@@ -21,6 +21,9 @@ export interface LoginRequest {
     code_challenge?: string;
     /// Validation: `plain|S256`
     code_challenge_method?: CodeChallengeMethod;
+    /// RFC 8707 resource indicator forwarded from the authorization request.
+    /// Validation: PATTERN_URI
+    resource?: string;
 }
 
 export interface LoginRefreshRequest {

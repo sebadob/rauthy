@@ -3,7 +3,7 @@ use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use mime_guess::mime::TEXT_PLAIN_UTF_8;
 use rauthy_api_types::api_keys::{ApiKeyRequest, ApiKeyResponse, ApiKeysResponse};
-use rauthy_data::entity::api_keys::ApiKeyEntity;
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights, ApiKeyEntity};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use validator::Validate;
 
@@ -23,7 +23,7 @@ use validator::Validate;
 )]
 #[get("/api_keys")]
 pub async fn get_api_keys(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::ApiKeys, AccessRights::Read)?;
 
     let entities = ApiKeyEntity::find_all().await?;
     let mut keys = Vec::with_capacity(entities.len());
@@ -55,7 +55,7 @@ pub async fn post_api_key(
     principal: ReqPrincipal,
     Json(payload): Json<ApiKeyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::ApiKeys, AccessRights::Create)?;
     payload.validate()?;
 
     let access = payload.access.into_iter().map(|a| a.into()).collect();
@@ -87,7 +87,7 @@ pub async fn put_api_key(
     name: web::Path<String>,
     Json(payload): Json<ApiKeyRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::ApiKeys, AccessRights::Update)?;
     payload.validate()?;
 
     let name = name.into_inner();
@@ -123,7 +123,7 @@ pub async fn delete_api_key(
     principal: ReqPrincipal,
     name: web::Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::ApiKeys, AccessRights::Delete)?;
 
     let name = name.into_inner();
     ApiKeyEntity::delete(&name).await?;
@@ -188,7 +188,7 @@ pub async fn put_api_key_secret(
     principal: ReqPrincipal,
     name: web::Path<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    principal.validate_api_key_or_admin_session(AccessGroup::ApiKeys, AccessRights::Update)?;
 
     let name = name.into_inner();
     let secret = ApiKeyEntity::generate_secret(&name).await?;

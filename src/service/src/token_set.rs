@@ -1,6 +1,6 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
-use rauthy_api_types::oidc::JktClaim;
+use rauthy_api_types::oidc::{Audience, JktClaim};
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
@@ -132,6 +132,7 @@ impl TokenSet {
         scope: Option<TokenScopes>,
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
         sid: Option<SessionId>,
+        resource: Option<&str>,
         device_code_flow: DeviceCodeFlow,
     ) -> Result<(AccessTokenJti, String), ErrorResponse> {
         let did = match device_code_flow {
@@ -174,6 +175,22 @@ impl TokenSet {
             None
         };
 
+        // RFC 8707: the access token audience is the client itself, plus any always-on
+        // `default_aud` entries, plus the granted `resource` (de-duplicated).
+        let mut auds: Vec<Cow<'_, str>> = Vec::with_capacity(1);
+        auds.push(Cow::Borrowed(client.id.as_str()));
+        for a in client.default_aud_iter() {
+            if !auds.iter().any(|x| x.as_ref() == a) {
+                auds.push(Cow::Borrowed(a));
+            }
+        }
+        if let Some(resource) = resource
+            && !auds.iter().any(|x| x.as_ref() == resource)
+        {
+            auds.push(Cow::Borrowed(resource));
+        }
+        let aud = Audience::from_values(auds);
+
         let mut claims_new_impl = JwtAccessClaims {
             common: JwtCommonClaims {
                 iat: now,
@@ -181,7 +198,7 @@ impl TokenSet {
                 exp,
                 iss: &RauthyConfig::get().issuer,
                 jti: Some(&issued_token.jti),
-                aud: Cow::Borrowed(client.id.as_str()),
+                aud,
                 sub,
                 typ: JwtTokenType::Bearer,
                 azp: &client.id,
@@ -233,6 +250,34 @@ impl TokenSet {
             }
         }
 
+        // `client_credentials` tokens have no user (`user.is_none()`), so they
+        // carry the client's admin-defined custom claims. Routed to the token root
+        // (flattened) or nested under `custom` by the client's `claims_at_root`
+        // flag, mirroring the per-scope routing above without the scope checks.
+        // Only the admin API / UI can set these; the dynamic client registration
+        // path never populates `client.claims`.
+        if user.is_none()
+            && let Some(claims) = &client.claims
+        {
+            let value: serde_json::Value = serde_json::from_slice(claims)?;
+            if let serde_json::Value::Object(map) = value {
+                if client.claims_at_root {
+                    let flattened = map.into_iter().collect::<HashMap<_, _>>();
+                    // Fail issuance rather than emit a token that shadows a reserved claim.
+                    validate_no_reserved_collision(&flattened)?;
+                    claims_new_impl
+                        .custom_flattened
+                        .get_or_insert_with(HashMap::new)
+                        .extend(flattened);
+                } else {
+                    claims_new_impl
+                        .custom
+                        .get_or_insert_with(HashMap::new)
+                        .extend(map);
+                }
+            }
+        }
+
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
         let token = JwtToken::build(&kp, &claims_new_impl)?;
@@ -262,10 +307,14 @@ impl TokenSet {
         } else {
             JwtAmrValue::Pwd.as_str()
         };
+        // Solid-OIDC ephemeral clients additionally carry the `solid` audience.
         let aud = if client.is_ephemeral() && config.vars.ephemeral_clients.enable_solid_aud {
-            Cow::from(format!("[\"{}\",\"solid\"]", client.id))
+            Audience::Multiple(vec![
+                Cow::Borrowed(client.id.as_str()),
+                Cow::Borrowed("solid"),
+            ])
         } else {
-            Cow::Borrowed(client.id.as_str())
+            Audience::single(client.id.as_str())
         };
 
         let user_values = UserValues::find(&user.id).await?;
@@ -411,6 +460,7 @@ impl TokenSet {
         is_mfa: bool,
         device_code_flow: DeviceCodeFlow,
         sid: Option<SessionId>,
+        resource: Option<&str>,
         jti: AccessTokenJti,
     ) -> Result<String, ErrorResponse> {
         let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
@@ -444,7 +494,7 @@ impl TokenSet {
                     // jti is not really used for any validation, it just exists
                     // to bring a bit more randomness into the claims
                     jti: Some(&jti),
-                    aud: Cow::Borrowed(client.id.as_str()),
+                    aud: Audience::single(client.id.as_str()),
                     sub: None,
                     typ: JwtTokenType::Refresh,
                     azp: &client.id,
@@ -458,6 +508,7 @@ impl TokenSet {
                 // Only Optional for backwards compatibility with older Rauthy versions and tokens.
                 // Could be changed with v1.0.0 maybe.
                 auth_time: Some(auth_time.get()),
+                resource,
             };
 
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
@@ -498,6 +549,7 @@ impl TokenSet {
     pub async fn for_client_credentials(
         client: &Client,
         dpop_fingerprint: Option<DpopFingerprint>,
+        resource: Option<&str>,
     ) -> Result<Self, ErrorResponse> {
         let token_type = if dpop_fingerprint.is_some() {
             JwtTokenType::DPoP
@@ -512,6 +564,7 @@ impl TokenSet {
             None,
             None,
             None,
+            resource,
             DeviceCodeFlow::No,
         )
         .await?;
@@ -535,6 +588,7 @@ impl TokenSet {
         nonce: Option<TokenNonce>,
         scopes: Option<TokenScopes>,
         sid: Option<SessionId>,
+        resource: Option<String>,
         auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
     ) -> Result<Self, ErrorResponse> {
@@ -626,6 +680,7 @@ impl TokenSet {
             Some(TokenScopes(scope.clone())),
             customs_access,
             sid.clone(),
+            resource.as_deref(),
             device_code_flow.clone(),
         )
         .await?;
@@ -660,6 +715,7 @@ impl TokenSet {
                     user.has_webauthn_enabled(),
                     device_code_flow,
                     sid,
+                    resource.as_deref(),
                     jti,
                 )
                 .await?,

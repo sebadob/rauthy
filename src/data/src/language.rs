@@ -16,16 +16,17 @@ pub enum Language {
     Fr,
     Ko,
     Nb,
+    Nl,
     Ru,
     Uk,
     ZhHans,
 }
 
 impl Language {
-    fn all_available<'a>() -> [&'a str; 16] {
+    fn all_available<'a>() -> [&'a str; 18] {
         [
-            "en", "en-US", "de", "de-DE", "fr", "fr-FR", "ko", "nb", "nb-NO", "no-NO", "ru",
-            "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
+            "en", "en-US", "de", "de-DE", "fr", "fr-FR", "ko", "nb", "nb-NO", "no-NO", "nl",
+            "nl-NL", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
         ]
     }
 
@@ -37,6 +38,7 @@ impl Language {
             Language::Fr => "fr",
             Language::Ko => "ko",
             Language::Nb => "nb",
+            Language::Nl => "nl",
             Language::Ru => "ru",
             Language::Uk => "uk",
             Language::ZhHans => "zhhans",
@@ -70,6 +72,7 @@ impl From<&str> for Language {
             "fr" | "fr-FR" => Self::Fr,
             "ko" | "ko-KR" => Self::Ko,
             "nb" | "nb-NO" | "no-NO" => Self::Nb,
+            "nl" | "nl-NL" => Self::Nl,
             "ru" | "ru-RU" => Self::Ru,
             "uk" | "uk-UA" => Self::Uk,
             "zh" | "zhhans" | "zh-hans" | "zh-Hans" => Self::ZhHans,
@@ -114,6 +117,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
             rauthy_api_types::generic::Language::Fr => Self::Fr,
             rauthy_api_types::generic::Language::Ko => Self::Ko,
             rauthy_api_types::generic::Language::Nb => Self::Nb,
+            rauthy_api_types::generic::Language::Nl => Self::Nl,
             rauthy_api_types::generic::Language::Ru => Self::Ru,
             rauthy_api_types::generic::Language::Uk => Self::Uk,
             rauthy_api_types::generic::Language::ZhHans => Self::ZhHans,
@@ -129,6 +133,7 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::Fr => Self::Fr,
             Language::Ko => Self::Ko,
             Language::Nb => Self::Nb,
+            Language::Nl => Self::Nl,
             Language::Ru => Self::Ru,
             Language::Uk => Self::Uk,
             Language::ZhHans => Self::ZhHans,

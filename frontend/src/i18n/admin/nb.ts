@@ -39,6 +39,10 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
+        allowedResources: 'Tillatte ressurser',
+        defaultAud: 'Standard-mottakere (aud)',
+        descAllowedResources: `Valgfrie RFC 8707 ressursindikatorer denne klienten kan be om. En tom liste avviser enhver 'resource'-parameter med 'invalid_target'.`,
+        descDefaultAud: `Mottakere (aud) som alltid legges til i denne klientens tokens, uavhengig av en 'resource'-parameter.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
             descHsl: `Fargene må angis som HSL. Her defineres kun basisfargen.
@@ -49,6 +53,15 @@ export let I18nAdminNb: I18nAdmin = {
                 for eksempel fritekst kan referere til variablene, like som med
                 <code>hsla(var(--action) / .7)</code>.`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: 'Følsomt',
         confidentialNoSecret: 'Dette er ikke en følsom klient, og har derfor ingen hemmelighet.',
         config: 'Klient konfigurasjon',
@@ -462,6 +475,13 @@ export let I18nAdminNb: I18nAdmin = {
         deleteUser: 'Skal denne brukeren slettes?',
         descAttr: `Sett individuelle bruker-attributter. Alle nøkkel/verdi-par håndteres som String/JSON-verdi.`,
         forceLogout: `Skal alle økter for denne brukeren invalidiseres og alle refresh tokens slettes?`,
+        groupAdmin: {
+            notManagedTitle: 'Bruker utenfor gruppene dine',
+            notManagedDesc: `Denne brukeren er ikke medlem av noen gruppe du administrerer, så detaljene er skjult.
+                Legg brukeren til i en eller flere av gruppene dine for å administrere den.
+                Medlemskap utenfor gruppene dine beholdes.`,
+            addToGroups: 'Legg til i mine grupper',
+        },
         lastLogin: 'Siste innlogging',
         manualInitDesc: `Brukeren kan også initialiseres her. I så fall må passordet kommuniseres direkte.`,
         manualInit: 'Manuell initialisering',

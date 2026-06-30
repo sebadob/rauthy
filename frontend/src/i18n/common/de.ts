@@ -108,6 +108,7 @@ export const I18nDe: I18n = {
         navEdit: 'Editieren',
         navMfa: 'MFA',
         navLogout: 'Logout',
+        navBackToAdmin: 'Admin-UI',
         other: 'Sonstiges',
         pam: {
             addSshKey: 'Neuen Key Hinzufügen',

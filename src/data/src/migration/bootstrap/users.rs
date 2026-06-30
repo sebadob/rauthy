@@ -4,8 +4,11 @@ use crate::entity::roles::Role;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::entity::users_values::UserValues;
 use crate::migration::bootstrap::bootstrap_data;
+use crate::migration::bootstrap::generated_secrets::{GeneratedSecretEntry, GeneratedSecretKey};
 use crate::migration::bootstrap::types::{User, UserPassword};
+use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
+use cryptr::utils::secure_random_alnum;
 use hiqlite::macros::params;
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::is_hiqlite;
@@ -13,6 +16,7 @@ use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::new_store_id;
 use rauthy_error::ErrorResponse;
 use tracing::info;
+use zeroize::Zeroize;
 
 pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let users = bootstrap_data!(User, "users");
@@ -53,6 +57,24 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#;
         let password = match user.password {
             UserPassword::Plain(plain) => HashPassword::hash_password(plain).await?,
             UserPassword::Argon2ID(hash) => hash,
+            UserPassword::Generate => {
+                let mut plain = secure_random_alnum(64);
+                let bootstrap = &RauthyConfig::get().vars.bootstrap;
+                if let Err(err) = crate::migration::bootstrap::generated_secrets::upsert_secret(
+                    bootstrap.generated_secrets_file.as_ref(),
+                    bootstrap.generated_secrets_ttl,
+                    GeneratedSecretEntry::new(
+                        GeneratedSecretKey::new("user", &user.email, "password"),
+                        plain.clone(),
+                    ),
+                )
+                .await
+                {
+                    plain.zeroize();
+                    return Err(err);
+                }
+                HashPassword::hash_password(plain).await?
+            }
         };
 
         for role in &user.roles {

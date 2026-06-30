@@ -22,12 +22,22 @@
     import IconCheckBadge from '$icons/IconCheckBadge.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import IconLogout from '$icons/IconLogout.svelte';
+    import IconUserCircle from '$icons/IconUserCircle.svelte';
     import { redirectToLogout } from '$utils/helpers';
+    import A from '$lib5/A.svelte';
     import Tooltip from '$lib5/Tooltip.svelte';
     import IconCommandLine from '$icons/IconCommandLine.svelte';
     import IconCircleStack from '$icons/IconCircleStack.svelte';
+    import { useSession } from '$state/session.svelte';
 
     let ta = useI18nAdmin();
+
+    let session = useSession('admin');
+    // Delegated group admins only get the user-centric, read-only sections.
+    // Everything that manages clients, roles, groups, scopes, system config, etc. stays
+    // full-admin only. The backend enforces this regardless; here we just hide it. The
+    // principal acts as a group admin when it reached the admin UI without the full role.
+    let isGroupAdmin = $derived(!session.isAdmin());
 
     let timeout: undefined | number;
 
@@ -140,47 +150,49 @@
                         {ta.nav.users}
                     </NavLink>
 
-                    <NavLink {compact} {params} route="/clients">
-                        {#snippet icon(width: string)}
-                            <IconOffice {width} />
-                        {/snippet}
-                        {ta.nav.clients}
-                    </NavLink>
+                    {#if !isGroupAdmin}
+                        <NavLink {compact} {params} route="/clients">
+                            {#snippet icon(width: string)}
+                                <IconOffice {width} />
+                            {/snippet}
+                            {ta.nav.clients}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/roles">
-                        {#snippet icon(width: string)}
-                            <IconCheckBadge {width} />
-                        {/snippet}
-                        {ta.nav.roles}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/roles">
+                            {#snippet icon(width: string)}
+                                <IconCheckBadge {width} />
+                            {/snippet}
+                            {ta.nav.roles}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/groups">
-                        {#snippet icon(width: string)}
-                            <IconUserGroup {width} />
-                        {/snippet}
-                        {ta.nav.groups}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/groups">
+                            {#snippet icon(width: string)}
+                                <IconUserGroup {width} />
+                            {/snippet}
+                            {ta.nav.groups}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/attributes">
-                        {#snippet icon(width: string)}
-                            <IconDocText {width} />
-                        {/snippet}
-                        {ta.nav.attributes}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/attributes">
+                            {#snippet icon(width: string)}
+                                <IconDocText {width} />
+                            {/snippet}
+                            {ta.nav.attributes}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/scopes">
-                        {#snippet icon(width: string)}
-                            <IconId {width} />
-                        {/snippet}
-                        {ta.nav.scopes}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/scopes">
+                            {#snippet icon(width: string)}
+                                <IconId {width} />
+                            {/snippet}
+                            {ta.nav.scopes}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/pam">
-                        {#snippet icon(width: string)}
-                            <IconCommandLine {width} />
-                        {/snippet}
-                        PAM
-                    </NavLink>
+                        <NavLink {compact} {params} route="/pam">
+                            {#snippet icon(width: string)}
+                                <IconCommandLine {width} />
+                            {/snippet}
+                            PAM
+                        </NavLink>
+                    {/if}
 
                     <NavLink {compact} {params} route="/sessions">
                         {#snippet icon(width: string)}
@@ -203,33 +215,40 @@
                         {ta.nav.blacklist}
                     </NavLink>
 
-                    <NavLink {compact} {params} route="/api_keys">
-                        {#snippet icon(width: string)}
-                            <IconKey {width} />
-                        {/snippet}
-                        {ta.nav.apiKeys}
-                    </NavLink>
+                    {#if !isGroupAdmin}
+                        <NavLink {compact} {params} route="/api_keys">
+                            {#snippet icon(width: string)}
+                                <IconKey {width} />
+                            {/snippet}
+                            {ta.nav.apiKeys}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/providers">
-                        {#snippet icon(width: string)}
-                            <IconCloud {width} />
-                        {/snippet}
-                        {ta.nav.providers}
-                    </NavLink>
+                        <NavLink {compact} {params} route="/providers">
+                            {#snippet icon(width: string)}
+                                <IconCloud {width} />
+                            {/snippet}
+                            {ta.nav.providers}
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/kv">
-                        {#snippet icon(width: string)}
-                            <IconCircleStack {width} />
-                        {/snippet}
-                        KV Store
-                    </NavLink>
+                        <NavLink {compact} {params} route="/kv">
+                            {#snippet icon(width: string)}
+                                <IconCircleStack {width} />
+                            {/snippet}
+                            KV Store
+                        </NavLink>
 
-                    <NavLink {compact} {params} route="/config/policy" highlightIncludes="/config/">
-                        {#snippet icon(width: string)}
-                            <IconWrenchScrew {width} />
-                        {/snippet}
-                        {ta.nav.config}
-                    </NavLink>
+                        <NavLink
+                            {compact}
+                            {params}
+                            route="/config/policy"
+                            highlightIncludes="/config/"
+                        >
+                            {#snippet icon(width: string)}
+                                <IconWrenchScrew {width} />
+                            {/snippet}
+                            {ta.nav.config}
+                        </NavLink>
+                    {/if}
 
                     <NavLink {compact} {params} route="/docs">
                         {#snippet icon(width: string)}
@@ -253,7 +272,21 @@
                     </div>
                 {/snippet}
 
+                <!-- a quick link to the own account dashboard. A delegated group admin
+                     cannot manage itself in here (it's an admin), so it self-manages from the
+                     account dashboard, which links back to the Admin UI. -->
+                {#snippet toAccount()}
+                    <div class="account">
+                        <A href="/auth/v1/account" hideUnderline>
+                            <Tooltip text="Account" yOffset={-40}>
+                                <IconUserCircle />
+                            </Tooltip>
+                        </A>
+                    </div>
+                {/snippet}
+
                 {#if compact}
+                    {@render toAccount()}
                     {@render toLogout()}
                     <div class="theme">
                         <ThemeSwitch />
@@ -263,6 +296,7 @@
                     <div class="flex gap-05">
                         <ThemeSwitch />
                         <LangSelector openTop borderless />
+                        {@render toAccount()}
                         {@render toLogout()}
                     </div>
                     <div class="version">
@@ -355,8 +389,16 @@
         overflow: clip;
     }
 
+    .account,
     .logout {
         margin-bottom: -0.25rem;
+    }
+
+    /* now that the nav has multiple bottom buttons, color the logout icon the same red as
+       the one on the account dashboard to set it apart */
+    .logout :global(button > div),
+    .logout :global(button:hover > div) {
+        color: hsl(var(--error));
     }
 
     .menu {

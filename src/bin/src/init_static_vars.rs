@@ -143,6 +143,7 @@ pub fn trigger() {
     if vars.ephemeral_clients.enable {
         let _ = *RE_CLIENT_ID;
     }
+    let _ = *RE_CLIENT_ID_STRICT;
     let _ = *RE_CLIENT_NAME;
     let _ = *RE_CODE_CHALLENGE;
     let _ = *RE_CODE_VERIFIER;

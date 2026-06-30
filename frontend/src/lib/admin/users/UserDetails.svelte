@@ -8,6 +8,7 @@
     import { fetchGet } from '$api/fetch';
     import type { UserResponse } from '$api/types/user.ts';
     import UserAttr from '$lib5/admin/users/UserAttr.svelte';
+    import UserAddToGroups from './UserAddToGroups.svelte';
     import UserPassword from './UserPassword.svelte';
     import UserMfa from './UserMfa.svelte';
     import Devices from '$lib5/devices/Devices.svelte';
@@ -16,6 +17,7 @@
     import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
     import { useTrigger } from '$state/callback.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import { useSession } from '$state/session.svelte';
 
     let {
         userValuesConfig,
@@ -36,16 +38,27 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const tabs = [
-        t.account.navInfo,
-        ta.users.attributes,
-        t.common.password,
-        t.account.navMfa,
-        t.account.devices,
-        t.account.navLogout,
-        t.common.delete,
-    ];
-    let selected = $state(tabs[0]);
+    let session = useSession('admin');
+    // Group admins get a reduced tab set: profile (restricted), password, MFA reset
+    // and force-logout. Attributes, devices and delete stay full-admin only, matching the
+    // backend, which rejects those actions for a group admin anyway. The principal acts as a
+    // delegated group admin when it reached the admin UI without the full `rauthy_admin` role.
+    let isGroupAdmin = $derived(!session.isAdmin());
+
+    const TAB_INFO = t.account.navInfo;
+    const TAB_ATTR = ta.users.attributes;
+    const TAB_PASSWORD = t.common.password;
+    const TAB_MFA = t.account.navMfa;
+    const TAB_DEVICES = t.account.devices;
+    const TAB_LOGOUT = t.account.navLogout;
+    const TAB_DELETE = t.common.delete;
+
+    let tabs = $derived(
+        isGroupAdmin
+            ? [TAB_INFO, TAB_PASSWORD, TAB_MFA, TAB_LOGOUT]
+            : [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE],
+    );
+    let selected = $state(TAB_INFO);
 
     let focusFirst: undefined | (() => void) = $state();
     useTrigger().set('navSubSub', () => {
@@ -55,6 +68,9 @@
     });
 
     let err = $state('');
+    // a group admin opened an ordinary user that is not in any of its groups yet (HTTP 428):
+    // instead of an error, we offer to add the user to a managed group
+    let notManaged = $state(false);
     let user: undefined | UserResponse = $state();
 
     $effect(() => {
@@ -62,6 +78,8 @@
     });
 
     async function fetchUser() {
+        err = '';
+        notManaged = false;
         let res = await fetchGet<UserResponse>(`/auth/v1/users/${userId}`);
         if (res.body) {
             user = undefined;
@@ -69,7 +87,11 @@
                 user = res.body;
             });
             focusFirst?.();
+        } else if (res.status === 428) {
+            user = undefined;
+            notManaged = true;
         } else {
+            user = undefined;
             err = res.error?.message || 'Error fetching user';
         }
     }
@@ -81,36 +103,51 @@
 </script>
 
 {#if err}
-    <div class="err">
+    <!-- a group admin reaching a user it cannot manage (e.g. another admin) gets a clean
+         notice instead of a raw API error and an empty tab bar -->
+    <div class="notice">
         {err}
+    </div>
+{:else if notManaged}
+    <UserAddToGroups {userId} {groups} onAdded={onSaveLocal} />
+{:else}
+    <div class="flex">
+        <Tabs {tabs} bind:selected bind:focusFirst />
     </div>
 {/if}
 
-<div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst />
-</div>
-
-{#if user}
-    {#if selected === tabs[0]}
+{#if user && !err}
+    {#if selected === TAB_INFO}
         <UserInfo
             bind:user
             config={userValuesConfig}
             {providers}
             {roles}
             {groups}
+            {isGroupAdmin}
             onSave={onSaveLocal}
         />
-    {:else if selected === tabs[1]}
+    {:else if selected === TAB_ATTR}
         <UserAttr {user} {onSave} />
-    {:else if selected === tabs[2]}
+    {:else if selected === TAB_PASSWORD}
         <UserPassword {user} {onSave} />
-    {:else if selected === tabs[3]}
+    {:else if selected === TAB_MFA}
         <UserMfa {user} {onSave} />
-    {:else if selected === tabs[4]}
+    {:else if selected === TAB_DEVICES}
         <Devices {userId} />
-    {:else if selected === tabs[5]}
+    {:else if selected === TAB_LOGOUT}
         <UserForceLogout {userId} />
-    {:else if selected === tabs[6]}
+    {:else if selected === TAB_DELETE}
         <UserDelete {userId} {onSave} />
     {/if}
 {/if}
+
+<style>
+    .notice {
+        margin: 1rem 0.5rem;
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        background: hsla(var(--bg-high) / 0.25);
+        color: hsla(var(--text) / 0.9);
+    }
+</style>

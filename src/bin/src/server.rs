@@ -88,6 +88,9 @@ pub async fn run(
     }
 
     RauthyConfig::debug_logs();
+    if let Err(err) = rauthy_data::migration::bootstrap::purge_expired_generated_secrets().await {
+        warn!("Could not purge bootstrap generated-secret container: {err}");
+    }
 
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;

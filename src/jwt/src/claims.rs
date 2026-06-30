@@ -1,4 +1,4 @@
-use rauthy_api_types::oidc::JktClaim;
+use rauthy_api_types::oidc::{Audience, JktClaim};
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -18,7 +18,8 @@ pub struct JwtCommonClaims<'a> {
     pub iss: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jti: Option<&'a str>,
-    pub aud: Cow<'a, str>,
+    #[serde(borrow)]
+    pub aud: Audience<'a>,
     pub sub: Option<&'a str>,
     // pub nonce: Option<&'a str>,
     pub typ: JwtTokenType,
@@ -306,6 +307,11 @@ pub struct JwtRefreshClaims<'a> {
     pub uid: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auth_time: Option<i64>,
+    /// RFC 8707 resource granted to the original token. Carried so a refreshed access
+    /// token keeps its audience binding; a refresh may never widen the resource set.
+    /// `default` for backwards compatibility with tokens issued by an older version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -373,7 +379,8 @@ impl JwtAmrValue {
 #[cfg(test)]
 mod tests {
     use super::{
-        JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtTokenType, validate_no_reserved_collision,
+        Audience, JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+        validate_no_reserved_collision,
     };
     use serde_json::json;
     use std::borrow::Cow;
@@ -386,7 +393,7 @@ mod tests {
             exp: 1_700_003_600,
             iss: "https://auth.example.com",
             jti: Some("jti123"),
-            aud: Cow::Borrowed("client-id"),
+            aud: Audience::single("client-id"),
             sub: Some("user-id"),
             typ: JwtTokenType::Bearer,
             azp: "client-id",

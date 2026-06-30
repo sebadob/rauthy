@@ -2,6 +2,7 @@ use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use crate::migration::bootstrap::generated_secrets;
 use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
 use cryptr::EncKeys;
@@ -344,6 +345,8 @@ impl Default for Vars {
                 api_key: None,
                 api_key_secret: None,
                 bootstrap_dir: "bootstrap".into(),
+                generated_secrets_file: String::new().into(),
+                generated_secrets_ttl: 600,
             },
             cred_stuff_detect: VarsCredStuff {
                 blacklist_duration: 86400,
@@ -427,6 +430,7 @@ impl Default for Vars {
                     en: "%m/%d/%Y %T (%Z)".into(),
                     fr: "%d/%m/%Y %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
+                    nl: "%d-%m-%Y %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
                     ru: "%d.%m.%Y %T (%Z)".into(),
                     uk: "%d.%m.%Y %T (%Z)".into(),
@@ -451,6 +455,7 @@ impl Default for Vars {
                     "webid".into(),
                 ],
                 cache_lifetime: 3600,
+                danger_allow_unvalidated_resource: false,
             },
             events: VarsEvents {
                 email: None,
@@ -685,6 +690,20 @@ impl Default for Vars {
                         footer: None,
                         button_text_request_new: None,
                     },
+                    nl: VarsTemplate
+                    {
+                        subject: "Nieuw wachtwoord".into(),
+                        header: "Nieuw wachtwoord voor".into(),
+                        text: None,
+                        click_link: Some("Klik op de onderstaande link om een nieuw wachtwoord in te stellen."
+                                .into()),
+                        validity: Some("Deze link is om veiligheidsredenen slechts korte tijd geldig."
+                                .into()),
+                        expires: Some("Link geldig tot:".into()),
+                        button: Some("Wachtwoord instellen".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     ru: VarsTemplate
                     {
                         subject: "Новый пароль".into(),
@@ -799,6 +818,18 @@ impl Default for Vars {
                         button: Some("Tilbakestill passord".into()),
                         footer: Some("Hvis lenken har utløpt, kan du be om en ny.".into()),
                         button_text_request_new: Some("Be om ny lenke".into()),
+                    },
+                    nl: VarsTemplate {
+                        subject: "Wachtwoordreset aangevraagd".into(),
+                        header: "Wachtwoordreset aangevraagd voor".into(),
+                        text: None,
+                        click_link: Some("Klik op de onderstaande link om uw wachtwoord te resetten.".into()),
+                        validity: Some("Deze link is om veiligheidsredenen slechts korte tijd geldig."
+                                .into()),
+                        expires: Some("Link vervalt:".into()),
+                        button: Some("Wachtwoord resetten".into()),
+                        footer: Some("Als deze link is verlopen, kunt u een nieuwe aanvragen.".into()),
+                        button_text_request_new: Some("Nieuwe link aanvragen".into()),
                     },
                     ru: VarsTemplate {
                         subject: "Запрос на сброс пароля".into(),
@@ -924,6 +955,22 @@ Your account has not been compromised and no data was leaked."#.into()),
                         button: None,
                         footer: None,
                         button_text_request_new: Some("Request password reset Link".into()),
+                    },
+                    nl: VarsTemplate {
+                        subject: "E-Mail al geregistreerd".into(),
+                        header: "E-Mail al geregistreerd - ".into(),
+                        text: Some(r#"Iemand heeft geprobeerd een nieuw account te registreren met uw e-mailadres,
+terwijl er al een account bestaat. Als u dat zelf was en het een vergissing was, kunt u
+dit bericht negeren. Als u echter uw wachtwoord bent vergeten, kunt u
+de onderstaande link gebruiken om het te resetten.
+Als u zelf niet probeerde een nieuw account te registreren - geen zorgen.
+Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Wachtwoordreset link aanvragen".into()),
                     },
                     ru: VarsTemplate {
                         subject: "E-Mail уже зарегистрирован".into(),
@@ -1120,6 +1167,7 @@ impl Vars {
         slf.parse_webauthn(&mut table);
 
         let node_config = slf.parse_hiqlite_config(&mut table).await;
+        slf.resolve_bootstrap_generated_secrets_file(&node_config);
 
         check_table_empty(table, "<root>");
 
@@ -1440,8 +1488,31 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "bootstrap", "bootstrap_dir", "BOOTSTRAP_DIR") {
             self.bootstrap.bootstrap_dir = v.into();
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "bootstrap",
+            "generated_secrets_file",
+            "BOOTSTRAP_GENERATED_SECRETS_FILE",
+        ) {
+            self.bootstrap.generated_secrets_file = v.into();
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "bootstrap",
+            "generated_secrets_ttl",
+            "BOOTSTRAP_GENERATED_SECRETS_TTL",
+        ) {
+            self.bootstrap.generated_secrets_ttl = v;
+        }
 
         check_table_empty(table, "bootstrap");
+    }
+
+    fn resolve_bootstrap_generated_secrets_file(&mut self, node_config: &NodeConfig) {
+        if self.bootstrap.generated_secrets_file.is_empty() {
+            self.bootstrap.generated_secrets_file =
+                generated_secrets::default_file_path(&node_config.data_dir).into();
+        }
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
@@ -1893,6 +1964,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ko", "TZ_FMT_KO") {
             self.email.tz_fmt.ko = v.into();
         }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "nl", "TZ_FMT_NL") {
+            self.email.tz_fmt.nl = v.into();
+        }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "no", "TZ_FMT_NO") {
             self.email.tz_fmt.no = v.into();
         }
@@ -1996,6 +2070,15 @@ impl Vars {
             "EPHEMERAL_CLIENTS_CACHE_LIFETIME",
         ) {
             self.ephemeral_clients.cache_lifetime = v;
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "danger_allow_unvalidated_resource",
+            "EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE",
+        ) {
+            self.ephemeral_clients.danger_allow_unvalidated_resource = v;
         }
 
         check_table_empty(table, "ephemeral_clients");
@@ -3033,6 +3116,13 @@ impl Vars {
                         self.templates.password_reset.nb.clone()
                     }
                 }
+                "nl" => {
+                    if is_password_new {
+                        self.templates.password_new.nl.clone()
+                    } else {
+                        self.templates.password_reset.nl.clone()
+                    }
+                }
                 "ru" => {
                     if is_password_new {
                         self.templates.password_new.ru.clone()
@@ -3056,7 +3146,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
                     )
                 }
             };
@@ -3101,11 +3191,39 @@ impl Vars {
                         self.templates.password_reset.de = tpl;
                     }
                 }
+                "fr" => {
+                    if is_password_new {
+                        self.templates.password_new.fr = tpl;
+                    } else {
+                        self.templates.password_reset.fr = tpl;
+                    }
+                }
                 "ko" => {
                     if is_password_new {
                         self.templates.password_new.ko = tpl;
                     } else {
                         self.templates.password_reset.ko = tpl;
+                    }
+                }
+                "nb" => {
+                    if is_password_new {
+                        self.templates.password_new.nb = tpl;
+                    } else {
+                        self.templates.password_reset.nb = tpl;
+                    }
+                }
+                "nl" => {
+                    if is_password_new {
+                        self.templates.password_new.nl = tpl;
+                    } else {
+                        self.templates.password_reset.nl = tpl;
+                    }
+                }
+                "ru" => {
+                    if is_password_new {
+                        self.templates.password_new.ru = tpl;
+                    } else {
+                        self.templates.password_reset.ru = tpl;
                     }
                 }
                 "uk" => {
@@ -3124,7 +3242,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de ko nb uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
                     )
                 }
             }
@@ -3557,6 +3675,8 @@ pub struct VarsBootstrap {
     pub api_key: Option<String>,
     pub api_key_secret: Option<String>,
     pub bootstrap_dir: Cow<'static, str>,
+    pub generated_secrets_file: Cow<'static, str>,
+    pub generated_secrets_ttl: u32,
 }
 
 #[derive(Debug)]
@@ -3657,6 +3777,7 @@ pub struct VarsEmailTzFmt {
     pub en: Cow<'static, str>,
     pub fr: Cow<'static, str>,
     pub ko: Cow<'static, str>,
+    pub nl: Cow<'static, str>,
     pub no: Cow<'static, str>,
     pub ru: Cow<'static, str>,
     pub uk: Cow<'static, str>,
@@ -3679,6 +3800,12 @@ pub struct VarsEphemeralClients {
     pub allowed_flows: Vec<Cow<'static, str>>,
     pub allowed_scopes: Vec<Cow<'static, str>>,
     pub cache_lifetime: u32,
+    /// RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+    /// a requested `resource` is rejected by default. Setting this to `true` lets such
+    /// clients request any resource, which can be an easy privilege-escalation vector;
+    /// only enable it if you fully understand the implications and have a good reason.
+    /// Default deny.
+    pub danger_allow_unvalidated_resource: bool,
 }
 
 #[derive(Debug)]
@@ -3880,6 +4007,7 @@ pub struct VarsTemplatesLanguages {
     pub fr: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
+    pub nl: VarsTemplate,
     pub ru: VarsTemplate,
     pub uk: VarsTemplate,
     pub zhhans: VarsTemplate,

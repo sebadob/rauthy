@@ -18,6 +18,7 @@ impl I18nEmailResetInfo<'_> {
             Language::Fr => Self::build_fr(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Nl => Self::build_nl(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -72,6 +73,16 @@ impl I18nEmailResetInfo<'_> {
             expires_2: "utløper snart:",
             update: "Du kan oppdatere det her:",
             button_text: "Oppdater passord",
+        }
+    }
+
+    fn build_nl() -> Self {
+        Self {
+            subject: "Wachtwoord verloopt binnenkort",
+            expires_1: "Uw wachtwoord voor",
+            expires_2: "verloopt binnenkort:",
+            update: "U kunt het hier bijwerken:",
+            button_text: "Wachtwoord bijwerken",
         }
     }
 

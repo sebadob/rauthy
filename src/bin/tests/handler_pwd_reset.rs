@@ -131,6 +131,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         username: Some(username.to_string()),
         password: Some(req.password.to_string()),
         refresh_token: None,
+        resource: None,
     };
     let res = client.post(&url).form(&body).send().await?;
     assert_eq!(res.status(), 200);

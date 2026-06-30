@@ -109,6 +109,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         nonce: Some(nonce.to_owned()),
         code_challenge: Some(challenge_plain.to_owned()),
         code_challenge_method: Some("plain".to_string()),
+        resource: None,
     };
     let res = reqwest::Client::new()
         .post(&url_auth)
@@ -145,6 +146,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
     let url_token = format!("{}/oidc/token", backend_url);
     let res = reqwest::Client::new()
@@ -263,7 +265,6 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // disable pkce for the init client
     let mut update_client = UpdateClientRequest {
-        id: CLIENT_ID.to_string(),
         name: Some("Init Client".to_string()),
         confidential: true,
         redirect_uris: vec!["http://localhost:3000/oidc/callback".to_string()],
@@ -297,6 +298,10 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         contacts: None,
         backchannel_logout_uri: Some(init_client_bcl_uri()),
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
+        allowed_resources: None,
+        default_aud: None,
         scim: None,
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);
@@ -373,6 +378,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
     let url = format!("{}/oidc/token", backend_url);
     let client = reqwest::Client::new();
@@ -436,6 +442,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         nonce: None,
         code_challenge: Some(challenge_plain.to_owned()),
         code_challenge_method: None,
+        resource: None,
     };
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -503,6 +510,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
         username: Some(USERNAME.to_string()),
         password: None,
         refresh_token: None,
+        resource: None,
     };
     let client = reqwest::Client::new();
     let res = client.post(&url).form(&body).send().await?;
@@ -562,6 +570,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
+        resource: None,
     };
     let url = format!("{}/oidc/token", get_backend_url());
     let res = reqwest::Client::new().post(&url).form(&req).send().await?;
@@ -606,6 +615,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         refresh_token: None,
+        resource: None,
     };
 
     // dpop header
@@ -716,6 +726,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
+        resource: None,
     };
 
     // without DPoP header, it should fail
@@ -793,6 +804,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         nonce: Some(nonce.to_owned()),
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
+        resource: None,
     };
     let res = client
         .post(&url_auth)
@@ -817,6 +829,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
 
     let url_token = format!("{}/oidc/token", backend_url);
@@ -842,6 +855,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         username: None,
         password: None,
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
+        resource: None,
     };
     let res = client.post(&url_token).form(&req).send().await?;
     assert!(res.status().is_success());
@@ -916,6 +930,7 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         refresh_token: None,
+        resource: None,
     };
     let res = client.post(&url_token).form(&body).send().await?;
     assert!(res.status().is_success());
@@ -1156,6 +1171,7 @@ async fn fetch_token_set() -> TokenSet {
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         refresh_token: None,
+        resource: None,
     };
     let res = reqwest::Client::new()
         .post(&url_token)

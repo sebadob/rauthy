@@ -39,7 +39,8 @@ pub async fn get_sessions(
     principal: ReqPrincipal,
     Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Read)?;
+    // group admins get a read-only view of all sessions for user debugging
+    principal.validate_api_key_or_group_admin(AccessGroup::Sessions, AccessRights::Read)?;
     params.validate()?;
 
     let state = entity::sessions::SessionState::from(
@@ -163,10 +164,13 @@ pub async fn delete_sessions_for_user(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
+    // cheap auth gate before any DB lookup
+    principal.validate_api_key_or_group_admin(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
     let user = User::find(uid).await?;
+    // a group admin may force-logout a user it manages
+    principal.validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())?;
 
     Session::invalidate_for_user(&user.id).await?;
     RefreshToken::invalidate_for_user(&user.id).await?;

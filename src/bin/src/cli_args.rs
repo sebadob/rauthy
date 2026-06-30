@@ -1,10 +1,13 @@
-use clap::Parser;
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Clone, Parser)]
 #[clap(author, version, about, long_about = None)]
 pub enum Args {
     /// Start the Rauthy server
     Serve(ArgsServer),
+
+    /// Read or purge generated bootstrap secrets from the local encrypted container.
+    Bootstrap(ArgsBootstrap),
 
     /// Generate a config file to get you started.
     GenerateConfig(ArgsGenConfig),
@@ -19,6 +22,59 @@ pub enum Args {
     GenerateSecrets,
 
     HashPassword(ArgsPasswordHash),
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct ArgsBootstrap {
+    #[command(subcommand)]
+    pub command: ArgsBootstrapCommand,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum ArgsBootstrapCommand {
+    /// Decrypt and print generated bootstrap secrets.
+    Get(ArgsBootstrapGet),
+
+    /// Delete the generated bootstrap secret container.
+    Purge(ArgsBootstrapPurge),
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct ArgsBootstrapGet {
+    /// Path to the Rauthy config file. The encryption keys and the container
+    /// location are read from it, so no keys or file path are passed directly.
+    #[clap(short = 'c', long, default_value = "./config.toml")]
+    pub config_file: String,
+
+    /// Output format.
+    #[clap(long, value_enum, default_value_t = BootstrapOutputFormat::Env)]
+    pub format: BootstrapOutputFormat,
+
+    /// Filter by entry kind, for example `client` or `user`.
+    #[clap(long)]
+    pub kind: Option<String>,
+
+    /// Filter by entry id, for example the client id or user email.
+    #[clap(long)]
+    pub id: Option<String>,
+
+    /// Filter by field, for example `secret` or `password`.
+    #[clap(long)]
+    pub field: Option<String>,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct ArgsBootstrapPurge {
+    /// Path to the Rauthy config file. The container location is read from it.
+    #[clap(short = 'c', long, default_value = "./config.toml")]
+    pub config_file: String,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum BootstrapOutputFormat {
+    Raw,
+    Json,
+    Env,
 }
 
 #[derive(Debug, Clone, Parser)]
