@@ -26,8 +26,14 @@ async fn load_config(config_file: String) -> Result<&'static RauthyConfig, StdEr
     let (tx_email, _) = mpsc::channel::<mailer::EMail>(16);
     let (tx_events, _) = flume::unbounded();
     let (tx_events_router, _) = flume::unbounded();
-    let (config, _node) =
-        RauthyConfig::build(config_file, tx_email, tx_events, tx_events_router).await?;
+    let (config, _node) = RauthyConfig::build(
+        config_file,
+        "secrets.toml".to_string(),
+        tx_email,
+        tx_events,
+        tx_events_router,
+    )
+    .await?;
     config.init_static();
     Ok(RauthyConfig::get())
 }
