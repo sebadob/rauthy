@@ -216,6 +216,13 @@ pub struct UpdateClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub default_aud: Option<Vec<String>>,
+    /// Allow-list of authenticator AAGUIDs (canonical dashed UUID form) accepted for
+    /// hardware-attested sessions with this client. An empty / missing list means no
+    /// AAGUID restriction.
+    ///
+    /// Validation: `Vec<^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$>`
+    #[validate(custom(function = "validate_vec_aaguid"))]
+    pub allowed_aaguids: Option<Vec<String>>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -280,6 +287,8 @@ pub struct ClientResponse {
     pub allowed_resources: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_aud: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_aaguids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimClientRequestResponse>,
 }

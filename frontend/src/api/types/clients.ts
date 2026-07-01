@@ -74,6 +74,10 @@ export interface UpdateClientRequest {
     /// Audiences always added to this client's tokens, independent of any request.
     /// Validation: PATTERN_URI
     default_aud?: string[];
+    /// Allow-list of authenticator AAGUIDs (canonical dashed UUID form) accepted for
+    /// hardware-attested sessions with this client.
+    /// Validation: PATTERN_AAGUID
+    allowed_aaguids?: string[];
     scim?: ScimClientRequestResponse;
 }
 
@@ -107,6 +111,7 @@ export interface ClientResponse {
     claims_at_root: boolean;
     allowed_resources?: string[];
     default_aud?: string[];
+    allowed_aaguids?: string[];
     scim?: ScimClientRequestResponse;
 }
 

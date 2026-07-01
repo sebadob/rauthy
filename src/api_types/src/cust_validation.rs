@@ -1,10 +1,32 @@
 use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
 use rauthy_common::regex::{
-    RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_LINUX_HOSTNAME,
-    RE_ORIGIN, RE_ROLES_SCOPES, RE_URI,
+    RE_AAGUID, RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS,
+    RE_LINUX_HOSTNAME, RE_ORIGIN, RE_ROLES_SCOPES, RE_URI,
 };
 use std::borrow::Cow;
 use validator::ValidationError;
+
+#[inline]
+pub fn validate_vec_aaguid(value: &[String]) -> Result<(), ValidationError> {
+    let mut err = None;
+
+    if value.is_empty() {
+        err = Some("'allowed_aaguids' cannot be empty when provided");
+    } else {
+        value.iter().for_each(|v| {
+            if !RE_AAGUID.is_match(v) {
+                err = Some(
+                    "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+                );
+            }
+        });
+    }
+
+    if let Some(e) = err {
+        return Err(ValidationError::new(e));
+    }
+    Ok(())
+}
 
 #[inline]
 pub fn validate_vec_attr(value: &[String]) -> Result<(), ValidationError> {

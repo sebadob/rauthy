@@ -8,6 +8,7 @@
     import Form from '$lib5/form/Form.svelte';
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import {
+        PATTERN_AAGUID,
         PATTERN_CLIENT_NAME,
         PATTERN_CONTACT,
         PATTERN_GROUP,
@@ -69,6 +70,9 @@
         client.allowed_resources ? Array.from(client.allowed_resources) : [],
     );
     let defaultAud: string[] = $state(client.default_aud ? Array.from(client.default_aud) : []);
+    let allowedAaguids: string[] = $state(
+        client.allowed_aaguids ? Array.from(client.allowed_aaguids) : [],
+    );
 
     let scimEnabled = $state(client.scim !== undefined);
     let scim: ScimClientRequestResponse = $state({
@@ -137,6 +141,7 @@
             origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
             allowedResources = client.allowed_resources ? Array.from(client.allowed_resources) : [];
             defaultAud = client.default_aud ? Array.from(client.default_aud) : [];
+            allowedAaguids = client.allowed_aaguids ? Array.from(client.allowed_aaguids) : [];
             redirectURIs = Array.from(client.redirect_uris);
             postLogoutRedirectURIs = client.post_logout_redirect_uris
                 ? Array.from(client.post_logout_redirect_uris)
@@ -235,6 +240,7 @@
             claims_at_root: claimsAtRoot,
             allowed_resources: allowedResources.length > 0 ? allowedResources : undefined,
             default_aud: defaultAud.length > 0 ? defaultAud : undefined,
+            allowed_aaguids: allowedAaguids.length > 0 ? allowedAaguids : undefined,
         };
 
         if (flows.authorizationCode) {
@@ -413,6 +419,16 @@
             label={ta.clients.defaultAud}
             errMsg={ta.validation.uri}
             pattern={PATTERN_URI}
+        />
+
+        <div style:height=".5rem"></div>
+        <p class="mb-0"><b>Hardware Attestation</b></p>
+        <p class="desc">{ta.clients.descAllowedAaguids}</p>
+        <InputTags
+            bind:values={allowedAaguids}
+            label={ta.clients.allowedAaguids}
+            errMsg={ta.validation.aaguid}
+            pattern={PATTERN_AAGUID}
         />
 
         <div style:height=".5rem"></div>

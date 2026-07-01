@@ -60,6 +60,8 @@ export interface I18nAdmin {
         defaultAud: string;
         descAllowedResources: string;
         descDefaultAud: string;
+        allowedAaguids: string;
+        descAllowedAaguids: string;
         descGroupPrefix: string;
         descName: string;
         descOrigin: string;
@@ -455,6 +457,7 @@ export interface I18nAdmin {
         sendResetEmail: string;
     };
     validation: {
+        aaguid: string;
         css: string;
         origin: string;
         uri: string;

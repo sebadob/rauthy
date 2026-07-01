@@ -1,6 +1,10 @@
 use regex::Regex;
 use std::sync::{LazyLock, OnceLock};
 
+pub static RE_AAGUID: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+        .unwrap()
+});
 pub static RE_ALNUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]+$").unwrap());
 pub static RE_ALNUM_48: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
