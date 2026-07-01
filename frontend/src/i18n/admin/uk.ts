@@ -39,6 +39,8 @@ export let I18nAdminUk: I18nAdmin = {
         size: 'Розмір',
     },
     clients: {
+        allowedAaguids: 'Дозволені AAGUID',
+        descAllowedAaguids: `Необов'язковий список дозволених AAGUID автентифікаторів (у канонічній формі UUID), які приймаються для сеансів з апаратною атестацією для цього клієнта. Порожній список не застосовує обмеження за AAGUID.`,
         allowedResources: 'Дозволені ресурси',
         defaultAud: 'Аудиторії за замовчуванням',
         descAllowedResources: `Необов'язкові індикатори ресурсів RFC 8707, які може запитувати цей клієнт. Порожній список відхиляє будь-який параметр 'resource' з помилкою 'invalid_target'.`,
@@ -542,6 +544,7 @@ export let I18nAdminUk: I18nAdmin = {
         sendResetEmail: 'Надіслати лист для відновлення',
     },
     validation: {
+        aaguid: 'Недійсний AAGUID',
         css: 'Некоректне значення CSS',
         origin: 'Некоректний Origin',
         uri: 'Некоректний URI',

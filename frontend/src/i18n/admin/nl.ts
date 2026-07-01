@@ -40,6 +40,8 @@ export let I18nAdminNl: I18nAdmin = {
         size: 'Grootte',
     },
     clients: {
+        allowedAaguids: 'Toegestane AAGUIDs',
+        descAllowedAaguids: `Optionele acceptatielijst van authenticator-AAGUIDs (canonieke UUID-vorm) die worden geaccepteerd voor hardware-geattesteerde sessies met deze client. Een lege lijst past geen AAGUID-beperking toe.`,
         allowedResources: 'Toegestane resources',
         defaultAud: 'Standaard audiences',
         descAllowedResources: `Optionele RFC 8707 resource-indicatoren die deze client mag opvragen. Een lege lijst weigert elke 'resource'-parameter met 'invalid_target'.`,
@@ -549,6 +551,7 @@ export let I18nAdminNl: I18nAdmin = {
         sendResetEmail: 'Reset e-mail versturen',
     },
     validation: {
+        aaguid: 'Ongeldige AAGUID',
         css: 'Ongeldige CSS-waarde',
         origin: 'Ongeldige origin',
         uri: 'Ongeldige URI',

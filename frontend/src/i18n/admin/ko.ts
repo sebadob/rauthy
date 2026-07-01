@@ -36,6 +36,8 @@ export let I18nAdminKo: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        allowedAaguids: '허용된 AAGUID',
+        descAllowedAaguids: `이 클라이언트와의 하드웨어 증명 세션에 허용되는 인증자 AAGUID(표준 UUID 형식)의 선택적 허용 목록입니다. 목록이 비어 있으면 AAGUID 제한이 적용되지 않습니다.`,
         allowedResources: '허용된 리소스',
         defaultAud: '기본 대상(Audience)',
         descAllowedResources: `이 클라이언트가 요청할 수 있는 선택적 RFC 8707 리소스 인디케이터입니다. 목록이 비어 있으면 모든 'resource' 요청 파라미터를 'invalid_target'으로 거부합니다.`,
@@ -518,6 +520,7 @@ export let I18nAdminKo: I18nAdmin = {
         sendResetEmail: '재설정 이메일 보내기',
     },
     validation: {
+        aaguid: '잘못된 AAGUID',
         css: '비정상적인 CSS',
         origin: '비정상적인 오리진',
         uri: '비정상적인 URI',

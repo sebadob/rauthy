@@ -43,8 +43,8 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
-    claims_at_root = $23, allowed_resources = $24, default_aud = $25
-WHERE id = $26"#;
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25, allowed_aaguids = $26
+WHERE id = $27"#;
 
 /**
 # OIDC Client
@@ -94,6 +94,9 @@ pub struct Client {
     pub allowed_resources: Option<String>,
     /// Audiences always added to this client's tokens, independent of any request (CSV).
     pub default_aud: Option<String>,
+    /// Allow-list of authenticator AAGUIDs (CSV) accepted for hardware-attested
+    /// sessions with this client. Empty / `None` means no AAGUID restriction.
+    pub allowed_aaguids: Option<String>,
 }
 
 impl Debug for Client {
@@ -105,7 +108,8 @@ impl Debug for Client {
         flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
         client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
-        claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?} \
+        claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
+        allowed_aaguids: {:?} \
         }}",
             self.id,
             self.name,
@@ -131,6 +135,7 @@ impl Debug for Client {
             self.claims_at_root,
             self.allowed_resources,
             self.default_aud,
+            self.allowed_aaguids,
         )
     }
 }
@@ -159,9 +164,9 @@ INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redire
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
-default_aud)
+default_aud, allowed_aaguids)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23, $24)"#;
+$18, $19, $20, $21, $22, $23, $24, $25)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -191,7 +196,8 @@ $18, $19, $20, $21, $22, $23, $24)"#;
                         &client.backchannel_logout_uri,
                         &client.restrict_group_prefix,
                         &client.allowed_resources,
-                        &client.default_aud
+                        &client.default_aud,
+                        &client.allowed_aaguids
                     ),
                 )
                 .await?;
@@ -223,6 +229,7 @@ $18, $19, $20, $21, $22, $23, $24)"#;
                     &client.restrict_group_prefix,
                     &client.allowed_resources,
                     &client.default_aud,
+                    &client.allowed_aaguids,
                 ],
             )
             .await?;
@@ -519,6 +526,7 @@ VALUES ($1, $2, $3, $4)"#;
             .filter(|uri| !uri.is_empty());
         let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
         let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
+        let allowed_aaguids = self.allowed_aaguids.clone().filter(|a| !a.is_empty());
 
         txn.push((
             SQL_SAVE,
@@ -548,6 +556,7 @@ VALUES ($1, $2, $3, $4)"#;
                 self.claims_at_root,
                 allowed_resources,
                 default_aud,
+                allowed_aaguids,
                 &self.id
             ),
         ));
@@ -569,6 +578,7 @@ VALUES ($1, $2, $3, $4)"#;
             .filter(|uri| !uri.is_empty());
         let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
         let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
+        let allowed_aaguids = self.allowed_aaguids.clone().filter(|a| !a.is_empty());
 
         DB::pg_txn_append(
             txn,
@@ -599,6 +609,7 @@ VALUES ($1, $2, $3, $4)"#;
                 &self.claims_at_root,
                 &allowed_resources,
                 &default_aud,
+                &allowed_aaguids,
                 &self.id,
             ],
         )
@@ -627,6 +638,7 @@ VALUES ($1, $2, $3, $4)"#;
             .filter(|uri| !uri.is_empty());
         let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
         let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
+        let allowed_aaguids = self.allowed_aaguids.clone().filter(|a| !a.is_empty());
 
         if is_hiqlite() {
             DB::hql()
@@ -658,6 +670,7 @@ VALUES ($1, $2, $3, $4)"#;
                         self.claims_at_root,
                         allowed_resources,
                         default_aud,
+                        allowed_aaguids,
                         self.id.clone()
                     ),
                 )
@@ -691,6 +704,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &self.claims_at_root,
                     &allowed_resources,
                     &default_aud,
+                    &allowed_aaguids,
                     &self.id,
                 ],
             )
@@ -955,6 +969,22 @@ impl Client {
     pub fn get_default_aud(&self) -> Option<Vec<String>> {
         self.default_aud.as_ref()?;
         Some(self.default_aud_iter().map(String::from).collect())
+    }
+
+    /// Borrowed, allocation-free view of the `allowed_aaguids` CSV (empties skipped).
+    #[inline]
+    pub fn allowed_aaguids_iter(&self) -> impl Iterator<Item = &str> {
+        self.allowed_aaguids
+            .as_deref()
+            .unwrap_or_default()
+            .split(',')
+            .filter(|s| !s.is_empty())
+    }
+
+    #[inline]
+    pub fn get_allowed_aaguids(&self) -> Option<Vec<String>> {
+        self.allowed_aaguids.as_ref()?;
+        Some(self.allowed_aaguids_iter().map(String::from).collect())
     }
 
     /// Validates an RFC 8707 `resource` request value against this client's policy: it
@@ -1549,6 +1579,7 @@ impl Client {
             .and_then(|bytes| serde_json::from_slice(bytes).ok());
         let allowed_resources = self.get_allowed_resources();
         let default_aud = self.get_default_aud();
+        let allowed_aaguids = self.get_allowed_aaguids();
 
         let access_token_alg = JwkKeyPairAlg::from_str(&self.access_token_alg)
             .expect("internal JwkKeyPairAlg conversion to always succeed")
@@ -1582,6 +1613,7 @@ impl Client {
             claims_at_root: self.claims_at_root,
             allowed_resources,
             default_aud,
+            allowed_aaguids,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -1637,6 +1669,7 @@ impl From<EphemeralClientRequest> for Client {
             claims_at_root: false,
             allowed_resources: value.allowed_resources.map(|r| r.join(",")),
             default_aud: None,
+            allowed_aaguids: None,
         }
     }
 }
@@ -1680,6 +1713,7 @@ impl Default for Client {
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
+            allowed_aaguids: None,
         }
     }
 }
@@ -1929,6 +1963,7 @@ mod tests {
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
+            allowed_aaguids: None,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -2018,6 +2053,29 @@ mod tests {
                 "batman@localhost.de".to_string(),
                 "@alfred:matrix.org".to_string(),
             ]
+        );
+
+        // allowed_aaguids: none by default, then a CSV round-trips through the iter + getter,
+        // with empty entries skipped (mirrors the `default_aud` / `allowed_resources` behavior)
+        assert!(client.get_allowed_aaguids().is_none());
+        assert_eq!(client.allowed_aaguids_iter().count(), 0);
+        client.allowed_aaguids = Some(
+            "01020304-0506-0708-0a0b-0c0d0e0f1011,,fa2b99dc-9e39-4257-8f92-a9930c7635ee"
+                .to_string(),
+        );
+        assert_eq!(
+            client.allowed_aaguids_iter().collect::<Vec<_>>(),
+            vec![
+                "01020304-0506-0708-0a0b-0c0d0e0f1011",
+                "fa2b99dc-9e39-4257-8f92-a9930c7635ee",
+            ]
+        );
+        assert_eq!(
+            client.get_allowed_aaguids(),
+            Some(vec![
+                "01020304-0506-0708-0a0b-0c0d0e0f1011".to_string(),
+                "fa2b99dc-9e39-4257-8f92-a9930c7635ee".to_string(),
+            ])
         );
 
         // validate origin

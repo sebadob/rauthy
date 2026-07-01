@@ -41,6 +41,8 @@ export let I18nAdminFr: I18nAdmin = {
         size: 'Taille',
     },
     clients: {
+        allowedAaguids: 'AAGUID autorisés',
+        descAllowedAaguids: `Liste d'autorisation facultative des AAGUID d'authentificateurs (forme UUID canonique) acceptés pour les sessions attestées par le matériel avec ce client. Une liste vide n'applique aucune restriction d'AAGUID.`,
         allowedResources: 'Ressources autorisées',
         defaultAud: 'Audiences par défaut',
         descAllowedResources: `Indicateurs de ressources RFC 8707 optionnels que ce client peut demander. Une liste vide rejette tout paramètre 'resource' avec 'invalid_target'.`,
@@ -563,6 +565,7 @@ export let I18nAdminFr: I18nAdmin = {
         sendResetEmail: 'Envoyer un e-mail de réinitialisation',
     },
     validation: {
+        aaguid: 'AAGUID invalide',
         css: 'Valeur CSS invalide',
         origin: 'Origine invalide',
         uri: 'URI invalide',
