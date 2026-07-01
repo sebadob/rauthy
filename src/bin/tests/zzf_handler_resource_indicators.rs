@@ -52,6 +52,7 @@ fn base_update() -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        allowed_aaguids: None,
         scim: None,
     }
 }

@@ -14,6 +14,16 @@ in your config. Just be prepared to adjust your config when you update.
 
 ### Changes
 
+#### Per-Client Allowed AAGUIDs
+
+Clients can now define an optional allow-list of authenticator AAGUIDs
+(`allowed_aaguids`, canonical UUID form) via the Admin UI and the client API. This is the
+storage and management layer for restricting a client to specific hardware
+authenticators; an empty / missing list applies no restriction. Enforcement during the
+WebAuthn attestation ceremony is a planned follow-up.
+
+[#1619](https://github.com/sebadob/rauthy/pull/1619)
+
 #### Validate Config
 
 The CLI can now validate an existing Rauthy Config:

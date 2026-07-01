@@ -1,3 +1,5 @@
+export const PATTERN_AAGUID =
+    '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
 export const PATTERN_ALNUM = '^[a-zA-Z0-9]*$';
 // export const PATTERN_ALNUM_64 = '^[a-zA-Z0-9]{64}$';
 export const PATTERN_ATPROTO_ID =

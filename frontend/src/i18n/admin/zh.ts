@@ -37,6 +37,8 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        allowedAaguids: '允许的 AAGUID',
+        descAllowedAaguids: `此客户端进行硬件证明会话时接受的验证器 AAGUID（规范 UUID 形式）的可选允许列表。空列表则不应用任何 AAGUID 限制。`,
         allowedResources: '允许的资源',
         defaultAud: '默认受众 (aud)',
         descAllowedResources: `此客户端可以请求的可选 RFC 8707 资源指示符。空列表将以 'invalid_target' 拒绝任何 'resource' 请求参数。`,
@@ -509,6 +511,7 @@ export let I18nAdminZh: I18nAdmin = {
         sendResetEmail: '发送重置邮件',
     },
     validation: {
+        aaguid: '无效的 AAGUID',
         css: '无效的CSS值',
         origin: '无效的来源',
         uri: '无效的URI',

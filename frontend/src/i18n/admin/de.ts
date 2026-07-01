@@ -40,6 +40,8 @@ export let I18nAdminDe: I18nAdmin = {
         size: 'Größe',
     },
     clients: {
+        allowedAaguids: 'Erlaubte AAGUIDs',
+        descAllowedAaguids: `Optionale Positivliste von Authenticator-AAGUIDs (kanonische UUID-Form), die für hardwareattestierte Sitzungen mit diesem Client akzeptiert werden. Eine leere Liste wendet keine AAGUID-Einschränkung an.`,
         allowedResources: 'Erlaubte Ressourcen',
         defaultAud: 'Standard-Audiences',
         descAllowedResources: `Optionale RFC 8707 Resource Indicators, die dieser Client anfordern darf. Eine leere Liste lehnt jeden 'resource'-Parameter mit 'invalid_target' ab.`,
@@ -554,6 +556,7 @@ export let I18nAdminDe: I18nAdmin = {
         sendResetEmail: 'Reset E-Mail Senden',
     },
     validation: {
+        aaguid: 'Ungültige AAGUID',
         css: 'Ungültiger CSS Wert',
         origin: 'Ungültige Origin',
         uri: 'Ungültige URI',

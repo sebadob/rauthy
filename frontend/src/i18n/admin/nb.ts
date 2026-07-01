@@ -39,6 +39,8 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
+        allowedAaguids: 'Tillatte AAGUID-er',
+        descAllowedAaguids: `Valgfri tillatelsesliste over autentiserings-AAGUID-er (kanonisk UUID-form) som godtas for maskinvareattesterte økter med denne klienten. En tom liste gir ingen AAGUID-begrensning.`,
         allowedResources: 'Tillatte ressurser',
         defaultAud: 'Standard-mottakere (aud)',
         descAllowedResources: `Valgfrie RFC 8707 ressursindikatorer denne klienten kan be om. En tom liste avviser enhver 'resource'-parameter med 'invalid_target'.`,
@@ -502,6 +504,7 @@ export let I18nAdminNb: I18nAdmin = {
         sendResetEmail: 'Send e-post for tilbakestilling',
     },
     validation: {
+        aaguid: 'Ugyldig AAGUID',
         css: 'Gyldig CSS-verdi',
         origin: 'Gyldig origin',
         uri: 'Gyldig URI',

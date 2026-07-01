@@ -40,6 +40,8 @@ export let I18nAdminRu: I18nAdmin = {
         size: 'Размер',
     },
     clients: {
+        allowedAaguids: 'Разрешённые AAGUID',
+        descAllowedAaguids: `Необязательный список разрешённых AAGUID аутентификаторов (в канонической форме UUID), принимаемых для сеансов с аппаратной аттестацией для этого клиента. Пустой список не применяет ограничения по AAGUID.`,
         allowedResources: 'Разрешённые ресурсы',
         defaultAud: 'Аудитории по умолчанию',
         descAllowedResources: `Необязательные индикаторы ресурсов RFC 8707, которые может запрашивать этот клиент. Пустой список отклоняет любой параметр 'resource' с ошибкой 'invalid_target'.`,
@@ -540,6 +542,7 @@ export let I18nAdminRu: I18nAdmin = {
         sendResetEmail: 'Отправить письмо для сброса',
     },
     validation: {
+        aaguid: 'Недопустимый AAGUID',
         css: 'Недопустимое CSS-значение',
         origin: 'Недопустимый источник',
         uri: 'Недопустимый URI',
