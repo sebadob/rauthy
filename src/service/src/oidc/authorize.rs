@@ -18,9 +18,11 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_data::{AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
+use rauthy_data::{
+    AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
+};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use tracing::{trace};
+use tracing::trace;
 use zeroize::Zeroize;
 
 pub async fn post_authorize(
@@ -59,7 +61,7 @@ pub async fn post_authorize(
     // If a possibly existing mfa cookie does not match the given email, or the user
     // has webauthn or otp disabled in the meantime, ignore it
     let has_mfa_cookie = if user.has_webauthn_enabled()
-        && let Ok(c) = WebauthnCookie::parse_validate(&ApiCookie::from_req(req,COOKIE_MFA))
+        && let Ok(c) = WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
     {
         c.email == user.email
     } else if user.has_otp_enabled().await.unwrap_or_default()
@@ -177,7 +179,9 @@ pub async fn post_authorize_refresh(
     // Webauthn overrides otp
     let require_webauthn =
         user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
-    let require_otp = !require_webauthn && user.has_otp_enabled().await? && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
+    let require_otp = !require_webauthn
+        && user.has_otp_enabled().await?
+        && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
 
     finish_authorize(
         user,
@@ -225,7 +229,8 @@ pub(crate) async fn finish_authorize(
 ) -> Result<AuthStep, ErrorResponse> {
     client.validate_enabled()?;
     client
-        .validate_mfa(&user, provider_mfa_login).await
+        .validate_mfa(&user, provider_mfa_login)
+        .await
         .inspect_err(|_| {
             // in this case, we do not want to add a login delay
             // the user password was correct, we only need an mfa being added to the account

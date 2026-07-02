@@ -30,7 +30,9 @@ use hiqlite::macros::params;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
-    ActiveOtp, NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest, UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesRequest, UserValuesResponse
+    ActiveOtp, NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest,
+    UpdateUserSelfRequest, UserAccountTypeResponse, UserResponse, UserResponseSimple,
+    UserValuesRequest, UserValuesResponse,
 };
 use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
@@ -1786,35 +1788,27 @@ impl User {
     }
 
     pub async fn get_otp_kind(&self) -> Result<Vec<ActiveOtp>, ErrorResponse> {
-        Ok(
-            OneTimePassword::find_for_user(&self.id)
-                .await?
-                .iter()
-                .map(|f: &OneTimePassword| {
-                    ActiveOtp {
-                        otp_kind: f.kind.to_string(),
-                        otp_id: f.id.clone(),
-                    }
-                })
-                .collect()
-        )
+        Ok(OneTimePassword::find_for_user(&self.id)
+            .await?
+            .iter()
+            .map(|f: &OneTimePassword| ActiveOtp {
+                otp_kind: f.kind.to_string(),
+                otp_id: f.id.clone(),
+            })
+            .collect())
     }
 
-    pub async fn has_otp_of_kind_enabled(&self, kind: &OtpKind)  -> Result<bool, ErrorResponse> {
-        Ok(
-            OneTimePassword::find_kind_for_user(kind,&self.id)
-                .await
-                .is_ok_and(|o| o.is_active)
-        )
+    pub async fn has_otp_of_kind_enabled(&self, kind: &OtpKind) -> Result<bool, ErrorResponse> {
+        Ok(OneTimePassword::find_kind_for_user(kind, &self.id)
+            .await
+            .is_ok_and(|o| o.is_active))
     }
 
     #[inline(always)]
     pub async fn has_otp_enabled(&self) -> Result<bool, ErrorResponse> {
-        Ok(
-            OneTimePassword::find_for_user(&self.id)
-                .await
-                .is_ok_and(|otps| otps.iter().any(|o| o.is_active))
-        )
+        Ok(OneTimePassword::find_for_user(&self.id)
+            .await
+            .is_ok_and(|otps| otps.iter().any(|o| o.is_active)))
     }
 
     #[inline(always)]

@@ -234,8 +234,7 @@ export const I18nKo: I18n = {
         otp: {
             title: 'One time password',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Please enter the OTP code that was sent to your email address.',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
         },
         errorReg: '가입 절차 시작 중 오류 발생',

@@ -63,9 +63,7 @@
     }
 
     async function fetchOtps() {
-        let res = await fetchGet<OtpResponse[]>(
-            `/auth/v1/users/${user.id}/otp`,
-        );
+        let res = await fetchGet<OtpResponse[]>(`/auth/v1/users/${user.id}/otp`);
         if (res.body) {
             otps = res.body;
         } else {
@@ -81,7 +79,6 @@
             await fetchOtps();
         }
     }
-
 </script>
 
 <Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />

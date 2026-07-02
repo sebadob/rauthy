@@ -1,6 +1,14 @@
-import { fetchDelete, fetchPost, fetchPut } from "$api/fetch";
-import type { OtpResponse } from "$api/types/otp";
-import type { OtpActivateRequest, OtpActivateResponse, OtpCreateRequest, OtpCreateResponse, OtpDeleteRequest, OtpDeleteResponse, OtpKind } from "$mfa/otp/types.ts";
+import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
+import type { OtpResponse } from '$api/types/otp';
+import type {
+    OtpActivateRequest,
+    OtpActivateResponse,
+    OtpCreateRequest,
+    OtpCreateResponse,
+    OtpDeleteRequest,
+    OtpDeleteResponse,
+    OtpKind,
+} from '$mfa/otp/types.ts';
 
 export async function otpRequest(
     userId: string,
@@ -13,10 +21,7 @@ export async function otpRequest(
         otp_kind: kind,
         mfa_mod_token_id: mfaModTokenId,
     };
-    let res = await fetchPost<OtpResponse>(
-        `/auth/v1/users/${userId}/otp`,
-        payload
-    );
+    let res = await fetchPost<OtpResponse>(`/auth/v1/users/${userId}/otp`, payload);
     if (res.error) {
         console.error(res.error);
         return {
@@ -43,17 +48,14 @@ export async function otpActivate(
         otp_code: code,
         mfa_mod_token_id: mfaModTokenId,
     };
-    let res = await fetchPut<null>(
-        `/auth/v1/users/${userId}/otp`,
-        payload,
-    );
+    let res = await fetchPut<null>(`/auth/v1/users/${userId}/otp`, payload);
     if (res.error) {
         console.error(res.error);
         return {
             error: res.error.message || 'Error activating the Otp',
         };
     }
-    return {}
+    return {};
 }
 
 export async function otpDelete(
@@ -65,10 +67,7 @@ export async function otpDelete(
         otp_id: id,
         mfa_mod_token_id: mfaModTokenId,
     };
-    let res = await fetchDelete<null>(
-        `/auth/v1/users/${userId}/otp`,
-        payload,
-    );
+    let res = await fetchDelete<null>(`/auth/v1/users/${userId}/otp`, payload);
     if (res.error) {
         console.error(res.error);
         return {

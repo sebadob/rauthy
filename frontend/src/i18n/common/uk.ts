@@ -246,8 +246,7 @@ export const I18nUk: I18n = {
         otp: {
             title: 'One time password',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Please enter the OTP code that was sent to your email address.',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
         },
         errorReg: 'Помилка під час запуску процесу реєстрації',

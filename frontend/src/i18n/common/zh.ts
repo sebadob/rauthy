@@ -226,10 +226,9 @@ export const I18nZh: I18n = {
         otp: {
             title: 'One time password',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Please enter the OTP code that was sent to your email address.',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
-        },    
+        },
         errorReg: '开始注册过程时出现错误。',
         lastUsed: '最后使用',
         noKey: '此插槽没有已注册的安全密钥',

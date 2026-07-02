@@ -241,14 +241,14 @@ export const I18nEn: I18n = {
         otp: {
             title: 'One time password',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Please enter the OTP code that was sent to your email address.',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
         },
         errorReg: 'Error starting the Registration process',
         lastUsed: 'Last used',
         noKey: 'No Security key registered on this slot',
-        reAuthenticatePasskey: 'Before you can modify your MFA, you need to authenticate with a passkey:',
+        reAuthenticatePasskey:
+            'Before you can modify your MFA, you need to authenticate with a passkey:',
         reAuthenticatePwd:
             'Before you can modify your MFA, you need to re-authenticate with your password.',
         reAuthenticateOtp:

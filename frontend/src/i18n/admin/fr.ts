@@ -522,7 +522,8 @@ export let I18nAdminFr: I18nAdmin = {
         mfa: {
             otp: {
                 title: 'One Time Password',
-                mfaDelete1: 'Vous pouvez supprimer les mots de passe à usage unique de cet utilisateur.',
+                mfaDelete1:
+                    'Vous pouvez supprimer les mots de passe à usage unique de cet utilisateur.',
                 mfaDelete2: `Attention ! La suppression d’un mot de passe à usage unique est irréversible ; l’utilisateur doit procéder à une
             nouvelle inscription complète.`,
                 noMfaOtps: 'Cet utilisateur n’a pas de mot de passe à usage unique',

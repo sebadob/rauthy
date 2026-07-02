@@ -1,5 +1,5 @@
-import type { MfaPurpose } from "$api/types/mfa";
-import type { OtpResponse } from "$api/types/otp";
+import type { MfaPurpose } from '$api/types/mfa';
+import type { OtpResponse } from '$api/types/otp';
 
 export type OtpAdditionalData = undefined | OtpLoginFinishResponse | OtpServiceReq;
 
@@ -35,10 +35,7 @@ export interface OtpServiceReq {
     code: string;
 }
 
-export type OtpKind =
-    | 'email'
-    | 'phone'
-    | 'time';
+export type OtpKind = 'email' | 'phone' | 'time';
 
 export interface OtpCreateRequest {
     otp_name?: string;

@@ -21,7 +21,7 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rust_embed::Embed;
-use tracing::{error};
+use tracing::error;
 
 pub mod api_keys;
 pub mod atproto;

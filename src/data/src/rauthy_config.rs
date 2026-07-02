@@ -2483,14 +2483,13 @@ impl Vars {
     }
 
     fn parse_otp(&mut self, table: &mut toml::Table) {
-
         // [otp]
         let mut table = t_table(table, "otp");
         if let Some(v) = t_bool(&mut table, "otp", "enable", "OTP_ENABLE") {
             self.otp.enable = v;
         }
         if let Some(v) = t_u8(&mut table, "otp", "length", "OTP_LENGTH") {
-            self.otp.length = if v < 9 {v} else {6};
+            self.otp.length = if v < 9 { v } else { 6 };
         }
         if let Some(v) = t_u16(&mut table, "otp", "exp", "OTP_EXP") {
             self.otp.exp = v;
@@ -2498,8 +2497,17 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "otp", "renew_exp", "OTP_RENEW_EXP") {
             self.otp.renew_exp = v;
         }
-        if let Some(v) = t_u16(&mut table, "otp", "default_digest_len", "OTP_DEFAULT_DIGEST_LEN") {
-            self.otp.default_digest_len = if v == 256 || v == 384 || v == 512 {v} else {512};
+        if let Some(v) = t_u16(
+            &mut table,
+            "otp",
+            "default_digest_len",
+            "OTP_DEFAULT_DIGEST_LEN",
+        ) {
+            self.otp.default_digest_len = if v == 256 || v == 384 || v == 512 {
+                v
+            } else {
+                512
+            };
         }
 
         // [otp.email]

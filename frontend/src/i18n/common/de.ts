@@ -248,8 +248,7 @@ export const I18nDe: I18n = {
         otp: {
             title: 'Einmalpasswort',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Please enter the OTP code that was sent to your email address.',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'Einmalpasswort',
         },
         errorReg: 'Fehler beim Starten der Registrierung',

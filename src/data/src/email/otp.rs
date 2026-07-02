@@ -1,6 +1,10 @@
-use std::time::Duration;
+use crate::{
+    email::{i18n::otp::I18nEmailOtp, mailer::EMail},
+    entity::{theme::ThemeCssFull, users::User},
+    rauthy_config::RauthyConfig,
+};
 use askama::Template;
-use crate::{email::{i18n::otp::I18nEmailOtp, mailer::EMail}, entity::{theme::ThemeCssFull, users::User}, rauthy_config::{RauthyConfig}};
+use std::time::Duration;
 use tracing::error;
 
 #[derive(Default, Template)]
@@ -42,7 +46,7 @@ pub async fn send_email_otp(code: &str, user: &User) {
 
         let text = EmailOtpTxt {
             email_sub_prefix,
-            code: code,
+            code,
             exp: exp.clone(),
             header: i18n.header,
             text: i18n.text.unwrap_or_default(),
@@ -54,8 +58,8 @@ pub async fn send_email_otp(code: &str, user: &User) {
             lang: user.language.as_str(),
             theme_vars,
             email_sub_prefix,
-            code: code,
-            exp: exp,
+            code,
+            exp,
             header: i18n.header,
             text: i18n.text.unwrap_or_default(),
             validity: i18n.validity.unwrap_or_default(),

@@ -1086,8 +1086,9 @@ impl Client {
         provider_mfa_login: Option<ProviderMfaLogin>,
     ) -> Result<(), ErrorResponse> {
         let force_mfa = self.id != "rauthy" && self.force_mfa;
-        let has_mfa =
-            user.has_webauthn_enabled() || provider_mfa_login == Some(ProviderMfaLogin::Yes) || user.has_otp_enabled().await.unwrap_or_default();
+        let has_mfa = user.has_webauthn_enabled()
+            || provider_mfa_login == Some(ProviderMfaLogin::Yes)
+            || user.has_otp_enabled().await.unwrap_or_default();
 
         if force_mfa && !has_mfa {
             trace!("MFA required for this client but the user has none");

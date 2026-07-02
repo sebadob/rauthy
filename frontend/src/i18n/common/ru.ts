@@ -241,11 +241,10 @@ export const I18nRu: I18n = {
         otp: {
             title: 'One time password',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Please enter the OTP code that was sent to your email address.',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
         },
-        
+
         errorReg: 'Ошибка при запуске процесса регистрации',
         lastUsed: 'Последнее использование',
         noKey: 'На этом слоте не зарегистрирован ключ безопасности',

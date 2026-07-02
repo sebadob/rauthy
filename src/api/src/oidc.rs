@@ -142,14 +142,13 @@ pub async fn get_authorize(
             // because the authentication happens each time anyway
             force_new_session = false;
         }
-    } else if RauthyConfig::get().vars.otp.enable == true
-        && let Ok(mfa_cookie) = OtpCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA)) 
-        && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await 
+    } else if RauthyConfig::get().vars.otp.enable
+        && let Ok(mfa_cookie) = OtpCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+        && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
+        && user.has_otp_enabled().await?
     {
-        if user.has_otp_enabled().await? {
-            action = FrontendAction::MfaLogin(mfa_cookie.email);
-            force_new_session = false;
-        }
+        action = FrontendAction::MfaLogin(mfa_cookie.email);
+        force_new_session = false;
     }
 
     // check for `prompt=none` and redirect if we don't have a valid session

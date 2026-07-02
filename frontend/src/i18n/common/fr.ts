@@ -244,8 +244,7 @@ export const I18nFr: I18n = {
         otp: {
             title: 'Code à usage unique (OTP)',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Entrez le code à usage unique qui vous a été envoyé par e-mail',
+            activationCode: 'Entrez le code à usage unique qui vous a été envoyé par e-mail',
             code: 'Code à usage unique',
         },
         errorReg: `Erreur lors du démarrage du processus d'enregistrement`,

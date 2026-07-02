@@ -9,7 +9,11 @@
     import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
     import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
     import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
-    import type { ActiveOtp, OtpLoginResponse, WebauthnLoginResponse } from '$api/types/authorize.ts';
+    import type {
+        ActiveOtp,
+        OtpLoginResponse,
+        WebauthnLoginResponse,
+    } from '$api/types/authorize.ts';
     import type { ProviderCallbackRequest } from '$api/types/auth_provider.ts';
     import { IS_DEV } from '$utils/constants';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
@@ -25,7 +29,7 @@
 
     let userId: undefined | string = $state();
     let mfaPurpose: undefined | MfaPurpose = $state();
-    let mfaKind: undefined | "webauthn" | "otp" = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
     let activeOtps: undefined | ActiveOtp[] = $state();
 
     let tos: undefined | ToSLatestResponse = $state();
@@ -66,16 +70,17 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse>(
-            url,
-            payload,
-        );
+        let res = await fetchPost<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >(url, payload);
 
         await handleAuthRes(res);
     });
 
     async function handleAuthRes(
-        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse>,
+        res?: IResponse<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >,
     ) {
         if (!res) {
             return;
@@ -95,10 +100,12 @@
                     activeOtps = body.active_otps;
                     mfaKind = 'otp';
                 } else {
-                    mfaKind = "webauthn";
+                    mfaKind = 'webauthn';
                 }
             } else {
-                console.error('did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200');
+                console.error(
+                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                );
             }
         } else if (res.status === 204) {
             // in case of a 204, we have done a user federation on an existing account -> just redirect

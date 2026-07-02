@@ -1,6 +1,13 @@
-import { fetchPost } from "$api/fetch";
-import type { MfaPurpose } from "$api/types/mfa";
-import type {OtpAdditionalData, OtpAuthFinishRequest, OtpAuthFinishResult, OtpAuthStartRequest, OtpAuthStartResponse, OtpAuthStartResult } from "./types";
+import { fetchPost } from '$api/fetch';
+import type { MfaPurpose } from '$api/types/mfa';
+import type {
+    OtpAdditionalData,
+    OtpAuthFinishRequest,
+    OtpAuthFinishResult,
+    OtpAuthStartRequest,
+    OtpAuthStartResponse,
+    OtpAuthStartResult,
+} from './types';
 
 export async function otpAuthStart(
     userId: string,
@@ -39,10 +46,10 @@ export async function otpAuthFinish(
         code,
         otp_code: otpCode,
     };
-    console.log("payload start finish: ", payloadFinish);
+    console.log('payload start finish: ', payloadFinish);
     let res = await fetchPost<OtpAdditionalData>(
         `/auth/v1/users/${userId}/otp/auth/finish`,
-        payloadFinish
+        payloadFinish,
     );
     if (res.status === 202 || res.status === 206) {
         return {

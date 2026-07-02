@@ -26,7 +26,9 @@ use rauthy_data::entity::email_rate_limit::EmailRateLimit;
 use rauthy_data::entity::groups::Group;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_mod_token::MfaModToken;
-use rauthy_data::entity::one_time_password::{self, OneTimePassword, OtpAdditionalData, OtpKind, OtpServiceReq};
+use rauthy_data::entity::one_time_password::{
+    self, OneTimePassword, OtpAdditionalData, OtpKind, OtpServiceReq,
+};
 use rauthy_data::entity::password::PasswordPolicy;
 use rauthy_data::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_data::entity::pow::PowEntity;
@@ -729,7 +731,8 @@ pub async fn post_user_mfa_token(
 
     if let Some(password) = payload.password {
         if user.has_webauthn_enabled()
-            || (RauthyConfig::get().vars.otp.enable && user.has_otp_enabled().await?) {
+            || (RauthyConfig::get().vars.otp.enable && user.has_otp_enabled().await?)
+        {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "must provide `mfa_code` instead of `password`",
@@ -1279,7 +1282,7 @@ async fn user_revoke_handle(
 }
 
 /// Get status of all registered OTP of a user
-/// 
+///
 /// **Permissions**
 /// - authenticated and logged in user for this very {id}
 /// - authenticated and logged in admin
@@ -1319,7 +1322,7 @@ pub async fn get_user_otps(
 }
 
 /// Create a new OTP
-/// 
+///
 /// **Permissions**
 /// - authenticated and logged in user for this very {id}
 #[utoipa::path(
@@ -1373,11 +1376,11 @@ pub async fn create_user_otp(
     };
     otp.request_otp().await?;
     let resp: OtpGetResponse = otp.into();
-    return Ok(HttpResponse::Created().json(resp))
+    Ok(HttpResponse::Created().json(resp))
 }
 
 /// Activate an OTP
-/// 
+///
 /// **Permissions**
 /// - authenticated and logged in user for this very {id}
 #[utoipa::path(
@@ -1419,7 +1422,7 @@ pub async fn activate_user_otp(
     if let Ok(mut otp) = OneTimePassword::find_by_id_for_user(&payload.otp_id, &user_id).await {
         otp.validate(&user_id, &payload.otp_code).await?;
         otp.activate().await?;
-        return Ok(HttpResponse::Ok().finish())
+        return Ok(HttpResponse::Ok().finish());
     }
     Err(ErrorResponse::new(
         ErrorResponseType::NotFound,
@@ -1428,7 +1431,7 @@ pub async fn activate_user_otp(
 }
 
 /// Delete an OTP
-/// 
+///
 /// **Permissions**
 /// - authenticated and logged in user for this very {id}
 /// - authenticated and logged in admin
@@ -1467,9 +1470,9 @@ pub async fn delete_user_otp(
             false
         }
     };
-    
+
     let user_id: String = id.into_inner();
-    
+
     if !is_admin {
         principal.is_user(&user_id)?;
 
@@ -1483,9 +1486,15 @@ pub async fn delete_user_otp(
         let ip = real_ip_from_req(&req)?;
         token.validate(principal.user_id()?, ip)?;
 
-        warn!("Otp delete request from user {} for otp {}", user_id, payload.otp_id);
+        warn!(
+            "Otp delete request from user {} for otp {}",
+            user_id, payload.otp_id
+        );
     } else if principal.is_user(&user_id).is_err() {
-        warn!("Otp delete request from admin for user {} for otp {}", user_id, payload.otp_id);
+        warn!(
+            "Otp delete request from admin for user {} for otp {}",
+            user_id, payload.otp_id
+        );
     }
 
     if let Ok(otp) = OneTimePassword::find_by_id_for_user(&payload.otp_id, &user_id).await {
@@ -1496,17 +1505,17 @@ pub async fn delete_user_otp(
         if let Err(err) = resp.add_cookie(&cookie) {
             error!("Error deleting MFA cookie in delete_user_otp: {}", err);
         }
-        return Ok(resp)
+        return Ok(resp);
     }
 
     Err(ErrorResponse::new(
         ErrorResponseType::NotFound,
-        "otp does not exist"
+        "otp does not exist",
     ))
 }
 
 /// Starts the authentication process with otp for this user
-/// 
+///
 /// **Permissions**
 /// - authenticated and logged in user for this very {id}
 #[utoipa::path(
@@ -1570,14 +1579,13 @@ pub async fn post_otp_auth_start(
             id.into_inner()
         }
         _ => {
-            // for all other purposes, we need an authenticated session 
+            // for all other purposes, we need an authenticated session
             principal.validate_session_auth()?;
 
             // make sure the principal is this very user
             let id = id.into_inner();
             principal.is_user(&id)?;
             id
-
         }
     };
 
@@ -1587,7 +1595,7 @@ pub async fn post_otp_auth_start(
 }
 
 /// Finishes the authentication process with otp for this user
-/// 
+///
 /// **Permissions**
 /// - authenticated and logged in user for this very {id}
 #[utoipa::path(
@@ -1626,7 +1634,8 @@ pub async fn post_otp_auth_finish(
     // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
-    let res = one_time_password::auth_finish(id, &req, browser_id, principal.session, payload).await?;
+    let res =
+        one_time_password::auth_finish(id, &req, browser_id, principal.session, payload).await?;
     Ok(res.into_response())
 }
 

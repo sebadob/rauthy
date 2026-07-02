@@ -187,9 +187,7 @@ mod tests {
         assert!(!is_path_csrf_exception(
             "what_ever_in_front/webauthn/auth/finish"
         ));
-        assert!(!is_path_csrf_exception(
-            "what_ever_in_front/otp/auth/start"
-        ));
+        assert!(!is_path_csrf_exception("what_ever_in_front/otp/auth/start"));
         assert!(!is_path_csrf_exception(
             "what_ever_in_front/otp/auth/finish"
         ));

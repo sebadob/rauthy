@@ -666,7 +666,10 @@ impl Session {
                     "/auth/v1/tos/accept",
                     "/auth/v1/tos/deny",
                 ];
-                if exceptions.contains(&req_path) || req_path.contains("/webauthn/auth/") || req_path.contains("/otp/auth/") {
+                if exceptions.contains(&req_path)
+                    || req_path.contains("/webauthn/auth/")
+                    || req_path.contains("/otp/auth/")
+                {
                     return true;
                 }
 

@@ -879,14 +879,16 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(sql_2, &[
+            DB::pg_execute(
+                sql_2,
+                &[
                     &b.id,
                     &b.user_id,
                     &b.name,
                     &b.secret,
                     &b.last_used,
                     &b.kind.as_str(),
-                    &b.is_active
+                    &b.is_active,
                 ],
             )
             .await?;

@@ -20,46 +20,46 @@
 </script>
 
 {#if otp.is_active || showInactive}
-<div class="keyContainer">
-    <div class="row">
-        <span class="label">
-            {#if otp.kind == 'email'}
-                {t.mfa.otp.titleEmail}
-            {:else}
-                <!-- todo: implement other kind of otp -->
-                Not implemented
-            {/if}
-        </span>
+    <div class="keyContainer">
+        <div class="row">
+            <span class="label">
+                {#if otp.kind == 'email'}
+                    {t.mfa.otp.titleEmail}
+                {:else}
+                    <!-- todo: implement other kind of otp -->
+                    Not implemented
+                {/if}
+            </span>
 
-        <div class="name">
-            <b>{otp.name}</b>
-            {#if otp.is_active}
+            <div class="name">
+                <b>{otp.name}</b>
+                {#if otp.is_active}
                     <div style:margin-bottom="-.25rem">
                         <IconCheckBadge width="1rem" color="hsl(var(--accent))" />
                     </div>
-            {:else}
-                <div style:margin-bottom="-.25rem">
-                    <IconStop width="1rem" color="hsl(var(--accent))" />
-                </div>
-            {/if}
+                {:else}
+                    <div style:margin-bottom="-.25rem">
+                        <IconStop width="1rem" color="hsl(var(--accent))" />
+                    </div>
+                {/if}
+            </div>
         </div>
-    </div>
-    <div class="row">
-        <span class="label">
-            {t.mfa.lastUsed}
-        </span>
-        <span class="font-mono">{formatDateFromTs(otp.last_used)}</span>
-    </div>
+        <div class="row">
+            <span class="label">
+                {t.mfa.lastUsed}
+            </span>
+            <span class="font-mono">{formatDateFromTs(otp.last_used)}</span>
+        </div>
 
-    <div class="row">
-        <div></div>
-        <div class="deleteBtn">
-            <Button level={-3} onclick={() => onDelete(otp.id.toString())}>
-                {t.common.delete}
-            </Button>
+        <div class="row">
+            <div></div>
+            <div class="deleteBtn">
+                <Button level={-3} onclick={() => onDelete(otp.id.toString())}>
+                    {t.common.delete}
+                </Button>
+            </div>
         </div>
     </div>
-</div>
 {/if}
 
 <style>

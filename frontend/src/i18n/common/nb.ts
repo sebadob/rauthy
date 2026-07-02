@@ -238,8 +238,7 @@ export const I18nNb: I18n = {
         otp: {
             title: 'Engangspassord',
             titleEmail: 'Email-based OTP',
-            activationCode:
-                'Please enter the OTP code that was sent to your email address.',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'Engangspassord',
         },
         errorReg: 'Feil ved oppstart av registrering',

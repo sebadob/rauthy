@@ -10,10 +10,7 @@
     import { PATTERN_OTP_CODE, PATTERN_USER_NAME } from '$utils/patterns';
     import { webauthnReg } from '$mfa/webauthn/registration';
     import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import type {
-        WebauthnAdditionalData,
-        WebauthnServiceReq,
-    } from '$mfa/webauthn/types.ts';
+    import type { WebauthnAdditionalData, WebauthnServiceReq } from '$mfa/webauthn/types.ts';
     import UserPasskey from '$lib5/UserPasskey.svelte';
     import type { MfaModTokenResponse, UserMfaTokenRequest } from '$api/types/mfa_mod_token';
     import Modal from '$lib/Modal.svelte';
@@ -49,7 +46,7 @@
     let showDelete = $state(untrack(() => user.account_type) === 'password');
 
     let mfaPurpose: undefined | MfaPurpose = $state();
-    let mfaKind: undefined | "webauthn" | "otp" = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
     let passkeyName = $state('');
     let isInputError = $state(false);
     let isLoading = $state(false);
@@ -78,7 +75,7 @@
         if (isOtpEnabled) {
             fetchOtps();
         }
-    })
+    });
 
     $effect(() => {
         if (passkeys.length > 0 && user.account_type === 'passkey') {
@@ -193,9 +190,7 @@
     async function fetchOtps() {
         err = false;
 
-        let res = await fetchGet<OtpResponse[]>(
-            `/auth/v1/users/${session.get()?.user_id}/otp`,
-        );
+        let res = await fetchGet<OtpResponse[]>(`/auth/v1/users/${session.get()?.user_id}/otp`);
         if (res.body) {
             otps = res.body;
             res.body.forEach(otp => {
@@ -468,7 +463,12 @@
 
         {#if passkeys.length > 0}
             <div class="button">
-                <Button onclick={() => {mfaPurpose = 'Test'; mfaKind = 'webauthn';}}>{t.mfa.test}</Button>
+                <Button
+                    onclick={() => {
+                        mfaPurpose = 'Test';
+                        mfaKind = 'webauthn';
+                    }}>{t.mfa.test}</Button
+                >
             </div>
         {/if}
 
@@ -495,7 +495,7 @@
                 <Input
                     bind:ref={refInput}
                     name="otp"
-                    autocomplete='one-time-code'
+                    autocomplete="one-time-code"
                     label={t.mfa.otp.code}
                     placeholder={'0'.repeat(otpSize)}
                     maxLength={otpSize}
@@ -503,12 +503,19 @@
                     pattern={PATTERN_OTP_CODE}
                     bind:isError={isInputError}
                 />
-                <Button type='submit'>{t.mfa.register}</Button>
-                <Button level={3} onclick={() => {showOtpInput = false;}}>{t.common.cancel}</Button>
+                <Button type="submit">{t.mfa.register}</Button>
+                <Button
+                    level={3}
+                    onclick={() => {
+                        showOtpInput = false;
+                    }}>{t.common.cancel}</Button
+                >
             </Form>
         {:else}
             <div class="button">
-                <Button level={hasOtp === false ? 1 : 2} onclick={handleCreateOtp}>{t.mfa.registerNew}</Button>
+                <Button level={hasOtp === false ? 1 : 2} onclick={handleCreateOtp}
+                    >{t.mfa.registerNew}</Button
+                >
             </div>
         {/if}
 
@@ -526,7 +533,12 @@
 
         {#if hasOtp}
             <div class="button">
-                    <Button onclick={() => {mfaPurpose = 'Test'; mfaKind = 'otp';}}>{t.mfa.test}</Button>
+                <Button
+                    onclick={() => {
+                        mfaPurpose = 'Test';
+                        mfaKind = 'otp';
+                    }}>{t.mfa.test}</Button
+                >
             </div>
         {/if}
 
