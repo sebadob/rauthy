@@ -36,6 +36,7 @@ pub enum EventType {
     LoginNewLocation,
     TokenIssued,
     CredentialStuffing,
+    EmailSendError,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

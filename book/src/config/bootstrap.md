@@ -1,6 +1,6 @@
 # Bootstrapping
 
-Rauthy can bootstrap most values that are nore statically configured. There are only very few
+Rauthy can bootstrap most values that are not statically configured. There are only very few
 exceptions, so you should be able to achieve anything you need. The most important things live in
 the config to be able to run everything from a single file. However, when you want to do more
 advanced / custom stuff, you will need to provide additional JSON files.
@@ -60,61 +60,104 @@ it is a bit more cumbersome to use from outside the browser because of additiona
 security features. If you want to automatically set up Rauthy with external tooling after the first
 startup, you would want to do this with an API key most probably.
 
-If Rauthy starts up with an empty database, you can bootstrap a single API key with providing a
-base64 encoded json.
+If Rauthy starts up with an empty database, you can bootstrap API keys via
+`api_keys.json` in your configured `bootstrap_dir`. The older `bootstrap.api_key`
+config value shown below is still supported for a single key.
 
-An example json, which would create a key named `bootstrap` with access to `clients, roles, groups`
-with all `read, write, update, delete` could look like this:
+An example `api_keys.json`, which would create a key named `bootstrap` with access to
+`clients`, `roles`, and `groups` with all `read`, `create`, `update`, `delete`
+rights could look like this:
 
 ```json
-{
-  "name": "bootstrap",
-  "exp": 1735599600,
-  "access": [
-    {
-      "group": "Clients",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
+[
+  {
+    "name": "bootstrap",
+    "exp": 1735599600,
+    "secret": {
+      "Plain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    {
-      "group": "Roles",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
-    },
-    {
-      "group": "Groups",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
-    }
-  ]
-}
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      },
+      {
+        "group": "Roles",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      },
+      {
+        "group": "Groups",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      }
+    ]
+  }
+]
 ```
 
-The config documentation for the bootstrap value should explain all further questions:
+The `secret` can be `{"Plain": "..."}`, `{"Encrypted": "..."}`, or `"generate"`. Plain secrets must be at
+least 64 characters long. Encrypted secrets are encrypted with
+[`cryptr`](https://github.com/sebadob/cryptr) and base64-encoded, just like encrypted client
+secrets. Generated API-key secrets store the full usable `name$secret` token in the generated
+bootstrap secret container under `api-key/<name>/token`.
+
+```json
+[
+  {
+    "name": "provision",
+    "exp": 1735599600,
+    "secret": "generate",
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": ["read", "create", "update", "delete"]
+      },
+      {
+        "group": "Secrets",
+        "access_rights": ["read", "update"]
+      }
+    ]
+  }
+]
+```
+
+```admonish caution
+Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
+that expires after your first-start provisioning is complete, for example after about 10
+minutes. Long-lived bootstrap API keys increase the blast radius if the bootstrap files or
+deployment secrets are leaked. The example timestamp above is intentionally finite; replace it
+with a short-lived value for your deployment.
+```
+
+The legacy config documentation for bootstrapping a single API key should explain all further
+questions:
 
 ```toml
 [bootstrap]
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option<i64>,
 #     access: Vec<ApiKeyAccess>,
 # }
@@ -136,6 +179,7 @@ The config documentation for the bootstrap value should explain all further ques
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -184,10 +228,118 @@ Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidw
 ```
 
 ```admonish caution
-At the time of writing, it is not possible (yet) to provide API key secrets as encrypted values.
-This will probably be added in a future version. If you bootstrap API keys for production setup,
-make sure they always auto-expire.
+If you bootstrap API keys for production setup, make sure they always auto-expire. Bootstrap
+JSON is only read while initializing an empty production database; changing `api_keys.json`
+later does not reconcile live API keys.
 ```
+
+## Generated Bootstrap Secrets
+
+Generated bootstrap credentials are stored in an encrypted local container before their matching
+database rows are inserted. This keeps later phases from creating live client, user, or API-key
+rows whose generated plaintext cannot be recovered.
+
+The container is a single AEAD-encrypted JSON payload. The expiry deadline lives inside that
+encrypted payload, so startup and runtime expiry checks decrypt the container first. A positive TTL
+also schedules a runtime purge after each write. Set the TTL to `0` only if you intentionally want
+to keep the encrypted container for manual extraction and purge it yourself.
+
+Generated values are a first-boot mechanism only. The JSON bootstrap files are read while Rauthy
+initializes an empty production database. If you add `"generate"` to `clients.json`, `users.json`,
+or `api_keys.json` after the database has already been initialized, that day-2 change is ignored by
+the first-boot bootstrap gate and no new generated secret is written.
+
+```toml
+[bootstrap]
+# Path to the encrypted generated-secret container. If unset, Rauthy stores it
+# below Hiqlite's configured data directory as:
+#
+# `${cluster.data_dir}/bootstrap.secrets.enc`
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Time in seconds before generated bootstrap secrets expire. A value of `0`
+# disables expiry and runtime auto-purge.
+#
+# default: 600
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+generated_secrets_ttl = 600
+```
+
+Use the local CLI to retrieve or purge the encrypted container after first start. The command does
+not talk to the Rauthy server.
+
+```bash
+rauthy bootstrap get \
+  -c config.toml \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+
+rauthy bootstrap get -c config.toml --format env
+rauthy bootstrap purge -c config.toml
+```
+
+`get --format env` emits names that include the entity kind, sanitized id, and field, for example
+`RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...` and
+`RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...`.
+
+The CLI loads the existing Rauthy config and initializes the configured encryption keys before it
+decrypts the container. It does not accept encryption keys or the container path as command-line
+arguments.
+
+API keys can request a generated token with `"secret": "generate"`. `get --format env` emits it as
+`RAUTHY_BOOTSTRAP_API_KEY_<SANITIZED_NAME>_TOKEN=...`.
+
+Clients can request a generated confidential-client secret with `"secret": "generate"`:
+
+```json
+[
+  {
+    "id": "my-service",
+    "name": "My Service",
+    "secret": "generate",
+    "redirect_uris": ["https://my-service.example.com/callback"],
+    "enabled": true,
+    "flows_enabled": ["authorization_code", "refresh_token"],
+    "access_token_alg": "EdDSA",
+    "id_token_alg": "EdDSA",
+    "auth_code_lifetime": 60,
+    "access_token_lifetime": 3600,
+    "scopes": ["openid", "profile", "email"],
+    "default_scopes": ["openid", "profile", "email"],
+    "force_mfa": false
+  }
+]
+```
+
+If the `secret` field is absent or `null`, the client remains public and Rauthy forces `S256` PKCE.
+Use `"secret": "generate"` only when you want a confidential client and plan to extract the
+generated secret from the encrypted container.
+
+Users can request a generated password with `"password": "generate"`:
+
+```json
+[
+  {
+    "email": "admin@example.com",
+    "password": "generate",
+    "roles": ["admin"],
+    "enabled": true,
+    "email_verified": true
+  }
+]
+```
+
+Rauthy writes the plaintext password to the encrypted container before hashing it and inserting the
+user row. The database stores only the password hash.
+
+API keys in `api_keys.json` can request a generated token with `"secret": "generate"`. The full
+usable `name$secret` token is written to the encrypted container.
+Extract it with `--kind api-key --id <key-name> --field token` and use it directly as the
+`Authorization` header value: `Authorization: API-Key <token>`.
 
 ## Advanced / Custom Configuration
 
@@ -202,6 +354,7 @@ First, make sure to check the `bootstrap_dir` and configure it if necessary:
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json

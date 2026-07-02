@@ -43,6 +43,7 @@ pub struct WellKnown {
     pub service_documentation: String,
     pub ui_locales_supported: Vec<String>,
     pub claims_parameter_supported: bool,
+    pub client_id_metadata_document_supported: bool,
 }
 
 #[tokio::test]

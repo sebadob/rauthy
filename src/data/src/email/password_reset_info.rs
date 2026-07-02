@@ -1,6 +1,6 @@
 use crate::email::email_ts_prettify;
 use crate::email::i18n::reset_info::I18nEmailResetInfo;
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, EmailType};
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -69,6 +69,7 @@ pub async fn send_pwd_reset_info(user: &User) {
     };
 
     let req = EMail {
+        typ: EmailType::PasswordResetInfo,
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),

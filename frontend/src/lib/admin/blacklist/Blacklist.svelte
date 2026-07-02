@@ -21,9 +21,15 @@
     import Tooltip from '$lib5/Tooltip.svelte';
     import Pagination from '$lib5/pagination/Pagination.svelte';
     import { useTrigger } from '$state/callback.svelte';
+    import { useSession } from '$state/session.svelte';
 
     let t = useI18n();
     let ta = useI18nAdmin();
+
+    // group admins get a read-only blacklist view for debugging; adding / removing entries
+    // is full-admin only
+    let session = useSession('admin');
+    let isAdmin = $derived(session.isAdmin());
 
     let refOpts: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -132,36 +138,38 @@
             searchWidth="min(15.75rem, calc(100dvw - 1rem))"
         />
 
-        <ButtonAddModal level={1} bind:closeModal>
-            <div class="addNew">
-                <Form action="/auth/v1/blacklist" {onSubmit}>
-                    <Input
-                        bind:ref={refIp}
-                        bind:value={ip}
-                        autocomplete="off"
-                        label="IP"
-                        placeholder="IPv4"
-                        required
-                        maxLength={40}
-                    />
-                    <InputDateTimeCombo
-                        label="Expiry"
-                        bind:value={expDate}
-                        bind:timeValue={expTime}
-                        min={fmtDateInput()}
-                        withTime
-                    />
+        {#if isAdmin}
+            <ButtonAddModal level={1} bind:closeModal>
+                <div class="addNew">
+                    <Form action="/auth/v1/blacklist" {onSubmit}>
+                        <Input
+                            bind:ref={refIp}
+                            bind:value={ip}
+                            autocomplete="off"
+                            label="IP"
+                            placeholder="IPv4"
+                            required
+                            maxLength={40}
+                        />
+                        <InputDateTimeCombo
+                            label="Expiry"
+                            bind:value={expDate}
+                            bind:timeValue={expTime}
+                            min={fmtDateInput()}
+                            withTime
+                        />
 
-                    <div style:height=".5rem"></div>
-                    <Button type="submit">
-                        {t.common.save}
-                    </Button>
-                    <div class="err">
-                        {errSave}
-                    </div>
-                </Form>
-            </div>
-        </ButtonAddModal>
+                        <div style:height=".5rem"></div>
+                        <Button type="submit">
+                            {t.common.save}
+                        </Button>
+                        <div class="err">
+                            {errSave}
+                        </div>
+                    </Form>
+                </div>
+            </ButtonAddModal>
+        {/if}
     </div>
 
     <div id="blacklist">
@@ -185,13 +193,15 @@
                     <div class="date">
                         {formatDateFromTs(entry.exp)}
                     </div>
-                    <Button invisible onclick={() => deleteIp(entry.ip)}>
-                        <Tooltip text={t.common.delete}>
-                            <div class="delete">
-                                <IconStop width="1.25rem" />
-                            </div>
-                        </Tooltip>
-                    </Button>
+                    {#if isAdmin}
+                        <Button invisible onclick={() => deleteIp(entry.ip)}>
+                            <Tooltip text={t.common.delete}>
+                                <div class="delete">
+                                    <IconStop width="1.25rem" />
+                                </div>
+                            </Tooltip>
+                        </Button>
+                    {/if}
                 </div>
             {/snippet}
 

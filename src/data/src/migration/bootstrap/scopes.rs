@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::scopes::Scope as ScopeEntity;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::types::Scope;
@@ -19,8 +20,8 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
         .collect::<Vec<_>>();
 
     let sql = r#"
-INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
-VALUES ($1, $2, $3, $4)"#;
+INSERT INTO scopes (id, name, attr_include_access, attr_include_id, claims_at_root)
+VALUES ($1, $2, $3, $4, $5)"#;
 
     for scope in scopes {
         let attr_include_access = build_attrs(
@@ -36,19 +37,36 @@ VALUES ($1, $2, $3, $4)"#;
             "attr_include_id",
         );
 
+        // `claims_at_root` is only meaningful for custom scopes; normalize it so a
+        // default OIDC scope can never be stored as requesting root emission.
+        let claims_at_root =
+            scope.claims_at_root.unwrap_or(false) && ScopeEntity::is_custom(&scope.name);
+
         let id = scope.id.unwrap_or_else(new_store_id);
 
         if is_hiqlite() {
             DB::hql()
                 .execute(
                     sql,
-                    params!(id, scope.name, attr_include_access, attr_include_id),
+                    params!(
+                        id,
+                        scope.name,
+                        attr_include_access,
+                        attr_include_id,
+                        claims_at_root
+                    ),
                 )
                 .await?;
         } else {
             DB::pg_execute(
                 sql,
-                &[&id, &scope.name, &attr_include_access, &attr_include_id],
+                &[
+                    &id,
+                    &scope.name,
+                    &attr_include_access,
+                    &attr_include_id,
+                    &claims_at_root,
+                ],
             )
             .await?;
         }

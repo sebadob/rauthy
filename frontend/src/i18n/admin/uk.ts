@@ -39,6 +39,10 @@ export let I18nAdminUk: I18nAdmin = {
         size: 'Розмір',
     },
     clients: {
+        allowedResources: 'Дозволені ресурси',
+        defaultAud: 'Аудиторії за замовчуванням',
+        descAllowedResources: `Необов'язкові індикатори ресурсів RFC 8707, які може запитувати цей клієнт. Порожній список відхиляє будь-який параметр 'resource' з помилкою 'invalid_target'.`,
+        descDefaultAud: `Аудиторії, які завжди додаються до токенів цього клієнта, незалежно від параметра 'resource'.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
             descHsl: `Наступні значення мають бути вказані як HSL-значення. Ви вказуєте лише базові кольори.
@@ -48,6 +52,15 @@ export let I18nAdminUk: I18nAdmin = {
             descVariables: `Кожна наступна мітка є водночас назвою CSS-змінної. Це означає,
                 що ви можете посилатися на них у довільних полях, наприклад: <code>hsla(var(--action) / .7)</code>.`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: 'Конфіденційний',
         confidentialNoSecret: 'Цей клієнт не є конфіденційним, тому не має секрету.',
         config: 'Конфігурація клієнта',
@@ -347,6 +360,7 @@ export let I18nAdminUk: I18nAdmin = {
         addHost: 'Новий PAM хост',
         addUser: 'Новий PAM користувач',
         deleteHost: 'Ви справді хочете видалити цей хост?',
+        deleteUser: 'Do you really want to delete this user?',
         groupDescGeneric: `Загальні групи є аналогом записів, що зазвичай знаходяться в /etc/group.
             Користувачів можна до них призначати, і вони повертаються системою через NSS Lookups.`,
         groupDescHost: `Групи хостів використовуються для групування хостів. NSS-запити хоста в межах групи
@@ -444,6 +458,11 @@ export let I18nAdminUk: I18nAdmin = {
         name: 'Назва ролі',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: 'Це стандартний OIDC скоуп. Вони є незмінними.',
         delete1: 'Дійсно видалити цей скоуп?',
         deleteDefault: 'Стандартні OIDC скоупи не можна видалити.',
@@ -492,6 +511,13 @@ export let I18nAdminUk: I18nAdmin = {
         descAttr: `Встановіть власні атрибути користувача. Усі пари ключ-значення обробляються як String / JSON Value.`,
         forceLogout: `Дійсно завершити всі існуючі сесії та видалити всі
             refresh-токени для цього користувача?`,
+        groupAdmin: {
+            notManagedTitle: 'Користувач поза вашими групами',
+            notManagedDesc: `Цей користувач не входить до жодної з керованих вами груп, тому його дані приховано.
+                Додайте користувача до однієї або кількох ваших груп, щоб керувати ним.
+                Членство поза вашими групами зберігається.`,
+            addToGroups: 'Додати до моїх груп',
+        },
         lastLogin: 'Останній вхід',
         manualInitDesc: `Користувача також можна ініціалізувати тут, але в цьому випадку вам потрібно
             передати пароль особисто.`,

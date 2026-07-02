@@ -17,6 +17,8 @@ pub enum AccessGroup {
     UserAttributes,
     Users,
     Pam,
+    AuthProviders,
+    ApiKeys,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]

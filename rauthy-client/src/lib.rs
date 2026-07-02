@@ -1,3 +1,5 @@
+#![cfg_attr(doc, feature(doc_cfg))]
+
 //! Minimal and safe by default client library for the [Rauthy](https://github.com/sebadob/rauthy)
 //! project.
 //!
@@ -23,11 +25,11 @@
 //!   actively validate against it.
 
 use crate::handler::OidcCookieInsecure;
-use crate::jwks::jwks_handler;
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
-use base64::{engine, engine::general_purpose, Engine as _};
-use rand::{distr, RngExt};
+use crate::tokens::jwks::jwks_handler;
+use base64::{Engine as _, engine, engine::general_purpose};
+use rand::{RngExt, distr};
 pub use reqwest::Certificate as RootCertificate;
 use sha2::{Digest, Sha256};
 use tracing::{error, warn};
@@ -45,7 +47,6 @@ pub mod device_code;
 
 /// The api which need to be called from your endpoints
 pub mod handler;
-mod jwks;
 /// The Rauthy OIDC config
 pub mod oidc_config;
 /// The authenticated Principal, extracted from valid JWT tokens
@@ -60,13 +61,13 @@ pub mod rauthy_error;
 /// SCIM v2 types for full compatibility with Rauthy
 #[cfg(feature = "scim")]
 pub mod scim;
+pub mod tokens;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const B64_URL_SAFE_NO_PAD: engine::GeneralPurpose = general_purpose::URL_SAFE_NO_PAD;
 
 /// Decodes a base64 value
-#[allow(dead_code)]
 pub(crate) fn b64_decode(value: &str) -> Result<Vec<u8>, RauthyError> {
     Ok(general_purpose::STANDARD.decode(value)?)
 }
@@ -95,8 +96,12 @@ pub(crate) fn base64_url_no_pad_decode(b64: &str) -> Result<Vec<u8>, RauthyError
     Ok(B64_URL_SAFE_NO_PAD.decode(b64)?)
 }
 
+#[inline(always)]
+pub fn base64_url_no_pad_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), RauthyError> {
+    Ok(B64_URL_SAFE_NO_PAD.decode_vec(b64, buf)?)
+}
+
 #[inline]
-#[allow(dead_code)]
 fn build_lax_cookie_300(name: &str, value: &str, insecure: OidcCookieInsecure) -> String {
     if insecure != OidcCookieInsecure::Yes {
         format!("{name}={value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=300")

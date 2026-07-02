@@ -46,12 +46,20 @@ export interface I18nAdmin {
             descFullCss: string;
             descVariables: string;
         };
+        claims: string;
+        claimsAtRoot: string;
+        claimsAtRootWarning: string;
+        claimsDesc: string;
         confidential: string;
         confidentialNoSecret: string;
         config: string;
         delete1: string;
         descAuthCode: string;
         descClientUri: string;
+        allowedResources: string;
+        defaultAud: string;
+        descAllowedResources: string;
+        descDefaultAud: string;
         descGroupPrefix: string;
         descName: string;
         descOrigin: string;
@@ -296,6 +304,7 @@ export interface I18nAdmin {
         addHost: string;
         addUser: string;
         deleteHost: string;
+        deleteUser: string;
         groupDescGeneric: string;
         groupDescHost: string;
         groupDescLocal: string;
@@ -376,6 +385,8 @@ export interface I18nAdmin {
         name: string;
     };
     scopes: {
+        claimsAtRoot: string;
+        claimsAtRootWarning: string;
         defaultNoMod: string;
         delete1: string;
         deleteDefault: string;
@@ -421,6 +432,11 @@ export interface I18nAdmin {
         deleteUser: string;
         descAttr: string;
         forceLogout: string;
+        groupAdmin: {
+            notManagedTitle: string;
+            notManagedDesc: string;
+            addToGroups: string;
+        };
         lastLogin: string;
         manualInitDesc: string;
         manualInit: string;

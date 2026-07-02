@@ -1,5 +1,6 @@
 use crate::email::mailer::EMail;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
+use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
 use lettre::message;
 use rauthy_common::HTTP_CLIENT;
@@ -97,6 +98,10 @@ pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<EMail>) {
                 }
             };
 
+            // capture before `req` is moved into the message
+            let email_typ = req.typ;
+            let recipient = req.address.clone();
+
             let email = MicrosoftMessage {
                 message: MicrosoftEmail {
                     bcc_recipients: Vec::default(),
@@ -121,9 +126,14 @@ pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<EMail>) {
                 tokio::time::sleep(Duration::from_millis(500)).await;
 
                 if let Err(err) = send_email(&email).await {
-                    // we want to panic if multiple sends fail so emails don't get lost
-                    // silently
-                    panic!("Could not send E-Mail even after retrying: {err:?}");
+                    error!(
+                        error = ?err,
+                        "Could not send E-Mail to '{}' even after retrying - dropping it",
+                        recipient
+                    );
+                    if let Err(err) = Event::email_send_err(email_typ, &recipient).send().await {
+                        error!(?err, "Could not push EmailSendError event");
+                    }
                 }
             }
         } else {

@@ -28,6 +28,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         scope: "scope123".to_string(),
         attr_include_access: None,
         attr_include_id: None,
+        claims_at_root: false,
     };
     let res = client
         .post(&url)
@@ -58,7 +59,6 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
     default_scopes.push(new_scope.scope.clone());
 
     let update_client = UpdateClientRequest {
-        id: init_client.id,
         name: init_client.name,
         confidential: init_client.confidential,
         redirect_uris: init_client.redirect_uris,
@@ -78,6 +78,10 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         contacts: init_client.contacts,
         backchannel_logout_uri: Some(init_client_bcl_uri()),
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
+        allowed_resources: None,
+        default_aud: None,
         scim: None,
     };
     let res = client
@@ -96,6 +100,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         scope: "scope456".to_string(),
         attr_include_access: None,
         attr_include_id: None,
+        claims_at_root: false,
     };
     let url_name = format!("{}/{}", url, scope.id);
     let res = client

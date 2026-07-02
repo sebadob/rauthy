@@ -302,8 +302,16 @@ admin_button_hide = false
 # overwritten by: AUTH_HEADERS_ENABLE
 enable = true
 
+# If additionally the preferred username header should be enabled.
+# This requires an additiona DB lookup each time and is therefore
+# disabled by default.
+#
+# default: false
+# overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
+enable_pref_username = true
+
 # Configure the header names being used for the different values. You
-# can change them to your needs, if you cannot easily change your
+# can change them to your needs if you cannot easily change your
 # downstream apps.
 #
 # default: x-forwarded-user
@@ -330,6 +338,10 @@ given_name = 'x-forwarded-user-given-name'
 # default: x-forwarded-user-mfa
 # overwritten by: AUTH_HEADER_MFA
 mfa = 'x-forwarded-user-mfa'
+
+# default: x-forwarded-user-pref-username
+# overwritten by: AUTH_HEADER_PREF_USERNAME
+preferred_username = 'x-forwarded-user-pref-username'
 
 [backchannel_logout]
 # The maximum amount of retries made for a failed backchannel logout.
@@ -401,15 +413,16 @@ password_plain = '123SuperSafe'
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
 pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option<i64>,
 #     access: Vec<ApiKeyAccess>,
 # }
@@ -431,6 +444,7 @@ pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyv
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -459,12 +473,33 @@ api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 
+# Generated bootstrap secrets are written to this encrypted local container
+# before their matching database rows are inserted. Later bootstrap phases use
+# it for generated client secrets, user passwords, and API-key secrets that cannot be
+# reconstructed from the database after insertion.
+#
+# The file is a single AEAD-encrypted JSON payload. The expiry deadline lives
+# inside that encrypted payload, so expiry checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Time in seconds before generated bootstrap secrets are purged. The default
+# keeps first-start credentials available briefly for local extraction. Set to
+# `0` to disable expiry and runtime auto-purge.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+#generated_secrets_ttl = 600
+
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with
 # fixed names inside this folder. If it finds any of them, it will
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json
@@ -859,8 +894,8 @@ health_check_delay_secs = 30
 # These will be ignored as long as `hiqlite = true`.
 #
 # overwritten by: PG_HOST
-pg_host = '/var/run/postgresql'
-#pg_host = 'localhost'
+#pg_host = '/var/run/postgresql'
+pg_host = 'localhost'
 # default: 5432
 # overwritten by: PG_PORT
 pg_port = 5432
@@ -1299,6 +1334,9 @@ en = '%m/%d/%Y %T (%Z)'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 fr = '%d/%m/%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_NL
+nl = '%d-%m-%Y %T (%Z)'
 # default: '%Y-%m-%d %T (%Z)'
 # overwritten by: TZ_FMT_KO
 ko = '%Y-%m-%d %T (%Z)'
@@ -1401,6 +1439,18 @@ allowed_scopes = ['openid', 'profile', 'email', 'webid']
 # default: 3600
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
 cache_lifetime = 3600
+
+# RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+# a requested `resource` is rejected by default. Setting this to `true` lets such
+# clients request any resource indicator.
+#
+# CAUTION: only enable this if you know exactly what you are doing and have a good
+# reason. It can lead to an easy privilege escalation, because an ephemeral client
+# could then mint tokens for an arbitrary audience.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
+#danger_allow_unvalidated_resource = false
 
 [events]
 # The E-Mail address event notifications should be sent to.
@@ -1937,13 +1987,13 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['de', 'en', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['de', 'en', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -2326,7 +2376,7 @@ http_workers = 1
 #
 # default: false
 # overwritten by: PROXY_MODE
-proxy_modeproxy_mode = false
+proxy_mode = false
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
 # or `peer_ip_header_name` is set, these are mandatory to
@@ -2355,7 +2405,7 @@ trusted_proxies = ['127.0.0.1/32']
 #
 # default: false
 # overwritten by: METRICS_ENABLE
-metrics_enable = false
+metrics_enable = true
 
 # The IP address to listen on for the /metrics endpoint.
 # You do not want to expose your metrics on a publicly
@@ -2710,6 +2760,7 @@ revalidate_during_login = true
 #
 # one of: required, optional, hidden
 # default: 'optional'
+# overwritten_by: PREFERRED_USERNAME
 preferred_username = 'required'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
@@ -2723,6 +2774,7 @@ preferred_username = 'required'
 # users can change them freely at any time.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_IMMUTABLE
 immutable = true
 
 # Provide an array of blacklisted names.
@@ -2758,6 +2810,7 @@ pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
 # can be used as a fallback value for the id token.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_EMAIL_FALLBACK
 email_fallback = true
 
 [webauthn]

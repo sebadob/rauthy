@@ -74,6 +74,7 @@ pub async fn get_token_set_init_client() -> TokenSet {
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         refresh_token: None,
+        resource: None,
     };
 
     let res = reqwest::Client::new()
@@ -124,6 +125,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         nonce: Some("MySuperNonce".to_string()),
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
+        resource: None,
     };
 
     let res = client
@@ -147,6 +149,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         username: None,
         password: None,
         refresh_token: None,
+        resource: None,
     };
 
     let url_token = format!("{}/oidc/token", backend_url);
@@ -161,6 +164,57 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let ts = res.json::<TokenSet>().await.unwrap();
 
     (headers, ts)
+}
+
+/// Logs in as an arbitrary user (must have a usable password) and returns the
+/// authenticated session headers (cookie + CSRF). Mirrors [`session_headers`] but with
+/// caller-provided credentials, used to obtain a delegated group-admin session.
+pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
+    let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
+
+    let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+    let redirect_uri = format!("{}/oidc/callback", backend_url);
+    let challenge_s256 = base64_url_encode(sha256!(challenge_plain.as_bytes()));
+    let query_pkce = format!(
+        "client_id=rauthy&redirect_uri={}&response_type=code&code_challenge={}\
+        &code_challenge_method=S256",
+        redirect_uri, challenge_s256
+    );
+    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
+
+    let url_session = format!("{}/oidc/session", backend_url);
+    let res = client.post(&url_session).send().await.unwrap();
+    assert!(res.status().is_success());
+    let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
+
+    let req_login = LoginRequest {
+        email: email.to_string(),
+        password: Some(password.to_string()),
+        pow: get_solved_pow().await,
+        client_id: "rauthy".to_string(),
+        redirect_uri: redirect_uri.to_string(),
+        scopes: None,
+        state: None,
+        nonce: Some("MySuperNonce".to_string()),
+        code_challenge: Some(challenge_s256),
+        code_challenge_method: Some("S256".to_string()),
+        resource: None,
+    };
+
+    let res = client
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&req_login)
+        .send()
+        .await
+        .unwrap();
+    let status = res.status();
+    if status != 202 {
+        let body = res.text().await.unwrap_or_default();
+        panic!("group-admin login for {email} failed: {status} - {body}");
+    }
+    headers
 }
 
 /// extractor for the POST `/oidc/session` endpoint

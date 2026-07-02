@@ -92,7 +92,10 @@ pub async fn get_users(
     principal: ReqPrincipal,
     Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    // Group admins see the full (minified) user list as well. The
+    // per-user write scoping is enforced on the individual modify endpoints, never
+    // here, so list visibility intentionally does not imply mutate permission.
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     params.validate()?;
 
     let user_count = User::count().await?;
@@ -154,8 +157,11 @@ pub async fn post_users(
     principal: ReqPrincipal,
     Json(payload): Json<NewUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
+    // A group admin may create users too, but only without any role and into at least
+    // one group it manages, so the new account stays within its scope.
+    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_ref())?;
     // We are not using the UserValuesValidator on purpose here.
     // When an admin registers a new user, the user details view will be shown immediately anyway,
     // and an admin may have good reason to not set some values, like e.g. the preferred username.
@@ -538,16 +544,25 @@ pub async fn get_user_by_id(
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = path.into_inner();
 
-    // principal must either be an admin or have the same user id
-    let api_key_or_admin = principal
-        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)
+    // principal must be an admin, a group admin, or the user itself
+    let elevated = principal
+        .validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)
         .is_ok();
-    if !api_key_or_admin {
+    if !elevated {
         principal.validate_session_auth()?;
         principal.is_user(&id)?;
     }
 
     let user = User::find(id).await?;
+    // a group admin only gets the full details of a user it manages; for anyone else it
+    // only sees the minified entry from the user list. The view gate returns a
+    // `428` (instead of a `403`) for an ordinary, not-yet-managed user, so the Admin UI can
+    // offer to add the user to one of the admin's groups; an admin target stays a `403`.
+    // A group admin may always view its own account though (it is an admin, so the gate would
+    // otherwise reject it), which the account dashboard relies on for self-management.
+    if principal.is_session_group_admin() && principal.user_id() != Ok(user.id.as_str()) {
+        principal.validate_group_admin_can_view(user.roles_iter(), user.groups_iter())?;
+    }
     let values = UserValues::find(&user.id).await?;
 
     Ok(HttpResponse::Ok().json(user.into_response(values)))
@@ -816,7 +831,10 @@ pub async fn put_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Update)
             .is_err()
     {
-        return Err(err);
+        // the only remaining allowed caller is a delegated group admin managing this user
+        principal.validate_group_admin_session().map_err(|_| err)?;
+        let target = User::find(user_id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
     }
 
     content_len_limit(&req, RauthyConfig::get().vars.user_pictures.upload_limit_mb)?;
@@ -892,6 +910,16 @@ async fn validate_user_picture_access(
         {
             return Ok(None);
         }
+        // a delegated group admin may view the picture of a user it manages
+        if principal.validate_group_admin_session().is_ok() {
+            let user = User::find(user_id.to_string()).await?;
+            if principal
+                .validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())
+                .is_ok()
+            {
+                return Ok(None);
+            }
+        }
     }
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
@@ -943,7 +971,10 @@ pub async fn delete_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Delete)
             .is_err()
     {
-        return Err(err);
+        // the only remaining allowed caller is a delegated group admin managing this user
+        principal.validate_group_admin_session().map_err(|_| err)?;
+        let target = User::find(user_id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
     }
 
     UserPicture::remove(picture_id, user_id.clone()).await?;
@@ -1667,7 +1698,14 @@ pub async fn get_user_webauthn_passkeys(
     {
         // make sure a non-admin can only access its own information
         principal.validate_session_auth()?;
-        principal.is_user(&id)?;
+        if principal.is_user(&id).is_err() {
+            // a group admin may view the MFA devices of a user it manages (the MFA tab in
+            // the Admin UI, mirroring `delete_webauthn`); the cheap group-admin check runs
+            // before the DB lookup
+            principal.validate_group_admin_session()?;
+            let target = User::find(id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+        }
     }
 
     let pks = PasskeyEntity::find_for_user(&id)
@@ -1816,34 +1854,44 @@ pub async fn delete_webauthn(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    // Note: Currently, this is not allowed with an ApiKey on purpose
-    let is_admin = match principal.validate_admin_session() {
-        Ok(()) => true,
-        Err(_) => {
-            principal.validate_session_auth()?;
-            false
-        }
-    };
-
     let (id, name) = path.into_inner();
 
-    // validate that Principal matches the user or is an admin
-    if !is_admin {
-        principal.is_user(&id)?;
+    // Note: Currently, this is not allowed with an ApiKey on purpose.
+    // Access tiers:
+    // - full Rauthy admin: may reset MFA for any user,
+    // - group admin: may reset MFA for a user it manages,
+    // - the user itself: only with a valid `mfa_mod_token`.
+    if principal.validate_admin_session().is_ok() {
+        if principal.is_user(&id).is_err() {
+            warn!("Passkey delete from admin for user {} for key {}", id, name);
+        }
+    } else {
+        principal.validate_session_auth()?;
 
-        let Some(token_id) = payload.mfa_mod_token_id else {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "missing `mfa_mod_token_id`",
-            ));
-        };
-        let token = MfaModToken::find(&token_id).await?;
-        let ip = real_ip_from_req(&req)?;
-        token.validate(principal.user_id()?, ip)?;
+        if principal.is_user(&id).is_ok() {
+            // a user deleting its own passkey always needs a valid `mfa_mod_token`
+            let Some(token_id) = payload.mfa_mod_token_id else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "missing `mfa_mod_token_id`",
+                ));
+            };
+            let token = MfaModToken::find(&token_id).await?;
+            let ip = real_ip_from_req(&req)?;
+            token.validate(principal.user_id()?, ip)?;
 
-        warn!("Passkey delete for user {} for key {}", id, name);
-    } else if principal.is_user(&id).is_err() {
-        warn!("Passkey delete from admin for user {} for key {}", id, name);
+            warn!("Passkey delete for user {} for key {}", id, name);
+        } else {
+            // a group admin resetting MFA for a user it manages; the cheap group-admin
+            // check runs before the DB lookup
+            principal.validate_group_admin_session()?;
+            let target = User::find(id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+            warn!(
+                "Passkey delete from group admin for user {} for key {}",
+                id, name
+            );
+        }
     }
 
     PasskeyEntity::delete(id, name).await?;
@@ -2141,7 +2189,7 @@ pub async fn get_user_by_email(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
 
     let user = User::find_by_email(path.into_inner()).await?;
     let values = UserValues::find(&user.id).await?;
@@ -2171,7 +2219,6 @@ pub async fn put_user_by_id(
     principal: ReqPrincipal,
     Json(payload): Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
     UserValuesValidator {
@@ -2183,8 +2230,27 @@ pub async fn put_user_by_id(
     }
     .validate()?;
 
+    // cheap auth gate before any DB lookup
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
+
+    let id = id.into_inner();
+    let target = User::find(id.clone()).await?;
+    // a group admin may only modify a managed, non-admin user, and within that may not
+    // change roles or group memberships outside its prefix. It may always manage
+    // itself though (the admin-target guard would otherwise reject the self-edit), so the
+    // per-target manage check is skipped for self; the role / group guards still apply.
+    if principal.user_id() != Ok(target.id.as_str()) {
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+    }
+    principal.validate_group_admin_user_change(
+        target.roles_iter(),
+        target.groups_iter(),
+        &payload.roles,
+        payload.groups.as_deref().unwrap_or_default(),
+    )?;
+
     let preferred_username = UserValues::find_preferred_username(&id).await?;
-    handle_put_user_by_id(id.into_inner(), req, payload, preferred_username).await
+    handle_put_user_by_id(id, req, payload, preferred_username).await
 }
 
 /// Modifies a user via a patch operation
@@ -2209,11 +2275,54 @@ pub async fn patch_user(
     principal: ReqPrincipal,
     Json(payload): Json<PatchOp>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
+    // cheap auth gate before any DB lookup
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
 
     let user_id = id.into_inner();
-    let (upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
+    let target = User::find(user_id.clone()).await?;
+    // a group admin may always manage itself: it reaches its own detail view from the account
+    // dashboard, and the admin-target guards below would otherwise reject the self-edit (it is
+    // a `rauthy_admin:*` itself). The role / group guards still apply, so it cannot escalate.
+    let is_self = principal.user_id() == Ok(target.id.as_str());
+
+    let (mut upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
+
+    // A group admin may also patch an as-yet-unmanaged ordinary user to add it to one of its
+    // groups (the "add to my groups" flow). In that case the admin never saw the
+    // user's existing memberships, so the submitted groups are scoped: out-of-scope
+    // memberships are preserved and only in-scope additions are applied, instead of replacing
+    // the whole set. This is a no-op for users the admin already manages (the UI submits the
+    // full set there) and for full admins / ApiKeys / self-edits.
+    if principal.is_session_group_admin()
+        && !is_self
+        && !principal.group_admin_can_manage(target.roles_iter(), target.groups_iter())
+    {
+        let submitted = upd_req.groups.take().unwrap_or_default();
+        upd_req.groups =
+            Some(principal.group_admin_scoped_groups(target.groups_iter(), &submitted));
+    }
+
     upd_req.validate()?;
+
+    let new_groups = upd_req.groups.as_deref().unwrap_or_default();
+    // only managed groups may be changed and roles may never be touched (applies to self too) ...
+    principal.validate_group_admin_user_change(
+        target.roles_iter(),
+        target.groups_iter(),
+        &upd_req.roles,
+        new_groups,
+    )?;
+    // ... and the admin must be able to manage the user either before or after the change, so
+    // a patch that brings a previously unmanaged user into scope is allowed. A group admin may
+    // always manage itself, so this gate is skipped for the self-edit.
+    if !is_self {
+        principal.validate_group_admin_can_manage_change(
+            target.roles_iter(),
+            target.groups_iter(),
+            &upd_req.roles,
+            new_groups,
+        )?;
+    }
 
     handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
 }
@@ -2462,7 +2571,9 @@ pub async fn get_user_values_config(
     // There is no need to validate session or API key if the registration is open anyway.
     // In this case, anyone can pull out the same information from the HTML.
     if !RauthyConfig::get().vars.user_registration.enable {
-        principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+        // a delegated group admin needs this read-only config too: the Admin UI cannot render
+        // the user details view without it
+        principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     }
     Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
 }
@@ -2500,14 +2611,30 @@ pub async fn put_user_self_preferred_username(
         .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)
         .is_err()
     {
-        // make sure the logged-in, non-admin can only update its own username
-        principal.validate_user_session(&id)?;
-
+        // neither an ApiKey nor a full admin: force-overwrite is reserved for full admins,
+        // whether the caller is the user itself or a delegated group admin
         if force_overwrite {
             return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Only an admin can 'force_overwrite' the 'preferred_username'",
+                ErrorResponseType::Forbidden,
+                "Only a full admin can 'force_overwrite' the 'preferred_username'",
             ));
+        }
+        // not the logged-in user updating its own username: then it must be a group admin
+        // that manages the target, and it may only set the name while it is still empty
+        if principal.validate_user_session(&id).is_err() {
+            principal.validate_group_admin_session()?;
+            let target = User::find(id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+            if UserValues::find(&id)
+                .await?
+                .and_then(|v| v.preferred_username)
+                .is_some()
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "Group admins cannot overwrite an existing 'preferred_username'",
+                ));
+            }
         }
     }
 

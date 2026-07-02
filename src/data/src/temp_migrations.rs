@@ -1,97 +1,52 @@
-use crate::database::{Cache, DB};
-use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use crate::database::DB;
+use crate::entity::roles::Role;
 use hiqlite::macros::params;
-use rauthy_common::constants::{IDX_GROUPS, IDX_ROLES};
+use rauthy_common::constants::RAUTHY_ADMIN_GROUP_PREFIX;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
-use tracing::info;
+use tracing::{info, warn};
 
 pub async fn apply_temp_migrations() -> Result<(), ErrorResponse> {
-    // user_attr_values
-    let sql = "SELECT * FROM user_attr_values";
-    let values: Vec<UserAttrValueEntity> = if is_hiqlite() {
-        DB::hql().query_as(sql, params!()).await?
+    // cleanup possibly lingering PAM user groups
+    let sql = r#"
+DELETE FROM pam_groups
+WHERE typ = 'user' AND NOT EXISTS (
+    SELECT 1 FROM pam_users
+    WHERE pam_users.name = pam_groups.name
+)"#;
+    let rows_affected = if is_hiqlite() {
+        DB::hql().execute(sql, params!()).await?
     } else {
-        DB::pg_query(sql, &[], 0).await?
+        DB::pg_execute(sql, &[]).await?
     };
-
-    let mut migrated = 0;
-
-    for value in values {
-        let json = serde_json::from_slice::<serde_json::Value>(&value.value)?;
-        let serde_json::Value::String(s) = json else {
-            continue;
-        };
-
-        // This is the easiest method to check if the String is actually another JSON obj.
-        let Ok(json) = serde_json::from_str::<serde_json::Value>(s.as_str()) else {
-            // If this fails, we actually have a String here - nothing to do.
-            continue;
-        };
-        let value_json = serde_json::to_vec(&json)?;
-
-        let sql = "UPDATE user_attr_values SET value = $1 WHERE user_id = $2 AND key = $3";
-        if is_hiqlite() {
-            DB::hql()
-                .execute(sql, params!(value_json, value.user_id, value.key))
-                .await?;
-        } else {
-            DB::pg_execute(sql, &[&value_json, &value.user_id, &value.key]).await?;
-        }
-        migrated += 1;
+    if rows_affected > 0 {
+        info!("Cleaned up {rows_affected} lingering PAM Groups from and older cleanup bug");
     }
 
-    if migrated > 0 {
-        info!("Migrated {} user attr values to proper JSON", migrated);
-    }
+    warn_existing_group_admin_roles().await?;
 
-    // user_attr_config
-    let sql = "SELECT * FROM user_attr_config";
-    let configs: Vec<UserAttrConfigEntity> = if is_hiqlite() {
-        DB::hql().query_as(sql, params!()).await?
-    } else {
-        DB::pg_query(sql, &[], 0).await?
-    };
+    Ok(())
+}
 
-    let mut migrated = 0;
-
-    for value in configs {
-        let Some(default_value) = value.default_value else {
-            continue;
-        };
-        let json = serde_json::from_slice::<serde_json::Value>(&default_value)?;
-        let serde_json::Value::String(s) = json else {
-            continue;
-        };
-
-        // This is the easiest method to check if the String is actually another JSON obj.
-        let Ok(json) = serde_json::from_str::<serde_json::Value>(s.as_str()) else {
-            // If this fails, we actually have a String here - nothing to do.
-            continue;
-        };
-        let value_json = serde_json::to_vec(&json)?;
-
-        let sql = "UPDATE user_attr_config SET default_value = $1 WHERE name = $2";
-        if is_hiqlite() {
-            DB::hql()
-                .execute(sql, params!(value_json, value.name))
-                .await?;
-        } else {
-            DB::pg_execute(sql, &[&value_json, &value.name]).await?;
-        }
-        migrated += 1;
-    }
-
-    if migrated > 0 {
-        info!(
-            "Migrated {} user attr configs to proper JSON default values",
-            migrated
+/// The delegated group-admin feature reads roles named `rauthy_admin:<prefix>`
+/// as group admins. This is non-breaking unless such a role already existed before the
+/// upgrade, in which case its holders silently gain group-admin rights. We warn about
+/// any matching role on each startup for the whole `v0.36` cycle so operators can spot
+/// an unintended collision; roles created intentionally afterwards can ignore it.
+async fn warn_existing_group_admin_roles() -> Result<(), ErrorResponse> {
+    let found = Role::find_all()
+        .await?
+        .into_iter()
+        .filter(|r| r.name.starts_with(RAUTHY_ADMIN_GROUP_PREFIX))
+        .map(|r| r.name)
+        .collect::<Vec<_>>();
+    if !found.is_empty() {
+        warn!(
+            "Found custom roles matching the delegated group-admin scheme \
+            `rauthy_admin:<prefix>`: {found:?}. Their holders are now group admins for \
+            the matching groups. If you created these intentionally, you \
+            can safely ignore this warning."
         );
     }
-
-    // because of changes on groups and roles, we must clear caches
-    DB::hql().delete(Cache::App, IDX_GROUPS).await?;
-    DB::hql().delete(Cache::App, IDX_ROLES).await?;
-
     Ok(())
 }

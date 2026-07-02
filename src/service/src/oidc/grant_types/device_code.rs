@@ -1,4 +1,4 @@
-use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenScopes, TokenSet};
+use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet};
 use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
@@ -160,8 +160,10 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             &client,
             AuthTime::now(),
             None,
-            None,
+            code.nonce.map(TokenNonce),
             code.scopes.map(TokenScopes),
+            None,
+            // resource indicators are not supported for the device flow yet
             None,
             AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),

@@ -180,6 +180,7 @@ pub struct DeviceAuthCode {
     pub exp: DateTime<Utc>,
     pub last_poll: DateTime<Utc>,
     pub scopes: Option<String>,
+    pub nonce: Option<String>,
     // TODO we should probably save it hashed, even though it is only very shortly lived
     // saved additionally here to have fewer cache requests during client polling
     pub client_secret: Option<String>,
@@ -195,6 +196,7 @@ impl DeviceAuthCode {
         scopes: Option<String>,
         client_id: String,
         client_secret: Option<String>,
+        nonce: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now();
         let ttl = RauthyConfig::get().vars.device_grant.code_lifetime as i64;
@@ -206,6 +208,7 @@ impl DeviceAuthCode {
             exp,
             last_poll: now,
             scopes,
+            nonce,
             client_secret,
             warnings: 0,
         };

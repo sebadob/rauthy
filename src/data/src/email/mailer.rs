@@ -1,6 +1,7 @@
 use crate::database::DB;
 use crate::email::mailer_microsoft_graph::sender_microsoft_graph;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
+use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Mechanism;
@@ -8,12 +9,41 @@ use lettre::transport::smtp::{authentication, client};
 use lettre::{AsyncSmtpTransport, AsyncTransport, Tokio1Executor, message};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;
+use std::fmt::{Display, Formatter};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EmailType {
+    Custom,
+    EmailChangeConfirm,
+    EmailChangeInfo,
+    EmailRegisteredAlready,
+    LoginLocation,
+    Notification,
+    PasswordReset,
+    PasswordResetInfo,
+}
+
+impl Display for EmailType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Custom => write!(f, "Custom"),
+            Self::EmailChangeConfirm => write!(f, "EmailChangeConfirm"),
+            Self::EmailChangeInfo => write!(f, "EmailChangeInfo"),
+            Self::EmailRegisteredAlready => write!(f, "EmailRegisteredAlready"),
+            Self::LoginLocation => write!(f, "LoginLocation"),
+            Self::Notification => write!(f, "Notification"),
+            Self::PasswordReset => write!(f, "PasswordReset"),
+            Self::PasswordResetInfo => write!(f, "PasswordResetInfo"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct EMail {
+    pub typ: EmailType,
     pub recipient_name: String,
     pub address: String,
     pub subject: String,
@@ -146,9 +176,17 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
                             info!("E-Mail to '{}' sent successfully after retry!", req.address);
                         }
                         Err(err) => {
-                            // we want to panic if multiple sends fail so emails don't get lost
-                            // silently
-                            panic!("Could not send E-Mail even after retrying: {err:?}");
+                            // Log loudly and emit an event so admins see the failure.
+                            error!(
+                                error = ?err,
+                                "Could not send E-Mail to '{}' even after retrying - dropping it",
+                                req.address
+                            );
+                            if let Err(err) =
+                                Event::email_send_err(req.typ, &req.address).send().await
+                            {
+                                error!(?err, "Could not push EmailSendError event");
+                            }
                         }
                     }
                 }

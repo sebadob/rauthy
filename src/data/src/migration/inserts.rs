@@ -235,9 +235,10 @@ INSERT INTO clients
 (id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
 access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
-backchannel_logout_uri, restrict_group_prefix)
+backchannel_logout_uri, restrict_group_prefix, allowed_resources, default_aud)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)"#;
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+$22, $23, $24)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -268,7 +269,9 @@ VALUES
                         b.client_uri,
                         b.contacts,
                         b.backchannel_logout_uri,
-                        b.restrict_group_prefix
+                        b.restrict_group_prefix,
+                        b.allowed_resources,
+                        b.default_aud
                     ),
                 )
                 .await?;
@@ -301,6 +304,8 @@ VALUES
                     &b.contacts,
                     &b.backchannel_logout_uri,
                     &b.restrict_group_prefix,
+                    &b.allowed_resources,
+                    &b.default_aud,
                 ],
             )
             .await?;
@@ -1048,8 +1053,8 @@ VALUES ($1, $2)"#;
 
 pub async fn pam_users(data_before: Vec<PamUser>) -> Result<(), ErrorResponse> {
     let sql_1 = r#"
-INSERT INTO pam_users (id, name, gid, email, shell)
-VALUES ($1, $2, $3, $4, $5)"#;
+INSERT INTO pam_users (id, name, gid, email, shell, home_dir)
+VALUES ($1, $2, $3, $4, $5, $6)"#;
 
     let mut highest_id = 0;
     for user in &data_before {
@@ -1066,7 +1071,10 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
         for b in data_before {
             DB::hql()
-                .execute(sql_1, params!(b.id, b.name, b.gid, b.email, b.shell))
+                .execute(
+                    sql_1,
+                    params!(b.id, b.name, b.gid, b.email, b.shell, b.home_dir),
+                )
                 .await?;
         }
 
@@ -1087,7 +1095,14 @@ VALUES ($1, $2, $3, $4, $5)"#;
         for b in data_before {
             DB::pg_execute(
                 sql_1,
-                &[&(b.id as i64), &b.name, &(b.gid as i64), &b.email, &b.shell],
+                &[
+                    &(b.id as i64),
+                    &b.name,
+                    &(b.gid as i64),
+                    &b.email,
+                    &b.shell,
+                    &b.home_dir,
+                ],
             )
             .await?;
         }

@@ -23,6 +23,10 @@ pub enum ErrorResponseType {
     UseDpopNonce((Option<String>, String)),
     Forbidden,
     Internal,
+    /// RFC 8707 §2: the requested `resource` is invalid, unknown, malformed, or not
+    /// allowed for the client. Serialized as the RFC error code `invalid_target`.
+    #[serde(rename = "invalid_target")]
+    InvalidTarget,
     JwtToken,
     JoseError,
     MfaRequired,
@@ -30,6 +34,7 @@ pub enum ErrorResponseType {
     NotFound,
     PasswordExpired,
     PasswordRefresh,
+    PreconditionRequired,
     Scim,
     SessionExpired,
     SessionTimeout,

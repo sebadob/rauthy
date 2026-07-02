@@ -288,6 +288,14 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: AUTH_HEADERS_ENABLE
 #enable = false
 
+# If additionally, the preferred username header should be enabled.
+# This requires an additional DB lookup each time and is therefore
+# disabled by default.
+#
+# default: false
+# overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
+#enable_pref_username = false
+
 # Configure the header names being used for the different values. You
 # can change them to your needs, if you cannot easily change your
 # downstream apps.
@@ -316,6 +324,10 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # default: x-forwarded-user-mfa
 # overwritten by: AUTH_HEADER_MFA
 #mfa = 'x-forwarded-user-mfa'
+
+# default: x-forwarded-user-pref-username
+# overwritten by: AUTH_HEADER_PREF_USERNAME
+#preferred_username = 'x-forwarded-user-pref-username'
 
 [backchannel_logout]
 # The maximum amount of retries made for a failed backchannel logout.
@@ -387,15 +399,16 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
 #pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option<i64>,
 #     access: Vec<ApiKeyAccess>,
 # }
@@ -417,6 +430,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -451,6 +465,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json
@@ -1284,6 +1299,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_NL
+#nl = '%d-%m-%Y %T (%Z)'
 # default: '%Y-%m-%d %T (%Z)'
 # overwritten by: TZ_FMT_KO
 #ko = '%Y-%m-%d %T (%Z)'
@@ -1905,13 +1923,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -2613,6 +2631,7 @@ storage_type = 'db'
 #
 # one of: required, optional, hidden
 # default: 'optional'
+# overwritten_by: PREFERRED_USERNAME
 #preferred_username = 'optional'
 
 # The `preferred_username` is an unstable claim by the OIDC RFC.
@@ -2626,6 +2645,7 @@ storage_type = 'db'
 # users can change them freely at any time.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_IMMUTABLE
 #immutable = true
 
 # Provide an array of blacklisted names.
@@ -2661,6 +2681,7 @@ storage_type = 'db'
 # can be used as a fallback value for the id token.
 #
 # default: true
+# overwritten_by: PREFERRED_USERNAME_EMAIL_FALLBACK
 #email_fallback = true
 
 [webauthn]

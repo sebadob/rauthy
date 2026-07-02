@@ -126,8 +126,8 @@ with another `just build-ui`.
 
 The default config file is the `config.toml`. This has reasonable defaults for local dev and should
 work out of the box in most scenarios. If you want to modify any values to adjust to your setup, you
-should create a `.env` file and only configure here. You can even safely put secrets into it. It
-has been added to the `.gitignore` and cannot be (automatically) checked into version control by
+should create a `.env` file and only configure here. You can even safely put secrets into it. It has
+been added to the `.gitignore` and cannot be (automatically) checked into version control by
 accident.
 
 Any values specified inside `.env` or via inline env vars will always have the highest priority and
@@ -323,8 +323,8 @@ time of writing). Basically in the block beginning with `templates: VarsTemplate
 
 In the frontend, as mentioned before, just take a look at `frontend/src/i18n`. In the backend, the
 compiler is your best friend. If you update the `Language` enum in  `src/data/src/language.rs` with
-a new value, the compiler will yell at you about all the locations that need an update. The code
-was written in a way that everywhere where you might need it, it will do a `match` on the `Language`
+a new value, the compiler will yell at you about all the locations that need an update. The code was
+written in a way that everywhere where you might need it, it will do a `match` on the `Language`
 `enum`. This way, you cannot forget to update anything.
 
 ### CSS
@@ -404,7 +404,7 @@ If you don't have a registry available, you can also disable auto-push with for 
 You are welcome to update the documentation in the Rauthy book. You will need `mdbook` and
 `mdbook-admonish`. If you don't have them:
 
-- `cargo install mdbook`
+- `cargo install mdbook --version 0.4.52`
 - `cargo install mdbook-admonish`
 
 Once installed:
@@ -414,6 +414,10 @@ Once installed:
 
 You can then update the `*.md` files in `book/src`. It should be pretty self-explanatory.
 `just build-docs` will rebuild them and make them available on GitHub after merging.
+
+> NOTE: `mdbook-admonish` was not updated to `modbook-0.5` yet. To be able to build the book, you
+> need to use `mdbook-0.4` for now. There is an open issue about the migration in the
+> `mdbook-admonish` repo.
 
 ## Before Submitting a PR
 

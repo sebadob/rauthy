@@ -24,6 +24,10 @@ pub struct Scope {
     pub attr_include_access: Option<String>,
     // Custom user attributes as CSV to include in the id token
     pub attr_include_id: Option<String>,
+    /// If `true`, the mapped custom attributes are emitted at the token root
+    /// (flattened) instead of nested under `custom`. Only meaningful for custom
+    /// scopes; a collision with a reserved claim fails token issuance.
+    pub claims_at_root: bool,
 }
 
 // CRUD
@@ -59,16 +63,21 @@ impl Scope {
         let attr_include_access = Self::clean_up_attrs(scope_req.attr_include_access, &attrs);
         let attr_include_id = Self::clean_up_attrs(scope_req.attr_include_id, &attrs);
 
+        // `claims_at_root` is only meaningful for custom scopes; normalize it so
+        // the stored data can never request root emission for a default OIDC scope.
+        let claims_at_root = scope_req.claims_at_root && Scope::is_custom(&scope_req.scope);
+
         let new_scope = Scope {
             id: new_store_id(),
             name: scope_req.scope,
             attr_include_access,
             attr_include_id,
+            claims_at_root,
         };
 
         let sql = r#"
-INSERT INTO scopes (id, name, attr_include_access, attr_include_id)
-VALUES ($1, $2, $3, $4)"#;
+INSERT INTO scopes (id, name, attr_include_access, attr_include_id, claims_at_root)
+VALUES ($1, $2, $3, $4, $5)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -78,7 +87,8 @@ VALUES ($1, $2, $3, $4)"#;
                         &new_scope.id,
                         &new_scope.name,
                         &new_scope.attr_include_access,
-                        &new_scope.attr_include_id
+                        &new_scope.attr_include_id,
+                        new_scope.claims_at_root
                     ),
                 )
                 .await?;
@@ -90,6 +100,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &new_scope.name,
                     &new_scope.attr_include_access,
                     &new_scope.attr_include_id,
+                    &new_scope.claims_at_root,
                 ],
             )
             .await?;
@@ -257,11 +268,13 @@ VALUES ($1, $2, $3, $4)"#;
         debug!(?attr_include_access);
         debug!(?attr_include_id);
 
+        let claims_at_root = scope_req.claims_at_root && Scope::is_custom(&scope_req.scope);
         let new_scope = Scope {
             id: scope.id.clone(),
             name: scope_req.scope,
             attr_include_access,
             attr_include_id,
+            claims_at_root,
         };
 
         if is_hiqlite() {
@@ -276,12 +289,13 @@ VALUES ($1, $2, $3, $4)"#;
             txn.push((
                 r#"
 UPDATE scopes
-SET name = $1, attr_include_access = $2, attr_include_id = $3
-WHERE id = $4"#,
+SET name = $1, attr_include_access = $2, attr_include_id = $3, claims_at_root = $4
+WHERE id = $5"#,
                 params!(
                     &new_scope.name,
                     &new_scope.attr_include_access,
                     &new_scope.attr_include_id,
+                    new_scope.claims_at_root,
                     &new_scope.id
                 ),
             ));
@@ -303,12 +317,13 @@ WHERE id = $4"#,
                 &txn,
                 r#"
 UPDATE scopes
-SET name = $1, attr_include_access = $2, attr_include_id = $3
-WHERE id = $4"#,
+SET name = $1, attr_include_access = $2, attr_include_id = $3, claims_at_root = $4
+WHERE id = $5"#,
                 &[
                     &new_scope.name,
                     &new_scope.attr_include_access,
                     &new_scope.attr_include_id,
+                    &new_scope.claims_at_root,
                     &new_scope.id,
                 ],
             )
@@ -458,6 +473,7 @@ impl From<Scope> for ScopeResponse {
             name: value.name,
             attr_include_access,
             attr_include_id,
+            claims_at_root: value.claims_at_root,
         }
     }
 }

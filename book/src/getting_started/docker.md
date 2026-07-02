@@ -3,11 +3,11 @@
 ## Testing / Local Evaluation
 
 For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
-your localhost. The image contains a basic default config which is sufficient for local testing (
-don't use it in production, it contains hardcoded secrets).
+your localhost. The image contains a basic default config which is sufficient for local testing
+(don't use it in production, it contains hardcoded secrets).
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.1
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.2
 ```
 
 ```admonish caution
@@ -49,7 +49,7 @@ services:
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.35.1
+    image: ghcr.io/sebadob/rauthy:0.35.2
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -85,8 +85,7 @@ docker compose logs -f rauthy
 ```
 
 Any outgoing E-Mail will be caught by `mailcrab`, which can be accessed
-via [http://localhost:1080](http://localhost:1080) .
-When you are done testing, shut down with
+via [http://localhost:1080](http://localhost:1080) . When you are done testing, shut down with
 
 ```
 docker compose down
@@ -118,9 +117,9 @@ mkdir -p rauthy/data rauthy/tls
 
 **2. Add the new config file.**
 
-Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get
-you started. We will use it from inside the container. However, since it's rootless and runs with
-user `10001:10001` inside, we need to modify access rights.
+Rauthy (since v0.35) comes with a CLI. You can use it to generate a (basic) config file to get you
+started. We will use it from inside the container. However, since it's rootless and runs with user
+`10001:10001` inside, we need to modify access rights.
 
 ```bash
 sudo chown -R 10001:$(id -g) rauthy
@@ -204,7 +203,7 @@ docker run -d \
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.35.1
+    ghcr.io/sebadob/rauthy:0.35.2
 ```
 
 - `-v $(pwd)/rauthy/config.toml:/app/config.toml` mounts the config in the correct place

@@ -65,7 +65,7 @@
             if (timer) {
                 clearTimeout(timer);
             }
-            timer = setTimeout(() => {
+            timer = window.setTimeout(() => {
                 errFileSize = '';
             }, 5000);
         }

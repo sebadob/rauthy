@@ -9,7 +9,7 @@
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import Button from '$lib/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
-    import { fetchGet, fetchPut } from '$api/fetch';
+    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
     import Input from '$lib/form/Input.svelte';
     import Form from '$lib/form/Form.svelte';
     import type { PamGroupsSorted } from '$lib/admin/pam/types';
@@ -18,11 +18,13 @@
     import PamAuthorizedKeys from '$lib/PamAuthorizedKeys.svelte';
 
     let {
-        user,
+        user = $bindable(),
         groupsSorted,
+        onDelete,
     }: {
         user: PamUserResponse;
         groupsSorted: PamGroupsSorted;
+        onDelete: () => void;
     } = $props();
 
     let t = useI18n();
@@ -30,6 +32,7 @@
 
     let err = $state('');
     let success = $state(false);
+    let deleteConfirm = $state(false);
     let details: undefined | PamUserDetailsResponse = $state();
 
     interface LinkedGroup {
@@ -51,6 +54,8 @@
     });
 
     async function fetchDetails() {
+        deleteConfirm = false;
+
         let res = await fetchGet<PamUserDetailsResponse>(url);
         if (res.body) {
             details = res.body;
@@ -154,6 +159,7 @@
 
         let payload: PamUserUpdateRequest = {
             shell: user.shell,
+            home_dir: user.home_dir,
             groups: links,
         };
         let res = await fetchPut(url, payload);
@@ -162,6 +168,15 @@
             setTimeout(() => {
                 success = false;
             }, 3000);
+        } else {
+            err = res.error?.message || 'Error';
+        }
+    }
+
+    async function deleteUser() {
+        let res = await fetchDelete(url);
+        if (res.status === 200) {
+            onDelete();
         } else {
             err = res.error?.message || 'Error';
         }
@@ -184,7 +199,8 @@
         {user.email}
     </LabeledValue>
 
-    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="10rem" />
+    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="15rem" />
+    <Input label="Home" placeholder="Home" required bind:value={user.home_dir} width="15rem" />
 
     <h2>{ta.pam.groups}</h2>
 
@@ -242,18 +258,35 @@
         />
     {/if}
 
-    <div class="submit">
-        <Button type="submit">
-            {t.common.save}
-        </Button>
-        {#if success}
-            <IconCheck />
-        {:else if err}
-            <div class="err">
-                {err}
+    {#if deleteConfirm}
+        <div class="delConfirm">
+            <p>{ta.pam.deleteUser}</p>
+            <div class="flex gap-05 mh-10">
+                <Button level={-1} onclick={deleteUser}>
+                    {t.common.delete}
+                </Button>
+                <Button level={3} onclick={() => (deleteConfirm = false)}>
+                    {t.common.cancel}
+                </Button>
             </div>
-        {/if}
-    </div>
+        </div>
+    {:else}
+        <div class="submit">
+            <Button type="submit">
+                {t.common.save}
+            </Button>
+            <Button level={-1} onclick={() => (deleteConfirm = true)}>
+                {t.common.delete}
+            </Button>
+            {#if success}
+                <IconCheck />
+            {:else if err}
+                <div class="err">
+                    {err}
+                </div>
+            {/if}
+        </div>
+    {/if}
 </Form>
 
 <style>
@@ -277,6 +310,11 @@
 
     .checkbox {
         margin-top: -0.25rem;
+    }
+
+    .delConfirm {
+        margin: 0.5rem 0;
+        color: hsl(var(--error));
     }
 
     .header {

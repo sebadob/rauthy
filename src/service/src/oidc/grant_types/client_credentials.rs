@@ -60,7 +60,13 @@ pub async fn grant_type_credentials(
         ClientDyn::update_used(&client.id).await?;
     }
 
-    let ts = TokenSet::for_client_credentials(&client, dpop_fingerprint).await?;
+    if let Some(resource) = req_data.resource.as_deref() {
+        client.validate_resource_request(resource)?;
+    }
+
+    let ts =
+        TokenSet::for_client_credentials(&client, dpop_fingerprint, req_data.resource.as_deref())
+            .await?;
 
     if RauthyConfig::get().vars.events.generate_token_issued {
         Event::token_issued("client_credentials", &client.id, None)

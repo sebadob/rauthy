@@ -40,6 +40,10 @@ export let I18nAdminRu: I18nAdmin = {
         size: 'Размер',
     },
     clients: {
+        allowedResources: 'Разрешённые ресурсы',
+        defaultAud: 'Аудитории по умолчанию',
+        descAllowedResources: `Необязательные индикаторы ресурсов RFC 8707, которые может запрашивать этот клиент. Пустой список отклоняет любой параметр 'resource' с ошибкой 'invalid_target'.`,
+        descDefaultAud: `Аудитории, которые всегда добавляются в токены этого клиента, независимо от параметра 'resource'.`,
         backchannelLogout:
             'Если этот клиент поддерживает {{ OIDC_BCL }}, вы можете указать URI здесь.',
         branding: {
@@ -50,6 +54,15 @@ export let I18nAdminRu: I18nAdmin = {
             descVariables: `Каждая следующая метка одновременно является именем CSS-переменной. Это означает,
                 что вы можете ссылаться на них в свободных полях ввода, например, с помощью <code>hsla(var(--action) / .7)</code>.`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: 'Конфиденциальный',
         confidentialNoSecret: 'Это неконфиденциальный клиент, поэтому у него нет секрета.',
         config: 'Конфигурация клиента',
@@ -346,6 +359,7 @@ export let I18nAdminRu: I18nAdmin = {
         addHost: 'Новый PAM-хост',
         addUser: 'Новый PAM-пользователь',
         deleteHost: 'Вы действительно хотите удалить этот хост?',
+        deleteUser: 'Do you really want to delete this user?',
         groupDescGeneric: `Общие группы являются аналогом записей, которые обычно находятся в /etc/group. Пользователи
             могут быть назначены в них, и они возвращаются системе при NSS-запросах.`,
         groupDescHost: `Группы хостов используются для группировки хостов. NSS-запросы хоста внутри группы возвращают все остальные
@@ -442,6 +456,11 @@ export let I18nAdminRu: I18nAdmin = {
         name: 'Имя роли',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: 'Это стандартная область OIDC. Стандартные области неизменяемы.',
         delete1: 'Вы уверены, что хотите удалить эту область?',
         deleteDefault: 'Стандартные области OIDC нельзя удалить.',
@@ -491,6 +510,13 @@ export let I18nAdminRu: I18nAdmin = {
         descAttr: `Установите пользовательские атрибуты. Все пары ключ/значение обрабатываются как Строка / JSON-значение.`,
         forceLogout: `Вы уверены, что хотите аннулировать все существующие сессии и удалить все токены обновления
             для этого пользователя?`,
+        groupAdmin: {
+            notManagedTitle: 'Пользователь вне ваших групп',
+            notManagedDesc: `Этот пользователь не входит ни в одну из управляемых вами групп, поэтому его данные скрыты.
+                Добавьте пользователя в одну или несколько ваших групп, чтобы управлять им.
+                Членство вне ваших групп сохраняется.`,
+            addToGroups: 'Добавить в мои группы',
+        },
         lastLogin: 'Последний вход',
         manualInitDesc: `Пользователь также может быть инициализирован здесь. В этом случае, однако, вам нужно сообщить пароль
             напрямую.`,

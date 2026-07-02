@@ -1,4 +1,4 @@
-use crate::email::mailer::EMail;
+use crate::email::mailer::{EMail, EmailType};
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -88,6 +88,7 @@ pub async fn send_custom(
 ) -> Result<(), ErrorResponse> {
     let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let req = EMail {
+        typ: EmailType::Custom,
         recipient_name: user.email_recipient_name(),
         address: user.email.to_string(),
         subject: format!("{email_sub_prefix} - {subject}"),

@@ -106,6 +106,7 @@ export const I18nRu: I18n = {
         navEdit: 'Редактирование',
         navMfa: 'МФА',
         navLogout: 'Выход',
+        navBackToAdmin: 'Панель администратора',
         other: 'Другое',
         pam: {
             addSshKey: 'Добавить новый ключ',

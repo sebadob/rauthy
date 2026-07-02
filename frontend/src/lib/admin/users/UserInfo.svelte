@@ -47,6 +47,7 @@
         roles,
         groups,
         providers,
+        isGroupAdmin = false,
         onSave,
     }: {
         user: UserResponse;
@@ -54,6 +55,9 @@
         roles: RoleResponse[];
         groups: GroupResponse[];
         providers: AuthProviderTemplate[];
+        // `true` when the logged-in principal is only a delegated group admin:
+        // roles become read-only and groups outside the admin's prefix cannot be toggled.
+        isGroupAdmin?: boolean;
         onSave: () => void;
     } = $props();
 
@@ -66,6 +70,13 @@
 
     let userOrig: undefined | UserResponse = $state(untrack(() => user));
     let isSelf = $derived(session.get()?.user_id === user.id);
+
+    // A group admin may never change roles, and may only toggle groups it manages.
+    // Everything else stays read-only here; the backend enforces the same rules.
+    let rolesDisabled = $derived(isGroupAdmin ? roles.map(r => r.name) : []);
+    let groupsDisabled = $derived(
+        isGroupAdmin ? groups.filter(g => !session.managesGroup(g.name)).map(g => g.name) : [],
+    );
 
     let email = $state('');
     let givenName = $state('');
@@ -311,8 +322,14 @@
                 payload.del.push('roles');
             }
         }
-        // anti-lockout check for self
-        if (isSelf && !roles.includes('rauthy_admin')) {
+        // anti-lockout check for self: a full admin must not strip its own `rauthy_admin`
+        // role. A delegated group admin never holds that exact role and cannot edit
+        // roles anyway, so this only fires when the user currently is a full admin.
+        if (
+            isSelf &&
+            userOrig?.roles?.includes('rauthy_admin') &&
+            !roles.includes('rauthy_admin')
+        ) {
             err = `${ta.users.antiLockout.rule}: ${ta.users.antiLockout.rauthyAdmin}`;
             return;
         }
@@ -530,7 +547,8 @@
                         userId={user.id}
                         bind:preferred_username={user.user_values.preferred_username}
                         config={config.preferred_username}
-                        isAdmin
+                        isAdmin={!isGroupAdmin}
+                        {isGroupAdmin}
                     />
 
                     {#if languages}
@@ -593,10 +611,10 @@
                 </div>
             </div>
 
-            <SelectList bind:items={rolesItems}>
+            <SelectList bind:items={rolesItems} disabledItems={rolesDisabled}>
                 {t.account.roles.replaceAll(',', ' ')}
             </SelectList>
-            <SelectList bind:items={groupsItems}>
+            <SelectList bind:items={groupsItems} disabledItems={groupsDisabled}>
                 {t.account.groups.replaceAll(',', ' ')}
             </SelectList>
 

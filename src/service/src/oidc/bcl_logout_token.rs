@@ -1,5 +1,6 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
+use rauthy_api_types::oidc::Audience;
 use rauthy_common::utils::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
 use rauthy_data::entity::auth_providers::AuthProvider;
 use rauthy_data::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
@@ -85,7 +86,7 @@ impl LogoutToken<'_> {
                 exp: self.exp,
                 iss: self.iss,
                 jti: Some(self.jti.as_ref()),
-                aud: Cow::Borrowed(self.aud),
+                aud: Audience::single(self.aud),
                 sub: self.sub,
                 typ: self.typ.clone().unwrap_or(JwtTokenType::Logout),
                 azp: self.aud,

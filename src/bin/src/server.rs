@@ -83,6 +83,9 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
     }
 
     RauthyConfig::debug_logs();
+    if let Err(err) = rauthy_data::migration::bootstrap::purge_expired_generated_secrets().await {
+        warn!("Could not purge bootstrap generated-secret container: {err}");
+    }
 
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
@@ -244,6 +247,7 @@ async fn server_with_metrics() -> std::io::Result<()> {
             // out the correct type yet.
             .wrap(metrics_collector.clone())
             .service(oidc::get_well_known)
+            .service(oidc::get_well_known_oauth)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
@@ -328,6 +332,7 @@ async fn server_without_metrics() -> std::io::Result<()> {
             .wrap(CsrfProtectionMiddleware)
             .wrap(default_headers())
             .service(oidc::get_well_known)
+            .service(oidc::get_well_known_oauth)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
@@ -589,6 +594,7 @@ fn api_services() -> actix_web::Scope {
                 .service(pam::get_pam_users_authorized_keys)
                 .service(pam::get_pam_user)
                 .service(pam::put_pam_user)
+                .service(pam::delete_pam_user)
                 .service(pam::delete_pam_user_authorized_key)
                 .service(pam::get_validate_user)
                 .service(users::get_users)
@@ -676,6 +682,7 @@ fn api_services() -> actix_web::Scope {
                 .service(themes::put_theme)
                 .service(themes::delete_theme)
                 .service(oidc::get_well_known)
+                .service(oidc::get_well_known_oauth)
                 .service(generic::get_health)
                 .service(generic::get_i18n_config)
                 .service(generic::get_ready)

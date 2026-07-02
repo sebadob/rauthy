@@ -446,6 +446,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
                 gid: row.get::<_, i64>("gid")? as u32,
                 email: row.get("email")?,
                 shell: row.get("shell")?,
+                home_dir: row.get("home_dir")?,
             })
         })?
         .map(|r| r.unwrap())

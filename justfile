@@ -8,12 +8,12 @@ export USER := `echo "$(id -u):$(id -g)"`
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 is_mac_container := `if test -f /usr/local/bin/container; then echo true; else echo false; fi`
 docker := `which docker || which podman || which container || echo 'no-container-runtime-found'`
-map_docker_user := if docker == "podman" { "" } else { "-u $USER" }
+map_docker_user := if file_name(docker) == "podman" { "" } else { "-u $USER" }
 npm := `echo ${NPM:-npm}`
 cargo_home := `echo ${CARGO_HOME:-$HOME/.cargo}`
 node_image := "node:22"
 builder_image := "ghcr.io/sebadob/rauthy-builder"
-builder_tag_date := "20251203"
+builder_tag_date := "20260519"
 container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
@@ -380,7 +380,7 @@ build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     set -euxo pipefail
 
     # make sure base image is up to date
-    docker pull gcr.io/distroless/cc-debian12:nonroot
+    {{ docker }} pull gcr.io/distroless/cc-debian12:nonroot
 
     mkdir -p out/empty
 

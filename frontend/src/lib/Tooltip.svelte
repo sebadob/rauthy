@@ -21,7 +21,7 @@
 
     let title = $state(untrack(() => text));
     let show = $state(false);
-    let timer = $state<number | undefined>();
+    let timer: number | undefined = $state();
 
     const top = new Spring(0, {
         stiffness: 0.1,
@@ -48,7 +48,7 @@
     }
 
     function handleHide() {
-        timer = setTimeout(() => {
+        timer = window.setTimeout(() => {
             show = false;
         }, 100);
     }

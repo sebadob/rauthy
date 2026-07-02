@@ -13,7 +13,7 @@ use tracing::{error, info};
 
 type ConfigExt = axum::extract::State<Arc<Config>>;
 
-static SESSION_COOKIE_KEY: &str = "ExampleSession";
+const SESSION_COOKIE_KEY: &str = "ExampleSession";
 
 /// Index HTML
 pub async fn get_index(config: ConfigExt) -> Response<Body> {
@@ -76,7 +76,7 @@ pub async fn get_callback(
             return Response::builder()
                 .status(400)
                 .body(Body::from(format!("Invalid OIDC Callback: {err}")))
-                .unwrap()
+                .unwrap();
         }
     };
 
@@ -110,7 +110,7 @@ pub async fn get_callback(
             .sessions
             .write()
             .await
-            .push((sid, id_claims.sub.unwrap()));
+            .push((sid, id_claims.common.sub.unwrap()));
     }
 
     Response::builder()
@@ -140,7 +140,7 @@ pub async fn post_logout(config: ConfigExt, logout_token: LogoutToken) -> Respon
     // happen anyway as long as you are using TLS, which you should always do anyway.
 
     // let mut sessions = config.sessions.write().await;
-    if let Some(sub) = logout_token.sub {
+    if let Some(sub) = logout_token.common.sub {
         info!("Received a Logout Token for user ID {sub}");
         config.sessions.write().await.retain(|(_, uid)| uid != &sub);
     } else if let Some(sid) = logout_token.sid {

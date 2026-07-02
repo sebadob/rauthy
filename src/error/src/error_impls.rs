@@ -43,6 +43,11 @@ impl ErrorResponse {
         }
     }
 
+    /// Convenience constructor for an internal error.
+    pub fn internal(message: impl Into<Cow<'static, str>>) -> Self {
+        Self::new(ErrorResponseType::Internal, message)
+    }
+
     pub fn error_response_html(&self, body: String) -> HttpResponse {
         HttpResponseBuilder::new(self.status_code())
             .append_header(HEADER_HTML)
@@ -53,9 +58,9 @@ impl ErrorResponse {
 impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
-            ErrorResponseType::BadRequest | ErrorResponseType::UseDpopNonce(_) => {
-                StatusCode::BAD_REQUEST
-            }
+            ErrorResponseType::BadRequest
+            | ErrorResponseType::InvalidTarget
+            | ErrorResponseType::UseDpopNonce(_) => StatusCode::BAD_REQUEST,
             ErrorResponseType::Blocked
             | ErrorResponseType::Forbidden
             | ErrorResponseType::PasswordRefresh => StatusCode::FORBIDDEN,
@@ -63,6 +68,7 @@ impl ResponseError for ErrorResponse {
                 StatusCode::NOT_ACCEPTABLE
             }
             ErrorResponseType::NotFound => StatusCode::NOT_FOUND,
+            ErrorResponseType::PreconditionRequired => StatusCode::PRECONDITION_REQUIRED,
             ErrorResponseType::Disabled
             | ErrorResponseType::CSRFTokenError
             | ErrorResponseType::DPoP(_)

@@ -14,6 +14,7 @@ pub struct PamUser {
     pub gid: u32,
     pub email: String,
     pub shell: String,
+    pub home_dir: Option<String>,
 }
 
 impl From<&mut hiqlite::Row<'_>> for PamUser {
@@ -24,6 +25,7 @@ impl From<&mut hiqlite::Row<'_>> for PamUser {
             gid: row.get::<i64>("gid") as u32,
             email: row.get("email"),
             shell: row.get("shell"),
+            home_dir: row.get("home_dir"),
         }
     }
 }
@@ -36,6 +38,7 @@ impl From<tokio_postgres::Row> for PamUser {
             gid: row.get::<_, i64>("gid") as u32,
             email: row.get("email"),
             shell: row.get("shell"),
+            home_dir: row.get("home_dir"),
         }
     }
 }
@@ -152,13 +155,19 @@ WHERE pu.id IS NULL
         Ok(emails)
     }
 
-    pub async fn update_shell(uid: u32, shell: String) -> Result<(), ErrorResponse> {
-        let sql = "UPDATE pam_users SET shell = $1 WHERE id = $2";
+    pub async fn update_shell_home_dir(
+        uid: u32,
+        shell: String,
+        home_dir: Option<String>,
+    ) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE pam_users SET shell = $1, home_dir = $2 WHERE id = $3";
 
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(shell, uid)).await?;
+            DB::hql()
+                .execute(sql, params!(shell, home_dir, uid))
+                .await?;
         } else {
-            DB::pg_execute(sql, &[&shell, &(uid as i64)]).await?;
+            DB::pg_execute(sql, &[&shell, &home_dir, &(uid as i64)]).await?;
         }
 
         Ok(())
@@ -204,21 +213,55 @@ VALUES ($1, $2, $3)
 
         Ok(())
     }
+
+    /// Deletes this user and the linked user group.
+    pub async fn delete(self) -> Result<(), ErrorResponse> {
+        let sql_user = "DELETE FROM pam_users WHERE id = $1";
+        let sql_group = "DELETE FROM pam_groups WHERE name = $1 AND typ = $2";
+
+        if is_hiqlite() {
+            DB::hql()
+                .txn([
+                    (sql_user, params!(self.id)),
+                    (sql_group, params!(self.name, PamGroupType::User.as_str())),
+                ])
+                .await?;
+        } else {
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
+
+            DB::pg_txn_append(&txn, sql_user, &[&(self.id as i64)]).await?;
+            DB::pg_txn_append(&txn, sql_group, &[&self.name, &PamGroupType::User.as_str()]).await?;
+
+            txn.commit().await?;
+        }
+
+        Ok(())
+    }
 }
 
 impl PamUser {
     pub fn build_response(self, authorized_keys: Option<Vec<AuthorizedKey>>) -> PamUserResponse {
+        let home_dir = self.home_dir();
+
         PamUserResponse {
             id: self.id,
             name: self.name,
             gid: self.gid,
             email: self.email,
             shell: self.shell,
+            home_dir,
             authorized_keys: authorized_keys.map(|keys| {
                 keys.into_iter()
                     .map(PamSshAuthKeyResponse::from)
                     .collect::<Vec<_>>()
             }),
         }
+    }
+
+    pub fn home_dir(&self) -> String {
+        self.home_dir
+            .clone()
+            .unwrap_or_else(|| format!("/home/{}", self.name))
     }
 }

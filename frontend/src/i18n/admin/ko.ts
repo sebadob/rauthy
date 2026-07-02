@@ -36,6 +36,10 @@ export let I18nAdminKo: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        allowedResources: '허용된 리소스',
+        defaultAud: '기본 대상(Audience)',
+        descAllowedResources: `이 클라이언트가 요청할 수 있는 선택적 RFC 8707 리소스 인디케이터입니다. 목록이 비어 있으면 모든 'resource' 요청 파라미터를 'invalid_target'으로 거부합니다.`,
+        descDefaultAud: `'resource' 요청 파라미터와 무관하게 이 클라이언트의 토큰에 항상 추가되는 대상(audience)입니다.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
             descHsl: `HSL 값으로 입력해야 합니다. 기본 색상만 제공하면 알파 채널 및 기타 값은
@@ -45,6 +49,15 @@ export let I18nAdminKo: I18nAdmin = {
             descVariables: `색상의 각 레이블들은 동시에 CSS 변수의 이름입니다. 즉, 입력 칸에서 이를 참조할 수
                 있습니다. (예: <code>hsla(var(--action) / .7)</code>)`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: '기밀',
         confidentialNoSecret: '이 클라이언트는 기밀이 아닌 클라이언트이므로 Secret이 없습니다.',
         config: '클라이언트 설정',
@@ -328,6 +341,7 @@ export let I18nAdminKo: I18nAdmin = {
         addHost: 'New PAM Host',
         addUser: 'New PAM User',
         deleteHost: 'Do you really want to delete this host?',
+        deleteUser: 'Do you really want to delete this user?',
         groupDescGeneric: `Generic groups are the counterpart to entries that are usually found in /etc/group. Users 
             can be assigned to these and they are returned to the system by NSS Lookups.`,
         groupDescHost: `Host groups are used to group hosts. NSS lookups of a host within the group return all other 
@@ -424,6 +438,11 @@ export let I18nAdminKo: I18nAdmin = {
         name: '역할 이름',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: '이것은 OIDC 기본 범위 중 하나입니다. 변경할 수 없습니다.',
         delete1: '이 범위를 삭제하시겠습니까?',
         deleteDefault: 'OIDC 기본 범위는 삭제할 수 없습니다.',
@@ -472,6 +491,13 @@ export let I18nAdminKo: I18nAdmin = {
         deleteUser: '이 사용자를 삭제하시겠습니까?',
         descAttr: `사용자 지정 속성을 설정합니다. 모든 키/값 쌍은 문자열/JSON 값으로 처리됩니다.`,
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,
+        groupAdmin: {
+            notManagedTitle: '내 그룹 밖의 사용자',
+            notManagedDesc: `이 사용자는 회원님이 관리하는 그룹에 속해 있지 않아 세부 정보가 표시되지 않습니다.
+                사용자를 관리하려면 내 그룹 중 하나 이상에 추가하세요.
+                내 그룹 밖의 멤버십은 그대로 유지됩니다.`,
+            addToGroups: '내 그룹에 추가',
+        },
         lastLogin: '마지막 로그인',
         manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
             password directly.`,

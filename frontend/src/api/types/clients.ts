@@ -1,4 +1,5 @@
 import type { JwkKeyPairAlg } from './oidc';
+import type { JsonValue } from '$utils/jsonValue';
 
 export const AuthFlowDeviceCode = 'urn:ietf:params:oauth:grant-type:device_code';
 export type AuthFlow =
@@ -32,8 +33,6 @@ export interface ScimClientRequestResponse {
 }
 
 export interface UpdateClientRequest {
-    /// Validation: PATTERN_CLIENT_ID
-    id: string;
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;
     confidential: boolean;
@@ -66,6 +65,15 @@ export interface UpdateClientRequest {
     backchannel_logout_uri?: string;
     /// Validation: PATTERN_GROUP
     restrict_group_prefix?: string;
+    /// Validation: JSON object, max 1024 serialized characters
+    claims?: JsonValue;
+    claims_at_root?: boolean;
+    /// RFC 8707 allow-list of resource indicators this client may request.
+    /// Validation: PATTERN_URI
+    allowed_resources?: string[];
+    /// Audiences always added to this client's tokens, independent of any request.
+    /// Validation: PATTERN_URI
+    default_aud?: string[];
     scim?: ScimClientRequestResponse;
 }
 
@@ -95,6 +103,10 @@ export interface ClientResponse {
     contacts?: string[];
     backchannel_logout_uri?: string;
     restrict_group_prefix?: string;
+    claims?: JsonValue;
+    claims_at_root: boolean;
+    allowed_resources?: string[];
+    default_aud?: string[];
     scim?: ScimClientRequestResponse;
 }
 

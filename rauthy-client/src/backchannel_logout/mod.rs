@@ -1,4 +1,4 @@
-use jwt_simple::prelude::Deserialize;
+use serde::Deserialize;
 
 pub mod logout_token;
 

@@ -12,15 +12,17 @@
 //! used. If it is not given, a random ID will be generated.
 
 use crate::language::Language;
+use rauthy_api_types::api_keys::{AccessGroup, AccessRights};
 use rauthy_api_types::clients::ScimClientRequestResponse;
 use rauthy_api_types::cust_validation::*;
 use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
 use rauthy_common::regex::*;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+use std::fmt::{Debug, Formatter};
 use std::sync::LazyLock;
-use validator::Validate;
+use validator::{Validate, ValidationError, ValidationErrors};
 
 pub static RE_DB_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{24}$").unwrap());
 
@@ -70,15 +72,101 @@ pub struct Scope {
     /// `[UserAttribute.name]`s that should be included in the `id_token` if this scope is
     /// requested.
     pub attr_include_id: Option<Vec<String>>,
+    /// If `true`, this scope's mapped custom attributes are emitted at the token root
+    /// (flattened) instead of nested under `custom`. Only honored for custom scopes.
+    /// Defaults to `false`.
+    pub claims_at_root: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ApiKey {
+    /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
+    pub name: String,
+    /// Unix timestamp in seconds.
+    pub exp: Option<i64>,
+    pub secret: ApiKeySecret,
+    pub access: Vec<ApiKeyAccess>,
+}
+
+impl Validate for ApiKey {
+    fn validate(&self) -> Result<(), ValidationErrors> {
+        let mut errors = ValidationErrors::new();
+
+        if !RE_API_KEY.is_match(&self.name) {
+            let mut err = ValidationError::new("^[a-zA-Z0-9_-/]{2,24}$");
+            err.add_param(std::borrow::Cow::from("value"), &self.name);
+            errors.add("name", err);
+        }
+
+        if let Some(exp) = self.exp
+            && exp < 1719784800
+        {
+            let mut err = ValidationError::new("range");
+            err.add_param(std::borrow::Cow::from("min"), &1719784800);
+            err.add_param(std::borrow::Cow::from("value"), &exp);
+            errors.add("exp", err);
+        }
+
+        if self.access.is_empty() {
+            let mut err = ValidationError::new("length");
+            err.add_param(std::borrow::Cow::from("min"), &1);
+            errors.add("access", err);
+        } else {
+            errors.merge_self("access", self.access.validate());
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+pub enum ApiKeySecret {
+    // Plain text secret
+    Plain(String),
+    // Must be encrypted using [cryptr](https://github.com/sebadob/cryptr) with an `ENC_KEY` that
+    // the Rauthy instance must have available. The encrypted data is expected as **base64**.
+    Encrypted(String),
+    // Generate a new API-key token on first bootstrap and store the full
+    // `name$secret` token in the encrypted generated-secret container.
+    Generate,
+}
+
+impl Debug for ApiKeySecret {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("<hidden>")
+    }
+}
+
+impl<'de> Deserialize<'de> for ApiKeySecret {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_secret(
+            deserializer,
+            "API-key secret",
+            "Encrypted",
+            |s| Ok(Self::Plain(s)),
+            |s| Ok(Self::Encrypted(s)),
+            || Ok(Self::Generate),
+        )
+    }
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ApiKeyAccess {
+    pub group: AccessGroup,
+    #[validate(length(min = 1))]
+    pub access_rights: Vec<AccessRights>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct Client {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
+    /// Validation: `^[a-zA-Z0-9._\-]{2,256}$`
+    #[validate(regex(path = "*RE_CLIENT_ID_STRICT", code = "^[a-zA-Z0-9._\\-]{2,256}$"))]
     pub id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
@@ -146,7 +234,7 @@ pub struct Client {
     pub scim: Option<ScimClientRequestResponse>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub enum ClientSecret {
     // Plain text secret
     Plain(String),
@@ -160,6 +248,25 @@ pub enum ClientSecret {
     // For future versions, the idea is to add CLI capabilities to the `rauthy` binary and provide
     // a much easier way to achieve this.
     Encrypted(String),
+    // Generate a new confidential-client secret on first bootstrap and store
+    // the cleartext in the encrypted generated-secret container.
+    Generate,
+}
+
+impl<'de> Deserialize<'de> for ClientSecret {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_secret(
+            deserializer,
+            "client secret",
+            "Encrypted",
+            |s| Ok(Self::Plain(s)),
+            |s| Ok(Self::Encrypted(s)),
+            || Ok(Self::Generate),
+        )
+    }
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -206,8 +313,186 @@ pub struct User {
     pub attributes: Option<Vec<UserAttrValueRequest>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub enum UserPassword {
     Plain(String),
     Argon2ID(String),
+    Generate,
+}
+
+impl<'de> Deserialize<'de> for UserPassword {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_secret(
+            deserializer,
+            "user password",
+            "Argon2ID",
+            |s| Ok(Self::Plain(s)),
+            |s| Ok(Self::Argon2ID(s)),
+            || Ok(Self::Generate),
+        )
+    }
+}
+
+fn deserialize_secret<'de, D, T, Plain, Encrypted, Generate>(
+    deserializer: D,
+    name: &str,
+    encrypted_variant: &str,
+    plain: Plain,
+    encrypted: Encrypted,
+    generate: Generate,
+) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    Plain: FnOnce(String) -> Result<T, D::Error>,
+    Encrypted: FnOnce(String) -> Result<T, D::Error>,
+    Generate: FnOnce() -> Result<T, D::Error>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::String(s) if s == "generate" => generate(),
+        serde_json::Value::String(s) => Err(serde::de::Error::custom(format!(
+            "invalid {name} string '{s}', expected 'generate'"
+        ))),
+        serde_json::Value::Object(mut obj) if obj.len() == 1 => {
+            if let Some(v) = obj.remove("Plain") {
+                let s = serde_json::from_value(v).map_err(serde::de::Error::custom)?;
+                plain(s)
+            } else if let Some(v) = obj.remove(encrypted_variant) {
+                let s = serde_json::from_value(v).map_err(serde::de::Error::custom)?;
+                encrypted(s)
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "invalid {name} object variant"
+                )))
+            }
+        }
+        _ => Err(serde::de::Error::custom(format!(
+            "invalid {name}, expected {{\"Plain\": ...}}, {{\"{encrypted_variant}\": ...}}, \
+             or \"generate\""
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use validator::Validate;
+
+    #[test]
+    fn parses_api_keys_bootstrap_example() {
+        let api_keys = serde_json::from_str::<Vec<ApiKey>>(include_str!(
+            "../../../../../bootstrap/api_keys.json"
+        ))
+        .expect("api_keys bootstrap example should parse");
+
+        assert_eq!(api_keys.len(), 1);
+        assert_eq!(api_keys[0].name, "bootstrap");
+        for api_key in &api_keys {
+            api_key
+                .validate()
+                .expect("api_keys bootstrap example should validate");
+        }
+    }
+
+    #[test]
+    fn parses_generated_api_key_secret_string() {
+        let api_key = serde_json::from_str::<ApiKey>(
+            r#"{
+                "name": "provision",
+                "secret": "generate",
+                "access": [
+                    {
+                        "group": "Clients",
+                        "access_rights": ["read"]
+                    }
+                ]
+            }"#,
+        )
+        .unwrap();
+
+        assert!(matches!(api_key.secret, ApiKeySecret::Generate));
+        api_key.validate().unwrap();
+    }
+
+    #[test]
+    fn parses_generated_client_secret_string() {
+        let client = serde_json::from_str::<Client>(
+            r#"{
+                "id": "generated-client",
+                "secret": "generate",
+                "redirect_uris": ["https://localhost/callback"],
+                "enabled": true,
+                "flows_enabled": ["authorization_code"],
+                "access_token_alg": "EdDSA",
+                "id_token_alg": "EdDSA",
+                "auth_code_lifetime": 10,
+                "access_token_lifetime": 900,
+                "scopes": ["openid", "profile"],
+                "default_scopes": ["openid"],
+                "force_mfa": false
+            }"#,
+        )
+        .unwrap();
+
+        assert!(matches!(client.secret, Some(ClientSecret::Generate)));
+    }
+
+    #[test]
+    fn absent_or_null_client_secret_stays_public() {
+        let without_secret = serde_json::from_str::<Client>(
+            r#"{
+                "id": "public-client",
+                "redirect_uris": ["https://localhost/callback"],
+                "enabled": true,
+                "flows_enabled": ["authorization_code"],
+                "access_token_alg": "EdDSA",
+                "id_token_alg": "EdDSA",
+                "auth_code_lifetime": 10,
+                "access_token_lifetime": 900,
+                "scopes": ["openid", "profile"],
+                "default_scopes": ["openid"],
+                "force_mfa": false
+            }"#,
+        )
+        .unwrap();
+        let null_secret = serde_json::from_str::<Client>(
+            r#"{
+                "id": "public-client-null",
+                "secret": null,
+                "redirect_uris": ["https://localhost/callback"],
+                "enabled": true,
+                "flows_enabled": ["authorization_code"],
+                "access_token_alg": "EdDSA",
+                "id_token_alg": "EdDSA",
+                "auth_code_lifetime": 10,
+                "access_token_lifetime": 900,
+                "scopes": ["openid", "profile"],
+                "default_scopes": ["openid"],
+                "force_mfa": false
+            }"#,
+        )
+        .unwrap();
+
+        assert!(without_secret.secret.is_none());
+        assert!(null_secret.secret.is_none());
+    }
+
+    #[test]
+    fn parses_generated_user_password_string() {
+        let user = serde_json::from_str::<User>(
+            r#"{
+                "email": "generated@example.com",
+                "password": "generate",
+                "roles": ["user"],
+                "enabled": true,
+                "email_verified": true
+            }"#,
+        )
+        .unwrap();
+
+        assert!(matches!(user.password, UserPassword::Generate));
+    }
 }

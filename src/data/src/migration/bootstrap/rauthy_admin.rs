@@ -21,7 +21,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 
     First-Time setup - an already hashed bootstrap password has been given for '{email}'
 
-    Please change it immediately: {issuer}/account
+    Please change it immediately: {issuer}account
     You will never see this message again!
         "#
             );
@@ -35,7 +35,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 
     First-Time setup - a bootstrap password has been given for '{email}'
 
-    Please change it immediately: {issuer}/account
+    Please change it immediately: {issuer}account
     You will never see this message again!
         "#
                     );
@@ -50,7 +50,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 
     {plain}
 
-    Please change it immediately: {issuer}/account
+    Please change it immediately: {issuer}account
     You will never see this message again!
         "#
                     );

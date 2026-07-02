@@ -6,6 +6,7 @@ use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::one_time_password::{OneTimePassword, OtpKind};
+use crate::entity::pam::users::PamUser;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
@@ -192,7 +193,7 @@ impl User {
         Ok(())
     }
 
-    async fn count_dec() -> Result<(), ErrorResponse> {
+    pub async fn count_dec() -> Result<(), ErrorResponse> {
         let mut count = Self::count().await?;
         // theoretically, we could have overlaps here, but we don't really care
         // -> used for dynamic pagination only
@@ -286,6 +287,12 @@ impl User {
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
+        // We are cleaning up PAM data manually instead of using FKs because
+        // of a chicken-and-egg problem in some cases.
+        if let Ok(user) = PamUser::find_by_user_id(self.id.clone()).await {
+            user.delete().await?;
+        }
+
         Session::delete_by_user(&self.id).await?;
 
         if let Some(picture_id) = &self.picture_id {

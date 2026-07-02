@@ -507,7 +507,7 @@ pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, Err
         .json(JWKSPublicKeyCerts::from(pub_key)))
 }
 
-/// POST for starting an OAuth 2.0 Device Authorization Grant flow
+/// POST for starting an OAuth 2 Device Authorization Grant flow
 #[utoipa::path(
     post,
     path = "/oidc/device",
@@ -627,15 +627,16 @@ pub async fn post_device_auth(
     }
 
     // we are good - create the code
-    let code = match DeviceAuthCode::new(scopes, client.id, payload.client_secret).await {
-        Ok(code) => code,
-        Err(err) => {
-            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidRequest,
-                error_description: Some(err.message),
-            });
-        }
-    };
+    let code =
+        match DeviceAuthCode::new(scopes, client.id, payload.client_secret, payload.nonce).await {
+            Ok(code) => code,
+            Err(err) => {
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(err.message),
+                });
+            }
+        };
 
     let user_code = code.user_code();
     let verification_uri = code.verification_uri();
@@ -652,7 +653,7 @@ pub async fn post_device_auth(
     HttpResponse::Ok().json(resp)
 }
 
-/// POST for verifying an OAuth 2.0 Device Authorization Grant flow
+/// POST for verifying an OAuth 2 Device Authorization Grant flow
 #[utoipa::path(
     post,
     path = "/oidc/device/verify",
@@ -1209,7 +1210,8 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
 
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
-        Ok(HttpResponse::Ok()
+        let mut builder = HttpResponse::Ok();
+        builder
             .insert_header((headers.user.as_ref(), info.id))
             .insert_header((headers.roles.as_ref(), info.roles.join(",")))
             .insert_header((
@@ -1229,8 +1231,15 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
                 headers.given_name.as_ref(),
                 info.given_name.unwrap_or_default(),
             ))
-            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()))
-            .finish())
+            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()));
+
+        if headers.enable_pref_username
+            && let Some(username) = info.preferred_username
+        {
+            builder.insert_header((headers.preferred_username.as_ref(), username));
+        }
+
+        Ok(builder.finish())
     } else {
         Ok(HttpResponse::Ok().finish())
     }
@@ -1240,6 +1249,17 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
 ///
 /// Capable OIDC clients can use this endpoint to auto-discover all necessary OIDC information and
 /// endpoints that are provided by rauthy to automatically choose the best / safest options.
+async fn well_known_response() -> Result<HttpResponse, ErrorResponse> {
+    let wk = WellKnown::json().await?;
+    Ok(HttpResponse::Ok()
+        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
+        .insert_header((
+            header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_static("*"),
+        ))
+        .body(wk))
+}
+
 #[utoipa::path(
     get,
     path = "/.well-known/openid-configuration",
@@ -1250,12 +1270,14 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
 )]
 #[get("/.well-known/openid-configuration")]
 pub async fn get_well_known() -> Result<HttpResponse, ErrorResponse> {
-    let wk = WellKnown::json().await?;
-    Ok(HttpResponse::Ok()
-        .insert_header((CONTENT_TYPE, APPLICATION_JSON))
-        .insert_header((
-            header::ACCESS_CONTROL_ALLOW_ORIGIN,
-            HeaderValue::from_static("*"),
-        ))
-        .body(wk))
+    well_known_response().await
+}
+
+// RFC 8414 alias for `/.well-known/openid-configuration`. Some MCP clients
+// (ChatGPT's connector backend) prefer the RFC 8414 endpoint for AS-metadata
+// discovery and won't read `client_id_metadata_document_supported` from the
+// OIDC-only doc. Body is identical; we just expose it under the second path.
+#[get("/.well-known/oauth-authorization-server")]
+pub async fn get_well_known_oauth() -> Result<HttpResponse, ErrorResponse> {
+    well_known_response().await
 }

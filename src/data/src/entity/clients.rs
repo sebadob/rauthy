@@ -42,8 +42,9 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-    backchannel_logout_uri = $20, restrict_group_prefix = $21
-WHERE id = $22"#;
+    backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25
+WHERE id = $26"#;
 
 /**
 # OIDC Client
@@ -81,6 +82,18 @@ pub struct Client {
     pub contacts: Option<String>,
     pub backchannel_logout_uri: Option<String>,
     pub restrict_group_prefix: Option<String>,
+    // Admin-defined custom claims, serialized JSON object. We don't store
+    // `serde_json::Value` directly, because it might produce a
+    // `Bincode: Serde(AnyNotSupported)`. Emitted into `client_credentials`
+    // tokens; see `TokenSet::build_access_token`.
+    pub claims: Option<Vec<u8>>,
+    // When `true`, `claims` are emitted at the token root (flattened) instead of
+    // nested under `custom`, guarded by `validate_no_reserved_collision()`.
+    pub claims_at_root: bool,
+    /// RFC 8707 allow-list of resource indicators this client may request (CSV).
+    pub allowed_resources: Option<String>,
+    /// Audiences always added to this client's tokens, independent of any request (CSV).
+    pub default_aud: Option<String>,
 }
 
 impl Debug for Client {
@@ -91,7 +104,8 @@ impl Debug for Client {
         redirect_uris: {}, post_logout_redirect_uris: {:?}, allowed_origins: {:?}, \
         flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
-        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?} \
+        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
+        claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?} \
         }}",
             self.id,
             self.name,
@@ -113,6 +127,10 @@ impl Debug for Client {
             self.contacts,
             self.backchannel_logout_uri,
             self.restrict_group_prefix,
+            self.claims.as_deref().map(String::from_utf8_lossy),
+            self.claims_at_root,
+            self.allowed_resources,
+            self.default_aud,
         )
     }
 }
@@ -140,9 +158,10 @@ impl Client {
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
+default_aud)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22)"#;
+$18, $19, $20, $21, $22, $23, $24)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -170,7 +189,9 @@ $18, $19, $20, $21, $22)"#;
                         &client.client_uri,
                         &client.contacts,
                         &client.backchannel_logout_uri,
-                        &client.restrict_group_prefix
+                        &client.restrict_group_prefix,
+                        &client.allowed_resources,
+                        &client.default_aud
                     ),
                 )
                 .await?;
@@ -200,6 +221,8 @@ $18, $19, $20, $21, $22)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &client.allowed_resources,
+                    &client.default_aud,
                 ],
             )
             .await?;
@@ -494,6 +517,8 @@ VALUES ($1, $2, $3, $4)"#;
             .backchannel_logout_uri
             .clone()
             .filter(|uri| !uri.is_empty());
+        let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
+        let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
 
         txn.push((
             SQL_SAVE,
@@ -519,6 +544,10 @@ VALUES ($1, $2, $3, $4)"#;
                 contacts,
                 backchannel_logout_uri,
                 &self.restrict_group_prefix,
+                &self.claims,
+                self.claims_at_root,
+                allowed_resources,
+                default_aud,
                 &self.id
             ),
         ));
@@ -538,6 +567,8 @@ VALUES ($1, $2, $3, $4)"#;
             .backchannel_logout_uri
             .clone()
             .filter(|uri| !uri.is_empty());
+        let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
+        let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
 
         DB::pg_txn_append(
             txn,
@@ -564,6 +595,10 @@ VALUES ($1, $2, $3, $4)"#;
                 &contacts,
                 &backchannel_logout_uri,
                 &self.restrict_group_prefix,
+                &self.claims,
+                &self.claims_at_root,
+                &allowed_resources,
+                &default_aud,
                 &self.id,
             ],
         )
@@ -590,6 +625,8 @@ VALUES ($1, $2, $3, $4)"#;
             .backchannel_logout_uri
             .clone()
             .filter(|uri| !uri.is_empty());
+        let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
+        let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
 
         if is_hiqlite() {
             DB::hql()
@@ -617,6 +654,10 @@ VALUES ($1, $2, $3, $4)"#;
                         contacts,
                         backchannel_logout_uri,
                         &self.restrict_group_prefix,
+                        &self.claims,
+                        self.claims_at_root,
+                        allowed_resources,
+                        default_aud,
                         self.id.clone()
                     ),
                 )
@@ -646,6 +687,10 @@ VALUES ($1, $2, $3, $4)"#;
                     &contacts,
                     &backchannel_logout_uri,
                     &self.restrict_group_prefix,
+                    &self.claims,
+                    &self.claims_at_root,
+                    &allowed_resources,
+                    &default_aud,
                     &self.id,
                 ],
             )
@@ -877,6 +922,77 @@ impl Client {
             Some(res)
         } else {
             None
+        }
+    }
+
+    /// Borrowed, allocation-free view of the `allowed_resources` CSV (empties skipped).
+    #[inline]
+    pub fn allowed_resources_iter(&self) -> impl Iterator<Item = &str> {
+        self.allowed_resources
+            .as_deref()
+            .unwrap_or_default()
+            .split(',')
+            .filter(|s| !s.is_empty())
+    }
+
+    /// Borrowed, allocation-free view of the `default_aud` CSV (empties skipped).
+    #[inline]
+    pub fn default_aud_iter(&self) -> impl Iterator<Item = &str> {
+        self.default_aud
+            .as_deref()
+            .unwrap_or_default()
+            .split(',')
+            .filter(|s| !s.is_empty())
+    }
+
+    #[inline]
+    pub fn get_allowed_resources(&self) -> Option<Vec<String>> {
+        self.allowed_resources.as_ref()?;
+        Some(self.allowed_resources_iter().map(String::from).collect())
+    }
+
+    #[inline]
+    pub fn get_default_aud(&self) -> Option<Vec<String>> {
+        self.default_aud.as_ref()?;
+        Some(self.default_aud_iter().map(String::from).collect())
+    }
+
+    /// Validates an RFC 8707 `resource` request value against this client's policy: it
+    /// must match one of the client's configured `allowed_resources`. The entries are
+    /// matched verbatim, so an operator decides what a valid value looks like. Ephemeral
+    /// clients without their own allow-list are only permitted when
+    /// `ephemeral_clients.danger_allow_unvalidated_resource` is enabled. On any failure
+    /// an `invalid_target` error (RFC 8707 §2) is returned.
+    pub fn validate_resource_request(&self, resource: &str) -> Result<(), ErrorResponse> {
+        if resource.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "`resource` must not be empty",
+            ));
+        }
+
+        let mut allowed = self.allowed_resources_iter().peekable();
+        if allowed.peek().is_some() {
+            if allowed.any(|r| r == resource) {
+                Ok(())
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "the requested `resource` is not allowed for this client",
+                ))
+            }
+        } else if self.is_ephemeral()
+            && RauthyConfig::get()
+                .vars
+                .ephemeral_clients
+                .danger_allow_unvalidated_resource
+        {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "this client has no `allowed_resources` configured for the requested `resource`",
+            ))
         }
     }
 
@@ -1428,6 +1544,12 @@ impl Client {
         let default_scopes = self.get_default_scopes();
         let challenges = self.get_challenges();
         let contacts = self.get_contacts();
+        let claims = self
+            .claims
+            .as_deref()
+            .and_then(|bytes| serde_json::from_slice(bytes).ok());
+        let allowed_resources = self.get_allowed_resources();
+        let default_aud = self.get_default_aud();
 
         let access_token_alg = JwkKeyPairAlg::from_str(&self.access_token_alg)
             .expect("internal JwkKeyPairAlg conversion to always succeed")
@@ -1457,6 +1579,10 @@ impl Client {
             contacts,
             backchannel_logout_uri: self.backchannel_logout_uri,
             restrict_group_prefix: self.restrict_group_prefix,
+            claims,
+            claims_at_root: self.claims_at_root,
+            allowed_resources,
+            default_aud,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -1508,6 +1634,10 @@ impl From<EphemeralClientRequest> for Client {
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: value.allowed_resources.map(|r| r.join(",")),
+            default_aud: None,
         }
     }
 }
@@ -1547,6 +1677,10 @@ impl Default for Client {
             contacts: None,
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
         }
     }
 }
@@ -1792,6 +1926,10 @@ mod tests {
             contacts: Some("batman@localhost.de,@alfred:matrix.org".to_string()),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);

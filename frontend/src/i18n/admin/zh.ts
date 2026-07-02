@@ -37,6 +37,10 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        allowedResources: '允许的资源',
+        defaultAud: '默认受众 (aud)',
+        descAllowedResources: `此客户端可以请求的可选 RFC 8707 资源指示符。空列表将以 'invalid_target' 拒绝任何 'resource' 请求参数。`,
+        descDefaultAud: `无论是否提供 'resource' 请求参数，始终添加到此客户端令牌中的受众 (aud)。`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
             descHsl: `以下值必须以HSL值形式给出。您只需提供基本颜色。
@@ -46,6 +50,15 @@ export let I18nAdminZh: I18nAdmin = {
             descVariables: `每个标签同时也是CSS变量名。这意味着，
                 您可以在自由输入框中引用它们，例如<code>hsla(var(--action) / .7)</code>。`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: '机密',
         confidentialNoSecret: '这是一个非机密客户端，因此没有密钥。',
         config: '客户端配置',
@@ -327,6 +340,7 @@ export let I18nAdminZh: I18nAdmin = {
         addHost: '新建PAM主机',
         addUser: '新建PAM用户',
         deleteHost: '您真的要删除此主机吗？',
+        deleteUser: 'Do you really want to delete this user?',
         groupDescGeneric: `通用组是通常在/etc/group中找到的条目的对应物。
             用户可以分配到这些组，并通过NSS查找返回给系统。`,
         groupDescHost: `主机组用于对主机进行分组。对组内主机的NSS查找会返回组内的所有其他主机作为结果。
@@ -418,6 +432,11 @@ export let I18nAdminZh: I18nAdmin = {
         name: '角色名称',
     },
     scopes: {
+        claimsAtRoot: 'Emit claims at token root',
+        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a mapped
+            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
         defaultNoMod: '这是默认OIDC作用域。这些是不可变的。',
         delete1: '您确定要删除此作用域吗？',
         deleteDefault: '默认OIDC作用域无法删除。',
@@ -464,6 +483,13 @@ export let I18nAdminZh: I18nAdmin = {
         deleteUser: '您确定要删除此用户吗？',
         descAttr: `设置自定义用户属性。所有键/值对将作为字符串/JSON值处理。`,
         forceLogout: `您确定要使此用户的所有现有会话无效并删除所有刷新令牌吗？`,
+        groupAdmin: {
+            notManagedTitle: '不在您群组中的用户',
+            notManagedDesc: `该用户不属于任何您管理的群组，因此其详细信息处于隐藏状态。
+                将该用户添加到您的一个或多个群组即可进行管理。
+                您管理范围之外的成员关系将被保留。`,
+            addToGroups: '添加到我的群组',
+        },
         lastLogin: '最后登录',
         manualInitDesc: `也可以在此处初始化用户。在这种情况下，您需要直接传达密码。`,
         manualInit: '手动初始化',

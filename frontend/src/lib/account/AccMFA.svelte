@@ -309,7 +309,7 @@
             }
 
             calcModSecs();
-            interval = setInterval(() => {
+            interval = window.setInterval(() => {
                 calcModSecs();
             }, 1000);
         } else {

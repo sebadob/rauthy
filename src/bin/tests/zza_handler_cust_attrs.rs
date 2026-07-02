@@ -54,6 +54,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         scope: "cust_scope".to_string(),
         attr_include_access: None,
         attr_include_id: None,
+        claims_at_root: false,
     };
     let url_scopes = format!("{}/scopes", backend_url);
     let res = client
@@ -73,6 +74,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         scope: "cust_scope".to_string(),
         attr_include_access: Some(vec!["cust1".to_string()]),
         attr_include_id: Some(vec!["cust1".to_string()]),
+        claims_at_root: false,
     };
     let url_scope = format!("{}/{}", url_scopes, scope.id);
     let res = client
@@ -110,7 +112,6 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     let mut default_scopes = c.default_scopes;
     default_scopes.push("cust_scope".to_string());
     let client_req = UpdateClientRequest {
-        id: c.id,
         name: c.name,
         confidential: c.confidential,
         redirect_uris: c.redirect_uris,
@@ -130,6 +131,10 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         contacts: None,
         backchannel_logout_uri: None,
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
+        allowed_resources: None,
+        default_aud: None,
         scim: None,
     };
     let res = client
@@ -177,6 +182,64 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         cust_claims.get("cust1").unwrap(),
         &Value::String("Some String".to_string())
     );
+
+    // === issue #1595: per-scope `claims_at_root` ===
+    // Flip the scope so its mapped attribute is emitted at the token root (flattened)
+    // instead of nested under `custom`, then assert the change end-to-end.
+    let req = ScopeRequest {
+        scope: "cust_scope".to_string(),
+        attr_include_access: Some(vec!["cust1".to_string()]),
+        attr_include_id: Some(vec!["cust1".to_string()]),
+        claims_at_root: true,
+    };
+    let res = client
+        .put(&url_scope)
+        .headers(auth_headers.clone())
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let scope_root = res.json::<ScopeResponse>().await?;
+    assert!(scope_root.claims_at_root);
+
+    // The mapped attribute must now be a top-level claim and must NOT appear nested
+    // under `custom` (the only custom mapping on this token is root-promoted).
+    let token = get_token_set().await;
+    let bytes = extract_raw_claims(&token.access_token);
+    let raw = serde_json::from_slice::<Value>(&bytes).unwrap();
+    assert_eq!(
+        raw.get("cust1").unwrap(),
+        &Value::String("Some String".to_string())
+    );
+    assert!(
+        raw.get("custom").is_none(),
+        "no nested `custom` object expected when the only mapping is root-promoted"
+    );
+    // It must also round-trip through the typed claims into `custom_flattened`.
+    let claims = serde_json::from_slice::<JwtAccessClaims>(&bytes).unwrap();
+    assert!(claims.custom.is_none());
+    let flat = claims
+        .custom_flattened
+        .expect("root-promoted attribute must be present in custom_flattened");
+    assert_eq!(
+        flat.get("cust1").unwrap(),
+        &Value::String("Some String".to_string())
+    );
+
+    // Restore nested behavior so the remainder of the test observes `custom.*` again.
+    let req = ScopeRequest {
+        scope: "cust_scope".to_string(),
+        attr_include_access: Some(vec!["cust1".to_string()]),
+        attr_include_id: Some(vec!["cust1".to_string()]),
+        claims_at_root: false,
+    };
+    let res = client
+        .put(&url_scope)
+        .headers(auth_headers.clone())
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
 
     // modify the custom attr and change its name
     let cust_attr_mod = UserAttrConfigRequest {
