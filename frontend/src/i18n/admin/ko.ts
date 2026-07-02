@@ -476,9 +476,21 @@ export let I18nAdminKo: I18nAdmin = {
         manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
             password directly.`,
         manualInit: 'Manual Initialization',
-        mfaDelete1: '이 사용자의 패스키를 삭제할 수 있습니다.',
-        mfaDelete2: `이 작업은 되돌릴 수 없습니다!`,
-        noMfaKeys: '등록된 패스키 없음',
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: '이 사용자의 패스키를 삭제할 수 있습니다.',
+                mfaDelete2: `이 작업은 되돌릴 수 없습니다!`,
+                noMfaKeys: '등록된 패스키 없음',
+            },
+        },
         pkOnly1: '이 사용자는 패스키 전용 계정입니다.',
         pkOnly2: '이 사용자는 비밀번호 없는 로그인을 사용하며, 설정된 비밀번호가 없습니다.',
         pkOnly3: `이 사용자가 모든 비밀번호를 분실한 경우, 계정을 완전히 재설정하고 새로운 비밀번호

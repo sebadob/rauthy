@@ -9,7 +9,7 @@
     import type { GroupResponse } from '$api/types/groups.ts';
     import type { SelectItem } from '$lib5/select_list/props.ts';
     import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
-    import { fetchPatch } from '$api/fetch';
+    import { fetchGet, fetchPatch } from '$api/fetch';
     import Form from '$lib5/form/Form.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
     import { useI18n } from '$state/i18n.svelte';
@@ -37,6 +37,9 @@
     import TZSelect from '$lib/TZSelect.svelte';
     import PreferredUsername from '$lib/PreferredUsername.svelte';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import Template from '$lib5/Template.svelte';
+    import { TPL_IS_OTP_ENABLED } from '$utils/constants';
+    import type { OtpResponse } from '$api/types/otp';
 
     let {
         user = $bindable(),
@@ -163,6 +166,29 @@
             country !== userOrig?.user_values?.country
         );
     });
+
+    let isOtpEnabled = $state(false);
+    let hasOtp = $state(false);
+
+    $effect(() => {
+        if (isOtpEnabled) {
+            fetchOtps();
+        }
+    });
+
+    async function fetchOtps() {
+        let res = await fetchGet<OtpResponse[]>(
+            `/auth/v1/users/${user.id}/otp`,
+        );
+        if (res.body) {
+            for (let otp of res.body) {
+                if (otp.is_active) {
+                    hasOtp = true;
+                    return;
+                }
+            }
+        }
+    }
 
     $effect(() => {
         if (user) {
@@ -391,6 +417,8 @@
         }
     }
 </script>
+
+<Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
 <div class="container" style:border-color={isUnsaved ? 'hsla(var(--action) / .7)' : 'transparent'}>
     {#if user}
@@ -632,7 +660,7 @@
                         {/if}
                     </LabeledValue>
                     <LabeledValue label={t.account.mfaActivated}>
-                        <CheckIcon checked={!!user.webauthn_user_id} />
+                        <CheckIcon checked={!!user.webauthn_user_id || hasOtp} />
                     </LabeledValue>
                 </div>
             </div>

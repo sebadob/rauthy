@@ -3,7 +3,7 @@
     import { buildWebIdUri, formatDateFromTs, saveProviderToken } from '$utils/helpers';
     import Button from '$lib5/button/Button.svelte';
     import Modal from '$lib5/Modal.svelte';
-    import { PKCE_VERIFIER_UPSTREAM } from '$utils/constants';
+    import { PKCE_VERIFIER_UPSTREAM, TPL_IS_OTP_ENABLED } from '$utils/constants';
     import { useI18n } from '$state/i18n.svelte.js';
     import type { UserResponse } from '$api/types/user.ts';
     import type {
@@ -12,12 +12,14 @@
     } from '$api/templates/AuthProvider.ts';
     import type { WebIdResponse } from '$api/types/web_id.ts';
     import type { ProviderLoginRequest } from '$api/types/auth_provider.ts';
-    import { fetchDelete, fetchPost } from '$api/fetch';
+    import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
     import ButtonAuthProvider from '../ButtonAuthProvider.svelte';
     import UserPicture from '$lib/UserPicture.svelte';
     import { fetchSolvePow } from '$utils/pow';
     import { generatePKCE } from '$utils/pkce';
     import type { PamUserResponse } from '$api/types/pam';
+    import Template from '$lib5/Template.svelte';
+    import type { OtpResponse } from '$api/types/otp';
 
     let {
         user = $bindable(),
@@ -62,6 +64,29 @@
         }
         return chars;
     });
+
+    let isOtpEnabled = $state(false);
+    let hasOtp = $state(false);
+
+    $effect(() => {
+        if (isOtpEnabled) {
+            fetchOtps();
+        }
+    });
+
+    async function fetchOtps() {
+        let res = await fetchGet<OtpResponse[]>(
+            `/auth/v1/users/${user.id}/otp`,
+        );
+        if (res.body) {
+            for (let otp of res.body) {
+                if (otp.is_active) {
+                    hasOtp = true;
+                    return;
+                }
+            }
+        }
+    }
 
     function linkProvider(id: string) {
         generatePKCE().then(pkce => {
@@ -109,6 +134,8 @@
         }
     }
 </script>
+
+<Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
 <div>
     <div class={classRow} style:margin=".5rem 0">
@@ -202,7 +229,7 @@
 
     <div class={classRow}>
         <div class={classLabel}>{t.account.mfaActivated}</div>
-        <CheckIcon checked={!!user.webauthn_user_id} />
+        <CheckIcon checked={!!user.webauthn_user_id || hasOtp} />
     </div>
 
     <div class={classRow}>

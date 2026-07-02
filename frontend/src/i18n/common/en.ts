@@ -66,7 +66,7 @@ export const I18nEn: I18n = {
         accessRenew: 'Access renewable until',
         accessRenewDelete: 'Delete the possibility to renew',
         birthdate: 'Birthdate',
-        canModifyFor: 'Passkeys can be modified for:',
+        canModifyFor: 'MFA can be modified for:',
         city: 'City',
         changePassword: 'Change Password',
         convertAccount: 'Convert Account',
@@ -167,6 +167,7 @@ export const I18nEn: I18n = {
         emailRequired: 'E-Mail is required',
         emailSentMsg: 'If your E-Mail exists, a request has been sent',
         expectingPasskey: 'Expecting Passkey Authentication',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: 'Too many invalid inputs. Locked until:',
         invalidCredentials: 'Invalid credentials',
         invalidKeyUsed: 'Invalid Key',
@@ -225,24 +226,38 @@ export const I18nEn: I18n = {
         cancel: 'Cancel',
     },
     mfa: {
-        p1: `If you plan on using your MFA key with multiple systems like Windows and Android, 
-            you should do the registration with Android.`,
-        p2: `Android is the platform with the least supported features for the passwordless 
-            technology. Keys you register with Android work elsewhere too. However, this does not 
-            apply the other way around.`,
-        p3: 'For more information, see',
-        docLinkText: 'the documentation about passkeys',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `If you plan on using your MFA key with multiple systems like Windows and Android, 
+                you should do the registration with Android.`,
+            p2: `Android is the platform with the least supported features for the passwordless 
+                technology. Keys you register with Android work elsewhere too. However, this does not 
+                apply the other way around.`,
+            p3: 'For more information, see',
+            docLinkText: 'the documentation about passkeys',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One time password',
+            titleEmail: 'Email-based OTP',
+            activationCode:
+                'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+        },
         errorReg: 'Error starting the Registration process',
         lastUsed: 'Last used',
         noKey: 'No Security key registered on this slot',
-        reAuthenticatePasskey: `Before you can modify Passkeys, you need to authenticate with an 
-            already registered one:`,
+        reAuthenticatePasskey: 'Before you can modify your MFA, you need to authenticate with a passkey:',
         reAuthenticatePwd:
-            'Before you can modify Passkeys, you need to re-authenticate with your password.',
+            'Before you can modify your MFA, you need to re-authenticate with your password.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Register',
-        registerNew: 'Register New Key',
+        registerNew: 'Register New',
         registerd: 'Registered',
         registerdKeys: 'Registered Keys',
+        registerdOtps: 'Registered OTPs',
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 non-special characters',
         passwordInvalid: 'Password Invalid',

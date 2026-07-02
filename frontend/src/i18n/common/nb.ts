@@ -66,7 +66,7 @@ export const I18nNb: I18n = {
         accessRenew: 'Tilgang kan fornyes til',
         accessRenewDelete: 'Fjern mulighet for fornyelse',
         birthdate: 'Fødselsdato',
-        canModifyFor: 'Passkeys kan endres for:',
+        canModifyFor: 'MFA kan endres for:',
         city: 'By',
         changePassword: 'Bytt passord',
         convertAccount: 'Endre konto',
@@ -166,6 +166,7 @@ export const I18nNb: I18n = {
         emailRequired: 'E-post er påkrevd',
         emailSentMsg: 'Hvis adressen din er registrert, er det sendt en melding',
         expectingPasskey: 'Forventer autentisering med passkey',
+        expectingOtp: 'Forventer autentisering med engangspassord',
         http429: 'For mange ugyldige forsøk. Sperret til:',
         invalidCredentials: 'Ugyldige påloggingsopplysninger',
         invalidKeyUsed: 'Ugyldig sikkerhetsnøkkel',
@@ -222,13 +223,25 @@ export const I18nNb: I18n = {
         cancel: 'Avbryt',
     },
     mfa: {
-        p1: `Hvis du ønsker å bruke flere systemer parallelt, som f.eks. Windows og Android, bør du 
-            registrere deg med Android først.`,
-        p2: `Android er plattformen som for øyeblikket støtter færrest funksjoner av den 
-            passordløse teknologien. Nøkler som registreres der, fungerer på andre enheter på samme 
-            måte. Dette gjelder imidlertid ikke omvendt.`,
-        p3: 'For more information, see',
-        docLinkText: 'the documentation about passkeys',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Hvis du ønsker å bruke flere systemer parallelt, som f.eks. Windows og Android, bør du 
+                registrere deg med Android først.`,
+            p2: `Android er plattformen som for øyeblikket støtter færrest funksjoner av den 
+                passordløse teknologien. Nøkler som registreres der, fungerer på andre enheter på samme 
+                måte. Dette gjelder imidlertid ikke omvendt.`,
+            p3: 'For more information, see',
+            docLinkText: 'the documentation about passkeys',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'Engangspassord',
+            titleEmail: 'Email-based OTP',
+            activationCode:
+                'Please enter the OTP code that was sent to your email address.',
+            code: 'Engangspassord',
+        },
         errorReg: 'Feil ved oppstart av registrering',
         lastUsed: 'Sist brukt',
         noKey: 'Det er ikke registrert noen sikkerhetsnøkkel i denne lagringen ennå',
@@ -236,10 +249,13 @@ export const I18nNb: I18n = {
             'Før passkeys kan redigeres, må en av de eksisterende først verifiseres:',
         reAuthenticatePwd:
             'Før passkeys kan redigeres, er det nødvendig med en ny bekreftelse av passordet.',
+        reAuthenticateOtp:
+            'Før engangspassord kan redigeres, må en av de eksisterende først verifiseres:',
         register: 'Registrer',
         registerNew: 'Registrer ny nøkkel',
         registerd: 'Registrert',
         registerdKeys: 'Registrerte nøkler',
+        registerdOtps: 'Registrerte engangspassord',
         passkeyName: 'Passkey-navn',
         passkeyNameErr: '2 - 32 bokstaver, ingen spesialtegn',
         passwordInvalid: 'Ugyldig passord',

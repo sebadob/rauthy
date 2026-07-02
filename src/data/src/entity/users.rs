@@ -1803,8 +1803,8 @@ impl User {
     pub async fn has_otp_of_kind_enabled(&self, kind: &OtpKind)  -> Result<bool, ErrorResponse> {
         Ok(
             OneTimePassword::find_kind_for_user(kind,&self.id)
-                .await?
-                .is_active
+                .await
+                .is_ok_and(|o| o.is_active)
         )
     }
 
@@ -1812,9 +1812,8 @@ impl User {
     pub async fn has_otp_enabled(&self) -> Result<bool, ErrorResponse> {
         Ok(
             OneTimePassword::find_for_user(&self.id)
-                .await?
-                .iter()
-                .any(|x| x.is_active)
+                .await
+                .is_ok_and(|otps| otps.iter().any(|o| o.is_active))
         )
     }
 

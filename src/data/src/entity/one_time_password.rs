@@ -9,7 +9,7 @@ use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use ring::{digest, hmac::{self}, rand::{self}};
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
+use time::{OffsetDateTime};
 use hiqlite::macros::params;
 use tracing::{info};
 use utoipa::ToSchema;
@@ -100,7 +100,7 @@ impl OneTimePassword  {
             user_id,
             name,
             secret: secret.to_vec(),
-            last_used: OffsetDateTime::now_utc().unix_timestamp(),
+            last_used: 0,
             kind,
             is_active: false,
         };
@@ -267,27 +267,26 @@ impl OneTimePassword {
                 "otp does not exist",
             ));
         }
-
         match self.kind {
             OtpKind::Email => {
                 let current_time = OffsetDateTime::now_utc().unix_timestamp();
-                let timeout = (current_time - self.last_used) / RauthyConfig::get().vars.otp.exp as i64;
+                let timeout = (current_time - self.last_used) / 60;
                 if timeout >= RauthyConfig::get().vars.otp.exp as i64 {
                     return Err(
                         ErrorResponse::new(
-                            ErrorResponseType::Unauthorized, 
+                            ErrorResponseType::BadRequest, 
                             "otp code expired",
                     ))
                 }
                 let valid_code = Self::generate_otp(&self.secret, self.last_used, RauthyConfig::get().vars.otp.default_digest_len, RauthyConfig::get().vars.otp.length);
                 if code != valid_code {
                     return Err(ErrorResponse::new(
-                    ErrorResponseType::Unauthorized,
+                    ErrorResponseType::BadRequest,
                     "code is incorrect",
                     ))
                 }
             },
-            // Unreachable should never panic since these kind aren't implement
+            // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time
             | OtpKind::Phone => {
                 unreachable!()
@@ -310,7 +309,7 @@ impl OneTimePassword {
             OtpKind::Email => {
                 send_email_otp(&code, &user).await;
             },
-            // Unreachable should never panic since these kind aren't implement
+            // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time
             | OtpKind::Phone => {
                 unreachable!()

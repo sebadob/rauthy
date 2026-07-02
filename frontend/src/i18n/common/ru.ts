@@ -168,6 +168,7 @@ export const I18nRu: I18n = {
         emailRequired: 'Эл. почта обязательна',
         emailSentMsg: 'Если ваша эл. почта существует, запрос был отправлен',
         expectingPasskey: 'Ожидается аутентификация ключом доступа',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: 'Слишком много неверных попыток. Заблокировано до:',
         invalidCredentials: 'Неверные учётные данные',
         invalidKeyUsed: 'Неверный ключ',
@@ -225,13 +226,26 @@ export const I18nRu: I18n = {
         cancel: 'Отмена',
     },
     mfa: {
-        p1: `Если вы планируете использовать свой МФА-ключ с несколькими системами, такими как Windows и Android,
-            вам следует выполнить регистрацию с Android.`,
-        p2: `Android — это платформа с наименьшим количеством поддерживаемых функций для технологии
-            беспарольной аутентификации. Ключи, зарегистрированные с Android, работают и в других местах. Однако это не
-            работает в обратном направлении.`,
-        p3: 'Для получения дополнительной информации см.',
-        docLinkText: 'документацию о ключах доступа',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Если вы планируете использовать свой МФА-ключ с несколькими системами, такими как Windows и Android,
+                вам следует выполнить регистрацию с Android.`,
+            p2: `Android — это платформа с наименьшим количеством поддерживаемых функций для технологии
+                беспарольной аутентификации. Ключи, зарегистрированные с Android, работают и в других местах. Однако это не
+                работает в обратном направлении.`,
+            p3: 'Для получения дополнительной информации см.',
+            docLinkText: 'документацию о ключах доступа',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One time password',
+            titleEmail: 'Email-based OTP',
+            activationCode:
+                'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+        },
+        
         errorReg: 'Ошибка при запуске процесса регистрации',
         lastUsed: 'Последнее использование',
         noKey: 'На этом слоте не зарегистрирован ключ безопасности',
@@ -239,10 +253,13 @@ export const I18nRu: I18n = {
             уже зарегистрированным ключом:`,
         reAuthenticatePwd:
             'Прежде чем вы сможете изменять ключи доступа, необходимо повторно ввести пароль.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Зарегистрировать',
         registerNew: 'Зарегистрировать новый ключ',
         registerd: 'Зарегистрирован',
         registerdKeys: 'Зарегистрированные ключи',
+        registerdOtps: 'Registered OTPs',
         passkeyName: 'Название ключа доступа',
         passkeyNameErr: '2 - 32 обычных символа',
         passwordInvalid: 'Неверный пароль',

@@ -55,6 +55,17 @@ export interface RequestResetRequest {
 //     refresh_token?: string,
 // }
 
+export interface ActiveOtp {
+    otp_id: string;
+    otp_kind: string;
+}
+
+export interface OtpLoginResponse {
+    code: string;
+    active_otps: ActiveOtp[];
+    user_id: string;
+}
+
 export interface WebauthnLoginResponse {
     code: string;
     user_id: string;

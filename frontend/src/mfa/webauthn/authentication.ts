@@ -1,14 +1,13 @@
 import { arrBufToBase64UrlSafe, promiseTimeout } from '$utils/helpers';
 import { fetchPost } from '$api/fetch';
 import type {
-    MfaPurpose,
     WebauthnAdditionalData,
     WebauthnAuthFinishRequest,
     WebauthnAuthStartRequest,
     WebauthnAuthStartResponse,
-} from './types.ts';
-import { base64UrlSafeToArrBuf } from './utils';
-import { untrack } from 'svelte';
+} from '$mfa/webauthn/types.ts';
+import { base64UrlSafeToArrBuf } from './utils.js';
+import type { MfaPurpose } from '$api/types/mfa.js';
 
 export interface WebauthnAuthResult {
     error?: string;

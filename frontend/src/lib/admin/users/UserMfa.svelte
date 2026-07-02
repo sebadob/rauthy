@@ -4,6 +4,11 @@
     import type { PasskeyResponse } from '$api/types/webauthn.ts';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import UserPasskey from '$lib5/UserPasskey.svelte';
+    import type { OtpResponse } from '$api/types/otp';
+    import Template from '$lib5/Template.svelte';
+    import { TPL_IS_OTP_ENABLED } from '$utils/constants';
+    import { otpDelete } from '$mfa/otp/mod';
+    import UserOtp from '$lib5/UserOtp.svelte';
 
     let {
         user,
@@ -18,8 +23,17 @@
     let err = $state('');
     let passkeys: PasskeyResponse[] = $state([]);
 
+    let otps: OtpResponse[] = $state([]);
+    let isOtpEnabled = $state(false);
+
     $effect(() => {
         fetchPasskeys();
+    });
+
+    $effect(() => {
+        if (isOtpEnabled) {
+            fetchOtps();
+        }
     });
 
     async function fetchPasskeys() {
@@ -47,17 +61,56 @@
             err = res.error?.message || 'Error';
         }
     }
+
+    async function fetchOtps() {
+        let res = await fetchGet<OtpResponse[]>(
+            `/auth/v1/users/${user.id}/otp`,
+        );
+        if (res.body) {
+            otps = res.body;
+        } else {
+            err = res.error?.message || 'Error';
+        }
+    }
+
+    async function onDeleteOtp(id: string) {
+        let res = await otpDelete(user.id, id, undefined);
+        if (res.error) {
+            err = res.error || 'Error';
+        } else {
+            await fetchOtps();
+        }
+    }
+
 </script>
 
+<Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
+
+{#if isOtpEnabled}
+    <b>{ta.users.mfa.webauthn.title}</b>
+{/if}
 {#if passkeys.length === 0}
-    <p>{ta.users.noMfaKeys}</p>
+    <p>{ta.users.mfa.webauthn.noMfaKeys}</p>
 {:else}
-    <p>{ta.users.mfaDelete1}</p>
-    <p>{@html ta.users.mfaDelete2}</p>
+    <p>{ta.users.mfa.webauthn.mfaDelete1}</p>
+    <p>{@html ta.users.mfa.webauthn.mfaDelete2}</p>
 
     <div class="keysContainer">
         {#each passkeys as passkey (passkey.name)}
             <UserPasskey {passkey} showDelete {onDelete} />
+        {/each}
+    </div>
+{/if}
+<b>{ta.users.mfa.otp.title}</b>
+{#if otps.length === 0}
+    <p>{ta.users.mfa.otp.noMfaOtps}</p>
+{:else}
+    <p>{ta.users.mfa.otp.mfaDelete1}</p>
+    <p>{@html ta.users.mfa.otp.mfaDelete2}</p>
+
+    <div class="keysContainer">
+        {#each otps as otp}
+            <UserOtp {otp} showInactive={true} onDelete={onDeleteOtp} />
         {/each}
     </div>
 {/if}
