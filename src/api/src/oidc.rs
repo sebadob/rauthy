@@ -15,7 +15,7 @@ use rauthy_api_types::oidc::{
     TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
-use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
+use rauthy_api_types::users::{OtpLoginResponse, Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
@@ -34,6 +34,7 @@ use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair, JwkKeyPairType};
 use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::one_time_password::OtpCookie;
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
@@ -141,6 +142,13 @@ pub async fn get_authorize(
             // because the authentication happens each time anyway
             force_new_session = false;
         }
+    } else if RauthyConfig::get().vars.otp.enable
+        && let Ok(mfa_cookie) = OtpCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+        && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
+        && user.has_otp_enabled().await?
+    {
+        action = FrontendAction::MfaLogin(mfa_cookie.email);
+        force_new_session = false;
     }
 
     // check for `prompt=none` and redirect if we don't have a valid session
@@ -308,7 +316,10 @@ fn build_authorize_resp(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login (Webauthn or OTP)", content(
+            (WebauthnLoginResponse = "application/webauthn+json"),
+            (OtpLoginResponse = "application/otp+json"),
+        )),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
         (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),

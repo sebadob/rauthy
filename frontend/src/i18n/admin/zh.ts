@@ -493,10 +493,22 @@ export let I18nAdminZh: I18nAdmin = {
         lastLogin: '最后登录',
         manualInitDesc: `也可以在此处初始化用户。在这种情况下，您需要直接传达密码。`,
         manualInit: '手动初始化',
-        mfaDelete1: '您可以删除此用户的通行密钥。',
-        mfaDelete2: `注意！通行密钥的删除<b>无法撤销</b>，除非用户
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: '您可以删除此用户的通行密钥。',
+                mfaDelete2: `注意！通行密钥的删除<b>无法撤销</b>，除非用户
             进行全新的注册。`,
-        noMfaKeys: '此用户没有注册的通行密钥。',
+                noMfaKeys: '此用户没有注册的通行密钥。',
+            },
+        },
         pkOnly1: '这是一个仅通行密钥账户。',
         pkOnly2: '这意味着该用户使用无密码登录，根本没有设置密码。',
         pkOnly3: `如果此用户丢失了所有通行密钥，可以完全重置账户并发送新的密码重置邮件。

@@ -65,7 +65,7 @@ export const I18nKo: I18n = {
         accessRenew: '접근 갱신 기한',
         accessRenewDelete: '갱신 비활성화',
         birthdate: '생년월일',
-        canModifyFor: 'Passkeys can be modified for:',
+        canModifyFor: 'MFA can be modified for:',
         city: '도시',
         changePassword: '비밀번호 변경',
         convertAccount: '계정 전환',
@@ -163,6 +163,7 @@ export const I18nKo: I18n = {
         emailRequired: '이메일이 필요합니다.',
         emailSentMsg: '이메일로 메세지가 발송되었습니다.',
         expectingPasskey: 'MFA 기기를 통해 로그인해 주세요.',
+        expectingOtp: 'Expecting OTP Authentication.',
         http429: '유효하지 않은 입력이 너무 많습니다. 다음 시간 전까지 비활성화합니다:',
         invalidCredentials: '유효하지 않은 인증 정보입니다.',
         invalidKeyUsed: '유효하지 않은 키입니다.',
@@ -221,10 +222,22 @@ export const I18nKo: I18n = {
         cancel: '취소',
     },
     mfa: {
-        p1: '윈도우와 안드로이드 등 다양한 시스템에서 MFA를 사용하려면, 안드로이드에서 키를 등록하여야 합니다.',
-        p2: `안드로이드는 비밀번호 없이 인증하는 기술을 가장 적게 지원하는 플랫폼입니다. 안드로이드에서 등록한 키는 
-            다른 곳에서도 작동하지만, 그 반대로는 작동되지 않습니다.`,
-        p3: 'For more information, see',
+        webauthn: {
+            title: 'Passkeys',
+            p1: '윈도우와 안드로이드 등 다양한 시스템에서 MFA를 사용하려면, 안드로이드에서 키를 등록하여야 합니다.',
+            p2: `안드로이드는 비밀번호 없이 인증하는 기술을 가장 적게 지원하는 플랫폼입니다. 안드로이드에서 등록한 키는 
+                다른 곳에서도 작동하지만, 그 반대로는 작동되지 않습니다.`,
+            p3: 'For more information, see',
+            docLinkText: 'the documentation about passkeys',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One time password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+        },
         errorReg: '가입 절차 시작 중 오류 발생',
         lastUsed: '마지막 사용일',
         noKey: '이 슬롯에 등록된 보안 키가 없습니다.',
@@ -232,17 +245,19 @@ export const I18nKo: I18n = {
             already registered one:'`,
         reAuthenticatePwd:
             'Before you can modify Passkeys, you need to re-authenticate with your password.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '등록',
         registerNew: '새 키 등록',
         registerd: '등록일',
         registerdKeys: '등록된 키',
+        registerdOtps: 'Registered OTPs',
         passkeyName: '패스키 이름',
         passkeyNameErr: '특수문자를 제외한 2자에서 32자이어야 합니다.',
         passwordInvalid: 'Password Invalid',
         test: '테스트',
         testError: '테스트 시작 중 오류 발생',
         testSuccess: '테스트 성공',
-        docLinkText: 'the documentation about Passkeys',
     },
     pagination: {
         entries: '표시 개수',

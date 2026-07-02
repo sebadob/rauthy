@@ -521,10 +521,22 @@ export let I18nAdminRu: I18nAdmin = {
         manualInitDesc: `Пользователь также может быть инициализирован здесь. В этом случае, однако, вам нужно сообщить пароль
             напрямую.`,
         manualInit: 'Ручная инициализация',
-        mfaDelete1: 'Вы можете удалить ключи доступа для этого пользователя.',
-        mfaDelete2: `Внимание! Удаление ключа доступа <b>нельзя отменить</b> без полной повторной
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'Вы можете удалить ключи доступа для этого пользователя.',
+                mfaDelete2: `Внимание! Удаление ключа доступа <b>нельзя отменить</b> без полной повторной
             регистрации пользователем.`,
-        noMfaKeys: 'У этого пользователя нет зарегистрированных ключей доступа.',
+                noMfaKeys: 'У этого пользователя нет зарегистрированных ключей доступа.',
+            },
+        },
         pkOnly1: 'Это аккаунт только с ключом доступа.',
         pkOnly2:
             'Это означает, что этот пользователь использует вход без пароля и не имеет установленного пароля.',

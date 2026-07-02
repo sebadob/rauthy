@@ -14,13 +14,14 @@
     import Template from '$lib5/Template.svelte';
     import { useParam } from '$state/param.svelte';
     import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
     import InputPassword from '$lib5/form/InputPassword.svelte';
     import A from '$lib5/A.svelte';
-    import { webauthnReg } from '$webauthn/registration';
+    import { webauthnReg } from '$mfa/webauthn/registration';
     import Form from '$lib5/form/Form.svelte';
     import { PATTERN_USER_NAME } from '$utils/patterns';
     import type { PasswordResetRequest } from '$api/types/password_reset.ts';
+    import type { MfaPurpose } from '$api/types/mfa';
 
     const inputWidth = '20rem';
 

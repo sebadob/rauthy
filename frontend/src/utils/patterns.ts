@@ -26,6 +26,7 @@ export const PATTERN_LINUX_HOSTNAME = '^[a-zA-Z0-9][a-zA-Z0-9\\-.]*[a-zA-Z0-9]$'
 export const PATTERN_LINUX_USERNAME = '^[a-z][a-z0-9_\\-]{1,61}$';
 export const PATTERN_LOWERCASE = '^[a-z0-9\\-_\\/]{2,128}$';
 export const PATTERN_ORIGIN = '^(http|https)://[a-z0-9.:\\-]+$';
+export const PATTERN_OTP_CODE = '^[0-9]*$';
 // export const PATTERN_PEM = '^(-----BEGIN CERTIFICATE-----)[a-zA-Z0-9+\\/=\\n]+(-----END CERTIFICATE-----)$';
 export const PATTERN_PHONE = '^\\+[0-9]{0,32}$';
 export const PATTERN_SCOPE_SPACE = '^[a-zA-Z0-9\\-_\\/:\\s*]{0,512}$';

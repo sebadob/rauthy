@@ -65,21 +65,21 @@ impl MfaModToken {
         if self.exp < Utc::now().timestamp() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
-                "MfaMofToken has expired",
+                "MfaModToken has expired",
             ));
         }
 
         if self.user_id != user_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "MfaMofToken is bound to a different User",
+                "MfaModToken is bound to a different User",
             ));
         }
 
         if self.ip != ip {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
-                "MfaMofToken is bound to a different IP",
+                "MfaModToken is bound to a different IP",
             ));
         }
 

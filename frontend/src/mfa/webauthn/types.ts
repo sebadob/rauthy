@@ -1,9 +1,5 @@
-export type MfaPurpose =
-    | { Login: string }
-    | 'MfaModToken'
-    | 'PasswordNew'
-    | 'PasswordReset'
-    | 'Test';
+import type { MfaPurpose } from '$api/types/mfa';
+
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
 export interface WebauthnAuthStartRequest {

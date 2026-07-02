@@ -688,7 +688,13 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_ready)
                 .service(swagger_ui::get_openapi_doc)
                 .service(swagger_ui::get_swagger_ui)
-                .service(html::get_static_assets),
+                .service(users::get_user_otps)
+                .service(users::create_user_otp)
+                .service(users::activate_user_otp)
+                .service(users::delete_user_otp)
+                .service(users::post_otp_auth_start)
+                .service(users::post_otp_auth_finish)
+                .service(html::get_static_assets), // catch-all GET routes
         )
 }
 

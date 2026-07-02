@@ -65,6 +65,10 @@ impl HtmlTemplate {
             )),
             "tpl_email_old" => Ok((Self::EmailOld("OLD@EMAIL.LOCAL".to_string()), None)),
             "tpl_email_new" => Ok((Self::EmailOld("NEW@EMAIL.LOCAL".to_string()), None)),
+            "tpl_is_otp_enabled" => Ok((
+                Self::IsOtpEnabled(RauthyConfig::get().vars.otp.enable),
+                None,
+            )),
             "tpl_is_reg_open" => Ok((
                 Self::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
                 None,
@@ -74,6 +78,7 @@ impl HtmlTemplate {
             "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),
             // "tpl_client_name" => todo!("extract info from referrer?"),
             // "tpl_client_url" => todo!("extract info from referrer?"),
+            "tpl_otp_length" => Ok((Self::OtpLength(RauthyConfig::get().vars.otp.length), None)),
             "tpl_restricted_email_domain" => Ok((
                 Self::RestrictedEmailDomain(
                     RauthyConfig::get()

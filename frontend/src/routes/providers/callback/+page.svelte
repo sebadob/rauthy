@@ -7,14 +7,21 @@
     import { useI18n } from '$state/i18n.svelte';
     import { useParam } from '$state/param.svelte';
     import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
     import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
-    import type { WebauthnLoginResponse } from '$api/types/authorize.ts';
+    import type {
+        ActiveOtp,
+        OtpLoginResponse,
+        WebauthnLoginResponse,
+    } from '$api/types/authorize.ts';
     import type { ProviderCallbackRequest } from '$api/types/auth_provider.ts';
     import { IS_DEV } from '$utils/constants';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
     import TosAccept from '$lib/TosAccept.svelte';
     import ContentCenter from '$lib/ContentCenter.svelte';
+    import type { MfaPurpose } from '$api/types/mfa';
+    import OtpRequest from '$lib5/OtpRequest.svelte';
+    import type { OtpAdditionalData } from '$mfa/otp/types';
 
     let t = useI18n();
     let clientMfaForce = $state(false);
@@ -22,6 +29,8 @@
 
     let userId: undefined | string = $state();
     let mfaPurpose: undefined | MfaPurpose = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let activeOtps: undefined | ActiveOtp[] = $state();
 
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
@@ -61,16 +70,17 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(
-            url,
-            payload,
-        );
+        let res = await fetchPost<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >(url, payload);
 
         await handleAuthRes(res);
     });
 
     async function handleAuthRes(
-        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+        res?: IResponse<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >,
     ) {
         if (!res) {
             return;
@@ -86,8 +96,16 @@
             if (body && 'user_id' in body && 'code' in body) {
                 userId = body.user_id as string;
                 mfaPurpose = { Login: body.code as string };
+                if ('active_otps' in body) {
+                    activeOtps = body.active_otps;
+                    mfaKind = 'otp';
+                } else {
+                    mfaKind = 'webauthn';
+                }
             } else {
-                console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
+                console.error(
+                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                );
             }
         } else if (res.status === 204) {
             // in case of a 204, we have done a user federation on an existing account -> just redirect
@@ -137,15 +155,17 @@
         }, 1000);
     }
 
-    function onWebauthnError(err: string) {
+    function onMfaError(err: string) {
         error = err;
         mfaPurpose = undefined;
+        mfaKind = undefined;
     }
 
-    function onWebauthnSuccess(data?: WebauthnAdditionalData) {
+    function onMfaSuccess(data?: WebauthnAdditionalData | OtpAdditionalData) {
         if (!data) {
             // will be empty if the user needs to update values
             mfaPurpose = undefined;
+            mfaKind = undefined;
             needsValuesUpdate = true;
             return;
         }
@@ -162,12 +182,22 @@
 
 <ContentCenter>
     {#if mfaPurpose && userId}
-        <WebauthnRequest
-            {userId}
-            purpose={mfaPurpose}
-            onSuccess={onWebauthnSuccess}
-            onError={onWebauthnError}
-        />
+        {#if mfaKind == 'webauthn'}
+            <WebauthnRequest
+                {userId}
+                purpose={mfaPurpose}
+                onSuccess={onMfaSuccess}
+                onError={onMfaError}
+            />
+        {:else if mfaKind == 'otp' && activeOtps}
+            <OtpRequest
+                {userId}
+                {activeOtps}
+                purpose={mfaPurpose}
+                onSuccess={onMfaSuccess}
+                onError={onMfaError}
+            />
+        {/if}
     {:else if clientMfaForce}
         <div class="btn flex-col">
             <Button onclick={() => (window.location.href = '/auth/v1/account')}>Account</Button>

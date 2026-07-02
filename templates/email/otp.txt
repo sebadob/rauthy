@@ -1,0 +1,6 @@
+{{ header }} {{ email_sub_prefix -}}
+
+{{ text }}
+{{code}}
+{{validity}}
+{{ expires }} {{ exp }}

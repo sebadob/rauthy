@@ -534,10 +534,22 @@ export let I18nAdminDe: I18nAdmin = {
         manualInitDesc: `Der Benutzer kann jedoch ebenfalls hier initialisiert werden. In diesem Fall muss das
             Passwort allerdings direkt kommuniziert werden.`,
         manualInit: 'Manuell Initialisieren',
-        mfaDelete1: 'Die Passkeys dieses Nutzers können gelöscht werden.',
-        mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
+        mfa: {
+            otp: {
+                title: 'Einmalpasswort',
+                mfaDelete1: 'Die Einmalpasswort dieses Nutzers können gelöscht werden.',
+                mfaDelete2: `Vorsicht! Das Löschen eines Einmalpasswort <b>kann nicht rückgängig gemacht werden</b>, ohne
             dass der Benutzer die Registrierung erneut durchführt.`,
-        noMfaKeys: 'Dieser Benutzer hat keine registrierten Passkeys.',
+                noMfaOtps: 'Dieser Benutzer hat keine registrierten Einmalpasswort.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'Die Passkeys dieses Nutzers können gelöscht werden.',
+                mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
+            dass der Benutzer die Registrierung erneut durchführt.`,
+                noMfaKeys: 'Dieser Benutzer hat keine registrierten Passkeys.',
+            },
+        },
         pkOnly1: 'Dies ist ein Passkey-Only Account.',
         pkOnly2:
             'Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.',

@@ -485,9 +485,21 @@ export let I18nAdminNb: I18nAdmin = {
         lastLogin: 'Siste innlogging',
         manualInitDesc: `Brukeren kan også initialiseres her. I så fall må passordet kommuniseres direkte.`,
         manualInit: 'Manuell initialisering',
-        mfaDelete1: 'Passnøkler for denne brukeren kan slettes.',
-        mfaDelete2: `Advarsel! Sletting av en passnøkkel <b>kan ikke angres</b> uten at brukeren registrerer seg på nytt.`,
-        noMfaKeys: 'Denne brukeren har ingen registrerte passnøkler.',
+        mfa: {
+            otp: {
+                title: 'Engangspassord',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passnøkler',
+                mfaDelete1: 'Passnøkler for denne brukeren kan slettes.',
+                mfaDelete2: `Advarsel! Sletting av en passnøkkel <b>kan ikke angres</b> uten at brukeren registrerer seg på nytt.`,
+                noMfaKeys: 'Denne brukeren har ingen registrerte passnøkler.',
+            },
+        },
         pkOnly1: 'Dette er en passkey-only-konto.',
         pkOnly2:
             'Det betyr at denne brukeren bruker passordløs innlogging og ikke har noe passord satt.',

@@ -10,11 +10,12 @@
     import IconCheck from '$icons/IconCheck.svelte';
     import type { PropsPassword } from './props.ts';
     import { fetchGet, fetchPost, fetchPut } from '$api/fetch';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.js';
     import type { PasskeyResponse } from '$api/types/webauthn.ts';
     import { onMount } from 'svelte';
     import type { RequestResetRequest } from '$api/types/authorize.ts';
     import { fetchSolvePow } from '$utils/pow';
+    import type { MfaPurpose } from '$api/types/mfa.js';
 
     let {
         user = $bindable(),
