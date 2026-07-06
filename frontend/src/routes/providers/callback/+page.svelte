@@ -163,7 +163,6 @@
 <ContentCenter>
     {#if mfaPurpose && userId}
         <WebauthnRequest
-            {userId}
             purpose={mfaPurpose}
             onSuccess={onWebauthnSuccess}
             onError={onWebauthnError}

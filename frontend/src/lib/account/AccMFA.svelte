@@ -249,7 +249,6 @@
     {:else}
         {#if mfaPurpose}
             <WebauthnRequest
-                userId={user.id}
                 purpose={mfaPurpose}
                 onSuccess={onWebauthnSuccess}
                 onError={onWebauthnError}

@@ -268,7 +268,6 @@
     <ContentCenter>
         {#if mfaPurpose && tplData}
             <WebauthnRequest
-                userId={tplData.user_id}
                 purpose={mfaPurpose}
                 onSuccess={onWebauthnSuccess}
                 onError={onWebauthnError}

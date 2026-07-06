@@ -158,7 +158,6 @@
 <div class="container">
     {#if mfaPurpose}
         <WebauthnRequest
-            userId={user.id}
             purpose={mfaPurpose}
             onSuccess={onWebauthnSuccess}
             onError={onWebauthnError}
