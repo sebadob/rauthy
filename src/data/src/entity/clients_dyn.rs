@@ -64,7 +64,7 @@ impl ClientDyn {
         if is_hiqlite() {
             DB::hql().execute(sql, params!(now, id)).await?;
         } else {
-            DB::pg_execute(sql, &[&id]).await?;
+            DB::pg_execute(sql, &[&now, &id]).await?;
         }
 
         Ok(())
