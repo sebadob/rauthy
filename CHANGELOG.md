@@ -61,9 +61,8 @@ unaffected and may still use a full URI as their ID.
 Previously, the backend accepted URI-shaped IDs on these paths, even though such a client cannot be
 managed in the Admin UI and behaves completely differently depending on whether ephemeral clients
 are enabled. Existing clients with such an ID keep working and can still be updated, since the ID
-for
-an update is taken from the URL path; only creating or bootstrapping a new client with such an ID is
-now rejected.
+for an update is taken from the URL path; only creating or bootstrapping a new client with such an
+ID is now rejected.
 
 As part of this, the redundant `id` field was removed from the client update request body. It was a
 leftover from an older API version: on update the ID is always taken from the URL path and could
@@ -75,15 +74,13 @@ never be changed, so the field had no effect, and any `id` still sent in the bod
 
 Rauthy now supports [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707) resource indicators. Clients
 may send a `resource` parameter on the authorization and token requests (for the
-`authorization_code`,
-`client_credentials` and `refresh_token` grants) to request an audience-restricted access token. The
-requested resource is validated against a new per-client `allowed_resources` allow-list (empty means
-deny, returning `invalid_target`), and a second new per-client field `default_aud` lets you always
-add fixed audiences to a client's tokens without a request parameter, e.g. for clients that cannot
-send a `resource`. Ephemeral clients deny resource requests by default unless
-`ephemeral_clients.danger_allow_unvalidated_resource` is enabled or the client document declares its
-own
-`allowed_resources`.
+`authorization_code`, `client_credentials` and `refresh_token` grants) to request an
+audience-restricted access token. The requested resource is validated against a new per-client
+`allowed_resources` allow-list (empty means deny, returning `invalid_target`), and a second new
+per-client field `default_aud` lets you always add fixed audiences to a client's tokens without a
+request parameter, e.g. for clients that cannot send a `resource`. Ephemeral clients deny resource
+requests by default unless `ephemeral_clients.danger_allow_unvalidated_resource` is enabled or the
+client document declares its own `allowed_resources`.
 
 As part of this, the `aud` claim is now emitted as a JSON array when a token carries two or more
 audiences, and stays a single string otherwise. This also fixes the `solid_aud` case for Solid-OIDC
