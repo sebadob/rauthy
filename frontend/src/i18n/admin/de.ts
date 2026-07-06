@@ -56,15 +56,16 @@ export let I18nAdminDe: I18nAdmin = {
                 dass z.B. die freien Eingaben wiederum die Variablen referenzieren können, z.B. mit
                 <code>hsla(var(--action) / .7)</code>.`,
         },
-        claimsAtRoot: 'Emit claims at the token root',
-        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
-            instead of being nested under 'custom'. You own collision-correctness: if a claim
-            name collides with a reserved JWT claim, token issuance fails. Root-level custom
-            claims may also break with future protocol or feature changes. Reference:`,
+        claimsAtRoot: 'Setze claims auf Token root Ebene',
+        claimsAtRootWarning: `Die zusätzlichen claims werden auf Token root Ebene gesetzt anstatt
+            standardmäßig unter 'custom'. Das kann zu Kollisionen führen, sollten hier standard 
+            claims überschrieben werden. Der Admin ist verantwortlich für die korrekte Nutzung.
+            Im Falle einer Kollision wird ein Fehler geloggt und es wird kein Token ausgestellt.
+            Es gibt keine Garantie, dass jetzt funktionierende Claims auch in Zukunft funktionieren
+            werden, sollte es ein Update seitens Rauthy geben.`,
         claims: 'Custom claims (client_credentials)',
-        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
-            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
-            1024 serialized characters.`,
+        claimsDesc: `Ein JSON Objekt welches beim 'client_credentials' flow als zusätzliche custom
+            claims unter 'custom' angehängt wird. Max 1024 Zeichen erlaubt.`,
         confidential: 'Vertraulich',
         confidentialNoSecret: 'Dies ist kein vertraulicher Client und hat somit kein Secret.',
         config: 'Client Konfiguration',
@@ -468,11 +469,13 @@ export let I18nAdminDe: I18nAdmin = {
         name: 'Rollenname',
     },
     scopes: {
-        claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
-            instead of being nested under 'custom'. You own collision-correctness: if a mapped
-            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
-            claims may also break with future protocol or feature changes. Reference:`,
+        claimsAtRoot: 'Setze claims auf Token root Ebene',
+        claimsAtRootWarning: `Die zusätzlichen claims werden auf Token root Ebene gesetzt anstatt
+            standardmäßig unter 'custom'. Das kann zu Kollisionen führen, sollten hier standard 
+            claims überschrieben werden. Der Admin ist verantwortlich für die korrekte Nutzung.
+            Im Falle einer Kollision wird ein Fehler geloggt und es wird kein Token ausgestellt.
+            Es gibt keine Garantie, dass jetzt funktionierende Claims auch in Zukunft funktionieren
+            werden, sollte es ein Update seitens Rauthy geben.`,
         defaultNoMod: 'Dies ist ein Default OIDC Scope. Diese sind unveränderbar.',
         delete1: 'Soll dieser Scope wirklich gelöscht werden?',
         deleteDefault: 'OIDC default scopes cannot be deleted',

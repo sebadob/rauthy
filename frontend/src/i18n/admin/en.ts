@@ -51,14 +51,13 @@ export let I18nAdminEn: I18nAdmin = {
                 that you can reference these in the free inputs, e.g. with <code>hsla(var(--action) / .7)</code>.`,
         },
         claimsAtRoot: 'Emit claims at the token root',
-        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+        claimsAtRootWarning: `This client's claims are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a claim
             name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
         claims: 'Custom claims (client_credentials)',
         claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
-            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
-            1024 serialized characters.`,
+            custom claim. Max 1024 serialized characters.`,
         confidential: 'Confidential',
         confidentialNoSecret: 'This is a non-confidential client and therefore has not secret.',
         config: 'Client Configuration',
@@ -449,7 +448,7 @@ export let I18nAdminEn: I18nAdmin = {
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
             attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,

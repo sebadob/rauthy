@@ -56,13 +56,12 @@ export let I18nAdminNl: I18nAdmin = {
         },
         claims: 'Custom claims (client_credentials)',
         claimsAtRoot: 'Emit claims at the token root',
-        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+        claimsAtRootWarning: `This client's claims are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a claim
             name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
         claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
-            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
-            1024 serialized characters.`,
+            custom claim. Max 1024 serialized characters.`,
         confidential: 'Vertrouwelijk',
         confidentialNoSecret: 'Dit is een niet-vertrouwelijke client en heeft daarom geen geheim.',
         config: 'Clientconfiguratie',

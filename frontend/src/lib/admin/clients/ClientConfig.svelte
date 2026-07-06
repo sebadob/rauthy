@@ -488,16 +488,18 @@
         <InputCheckbox ariaLabel={ta.clients.claimsAtRoot} bind:checked={claimsAtRoot}>
             {ta.clients.claimsAtRoot}
         </InputCheckbox>
-        <p class="warn">
-            {ta.clients.claimsAtRootWarning}
-            <a
-                href="https://www.iana.org/assignments/jwt/jwt.xhtml"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                IANA JWT Claims Registry
-            </a>
-        </p>
+        {#if claimsAtRoot}
+            <p class="warn">
+                {ta.clients.claimsAtRootWarning}
+                <a
+                    href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    IANA JWT Claims Registry
+                </a>
+            </p>
+        {/if}
 
         <p class="mb-0"><b>Backchannel Logout</b></p>
         <p class="desc">
@@ -632,6 +634,7 @@
 
     .warn {
         max-width: 40rem;
+        color: hsl(var(--error));
         font-size: 0.9rem;
         opacity: 0.8;
     }

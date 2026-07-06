@@ -5,7 +5,6 @@
     import type { UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
     import type { ScopeRequest, ScopeResponse } from '$api/types/scopes.ts';
     import IconCheck from '$icons/IconCheck.svelte';
-    import Switch from '$lib5/Switch.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { fetchPut } from '$api/fetch';
@@ -15,6 +14,7 @@
     import SelectList from '$lib5/select_list/SelectList.svelte';
     import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
     import { untrack } from 'svelte';
+    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
 
     let {
         attrs,
@@ -142,24 +142,26 @@
         {/if}
 
         <div class="rootClaims">
-            <Switch bind:checked={claimsAtRoot} ariaLabel={ta.scopes.claimsAtRoot}>
+            <InputCheckbox bind:checked={claimsAtRoot} ariaLabel={ta.scopes.claimsAtRoot}>
                 {ta.scopes.claimsAtRoot}
-            </Switch>
+            </InputCheckbox>
         </div>
-        <p class="warn">
-            {ta.scopes.claimsAtRootWarning}
-            <a
-                href="https://www.iana.org/assignments/jwt/jwt.xhtml"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                IANA JWT Claims Registry
-            </a>
-        </p>
+        {#if claimsAtRoot}
+            <p class="warn">
+                {ta.scopes.claimsAtRootWarning}
+                <a
+                    href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    IANA JWT Claims Registry
+                </a>
+            </p>
+        {/if}
     {/if}
 
     {#if !isDefault}
-        <div class="flex gap-05">
+        <div class="flex gap-05 mh-10">
             <Button type="submit">
                 {t.common.save}
             </Button>
@@ -184,6 +186,7 @@
 
     .warn {
         max-width: 30rem;
+        color: hsl(var(--error));
         font-size: 0.9rem;
         opacity: 0.8;
     }
