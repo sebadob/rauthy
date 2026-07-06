@@ -1,5 +1,4 @@
 import type { Language } from './i18n';
-import { PATTERN_ALNUM } from '$utils/patterns';
 import type { JsonValue } from '$utils/jsonValue';
 
 export interface UserPictureConfig {

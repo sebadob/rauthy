@@ -4,6 +4,7 @@ export type MfaPurpose =
     | 'PasswordNew'
     | 'PasswordReset'
     | 'Test';
+
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
 export interface WebauthnAuthStartRequest {
