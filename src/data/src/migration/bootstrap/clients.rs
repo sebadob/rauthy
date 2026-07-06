@@ -2,7 +2,10 @@ use crate::database::DB;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
+use crate::migration::bootstrap::generated_secrets::{GeneratedSecretEntry, GeneratedSecretKey};
 use crate::migration::bootstrap::types::{Client, ClientSecret};
+use crate::rauthy_config::RauthyConfig;
+use cryptr::utils::secure_random_alnum;
 use cryptr::{EncKeys, EncValue};
 use hiqlite::macros::params;
 use itertools::Itertools;
@@ -11,6 +14,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
 use rauthy_error::ErrorResponse;
 use tracing::info;
+use zeroize::Zeroize;
 
 pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let clients = bootstrap_data!(Client, "clients");
@@ -32,7 +36,7 @@ $18, $19, $20, $21, $22)"#;
 
     for client in clients {
         let (kid, secret) = if let Some(secret) = client.secret {
-            let plain = match secret {
+            let mut plain = match secret {
                 ClientSecret::Plain(s) => s,
                 ClientSecret::Encrypted(enc) => {
                     // make sure we can decrypt it
@@ -46,6 +50,24 @@ $18, $19, $20, $21, $22)"#;
                         "Invalid characters in client secret. Cannot convert to lossless String.",
                     )
                 }
+                ClientSecret::Generate => {
+                    let mut plain = secure_random_alnum(SECRET_LEN_CLIENTS);
+                    let bootstrap = &RauthyConfig::get().vars.bootstrap;
+                    if let Err(err) = crate::migration::bootstrap::generated_secrets::upsert_secret(
+                        bootstrap.generated_secrets_file.as_ref(),
+                        bootstrap.generated_secrets_ttl,
+                        GeneratedSecretEntry::new(
+                            GeneratedSecretKey::new("client", &client.id, "secret"),
+                            plain.clone(),
+                        ),
+                    )
+                    .await
+                    {
+                        plain.zeroize();
+                        return Err(err);
+                    }
+                    plain
+                }
             };
 
             if plain.len() < SECRET_LEN_CLIENTS {
@@ -58,6 +80,7 @@ $18, $19, $20, $21, $22)"#;
             let enc = EncValue::encrypt_with_key_id(plain.as_ref(), kid.clone())?
                 .into_bytes()
                 .to_vec();
+            plain.zeroize();
 
             (Some(kid), Some(enc))
         } else {

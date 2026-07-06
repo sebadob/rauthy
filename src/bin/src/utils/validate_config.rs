@@ -9,7 +9,14 @@ pub async fn validate(args: ArgsValidateConfig) -> Result<(), Box<dyn Error>> {
     let (tx_events, _) = flume::unbounded();
     let (tx_events_router, _) = flume::unbounded();
 
-    RauthyConfig::build(args.path.clone(), tx_email, tx_events, tx_events_router).await?;
+    RauthyConfig::build(
+        args.path.clone(),
+        "secrets.toml".to_string(),
+        tx_email,
+        tx_events,
+        tx_events_router,
+    )
+    .await?;
 
     println!("Rauthy Config '{}' is valid", args.path);
 

@@ -17,7 +17,12 @@
     import Devices from '$lib5/devices/Devices.svelte';
     import type { WebIdResponse } from '$api/types/web_id.ts';
     import IconLogout from '$icons/IconLogout.svelte';
+    import IconUserGroup from '$icons/IconUserGroup.svelte';
     import Button from '$lib/button/Button.svelte';
+    import A from '$lib5/A.svelte';
+    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
+    import LangSelector from '$lib5/LangSelector.svelte';
+    import { useSession } from '$state/session.svelte';
     import AccOther from '$lib/account/AccOther.svelte';
     import AccPAM from '$lib/account/AccPAM.svelte';
     import type { PamUserResponse } from '$api/types/pam';
@@ -33,6 +38,7 @@
     } = $props();
 
     let t = useI18n();
+    let session = useSession('account');
 
     let innerWidth: undefined | number = $state();
     let config: undefined | UserValuesConfig = $state();
@@ -45,6 +51,11 @@
 
     let viewModePhone = $derived(innerWidth && innerWidth < 560);
     let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
+
+    // a user holding any `rauthy_admin*` role (full or delegated group admin) gets a
+    // link to the Admin UI from here. This is how a group admin self-manages: it cannot manage
+    // itself inside the Admin UI (it's an admin there), so it uses this dashboard instead.
+    let showAdminLink = $derived(session.isAnyAdmin());
 
     let pamUser: undefined | PamUserResponse = $state();
 
@@ -63,7 +74,9 @@
 
         return tabs;
     });
-    let tabsCompact = $derived([t.account.navInfo, ...tabsWide, t.account.navLogout]);
+    // Logout is not a tab anymore: on the compact / phone layouts it lives in the bottom
+    // control bar next to the theme, language and Admin UI controls (see `bottomControls`).
+    let tabsCompact = $derived([t.account.navInfo, ...tabsWide]);
 
     onMount(() => {
         fetchPamUser();
@@ -80,12 +93,6 @@
             selected = 'PAM';
         } else {
             selected = t.account.navMfa;
-        }
-    });
-
-    $effect(() => {
-        if (selected === t.account.navLogout) {
-            redirectToLogout();
         }
     });
 
@@ -128,13 +135,41 @@
     <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
 {/snippet}
 
+{#snippet adminLink()}
+    {#if showAdminLink}
+        <div class="adminLink">
+            <A href="/auth/v1/admin/users" hideUnderline>
+                <div title={t.account.navBackToAdmin} class="flex gap-05">
+                    <IconUserGroup />
+                    {t.account.navBackToAdmin}
+                </div>
+            </A>
+        </div>
+    {/if}
+{/snippet}
+
+<!-- theme, language, the switch-to-Admin-UI link and the logout sit together in one
+     row, matching the order and position of the same controls in the Admin UI nav so an
+     admin switching back and forth does not see them jump around -->
+{#snippet bottomControls()}
+    <ThemeSwitch />
+    <LangSelector openTop borderless />
+    {@render adminLink()}
+    <Button level={-3} onclick={redirectToLogout}>
+        <div title={t.account.navLogout} class="flex gap-05">
+            <IconLogout />
+            {t.account.navLogout}
+        </div>
+    </Button>
+{/snippet}
+
 <div class="wrapper">
     {#if viewModePhone}
         <div class="headerPhone">
             {@render header()}
         </div>
 
-        <div class="container">
+        <div class="container containerPhone">
             <Tabs tabs={tabsCompact} bind:selected />
 
             <div class="innerPhone">
@@ -165,6 +200,12 @@
                     <Devices userId={user.id} />
                 {/if}
             </div>
+        </div>
+
+        <!-- on phone the controls flow as the last row of the column so they never overlap
+             the scrollable content above them -->
+        <div class="bottomBarPhone">
+            {@render bottomControls()}
         </div>
     {:else}
         <div class="wide">
@@ -200,13 +241,8 @@
                 </div>
             </div>
 
-            <div class="logout">
-                <Button level={-3} onclick={redirectToLogout}>
-                    <div title={t.account.navLogout} class="flex gap-05">
-                        <IconLogout />
-                        {t.account.navLogout}
-                    </div>
-                </Button>
+            <div class="bottomLeft">
+                {@render bottomControls()}
             </div>
         </div>
     {/if}
@@ -240,16 +276,42 @@
         overflow-y: auto;
     }
 
+    /* on phone the container grows to fill the space between the header and the bottom bar,
+       and the inner content scrolls inside it */
+    .containerPhone {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+    }
+
     .innerPhone {
         width: 100vw;
-        max-height: calc(100dvh - 10rem);
+        flex: 1 1 auto;
+        min-height: 0;
         overflow-y: auto;
     }
 
-    .logout {
+    .bottomLeft {
         position: absolute;
-        top: 0.25rem;
-        right: 0.5rem;
+        bottom: 0.5rem;
+        left: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .bottomBarPhone {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .adminLink {
+        font-size: 0.9rem;
+        color: hsla(var(--text) / 0.8);
     }
 
     .wide {

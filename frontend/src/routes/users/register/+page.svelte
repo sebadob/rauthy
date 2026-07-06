@@ -284,7 +284,9 @@
                             bind:value={values.preferred_username}
                             required
                             isError={usernameExists}
-                            errMsg={usernameExists ? t.account.preferredUsername.notAvailable : ''}
+                            errMsg={usernameExists
+                                ? t.account.preferredUsername.notAvailable
+                                : config?.preferred_username.pattern_hint}
                             pattern={config?.preferred_username.pattern_html}
                             onInput={() => (usernameExists = false)}
                         />

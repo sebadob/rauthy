@@ -40,6 +40,10 @@ export let I18nAdminDe: I18nAdmin = {
         size: 'Größe',
     },
     clients: {
+        allowedResources: 'Erlaubte Ressourcen',
+        defaultAud: 'Standard-Audiences',
+        descAllowedResources: `Optionale RFC 8707 Resource Indicators, die dieser Client anfordern darf. Eine leere Liste lehnt jeden 'resource'-Parameter mit 'invalid_target' ab.`,
+        descDefaultAud: `Audiences, die immer zu den Tokens dieses Clients hinzugefügt werden, unabhängig von einem 'resource'-Parameter.`,
         backchannelLogout:
             'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
         branding: {
@@ -52,6 +56,15 @@ export let I18nAdminDe: I18nAdmin = {
                 dass z.B. die freien Eingaben wiederum die Variablen referenzieren können, z.B. mit
                 <code>hsla(var(--action) / .7)</code>.`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: 'Vertraulich',
         confidentialNoSecret: 'Dies ist kein vertraulicher Client und hat somit kein Secret.',
         config: 'Client Konfiguration',
@@ -510,6 +523,13 @@ export let I18nAdminDe: I18nAdmin = {
             werden als String / JSON Wert gehandhabt.`,
         forceLogout: `Sollen sämtliche, für diesen Benutzer existierenden Sessions invalidiert und 
             Refresh Tokens gelöscht werden?`,
+        groupAdmin: {
+            notManagedTitle: 'Nutzer außerhalb Ihrer Gruppen',
+            notManagedDesc: `Dieser Nutzer ist in keiner von Ihnen verwalteten Gruppe, daher bleiben die Details verborgen.
+                Fügen Sie den Nutzer zu einer oder mehreren Ihrer Gruppen hinzu, um ihn zu verwalten.
+                Mitgliedschaften außerhalb Ihrer Gruppen bleiben erhalten.`,
+            addToGroups: 'Zu meinen Gruppen hinzufügen',
+        },
         lastLogin: 'Letzter Login',
         manualInitDesc: `Der Benutzer kann jedoch ebenfalls hier initialisiert werden. In diesem Fall muss das
             Passwort allerdings direkt kommuniziert werden.`,

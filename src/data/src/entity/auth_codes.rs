@@ -20,6 +20,11 @@ pub struct AuthCode {
     pub challenge_method: Option<String>,
     pub nonce: Option<String>,
     pub scopes: Vec<String>,
+    /// RFC 8707 resource indicator chosen at the authorization request, carried through
+    /// to the token exchange so the issued access token can be audience-restricted.
+    /// No `serde` skip/default attributes here: auth codes are cached with bincode (a
+    /// positional, non-self-describing format), so the field must always be present.
+    pub resource: Option<String>,
 }
 
 impl Debug for AuthCode {
@@ -82,6 +87,7 @@ impl AuthCode {
         challenge_method: Option<String>,
         nonce: Option<String>,
         scopes: Vec<String>,
+        resource: Option<String>,
         lifetime_secs: i32,
     ) -> Self {
         let id = get_rand(64);
@@ -98,6 +104,7 @@ impl AuthCode {
             challenge_method,
             nonce,
             scopes,
+            resource,
         }
     }
 

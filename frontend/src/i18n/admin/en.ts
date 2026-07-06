@@ -37,6 +37,10 @@ export let I18nAdminEn: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        allowedResources: 'Allowed Resources',
+        defaultAud: 'Default Audiences',
+        descAllowedResources: `Optional RFC 8707 resource indicators this client may request. An empty list rejects any 'resource' request parameter with 'invalid_target'.`,
+        descDefaultAud: `Audiences that are always added to this client's tokens, independent of any 'resource' request parameter.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
             descHsl: `The following values must be given as HSL values. You only provide the base colors.
@@ -46,6 +50,15 @@ export let I18nAdminEn: I18nAdmin = {
             descVariables: `Each following label is at the same time the name of the CSS variable. This means,
                 that you can reference these in the free inputs, e.g. with <code>hsla(var(--action) / .7)</code>.`,
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `When enabled, this client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Admin-set only; dynamic and ephemeral clients cannot set it. Max
+            1024 serialized characters.`,
         confidential: 'Confidential',
         confidentialNoSecret: 'This is a non-confidential client and therefore has not secret.',
         config: 'Client Configuration',
@@ -489,6 +502,13 @@ export let I18nAdminEn: I18nAdmin = {
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
         forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens
             for this user?`,
+        groupAdmin: {
+            notManagedTitle: 'User outside your groups',
+            notManagedDesc: `This user is not a member of any group you manage, so the details stay hidden.
+                Add the user to one or more of your groups to manage it.
+                Memberships outside your groups are kept.`,
+            addToGroups: 'Add to my groups',
+        },
         lastLogin: 'Last Login',
         manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
             password directly.`,

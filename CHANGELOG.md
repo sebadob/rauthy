@@ -37,9 +37,149 @@ API Keys can now be bootstrapped during advanced bootstrapping from JSON files.
 
 [#1585](https://github.com/sebadob/rauthy/pull/1585)
 
+#### Custom Claims on `client_credentials` Tokens
+
+A client can now carry admin-defined custom claims. You can set a JSON object on a `Client` in the
+Admin UI (or via the management API), which is emitted into the access token of the
+`client_credentials` flow. This lets machine clients carry self-describing claims (workload
+identity, tenant id, deployment profile, ...) without the resource server having to look anything up
+by `client_id`. By default the claims are nested under the `custom` claim; an opt-in
+`claims_at_root`
+flag emits them at the token root instead (a collision with a reserved claim fails token issuance).
+The value must be a JSON object and is capped at 1024 serialized characters. Dynamic and ephemeral
+clients cannot set their own claims.
+
+[#1604](https://github.com/sebadob/rauthy/pull/1604)
+
+#### Stricter Client ID validation
+
+Client IDs for manually managed clients are now validated against the stricter pattern
+`^[a-zA-Z0-9._\-]{2,256}$`, which matches the existing Admin UI restriction. This applies when
+creating a client via the API and when bootstrapping clients from JSON files. Ephemeral clients are
+unaffected and may still use a full URI as their ID.
+
+Previously, the backend accepted URI-shaped IDs on these paths, even though such a client cannot be
+managed in the Admin UI and behaves completely differently depending on whether ephemeral clients
+are enabled. Existing clients with such an ID keep working and can still be updated, since the ID
+for an update is taken from the URL path; only creating or bootstrapping a new client with such an
+ID is now rejected.
+
+As part of this, the redundant `id` field was removed from the client update request body. It was a
+leftover from an older API version: on update the ID is always taken from the URL path and could
+never be changed, so the field had no effect, and any `id` still sent in the body is now ignored.
+
+[#1605](https://github.com/sebadob/rauthy/pull/1605)
+
+#### Resource Indicators (RFC 8707)
+
+Rauthy now supports [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707) resource indicators. Clients
+may send a `resource` parameter on the authorization and token requests (for the
+`authorization_code`, `client_credentials` and `refresh_token` grants) to request an
+audience-restricted access token. The requested resource is validated against a new per-client
+`allowed_resources` allow-list (empty means deny, returning `invalid_target`), and a second new
+per-client field `default_aud` lets you always add fixed audiences to a client's tokens without a
+request parameter, e.g. for clients that cannot send a `resource`. Ephemeral clients deny resource
+requests by default unless `ephemeral_clients.danger_allow_unvalidated_resource` is enabled or the
+client document declares its own `allowed_resources`.
+
+As part of this, the `aud` claim is now emitted as a JSON array when a token carries two or more
+audiences, and stays a single string otherwise. This also fixes the `solid_aud` case for Solid-OIDC
+ephemeral clients, which previously emitted a string that merely looked like an array.
+
+[#1562](https://github.com/sebadob/rauthy/issues/1562)
+
+#### Delegated Group Admins
+
+You can now delegate user management to non-admins via group-scoped roles. A role named
+`rauthy_admin:<group>` makes its holders a group admin for the matching group(s): an exact match by
+default, a trailing `*` for a prefix glob, and `rauthy_admin:*` for all groups. A group admin can
+manage users that are members of a group it manages (create, edit profile, toggle `enabled`, manage
+in-scope group memberships, reset MFA, reset or set a password, manage the profile picture, view /
+invalidate sessions, and send a bulk E-Mail scoped to one of its managed groups) and gets a
+read-only view of Sessions, Events and the Blacklist for debugging. It can also manage its own
+account via the account dashboard, which the Admin UI links to. It can never modify roles, delete
+users, send unscoped bulk E-Mails, manage other admins, or touch any non-user administration. This
+is non-breaking unless you already use a custom role starting with `rauthy_admin:`; such roles are
+logged on startup.
+
+[#1538](https://github.com/sebadob/rauthy/issues/1538)
+
+#### Secrets from file
+
+You now have a 3rd option to provide secrets. The first is to inline them in the config, which makes
+the config itself a secret. The 2nd is to provide them as ENV vars, which you should avoid if
+possible, but sometimes it's the only way. The new option now is from an additional secrets file.
+
+By default, Rauthy will look for a `./secrets.toml`. You can overwrite the path via CLI when
+`serve`ing with the `-s, --secrets-file <SECRETS_FILE>` option.
+
+You can only put real secrets inside this file. Anything additional will trigger an error. By
+default, these values are ignored unless you explicitly configure them to be read from this file.
+To do so, instead of providing a secrets inside the config directly, you can set the values to
+
+```
+"$SECRETS"
+```
+
+This value is case-sensitive. If set to any of the secrets, the config parser expects the value to
+exist in the secrets toml file.
+
+As mentioned already, this file must have the exact same sections and variable names as the secret
+in the main config. For instance, if you have `database.pg_password` in the config, and you set the
+value to `"$SECRETS"`, you must provide a `database.pg_password` in the secrets toml.
+
+You can optionally read the following secrets in this way:
+
+```toml
+[cluster]
+secret_raft = ''
+secret_api = ''
+s3_key = ''
+s3_secret = ''
+password_dashboard = ''
+
+[database]
+pg_user = ''
+pg_password = ''
+
+[dynamic_clients]
+reg_token = ''
+
+[email]
+smtp_username = ''
+smtp_password = ''
+xoauth_client_id = ''
+xoauth_client_secret = ''
+
+[encryption]
+keys = ['']
+key_active = ''
+
+[events]
+matrix_user_id = ''
+matrix_access_token = ''
+matrix_user_password = ''
+slack_webhook = ''
+
+[geolocation]
+maxmind_account_id = ''
+maxmind_license_key = ''
+
+[user_pictures]
+s3_key = ''
+s3_secret = ''
+```
+
+> The `encryption.keys` is an exception here. The parser expects an array instead of a single
+> String. You can read them from secrets with by setting: `keys = ['$SECRETS']`
+
 ### Bugfix
 
-- After the Issue change with `V0.35.0` the URL to the dashboard that's built for a fresh instance
+- The Postgres migration `v24__cust_attrs_token_root.sql` was named with a lowercase `v` and was
+  therefore silently skipped by `refinery` (which only matches an uppercase `V`/`U` prefix). On
+  Postgres, the `scopes.claims_at_root` column was never created and a fresh bootstrap failed. The
+  migration is renamed to `V24__cust_attrs_token_root.sql`.
+- After the Issue change with `v0.35.0` the URL to the dashboard that's built for a fresh instance
   was wrong. It contained an additional `/` and was therefore invalid.
   [#1578](https://github.com/sebadob/rauthy/pull/1578)
 - When then config expected an `Integer` value that could not be parsed successfully, you might have

@@ -1,7 +1,8 @@
 use crate::cust_validation::*;
 use crate::oidc::JwkKeyPairAlg;
 use rauthy_common::regex::{
-    RE_CLIENT_ID, RE_CLIENT_NAME, RE_GROUPS, RE_SCOPE_SPACE, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
+    RE_CLIENT_ID, RE_CLIENT_ID_STRICT, RE_CLIENT_NAME, RE_GROUPS, RE_SCOPE_SPACE,
+    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -112,16 +113,20 @@ pub struct EphemeralClientRequest {
     pub access_token_signed_response_alg: Option<JwkKeyPairAlg>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
+    /// RFC 8707 resource indicators this ephemeral client may request. When present, a
+    /// requested `resource` is validated against this list; when absent, `resource` is
+    /// only honored if `ephemeral_clients.danger_allow_unvalidated_resource` is enabled.
+    ///
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_uri"))]
+    pub allowed_resources: Option<Vec<String>>,
 }
 
 #[derive(Validate, Deserialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct NewClientRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
+    /// Validation: `^[a-zA-Z0-9._\-]{2,256}$`
+    #[validate(regex(path = "*RE_CLIENT_ID_STRICT", code = "^[a-zA-Z0-9._\\-]{2,256}$"))]
     pub id: String,
     /// Validation: None - will not be deserialized
     #[serde(skip_deserializing)]
@@ -142,12 +147,6 @@ pub struct NewClientRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateClientRequest {
-    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
-    pub id: String,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
     pub name: Option<String>,
@@ -196,6 +195,27 @@ pub struct UpdateClientRequest {
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub restrict_group_prefix: Option<String>,
+    /// Admin-defined custom claims emitted into `client_credentials` tokens.
+    /// Validation: JSON object, max 1024 serialized characters
+    #[serde(default)]
+    #[validate(custom(function = "validate_claims"))]
+    pub claims: Option<serde_json::Value>,
+    /// When `true`, `claims` are emitted at the token root instead of nested
+    /// under `custom`. Collisions with reserved claims fail token issuance.
+    #[serde(default)]
+    pub claims_at_root: bool,
+    /// RFC 8707 allow-list of resource indicators this client may request. An empty /
+    /// missing list rejects any `resource` request parameter with `invalid_target`.
+    ///
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_uri"))]
+    pub allowed_resources: Option<Vec<String>>,
+    /// Audiences that are always added to this client's tokens, independent of any
+    /// `resource` request parameter. Useful for clients that cannot send a `resource`.
+    ///
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_uri"))]
+    pub default_aud: Option<Vec<String>>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -253,6 +273,13 @@ pub struct ClientResponse {
     pub backchannel_logout_uri: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub restrict_group_prefix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub claims: Option<serde_json::Value>,
+    pub claims_at_root: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_resources: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_aud: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimClientRequestResponse>,
 }

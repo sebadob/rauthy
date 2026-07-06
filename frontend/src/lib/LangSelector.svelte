@@ -30,9 +30,6 @@
         page.route.id?.includes('/admin') ? useI18nConfig().admin() : useI18nConfig().common(),
     );
 
-    let offsetTop = $derived(openTop ? `-${(languages?.length || 0) * 2 + 2}rem` : undefined);
-    let offsetLeft = $derived(openTop ? '.2rem' : undefined);
-
     $effect(() => {
         let cookie = getCookie('locale');
         let current = untrack(() => selected);
@@ -71,8 +68,7 @@
             options={languages}
             {borderless}
             bind:value={selected}
-            {offsetTop}
-            {offsetLeft}
+            anchored={openTop}
         />
     </div>
 {/if}

@@ -14,6 +14,7 @@
         maxHeight = '16rem',
         offsetTop,
         offsetLeft,
+        anchored,
         borderless = false,
         withSearch = false,
         onChange,
@@ -30,6 +31,7 @@
         maxHeight?: string;
         offsetTop?: string;
         offsetLeft?: string;
+        anchored?: boolean;
         borderless?: boolean;
         withSearch?: boolean;
         onChange?: (value: string | number | undefined) => void;
@@ -172,6 +174,7 @@
     bind:close
     {offsetTop}
     {offsetLeft}
+    {anchored}
     {onToggle}
     {onLeft}
     {onRight}

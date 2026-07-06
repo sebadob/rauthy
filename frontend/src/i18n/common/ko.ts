@@ -102,6 +102,7 @@ export const I18nKo: I18n = {
         navEdit: '수정',
         navMfa: 'MFA',
         navLogout: '로그아웃',
+        navBackToAdmin: '관리자 UI',
         other: 'Other',
         pam: {
             addSshKey: 'Add New Key',

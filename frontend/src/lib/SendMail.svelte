@@ -14,6 +14,7 @@
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import { fetchPost } from '$api/fetch';
     import IconCheck from '$icons/IconCheck.svelte';
+    import { useSession } from '$state/session.svelte';
 
     let {
         groups,
@@ -24,6 +25,16 @@
     } = $props();
 
     let ta = useI18nAdmin();
+    let session = useSession('admin');
+
+    // A delegated group admin may only email users of a single group it manages, so
+    // the filter is locked to "In Group" and the group dropdown is limited to managed groups.
+    // The backend enforces the same. The principal acts as a group admin when it reached the
+    // admin UI without the full `rauthy_admin` role.
+    let isGroupAdmin = $derived(!session.isAdmin());
+    let availableGroups = $derived(
+        isGroupAdmin ? groups.filter(g => session.managesGroup(g.name)) : groups,
+    );
 
     let showModal = $state(false);
     let closeModal: undefined | (() => void) = $state();
@@ -54,8 +65,10 @@
     );
 
     $effect(() => {
-        if (groups.length > 0) {
-            group = groups[0].name;
+        // default to the first selectable group, and keep `group` valid if the list narrows
+        // for a group admin
+        if (availableGroups.length > 0 && !availableGroups.some(g => g.name === group)) {
+            group = availableGroups[0].name;
         }
     });
 
@@ -77,7 +90,11 @@
         if (scheduled) {
             payload.scheduled = unixTsFromLocalDateTime(schedDate, schedTime);
         }
-        if (isFilterGroup) {
+        if (isGroupAdmin) {
+            // group admins are locked to an "In Group" filter for a group they manage
+            payload.filter_type = 'in_group';
+            payload.filter_value = group;
+        } else if (isFilterGroup) {
             payload.filter_value = group;
             if (filter === ta.email.filterType[1]) {
                 payload.filter_type = 'in_group';
@@ -85,7 +102,7 @@
                 payload.filter_type = 'not_in_group';
             }
         }
-        if (isFilterRole) {
+        if (!isGroupAdmin && isFilterRole) {
             payload.filter_value = role;
             if (filter === ta.email.filterType[3]) {
                 payload.filter_type = 'has_role';
@@ -144,31 +161,43 @@
                 <span style:margin=".25rem 0">:</span>
             </div>
 
-            <Options
-                ariaLabel={ta.email.userFilter}
-                options={ta.email.filterType}
-                bind:value={filter}
-                borderless
-            />
+            {#if isGroupAdmin}
+                <!-- a group admin is locked to "In Group" for a group it manages -->
+                <div class="ms-05">{ta.email.filterType[1]}:</div>
+                <Options
+                    ariaLabel={ta.email.userFilter}
+                    options={availableGroups.map(g => g.name)}
+                    bind:value={group}
+                    borderless
+                    withSearch={availableGroups.length > 7}
+                />
+            {:else}
+                <Options
+                    ariaLabel={ta.email.userFilter}
+                    options={ta.email.filterType}
+                    bind:value={filter}
+                    borderless
+                />
 
-            {#if filter !== ta.email.filterType[0]}
-                <div class="ms-05">:</div>
-                {#if isFilterGroup}
-                    <Options
-                        ariaLabel={ta.email.userFilter}
-                        options={groups.map(g => g.name)}
-                        bind:value={group}
-                        borderless
-                        withSearch={groups.length > 7}
-                    />
-                {:else if isFilterRole}
-                    <Options
-                        ariaLabel={ta.email.userFilter}
-                        options={roles.map(g => g.name)}
-                        bind:value={role}
-                        borderless
-                        withSearch={roles.length > 7}
-                    />
+                {#if filter !== ta.email.filterType[0]}
+                    <div class="ms-05">:</div>
+                    {#if isFilterGroup}
+                        <Options
+                            ariaLabel={ta.email.userFilter}
+                            options={groups.map(g => g.name)}
+                            bind:value={group}
+                            borderless
+                            withSearch={groups.length > 7}
+                        />
+                    {:else if isFilterRole}
+                        <Options
+                            ariaLabel={ta.email.userFilter}
+                            options={roles.map(g => g.name)}
+                            bind:value={role}
+                            borderless
+                            withSearch={roles.length > 7}
+                        />
+                    {/if}
                 {/if}
             {/if}
         </div>
@@ -193,7 +222,10 @@
 
     <div class="send">
         <p>
-            {#if isFilterNone}
+            {#if isGroupAdmin}
+                {ta.email.sendAllUsersFiltered}
+                <b>{`${ta.email.filterType[1]} ${group}`}</b>
+            {:else if isFilterNone}
                 {ta.email.sendAllUsers}
             {:else if isFilterGroup}
                 {ta.email.sendAllUsersFiltered}

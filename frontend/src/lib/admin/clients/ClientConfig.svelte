@@ -28,6 +28,8 @@
     import { slide } from 'svelte/transition';
     import Options from '$lib5/Options.svelte';
     import InputPassword from '$lib/form/InputPassword.svelte';
+    import InputArea from '$lib/form/InputArea.svelte';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
     import { untrack } from 'svelte';
 
     let {
@@ -49,7 +51,6 @@
     let err = $state('');
     let success = $state(false);
 
-    let id = $state(client.id);
     let name: string = $state(client.name || '');
     let enabled = $state(client.enabled);
     let confidential = $state(client.confidential);
@@ -64,6 +65,10 @@
     );
     let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
     let restrict_group_prefix: string = $state(client.restrict_group_prefix || '');
+    let allowedResources: string[] = $state(
+        client.allowed_resources ? Array.from(client.allowed_resources) : [],
+    );
+    let defaultAud: string[] = $state(client.default_aud ? Array.from(client.default_aud) : []);
 
     let scimEnabled = $state(client.scim !== undefined);
     let scim: ScimClientRequestResponse = $state({
@@ -116,9 +121,11 @@
 
     let forceMfa = $state(client.force_mfa);
 
+    let jsonClaims = $state(untrack(() => stringifyJsonValue(client.claims) || ''));
+    let claimsAtRoot = $state(untrack(() => client.claims_at_root));
+
     $effect(() => {
         if (client.id) {
-            id = client.id;
             name = client.name || '';
             enabled = client.enabled;
             forceMfa = client.force_mfa;
@@ -128,6 +135,8 @@
             restrict_group_prefix = client.restrict_group_prefix || '';
             contacts = client.contacts ? Array.from(client.contacts) : [];
             origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
+            allowedResources = client.allowed_resources ? Array.from(client.allowed_resources) : [];
+            defaultAud = client.default_aud ? Array.from(client.default_aud) : [];
             redirectURIs = Array.from(client.redirect_uris);
             postLogoutRedirectURIs = client.post_logout_redirect_uris
                 ? Array.from(client.post_logout_redirect_uris)
@@ -160,6 +169,9 @@
             });
             challenges.plain = client.challenges?.includes('plain') || false;
             challenges.s256 = client.challenges?.includes('S256') || false;
+
+            jsonClaims = stringifyJsonValue(client.claims) || '';
+            claimsAtRoot = client.claims_at_root;
 
             scim = {
                 base_uri: client.scim?.base_uri || '',
@@ -196,7 +208,6 @@
         err = '';
 
         let payload: UpdateClientRequest = {
-            id,
             name: name || undefined,
             enabled,
             confidential,
@@ -220,6 +231,10 @@
             contacts: contacts.length > 0 ? contacts : undefined,
             backchannel_logout_uri: backchannel_logout_uri || undefined,
             restrict_group_prefix: restrict_group_prefix || undefined,
+            claims: parseJsonValue(jsonClaims),
+            claims_at_root: claimsAtRoot,
+            allowed_resources: allowedResources.length > 0 ? allowedResources : undefined,
+            default_aud: defaultAud.length > 0 ? defaultAud : undefined,
         };
 
         if (flows.authorizationCode) {
@@ -384,6 +399,23 @@
         />
 
         <div style:height=".5rem"></div>
+        <p class="mb-0"><b>Resource Indicators</b></p>
+        <p class="desc">{ta.clients.descAllowedResources}</p>
+        <InputTags
+            bind:values={allowedResources}
+            label={ta.clients.allowedResources}
+            errMsg={ta.validation.uri}
+            pattern={PATTERN_URI}
+        />
+        <p class="desc">{ta.clients.descDefaultAud}</p>
+        <InputTags
+            bind:values={defaultAud}
+            label={ta.clients.defaultAud}
+            errMsg={ta.validation.uri}
+            pattern={PATTERN_URI}
+        />
+
+        <div style:height=".5rem"></div>
         <p class="mb-0"><b>Scopes</b></p>
         <p class="desc">{@html ta.clients.scopes.desc}</p>
         <SelectList bind:items={scopes}>
@@ -441,6 +473,31 @@
             max="300"
             errMsg="10 <= Auth Code Lifetime <= 300"
         />
+
+        <div style:height=".5rem"></div>
+        <p class="mb-0"><b>Custom Claims</b></p>
+        <p class="desc">{ta.clients.claimsDesc}</p>
+        <div class="claims">
+            <InputArea
+                label={ta.clients.claims}
+                placeholder={ta.clients.claims}
+                rows={10}
+                bind:value={jsonClaims}
+            />
+        </div>
+        <InputCheckbox ariaLabel={ta.clients.claimsAtRoot} bind:checked={claimsAtRoot}>
+            {ta.clients.claimsAtRoot}
+        </InputCheckbox>
+        <p class="warn">
+            {ta.clients.claimsAtRootWarning}
+            <a
+                href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                IANA JWT Claims Registry
+            </a>
+        </p>
 
         <p class="mb-0"><b>Backchannel Logout</b></p>
         <p class="desc">
@@ -567,5 +624,15 @@
 
     .mb-0 {
         margin-bottom: 0;
+    }
+
+    .claims {
+        max-width: 40rem;
+    }
+
+    .warn {
+        max-width: 40rem;
+        font-size: 0.9rem;
+        opacity: 0.8;
     }
 </style>

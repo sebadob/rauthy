@@ -23,7 +23,8 @@ use validator::Validate;
 )]
 #[get("/roles")]
 pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Roles, AccessRights::Read)?;
+    // group admins need to read the role list so the user management UI works
+    principal.validate_api_key_or_group_admin(AccessGroup::Roles, AccessRights::Read)?;
 
     let roles = Role::find_all()
         .await?

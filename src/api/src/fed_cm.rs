@@ -181,6 +181,7 @@ pub async fn get_fed_client_config() -> HttpResponse {
         require_auth_time: Some(true),
         access_token_signed_response_alg: Some(rauthy_api_types::oidc::JwkKeyPairAlg::EdDSA),
         id_token_signed_response_alg: Some(rauthy_api_types::oidc::JwkKeyPairAlg::EdDSA),
+        allowed_resources: None,
     };
 
     HttpResponse::Ok().json(config)
@@ -292,6 +293,7 @@ pub async fn post_fed_cm_token(
         AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         None,
         payload.nonce.map(TokenNonce),
+        None,
         None,
         None,
         AuthCodeFlow::No,

@@ -43,8 +43,8 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = RauthyConfig::get().vars.i18n.filter_lang_common
         .iter()
         .map(|v| {
-                if !["de", "en", "fr", "ko", "nb", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
-                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de fr ko nb ru uk zhhans\nfound: {v}");
+                if !["de", "en", "fr", "ko", "nb", "nl", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de fr ko nb nl ru uk zhhans\nfound: {v}");
                 }
                 Language::from(v.as_ref()).into()
         })
@@ -56,9 +56,9 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .filter_lang_admin
         .iter()
         .map(|v| {
-            if !["de", "en", "fr", "ko", "nb", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
+            if !["de", "en", "fr", "ko", "nb", "nl", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
                 panic!(
-                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de fr ko nb ru uk zhhans\nfound: {v}",
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de fr ko nb nl ru uk zhhans\nfound: {v}",
                 );
             }
             Language::from(v.as_ref()).into()
@@ -108,7 +108,14 @@ pub async fn get_auth_check(principal: ReqPrincipal) -> Result<HttpResponse, Err
 )]
 #[get("/auth_check_admin")]
 pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    if principal.is_admin() {
+        // full admin: validate the session and enforce admin-MFA (-> 406)
+        principal.validate_admin_session()?;
+    } else {
+        // delegated group admin: a valid session and the same admin-MFA
+        // enforcement, but without requiring the full `rauthy_admin` role
+        principal.validate_group_admin_session()?;
+    }
     Ok(HttpResponse::Ok().finish())
 }
 

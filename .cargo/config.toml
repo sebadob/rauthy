@@ -1,2 +1,9 @@
 [target.wasm32-unknown-unknown]
 rustflags = ['--cfg', 'getrandom_backend="wasm_js"', '-Ctarget-cpu=mvp']
+
+[registry]
+# This is only respected with at least nightly-2026-06-21
+global-min-publish-age = '10 days'
+
+[unstable]
+min-publish-age = true

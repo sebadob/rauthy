@@ -2,6 +2,8 @@ use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use crate::migration::bootstrap::generated_secrets;
+use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
@@ -12,10 +14,10 @@ use regex::Regex;
 use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
-use std::env;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::OnceLock;
+use std::{env, mem};
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio_postgres::config;
@@ -25,6 +27,8 @@ use utoipa::ToSchema;
 use webauthn_rs::Webauthn;
 
 static CONFIG: OnceLock<RauthyConfig> = OnceLock::new();
+
+const FROM_SECRETS: &str = "$SECRETS";
 
 #[derive(Debug)]
 pub struct RauthyConfig {
@@ -46,12 +50,13 @@ pub struct RauthyConfig {
 
 impl RauthyConfig {
     pub async fn build(
-        config_file: String,
+        path_config: String,
+        path_secrets: String,
         tx_email: mpsc::Sender<EMail>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
-        let (vars, node_config) = Vars::load(&config_file).await;
+        let (vars, node_config) = Vars::load(&path_config, path_secrets).await;
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {err}");
@@ -340,6 +345,8 @@ impl Default for Vars {
                 api_key: None,
                 api_key_secret: None,
                 bootstrap_dir: "bootstrap".into(),
+                generated_secrets_file: String::new().into(),
+                generated_secrets_ttl: 600,
             },
             cred_stuff_detect: VarsCredStuff {
                 blacklist_duration: 86400,
@@ -423,6 +430,7 @@ impl Default for Vars {
                     en: "%m/%d/%Y %T (%Z)".into(),
                     fr: "%d/%m/%Y %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
+                    nl: "%d-%m-%Y %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
                     ru: "%d.%m.%Y %T (%Z)".into(),
                     uk: "%d.%m.%Y %T (%Z)".into(),
@@ -447,6 +455,7 @@ impl Default for Vars {
                     "webid".into(),
                 ],
                 cache_lifetime: 3600,
+                danger_allow_unvalidated_resource: false,
             },
             events: VarsEvents {
                 email: None,
@@ -681,6 +690,20 @@ impl Default for Vars {
                         footer: None,
                         button_text_request_new: None,
                     },
+                    nl: VarsTemplate
+                    {
+                        subject: "Nieuw wachtwoord".into(),
+                        header: "Nieuw wachtwoord voor".into(),
+                        text: None,
+                        click_link: Some("Klik op de onderstaande link om een nieuw wachtwoord in te stellen."
+                                .into()),
+                        validity: Some("Deze link is om veiligheidsredenen slechts korte tijd geldig."
+                                .into()),
+                        expires: Some("Link geldig tot:".into()),
+                        button: Some("Wachtwoord instellen".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     ru: VarsTemplate
                     {
                         subject: "Новый пароль".into(),
@@ -795,6 +818,18 @@ impl Default for Vars {
                         button: Some("Tilbakestill passord".into()),
                         footer: Some("Hvis lenken har utløpt, kan du be om en ny.".into()),
                         button_text_request_new: Some("Be om ny lenke".into()),
+                    },
+                    nl: VarsTemplate {
+                        subject: "Wachtwoordreset aangevraagd".into(),
+                        header: "Wachtwoordreset aangevraagd voor".into(),
+                        text: None,
+                        click_link: Some("Klik op de onderstaande link om uw wachtwoord te resetten.".into()),
+                        validity: Some("Deze link is om veiligheidsredenen slechts korte tijd geldig."
+                                .into()),
+                        expires: Some("Link vervalt:".into()),
+                        button: Some("Wachtwoord resetten".into()),
+                        footer: Some("Als deze link is verlopen, kunt u een nieuwe aanvragen.".into()),
+                        button_text_request_new: Some("Nieuwe link aanvragen".into()),
                     },
                     ru: VarsTemplate {
                         subject: "Запрос на сброс пароля".into(),
@@ -921,6 +956,22 @@ Your account has not been compromised and no data was leaked."#.into()),
                         footer: None,
                         button_text_request_new: Some("Request password reset Link".into()),
                     },
+                    nl: VarsTemplate {
+                        subject: "E-Mail al geregistreerd".into(),
+                        header: "E-Mail al geregistreerd - ".into(),
+                        text: Some(r#"Iemand heeft geprobeerd een nieuw account te registreren met uw e-mailadres,
+terwijl er al een account bestaat. Als u dat zelf was en het een vergissing was, kunt u
+dit bericht negeren. Als u echter uw wachtwoord bent vergeten, kunt u
+de onderstaande link gebruiken om het te resetten.
+Als u zelf niet probeerde een nieuw account te registreren - geen zorgen.
+Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Wachtwoordreset link aanvragen".into()),
+                    },
                     ru: VarsTemplate {
                         subject: "E-Mail уже зарегистрирован".into(),
                         header: "E-Mail уже зарегистрирован - ".into(),
@@ -1016,6 +1067,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                     immutable: true,
                     blacklist: vec!["admin".into(), "administrator".into(), "root".into()],
                     pattern_html: "^[a-z][a-z0-9_\\-]{1,61}$".into(),
+                    pattern_hint: None,
                     email_fallback: true,
                 },
             },
@@ -1035,7 +1087,7 @@ Your account has not been compromised and no data was leaked."#.into()),
 }
 
 impl Vars {
-    pub async fn load(path_config: &str) -> (Self, hiqlite::NodeConfig) {
+    pub async fn load(path_config: &str, path_secrets: String) -> (Self, hiqlite::NodeConfig) {
         let use_vault_config = env::var("USE_VAULT_CONFIG")
             .unwrap_or_else(|_| "false".to_string())
             .parse::<bool>()
@@ -1057,10 +1109,14 @@ impl Vars {
             }
         };
 
-        Self::parse(slf, config).await
+        Self::parse(slf, config, path_secrets).await
     }
 
-    async fn parse(mut slf: Vars, config: String) -> (Self, hiqlite::NodeConfig) {
+    async fn parse(
+        mut slf: Vars,
+        config: String,
+        path_secrets: String,
+    ) -> (Self, hiqlite::NodeConfig) {
         // Note: these inner parsers are very verbose, but they allow the upfront memory allocation
         // and memory fragmentation, after the quite big toml has been freed and the config stays
         // in static memory.
@@ -1069,7 +1125,9 @@ impl Vars {
 
         let mut table = config
             .parse::<toml::Table>()
-            .expect("Cannot parse TOML file");
+            .expect("Cannot parse Config TOML file");
+
+        let mut secrets = Self::parse_secrets(&mut table, path_secrets);
 
         slf.parse_dev(&mut table);
         slf.parse_atproto(&mut table);
@@ -1078,16 +1136,16 @@ impl Vars {
         slf.parse_backchannel_logout(&mut table);
         slf.parse_bootstrap(&mut table);
         slf.parse_cred_stuff(&mut table);
-        slf.parse_database(&mut table);
+        slf.parse_database(&mut table, &mut secrets);
         slf.parse_device_grant(&mut table);
         slf.parse_dpop(&mut table);
-        slf.parse_dynamic_clients(&mut table);
-        slf.parse_email(&mut table);
-        slf.parse_encryption(&mut table);
+        slf.parse_dynamic_clients(&mut table, &mut secrets);
+        slf.parse_email(&mut table, &mut secrets);
+        slf.parse_encryption(&mut table, &mut secrets);
         slf.parse_ephemeral_clients(&mut table);
-        slf.parse_events(&mut table);
+        slf.parse_events(&mut table, &mut secrets);
         slf.parse_fedcm(&mut table);
-        slf.parse_geo(&mut table);
+        slf.parse_geo(&mut table, &mut secrets);
         slf.parse_hashing(&mut table);
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
@@ -1104,16 +1162,29 @@ impl Vars {
         slf.parse_tls(&mut table);
         slf.parse_tos(&mut table);
         slf.parse_user_delete(&mut table);
-        slf.parse_user_pictures(&mut table);
+        slf.parse_user_pictures(&mut table, &mut secrets);
         slf.parse_user_registration(&mut table);
         slf.parse_user_values(&mut table);
         slf.parse_webauthn(&mut table);
 
-        let node_config = slf.parse_hiqlite_config(&mut table).await;
+        let node_config = slf.parse_hiqlite_config(&mut table, secrets).await;
+        slf.resolve_bootstrap_generated_secrets_file(&node_config);
 
-        check_empty(table, "<root>");
+        check_table_empty(table, "<root>");
 
         (slf, node_config)
+    }
+
+    fn parse_secrets(table: &mut toml::Table, path_secrets_file: String) -> RauthySecrets {
+        // When we allow overwriting the default startup arg via config, the location of the file
+        // can be managed in version control and does not need an adjustment to the service def
+        // on each node.
+        // -> `secrets_file` at the root of the config always has the higher priority
+        if let Some(path) = t_str(table, "", "secrets_file", "SECRETS_FILE") {
+            RauthySecrets::read_or_default(path)
+        } else {
+            RauthySecrets::read_or_default(path_secrets_file)
+        }
     }
 
     fn parse_dev(&mut self, table: &mut toml::Table) {
@@ -1137,7 +1208,7 @@ impl Vars {
             self.dev.provider_callback_url = Some(v);
         }
 
-        check_empty(table, "dev");
+        check_table_empty(table, "dev");
     }
 
     fn parse_atproto(&mut self, table: &mut toml::Table) {
@@ -1147,7 +1218,7 @@ impl Vars {
             self.atproto.enable = v;
         }
 
-        check_empty(table, "atproto");
+        check_table_empty(table, "atproto");
     }
 
     fn parse_access(&mut self, table: &mut toml::Table) {
@@ -1252,7 +1323,7 @@ impl Vars {
             self.access.redirect_root_to_account = v;
         }
 
-        check_empty(table, "access");
+        check_table_empty(table, "access");
     }
 
     fn parse_auth_headers(&mut self, table: &mut toml::Table) {
@@ -1319,7 +1390,7 @@ impl Vars {
             self.auth_headers.preferred_username = v.into();
         }
 
-        check_empty(table, "auth_headers");
+        check_table_empty(table, "auth_headers");
     }
 
     fn parse_backchannel_logout(&mut self, table: &mut toml::Table) {
@@ -1374,7 +1445,7 @@ impl Vars {
             self.backchannel_logout.allowed_token_lifetime = v;
         }
 
-        check_empty(table, "backchannel_logout");
+        check_table_empty(table, "backchannel_logout");
     }
 
     fn parse_bootstrap(&mut self, table: &mut toml::Table) {
@@ -1418,8 +1489,31 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "bootstrap", "bootstrap_dir", "BOOTSTRAP_DIR") {
             self.bootstrap.bootstrap_dir = v.into();
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "bootstrap",
+            "generated_secrets_file",
+            "BOOTSTRAP_GENERATED_SECRETS_FILE",
+        ) {
+            self.bootstrap.generated_secrets_file = v.into();
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "bootstrap",
+            "generated_secrets_ttl",
+            "BOOTSTRAP_GENERATED_SECRETS_TTL",
+        ) {
+            self.bootstrap.generated_secrets_ttl = v;
+        }
 
-        check_empty(table, "bootstrap");
+        check_table_empty(table, "bootstrap");
+    }
+
+    fn resolve_bootstrap_generated_secrets_file(&mut self, node_config: &NodeConfig) {
+        if self.bootstrap.generated_secrets_file.is_empty() {
+            self.bootstrap.generated_secrets_file =
+                generated_secrets::default_file_path(&node_config.data_dir).into();
+        }
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
@@ -1450,10 +1544,10 @@ impl Vars {
             self.cred_stuff_detect.scan_window = v;
         }
 
-        check_empty(table, "cred_stuff_detection");
+        check_table_empty(table, "cred_stuff_detection");
     }
 
-    fn parse_database(&mut self, table: &mut toml::Table) {
+    fn parse_database(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
         let mut table = t_table(table, "database");
 
         if let Some(v) = t_bool(&mut table, "database", "hiqlite", "HIQLITE") {
@@ -1475,10 +1569,18 @@ impl Vars {
             self.database.pg_port = v;
         }
         if let Some(v) = t_str(&mut table, "database", "pg_user", "PG_USER") {
-            self.database.pg_user = Some(v);
+            if v == FROM_SECRETS {
+                self.database.pg_user = mem::take(&mut secrets.database.pg_user);
+            } else {
+                self.database.pg_user = Some(v);
+            }
         }
         if let Some(v) = t_str(&mut table, "database", "pg_password", "PG_PASSWORD") {
-            self.database.pg_password = Some(v);
+            if v == FROM_SECRETS {
+                self.database.pg_password = mem::take(&mut secrets.database.pg_password);
+            } else {
+                self.database.pg_password = Some(v);
+            }
         }
         if let Some(v) = t_str(&mut table, "database", "pg_db_name", "PG_DB_NAME") {
             self.database.pg_db_name = v.into();
@@ -1513,7 +1615,11 @@ impl Vars {
             self.database.migrate_pg_port = v;
         }
         if let Some(v) = t_str(&mut table, "database", "migrate_pg_user", "MIGRATE_PG_USER") {
-            self.database.migrate_pg_user = Some(v);
+            if v == FROM_SECRETS {
+                self.database.migrate_pg_user = mem::take(&mut secrets.database.migrate_pg_user);
+            } else {
+                self.database.migrate_pg_user = Some(v);
+            }
         }
         if let Some(v) = t_str(
             &mut table,
@@ -1521,7 +1627,12 @@ impl Vars {
             "migrate_pg_password",
             "MIGRATE_PG_PASSWORD",
         ) {
-            self.database.migrate_pg_password = Some(v);
+            if v == FROM_SECRETS {
+                self.database.migrate_pg_password =
+                    mem::take(&mut secrets.database.migrate_pg_password);
+            } else {
+                self.database.migrate_pg_password = Some(v);
+            }
         }
         if let Some(v) = t_str(
             &mut table,
@@ -1549,7 +1660,7 @@ impl Vars {
             self.database.sched_user_exp_delete_mins = Some(v);
         }
 
-        check_empty(table, "database");
+        check_table_empty(table, "database");
     }
 
     fn parse_device_grant(&mut self, table: &mut toml::Table) {
@@ -1596,7 +1707,7 @@ impl Vars {
             self.device_grant.refresh_token_lifetime = v;
         }
 
-        check_empty(table, "device_grant");
+        check_table_empty(table, "device_grant");
     }
 
     fn parse_dpop(&mut self, table: &mut toml::Table) {
@@ -1609,10 +1720,10 @@ impl Vars {
             self.dpop.nonce_exp = v;
         }
 
-        check_empty(table, "dpop");
+        check_table_empty(table, "dpop");
     }
 
-    fn parse_dynamic_clients(&mut self, table: &mut toml::Table) {
+    fn parse_dynamic_clients(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
         let mut table = t_table(table, "dynamic_clients");
 
         if let Some(v) = t_bool(
@@ -1645,7 +1756,12 @@ impl Vars {
             "reg_token",
             "DYN_CLIENT_REG_TOKEN",
         ) {
-            self.dynamic_clients.reg_token = Some(v);
+            if v == FROM_SECRETS {
+                self.dynamic_clients.reg_token =
+                    mem::take(&mut secrets.database.migrate_pg_password);
+            } else {
+                self.database.migrate_pg_password = Some(v);
+            }
         }
         if let Some(v) = t_u32(
             &mut table,
@@ -1696,10 +1812,10 @@ impl Vars {
             self.dynamic_clients.rate_limit_sec = v;
         }
 
-        check_empty(table, "dynamic_clients");
+        check_table_empty(table, "dynamic_clients");
     }
 
-    fn parse_email(&mut self, table: &mut toml::Table) {
+    fn parse_email(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
         let mut table = t_table(table, "email");
 
         self.email.rauthy_admin_email = t_str(
@@ -1713,8 +1829,22 @@ impl Vars {
         }
         self.email.smtp_url = t_str(&mut table, "email", "smtp_url", "SMTP_URL");
         self.email.smtp_port = t_u16(&mut table, "email", "smtp_port", "SMTP_PORT");
-        self.email.smtp_username = t_str(&mut table, "email", "smtp_username", "SMTP_USERNAME");
-        self.email.smtp_password = t_str(&mut table, "email", "smtp_password", "SMTP_PASSWORD");
+
+        if let Some(v) = t_str(&mut table, "email", "smtp_username", "SMTP_USERNAME") {
+            if v == FROM_SECRETS {
+                self.email.smtp_username = mem::take(&mut secrets.email.smtp_username);
+            } else {
+                self.email.smtp_username = Some(v);
+            }
+        }
+        if let Some(v) = t_str(&mut table, "email", "smtp_password", "SMTP_PASSWORD") {
+            if v == FROM_SECRETS {
+                self.email.smtp_password = mem::take(&mut secrets.email.smtp_password);
+            } else {
+                self.email.smtp_password = Some(v);
+            }
+        }
+
         if let Some(v) = t_str(&mut table, "email", "smtp_from", "SMTP_FROM") {
             self.email.smtp_from = v.into();
         }
@@ -1732,18 +1862,33 @@ impl Vars {
         }
 
         self.email.xoauth_url = t_str(&mut table, "email", "xoauth_url", "SMTP_XOAUTH2_URL");
-        self.email.xoauth_client_id = t_str(
+
+        if let Some(v) = t_str(
             &mut table,
             "email",
             "xoauth_client_id",
             "SMTP_XOAUTH2_CLIENT_ID",
-        );
-        self.email.xoauth_client_secret = t_str(
+        ) {
+            if v == FROM_SECRETS {
+                self.email.xoauth_client_id = mem::take(&mut secrets.email.xoauth_client_id);
+            } else {
+                self.email.xoauth_client_id = Some(v);
+            }
+        }
+        if let Some(v) = t_str(
             &mut table,
             "email",
             "xoauth_client_secret",
             "SMTP_XOAUTH2_CLIENT_SECRET",
-        );
+        ) {
+            if v == FROM_SECRETS {
+                self.email.xoauth_client_secret =
+                    mem::take(&mut secrets.email.xoauth_client_secret);
+            } else {
+                self.email.xoauth_client_secret = Some(v);
+            }
+        }
+
         self.email.xoauth_scope = t_str(&mut table, "email", "xoauth_scope", "SMTP_XOAUTH2_SCOPE");
 
         self.email.microsoft_graph_uri = t_str(
@@ -1803,7 +1948,7 @@ impl Vars {
         ) {
             self.email.jobs.batch_delay_ms = v;
         }
-        check_empty(jobs, "email.jobs");
+        check_table_empty(jobs, "email.jobs");
 
         // [email.tz_fmt]
         let mut tz_fmt = t_table(&mut table, "tz_fmt");
@@ -1819,6 +1964,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ko", "TZ_FMT_KO") {
             self.email.tz_fmt.ko = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "nl", "TZ_FMT_NL") {
+            self.email.tz_fmt.nl = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "no", "TZ_FMT_NO") {
             self.email.tz_fmt.no = v.into();
@@ -1836,22 +1984,30 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "tz_fallback", "TZ_FALLBACK") {
             self.email.tz_fmt.tz_fallback = v.into();
         }
-        check_empty(tz_fmt, "email.tz_fmt");
+        check_table_empty(tz_fmt, "email.tz_fmt");
 
-        check_empty(table, "email");
+        check_table_empty(table, "email");
     }
 
-    fn parse_encryption(&mut self, table: &mut toml::Table) {
+    fn parse_encryption(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
         let mut table = t_table(table, "encryption");
 
         if let Some(v) = t_str(&mut table, "encryption", "key_active", "ENC_KEY_ACTIVE") {
-            self.encryption.key_active = v;
+            if v == FROM_SECRETS {
+                self.encryption.key_active = mem::take(&mut secrets.encryption.key_active);
+            } else {
+                self.encryption.key_active = v;
+            }
         }
         if let Some(v) = t_str_vec(&mut table, "encryption", "keys", "ENC_KEYS") {
-            self.encryption.keys = v;
+            if v.first().map(|v| v.as_str()) == Some(FROM_SECRETS) {
+                self.encryption.keys = mem::take(&mut secrets.encryption.keys);
+            } else {
+                self.encryption.keys = v;
+            }
         }
 
-        check_empty(table, "encryption");
+        check_table_empty(table, "encryption");
     }
 
     fn parse_ephemeral_clients(&mut self, table: &mut toml::Table) {
@@ -1917,10 +2073,19 @@ impl Vars {
             self.ephemeral_clients.cache_lifetime = v;
         }
 
-        check_empty(table, "ephemeral_clients");
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "danger_allow_unvalidated_resource",
+            "EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE",
+        ) {
+            self.ephemeral_clients.danger_allow_unvalidated_resource = v;
+        }
+
+        check_table_empty(table, "ephemeral_clients");
     }
 
-    fn parse_events(&mut self, table: &mut toml::Table) {
+    fn parse_events(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
         let mut table = t_table(table, "events");
 
         if let Some(v) = t_str(&mut table, "events", "email", "EVENT_EMAIL") {
@@ -1933,7 +2098,11 @@ impl Vars {
             "matrix_user_id",
             "EVENT_MATRIX_USER_ID",
         ) {
-            self.events.matrix_user_id = Some(v);
+            if v == FROM_SECRETS {
+                self.events.matrix_user_id = mem::take(&mut secrets.events.matrix_user_id);
+            } else {
+                self.events.matrix_user_id = Some(v);
+            }
         }
         if let Some(v) = t_str(
             &mut table,
@@ -1949,7 +2118,12 @@ impl Vars {
             "matrix_access_token",
             "EVENT_MATRIX_ACCESS_TOKEN",
         ) {
-            self.events.matrix_access_token = Some(v);
+            if v == FROM_SECRETS {
+                self.events.matrix_access_token =
+                    mem::take(&mut secrets.events.matrix_access_token);
+            } else {
+                self.events.matrix_access_token = Some(v);
+            }
         }
         if let Some(v) = t_str(
             &mut table,
@@ -1957,7 +2131,12 @@ impl Vars {
             "matrix_user_password",
             "EVENT_MATRIX_USER_PASSWORD",
         ) {
-            self.events.matrix_user_password = Some(v);
+            if v == FROM_SECRETS {
+                self.events.matrix_user_password =
+                    mem::take(&mut secrets.events.matrix_user_password);
+            } else {
+                self.events.matrix_user_password = Some(v);
+            }
         }
         if let Some(v) = t_str(
             &mut table,
@@ -1993,7 +2172,11 @@ impl Vars {
         }
 
         if let Some(v) = t_str(&mut table, "events", "slack_webhook", "EVENT_SLACK_WEBHOOK") {
-            self.events.slack_webhook = Some(v);
+            if v == FROM_SECRETS {
+                self.events.slack_webhook = mem::take(&mut secrets.events.slack_webhook);
+            } else {
+                self.events.slack_webhook = Some(v);
+            }
         }
 
         if let Some(v) = t_str(
@@ -2285,7 +2468,7 @@ impl Vars {
             self.events.disable_app_version_check = v;
         }
 
-        check_empty(table, "events");
+        check_table_empty(table, "events");
     }
 
     fn parse_fedcm(&mut self, table: &mut toml::Table) {
@@ -2316,10 +2499,10 @@ impl Vars {
             self.fedcm.session_timeout = v;
         }
 
-        check_empty(table, "fedcm");
+        check_table_empty(table, "fedcm");
     }
 
-    fn parse_geo(&mut self, table: &mut toml::Table) {
+    fn parse_geo(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
         let mut table = t_table(table, "geolocation");
 
         if let Some(v) = t_bool(
@@ -2351,18 +2534,38 @@ impl Vars {
             }
         }
 
-        self.geo.maxmind_account_id = t_str(
-            &mut table,
-            "geolocation",
-            "maxmind_account_id",
-            "GEO_MAXMIND_ACC_ID",
-        );
         self.geo.maxmind_license_key = t_str(
             &mut table,
             "geolocation",
             "maxmind_license_key",
             "GEO_MAXMIND_LICENSE",
         );
+
+        if let Some(v) = t_str(
+            &mut table,
+            "geolocation",
+            "maxmind_account_id",
+            "GEO_MAXMIND_ACC_ID",
+        ) {
+            if v == FROM_SECRETS {
+                self.geo.maxmind_account_id = mem::take(&mut secrets.geo.maxmind_account_id);
+            } else {
+                self.geo.maxmind_account_id = Some(v);
+            }
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "geolocation",
+            "maxmind_license_key",
+            "GEO_MAXMIND_LICENSE",
+        ) {
+            if v == FROM_SECRETS {
+                self.geo.maxmind_license_key = mem::take(&mut secrets.geo.maxmind_license_key);
+            } else {
+                self.geo.maxmind_license_key = Some(v);
+            }
+        }
+
         if let Some(v) = t_str(
             &mut table,
             "geolocation",
@@ -2388,7 +2591,7 @@ impl Vars {
             self.geo.maxmind_update_cron = v.into();
         }
 
-        check_empty(table, "geolocation");
+        check_table_empty(table, "geolocation");
     }
 
     fn parse_hashing(&mut self, table: &mut toml::Table) {
@@ -2421,10 +2624,14 @@ impl Vars {
             self.hashing.hash_await_warn_time = v;
         }
 
-        check_empty(table, "hashing");
+        check_table_empty(table, "hashing");
     }
 
-    async fn parse_hiqlite_config(&mut self, table: &mut toml::Table) -> hiqlite::NodeConfig {
+    async fn parse_hiqlite_config(
+        &mut self,
+        table: &mut toml::Table,
+        secrets: RauthySecrets,
+    ) -> hiqlite::NodeConfig {
         let table = t_table(table, "cluster");
 
         if self.encryption.key_active.is_empty() || self.encryption.keys.is_empty() {
@@ -2437,8 +2644,9 @@ impl Vars {
             panic!("Invalid ENC_KEYS / ENC_KEY_ACTIVE");
         };
 
-        // TODO add the check_empty check to hiqlite as well
-        match NodeConfig::from_toml_table(table, "cluster", Some(enc_keys)).await {
+        match NodeConfig::from_toml_table(table, "cluster", Some(secrets.cluster), Some(enc_keys))
+            .await
+        {
             Ok(config) => config,
             Err(err) => {
                 panic!("Error parsing `[cluster]` section: {err:?}");
@@ -2501,7 +2709,7 @@ impl Vars {
             self.http_client.root_ca_bundle = Some(v);
         }
 
-        check_empty(table, "http_client");
+        check_table_empty(table, "http_client");
     }
 
     fn parse_i18n(&mut self, table: &mut toml::Table) {
@@ -2519,7 +2727,7 @@ impl Vars {
             self.i18n.filter_lang_admin = v.into_iter().map(Cow::from).collect::<Vec<_>>();
         }
 
-        check_empty(table, "i18n");
+        check_table_empty(table, "i18n");
     }
 
     fn parse_lifetimes(&mut self, table: &mut toml::Table) {
@@ -2590,7 +2798,7 @@ impl Vars {
             self.lifetimes.jwk_autorotate_cron = v.into();
         }
 
-        check_empty(table, "lifetimes");
+        check_table_empty(table, "lifetimes");
     }
 
     fn parse_logging(&mut self, table: &mut toml::Table) {
@@ -2614,7 +2822,7 @@ impl Vars {
             self.logging.log_fmt = v.into();
         }
 
-        check_empty(table, "logging");
+        check_table_empty(table, "logging");
     }
 
     fn parse_matrix(&mut self, table: &mut toml::Table) {
@@ -2629,7 +2837,7 @@ impl Vars {
             self.matrix.msc3861_enable = v;
         }
 
-        check_empty(table, "matrix");
+        check_table_empty(table, "matrix");
     }
 
     fn parse_mfa(&mut self, table: &mut toml::Table) {
@@ -2639,7 +2847,7 @@ impl Vars {
             self.mfa.admin_force_mfa = v;
         }
 
-        check_empty(table, "mfa");
+        check_table_empty(table, "mfa");
     }
 
     fn parse_pam(&mut self, table: &mut toml::Table) {
@@ -2713,9 +2921,9 @@ impl Vars {
         ) {
             self.pam.authorized_keys.forced_key_expiry_days = v;
         }
-        check_empty(auth_keys, "pam.authorized_keys");
+        check_table_empty(auth_keys, "pam.authorized_keys");
 
-        check_empty(table, "pam");
+        check_table_empty(table, "pam");
     }
 
     fn parse_pow(&mut self, table: &mut toml::Table) {
@@ -2728,7 +2936,7 @@ impl Vars {
             self.pow.exp = v;
         }
 
-        check_empty(table, "pow");
+        check_table_empty(table, "pow");
     }
 
     fn parse_scim(&mut self, table: &mut toml::Table) {
@@ -2754,7 +2962,7 @@ impl Vars {
             self.scim.retry_count = v;
         }
 
-        check_empty(table, "scim");
+        check_table_empty(table, "scim");
     }
 
     fn parse_server(&mut self, table: &mut toml::Table) {
@@ -2828,7 +3036,7 @@ impl Vars {
             self.server.ssp_threshold = v;
         }
 
-        check_empty(table, "server");
+        check_table_empty(table, "server");
     }
 
     fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
@@ -2851,7 +3059,7 @@ impl Vars {
             self.suspicious_requests.log = v;
         }
 
-        check_empty(table, "suspicious_requests");
+        check_table_empty(table, "suspicious_requests");
     }
 
     fn parse_templates(&mut self, table: &mut toml::Table) {
@@ -2914,6 +3122,13 @@ impl Vars {
                         self.templates.password_reset.nb.clone()
                     }
                 }
+                "nl" => {
+                    if is_password_new {
+                        self.templates.password_new.nl.clone()
+                    } else {
+                        self.templates.password_reset.nl.clone()
+                    }
+                }
                 "ru" => {
                     if is_password_new {
                         self.templates.password_new.ru.clone()
@@ -2937,7 +3152,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
                     )
                 }
             };
@@ -2982,11 +3197,39 @@ impl Vars {
                         self.templates.password_reset.de = tpl;
                     }
                 }
+                "fr" => {
+                    if is_password_new {
+                        self.templates.password_new.fr = tpl;
+                    } else {
+                        self.templates.password_reset.fr = tpl;
+                    }
+                }
                 "ko" => {
                     if is_password_new {
                         self.templates.password_new.ko = tpl;
                     } else {
                         self.templates.password_reset.ko = tpl;
+                    }
+                }
+                "nb" => {
+                    if is_password_new {
+                        self.templates.password_new.nb = tpl;
+                    } else {
+                        self.templates.password_reset.nb = tpl;
+                    }
+                }
+                "nl" => {
+                    if is_password_new {
+                        self.templates.password_new.nl = tpl;
+                    } else {
+                        self.templates.password_reset.nl = tpl;
+                    }
+                }
+                "ru" => {
+                    if is_password_new {
+                        self.templates.password_new.ru = tpl;
+                    } else {
+                        self.templates.password_reset.ru = tpl;
                     }
                 }
                 "uk" => {
@@ -3005,12 +3248,12 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de ko nb uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
                     )
                 }
             }
 
-            check_empty(table, "[[templates]]");
+            check_table_empty(table, "[[templates]]");
         }
     }
 
@@ -3033,7 +3276,7 @@ impl Vars {
             self.tls.generate_self_signed = v;
         }
 
-        check_empty(table, "tls");
+        check_table_empty(table, "tls");
     }
 
     fn parse_tos(&mut self, table: &mut toml::Table) {
@@ -3043,7 +3286,7 @@ impl Vars {
             self.tos.accept_timeout = v;
         }
 
-        check_empty(table, "tos");
+        check_table_empty(table, "tos");
     }
 
     fn parse_user_delete(&mut self, table: &mut toml::Table) {
@@ -3058,10 +3301,10 @@ impl Vars {
             self.user_delete.enable_self_delete = v;
         }
 
-        check_empty(table, "user_delete");
+        check_table_empty(table, "user_delete");
     }
 
-    fn parse_user_pictures(&mut self, table: &mut toml::Table) {
+    fn parse_user_pictures(&mut self, table: &mut toml::Table, secrets: &mut RauthySecrets) {
         let mut table = t_table(table, "user_pictures");
 
         if let Some(v) = t_str(
@@ -3089,10 +3332,18 @@ impl Vars {
             self.user_pictures.region = Some(v);
         }
         if let Some(v) = t_str(&mut table, "user_pictures", "s3_key", "PIC_S3_KEY") {
-            self.user_pictures.s3_key = Some(v);
+            if v == FROM_SECRETS {
+                self.user_pictures.s3_key = mem::take(&mut secrets.user_pictures.s3_key);
+            } else {
+                self.user_pictures.s3_key = Some(v);
+            }
         }
         if let Some(v) = t_str(&mut table, "user_pictures", "s3_secret", "PIC_S3_SECRET") {
-            self.user_pictures.s3_secret = Some(v);
+            if v == FROM_SECRETS {
+                self.user_pictures.s3_secret = mem::take(&mut secrets.user_pictures.s3_secret);
+            } else {
+                self.user_pictures.s3_secret = Some(v);
+            }
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -3115,7 +3366,7 @@ impl Vars {
             self.user_pictures.public = v;
         }
 
-        check_empty(table, "user_pictures");
+        check_table_empty(table, "user_pictures");
     }
 
     fn parse_user_registration(&mut self, table: &mut toml::Table) {
@@ -3141,7 +3392,7 @@ impl Vars {
             self.user_registration.domain_blacklist = v;
         }
 
-        check_empty(table, "user_registration");
+        check_table_empty(table, "user_registration");
     }
 
     fn parse_user_values(&mut self, table: &mut toml::Table) {
@@ -3233,6 +3484,12 @@ impl Vars {
         ) {
             self.user_values.preferred_username.pattern_html = v.into();
         }
+        self.user_values.preferred_username.pattern_hint = t_str(
+            &mut pref_username,
+            "user_values.preferred_username",
+            "pattern_hint",
+            "",
+        );
         if let Some(v) = t_bool(
             &mut pref_username,
             "user_values.preferred_username",
@@ -3245,8 +3502,8 @@ impl Vars {
         // linux username regex as fallback
         let _ = RE_PREFERRED_USERNAME.set(RE_LINUX_USERNAME.clone());
 
-        check_empty(pref_username, "user_values.preferred_username");
-        check_empty(table, "user_values");
+        check_table_empty(pref_username, "user_values.preferred_username");
+        check_table_empty(table, "user_values");
     }
 
     fn parse_webauthn(&mut self, table: &mut toml::Table) {
@@ -3282,7 +3539,7 @@ impl Vars {
             self.webauthn.no_password_exp = v;
         }
 
-        check_empty(table, "webauthn");
+        check_table_empty(table, "webauthn");
     }
 
     pub fn validate(&self) {
@@ -3430,6 +3687,8 @@ pub struct VarsBootstrap {
     pub api_key: Option<String>,
     pub api_key_secret: Option<String>,
     pub bootstrap_dir: Cow<'static, str>,
+    pub generated_secrets_file: Cow<'static, str>,
+    pub generated_secrets_ttl: u32,
 }
 
 #[derive(Debug)]
@@ -3530,6 +3789,7 @@ pub struct VarsEmailTzFmt {
     pub en: Cow<'static, str>,
     pub fr: Cow<'static, str>,
     pub ko: Cow<'static, str>,
+    pub nl: Cow<'static, str>,
     pub no: Cow<'static, str>,
     pub ru: Cow<'static, str>,
     pub uk: Cow<'static, str>,
@@ -3552,6 +3812,12 @@ pub struct VarsEphemeralClients {
     pub allowed_flows: Vec<Cow<'static, str>>,
     pub allowed_scopes: Vec<Cow<'static, str>>,
     pub cache_lifetime: u32,
+    /// RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+    /// a requested `resource` is rejected by default. Setting this to `true` lets such
+    /// clients request any resource, which can be an easy privilege-escalation vector;
+    /// only enable it if you fully understand the implications and have a good reason.
+    /// Default deny.
+    pub danger_allow_unvalidated_resource: bool,
 }
 
 #[derive(Debug)]
@@ -3753,6 +4019,7 @@ pub struct VarsTemplatesLanguages {
     pub fr: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
+    pub nl: VarsTemplate,
     pub ru: VarsTemplate,
     pub uk: VarsTemplate,
     pub zhhans: VarsTemplate,
@@ -3835,6 +4102,7 @@ pub struct VarsUserPreferredUsername {
     // in macros.
     // pub regex_rust: String,
     pub pattern_html: Cow<'static, str>,
+    pub pattern_hint: Option<String>,
     pub email_fallback: bool,
 }
 
@@ -3874,9 +4142,9 @@ pub struct VarsAtproto {
     pub enable: bool,
 }
 
-fn check_empty(table: toml::Table, tbl_name: &str) {
+pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
     if !table.is_empty() {
-        panic!("Unknown Config data in section: '{tbl_name}': {table:#?}");
+        panic!("Unknown data in section: '{tbl_name}': {table:#?}");
     }
 }
 
@@ -3971,7 +4239,12 @@ pub fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> O
     Some(s)
 }
 
-fn t_str_vec(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<Vec<String>> {
+pub fn t_str_vec(
+    map: &mut toml::Table,
+    parent: &str,
+    key: &str,
+    env_var: &str,
+) -> Option<Vec<String>> {
     let value = map.remove(key);
 
     if !env_var.is_empty()

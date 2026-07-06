@@ -11,6 +11,7 @@
         offsetLeft = '0px',
         offsetTop = '0px',
         absolute,
+        anchored,
         lazy,
         btnDisabled,
         btnInvisible,
@@ -31,6 +32,9 @@
         offsetLeft?: string;
         offsetTop?: string;
         absolute?: boolean;
+        // when set, the popover is positioned by the browser relative to its toggle
+        // button via CSS anchor positioning instead of the manual offset math below
+        anchored?: boolean;
         lazy?: boolean;
         btnDisabled?: boolean;
         btnInvisible?: boolean;
@@ -53,6 +57,16 @@
 
     close = () => refPopover?.hidePopover();
 
+    $effect(() => {
+        // link the popover to its toggle button so the browser keeps it anchored
+        // regardless of the popover's own height (see the `.anchored` style rule)
+        if (anchored && ref && refPopover) {
+            let name = `--${idButton}`;
+            ref.style.setProperty('anchor-name', name);
+            refPopover.style.setProperty('position-anchor', name);
+        }
+    });
+
     function onclick(ev: Event) {
         ev.stopPropagation();
 
@@ -61,13 +75,16 @@
         }
 
         if (ref && refPopover) {
-            if (absolute) {
-                refPopover.style.top = offsetTop;
-                refPopover.style.left = offsetLeft;
-            } else {
-                let rectBtn = ref.getBoundingClientRect();
-                refPopover.style.top = `calc(${rectBtn.bottom + window.scrollY}px + ${offsetTop})`;
-                refPopover.style.left = `calc(${rectBtn.left + window.scrollX}px + ${offsetLeft})`;
+            // anchored popovers are placed declaratively by CSS, nothing to do here
+            if (!anchored) {
+                if (absolute) {
+                    refPopover.style.top = offsetTop;
+                    refPopover.style.left = offsetLeft;
+                } else {
+                    let rectBtn = ref.getBoundingClientRect();
+                    refPopover.style.top = `calc(${rectBtn.bottom + window.scrollY}px + ${offsetTop})`;
+                    refPopover.style.left = `calc(${rectBtn.left + window.scrollX}px + ${offsetLeft})`;
+                }
             }
         } else {
             console.warn('button and popover ref missing');
@@ -108,6 +125,7 @@
         aria-labelledby={idButton}
         aria-expanded={isOpen}
         class="popover"
+        class:anchored
         popover="auto"
         {ontoggle}
     >
@@ -132,6 +150,16 @@
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         box-shadow: 0 0 2px 1px hsl(var(--bg-high));
+    }
+
+    .popover.anchored {
+        /* open upward from the toggle button (linked via `position-anchor` in JS),
+           left edges aligned, with a small constant gap; flip below when there is
+           not enough room above. Height-independent, so a scrolling list cannot
+           push the popover over its button. */
+        position-area: top span-right;
+        margin-bottom: 0.4rem;
+        position-try-fallbacks: flip-block;
     }
 
     .inner {

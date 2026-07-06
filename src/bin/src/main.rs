@@ -34,15 +34,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .expect("Cannot parse LOCAL_TEST as bool");
 
             if local_test {
-                server::run("config-local-test.toml".to_string(), false).await?
+                server::run(
+                    "config-local-test.toml".to_string(),
+                    args.secrets_file,
+                    false,
+                )
+                .await?
             } else {
                 #[cfg(debug_assertions)]
                 let test_mode = args.test;
                 #[cfg(not(debug_assertions))]
                 let test_mode = false;
-                server::run(args.config_file, test_mode).await?
+                server::run(args.config_file, args.secrets_file, test_mode).await?
             }
         }
+        Args::Bootstrap(args) => utils::bootstrap::run(args).await?,
         Args::GenerateConfig(args) => utils::gen_config::generate(args).await?,
         Args::ValidateConfig(args) => utils::validate_config::validate(args).await?,
         Args::GenerateEncKey(args) => utils::gen_enc_keys::generate(args).await?,

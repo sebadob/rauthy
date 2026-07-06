@@ -10,12 +10,6 @@ pub async fn update_client(
     client_req: UpdateClientRequest,
 ) -> Result<(Client, Option<(ClientScim, bool)>), ErrorResponse> {
     let mut client = Client::find(id).await?;
-    if client.id != client_req.id {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "The 'id' cannot be changed",
-        ));
-    }
 
     client.name = client_req.name;
     if client_req.confidential {
@@ -56,6 +50,21 @@ pub async fn update_client(
     client.client_uri = client_req.client_uri;
     client.backchannel_logout_uri = client_req.backchannel_logout_uri;
     client.restrict_group_prefix = client_req.restrict_group_prefix;
+    // serialized as bytes, see `Client.claims`; validated on the request as a
+    // size-capped JSON object via `validate_claims`
+    client.claims = match client_req.claims {
+        Some(claims) => Some(serde_json::to_vec(&claims)?),
+        None => None,
+    };
+    client.claims_at_root = client_req.claims_at_root;
+    client.allowed_resources = client_req
+        .allowed_resources
+        .map(|r| r.join(","))
+        .filter(|r| !r.is_empty());
+    client.default_aud = client_req
+        .default_aud
+        .map(|a| a.join(","))
+        .filter(|a| !a.is_empty());
 
     client.save().await?;
 

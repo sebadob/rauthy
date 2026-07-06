@@ -26,7 +26,7 @@ pub fn is_scan_target(request_path: &str) -> bool {
     }
 
     // This is the only somewhat valid XML that might be scanned, even though it does not exist
-    if request_path.ends_with("sizemap.xml") {
+    if request_path.ends_with("sitemap.xml") {
         return false;
     }
 

@@ -1,3 +1,10 @@
+# If this value it set a the root level, it will overwrite a
+# secrety file location given via CLI args.
+#
+# default: not set
+# overwritten by: SECRETS_FILE
+secrets_file = 'secrets.toml'
+
 # Values in the `dev` category will not work in release builds.
 [dev]
 # If 'true', the data store will be initialized with DEV values.
@@ -473,6 +480,26 @@ api_key = 'ewogICJuYW1lIjogImJvb3RzdHJhcCIsCiAgImV4cCI6IDE3MzU1OTk2MDAsCiAgImFjY
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
 
+# Generated bootstrap secrets are written to this encrypted local container
+# before their matching database rows are inserted. Later bootstrap phases use
+# it for generated client secrets, user passwords, and API-key secrets that cannot be
+# reconstructed from the database after insertion.
+#
+# The file is a single AEAD-encrypted JSON payload. The expiry deadline lives
+# inside that encrypted payload, so expiry checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Time in seconds before generated bootstrap secrets are purged. The default
+# keeps first-start credentials available briefly for local extraction. Set to
+# `0` to disable expiry and runtime auto-purge.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+#generated_secrets_ttl = 600
+
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with
 # fixed names inside this folder. If it finds any of them, it will
@@ -680,10 +707,10 @@ tls_auto_certificates = false
 #
 # default: not set - required
 # overwritten by: HQL_SECRET_RAFT
-secret_raft = "SuperSecureSecret1337"
+secret_raft = "$SECRETS"
 # default: not set - required
 # overwritten by: HQL_SECRET_API
-secret_api = "SuperSecureSecret1337"
+secret_api = "$SECRETS"
 
 # Configures the initial delay in seconds that should be applied
 # to `<API>/health` checks. During the first X seconds after node
@@ -757,7 +784,7 @@ secret_api = "SuperSecureSecret1337"
 #
 # '123SuperMegaSafe' in this example
 # overwritten by: HQL_PASSWORD_DASHBOARD
-password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+password_dashboard = "$SECRETS"
 
 # Can be set to `true` during local dev and testing to issue
 # insecure cookies
@@ -880,9 +907,9 @@ pg_host = 'localhost'
 # overwritten by: PG_PORT
 pg_port = 5432
 # overwritten by: PG_USER
-pg_user = 'rauthy'
+pg_user = '$SECRETS'
 # overwritten by: PG_PASSWORD
-pg_password = '123SuperSafe'
+pg_password = '$SECRETS'
 # default: rauthy
 # overwritten by: PG_DB_NAME
 pg_db_name = 'rauthy'
@@ -1059,7 +1086,7 @@ default_scopes = ['openid']
 #
 # default: <empty>
 # overwritten by: DYN_CLIENT_REG_TOKEN
-reg_token = '123SuperSafeToken'
+reg_token = '$SECRETS'
 
 # The default token lifetime in seconds for a dynamic client,
 # that will be set during the registration.
@@ -1314,6 +1341,9 @@ en = '%m/%d/%Y %T (%Z)'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 fr = '%d/%m/%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_NL
+nl = '%d-%m-%Y %T (%Z)'
 # default: '%Y-%m-%d %T (%Z)'
 # overwritten by: TZ_FMT_KO
 ko = '%Y-%m-%d %T (%Z)'
@@ -1358,16 +1388,13 @@ tz_fallback = 'UTC'
 # You can find a utility in the Admin UI to do this for you.
 #
 # overwritten by: ENC_KEYS - single String, \n separated values
-keys = [
-    'q6u26onRvXVG4427/M0NFQzhSSldCY01rckJNa1JYZ3g2NUFtSnNOVGdoU0E=',
-    'bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=',
-]
+keys = ['$SECRETS']
 
 # This identifies the key ID from the `ENC_KEYS` list, that
 # should actively be used for new encryptions.
 #
 # overwritten by: ENC_KEY_ACTIVE
-key_active = 'bVCyTsGaggVy5yqQ'
+key_active = '$SECRETS'
 
 [ephemeral_clients]
 # Can be set to 'true' to allow the dynamic client lookup via
@@ -1416,6 +1443,18 @@ allowed_scopes = ['openid', 'profile', 'email', 'webid']
 # default: 3600
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
 cache_lifetime = 3600
+
+# RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+# a requested `resource` is rejected by default. Setting this to `true` lets such
+# clients request any resource indicator.
+#
+# CAUTION: only enable this if you know exactly what you are doing and have a good
+# reason. It can lead to an easy privilege escalation, because an ephemeral client
+# could then mint tokens for an arbitrary audience.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
+#danger_allow_unvalidated_resource = false
 
 [events]
 # The E-Mail address event notifications should be sent to.
@@ -1952,13 +1991,13 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['de', 'en', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['de', 'en', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -2718,6 +2757,12 @@ blacklist = ['admin', 'administrator', 'root']
 regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
 # default: '^[a-z][a-z0-9_\-]{1,61}$'
 pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
+
+# Configure a hint that will be shown to the user on pattern
+# mismatch.
+#
+# default: not set
+pattern_hint = 'Linux-compatible Username'
 
 # If a user does not have a `preferred_username`, the `email`
 # can be used as a fallback value for the id token.
