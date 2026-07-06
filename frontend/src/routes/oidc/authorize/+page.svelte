@@ -99,7 +99,6 @@
 
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
-    let userId = $state('');
     let showPasswordInput = $derived(
         needsPassword && existingMfaUser !== email && !showReset && !isAtproto,
     );
@@ -340,7 +339,6 @@
         } else if (res.status === 206) {
             // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
-            userId = body.user_id;
             tosAcceptCode = body.tos_await_code;
             await fetchTos();
         } else if (res.status === 400) {
@@ -448,7 +446,6 @@
 
     async function onToSCancel() {
         password = '';
-        userId = '';
         tosAcceptCode = '';
         tos = undefined;
         isLoading = false;

@@ -161,7 +161,6 @@ pub async fn map_auth_step(
 
             Ok(builder.json(&ToSAwaitLoginResponse {
                 tos_await_code: res.code,
-                user_id: Some(res.user_id),
                 force_accept: (new_user_created == NewFederatedUserCreated::Yes).then_some(true),
             }))
         }
