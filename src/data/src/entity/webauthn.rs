@@ -613,7 +613,6 @@ impl WebauthnAdditionalData {
                 let mut resp = HttpResponseBuilder::new(StatusCode::from_u16(206).unwrap()).json(
                     &ToSAwaitLoginResponse {
                         tos_await_code: tos_req.await_code,
-                        user_id: None,
                         force_accept: None,
                     },
                 );
