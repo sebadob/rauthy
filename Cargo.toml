@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.36.0-20260603"
+version = "0.36.0-20260706"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
@@ -57,14 +57,14 @@ lto = false
 strip = false
 
 [patch.crates-io]
-hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
-hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
+#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+#hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
+#hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
 
 [workspace.dependencies]
 accept-language = "3"
 actix = "0.13"
-actix-multipart = "0.7.2"
+actix-multipart = "0.8"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.26"
 actix-web-prom = "0.10"
@@ -81,6 +81,7 @@ base64 = "0.22.0"
 bincode = { version = "2", features = ["serde"] }
 brotli = "8"
 bytes = "1.11.1"
+# update blocked by cryptr
 chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", default-features = false, features = [
     "clock", "serde", "std"
@@ -90,7 +91,7 @@ cidr = "0.3.0"
 clap = { version = "4.6", features = ["derive", "env"] }
 colored = "3"
 constant_time_eq = "0.5"
-cron = "0.16"
+cron = "0.17"
 cryptr = { version = "0.10", features = ["s3", "streaming"] }
 css-color = "0.2"
 # upgrade blocked by deadpool-postgres
@@ -105,7 +106,7 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.26.1"
-hiqlite = { version = "0.14.0-202606024", features = [
+hiqlite = { version = "0.14.0", features = [
     "cache", "cast_ints", "counters", "dashboard", "listen_notify_local", "macros"
 ] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
@@ -113,12 +114,12 @@ hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
     "jpeg", "png", "webp"
 ] }
-itertools = "0.14"
+itertools = "0.15"
 lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
 libflate = "2.1.0"
-maxminddb = "0.28.1"
+maxminddb = "0.29"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
@@ -141,7 +142,7 @@ rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rpassword = "7.5"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
-ruma-client = { version = "0.18", features = [
+ruma-client = { version = "0.19", features = [
     "client-api", "reqwest-rustls-no-provider"
 ] }
 rusqlite = "0.40.1"
@@ -161,7 +162,7 @@ spow = { version = "0.6", features = ["server"] }
 strum = { version = "0.28", features = ["derive"] }
 svg-hush = "0.9.4"
 tar = "0.4.45"
-tikv-jemallocator = { version = "0.6", features = [
+tikv-jemallocator = { version = "0.7", features = [
     "unprefixed_malloc_on_supported_platforms"
 ] }
 time = { version = "0.3.47", features = [
@@ -175,7 +176,7 @@ tracing-subscriber = { version = "0.3", features = [
 ] }
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7.10", features = ["with-chrono-0_4"] }
-tokio-postgres-rustls = { version = "0.13", features = [] }
+tokio-postgres-rustls = { version = "0.14", features = [] }
 utoipa = { version = "5", features = [
     "actix_extras", "chrono", "openapi_extensions"
 ] }
