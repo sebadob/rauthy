@@ -1579,18 +1579,6 @@ checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
 
 [[package]]
 name = "cron"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "089df96cf6a25253b4b6b6744d86f91150a3d4df546f31a95def47976b8cba97"
-dependencies = [
- "chrono",
- "once_cell",
- "phf 0.11.3",
- "winnow 0.7.15",
-]
-
-[[package]]
-name = "cron"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5dcd6f69605c2956916ce24e8af637b754964c9a83f4662d3a2361654cdba09"
@@ -2873,8 +2861,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite"
-version = "0.14.0-202606024"
-source = "git+https://github.com/sebadob/hiqlite.git#b1adcbfd444bc0cf0373eac4336bad570d364d4d"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8711815c093414290a5fcbc0bf74e1e70e3d6ef37e21735000178d25cee6fcf0"
 dependencies = [
  "argon2",
  "axum",
@@ -2883,7 +2872,7 @@ dependencies = [
  "bincode",
  "bytes",
  "chrono",
- "cron 0.16.0",
+ "cron",
  "crossbeam",
  "cryptr",
  "deadpool 0.13.0",
@@ -2922,7 +2911,7 @@ dependencies = [
  "tokio-rustls",
  "toml",
  "tower",
- "tower-http",
+ "tower-http 0.7.0",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -2932,8 +2921,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-derive"
-version = "0.14.0-202606024"
-source = "git+https://github.com/sebadob/hiqlite.git#b1adcbfd444bc0cf0373eac4336bad570d364d4d"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "262ec752546b183ecab006d9a34e2a0811a7141ad0b575cc68c7ac61f30de53e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2942,8 +2932,9 @@ dependencies = [
 
 [[package]]
 name = "hiqlite-wal"
-version = "0.14.0-202606024"
-source = "git+https://github.com/sebadob/hiqlite.git#b1adcbfd444bc0cf0373eac4336bad570d364d4d"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "247fc29e082f38fdf25270f6a5d7148284c9710384c3bce21636608dc104fddf"
 dependencies = [
  "bincode",
  "byteorder",
@@ -3882,9 +3873,9 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "maxminddb"
-version = "0.28.1"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "faf6467428ad055b71e588bcedcbaf2ff605b3251deb0c52be4a04b674c546dd"
+checksum = "65e84ef32bcbf18a95548989e880db4af6fafd563463753afb4b9a149fb2782c"
 dependencies = [
  "ipnetwork",
  "log",
@@ -5046,7 +5037,7 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rauthy"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -5096,7 +5087,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -5116,7 +5107,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -5147,7 +5138,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5233,7 +5224,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5242,7 +5233,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5279,7 +5270,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5316,7 +5307,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "chrono",
  "openssl",
@@ -5333,7 +5324,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5349,7 +5340,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5365,11 +5356,11 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-web",
  "chrono",
- "cron 0.17.0",
+ "cron",
  "hiqlite",
  "openssl",
  "openssl-sys",
@@ -5384,7 +5375,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5412,7 +5403,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.36.0-20260603"
+version = "0.36.0"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
@@ -5588,7 +5579,7 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tower",
- "tower-http",
+ "tower-http 0.6.11",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -5632,7 +5623,7 @@ dependencies = [
  "tokio-rustls",
  "tokio-util",
  "tower",
- "tower-http",
+ "tower-http 0.6.11",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -7260,6 +7251,22 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "url",
+]
+
+[[package]]
+name = "tower-http"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b11f75e912b0c2be01b63d8cf8057b8c3f97cf34abb3d431a3a4c8675498e233"
+dependencies = [
+ "bitflags",
+ "bytes",
+ "http 1.4.2",
+ "percent-encoding",
+ "pin-project-lite",
+ "tower",
+ "tower-layer",
+ "tower-service",
 ]
 
 [[package]]
