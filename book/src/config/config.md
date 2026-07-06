@@ -1408,6 +1408,18 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
 #cache_lifetime = 3600
 
+# RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+# a requested `resource` is rejected by default. Setting this to `true` lets such
+# clients request any resource indicator.
+#
+# CAUTION: only enable this if you know exactly what you are doing and have a good
+# reason. It can lead to an easy privilege escalation, because an ephemeral client
+# could then mint tokens for an arbitrary audience.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
+#danger_allow_unvalidated_resource = false
+
 [events]
 # The E-Mail address event notifications should be sent to.
 #
@@ -2676,6 +2688,12 @@ storage_type = 'db'
 #regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
 # default: '^[a-z][a-z0-9_\-]{1,61}$'
 #pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
+
+# Configure a hint that will be shown to the user on pattern
+# mismatch.
+#
+# default: not set
+#pattern_hint = 'Linux-compatible Username'
 
 # If a user does not have a `preferred_username`, the `email`
 # can be used as a fallback value for the id token.
