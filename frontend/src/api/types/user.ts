@@ -95,7 +95,12 @@ export interface UserAttrValuesUpdateRequest {
 }
 
 export type UserAccountTypeResponse =
-    'new' | 'password' | 'passkey' | 'federated' | 'federated_passkey' | 'federated_password';
+    | 'new'
+    | 'password'
+    | 'passkey'
+    | 'federated'
+    | 'federated_passkey'
+    | 'federated_password';
 
 export interface UserResponseSimple {
     id: string;
