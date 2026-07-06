@@ -108,7 +108,7 @@ pub async fn get_authorize(
     let theme_ts = ThemeCssFull::find_theme_ts(client.id.clone()).await?;
 
     // check prompt and max_age to possibly force a new session
-    let mut force_new_session = if params
+    let force_new_session = if params
         .prompt
         .as_ref()
         .map(|p| p.contains("login"))
@@ -129,17 +129,15 @@ pub async fn get_authorize(
 
     // check if the user needs to do the Webauthn login each time
     let mut action = FrontendAction::None;
-    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+    if !force_new_session
+        && let Ok(mfa_cookie) =
+            WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
         && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
     {
-        // we need to check this, because a user could deactivate MFA in another browser or
+        // we need to check this because a user could deactivate MFA in another browser or
         // be deleted while still having existing mfa cookies somewhere else
         if user.has_webauthn_enabled() {
             action = FrontendAction::MfaLogin(mfa_cookie.email);
-
-            // if the user must do another MFA login anyway, we do never force a new session creation,
-            // because the authentication happens each time anyway
-            force_new_session = false;
         }
     }
 
