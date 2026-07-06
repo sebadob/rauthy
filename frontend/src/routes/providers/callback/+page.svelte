@@ -20,7 +20,6 @@
     let clientMfaForce = $state(false);
     let error = $state('');
 
-    let userId: undefined | string = $state();
     let mfaPurpose: undefined | MfaPurpose = $state();
 
     let tos: undefined | ToSLatestResponse = $state();
@@ -83,8 +82,7 @@
             // -> all good, but needs additional passkey validation
             error = '';
             let body = res.body;
-            if (body && 'user_id' in body && 'code' in body) {
-                userId = body.user_id as string;
+            if (body && 'code' in body) {
                 mfaPurpose = { Login: body.code as string };
             } else {
                 console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
@@ -98,7 +96,6 @@
         } else if (res.status === 206) {
             // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
-            userId = body.user_id;
             tosAcceptCode = body.tos_await_code;
             tosForceAccept = body.force_accept || false;
             await fetchTos();
@@ -161,7 +158,7 @@
 </svelte:head>
 
 <ContentCenter>
-    {#if mfaPurpose && userId}
+    {#if mfaPurpose}
         <WebauthnRequest
             purpose={mfaPurpose}
             onSuccess={onWebauthnSuccess}
