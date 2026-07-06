@@ -485,7 +485,7 @@ the <a href="getting_started/../config/config_minimal.html">Minimal Production C
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing
 (don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.35.2
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.36.0
 </code></pre>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
@@ -542,7 +542,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.35.2
+    image: ghcr.io/sebadob/rauthy:0.36.0
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -676,7 +676,7 @@ the <a href="getting_started/../config/production_config.html">Production Config
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.35.2
+    ghcr.io/sebadob/rauthy:0.36.0
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -928,7 +928,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.35.2
+          image: ghcr.io/sebadob/rauthy:0.36.0
           securityContext:
             capabilities:
               drop:
@@ -1344,6 +1344,46 @@ where you cannot be sure.</p>
 is very safe while still not being way over the top. If we wanted the same level of security as a
 256-bit random bytes key, in alphanumeric form it would be ~43 characters. We have 48 here, which
 even exceeds it. Anything bigger would be a waste of resources.</p>
+<h2 id="bootstrap-generated-secrets"><a class="header" href="#bootstrap-generated-secrets">Bootstrap Generated Secrets</a></h2>
+<p>When <code>clients.json</code> or <code>users.json</code> uses <code>"generate"</code>, Rauthy writes the plaintext values into an
+encrypted local container before inserting the matching database rows. The CLI can read this
+container without starting or contacting the Rauthy server.</p>
+<p>The CLI reads everything it needs from your existing Rauthy config file: it loads the same
+<code>ENC_KEYS</code> that were active during bootstrap and resolves the configured container location. You
+never pass encryption keys on the command line (which would leak them into your shell history and
+process list) or a separate file path. Just point it at the config:</p>
+<pre><code class="language-bash">rauthy bootstrap get --config-file ./config.toml --format env
+</code></pre>
+<p><code>--config-file</code> defaults to <code>./config.toml</code>, so inside the container or next to the config you can
+usually omit it. If your deployment uses <code>USE_VAULT_CONFIG=true</code>, the CLI loads the config the same
+way the server does.</p>
+<p>To print only one value, use <code>raw</code> with an exact selector:</p>
+<pre><code class="language-bash">rauthy bootstrap get \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+</code></pre>
+<p><code>json</code> preserves every field:</p>
+<pre><code class="language-bash">rauthy bootstrap get \
+  --kind user \
+  --id admin@example.com \
+  --field password \
+  --format json
+</code></pre>
+<p><code>env</code> emits collision-safe names containing the kind, sanitized id, and field:</p>
+<pre><code class="language-bash">rauthy bootstrap get --format env
+</code></pre>
+<p>Example output:</p>
+<pre><code class="language-bash">RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...
+RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...
+RAUTHY_BOOTSTRAP_API_KEY_PROVISION_TOKEN=...
+</code></pre>
+<p>After you have stored the values somewhere safe, purge the container:</p>
+<pre><code class="language-bash">rauthy bootstrap purge
+</code></pre>
+<p>Purging is idempotent: if the file is already absent, the command reports that and exits
+successfully.</p>
 <h2 id="hash-passwords"><a class="header" href="#hash-passwords">Hash Passwords</a></h2>
 <p>If you want to hash a password for bootstrapping, you can do it like so:</p>
 <pre><code class="language-bash">rauthy hash-password
@@ -3283,7 +3323,7 @@ connections between all pods by default, you can use the HA cache with just plai
 <p>However, if you do not have encryption between pods by default, I would highly recommend, that you
 use <a href="config/tls.html">TLS</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bootstrapping"><a class="header" href="#bootstrapping">Bootstrapping</a></h1>
-<p>Rauthy can bootstrap most values that are nore statically configured. There are only very few
+<p>Rauthy can bootstrap most values that are not statically configured. There are only very few
 exceptions, so you should be able to achieve anything you need. The most important things live in
 the config to be able to run everything from a single file. However, when you want to do more
 advanced / custom stuff, you will need to provide additional JSON files.</p>
@@ -3331,55 +3371,102 @@ The <a href="config/cli.html">Rauthy CLI</a> can do it for you as well.</p>
 it is a bit more cumbersome to use from outside the browser because of additional CSRF tokens and
 security features. If you want to automatically set up Rauthy with external tooling after the first
 startup, you would want to do this with an API key most probably.</p>
-<p>If Rauthy starts up with an empty database, you can bootstrap a single API key with providing a
-base64 encoded json.</p>
-<p>An example json, which would create a key named <code>bootstrap</code> with access to <code>clients, roles, groups</code>
-with all <code>read, write, update, delete</code> could look like this:</p>
-<pre><code class="language-json">{
-  "name": "bootstrap",
-  "exp": 1735599600,
-  "access": [
-    {
-      "group": "Clients",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
+<p>If Rauthy starts up with an empty database, you can bootstrap API keys via
+<code>api_keys.json</code> in your configured <code>bootstrap_dir</code>. The older <code>bootstrap.api_key</code>
+config value shown below is still supported for a single key.</p>
+<p>An example <code>api_keys.json</code>, which would create a key named <code>bootstrap</code> with access to
+<code>clients</code>, <code>roles</code>, and <code>groups</code> with all <code>read</code>, <code>create</code>, <code>update</code>, <code>delete</code>
+rights could look like this:</p>
+<pre><code class="language-json">[
+  {
+    "name": "bootstrap",
+    "exp": 1735599600,
+    "secret": {
+      "Plain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    {
-      "group": "Roles",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
-    },
-    {
-      "group": "Groups",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
-    }
-  ]
-}
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      },
+      {
+        "group": "Roles",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      },
+      {
+        "group": "Groups",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      }
+    ]
+  }
+]
 </code></pre>
-<p>The config documentation for the bootstrap value should explain all further questions:</p>
+<p>The <code>secret</code> can be <code>{"Plain": "..."}</code>, <code>{"Encrypted": "..."}</code>, or <code>"generate"</code>. Plain secrets must be at
+least 64 characters long. Encrypted secrets are encrypted with
+<a href="https://github.com/sebadob/cryptr"><code>cryptr</code></a> and base64-encoded, just like encrypted client
+secrets. Generated API-key secrets store the full usable <code>name$secret</code> token in the generated
+bootstrap secret container under <code>api-key/&lt;name&gt;/token</code>.</p>
+<pre><code class="language-json">[
+  {
+    "name": "provision",
+    "exp": 1735599600,
+    "secret": "generate",
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": ["read", "create", "update", "delete"]
+      },
+      {
+        "group": "Secrets",
+        "access_rights": ["read", "update"]
+      }
+    ]
+  }
+]
+</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="config/bootstrap.html#admonition-caution"></a>
+</div>
+<div>
+<p>Only bootstrap short-lived API keys for production automation. Set <code>exp</code> to a timestamp
+that expires after your first-start provisioning is complete, for example after about 10
+minutes. Long-lived bootstrap API keys increase the blast radius if the bootstrap files or
+deployment secrets are leaked. The example timestamp above is intentionally finite; replace it
+with a short-lived value for your deployment.</p>
+</div>
+</div>
+<p>The legacy config documentation for bootstrapping a single API key should explain all further
+questions:</p>
 <pre><code class="language-toml">[bootstrap]
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option&lt;i64&gt;,
 #     access: Vec&lt;ApiKeyAccess&gt;,
 # }
@@ -3401,6 +3488,7 @@ with all <code>read, write, update, delete</code> could look like this:</p>
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -3439,19 +3527,106 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 </code></pre>
 <pre><code>Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 </code></pre>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
 <div class="admonition-title">
-<div id="admonition-caution-title">
+<div id="admonition-caution-1-title">
 <p>Caution</p>
 </div>
-<a class="admonition-anchor-link" href="config/bootstrap.html#admonition-caution"></a>
+<a class="admonition-anchor-link" href="config/bootstrap.html#admonition-caution-1"></a>
 </div>
 <div>
-<p>At the time of writing, it is not possible (yet) to provide API key secrets as encrypted values.
-This will probably be added in a future version. If you bootstrap API keys for production setup,
-make sure they always auto-expire.</p>
+<p>If you bootstrap API keys for production setup, make sure they always auto-expire. Bootstrap
+JSON is only read while initializing an empty production database; changing <code>api_keys.json</code>
+later does not reconcile live API keys.</p>
 </div>
 </div>
+<h2 id="generated-bootstrap-secrets"><a class="header" href="#generated-bootstrap-secrets">Generated Bootstrap Secrets</a></h2>
+<p>Generated bootstrap credentials are stored in an encrypted local container before their matching
+database rows are inserted. This keeps later phases from creating live client, user, or API-key
+rows whose generated plaintext cannot be recovered.</p>
+<p>The container is a single AEAD-encrypted JSON payload. The expiry deadline lives inside that
+encrypted payload, so startup and runtime expiry checks decrypt the container first. A positive TTL
+also schedules a runtime purge after each write. Set the TTL to <code>0</code> only if you intentionally want
+to keep the encrypted container for manual extraction and purge it yourself.</p>
+<p>Generated values are a first-boot mechanism only. The JSON bootstrap files are read while Rauthy
+initializes an empty production database. If you add <code>"generate"</code> to <code>clients.json</code>, <code>users.json</code>,
+or <code>api_keys.json</code> after the database has already been initialized, that day-2 change is ignored by
+the first-boot bootstrap gate and no new generated secret is written.</p>
+<pre><code class="language-toml">[bootstrap]
+# Path to the encrypted generated-secret container. If unset, Rauthy stores it
+# below Hiqlite's configured data directory as:
+#
+# `${cluster.data_dir}/bootstrap.secrets.enc`
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Time in seconds before generated bootstrap secrets expire. A value of `0`
+# disables expiry and runtime auto-purge.
+#
+# default: 600
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+generated_secrets_ttl = 600
+</code></pre>
+<p>Use the local CLI to retrieve or purge the encrypted container after first start. The command does
+not talk to the Rauthy server.</p>
+<pre><code class="language-bash">rauthy bootstrap get \
+  -c config.toml \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+
+rauthy bootstrap get -c config.toml --format env
+rauthy bootstrap purge -c config.toml
+</code></pre>
+<p><code>get --format env</code> emits names that include the entity kind, sanitized id, and field, for example
+<code>RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...</code> and
+<code>RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...</code>.</p>
+<p>The CLI loads the existing Rauthy config and initializes the configured encryption keys before it
+decrypts the container. It does not accept encryption keys or the container path as command-line
+arguments.</p>
+<p>API keys can request a generated token with <code>"secret": "generate"</code>. <code>get --format env</code> emits it as
+<code>RAUTHY_BOOTSTRAP_API_KEY_&lt;SANITIZED_NAME&gt;_TOKEN=...</code>.</p>
+<p>Clients can request a generated confidential-client secret with <code>"secret": "generate"</code>:</p>
+<pre><code class="language-json">[
+  {
+    "id": "my-service",
+    "name": "My Service",
+    "secret": "generate",
+    "redirect_uris": ["https://my-service.example.com/callback"],
+    "enabled": true,
+    "flows_enabled": ["authorization_code", "refresh_token"],
+    "access_token_alg": "EdDSA",
+    "id_token_alg": "EdDSA",
+    "auth_code_lifetime": 60,
+    "access_token_lifetime": 3600,
+    "scopes": ["openid", "profile", "email"],
+    "default_scopes": ["openid", "profile", "email"],
+    "force_mfa": false
+  }
+]
+</code></pre>
+<p>If the <code>secret</code> field is absent or <code>null</code>, the client remains public and Rauthy forces <code>S256</code> PKCE.
+Use <code>"secret": "generate"</code> only when you want a confidential client and plan to extract the
+generated secret from the encrypted container.</p>
+<p>Users can request a generated password with <code>"password": "generate"</code>:</p>
+<pre><code class="language-json">[
+  {
+    "email": "admin@example.com",
+    "password": "generate",
+    "roles": ["admin"],
+    "enabled": true,
+    "email_verified": true
+  }
+]
+</code></pre>
+<p>Rauthy writes the plaintext password to the encrypted container before hashing it and inserting the
+user row. The database stores only the password hash.</p>
+<p>API keys in <code>api_keys.json</code> can request a generated token with <code>"secret": "generate"</code>. The full
+usable <code>name$secret</code> token is written to the encrypted container.
+Extract it with <code>--kind api-key --id &lt;key-name&gt; --field token</code> and use it directly as the
+<code>Authorization</code> header value: <code>Authorization: API-Key &lt;token&gt;</code>.</p>
 <h2 id="advanced--custom-configuration"><a class="header" href="#advanced--custom-configuration">Advanced / Custom Configuration</a></h2>
 <p>If you want to bootstrap other things like users or clients, you need to do it a bit differently.
 First, make sure to check the <code>bootstrap_dir</code> and configure it if necessary:</p>
@@ -3462,6 +3637,7 @@ First, make sure to check the <code>bootstrap_dir</code> and configure it if nec
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json
@@ -3975,14 +4151,16 @@ page.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="working-with-rauthy"><a class="header" href="#working-with-rauthy">Working with Rauthy</a></h1>
 <p>This section will describe a few things you should now when working with Rauthy</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api-keys"><a class="header" href="#api-keys">API Keys</a></h1>
-<p>API Keys allow you to interact with Rauthy's REST API in a programmatic way. They allow you to do almost all the same
-things as a logged in Admin via the UI is allowed to do. There are only very few exceptions, like for instance an API
-Key is not allowed to manage other API Keys to reduce the impact of leaked credentials somewhere in your applications.</p>
-<p>Each API Key can be configured with very fine-grained access rights, so you only allow actions it actually needs to
-perform for improved security.</p>
-<p>Setting these access rights should be very intuitive. For instance, if you want to use your API Key to listen to the
-events stream, you need to allow <em>Events: read</em>, which makes sense. If you want to read users and maybe update them in
-some external application, you would need <em>Users: read, update</em>.<br />
+<p>API Keys allow you to interact with Rauthy's REST API in a programmatic way. They allow you to do
+almost all the same things as a logged in Admin via the UI is allowed to do. There are only very few
+exceptions, like for instance an API Key is not allowed to manage other API Keys to reduce the
+impact of leaked credentials somewhere in your applications.</p>
+<p>Each API Key can be configured with very fine-grained access rights, so you only allow actions it
+actually needs to perform for improved security.</p>
+<p>Setting these access rights should be very intuitive. For instance, if you want to use your API Key
+to listen to the events stream, you need to allow <em>Events: read</em>, which makes sense. If you want to
+read users and maybe update them in some external application, you would need <em>Users: read,
+update</em>.<br />
 Most access rights requests mimic their HTTP methods:</p>
 <ul>
 <li><code>GET</code> -&gt; <code>read</code></li>
@@ -3990,14 +4168,15 @@ Most access rights requests mimic their HTTP methods:</p>
 <li><code>PUT</code> -&gt; <code>update</code></li>
 <li><code>DELETE</code> -&gt; <code>delete</code></li>
 </ul>
-<p>To use an API Key, you need to provide it with the HTTP <code>Authorization</code> header, but instead of <code>Bearer</code> as prefix, you
-set it to <code>API-Key</code>, so Rauthy can efficiently distinguish if you try to access the API with a JWT token or an API Key:</p>
+<p>To use an API Key, you need to provide it with the HTTP <code>Authorization</code> header, but instead of
+<code>Bearer</code> as prefix, you set it to <code>API-Key</code>, so Rauthy can efficiently distinguish if you try to
+access the API with a JWT token or an API Key:</p>
 <pre><code>Authorization: API-Key &lt;API Key name&gt;$&lt;API Key secret&gt;
 </code></pre>
 <pre><code>Authorization: API-Key my_key$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 </code></pre>
-<p>The correct format will be generated automatically, when you create a new secret for an API Key via the Admin UI, so
-you only need to copy &amp; paste it.</p>
+<p>The correct format will be generated automatically, when you create a new secret for an API Key via
+the Admin UI, so you only need to copy &amp; paste it.</p>
 <div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
 <div class="admonition-title">
 <div id="admonition-info-title">
@@ -4011,19 +4190,24 @@ logins to limit the likelihood of privilege escalation in case of leaked credent
 </div>
 </div>
 <h2 id="creating-a-new-api-key"><a class="header" href="#creating-a-new-api-key">Creating a new API Key</a></h2>
-<p>Apart from the initial <a href="work/../config/bootstrap.html#api-key">bootstrap</a>, the creation and modification of API Keys is only
-allowed via the Admin UI.</p>
-<p>Navigate to the <code>API Keys</code> section, click <code>New Key</code>, fill out the inputs and <code>Save</code>. You can set an optional key expiry.
-By default, API Keys never expire.</p>
+<p>Apart from the initial <a href="work/../config/bootstrap.html#api-key">bootstrap</a>, the creation and modification of
+API Keys is only allowed via the Admin UI. API keys declared in <code>api_keys.json</code> should have a short
+expiry for production bootstrap, for example around 10 minutes, so first-start automation can finish
+and the credential then becomes useless automatically. Bootstrap JSON is not live reconciliation;
+later file changes do not update existing API keys.</p>
+<p>Navigate to the <code>API Keys</code> section, click <code>New Key</code>, fill out the inputs and <code>Save</code>. You can set an
+optional key expiry. By default, API Keys never expire.</p>
 <p><img src="work/../config/img/api_key_1.png" alt="api key create" /></p>
-<p>The secret is created in a second step. Whenever you generate a new secret, the old one will stop working immediately.</p>
+<p>The secret is created in a second step. Whenever you generate a new secret, the old one will stop
+working immediately.</p>
 <p><img src="work/../config/img/api_key_2.png" alt="api key secret" /></p>
-<p>After generating a new secret, you will never be able to see it again. If you loose it, you must generate a new one.
-Rauthy will format the API key in the correct format and shows a <code>curl</code> command for making sure your key works fine.
-You can copy &amp; paste the pre-configured <code>curl</code> for the test endpoint. The result should look something like this:</p>
+<p>After generating a new secret, you will never be able to see it again. If you loose it, you must
+generate a new one. Rauthy will format the API key in the correct format and shows a <code>curl</code> command
+for making sure your key works fine. You can copy &amp; paste the pre-configured <code>curl</code> for the test
+endpoint. The result should look something like this:</p>
 <p><img src="work/../config/img/api_key_test.png" alt="api key test" /></p>
-<p>If you try to access an endpoint with an API Key that has insufficient access rights, Rauthy will return a proper
-error message with description, which access rights you actually need.</p>
+<p>If you try to access an endpoint with an API Key that has insufficient access rights, Rauthy will
+return a proper error message with description, which access rights you actually need.</p>
 <p><img src="work/../config/img/api_key_permission.png" alt="api key permission" /></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-scopes-and-attributes"><a class="header" href="#custom-scopes-and-attributes">Custom Scopes and Attributes</a></h1>
 <p>OpenID Connect defines quite a few very useful claims to be included in the <code>id_token</code> as additional information about
@@ -4117,6 +4301,139 @@ I used the <code>rauthy</code> client in this example (which you should not mess
   }
 }
 </code></pre>
+<h2 id="client-credentials-custom-claims"><a class="header" href="#client-credentials-custom-claims">Client Credentials Custom Claims</a></h2>
+<p>The flow above is user-bound: scope-mapped attributes come from a user, so a token issued through the
+<code>client_credentials</code> flow (which has no user) can never carry them. Machine clients often need to describe
+themselves directly though, for example a workload identity, a tenant id, or a deployment profile, so that the
+resource server does not have to look anything up by <code>client_id</code>.</p>
+<p>For this, a client can carry its own custom claims. Open the configuration for any <code>Client</code>, scroll down to the
+<code>Custom Claims</code> section and enter a JSON object:</p>
+<pre><code class="language-json">{
+  "tenant": "acme",
+  "tier": "gold"
+}
+</code></pre>
+<p>These claims are emitted into the access token of the <code>client_credentials</code> flow, nested under the <code>custom</code> claim,
+exactly like the user values above:</p>
+<pre><code class="language-json">{
+  "iat": 1721722389,
+  "exp": 1721722399,
+  "nbf": 1721722389,
+  "iss": "http://localhost:8080/auth/v1",
+  "sub": "my_client",
+  "aud": "my_client",
+  "azp": "my_client",
+  "typ": "Bearer",
+  "scope": "openid",
+  "custom": {
+    "tenant": "acme",
+    "tier": "gold"
+  }
+}
+</code></pre>
+<p>By default these are nested under <code>custom</code>, exactly like user values. If you enable <code>Emit claims at the token root</code> on the client, they are written at the token root (flattened) instead, just like the per-scope
+<code>claims_at_root</code> option. As with that option, you own collision-correctness: if a claim name collides with a
+reserved JWT claim, token issuance fails rather than silently shadowing it.</p>
+<div id="admonition-info-2" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-2-title">
+<div class="admonition-title">
+<div id="admonition-info-2-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="work/custom_scopes_attributes.html#admonition-info-2"></a>
+</div>
+<div>
+<p>The value must be a JSON object and is capped at 1024 serialized characters, since tokens are frequently kept
+small (and sometimes stored in cookies). The cap applies to the client's custom JSON only, not the full token.</p>
+</div>
+</div>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="work/custom_scopes_attributes.html#admonition-caution"></a>
+</div>
+<div>
+<p>Custom claims can only be set by an admin (or via the management API). Dynamic clients (registered through the
+dynamic client registration endpoint) and ephemeral clients cannot set their own claims, which would otherwise be
+a privilege-escalation vector: a client must not be able to assert facts about itself that it was never granted.</p>
+</div>
+</div>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="delegated-group-admins"><a class="header" href="#delegated-group-admins">Delegated Group Admins</a></h1>
+<p>Sometimes you do not want to hand out the full <code>rauthy_admin</code> role just so someone can help with
+day-to-day user management for their own team. Delegated group admins let you scope user
+administration to the members of one or more groups, without giving access to clients, scopes,
+roles, system config, or any user outside of those groups.</p>
+<h2 id="the-role-grammar"><a class="header" href="#the-role-grammar">The role grammar</a></h2>
+<p>A delegated group admin is just a normal role with a special name:</p>
+<pre><code>rauthy_admin:&lt;group&gt;
+</code></pre>
+<p>The <code>rauthy_admin</code> role (without a colon) is the full Rauthy admin and behaves exactly as before.
+A role with the <code>rauthy_admin:</code> prefix turns its holders into a <strong>group admin</strong> for the matching
+groups:</p>
+<ul>
+<li><code>rauthy_admin:engineering</code> matches the group <code>engineering</code> <strong>exactly</strong>.</li>
+<li><code>rauthy_admin:eng*</code> is a <strong>prefix glob</strong> and matches <code>eng</code>, <code>engineering</code>, <code>eng_platform</code>, etc.</li>
+<li><code>rauthy_admin:*</code> matches <strong>every</strong> group, making the holder a user-super-admin (still only over
+users, never over clients / scopes / config).</li>
+</ul>
+<p>You assign these roles like any other role. Create a role named e.g. <code>rauthy_admin:engineering</code>,
+then assign it to the users who should administer that group.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/group_admins.html#admonition-note"></a>
+</div>
+<div>
+<p>This is non-breaking: unless you already had a custom role that happens to start with
+<code>rauthy_admin:</code>, nothing changes. On startup, Rauthy logs a warning listing any pre-existing roles
+that match this scheme so you can double-check they are intended.</p>
+</div>
+</div>
+<h2 id="what-a-group-admin-can-do"><a class="header" href="#what-a-group-admin-can-do">What a group admin can do</a></h2>
+<p>A group admin can manage users who are a member of at least one group it manages <strong>and</strong> who are
+not themselves any kind of <code>rauthy_admin</code>. For those users it can:</p>
+<ul>
+<li>list and view users (the user list is not filtered, see below),</li>
+<li>create new users and place them into a group it manages,</li>
+<li>edit profile data and toggle <code>enabled</code> / <code>email_verified</code>,</li>
+<li>add or remove memberships, but only for groups it manages,</li>
+<li>reset MFA (delete passkeys) and reset or set a password,</li>
+<li>set a <code>preferred_username</code> while it is still empty (overwriting an existing one stays a
+full-admin action),</li>
+<li>upload or remove the profile picture of a managed user,</li>
+<li>view and invalidate (force-logout) sessions,</li>
+<li>send a custom E-Mail to the users of a group it manages, and view the resulting E-Mail jobs.
+The recipient filter is locked to a single one of its managed groups (a full admin may also
+send to all users or filter by role).</li>
+</ul>
+<p>A group admin can also manage its own account: it can open its own user in the Admin UI, and the
+nav links to the account dashboard for self-service (which in turn links back to the Admin UI).</p>
+<p>In addition, a group admin gets a read-only view of the Sessions, Events, and Blacklist pages to
+help with debugging user issues.</p>
+<h2 id="what-a-group-admin-cannot-do"><a class="header" href="#what-a-group-admin-cannot-do">What a group admin cannot do</a></h2>
+<p>The backend enforces all of the following, regardless of what the UI shows:</p>
+<ul>
+<li>it cannot manage any user that holds a <code>rauthy_admin</code> or <code>rauthy_admin:&lt;...&gt;</code> role (no
+privilege escalation, and group admins cannot manage each other),</li>
+<li>it cannot modify a user's roles, or change group memberships outside of its managed groups,</li>
+<li>it cannot delete users,</li>
+<li>it cannot send a bulk E-Mail to all users, to a group it does not manage, or filtered by role,</li>
+<li>it cannot manage clients, scopes, roles, groups, providers, API keys, or system config,</li>
+<li>it cannot add or remove blacklist entries (read-only),</li>
+<li>API keys are never group-scoped; delegation applies to logged-in sessions only.</li>
+</ul>
+<h2 id="why-the-user-list-is-not-filtered"><a class="header" href="#why-the-user-list-is-not-filtered">Why the user list is not filtered</a></h2>
+<p>The <code>users</code> table inlines roles and groups for fast logins, which makes filtering users by group on
+the database side expensive. A group admin therefore sees the same (minified) user list as a full
+admin. This is intentional: the security boundary is enforced on every <strong>write</strong>, not on list
+visibility, and an admin is trusted by definition. It also enables a useful flow: a group admin can
+open any user and add them to a group it manages, even if that user was created by someone else.</p>
+<p>If you need strict tenant isolation (group admins of independent organizations must not see each
+other's users), that is a separate, more restrictive mode that can be added as an opt-in in a future
+iteration.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ephemeral-clients"><a class="header" href="#ephemeral-clients">Ephemeral Clients</a></h1>
 <p>In addition to static, upfront registered clients, which should always be preferred if they work out for your, and
 dynamically registered clients via OIDC DCR, Rauthy supports an additional feature, which is <em>Ephemeral Clients</em>.
@@ -4126,6 +4443,20 @@ as they require an additional network round trip to where ever their document is
 <p>Just to make clear what I am talking about, a high level comparison of these different clients:</p>
 <p><strong>Static clients</strong> are the ones that you register and configure via the Admin UI. These are the most efficient and
 secure ones. They require less work in the backend and exist inside the Rauthy database.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-note"></a>
+</div>
+<div>
+<p>Static client IDs (via the Admin UI, the API, or bootstrapping) are restricted to
+<code>^[a-zA-Z0-9._\-]{2,256}$</code>. Only ephemeral clients use a full URI as their ID, since that URI is the
+location their client document is fetched from. A static client therefore never needs a URI-shaped
+ID.</p>
+</div>
+</div>
 <p>Then there is OIDC <strong>Dynamic Client Registration</strong> (DCR), which is an OIDC extension that Rauthy supports as well. If a
 downstream application has support for this feature, it can self-register a client, which then can be used for the
 login afterward. This sound very nice in the beginning, but brings quite a few problems:</p>
@@ -4312,12 +4643,12 @@ If you want to configure some more things, keep reading.</p>
     id_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
 }
 <span class="boring">}</span></code></pre></pre>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
-<div id="admonition-note-title">
+<div id="admonition-note-1-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-note"></a>
+<a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-note-1"></a>
 </div>
 <div>
 <p>The <code>grant_types</code> exist for completeness only. They are actually ignored and overridden by the
@@ -4357,6 +4688,94 @@ If you want to configure some more things, keep reading.</p>
 file on GitHub for instance and receive a valid JSON.</p>
 </div>
 </div>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="resource-indicators-rfc-8707"><a class="header" href="#resource-indicators-rfc-8707">Resource Indicators (RFC 8707)</a></h1>
+<p><a href="https://www.rfc-editor.org/rfc/rfc8707">RFC 8707</a> lets a client tell Rauthy which protected
+resource (resource server) an access token is intended for, using a <code>resource</code> request parameter.
+Rauthy validates the request and binds the issued access token to that resource via its <code>aud</code>
+(audience) claim. A resource server can then reject a token that was not minted for it, which stops
+a token issued for one service being replayed against another.</p>
+<p>This is especially useful when Rauthy acts as the authorization server for multiple resource
+servers, for instance a fleet of MCP servers.</p>
+<h2 id="the-resource-request-parameter"><a class="header" href="#the-resource-request-parameter">The <code>resource</code> request parameter</a></h2>
+<p>The <code>resource</code> parameter is accepted on:</p>
+<ul>
+<li>the <strong>authorization request</strong> (<code>GET /oidc/authorize</code>), carried through the issued auth code, and</li>
+<li>the <strong>token request</strong> (<code>POST /oidc/token</code>) for the <code>authorization_code</code>, <code>client_credentials</code>,
+and <code>refresh_token</code> grants.</li>
+</ul>
+<p>The requested value is matched verbatim against the client's allow-list (see below). The RFC
+recommends an absolute URI such as <code>https://api.example.com/mcp</code>, but Rauthy treats the value as
+opaque, so an operator decides what a valid value looks like. A missing, unknown, or disallowed
+value is rejected with the RFC error code <code>invalid_target</code>.</p>
+<p>Rauthy currently accepts a single <code>resource</code> value per request. On a <code>refresh_token</code> grant the
+granted resource is carried inside the refresh token and reused, so a refreshed access token keeps
+its audience binding; a refresh can never widen the resource set.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/resource_indicators.html#admonition-note"></a>
+</div>
+<div>
+<p>The <code>password</code> and device-code grants, and logins brokered through an upstream identity provider,
+do not process the <code>resource</code> parameter yet.</p>
+</div>
+</div>
+<h2 id="per-client-configuration"><a class="header" href="#per-client-configuration">Per-client configuration</a></h2>
+<p>Two optional, comma-separated fields can be configured per client, in the Admin UI under the client
+config or via the clients API:</p>
+<ul>
+<li><strong><code>allowed_resources</code></strong> is the allow-list against which a requested <code>resource</code> is validated. If it
+is empty, any <code>resource</code> request is rejected with <code>invalid_target</code> (deny by default). To let a
+client request a resource, add the exact value here.</li>
+<li><strong><code>default_aud</code></strong> is a list of audiences that are <strong>always</strong> added to this client's access tokens,
+independent of any <code>resource</code> parameter. This is handy for less capable clients or IoT devices
+that cannot send a <code>resource</code> parameter but still need a fixed audience.</li>
+</ul>
+<p>The final access-token <code>aud</code> is the client id, plus every <code>default_aud</code> entry, plus the granted
+<code>resource</code> (de-duplicated).</p>
+<h2 id="the-aud-claim-shape"><a class="header" href="#the-aud-claim-shape">The <code>aud</code> claim shape</a></h2>
+<p>The <code>aud</code> claim is a single string when there is exactly one audience, and a JSON array when there
+are two or more. Both forms are valid per RFC 7519. Consumers that already read <code>aud</code> as a string
+keep working for the single-audience case.</p>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/resource_indicators.html#admonition-note-1"></a>
+</div>
+<div>
+<p>Solid-OIDC ephemeral clients (<code>enable_solid_aud</code>) previously received an <code>aud</code> value that was a
+string containing array-like text. With this feature it is emitted as a proper JSON array.</p>
+</div>
+</div>
+<h2 id="ephemeral-clients-1"><a class="header" href="#ephemeral-clients-1">Ephemeral clients</a></h2>
+<p>An ephemeral client document may declare its own <code>allowed_resources</code>, which is validated the same
+way as for a normal client. If it declares none, a requested <code>resource</code> is rejected unless the
+operator opts in with:</p>
+<pre><code class="language-toml">[ephemeral_clients]
+danger_allow_unvalidated_resource = true
+</code></pre>
+<p>This defaults to <code>false</code> (deny) so that a client without a declared allow-list cannot silently
+obtain a token for an arbitrary audience.</p>
+<div id="admonition-danger" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-title">
+<div class="admonition-title">
+<div id="admonition-danger-title">
+<p>Danger</p>
+</div>
+<a class="admonition-anchor-link" href="work/resource_indicators.html#admonition-danger"></a>
+</div>
+<div>
+<p>Only enable <code>danger_allow_unvalidated_resource</code> if you know exactly what you are doing and have a
+good reason. It can lead to an easy privilege escalation, because an ephemeral client could then
+mint tokens for an arbitrary audience.</p>
+</div>
+</div>
+<h2 id="introspection"><a class="header" href="#introspection">Introspection</a></h2>
+<p>The token introspection endpoint (<code>POST /oidc/introspect</code>) reflects the restricted <code>aud</code>
+automatically, using the same single-string-or-array shape as the token.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="e-mail-templates"><a class="header" href="#e-mail-templates">E-Mail Templates</a></h1>
 <p>The templates for E-Mails being sent by Rauthy are baked into the binary. This is the most efficient
 and fastest way of handling them. It simplifies the container images and speeds up the internal
@@ -4605,7 +5024,7 @@ level_jwks_rotate = 'notice'
 <div style="break-before: page; page-break-before: always;"></div><h1 id="i18n"><a class="header" href="#i18n">I18n</a></h1>
 <p>Rauthy supports translated views for all user-facing UI and E-Mails.</p>
 <p>At the time of writing, the following languages are supported: English (default), German, French, Korean, Norwegian Bokmål,
-Russian, Ukrainian, and Simplified Chinese. If you need another language, it can be implemented pretty easily, as
+Dutch, Russian, Ukrainian, and Simplified Chinese. If you need another language, it can be implemented pretty easily, as
 the project is prepared for that. You can either open a PR and provide all the necessary translations,
 or if you are a company, you can reach out to me: <code>mail@sebadob.dev</code>.</p>
 <p>What will never happen though is the implementation of an automated approach, because all these generated translations
@@ -6010,15 +6429,16 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
 #pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option&lt;i64&gt;,
 #     access: Vec&lt;ApiKeyAccess&gt;,
 # }
@@ -6040,6 +6460,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -6074,6 +6495,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json
@@ -6366,6 +6788,26 @@ secret_api = "SuperSecureSecret1337"
 # default: false
 # overwritten by: HQL_INSECURE_COOKIE
 #insecure_cookie = false
+
+# To guarantee the stabiliy of your Raft cluster, you can
+# rate-limit all write operations to the Raft (excluding
+# management overhead). This is in request per second. It
+# guarantees that the cluster can never be overwhelmed
+# because maybe the disks cannot keep up. Usually, when
+# this happens, you would see dropped or missing heartbeats
+# and errors that the leader is down, even when the cluster
+# is healthy.
+# The burst can usually be 2-2x the rps.
+#
+# default: not set
+# overwritten by: HQL_RL_CACHE_RPS
+#rate_limit_cache_rps = 50000
+# overwritten by: HQL_RL_CACHE_BURST
+#rate_limit_cache_burst = 100000
+# overwritten by: HQL_RL_DB_RPS
+#rate_limit_db_rps = 100000
+# overwritten by: HQL_RL_DB_BURST
+#rate_limit_db_burst = 200000
 
 # You can reset the Raft Logs + Metadata when set to
 # `true`. This can be helpful, if you e.g. run a single
@@ -6907,6 +7349,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_NL
+#nl = '%d-%m-%Y %T (%Z)'
 # default: '%Y-%m-%d %T (%Z)'
 # overwritten by: TZ_FMT_KO
 #ko = '%Y-%m-%d %T (%Z)'
@@ -7012,6 +7457,18 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # default: 3600
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
 #cache_lifetime = 3600
+
+# RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+# a requested `resource` is rejected by default. Setting this to `true` lets such
+# clients request any resource indicator.
+#
+# CAUTION: only enable this if you know exactly what you are doing and have a good
+# reason. It can lead to an easy privilege escalation, because an ephemeral client
+# could then mint tokens for an arbitrary audience.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
+#danger_allow_unvalidated_resource = false
 
 [events]
 # The E-Mail address event notifications should be sent to.
@@ -7528,13 +7985,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -8281,6 +8738,12 @@ storage_type = 'db'
 #regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
 # default: '^[a-z][a-z0-9_\-]{1,61}$'
 #pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
+
+# Configure a hint that will be shown to the user on pattern
+# mismatch.
+#
+# default: not set
+#pattern_hint = 'Linux-compatible Username'
 
 # If a user does not have a `preferred_username`, the `email`
 # can be used as a fallback value for the id token.

@@ -572,15 +572,16 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
 #pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option&lt;i64&gt;,
 #     access: Vec&lt;ApiKeyAccess&gt;,
 # }
@@ -602,6 +603,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -636,6 +638,7 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json
@@ -928,6 +931,26 @@ secret_api = "SuperSecureSecret1337"
 # default: false
 # overwritten by: HQL_INSECURE_COOKIE
 #insecure_cookie = false
+
+# To guarantee the stabiliy of your Raft cluster, you can
+# rate-limit all write operations to the Raft (excluding
+# management overhead). This is in request per second. It
+# guarantees that the cluster can never be overwhelmed
+# because maybe the disks cannot keep up. Usually, when
+# this happens, you would see dropped or missing heartbeats
+# and errors that the leader is down, even when the cluster
+# is healthy.
+# The burst can usually be 2-2x the rps.
+#
+# default: not set
+# overwritten by: HQL_RL_CACHE_RPS
+#rate_limit_cache_rps = 50000
+# overwritten by: HQL_RL_CACHE_BURST
+#rate_limit_cache_burst = 100000
+# overwritten by: HQL_RL_DB_RPS
+#rate_limit_db_rps = 100000
+# overwritten by: HQL_RL_DB_BURST
+#rate_limit_db_burst = 200000
 
 # You can reset the Raft Logs + Metadata when set to
 # `true`. This can be helpful, if you e.g. run a single
@@ -1469,6 +1492,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%d-%m-%Y %T (%Z)'
+# overwritten by: TZ_FMT_NL
+#nl = '%d-%m-%Y %T (%Z)'
 # default: '%Y-%m-%d %T (%Z)'
 # overwritten by: TZ_FMT_KO
 #ko = '%Y-%m-%d %T (%Z)'
@@ -1574,6 +1600,18 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # default: 3600
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
 #cache_lifetime = 3600
+
+# RFC 8707: when an ephemeral client document declares no `allowed_resources`,
+# a requested `resource` is rejected by default. Setting this to `true` lets such
+# clients request any resource indicator.
+#
+# CAUTION: only enable this if you know exactly what you are doing and have a good
+# reason. It can lead to an easy privilege escalation, because an ephemeral client
+# could then mint tokens for an arbitrary audience.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
+#danger_allow_unvalidated_resource = false
 
 [events]
 # The E-Mail address event notifications should be sent to.
@@ -2090,13 +2128,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ko nb ru uk zhhans
+# Available Options: en de fr ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time in seconds for how long in seconds the refresh
@@ -2843,6 +2881,12 @@ storage_type = 'db'
 #regex_rust = '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
 # default: '^[a-z][a-z0-9_\-]{1,61}$'
 #pattern_html = '^[a-z][a-z0-9_\-]{1,61}$'
+
+# Configure a hint that will be shown to the user on pattern
+# mismatch.
+#
+# default: not set
+#pattern_hint = 'Linux-compatible Username'
 
 # If a user does not have a `preferred_username`, the `email`
 # can be used as a fallback value for the id token.

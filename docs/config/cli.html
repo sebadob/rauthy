@@ -241,6 +241,46 @@ where you cannot be sure.</p>
 is very safe while still not being way over the top. If we wanted the same level of security as a
 256-bit random bytes key, in alphanumeric form it would be ~43 characters. We have 48 here, which
 even exceeds it. Anything bigger would be a waste of resources.</p>
+<h2 id="bootstrap-generated-secrets"><a class="header" href="#bootstrap-generated-secrets">Bootstrap Generated Secrets</a></h2>
+<p>When <code>clients.json</code> or <code>users.json</code> uses <code>"generate"</code>, Rauthy writes the plaintext values into an
+encrypted local container before inserting the matching database rows. The CLI can read this
+container without starting or contacting the Rauthy server.</p>
+<p>The CLI reads everything it needs from your existing Rauthy config file: it loads the same
+<code>ENC_KEYS</code> that were active during bootstrap and resolves the configured container location. You
+never pass encryption keys on the command line (which would leak them into your shell history and
+process list) or a separate file path. Just point it at the config:</p>
+<pre><code class="language-bash">rauthy bootstrap get --config-file ./config.toml --format env
+</code></pre>
+<p><code>--config-file</code> defaults to <code>./config.toml</code>, so inside the container or next to the config you can
+usually omit it. If your deployment uses <code>USE_VAULT_CONFIG=true</code>, the CLI loads the config the same
+way the server does.</p>
+<p>To print only one value, use <code>raw</code> with an exact selector:</p>
+<pre><code class="language-bash">rauthy bootstrap get \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+</code></pre>
+<p><code>json</code> preserves every field:</p>
+<pre><code class="language-bash">rauthy bootstrap get \
+  --kind user \
+  --id admin@example.com \
+  --field password \
+  --format json
+</code></pre>
+<p><code>env</code> emits collision-safe names containing the kind, sanitized id, and field:</p>
+<pre><code class="language-bash">rauthy bootstrap get --format env
+</code></pre>
+<p>Example output:</p>
+<pre><code class="language-bash">RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...
+RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...
+RAUTHY_BOOTSTRAP_API_KEY_PROVISION_TOKEN=...
+</code></pre>
+<p>After you have stored the values somewhere safe, purge the container:</p>
+<pre><code class="language-bash">rauthy bootstrap purge
+</code></pre>
+<p>Purging is idempotent: if the file is already absent, the command reports that and exits
+successfully.</p>
 <h2 id="hash-passwords"><a class="header" href="#hash-passwords">Hash Passwords</a></h2>
 <p>If you want to hash a password for bootstrapping, you can do it like so:</p>
 <pre><code class="language-bash">rauthy hash-password

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Custom Scopes and Attributes - Rauthy Documentation</title>
+        <title>Delegated Group Admins - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -167,166 +167,91 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="custom-scopes-and-attributes"><a class="header" href="#custom-scopes-and-attributes">Custom Scopes and Attributes</a></h1>
-<p>OpenID Connect defines quite a few very useful claims to be included in the <code>id_token</code> as additional information about
-a user. However, there are times when you need other data as well, and maybe it is data that multiple downstream
-applications need, like for instance an internal employee ID.</p>
-<p>Rauthy can handle this as well. There are custom scopes you can create. These do not get mixed up with the default
-scopes, so they can't interfere, which makes the whole setup pretty easy.</p>
-<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
-<div class="admonition-title">
-<div id="admonition-info-title">
-<p>Info</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-info"></a>
-</div>
-<div>
-<p>Users are not allowed to self-manage their custom scope values.<br />
-This must be done by an admin.</p>
-</div>
-</div>
-<p>Values are mapped as claims into tokens only if allowed an requested for an individual client. This means even if you
-set a value for a user, it will not just end up in the token automatically. Let's walk through how you can achieve that.</p>
-<h2 id="custom-user-attribute"><a class="header" href="#custom-user-attribute">Custom User Attribute</a></h2>
-<p>The first thing we will do is to create a custom user attribute. Rauthy does not allow you to just enter anything you
-like. All values are strictly typed and must be pre-configured to prevent user error during normal operation. For
-instance, you won't be able to do typos, don't need copy &amp; paste from other entries, and so on.</p>
-<p>In the Admin UI, navigate to <code>Attributes</code> -&gt; <code>Add New User Attribute</code></p>
-<p><img src="img/cust_attr.png" alt="custom attribute" /></p>
-<p>The description is optional and can be changed at any time without any impact. The <code>name</code> of the attribute will be the
-exact same in the JWT token later on.</p>
-<h2 id="set-user-values"><a class="header" href="#set-user-values">Set User Values</a></h2>
-<p>Now that we created our custom attribute in the step above, we can set them for users. Navigate to a user of your
-choice, expand the entry and choose the <code>Attributed</code> tab.</p>
-<p><img src="img/set_user_attr.png" alt="set user attribute" /></p>
-<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
-<div class="admonition-title">
-<div id="admonition-info-1-title">
-<p>Info</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-info-1"></a>
-</div>
-<div>
-<p>The custom values for users are always interpreted, saved and returned <code>String</code>s without any further validation.</p>
-</div>
-</div>
-<h2 id="create-a-custom-scope"><a class="header" href="#create-a-custom-scope">Create a Custom Scope</a></h2>
-<p>The next thing we need is a custom scope we can map attributes to. You are not allowed to modify the OIDC default
-scopes, but you can add your own ones, as many as you like. This is the first step we need to do. Navigate to the</p>
-<p>Admin UI -&gt; <code>Scopes</code> -&gt; <code>Add New Scopes</code></p>
-<p><img src="img/cust_scope.png" alt="custom scope" /></p>
-<p>After saving, expand your just created scope. You want to map your attribute from the step before into JWT tokens
-when a client requests (and is allowed to) this scope. For instance, let's add our new attribute to the <code>id_token</code>
-with this custom scope.</p>
-<p><img src="img/cust_scope_mapping.png" alt="custom scope mapping" /></p>
-<p>We are almost done.</p>
-<h2 id="allow-scope-for-client"><a class="header" href="#allow-scope-for-client">Allow Scope for Client</a></h2>
-<p>The very last step is one you probably know. A client needs to be allowed to request certain scopes in the first place.
-From this point on, the new custom scope behaves like any default one. We need to allow it for a client to be requested.</p>
-<p>Open the configuration for any <code>Client</code> and scroll down until you see the <code>Allowed Scopes</code> and <code>Default Scopes</code> section.</p>
-<p><img src="img/client_scope_allow.png" alt="allow client scope request" /></p>
-<p>The <code>Allowed Scopes</code> are the ones a client is allowed to request when redirecting a user to the authorization endpoint
-to initiate the <code>authorization_code</code> flow. The <code>Default Scopes</code> are the ones that Rauthy will simply always add. This is
-useful for instance when you are using <code>client_credentials</code> or another flow, because only the <code>authorization_code</code>
-flow can request specific scopes while all others can't.</p>
-<h2 id="finish"><a class="header" href="#finish">Finish</a></h2>
-<p>That is it. It seems like many steps to follow, but it is to your advantage. With this setup you have type-safety and
-the most flexibility about which client can see which values in which context, and so on.</p>
-<p>When you have done everything right, you will see your new custom value in the <code>custom</code> section of the JWT token claims.
-I used the <code>rauthy</code> client in this example (which you should not mess with when deployed).</p>
-<pre><code class="language-json">{
-  "iat": 1721722389,
-  "exp": 1721722399,
-  "nbf": 1721722389,
-  "iss": "http://localhost:8080/auth/v1",
-  "sub": "za9UxpH7XVxqrtpEbThoqvn2",
-  "aud": "rauthy",
-  "nonce": "Fars0wPqrm9f6XimDKD08CPl",
-  "azp": "rauthy",
-  "typ": "Id",
-  "amr": [
-    "pwd"
-  ],
-  "auth_time": 1721722389,
-  "at_hash": "Hd5ugcSzxwl1epF7Il3pEpq0gznnqs2SnSVZCdNw0EI",
-  "preferred_username": "admin@localhost",
-  "roles": [
-    "rauthy_admin",
-    "admin"
-  ],
-  "custom": {
-    "my_attr": "This is Batman!"
-  }
-}
+                        <h1 id="delegated-group-admins"><a class="header" href="#delegated-group-admins">Delegated Group Admins</a></h1>
+<p>Sometimes you do not want to hand out the full <code>rauthy_admin</code> role just so someone can help with
+day-to-day user management for their own team. Delegated group admins let you scope user
+administration to the members of one or more groups, without giving access to clients, scopes,
+roles, system config, or any user outside of those groups.</p>
+<h2 id="the-role-grammar"><a class="header" href="#the-role-grammar">The role grammar</a></h2>
+<p>A delegated group admin is just a normal role with a special name:</p>
+<pre><code>rauthy_admin:&lt;group&gt;
 </code></pre>
-<h2 id="client-credentials-custom-claims"><a class="header" href="#client-credentials-custom-claims">Client Credentials Custom Claims</a></h2>
-<p>The flow above is user-bound: scope-mapped attributes come from a user, so a token issued through the
-<code>client_credentials</code> flow (which has no user) can never carry them. Machine clients often need to describe
-themselves directly though, for example a workload identity, a tenant id, or a deployment profile, so that the
-resource server does not have to look anything up by <code>client_id</code>.</p>
-<p>For this, a client can carry its own custom claims. Open the configuration for any <code>Client</code>, scroll down to the
-<code>Custom Claims</code> section and enter a JSON object:</p>
-<pre><code class="language-json">{
-  "tenant": "acme",
-  "tier": "gold"
-}
-</code></pre>
-<p>These claims are emitted into the access token of the <code>client_credentials</code> flow, nested under the <code>custom</code> claim,
-exactly like the user values above:</p>
-<pre><code class="language-json">{
-  "iat": 1721722389,
-  "exp": 1721722399,
-  "nbf": 1721722389,
-  "iss": "http://localhost:8080/auth/v1",
-  "sub": "my_client",
-  "aud": "my_client",
-  "azp": "my_client",
-  "typ": "Bearer",
-  "scope": "openid",
-  "custom": {
-    "tenant": "acme",
-    "tier": "gold"
-  }
-}
-</code></pre>
-<p>By default these are nested under <code>custom</code>, exactly like user values. If you enable <code>Emit claims at the token root</code> on the client, they are written at the token root (flattened) instead, just like the per-scope
-<code>claims_at_root</code> option. As with that option, you own collision-correctness: if a claim name collides with a
-reserved JWT claim, token issuance fails rather than silently shadowing it.</p>
-<div id="admonition-info-2" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-2-title">
+<p>The <code>rauthy_admin</code> role (without a colon) is the full Rauthy admin and behaves exactly as before.
+A role with the <code>rauthy_admin:</code> prefix turns its holders into a <strong>group admin</strong> for the matching
+groups:</p>
+<ul>
+<li><code>rauthy_admin:engineering</code> matches the group <code>engineering</code> <strong>exactly</strong>.</li>
+<li><code>rauthy_admin:eng*</code> is a <strong>prefix glob</strong> and matches <code>eng</code>, <code>engineering</code>, <code>eng_platform</code>, etc.</li>
+<li><code>rauthy_admin:*</code> matches <strong>every</strong> group, making the holder a user-super-admin (still only over
+users, never over clients / scopes / config).</li>
+</ul>
+<p>You assign these roles like any other role. Create a role named e.g. <code>rauthy_admin:engineering</code>,
+then assign it to the users who should administer that group.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
-<div id="admonition-info-2-title">
-<p>Info</p>
+<div id="admonition-note-title">
+<p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-info-2"></a>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>The value must be a JSON object and is capped at 1024 serialized characters, since tokens are frequently kept
-small (and sometimes stored in cookies). The cap applies to the client's custom JSON only, not the full token.</p>
+<p>This is non-breaking: unless you already had a custom role that happens to start with
+<code>rauthy_admin:</code>, nothing changes. On startup, Rauthy logs a warning listing any pre-existing roles
+that match this scheme so you can double-check they are intended.</p>
 </div>
 </div>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
-<div class="admonition-title">
-<div id="admonition-caution-title">
-<p>Caution</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-caution"></a>
-</div>
-<div>
-<p>Custom claims can only be set by an admin (or via the management API). Dynamic clients (registered through the
-dynamic client registration endpoint) and ephemeral clients cannot set their own claims, which would otherwise be
-a privilege-escalation vector: a client must not be able to assert facts about itself that it was never granted.</p>
-</div>
-</div>
+<h2 id="what-a-group-admin-can-do"><a class="header" href="#what-a-group-admin-can-do">What a group admin can do</a></h2>
+<p>A group admin can manage users who are a member of at least one group it manages <strong>and</strong> who are
+not themselves any kind of <code>rauthy_admin</code>. For those users it can:</p>
+<ul>
+<li>list and view users (the user list is not filtered, see below),</li>
+<li>create new users and place them into a group it manages,</li>
+<li>edit profile data and toggle <code>enabled</code> / <code>email_verified</code>,</li>
+<li>add or remove memberships, but only for groups it manages,</li>
+<li>reset MFA (delete passkeys) and reset or set a password,</li>
+<li>set a <code>preferred_username</code> while it is still empty (overwriting an existing one stays a
+full-admin action),</li>
+<li>upload or remove the profile picture of a managed user,</li>
+<li>view and invalidate (force-logout) sessions,</li>
+<li>send a custom E-Mail to the users of a group it manages, and view the resulting E-Mail jobs.
+The recipient filter is locked to a single one of its managed groups (a full admin may also
+send to all users or filter by role).</li>
+</ul>
+<p>A group admin can also manage its own account: it can open its own user in the Admin UI, and the
+nav links to the account dashboard for self-service (which in turn links back to the Admin UI).</p>
+<p>In addition, a group admin gets a read-only view of the Sessions, Events, and Blacklist pages to
+help with debugging user issues.</p>
+<h2 id="what-a-group-admin-cannot-do"><a class="header" href="#what-a-group-admin-cannot-do">What a group admin cannot do</a></h2>
+<p>The backend enforces all of the following, regardless of what the UI shows:</p>
+<ul>
+<li>it cannot manage any user that holds a <code>rauthy_admin</code> or <code>rauthy_admin:&lt;...&gt;</code> role (no
+privilege escalation, and group admins cannot manage each other),</li>
+<li>it cannot modify a user's roles, or change group memberships outside of its managed groups,</li>
+<li>it cannot delete users,</li>
+<li>it cannot send a bulk E-Mail to all users, to a group it does not manage, or filtered by role,</li>
+<li>it cannot manage clients, scopes, roles, groups, providers, API keys, or system config,</li>
+<li>it cannot add or remove blacklist entries (read-only),</li>
+<li>API keys are never group-scoped; delegation applies to logged-in sessions only.</li>
+</ul>
+<h2 id="why-the-user-list-is-not-filtered"><a class="header" href="#why-the-user-list-is-not-filtered">Why the user list is not filtered</a></h2>
+<p>The <code>users</code> table inlines roles and groups for fast logins, which makes filtering users by group on
+the database side expensive. A group admin therefore sees the same (minified) user list as a full
+admin. This is intentional: the security boundary is enforced on every <strong>write</strong>, not on list
+visibility, and an admin is trusted by definition. It also enables a useful flow: a group admin can
+open any user and add them to a group it manages, even if that user was created by someone else.</p>
+<p>If you need strict tenant isolation (group admins of independent organizations must not see each
+other's users), that is a separate, more restrictive mode that can be added as an opt-in in a future
+iteration.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../work/api_keys.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../work/custom_scopes_attributes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../work/group_admins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../work/ephemeral_clients.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -336,11 +261,11 @@ a privilege-escalation vector: a client must not be able to assert facts about i
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../work/api_keys.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../work/custom_scopes_attributes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../work/group_admins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../work/ephemeral_clients.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

@@ -168,7 +168,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="bootstrapping"><a class="header" href="#bootstrapping">Bootstrapping</a></h1>
-<p>Rauthy can bootstrap most values that are nore statically configured. There are only very few
+<p>Rauthy can bootstrap most values that are not statically configured. There are only very few
 exceptions, so you should be able to achieve anything you need. The most important things live in
 the config to be able to run everything from a single file. However, when you want to do more
 advanced / custom stuff, you will need to provide additional JSON files.</p>
@@ -216,55 +216,102 @@ The <a href="cli.html">Rauthy CLI</a> can do it for you as well.</p>
 it is a bit more cumbersome to use from outside the browser because of additional CSRF tokens and
 security features. If you want to automatically set up Rauthy with external tooling after the first
 startup, you would want to do this with an API key most probably.</p>
-<p>If Rauthy starts up with an empty database, you can bootstrap a single API key with providing a
-base64 encoded json.</p>
-<p>An example json, which would create a key named <code>bootstrap</code> with access to <code>clients, roles, groups</code>
-with all <code>read, write, update, delete</code> could look like this:</p>
-<pre><code class="language-json">{
-  "name": "bootstrap",
-  "exp": 1735599600,
-  "access": [
-    {
-      "group": "Clients",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
+<p>If Rauthy starts up with an empty database, you can bootstrap API keys via
+<code>api_keys.json</code> in your configured <code>bootstrap_dir</code>. The older <code>bootstrap.api_key</code>
+config value shown below is still supported for a single key.</p>
+<p>An example <code>api_keys.json</code>, which would create a key named <code>bootstrap</code> with access to
+<code>clients</code>, <code>roles</code>, and <code>groups</code> with all <code>read</code>, <code>create</code>, <code>update</code>, <code>delete</code>
+rights could look like this:</p>
+<pre><code class="language-json">[
+  {
+    "name": "bootstrap",
+    "exp": 1735599600,
+    "secret": {
+      "Plain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
-    {
-      "group": "Roles",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
-    },
-    {
-      "group": "Groups",
-      "access_rights": [
-        "read",
-        "create",
-        "update",
-        "delete"
-      ]
-    }
-  ]
-}
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      },
+      {
+        "group": "Roles",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      },
+      {
+        "group": "Groups",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      }
+    ]
+  }
+]
 </code></pre>
-<p>The config documentation for the bootstrap value should explain all further questions:</p>
+<p>The <code>secret</code> can be <code>{"Plain": "..."}</code>, <code>{"Encrypted": "..."}</code>, or <code>"generate"</code>. Plain secrets must be at
+least 64 characters long. Encrypted secrets are encrypted with
+<a href="https://github.com/sebadob/cryptr"><code>cryptr</code></a> and base64-encoded, just like encrypted client
+secrets. Generated API-key secrets store the full usable <code>name$secret</code> token in the generated
+bootstrap secret container under <code>api-key/&lt;name&gt;/token</code>.</p>
+<pre><code class="language-json">[
+  {
+    "name": "provision",
+    "exp": 1735599600,
+    "secret": "generate",
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": ["read", "create", "update", "delete"]
+      },
+      {
+        "group": "Secrets",
+        "access_rights": ["read", "update"]
+      }
+    ]
+  }
+]
+</code></pre>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-caution"></a>
+</div>
+<div>
+<p>Only bootstrap short-lived API keys for production automation. Set <code>exp</code> to a timestamp
+that expires after your first-start provisioning is complete, for example after about 10
+minutes. Long-lived bootstrap API keys increase the blast radius if the bootstrap files or
+deployment secrets are leaked. The example timestamp above is intentionally finite; replace it
+with a short-lived value for your deployment.</p>
+</div>
+</div>
+<p>The legacy config documentation for bootstrapping a single API key should explain all further
+questions:</p>
 <pre><code class="language-toml">[bootstrap]
-# You can provide an API Key during the initial prod database
-# bootstrap. This key must match the format and pass validation.
+# You can provide a single API Key during the initial prod database
+# bootstrap. This legacy config value must match the format and pass validation.
+# Prefer `api_keys.json` in `bootstrap_dir` for new deployments.
 # You need to provide it as a base64 encoded JSON in the format:
 #
 # ```
 # struct ApiKeyRequest {
 #     /// Validation: `^[a-zA-Z0-9_-/]{2,24}$`
 #     name: String,
-#     /// Unix timestamp in seconds in the future (max year 2099)
+#     /// Unix timestamp in seconds
 #     exp: Option&lt;i64&gt;,
 #     access: Vec&lt;ApiKeyAccess&gt;,
 # }
@@ -286,6 +333,7 @@ with all <code>read, write, update, delete</code> could look like this:</p>
 #     Scopes,
 #     UserAttributes,
 #     Users,
+#     Pam,
 # }
 #
 # #[serde(rename_all="lowercase")]
@@ -324,19 +372,106 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 </code></pre>
 <pre><code>Authorization: API-Key bootstrap$twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh
 </code></pre>
-<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div id="admonition-caution-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-1-title">
 <div class="admonition-title">
-<div id="admonition-caution-title">
+<div id="admonition-caution-1-title">
 <p>Caution</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-caution"></a>
+<a class="admonition-anchor-link" href="#admonition-caution-1"></a>
 </div>
 <div>
-<p>At the time of writing, it is not possible (yet) to provide API key secrets as encrypted values.
-This will probably be added in a future version. If you bootstrap API keys for production setup,
-make sure they always auto-expire.</p>
+<p>If you bootstrap API keys for production setup, make sure they always auto-expire. Bootstrap
+JSON is only read while initializing an empty production database; changing <code>api_keys.json</code>
+later does not reconcile live API keys.</p>
 </div>
 </div>
+<h2 id="generated-bootstrap-secrets"><a class="header" href="#generated-bootstrap-secrets">Generated Bootstrap Secrets</a></h2>
+<p>Generated bootstrap credentials are stored in an encrypted local container before their matching
+database rows are inserted. This keeps later phases from creating live client, user, or API-key
+rows whose generated plaintext cannot be recovered.</p>
+<p>The container is a single AEAD-encrypted JSON payload. The expiry deadline lives inside that
+encrypted payload, so startup and runtime expiry checks decrypt the container first. A positive TTL
+also schedules a runtime purge after each write. Set the TTL to <code>0</code> only if you intentionally want
+to keep the encrypted container for manual extraction and purge it yourself.</p>
+<p>Generated values are a first-boot mechanism only. The JSON bootstrap files are read while Rauthy
+initializes an empty production database. If you add <code>"generate"</code> to <code>clients.json</code>, <code>users.json</code>,
+or <code>api_keys.json</code> after the database has already been initialized, that day-2 change is ignored by
+the first-boot bootstrap gate and no new generated secret is written.</p>
+<pre><code class="language-toml">[bootstrap]
+# Path to the encrypted generated-secret container. If unset, Rauthy stores it
+# below Hiqlite's configured data directory as:
+#
+# `${cluster.data_dir}/bootstrap.secrets.enc`
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Time in seconds before generated bootstrap secrets expire. A value of `0`
+# disables expiry and runtime auto-purge.
+#
+# default: 600
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+generated_secrets_ttl = 600
+</code></pre>
+<p>Use the local CLI to retrieve or purge the encrypted container after first start. The command does
+not talk to the Rauthy server.</p>
+<pre><code class="language-bash">rauthy bootstrap get \
+  -c config.toml \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+
+rauthy bootstrap get -c config.toml --format env
+rauthy bootstrap purge -c config.toml
+</code></pre>
+<p><code>get --format env</code> emits names that include the entity kind, sanitized id, and field, for example
+<code>RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...</code> and
+<code>RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...</code>.</p>
+<p>The CLI loads the existing Rauthy config and initializes the configured encryption keys before it
+decrypts the container. It does not accept encryption keys or the container path as command-line
+arguments.</p>
+<p>API keys can request a generated token with <code>"secret": "generate"</code>. <code>get --format env</code> emits it as
+<code>RAUTHY_BOOTSTRAP_API_KEY_&lt;SANITIZED_NAME&gt;_TOKEN=...</code>.</p>
+<p>Clients can request a generated confidential-client secret with <code>"secret": "generate"</code>:</p>
+<pre><code class="language-json">[
+  {
+    "id": "my-service",
+    "name": "My Service",
+    "secret": "generate",
+    "redirect_uris": ["https://my-service.example.com/callback"],
+    "enabled": true,
+    "flows_enabled": ["authorization_code", "refresh_token"],
+    "access_token_alg": "EdDSA",
+    "id_token_alg": "EdDSA",
+    "auth_code_lifetime": 60,
+    "access_token_lifetime": 3600,
+    "scopes": ["openid", "profile", "email"],
+    "default_scopes": ["openid", "profile", "email"],
+    "force_mfa": false
+  }
+]
+</code></pre>
+<p>If the <code>secret</code> field is absent or <code>null</code>, the client remains public and Rauthy forces <code>S256</code> PKCE.
+Use <code>"secret": "generate"</code> only when you want a confidential client and plan to extract the
+generated secret from the encrypted container.</p>
+<p>Users can request a generated password with <code>"password": "generate"</code>:</p>
+<pre><code class="language-json">[
+  {
+    "email": "admin@example.com",
+    "password": "generate",
+    "roles": ["admin"],
+    "enabled": true,
+    "email_verified": true
+  }
+]
+</code></pre>
+<p>Rauthy writes the plaintext password to the encrypted container before hashing it and inserting the
+user row. The database stores only the password hash.</p>
+<p>API keys in <code>api_keys.json</code> can request a generated token with <code>"secret": "generate"</code>. The full
+usable <code>name$secret</code> token is written to the encrypted container.
+Extract it with <code>--kind api-key --id &lt;key-name&gt; --field token</code> and use it directly as the
+<code>Authorization</code> header value: <code>Authorization: API-Key &lt;token&gt;</code>.</p>
 <h2 id="advanced--custom-configuration"><a class="header" href="#advanced--custom-configuration">Advanced / Custom Configuration</a></h2>
 <p>If you want to bootstrap other things like users or clients, you need to do it a bit differently.
 First, make sure to check the <code>bootstrap_dir</code> and configure it if necessary:</p>
@@ -347,6 +482,7 @@ First, make sure to check the <code>bootstrap_dir</code> and configure it if nec
 # try to parse and apply them during the bootstrapping process.
 #
 # The following files will be parsed in the given directory:
+# - api_keys.json
 # - roles.json
 # - groups.json
 # - scopes.json

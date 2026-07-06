@@ -176,6 +176,20 @@ as they require an additional network round trip to where ever their document is
 <p>Just to make clear what I am talking about, a high level comparison of these different clients:</p>
 <p><strong>Static clients</strong> are the ones that you register and configure via the Admin UI. These are the most efficient and
 secure ones. They require less work in the backend and exist inside the Rauthy database.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>Static client IDs (via the Admin UI, the API, or bootstrapping) are restricted to
+<code>^[a-zA-Z0-9._\-]{2,256}$</code>. Only ephemeral clients use a full URI as their ID, since that URI is the
+location their client document is fetched from. A static client therefore never needs a URI-shaped
+ID.</p>
+</div>
+</div>
 <p>Then there is OIDC <strong>Dynamic Client Registration</strong> (DCR), which is an OIDC extension that Rauthy supports as well. If a
 downstream application has support for this feature, it can self-register a client, which then can be used for the
 login afterward. This sound very nice in the beginning, but brings quite a few problems:</p>
@@ -362,12 +376,12 @@ If you want to configure some more things, keep reading.</p>
     id_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
 }
 <span class="boring">}</span></code></pre></pre>
-<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
 <div class="admonition-title">
-<div id="admonition-note-title">
+<div id="admonition-note-1-title">
 <p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-note"></a>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
 </div>
 <div>
 <p>The <code>grant_types</code> exist for completeness only. They are actually ignored and overridden by the
@@ -412,11 +426,11 @@ file on GitHub for instance and receive a valid JSON.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../work/custom_scopes_attributes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../work/group_admins.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../work/email_templates.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../work/resource_indicators.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -426,11 +440,11 @@ file on GitHub for instance and receive a valid JSON.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../work/custom_scopes_attributes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../work/group_admins.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../work/email_templates.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../work/resource_indicators.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
