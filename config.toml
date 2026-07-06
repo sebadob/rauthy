@@ -793,6 +793,26 @@ password_dashboard = "$SECRETS"
 # overwritten by: HQL_INSECURE_COOKIE
 insecure_cookie = true
 
+# To guarantee the stabiliy of your Raft cluster, you can
+# rate-limit all write operations to the Raft (excluding
+# management overhead). This is in request per second. It
+# guarantees that the cluster can never be overwhelmed
+# because maybe the disks cannot keep up. Usually, when
+# this happens, you would see dropped or missing heartbeats
+# and errors that the leader is down, even when the cluster
+# is healthy.
+# The burst can usually be 2-2x the rps.
+#
+# default: not set
+# overwritten by: HQL_RL_CACHE_RPS
+rate_limit_cache_rps = 50000
+# overwritten by: HQL_RL_CACHE_BURST
+rate_limit_cache_burst = 100000
+# overwritten by: HQL_RL_DB_RPS
+rate_limit_db_rps = 100000
+# overwritten by: HQL_RL_DB_BURST
+rate_limit_db_burst = 200000
+
 # You can reset the Raft Logs + Metadata when set to
 # `true`. This can be helpful, if you e.g. run a single
 # instance "cluster" and encountered an unrecoverable

@@ -232,6 +232,55 @@ The CLI can now validate an existing Rauthy Config:
 
 [#1588](https://github.com/sebadob/rauthy/pull/1588)
 
+#### Hiqlite `v0.14.0`
+
+Hiqlite was updated to `v0.14.0`.
+
+You can now rate-limit all Raft write actions. These are things like cache PUT or e.g. execute
+queries. This limit does not affect read actions, since they are local and do not travel through the
+network. With this rate-limiting, if tuned properly for your deployment, you can guarantee that you
+never saturate your disk, and therefore can never get in a situation where you overwhelm the
+cluster, no matter how high requests might spike.
+
+Just as a very rough guideline: When you only write tiny queries that `INSERT` 3 columns per row,
+and you limit the Raft to 50.000 requests / s, your disk already writes 350+ MB/s. How you want to
+tune this value depends a lot on how much your server can handle and how expensive your queries are.
+It's impossible to provide a reasonable default value here.
+
+Each client has its own rate-limiter. This is crucial. If the leader enforced it, all limited
+requests would need to travel through the network only for getting limited. This means if you have a
+traffic spike that your deployment cannot handle, it would still flood the network. Instead, each
+client enforces this locally BEFORE sending out any network requests. At the same time, this means
+if you limit to e.g. 100 RPS while having a 3-node cluster, it will effectively mean ~300 RPS for
+the whole cluster (assuming even load balancing).
+
+You have new config values:
+
+```toml
+[cluster]
+# To guarantee the stabiliy of your Raft cluster, you can
+# rate-limit all write operations to the Raft (excluding
+# management overhead). This is in request per second. It
+# guarantees that the cluster can never be overwhelmed
+# because maybe the disks cannot keep up. Usually, when
+# this happens, you would see dropped or missing heartbeats
+# and errors that the leader is down, even when the cluster
+# is healthy.
+# The burst can usually be 2-2x the rps.
+#
+# default: not set
+# overwritten by: HQL_RL_CACHE_RPS
+rate_limit_cache_rps = 50000
+# overwritten by: HQL_RL_CACHE_BURST
+rate_limit_cache_burst = 100000
+# overwritten by: HQL_RL_DB_RPS
+rate_limit_db_rps = 100000
+# overwritten by: HQL_RL_DB_BURST
+rate_limit_db_burst = 200000
+```
+
+> When running Postgres, this setting only makes sense for the cache layer of course.
+
 ### Bugfix
 
 - The Postgres migration `v24__cust_attrs_token_root.sql` was named with a lowercase `v` and was
