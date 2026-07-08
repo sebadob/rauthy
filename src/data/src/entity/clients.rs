@@ -1290,9 +1290,14 @@ impl Client {
 
     #[inline]
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
+        // RFC 8252 loopback any-port matching — opt-in via access.rfc_8252_enable,
+        // and only for dynamic and ephemeral clients (never static ones).
+        let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
+            && (self.is_dynamic() || self.is_ephemeral());
         let has_any = self.get_redirect_uris().iter().any(|uri| {
             (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
                 || uri.as_str().eq(redirect_uri)
+                || (loopback && loopback_redirect_match(uri, redirect_uri))
         });
 
         if has_any {
@@ -1484,6 +1489,30 @@ impl Client {
         } else {
             Ok(())
         }
+    }
+}
+
+/// RFC 8252 section 7.3: for a loopback redirect URI, the authorization
+/// server MUST allow any port chosen by the client at request time. Native
+/// apps (and CLI OAuth clients) bind an ephemeral loopback port, so a
+/// registered `http://127.0.0.1/cb` must match a requested
+/// `http://127.0.0.1:52345/cb`. Everything except the port must be equal,
+/// and both sides must be loopback hosts. Gated behind access.rfc_8252_enable
+/// and applied to dynamic and ephemeral clients only (see `validate_redirect_uri`).
+fn loopback_redirect_match(registered: &str, requested: &str) -> bool {
+    fn parts(u: &str) -> Option<(String, String, String)> {
+        let url = Url::parse(u).ok()?;
+        let host = url.host_str()?.to_string();
+        Some((url.scheme().to_string(), host, url.path().to_string()))
+    }
+    fn is_loopback(host: &str) -> bool {
+        host == "localhost" || host == "127.0.0.1" || host == "[::1]" || host == "::1"
+    }
+    match (parts(registered), parts(requested)) {
+        (Some((rs, rh, rp)), Some((qs, qh, qp))) => {
+            is_loopback(&rh) && is_loopback(&qh) && rs == qs && rh == qh && rp == qp
+        }
+        _ => false,
     }
 }
 

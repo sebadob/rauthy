@@ -77,6 +77,25 @@ userinfo_strict = true
 # overwritten by: DANGER_DISABLE_INTROSPECT_AUTH
 danger_disable_introspect_auth = false
 
+# If set to `true`, loopback redirect URIs (to `localhost`, `127.0.0.1`
+# or `[::1]`) will match on any port, as required by RFC 8252 section 7.3
+# for native / CLI apps that bind an ephemeral loopback port at runtime.
+# Both the port-less form and an explicit `*` wildcard are accepted for
+# `localhost` when this is enabled.
+#
+# This only applies to dynamic and ephemeral clients. Static clients
+# always require an exact match or an explicit `*` wildcard, even with
+# this option set, because an admin has full control over their config.
+#
+# Only enable this if you need it, e.g. an MCP client whose loopback
+# redirect port is not known in advance and cannot be pre-registered.
+# It is `false` by default to keep redirect matching as strict as
+# possible out of the box.
+#
+# default: false
+# overwritten by: RFC_8252_ENABLE
+rfc_8252_enable = false
+
 # By default, `refresh_token`s will have an `nbf` claim, making them
 # valid at `access_token_lifetime - 60 seconds`. Any usage before
 # this time will result in invalidation of not only the token itself,

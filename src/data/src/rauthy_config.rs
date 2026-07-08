@@ -302,6 +302,7 @@ impl Default for Vars {
             access: VarsAccess {
                 userinfo_strict: true,
                 danger_disable_introspect_auth: false,
+                rfc_8252_enable: false,
                 disable_refresh_token_nbf: false,
                 sec_header_block: true,
                 session_validate_ip: true,
@@ -1234,6 +1235,9 @@ impl Vars {
             "DANGER_DISABLE_INTROSPECT_AUTH",
         ) {
             self.access.danger_disable_introspect_auth = v;
+        }
+        if let Some(v) = t_bool(&mut table, "access", "rfc_8252_enable", "RFC_8252_ENABLE") {
+            self.access.rfc_8252_enable = v;
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -3638,6 +3642,7 @@ pub struct VarsDev {
 pub struct VarsAccess {
     pub userinfo_strict: bool,
     pub danger_disable_introspect_auth: bool,
+    pub rfc_8252_enable: bool,
     pub disable_refresh_token_nbf: bool,
     pub sec_header_block: bool,
     pub session_validate_ip: bool,
