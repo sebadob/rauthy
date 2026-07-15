@@ -10,12 +10,15 @@ This chart is a thin, faithful Helmification of the Kubernetes deployment
 documented in the [Rauthy book](https://sebadob.github.io/rauthy/getting_started/k8s.html).
 It deliberately keeps configuration out of the chart:
 
-- **You own the config.** You provide the complete `config.toml` (the
-  documented Reference Config, or the Minimal Production Config) as a Secret.
-  The chart mounts it verbatim at `/app/config.toml`. The chart does **not**
-  re-template individual config values - every Rauthy setting is already
-  documented per-value in the book, and duplicating it into chart values would
-  only add drift and maintenance overhead.
+- **You own the config, and secrets stay separate.** You provide a NON-secret
+  `config.toml` (mounted from a ConfigMap) plus a `secrets.toml` holding only
+  sensitive values (mounted from a Secret). In `config.toml` each secret is the
+  literal `"$SECRETS"` (arrays like `encryption.keys` use `['$SECRETS']`), and
+  Rauthy reads the real value from `secrets.toml` at startup (file-based secrets,
+  Rauthy 0.36+). The chart mounts both verbatim at `/app/config.toml` and
+  `/app/secrets.toml` and does **not** re-template individual config values -
+  every Rauthy setting is already documented per-value in the book, and
+  duplicating it into chart values would only add drift and maintenance overhead.
 - **The chart owns only the Raft topology.** The single thing it injects over
   your config is the cluster membership: `HQL_NODE_ID_FROM=k8s` and `HQL_NODES`,
   both derived from `replicas`. These cannot live in a static file because they
@@ -23,42 +26,58 @@ It deliberately keeps configuration out of the chart:
 - **No autoscaling.** A Raft cluster cannot be safely scaled down, so there is
   no `HorizontalPodAutoscaler` and no scale-down path (see [Scaling](#scaling)).
 - **No generated secrets.** The chart never invents `secret_raft`, `secret_api`
-  or encryption keys for you; you generate and manage them, as in the book.
+  or encryption keys for you; you generate and manage them, as in the book. The
+  `secrets.toml` file is optional: you can instead supply the sensitive values
+  via env vars (`extraEnv`: `HQL_SECRET_RAFT`, `ENC_KEYS`, ...) or your own
+  external Secret.
 
 ## Prerequisites
 
 - Kubernetes 1.23+
 - Helm 3.8+
-- A `config.toml` with valid `cluster.secret_raft`, `cluster.secret_api` and
-  `encryption.keys` / `key_active`. See `files/config.toml.example` and the
-  book's [Minimal Production Config](https://sebadob.github.io/rauthy/config/config_minimal.html).
+- Rauthy 0.36+ (this chart's `appVersion`), the first release with file-based
+  secrets.
+- A NON-secret `config.toml` (with `"$SECRETS"` placeholders) plus the matching
+  `secrets.toml` holding `cluster.secret_raft`, `cluster.secret_api` and
+  `encryption.keys` / `key_active`. See `files/config.toml.example`,
+  `files/secrets.toml.example` and the book's
+  [Minimal Production Config](https://sebadob.github.io/rauthy/config/config_minimal.html).
 
 ## Install
 
-Provide your config either inline or, recommended, via an existing Secret.
+Provide the non-secret config as a ConfigMap and the secrets as a Secret, either
+by referencing existing objects (recommended) or inline.
 
-### Option A - existing Secret (recommended)
+### Option A - existing ConfigMap + Secret (recommended)
 
 ```bash
-# Your config.toml must contain the cluster secrets and encryption keys.
 kubectl create namespace rauthy
-kubectl -n rauthy create secret generic rauthy-config --from-file=config.toml
+
+# Non-secret config (config.toml uses "$SECRETS" placeholders):
+kubectl -n rauthy create configmap rauthy-config --from-file=config.toml
+
+# Secrets (secrets.toml holds the real values):
+kubectl -n rauthy create secret generic rauthy-secrets --from-file=secrets.toml
 
 helm install rauthy ./charts/rauthy \
   -n rauthy \
-  --set config.existingSecret=rauthy-config
+  --set config.existingConfigMap=rauthy-config \
+  --set secrets.existingSecret=rauthy-secrets
 ```
 
-### Option B - inline config
+### Option B - inline
 
 ```bash
 helm install rauthy ./charts/rauthy \
   -n rauthy --create-namespace \
-  --set-file config.content=./config.toml
+  --set-file config.content=./config.toml \
+  --set-file secrets.content=./secrets.toml
 ```
 
-A single `helm install` (or `helm upgrade`) is all that is needed; there are no
-manual steps to run beforehand beyond having your config.
+A single `helm install` (or `helm upgrade`) is all that is needed. `secrets.toml`
+is optional: to supply the sensitive values another way, drop the `secrets.*`
+setting and pass them via `extraEnv` (`HQL_SECRET_RAFT`, `ENC_KEYS`, ...) or your
+own mounted Secret.
 
 ## Upgrade
 
@@ -115,9 +134,12 @@ service and must never be routed through your ingress.
 | `image.tag` | `""` | Defaults to the chart `appVersion`. |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy. |
 | `imagePullSecrets` | `[]` | Pull secrets for private registries. |
-| `config.existingSecret` | `""` | Secret holding `config.toml` (recommended). |
-| `config.existingSecretKey` | `config.toml` | Key inside the Secret. |
-| `config.content` | `""` | Inline `config.toml`; chart creates the Secret. |
+| `config.existingConfigMap` | `""` | ConfigMap holding the non-secret `config.toml` (recommended). |
+| `config.existingConfigMapKey` | `config.toml` | Key inside the ConfigMap. |
+| `config.content` | `""` | Inline non-secret `config.toml`; chart creates the ConfigMap. |
+| `secrets.existingSecret` | `""` | Secret holding `secrets.toml` (recommended). Optional. |
+| `secrets.existingSecretKey` | `secrets.toml` | Key inside the Secret. |
+| `secrets.content` | `""` | Inline `secrets.toml`; chart creates the Secret. Optional. |
 | `service.type` | `ClusterIP` | Service type for the HTTP port. |
 | `service.port` | `8080` | HTTP service/target port. |
 | `ingress.enabled` | `false` | Create an Ingress. |

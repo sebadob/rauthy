@@ -119,13 +119,27 @@ spec:
               mountPath: /app/config.toml
               subPath: config.toml
               readOnly: true
+            {{- if or .Values.secrets.existingSecret .Values.secrets.content }}
+            - name: secrets
+              mountPath: /app/secrets.toml
+              subPath: secrets.toml
+              readOnly: true
+            {{- end }}
       volumes:
         - name: config
-          secret:
-            secretName: {{ include "rauthy.configSecretName" . }}
+          configMap:
+            name: {{ include "rauthy.configMapName" . }}
             items:
-              - key: {{ .Values.config.existingSecretKey }}
+              - key: {{ .Values.config.existingConfigMapKey }}
                 path: config.toml
+        {{- if or .Values.secrets.existingSecret .Values.secrets.content }}
+        - name: secrets
+          secret:
+            secretName: {{ include "rauthy.secretsSecretName" . }}
+            items:
+              - key: {{ .Values.secrets.existingSecretKey }}
+                path: secrets.toml
+        {{- end }}
   volumeClaimTemplates:
     - metadata:
         name: data

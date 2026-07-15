@@ -1,13 +1,25 @@
 # Rauthy Helm chart values.
 #
 # Design note: this chart does NOT re-template Rauthy's configuration. You
-# provide the complete `config.toml` (the documented Reference Config, or the
-# Minimal Production Config) in a Secret, and the chart mounts it verbatim at
-# /app/config.toml. The ONLY values the chart injects over your config are the
-# Raft cluster topology (HQL_NODES + HQL_NODE_ID_FROM), because those are
-# inherently tied to the StatefulSet and cannot be known until install/upgrade
-# time. Everything else - password hashing, sessions, SMTP, TLS, etc. - lives
-# in your config file, where every value is already documented.
+# provide two files and the chart mounts them verbatim:
+#   - config.toml   your full, NON-secret Rauthy config, in a ConfigMap, mounted
+#                   at /app/config.toml;
+#   - secrets.toml  only the sensitive values, in a Secret, mounted at
+#                   /app/secrets.toml.
+# In config.toml you reference each secret with the literal "$SECRETS" (arrays
+# like encryption.keys use ['$SECRETS']); Rauthy reads the real value from
+# secrets.toml at startup (file-based secrets, added in Rauthy 0.36). This keeps
+# every sensitive value out of the ConfigMap and in a single Secret you rotate
+# out of band. The ONLY values the chart injects over your config are the Raft
+# cluster topology (HQL_NODES + HQL_NODE_ID_FROM), because those are inherently
+# tied to the StatefulSet and cannot be known until install/upgrade time.
+# Everything else - password hashing, sessions, SMTP, TLS, etc. - lives in your
+# config file, where every value is already documented.
+#
+# Prefer env vars or an external secret store? Skip secrets.toml entirely and
+# supply the sensitive values via `extraEnv` (HQL_SECRET_RAFT, ENC_KEYS, ...) or
+# your own mounted Secret; leave the `secrets` block empty and the chart creates
+# no Secret.
 
 # Number of Rauthy replicas, i.e. Hiqlite Raft cluster members.
 #
@@ -37,21 +49,44 @@ image:
 imagePullSecrets: []
 
 config:
-  # Name of an existing Secret that holds the full Rauthy config under
-  # `existingSecretKey`. RECOMMENDED for production: you own the complete
-  # config and its secrets (cluster.secret_raft/secret_api, encryption.keys)
-  # and rotate them out of band. Takes precedence over `content` below.
+  # Non-secret Rauthy config.toml. The chart puts it in a ConfigMap and mounts
+  # it at /app/config.toml. Reference every sensitive value from it with the
+  # literal "$SECRETS" (see the `secrets` block) so nothing sensitive lands in
+  # the ConfigMap.
+  #
+  # Name of an existing ConfigMap that holds config.toml under
+  # `existingConfigMapKey`. Takes precedence over `content` below.
+  existingConfigMap: ""
+  # Key inside `existingConfigMap` (and the mount source) that contains the file.
+  existingConfigMapKey: config.toml
+  # Inline config.toml. Used ONLY when `existingConfigMap` is empty; the chart
+  # then creates the ConfigMap for you from this string. Paste your NON-secret
+  # config here (see files/config.toml.example, the Minimal Production Config, or
+  # the Reference Config in the Rauthy book), using "$SECRETS" placeholders for
+  # every sensitive value.
+  #
+  # Either `existingConfigMap` or `content` MUST be set; rendering fails otherwise.
+  content: ""
+
+secrets:
+  # Sensitive values (cluster.secret_raft/secret_api, encryption.keys/key_active,
+  # database password, ...) as a secrets.toml. It follows the exact same layout
+  # as config.toml but holds ONLY secrets; the chart puts it in a Secret and
+  # mounts it at /app/secrets.toml, and Rauthy fills every "$SECRETS" placeholder
+  # in config.toml from it. See files/secrets.toml.example.
+  #
+  # OPTIONAL: leave the whole block empty if you supply the secrets via
+  # `extraEnv` (HQL_SECRET_RAFT, ENC_KEYS, ...) or your own external Secret. When
+  # empty, the chart creates and mounts no Secret.
+  #
+  # Name of an existing Secret that holds secrets.toml under `existingSecretKey`.
+  # RECOMMENDED for production: you own the secrets and rotate them out of band.
+  # Takes precedence over `content` below.
   existingSecret: ""
   # Key inside `existingSecret` (and the mount source) that contains the file.
-  existingSecretKey: config.toml
-  # Inline config.toml. Used ONLY when `existingSecret` is empty; the chart
-  # then creates the Secret for you from this string. Paste a COMPLETE config
-  # here (see files/config.toml.example, the Minimal Production Config, or the
-  # Reference Config in the Rauthy book) - it must include valid
-  # cluster.secret_raft, cluster.secret_api and encryption.keys/key_active.
-  # The chart never generates secrets for you.
-  #
-  # Either `existingSecret` or `content` MUST be set; rendering fails otherwise.
+  existingSecretKey: secrets.toml
+  # Inline secrets.toml. Used ONLY when `existingSecret` is empty; the chart then
+  # creates the Secret for you from this string.
   content: ""
 
 service:

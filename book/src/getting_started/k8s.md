@@ -8,17 +8,25 @@ Kubernetes with plain manifests, as described below. If you prefer Helm, there i
 
 A Helm chart lives in [`charts/rauthy`](https://github.com/sebadob/rauthy/tree/main/charts/rauthy)
 in the repository. It is a thin wrapper around the same `StatefulSet` setup documented on this page:
-you provide the complete `config.toml` as a Secret and the chart mounts it verbatim, so there is no
-duplicated, re-templated configuration to maintain. The only thing the chart computes for you is the
-Hiqlite Raft topology (`HQL_NODES` + `HQL_NODE_ID_FROM`) from the replica count.
+you provide a non-secret `config.toml` as a ConfigMap and a `secrets.toml` holding only the sensitive
+values as a Secret, and the chart mounts both verbatim, so there is no duplicated, re-templated
+configuration to maintain. In `config.toml` each secret is the literal `"$SECRETS"`, which Rauthy
+fills from `secrets.toml` at startup. The only thing the chart computes for you is the Hiqlite Raft
+topology (`HQL_NODES` + `HQL_NODE_ID_FROM`) from the replica count.
 
 ```bash
-# Provide your config (with cluster secrets + encryption keys) as a Secret:
 kubectl create namespace rauthy
-kubectl -n rauthy create secret generic rauthy-config --from-file=config.toml
+
+# Non-secret config (config.toml uses "$SECRETS" placeholders):
+kubectl -n rauthy create configmap rauthy-config --from-file=config.toml
+
+# Secrets (secrets.toml holds the real values):
+kubectl -n rauthy create secret generic rauthy-secrets --from-file=secrets.toml
 
 # Install:
-helm install rauthy ./charts/rauthy -n rauthy --set config.existingSecret=rauthy-config
+helm install rauthy ./charts/rauthy -n rauthy \
+  --set config.existingConfigMap=rauthy-config \
+  --set secrets.existingSecret=rauthy-secrets
 ```
 
 See the [chart README](https://github.com/sebadob/rauthy/blob/main/charts/rauthy/README.md) for all

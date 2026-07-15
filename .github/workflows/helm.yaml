@@ -24,13 +24,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
       - name: helm lint
-        run: helm lint ./charts/rauthy --set-file config.content=./charts/rauthy/files/config.toml.example
+        run: |
+          helm lint ./charts/rauthy \
+            --set-file config.content=./charts/rauthy/files/config.toml.example \
+            --set-file secrets.content=./charts/rauthy/files/secrets.toml.example
       - name: helm template (1 and 3 replicas)
         run: |
+          # config-only (secrets via env / external Secret): no Secret rendered.
           helm template r ./charts/rauthy \
             --set-file config.content=./charts/rauthy/files/config.toml.example >/dev/null
+          # two-object split (config ConfigMap + secrets Secret), 3 replicas.
           helm template r ./charts/rauthy --set replicas=3 \
-            --set-file config.content=./charts/rauthy/files/config.toml.example >/dev/null
+            --set-file config.content=./charts/rauthy/files/config.toml.example \
+            --set-file secrets.content=./charts/rauthy/files/secrets.toml.example >/dev/null
 
   install:
     if: github.event.pull_request.draft == false
@@ -40,24 +46,28 @@ jobs:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
       - uses: helm/kind-action@v1
-      - name: Generate a test config
+      - name: Generate a test config + secrets
         run: |
           RAFT=$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c48)
           API=$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c48)
           ENC_KEY=$(openssl rand -base64 32)
           ENC_ID=$(openssl rand -hex 4)
-          cat > /tmp/config.toml <<EOF
+          # Non-secret config: every secret is a "$SECRETS" placeholder, read
+          # from secrets.toml at startup. Single-quoted heredoc keeps them literal.
+          cat > /tmp/config.toml <<'EOF'
+          secrets_file = 'secrets.toml'
+
           [bootstrap]
           admin_email = "admin@localhost"
-          admin_password_plain = "123SuperSafeTestPassword"
+          password_plain = "123SuperSafeTestPassword"
 
           [cluster]
-          secret_raft = "$RAFT"
-          secret_api = "$API"
+          secret_raft = "$SECRETS"
+          secret_api = "$SECRETS"
 
           [encryption]
-          keys = ["$ENC_ID/$ENC_KEY"]
-          key_active = "$ENC_ID"
+          keys = ['$SECRETS']
+          key_active = "$SECRETS"
 
           [server]
           pub_url = "localhost:8080"
@@ -67,11 +77,24 @@ jobs:
           rp_origin = "http://localhost:8080"
           rp_name = "Rauthy"
           EOF
+          # Secrets file: the real values (unquoted heredoc expands the vars).
+          cat > /tmp/secrets.toml <<EOF
+          [cluster]
+          secret_raft = "$RAFT"
+          secret_api = "$API"
+
+          [encryption]
+          keys = ["$ENC_ID/$ENC_KEY"]
+          key_active = "$ENC_ID"
+          EOF
           kubectl create namespace rauthy
-          kubectl -n rauthy create secret generic rauthy-config --from-file=config.toml=/tmp/config.toml
+          kubectl -n rauthy create configmap rauthy-config --from-file=config.toml=/tmp/config.toml
+          kubectl -n rauthy create secret generic rauthy-secrets --from-file=secrets.toml=/tmp/secrets.toml
       - name: Fresh install (1 replica)
         run: |
-          helm install rauthy ./charts/rauthy -n rauthy --set config.existingSecret=rauthy-config
+          helm install rauthy ./charts/rauthy -n rauthy \
+            --set config.existingConfigMap=rauthy-config \
+            --set secrets.existingSecret=rauthy-secrets
           kubectl -n rauthy rollout status statefulset/rauthy --timeout=240s
           helm test rauthy -n rauthy
       - name: Scale up 1 -> 3

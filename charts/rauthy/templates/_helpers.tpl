@@ -31,14 +31,29 @@ Headless service name used for stable pod DNS and Raft peer discovery.
 {{- end -}}
 
 {{/*
-Name of the Secret holding config.toml: either the user-provided existing
-Secret, or the one this chart creates from `config.content`.
+Name of the ConfigMap holding the (non-secret) config.toml: either the
+user-provided existing ConfigMap, or the one this chart creates from
+`config.content`.
 */}}
-{{- define "rauthy.configSecretName" -}}
-{{- if .Values.config.existingSecret -}}
-{{- .Values.config.existingSecret -}}
+{{- define "rauthy.configMapName" -}}
+{{- if .Values.config.existingConfigMap -}}
+{{- .Values.config.existingConfigMap -}}
 {{- else -}}
 {{- printf "%s-config" (include "rauthy.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Name of the Secret holding secrets.toml: either the user-provided existing
+Secret, or the one this chart creates from `secrets.content`. Only referenced
+when a secrets source is configured (the secrets file is optional; secrets may
+instead come from env vars or an external store).
+*/}}
+{{- define "rauthy.secretsSecretName" -}}
+{{- if .Values.secrets.existingSecret -}}
+{{- .Values.secrets.existingSecret -}}
+{{- else -}}
+{{- printf "%s-secrets" (include "rauthy.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
