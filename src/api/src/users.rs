@@ -1707,6 +1707,16 @@ pub async fn post_webauthn_reg_finish(
         principal.is_user(&id)?;
 
         webauthn::reg_finish(id, payload).await?;
+
+        // The registration ceremony is a fresh proof of possession for this very session, and
+        // starting it already required an `MfaModToken`. Upgrade the session in place so the user
+        // does not need a logout / login round-trip to satisfy `admin_force_mfa`.
+        let session = principal.get_session()?;
+        if !session.is_mfa {
+            let mut session = session.clone();
+            session.set_mfa(true).await?;
+        }
+
         Ok(HttpResponse::Created().finish())
     }
 }
