@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.14.3
+
+The JWT header `typ` validation accepts `at+jwt` in addition to `JWT` now. RFC 9068 specifies
+`at+jwt` as the header `typ` for OAuth 2.0 access tokens, and a future Rauthy version will emit it.
+Updating the client beforehand makes that switch possible without an interruption in service.
+
 ## v0.14.2
 
 This release only exists to (hopefully) resolve docs.rs builds.

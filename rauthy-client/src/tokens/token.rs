@@ -53,7 +53,9 @@ impl JwtToken {
 
         base64_url_no_pad_decode_buf(header, buf)?;
         let header = serde_json::from_slice::<JwtHeader>(buf)?;
-        if header.typ != "JWT" {
+        // RFC 9068 specifies `at+jwt` for access tokens. Accept both, because tokens issued
+        // before that change, as well as ID tokens, use `JWT`.
+        if header.typ != "JWT" && header.typ != "at+jwt" {
             return Err(RauthyError::InvalidJwt("Invalid JWT Header `typ`"));
         }
         let jwk = JwkPublicKey::get_for_token(token).await?;
