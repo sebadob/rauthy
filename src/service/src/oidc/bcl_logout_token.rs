@@ -98,7 +98,7 @@ impl LogoutToken<'_> {
             sid: self.sid,
             nonce: None,
         };
-        rauthy_jwt::token::JwtToken::build(kp, &claims)
+        rauthy_jwt::token::JwtToken::build(kp, &claims, rauthy_jwt::token::JwtHeaderTyp::Jwt)
     }
 
     /// Parse and validate the token as specified in

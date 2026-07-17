@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Breaking
+
+#### RFC 9068 `at+jwt` Token Type
+
+Access Tokens are issued with a JWT header `typ` of `at+jwt` now, as specified in
+[RFC 9068](https://www.rfc-editor.org/rfc/rfc9068.html). Rauthy's Access Tokens have been
+RFC 9068-shaped for a long time already, but the header still used the generic `JWT`, which made it
+impossible for a resource server to tell an Access Token apart from an ID Token by the header alone.
+ID, Refresh and Logout Tokens are unchanged and keep using `JWT`.
+
+This is only breaking for downstream resource servers that check the header `typ` for exactly `JWT`.
+Rauthy itself accepts both values, so Access Tokens issued before an update stay valid until they
+expire. `rauthy-client` accepts `at+jwt` starting with `v0.14.3`; update the client before updating
+Rauthy to avoid an interruption in service.
+
+[#1651](https://github.com/sebadob/rauthy/pull/1651)
+
 ### Changes
 
 #### Session MFA Upgrade after Passkey Registration

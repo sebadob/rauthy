@@ -12,8 +12,27 @@ use tracing::warn;
 pub struct JwtHeader<'a> {
     pub alg: JwkKeyPairAlg,
     pub kid: &'a str,
-    // should always be JWT -> DPoP tokens have their own validation
+    // either `JWT` or `at+jwt` -> DPoP tokens have their own validation
     pub typ: &'a str,
+}
+
+/// The JWT header `typ`. Not to be confused with the `typ` claim inside the payload, which is
+/// Rauthy's own token type and has different values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JwtHeaderTyp {
+    /// The generic `JWT` for ID, Refresh and Logout Tokens.
+    Jwt,
+    /// `at+jwt` for Access Tokens as specified in RFC 9068.
+    AtJwt,
+}
+
+impl JwtHeaderTyp {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Jwt => "JWT",
+            Self::AtJwt => "at+jwt",
+        }
+    }
 }
 
 pub struct JwtToken;
@@ -22,13 +41,15 @@ impl JwtToken {
     pub fn build<C: Debug + Serialize>(
         jwk: &JwkKeyPair,
         claims: &C,
+        typ: JwtHeaderTyp,
     ) -> Result<String, ErrorResponse> {
         let mut token = String::with_capacity(1024);
 
         let header = format!(
-            "{{\"alg\":\"{}\",\"kid\":\"{}\",\"typ\":\"JWT\"}}",
+            "{{\"alg\":\"{}\",\"kid\":\"{}\",\"typ\":\"{}\"}}",
             jwk.typ.as_str(),
-            jwk.kid
+            jwk.kid,
+            typ.as_str()
         );
         base64_url_no_pad_encode_buf(header.as_bytes(), &mut token);
         token.push('.');
@@ -94,7 +115,10 @@ impl JwtToken {
 
         base64_url_no_pad_decode_buf(header, buf)?;
         let header = serde_json::from_slice::<JwtHeader>(buf)?;
-        if header.typ != "JWT" {
+        // Access Tokens use `at+jwt` (RFC 9068), everything else `JWT`. Both must be accepted
+        // independently of the token type, because Access Tokens issued before that change are
+        // still valid until they expire.
+        if header.typ != JwtHeaderTyp::Jwt.as_str() && header.typ != JwtHeaderTyp::AtJwt.as_str() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Header `typ`",
@@ -185,9 +209,16 @@ impl ValidationClaims<'_> {
 #[cfg(test)]
 mod tests {
     use crate::claims::JwtTokenType;
-    use crate::token::ValidationClaims;
+    use crate::token::{JwtHeaderTyp, ValidationClaims};
     use chrono::Utc;
     use rauthy_error::{ErrorResponse, ErrorResponseType};
+
+    #[test]
+    fn test_jwt_header_typ() {
+        // RFC 9068 specifies exactly this value for Access Tokens
+        assert_eq!(JwtHeaderTyp::AtJwt.as_str(), "at+jwt");
+        assert_eq!(JwtHeaderTyp::Jwt.as_str(), "JWT");
+    }
 
     #[test]
     fn test_validation_claims() -> Result<(), ErrorResponse> {

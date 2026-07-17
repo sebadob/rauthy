@@ -189,6 +189,20 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .map(|v| v.to_string().replace('\"', ""))
         .unwrap();
 
+    // an ID token uses the generic `JWT`, while an access token must use `at+jwt` (RFC 9068)
+    let typ = header
+        .claim("typ")
+        .map(|v| v.to_string().replace('\"', ""))
+        .expect("'typ' is not set in id token header");
+    assert_eq!(typ, "JWT");
+
+    let access_header = josekit::jwt::decode_header(ts.access_token.clone())?;
+    let access_typ = access_header
+        .claim("typ")
+        .map(|v| v.to_string().replace('\"', ""))
+        .expect("'typ' is not set in access token header");
+    assert_eq!(access_typ, "at+jwt");
+
     // retrieve jwk for kid
     let kid_url = format!("{}/oidc/certs/{}", backend_url, kid);
     let res = reqwest::get(&kid_url).await?;
