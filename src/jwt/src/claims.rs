@@ -133,12 +133,26 @@ pub struct JwtAccessClaims<'a> {
     pub groups: Option<Vec<&'a str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
+    /// RFC 8693 §4.1: the acting party of a delegation. Only set when a token was issued
+    /// via the token exchange with an `actor_token`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub act: Option<ActClaim>,
     /// Custom user attributes promoted to the token root, driven by the per-scope
     /// `claims_at_root` flag. Flattened, so each entry becomes a top-level claim
     /// instead of nesting under `custom`. Issuance MUST fail if any key here
     /// collides with a reserved claim; see [`validate_no_reserved_collision`].
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub custom_flattened: Option<HashMap<String, serde_json::Value>>,
+}
+
+/// RFC 8693 §4.1 `act` (actor) claim. Identifies the party acting on behalf of the `sub`.
+/// Nests recursively, so a chain of delegation keeps the whole history: the outermost `act`
+/// is the current actor, and each nested `act` is the one it in turn acts for.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActClaim {
+    pub sub: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub act: Option<Box<ActClaim>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -237,6 +251,8 @@ pub const RESERVED_ROOT_CLAIMS: &[&str] = &[
     "phone_number_verified",
     "address",
     "updated_at",
+    // RFC 8693 token exchange
+    "act",
     // Rauthy top-level fields (access / id tokens)
     "typ",
     "scope",
@@ -442,6 +458,7 @@ mod tests {
             roles: None,
             groups: None,
             custom: Some(nested),
+            act: None,
             custom_flattened: Some(flattened),
         };
 
@@ -475,6 +492,7 @@ mod tests {
             roles: None,
             groups: None,
             custom: Some(nested),
+            act: None,
             custom_flattened: Some(flattened),
         };
 

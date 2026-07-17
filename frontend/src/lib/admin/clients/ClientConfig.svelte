@@ -17,6 +17,7 @@
     } from '$utils/patterns';
     import {
         AuthFlowDeviceCode,
+        AuthFlowTokenExchange,
         type ClientResponse,
         type ScimClientRequestResponse,
         type UpdateClientRequest,
@@ -85,6 +86,7 @@
         password: client.flows_enabled.includes('password'),
         refreshToken: client.flows_enabled.includes('refresh_token'),
         deviceCode: client.flows_enabled.includes(AuthFlowDeviceCode),
+        tokenExchange: client.flows_enabled.includes(AuthFlowTokenExchange),
     });
 
     const optionsAlgs: JwkKeyPairAlg[] = ['RS256', 'RS384', 'RS512', 'EdDSA'];
@@ -148,6 +150,7 @@
             flows.password = client.flows_enabled.includes('password');
             flows.refreshToken = client.flows_enabled.includes('refresh_token');
             flows.deviceCode = client.flows_enabled.includes(AuthFlowDeviceCode);
+            flows.tokenExchange = client.flows_enabled.includes(AuthFlowTokenExchange);
 
             accessTokenAlg = client.access_token_alg;
             idTokenAlg = client.id_token_alg;
@@ -252,6 +255,9 @@
         }
         if (flows.deviceCode) {
             payload.flows_enabled.push(AuthFlowDeviceCode);
+        }
+        if (flows.tokenExchange) {
+            payload.flows_enabled.push(AuthFlowTokenExchange);
         }
 
         if (challenges.plain) {
@@ -359,6 +365,12 @@
         <InputCheckbox ariaLabel="password" bind:checked={flows.password}>password</InputCheckbox>
         <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
             refresh_token
+        </InputCheckbox>
+        <InputCheckbox
+            ariaLabel="urn:ietf:params:oauth:grant-type:token-exchange"
+            bind:checked={flows.tokenExchange}
+        >
+            token_exchange
         </InputCheckbox>
 
         <div style:height=".5rem"></div>

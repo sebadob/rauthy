@@ -187,7 +187,7 @@ pub struct Client {
     #[validate(custom(function = "validate_vec_origin"))]
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
+    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_types"))]
     pub flows_enabled: Vec<String>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`

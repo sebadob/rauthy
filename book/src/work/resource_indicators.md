@@ -15,7 +15,7 @@ The `resource` parameter is accepted on:
 
 - the **authorization request** (`GET /oidc/authorize`), carried through the issued auth code, and
 - the **token request** (`POST /oidc/token`) for the `authorization_code`, `client_credentials`,
-  and `refresh_token` grants.
+  and `refresh_token` grants, as well as the [Token Exchange](token_exchange.md).
 
 The requested value is matched verbatim against the client's allow-list (see below). The RFC
 recommends an absolute URI such as `https://api.example.com/mcp`, but Rauthy treats the value as
@@ -38,7 +38,9 @@ config or via the clients API:
 
 - **`allowed_resources`** is the allow-list against which a requested `resource` is validated. If it
   is empty, any `resource` request is rejected with `invalid_target` (deny by default). To let a
-  client request a resource, add the exact value here.
+  client request a resource, add the exact value here. The same list is used for the target of a
+  [Token Exchange](token_exchange.md), because the question is the same one: may this client mint a
+  token for that target?
 - **`default_aud`** is a list of audiences that are **always** added to this client's access tokens,
   independent of any `resource` parameter. This is handy for less capable clients or IoT devices
   that cannot send a `resource` parameter but still need a fixed audience.

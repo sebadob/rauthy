@@ -129,16 +129,9 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
     let url_token = format!("{backend_url}/oidc/token");
     let mut token_req = TokenRequest {
         grant_type: "client_credentials".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(ID.to_string()),
         client_secret: Some(secret),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
 
     // (1) no `resource` requested -> `aud` is an array containing the client and the

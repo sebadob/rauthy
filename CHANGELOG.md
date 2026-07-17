@@ -14,6 +14,27 @@ instead of only after a manual page reload.
 
 [#1649](https://github.com/sebadob/rauthy/pull/1649)
 
+#### Token Exchange (RFC 8693)
+
+Rauthy supports the [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) token exchange now, via the
+`urn:ietf:params:oauth:grant-type:token-exchange` grant on the existing token endpoint. It lets a
+service trade an access token it received for one that is scoped to a downstream service, instead of
+forwarding a token that was never minted for that target.
+
+Both impersonation and delegation are supported. With an `actor_token`, the exchanged token carries
+an `act` claim naming the acting party, so a resource server can tell "A acting for B" apart from
+"B"; a delegation chain stays nested inside it.
+
+The exchange is deny-by-default and needs two things on the exchanging client: `token_exchange` in
+its `flows_enabled`, and the requested target in its `allowed_resources`, which is the same
+allow-list the RFC 8707 resource indicators use. Only confidential clients may exchange.
+
+Rauthy only accepts access tokens as `subject_token` / `actor_token`, and only ever issues an access
+token in return. An exchanged token deliberately never comes with a refresh token. `may_act` is not
+supported yet.
+
+[#1652](https://github.com/sebadob/rauthy/pull/1652)
+
 ## v0.36.0
 
 ### Breaking

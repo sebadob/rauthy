@@ -232,13 +232,13 @@ pub struct DeviceVerifyRequest {
     pub device_accepted: DeviceAcceptedRequest,
 }
 
-#[derive(Deserialize, Validate, ToSchema)]
+#[derive(Default, Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct TokenRequest {
-    /// Validation: `^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$`
+    /// Validation: `^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$`
     #[validate(regex(
         path = "*RE_GRANT_TYPES",
-        code = "^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$"
+        code = "^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$"
     ))]
     pub grant_type: String,
     /// Validation: `[a-zA-Z0-9]`
@@ -278,6 +278,50 @@ pub struct TokenRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
     #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
     pub resource: Option<String>,
+
+    /// RFC 8693 token exchange: the token that represents the identity on whose behalf the
+    /// request is made. Rauthy only accepts an access token here.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub subject_token: Option<String>,
+    /// RFC 8693 token exchange: the type of the `subject_token`. Rauthy only accepts
+    /// `urn:ietf:params:oauth:token-type:access_token`.
+    ///
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub subject_token_type: Option<String>,
+    /// RFC 8693 token exchange: the token that represents the identity of the acting party.
+    /// If given, the exchanged token is a delegation and will contain an `act` claim.
+    /// Rauthy only accepts an access token here.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub actor_token: Option<String>,
+    /// RFC 8693 token exchange: the type of the `actor_token`. Rauthy only accepts
+    /// `urn:ietf:params:oauth:token-type:access_token`.
+    ///
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub actor_token_type: Option<String>,
+    /// RFC 8693 token exchange: the type of token the client wants back. Rauthy only issues
+    /// `urn:ietf:params:oauth:token-type:access_token`, which is also the default.
+    ///
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub requested_token_type: Option<String>,
+    /// RFC 8693 token exchange: the target of the exchanged token. Validated against the
+    /// client's `allowed_resources`, exactly like `resource`.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub audience: Option<String>,
+    /// RFC 8693 token exchange: the scopes for the exchanged token. May only narrow the
+    /// scopes of the `subject_token`, never widen them.
+    ///
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
+    pub scope: Option<String>,
 }
 
 impl TokenRequest {

@@ -141,12 +141,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let url_token = format!("{}/oidc/token", backend_url);
     let res = reqwest::Client::new()
@@ -369,16 +364,8 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
 
     let mut body = TokenRequest {
         grant_type: "client_credentials".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
-        client_secret: None,
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let url = format!("{}/oidc/token", backend_url);
     let client = reqwest::Client::new();
@@ -501,16 +488,9 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     let url = format!("{}/oidc/token", get_backend_url());
     let mut body = TokenRequest {
         grant_type: "password".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
-        client_secret: None,
-        code_verifier: None,
-        device_code: None,
         username: Some(USERNAME.to_string()),
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let client = reqwest::Client::new();
     let res = client.post(&url).form(&body).send().await?;
@@ -561,16 +541,10 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     time::sleep(Duration::from_secs(2)).await;
     let req = TokenRequest {
         grant_type: "refresh_token".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
-        resource: None,
+        ..Default::default()
     };
     let url = format!("{}/oidc/token", get_backend_url());
     let res = reqwest::Client::new().post(&url).form(&req).send().await?;
@@ -606,16 +580,11 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     // token request itself
     let body = TokenRequest {
         grant_type: "password".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
-        code_verifier: None,
-        device_code: None,
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
 
     // dpop header
@@ -717,16 +686,10 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     time::sleep(Duration::from_secs(1)).await;
     let req = TokenRequest {
         grant_type: "refresh_token".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
-        resource: None,
+        ..Default::default()
     };
 
     // without DPoP header, it should fail
@@ -823,13 +786,8 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         code: Some(code.to_string()),
         redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some(client_id.to_string()),
-        client_secret: None,
         code_verifier: Some(challenge_plain.to_string()),
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
 
     let url_token = format!("{}/oidc/token", backend_url);
@@ -846,16 +804,9 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     time::sleep(Duration::from_secs(1)).await;
     let req = TokenRequest {
         grant_type: "refresh_token".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(client_id.to_string()),
-        client_secret: None,
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
-        resource: None,
+        ..Default::default()
     };
     let res = client.post(&url_token).form(&req).send().await?;
     assert!(res.status().is_success());
@@ -921,16 +872,11 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
     let url_token = format!("{}/oidc/token", backend_url);
     let body = TokenRequest {
         grant_type: "password".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
-        code_verifier: None,
-        device_code: None,
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let res = client.post(&url_token).form(&body).send().await?;
     assert!(res.status().is_success());
@@ -1162,16 +1108,11 @@ async fn fetch_token_set() -> TokenSet {
     let url_token = format!("{}/oidc/token", get_backend_url());
     let body = TokenRequest {
         grant_type: "password".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
-        code_verifier: None,
-        device_code: None,
         username: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let res = reqwest::Client::new()
         .post(&url_token)

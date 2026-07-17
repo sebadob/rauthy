@@ -2,10 +2,12 @@ use crate::oidc::grant_types::authorization_code::grant_type_authorization_code;
 use crate::oidc::grant_types::client_credentials::grant_type_credentials;
 use crate::oidc::grant_types::password::grant_type_password;
 use crate::oidc::grant_types::refresh_token::grant_type_refresh;
+use crate::oidc::grant_types::token_exchange::grant_type_token_exchange;
 use crate::token_set::TokenSet;
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use rauthy_api_types::oidc::TokenRequest;
+use rauthy_common::constants::GRANT_TYPE_TOKEN_EXCHANGE;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 
 pub use grant_types::device_code::grant_type_device_code;
@@ -33,6 +35,7 @@ pub async fn get_token_set(
         "client_credentials" => grant_type_credentials(req, req_data).await,
         "password" => grant_type_password(req, browser_id, req_data).await,
         "refresh_token" => grant_type_refresh(req, req_data).await,
+        s if s == GRANT_TYPE_TOKEN_EXCHANGE => grant_type_token_exchange(req, req_data).await,
         _ => Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Invalid 'grant_type'",

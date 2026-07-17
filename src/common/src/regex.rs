@@ -40,7 +40,7 @@ pub static RE_CSS_VALUE_LOOSE: LazyLock<Regex> =
 pub static RE_DATE_STR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap());
 pub static RE_GRANT_TYPES: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$").unwrap()
+    Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$").unwrap()
 });
 pub static RE_GRANT_TYPES_EPHEMERAL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap()

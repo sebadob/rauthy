@@ -311,16 +311,9 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     // try to get a token with the credentials
     let mut token_req = TokenRequest {
         grant_type: "client_credentials".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(secret.clone()),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let url_token = format!("{}/oidc/token", backend_url);
     let res = client.post(&url_token).form(&token_req).send().await?;
@@ -457,16 +450,9 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
 
     let token_req = TokenRequest {
         grant_type: "client_credentials".to_string(),
-        code: None,
-        redirect_uri: None,
         client_id: Some(client_id.to_string()),
         client_secret: Some(secret),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let res = client.post(&url_token).form(&token_req).send().await?;
     assert_eq!(res.status(), 200);

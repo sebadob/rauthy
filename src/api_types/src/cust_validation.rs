@@ -86,7 +86,7 @@ pub fn validate_vec_grant_types(value: &[String]) -> Result<(), ValidationError>
     for v in value {
         if !RE_GRANT_TYPES.is_match(v) {
             return Err(ValidationError::new(
-                "^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$",
+                "^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$",
             ));
         }
     }
