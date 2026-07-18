@@ -253,6 +253,8 @@ async fn server_with_metrics() -> std::io::Result<()> {
             .wrap(metrics_collector.clone())
             .service(oidc::get_well_known)
             .service(oidc::get_well_known_oauth)
+            .service(oidc::get_well_known_oauth_rfc8414)
+            .service(oidc::get_well_known_oauth_rfc8414_trailing)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
@@ -338,6 +340,8 @@ async fn server_without_metrics() -> std::io::Result<()> {
             .wrap(default_headers())
             .service(oidc::get_well_known)
             .service(oidc::get_well_known_oauth)
+            .service(oidc::get_well_known_oauth_rfc8414)
+            .service(oidc::get_well_known_oauth_rfc8414_trailing)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first

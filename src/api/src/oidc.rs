@@ -1268,3 +1268,29 @@ pub async fn get_well_known() -> Result<HttpResponse, ErrorResponse> {
 pub async fn get_well_known_oauth() -> Result<HttpResponse, ErrorResponse> {
     well_known_response().await
 }
+
+// RFC 8414 §3.1 path-insertion alias for the AS-metadata document. Because
+// rauthy's issuer carries a path component (`https://<host>/auth/v1/`), an
+// RFC-compliant client forms the metadata URL by INSERTING
+// `/.well-known/oauth-authorization-server` between host and issuer path, i.e.
+// `https://<host>/.well-known/oauth-authorization-server/auth/v1`. claude.ai
+// probes exactly this path-insertion form; without it the request falls through
+// to the SPA catch-all (301 -> HTML), so the client never reads
+// `client_id_metadata_document_supported` and falls back to Dynamic Client
+// Registration. The `/auth/v1` segment is rauthy's fixed API mount prefix (see
+// the hardcoded issuer in `rauthy_config.rs`), so the route can be a constant.
+// Body is identical to `get_well_known_oauth`. See issue #1643.
+//
+// Both the trailing-slash and no-slash forms are served: the issuer path is
+// `/auth/v1/` (with a trailing slash), so a strict client may preserve it, while
+// claude.ai probes the no-slash form. rauthy runs no `NormalizePath` middleware,
+// so each exact path needs its own route.
+#[get("/.well-known/oauth-authorization-server/auth/v1")]
+pub async fn get_well_known_oauth_rfc8414() -> Result<HttpResponse, ErrorResponse> {
+    well_known_response().await
+}
+
+#[get("/.well-known/oauth-authorization-server/auth/v1/")]
+pub async fn get_well_known_oauth_rfc8414_trailing() -> Result<HttpResponse, ErrorResponse> {
+    well_known_response().await
+}
