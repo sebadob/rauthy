@@ -20,6 +20,7 @@ pub struct JwtCommonClaims<'a> {
     pub jti: Option<&'a str>,
     #[serde(borrow)]
     pub aud: Audience<'a>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<&'a str>,
     // pub nonce: Option<&'a str>,
     pub typ: JwtTokenType,
@@ -559,6 +560,26 @@ mod tests {
                 "id custom_flattened leaked reserved claim `{reserved}`"
             );
         }
+    }
+
+    // Issue #1646: a subject-less token (e.g. `client_credentials`) must OMIT `sub`
+    // rather than emit `"sub": null`. RFC 7519 §4.1.2 requires `sub`, when present, to
+    // be a StringOrURI; `null` violates that and PyJWT >=2.10 rejects such tokens.
+    #[test]
+    fn common_claims_omit_sub_when_none_present_when_some() {
+        // sub = None -> the `sub` key must not appear at all
+        let mut claims = common();
+        claims.sub = None;
+        let v = serde_json::to_value(&claims).unwrap();
+        assert!(
+            v.get("sub").is_none(),
+            "`sub` must be omitted (not null) when None, got: {v}"
+        );
+
+        // sub = Some(..) -> the `sub` key must be present as that string
+        claims.sub = Some("some-subject-id");
+        let v = serde_json::to_value(&claims).unwrap();
+        assert_eq!(v.get("sub"), Some(&json!("some-subject-id")));
     }
 
     // (a) No custom value can produce shadowed JSON: a flattened map carrying a reserved
