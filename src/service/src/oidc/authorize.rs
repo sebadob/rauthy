@@ -184,8 +184,9 @@ pub async fn post_authorize_refresh(
             nonce: req_data.nonce,
             code_challenge: req_data.code_challenge,
             code_challenge_method: req_data.code_challenge_method,
-            // a session refresh has no new authorization request to carry a `resource`
-            resource: None,
+            // the silent re-auth authorize request still carries the RFC 8707 `resource`,
+            // thread it through so audience-bound tokens survive subsequent logins
+            resource: req_data.resource,
             header_origin,
             require_webauthn,
         },
