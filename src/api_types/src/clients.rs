@@ -117,8 +117,8 @@ pub struct EphemeralClientRequest {
     /// requested `resource` is validated against this list; when absent, `resource` is
     /// only honored if `ephemeral_clients.danger_allow_unvalidated_resource` is enabled.
     ///
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
     pub allowed_resources: Option<Vec<String>>,
 }
 
@@ -207,14 +207,14 @@ pub struct UpdateClientRequest {
     /// RFC 8707 allow-list of resource indicators this client may request. An empty /
     /// missing list rejects any `resource` request parameter with `invalid_target`.
     ///
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
     pub allowed_resources: Option<Vec<String>>,
     /// Audiences that are always added to this client's tokens, independent of any
     /// `resource` request parameter. Useful for clients that cannot send a `resource`.
     ///
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
     pub default_aud: Option<Vec<String>>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,

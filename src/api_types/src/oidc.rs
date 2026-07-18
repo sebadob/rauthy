@@ -5,7 +5,7 @@ use actix_web::HttpRequest;
 use actix_web::http::header;
 use rauthy_common::regex::{
     RE_ALNUM, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_GRANT_TYPES,
-    RE_LOWERCASE, RE_SCOPE_SPACE, RE_URI,
+    RE_LOWERCASE, RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -66,8 +66,8 @@ pub struct AuthRequest {
     /// requested resource is validated against the client's `allowed_resources` and,
     /// on success, added to the issued access token's `aud`.
     ///
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
     pub resource: Option<String>,
 }
 
@@ -138,8 +138,8 @@ pub struct LoginRequest {
     /// RFC 8707 resource indicator forwarded from the authorization request, carried
     /// into the auth code so the issued access token can be audience-restricted.
     ///
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
     pub resource: Option<String>,
 }
 
@@ -169,6 +169,12 @@ pub struct LoginRefreshRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator forwarded from the authorization request, carried
+    /// into the auth code so the issued access token can be audience-restricted.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
+    pub resource: Option<String>,
 }
 
 #[derive(Default, Deserialize, Validate, ToSchema, IntoParams)]
@@ -269,8 +275,8 @@ pub struct TokenRequest {
     /// `refresh_token` grant it may only narrow (be a subset of) the resources granted
     /// to the original token, never widen them.
     ///
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
     pub resource: Option<String>,
 }
 
@@ -518,4 +524,64 @@ pub struct TokenInfo<'a> {
     pub exp: Option<i64>,
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
     pub cnf: Option<JktClaim<'a>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use validator::Validate;
+
+    // Regression test for RFC 8707 `resource` being dropped on the silent re-auth path.
+    // The refresh authorize request must deserialize and validate a `resource` just like
+    // the full-login `LoginRequest` does, so audience-bound tokens survive later logins.
+    #[test]
+    fn login_refresh_request_carries_valid_resource() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "https://mcp.example.com/mcp"
+        }"#;
+
+        let req: LoginRefreshRequest =
+            serde_json::from_str(json).expect("must deserialize the resource field");
+        assert_eq!(req.resource.as_deref(), Some("https://mcp.example.com/mcp"));
+        assert!(
+            req.validate().is_ok(),
+            "a valid absolute-URI resource must pass validation"
+        );
+    }
+
+    #[test]
+    fn login_refresh_request_rejects_invalid_resource() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "not a valid uri"
+        }"#;
+
+        let req: LoginRefreshRequest =
+            serde_json::from_str(json).expect("must deserialize even an invalid resource");
+        assert!(
+            req.validate().is_err(),
+            "a resource with disallowed characters must fail validation"
+        );
+    }
+
+    // RFC 8707 §2: the `resource` MUST be an absolute URI without a fragment. The
+    // fragment-excluding `RE_RESOURCE` validator must reject a `#` fragment.
+    #[test]
+    fn login_refresh_request_rejects_resource_with_fragment() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "https://mcp.example.com/mcp#frag"
+        }"#;
+
+        let req: LoginRefreshRequest =
+            serde_json::from_str(json).expect("must deserialize even a fragmented resource");
+        assert!(
+            req.validate().is_err(),
+            "a resource containing a URI fragment must fail validation"
+        );
+    }
 }

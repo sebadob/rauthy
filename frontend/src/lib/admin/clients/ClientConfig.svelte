@@ -12,6 +12,7 @@
         PATTERN_CONTACT,
         PATTERN_GROUP,
         PATTERN_ORIGIN,
+        PATTERN_RESOURCE,
         PATTERN_URI,
     } from '$utils/patterns';
     import {
@@ -405,14 +406,14 @@
             bind:values={allowedResources}
             label={ta.clients.allowedResources}
             errMsg={ta.validation.uri}
-            pattern={PATTERN_URI}
+            pattern={PATTERN_RESOURCE}
         />
         <p class="desc">{ta.clients.descDefaultAud}</p>
         <InputTags
             bind:values={defaultAud}
             label={ta.clients.defaultAud}
             errMsg={ta.validation.uri}
-            pattern={PATTERN_URI}
+            pattern={PATTERN_RESOURCE}
         />
 
         <div style:height=".5rem"></div>

@@ -228,6 +228,9 @@
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
         }
+        if (resource) {
+            payload.resource = resource;
+        }
 
         let res = await fetchPost<undefined | WebauthnLoginResponse>(
             '/auth/v1/oidc/authorize/refresh',

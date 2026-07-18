@@ -1,7 +1,7 @@
 use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
 use rauthy_common::regex::{
     RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GRANT_TYPES, RE_GROUPS, RE_LINUX_HOSTNAME,
-    RE_ORIGIN, RE_ROLES_SCOPES, RE_URI,
+    RE_ORIGIN, RE_RESOURCE, RE_ROLES_SCOPES, RE_URI,
 };
 use std::borrow::Cow;
 use validator::ValidationError;
@@ -144,6 +144,19 @@ pub fn validate_vec_uri(value: &[String]) -> Result<(), ValidationError> {
     });
     if let Some(e) = err {
         return Err(ValidationError::new(e));
+    }
+    Ok(())
+}
+
+/// RFC 8707 resource indicators (client `allowed_resources` / `default_aud`). Same as a URI
+/// but a fragment (`#`) is not allowed, since a resource indicator MUST be an absolute URI
+/// without a fragment (RFC 8707 §2). Matches the request-side `resource` validation.
+#[inline]
+pub fn validate_vec_resource(value: &[String]) -> Result<(), ValidationError> {
+    for v in value {
+        if !RE_RESOURCE.is_match(v) {
+            return Err(ValidationError::new("^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$"));
+        }
     }
     Ok(())
 }
