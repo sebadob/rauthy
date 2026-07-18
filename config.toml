@@ -1476,6 +1476,21 @@ cache_lifetime = 3600
 # overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
 #danger_allow_unvalidated_resource = false
 
+# A dynamic client registration is always rejected when it advertises a grant
+# type Rauthy does not support. Some spec-valid CIMD clients (e.g. claude.ai)
+# advertise an unsupported grant (`urn:ietf:params:oauth:grant-type:jwt-bearer`)
+# in their metadata document without ever using it, which would otherwise cause
+# the whole document to be rejected. Setting this to `true` lets an ephemeral
+# (CIMD) client document through by sanitizing - stripping - the unsupported
+# grant types instead of rejecting it.
+#
+# This applies ONLY to ephemeral clients. Dynamic client registration (DCR) and
+# admin-managed clients always keep rejecting unknown grant types.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS
+#ignore_unknown_auth_flows = false
+
 [events]
 # The E-Mail address event notifications should be sent to.
 #

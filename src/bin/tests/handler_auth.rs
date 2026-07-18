@@ -8,7 +8,7 @@ use chrono::Utc;
 use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
-use rauthy_api_types::clients::UpdateClientRequest;
+use rauthy_api_types::clients::{DynamicClientRequest, UpdateClientRequest};
 use rauthy_api_types::oidc::{
     JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest, TokenRevocationRequest,
     TokenValidationRequest,
@@ -1230,4 +1230,43 @@ async fn validate_token_request(token: String) -> Result<reqwest::Response, Box<
         .send()
         .await?;
     Ok(res)
+}
+
+// #1644: Dynamic Client Registration stays strict and REJECTS an unsupported grant type.
+// `POST /clients_dyn` stores the advertised `grant_types` verbatim as the client's enabled
+// flows, so an unsupported one (`urn:ietf:params:oauth:grant-type:jwt-bearer`, which Rauthy
+// does not implement) must be rejected up front rather than persisted as a dead flow. The
+// ephemeral (CIMD) opt-in path that *strips* unknown grants when
+// `ephemeral_clients.ignore_unknown_auth_flows` is enabled is a separate code path and is not
+// exercised here.
+#[tokio::test]
+async fn test_dcr_rejects_unsupported_grant() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
+
+    let payload = DynamicClientRequest {
+        redirect_uris: vec!["http://localhost:8080/*".to_string()],
+        grant_types: vec![
+            "authorization_code".to_string(),
+            // unsupported by Rauthy -> DCR must reject the whole request
+            "urn:ietf:params:oauth:grant-type:jwt-bearer".to_string(),
+        ],
+        client_name: Some("Dyn JWT Bearer Reject".to_string()),
+        client_uri: None,
+        contacts: None,
+        id_token_signed_response_alg: None,
+        token_endpoint_auth_method: Some("none".to_string()),
+        token_endpoint_auth_signing_alg: None,
+        post_logout_redirect_uri: None,
+        backchannel_logout_uri: None,
+    };
+    let res = client
+        .post(format!("{backend_url}/clients_dyn"))
+        .json(&payload)
+        .send()
+        .await?;
+    // `payload.validate()` runs before the IP rate-limit, so this is a deterministic 400
+    assert_eq!(res.status(), 400);
+
+    Ok(())
 }

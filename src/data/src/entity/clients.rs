@@ -19,6 +19,7 @@ use rauthy_api_types::clients::{
     NewClientRequest, ScimClientRequestResponse,
 };
 use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
+use rauthy_common::regex::RE_GRANT_TYPES;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{http_client, is_hiqlite};
 use rauthy_derive::FromPgRow;
@@ -1507,7 +1508,7 @@ impl Client {
             return Err(ErrorResponse::new(ErrorResponseType::Connection, msg));
         }
 
-        let body = match res.json::<EphemeralClientRequest>().await {
+        let mut body = match res.json::<EphemeralClientRequest>().await {
             Ok(b) => b,
             Err(err) => {
                 let msg =
@@ -1516,6 +1517,23 @@ impl Client {
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, msg));
             }
         };
+
+        // A spec-valid CIMD document may advertise a grant type Rauthy does not support
+        // (e.g. claude.ai lists `urn:ietf:params:oauth:grant-type:jwt-bearer` but never uses
+        // it). Rejecting the whole document over an advertised-but-unused grant would block
+        // an otherwise-valid client. When the operator opts in, sanitize the list - strip the
+        // unsupported grant types - so validation passes; the flow set is derived from
+        // `ephemeral_clients.allowed_flows` regardless. Off by default: unknown grant types
+        // are rejected by `validate()` below, keeping the upfront error.
+        if RauthyConfig::get()
+            .vars
+            .ephemeral_clients
+            .ignore_unknown_auth_flows
+            && let Some(grant_types) = body.grant_types.as_mut()
+        {
+            retain_supported_grant_types(grant_types);
+        }
+
         body.validate()?;
 
         let slf = Self::from(body);
@@ -1891,12 +1909,50 @@ fn extract_external_origin<'a>(
     Ok(Some(origin))
 }
 
+/// Strips grant types Rauthy does not support from an ephemeral (CIMD) client document. Used
+/// when `ephemeral_clients.ignore_unknown_auth_flows` is enabled so an operator can accept a
+/// document that advertises an unsupported grant (e.g. claude.ai's
+/// `urn:ietf:params:oauth:grant-type:jwt-bearer`) without enabling anything unsupported - the
+/// effective flows still come from `ephemeral_clients.allowed_flows` (#1644).
+pub(crate) fn retain_supported_grant_types(grant_types: &mut Vec<String>) {
+    grant_types.retain(|g| RE_GRANT_TYPES.is_match(g));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn retain_supported_grant_types_strips_unknown() {
+        // #1644: an ephemeral/CIMD document advertising an unsupported grant (claude.ai's
+        // jwt-bearer) is sanitized down to the grants Rauthy supports; would fail if the strip
+        // were dropped or matched the wrong set.
+        let mut advertised = vec![
+            "authorization_code".to_string(),
+            "refresh_token".to_string(),
+            "urn:ietf:params:oauth:grant-type:jwt-bearer".to_string(),
+        ];
+        retain_supported_grant_types(&mut advertised);
+        assert_eq!(
+            advertised,
+            vec![
+                "authorization_code".to_string(),
+                "refresh_token".to_string()
+            ],
+        );
+
+        // an all-supported list is unchanged; an only-unknown list collapses to empty
+        let mut supported = vec!["authorization_code".to_string()];
+        retain_supported_grant_types(&mut supported);
+        assert_eq!(supported, vec!["authorization_code".to_string()]);
+
+        let mut only_unknown = vec!["urn:ietf:params:oauth:grant-type:jwt-bearer".to_string()];
+        retain_supported_grant_types(&mut only_unknown);
+        assert!(only_unknown.is_empty());
+    }
 
     #[test]
     fn test_client_impl() {
