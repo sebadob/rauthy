@@ -170,6 +170,11 @@
     ul {
         margin-left: 1rem;
         list-style: none;
+        /* Two columns when the host page is wide enough (halves the block's
+           height on short landscape viewports), single column otherwise. */
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+        column-gap: 1rem;
     }
 
     li {
