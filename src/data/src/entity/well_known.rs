@@ -2,7 +2,8 @@ use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
-use rauthy_common::constants::{CACHE_TTL_APP, GRANT_TYPE_DEVICE_CODE, GRANT_TYPE_TOKEN_EXCHANGE};
+use rauthy_api_types::oidc::GrantType;
+use rauthy_common::constants::CACHE_TTL_APP;
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use strum::IntoEnumIterator;
@@ -118,12 +119,12 @@ impl WellKnown {
             registration_endpoint,
             jwks_uri,
             grant_types_supported: [
-                "authorization_code",
-                "client_credentials",
-                "password",
-                "refresh_token",
-                GRANT_TYPE_DEVICE_CODE,
-                GRANT_TYPE_TOKEN_EXCHANGE,
+                GrantType::AuthorizationCode.as_str(),
+                GrantType::ClientCredentials.as_str(),
+                GrantType::Password.as_str(),
+                GrantType::RefreshToken.as_str(),
+                GrantType::DeviceCode.as_str(),
+                GrantType::TokenExchange.as_str(),
             ],
             response_types_supported: ["code"],
             subject_types_supported: ["public"],

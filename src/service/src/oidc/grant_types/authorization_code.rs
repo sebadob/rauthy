@@ -7,7 +7,7 @@ use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
 use chrono::Utc;
-use rauthy_api_types::oidc::TokenRequest;
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
 use rauthy_data::entity::auth_codes::AuthCode;
@@ -66,7 +66,7 @@ pub async fn grant_type_authorization_code(
         })?;
         client.validate_secret(secret, &req).await?;
     }
-    client.validate_flow("authorization_code")?;
+    client.validate_flow(GrantType::AuthorizationCode)?;
     client.validate_redirect_uri(req_data.redirect_uri.as_deref().unwrap_or_default())?;
 
     // check for DPoP header

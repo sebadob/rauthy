@@ -10,16 +10,15 @@ use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError, g
 use chrono::Utc;
 use rauthy_api_types::oidc::{
     AuthRequest, CertsParams, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
-    DeviceVerifyRequest, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, LoginRefreshRequest,
-    LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse, SessionInfoResponse,
-    TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
+    DeviceVerifyRequest, DeviceVerifyResponse, GrantType, JWKSCerts, JWKSPublicKeyCerts,
+    LoginRefreshRequest, LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse,
+    SessionInfoResponse, TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
-    APPLICATION_JSON, COOKIE_MFA, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
-    PROVIDER_ATPROTO,
+    APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
@@ -573,7 +572,7 @@ pub async fn post_device_auth(
         });
     }
 
-    if let Err(err) = client.validate_flow(GRANT_TYPE_DEVICE_CODE) {
+    if let Err(err) = client.validate_flow(GrantType::DeviceCode) {
         return HttpResponse::Forbidden().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(err.message),
@@ -971,7 +970,7 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
     ),
 )]
 #[post("/oidc/token")]
-#[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type))]
+#[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type.as_str()))]
 pub async fn post_token(
     req: HttpRequest,
     browser_id: BrowserId,
@@ -981,7 +980,7 @@ pub async fn post_token(
 
     let ip = real_ip_from_req(&req)?;
 
-    if payload.grant_type == GRANT_TYPE_DEVICE_CODE {
+    if payload.grant_type == GrantType::DeviceCode {
         // the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
@@ -989,7 +988,7 @@ pub async fn post_token(
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let has_password_been_hashed = payload.grant_type == "password";
+    let has_password_been_hashed = payload.grant_type == GrantType::Password;
 
     let res = match oidc::get_token_set(payload, browser_id, req).await {
         Ok((token_set, headers)) => {

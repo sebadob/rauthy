@@ -4,7 +4,7 @@ use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
 use chrono::Utc;
-use rauthy_api_types::oidc::TokenRequest;
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::real_ip_from_req;
@@ -53,7 +53,7 @@ pub async fn grant_type_password(
         })?;
         client.validate_secret(secret, &req).await?;
     }
-    client.validate_flow("password")?;
+    client.validate_flow(GrantType::Password)?;
 
     let mut headers = Vec::new();
     let dpop_fingerprint =

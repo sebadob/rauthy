@@ -18,8 +18,8 @@ use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
 };
+use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
-use rauthy_common::regex::RE_GRANT_TYPES;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{http_client, is_hiqlite};
 use rauthy_derive::FromPgRow;
@@ -847,7 +847,7 @@ WHERE id = $4"#;
 
 impl Client {
     pub fn allow_refresh_token(&self) -> bool {
-        self.flows_enabled.contains("refresh_token")
+        self.is_flow_enabled(GrantType::RefreshToken)
     }
 
     // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
@@ -972,6 +972,16 @@ impl Client {
             ));
         }
 
+        // A dynamic client is never allowed to set `allowed_resources` in the first place, so it
+        // can never have a match below. Rejecting it explicitly is cheap and keeps this robust if
+        // anything about the dynamic registration rules changes in the future.
+        if self.is_dynamic() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "dynamic clients must not request a `resource`",
+            ));
+        }
+
         let mut allowed = self.allowed_resources_iter().peekable();
         if allowed.peek().is_some() {
             if allowed.any(|r| r == resource) {
@@ -1050,14 +1060,24 @@ impl Client {
         JwkKeyPairAlg::from_str(self.id_token_alg.as_str())
     }
 
+    /// The enabled flows for this client. Values are validated as [GrantType] on the way in, so
+    /// anything unparsable here is corrupted data and gets skipped rather than failing the read.
     #[inline]
-    pub fn get_flows(&self) -> Vec<String> {
-        let mut res = Vec::new();
+    pub fn get_flows(&self) -> Vec<GrantType> {
         self.flows_enabled
             .split(',')
-            .map(|f| f.trim().to_owned())
-            .for_each(|f| res.push(f));
-        res
+            .filter_map(|f| match GrantType::from_str(f.trim()) {
+                Ok(flow) => Some(flow),
+                Err(_) => {
+                    warn!(
+                        client_id = self.id,
+                        flow = f,
+                        "Skipping unknown `flows_enabled` entry"
+                    );
+                    None
+                }
+            })
+            .collect()
     }
 
     #[inline]
@@ -1410,9 +1430,18 @@ impl Client {
         Ok(())
     }
 
+    /// `true` if the given flow is listed in `flows_enabled`. Matches on whole CSV entries, so a
+    /// flow name can never be satisfied by being a substring of a different one.
     #[inline]
-    pub fn validate_flow(&self, flow: &str) -> Result<(), ErrorResponse> {
-        if flow.is_empty() || !self.flows_enabled.contains(flow) {
+    pub fn is_flow_enabled(&self, flow: GrantType) -> bool {
+        self.flows_enabled
+            .split(',')
+            .any(|f| f.trim() == flow.as_str())
+    }
+
+    #[inline]
+    pub fn validate_flow(&self, flow: GrantType) -> Result<(), ErrorResponse> {
+        if !self.is_flow_enabled(flow) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("'{flow}' flow is not allowed for this client"),
@@ -1710,7 +1739,7 @@ impl Default for Client {
             redirect_uris: String::default(),
             post_logout_redirect_uris: None,
             allowed_origins: None,
-            flows_enabled: "authorization_code".to_string(),
+            flows_enabled: GrantType::AuthorizationCode.as_str().to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "EdDSA".to_string(),
             auth_code_lifetime: 60,
@@ -1840,7 +1869,7 @@ impl Client {
             redirect_uris: req.redirect_uris.join(","),
             post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
             allowed_origins,
-            flows_enabled: req.grant_types.join(","),
+            flows_enabled: GrantType::csv(&req.grant_types),
             access_token_alg,
             id_token_alg,
             access_token_lifetime: min(
@@ -1944,7 +1973,7 @@ fn extract_external_origin<'a>(
 /// `urn:ietf:params:oauth:grant-type:jwt-bearer`) without enabling anything unsupported - the
 /// effective flows still come from `ephemeral_clients.allowed_flows` (#1644).
 pub(crate) fn retain_supported_grant_types(grant_types: &mut Vec<String>) {
-    grant_types.retain(|g| RE_GRANT_TYPES.is_match(g));
+    grant_types.retain(|g| GrantType::from_str(g).is_ok());
 }
 
 #[cfg(test)]
@@ -2091,10 +2120,10 @@ mod tests {
         assert!(client.validate_challenge_method("blabla").is_err());
         assert!(client.validate_challenge_method("").is_err());
 
-        assert_eq!(client.validate_flow("authorization_code"), Ok(()));
-        assert_eq!(client.validate_flow("password"), Ok(()));
-        assert!(client.validate_flow("blabla").is_err());
-        assert!(client.validate_flow("").is_err());
+        assert_eq!(client.validate_flow(GrantType::AuthorizationCode), Ok(()));
+        assert_eq!(client.validate_flow(GrantType::Password), Ok(()));
+        assert!(client.validate_flow(GrantType::ClientCredentials).is_err());
+        assert!(client.validate_flow(GrantType::DeviceCode).is_err());
 
         // contacts
         assert_eq!(

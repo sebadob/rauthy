@@ -3,8 +3,8 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
-use rauthy_api_types::oidc::{JwkKeyPairAlg, TokenRequest};
-use rauthy_common::constants::{GRANT_TYPE_TOKEN_EXCHANGE, TOKEN_TYPE_ACCESS_TOKEN};
+use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest};
+use rauthy_common::constants::TOKEN_TYPE_ACCESS_TOKEN;
 use rauthy_common::utils::base64_url_no_pad_decode;
 use rauthy_service::token_set::TokenSet;
 use std::error::Error;
@@ -25,7 +25,7 @@ fn decode_claims(access_token: &str) -> serde_json::Value {
     serde_json::from_slice(&bytes).expect("valid JSON claims")
 }
 
-fn base_update(flows: Vec<String>) -> UpdateClientRequest {
+fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
     UpdateClientRequest {
         name: Some("Exchange Test".to_string()),
         confidential: true,
@@ -61,7 +61,7 @@ async fn password_token(http: &reqwest::Client, id: &str, secret: &str) -> Token
     let res = http
         .post(format!("{}/oidc/token", get_backend_url()))
         .form(&TokenRequest {
-            grant_type: "password".to_string(),
+            grant_type: GrantType::Password,
             client_id: Some(id.to_string()),
             client_secret: Some(secret.to_string()),
             username: Some(USERNAME.to_string()),
@@ -110,9 +110,9 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         .put(format!("{backend_url}/clients/{ID}"))
         .headers(auth_headers.clone())
         .json(&base_update(vec![
-            "client_credentials".to_string(),
-            "password".to_string(),
-            "refresh_token".to_string(),
+            GrantType::ClientCredentials,
+            GrantType::Password,
+            GrantType::RefreshToken,
         ]))
         .send()
         .await?;
@@ -137,7 +137,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
@@ -159,10 +159,10 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         .put(format!("{backend_url}/clients/{ID}"))
         .headers(auth_headers.clone())
         .json(&base_update(vec![
-            "client_credentials".to_string(),
-            "password".to_string(),
-            "refresh_token".to_string(),
-            GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            GrantType::ClientCredentials,
+            GrantType::Password,
+            GrantType::RefreshToken,
+            GrantType::TokenExchange,
         ]))
         .send()
         .await?;
@@ -172,7 +172,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
@@ -208,7 +208,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
@@ -227,7 +227,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
@@ -250,7 +250,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
@@ -268,7 +268,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(refresh),
@@ -286,7 +286,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some("not.a.token".to_string()),
@@ -302,7 +302,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
@@ -318,7 +318,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
@@ -337,7 +337,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
-            grant_type: GRANT_TYPE_TOKEN_EXCHANGE.to_string(),
+            grant_type: GrantType::TokenExchange,
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),

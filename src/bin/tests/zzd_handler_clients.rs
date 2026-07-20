@@ -4,7 +4,7 @@ use rauthy_api_types::clients::{
     ClientResponse, ClientSecretRequest, ClientSecretResponse, NewClientRequest,
     UpdateClientRequest,
 };
-use rauthy_api_types::oidc::{JwkKeyPairAlg, TokenRequest};
+use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest};
 use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_common::utils::base64_url_no_pad_decode;
 use rauthy_jwt::claims::JwtAccessClaims;
@@ -28,7 +28,7 @@ fn extract_raw_claims(token: &str) -> Vec<u8> {
 async fn put_client_claims(
     auth_headers: &reqwest::header::HeaderMap,
     id: &str,
-    flows_enabled: Vec<String>,
+    flows_enabled: Vec<GrantType>,
     claims: Option<Value>,
     claims_at_root: bool,
 ) -> Result<ClientResponse, Box<dyn Error>> {
@@ -145,7 +145,10 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     );
     assert_eq!(client.allowed_origins, None);
     // authorization_code should be the only default flow since it is secure
-    assert_eq!(client.flows_enabled.get(0).unwrap(), "authorization_code");
+    assert_eq!(
+        client.flows_enabled.get(0).unwrap(),
+        &GrantType::AuthorizationCode
+    );
     // S256 code challenge by default for better security
     assert_eq!(client.challenges.as_ref().unwrap().get(0).unwrap(), "S256");
 
@@ -174,7 +177,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     let allowed_origins = Some(vec!["http://origin.test.client.io".to_string()]);
 
     let mut flows_enabled = client.flows_enabled;
-    flows_enabled.push("password".to_string());
+    flows_enabled.push(GrantType::Password);
 
     let update_client = UpdateClientRequest {
         name: None,
@@ -237,7 +240,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.enabled, false);
     assert_eq!(
         client.flows_enabled,
-        vec!["authorization_code".to_string(), "password".to_string()]
+        vec![GrantType::AuthorizationCode, GrantType::Password]
     );
     assert_eq!(client.access_token_alg, JwkKeyPairAlg::RS256);
     assert_eq!(client.id_token_alg, JwkKeyPairAlg::RS256);
@@ -310,7 +313,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
 
     // try to get a token with the credentials
     let mut token_req = TokenRequest {
-        grant_type: "client_credentials".to_string(),
+        grant_type: GrantType::ClientCredentials,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(secret.clone()),
         ..Default::default()
@@ -426,7 +429,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let resp = put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         Some(claims.clone()),
         false,
     )
@@ -449,7 +452,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
         .expect("a confidential client to have a secret");
 
     let token_req = TokenRequest {
-        grant_type: "client_credentials".to_string(),
+        grant_type: GrantType::ClientCredentials,
         client_id: Some(client_id.to_string()),
         client_secret: Some(secret),
         ..Default::default()
@@ -477,7 +480,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let resp = put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         Some(claims.clone()),
         true,
     )
@@ -501,7 +504,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         Some(json!({ "iss": "evil" })),
         true,
     )
@@ -517,7 +520,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let resp = put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         None,
         false,
     )

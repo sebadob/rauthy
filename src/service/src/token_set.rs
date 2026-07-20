@@ -620,9 +620,9 @@ impl TokenSet {
             } else {
                 let attrs = UserAttrValueEntity::find_for_user_with_defaults(&user.id).await?;
                 let mut res = HashMap::with_capacity(attrs.len());
-                attrs.iter().for_each(|a| {
-                    res.insert(a.key.clone(), a.value.clone());
-                });
+                for a in attrs {
+                    res.insert(a.key, a.value);
+                }
                 Some(res)
             };
 

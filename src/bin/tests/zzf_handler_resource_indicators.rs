@@ -6,7 +6,7 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
-use rauthy_api_types::oidc::{JwkKeyPairAlg, LoginRequest, TokenRequest};
+use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, LoginRequest, TokenRequest};
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use rauthy_service::token_set::TokenSet;
@@ -51,7 +51,7 @@ fn base_update() -> UpdateClientRequest {
         post_logout_redirect_uris: None,
         allowed_origins: None,
         enabled: true,
-        flows_enabled: vec!["client_credentials".to_string()],
+        flows_enabled: vec![GrantType::ClientCredentials],
         access_token_alg: JwkKeyPairAlg::EdDSA,
         id_token_alg: JwkKeyPairAlg::EdDSA,
         auth_code_lifetime: 60,
@@ -128,7 +128,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
 
     let url_token = format!("{backend_url}/oidc/token");
     let mut token_req = TokenRequest {
-        grant_type: "client_credentials".to_string(),
+        grant_type: GrantType::ClientCredentials,
         client_id: Some(ID.to_string()),
         client_secret: Some(secret),
         ..Default::default()

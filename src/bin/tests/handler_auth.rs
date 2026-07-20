@@ -10,8 +10,8 @@ use josekit::jwk;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{DynamicClientRequest, UpdateClientRequest};
 use rauthy_api_types::oidc::{
-    JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest, TokenRevocationRequest,
-    TokenValidationRequest,
+    GrantType, JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest,
+    TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_common::constants::{
     APPLICATION_JSON, DPOP_TOKEN_ENDPOINT, HEADER_DPOP_NONCE, TOKEN_DPOP,
@@ -136,7 +136,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // Step 4: POST /token with extracted values + CSRF cookie
     let mut req_token = TokenRequest {
-        grant_type: "authorization_code".to_string(),
+        grant_type: GrantType::AuthorizationCode,
         code: Some(code.to_string()),
         redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some(CLIENT_ID.to_string()),
@@ -267,10 +267,10 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         allowed_origins: Some(vec!["http://localhost:8080".to_string()]),
         enabled: true,
         flows_enabled: vec![
-            "authorization_code".to_string(),
-            "password".to_string(),
-            "client_credentials".to_string(),
-            "refresh_token".to_string(),
+            GrantType::AuthorizationCode,
+            GrantType::Password,
+            GrantType::ClientCredentials,
+            GrantType::RefreshToken,
         ],
         access_token_alg: JwkKeyPairAlg::RS384,
         id_token_alg: JwkKeyPairAlg::EdDSA,
@@ -363,7 +363,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
 
     let mut body = TokenRequest {
-        grant_type: "client_credentials".to_string(),
+        grant_type: GrantType::ClientCredentials,
         client_id: Some(CLIENT_ID.to_string()),
         ..Default::default()
     };
@@ -487,7 +487,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
 
     let url = format!("{}/oidc/token", get_backend_url());
     let mut body = TokenRequest {
-        grant_type: "password".to_string(),
+        grant_type: GrantType::Password,
         client_id: Some(CLIENT_ID.to_string()),
         username: Some(USERNAME.to_string()),
         ..Default::default()
@@ -540,7 +540,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     // refresh it
     time::sleep(Duration::from_secs(2)).await;
     let req = TokenRequest {
-        grant_type: "refresh_token".to_string(),
+        grant_type: GrantType::RefreshToken,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
@@ -579,7 +579,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     // token request itself
     let body = TokenRequest {
-        grant_type: "password".to_string(),
+        grant_type: GrantType::Password,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         username: Some(USERNAME.to_string()),
@@ -685,7 +685,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     // refresh it
     time::sleep(Duration::from_secs(1)).await;
     let req = TokenRequest {
-        grant_type: "refresh_token".to_string(),
+        grant_type: GrantType::RefreshToken,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
@@ -782,7 +782,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
 
     // get a token with the code
     let req_token = TokenRequest {
-        grant_type: "authorization_code".to_string(),
+        grant_type: GrantType::AuthorizationCode,
         code: Some(code.to_string()),
         redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some(client_id.to_string()),
@@ -803,7 +803,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     // now try to refresh the token
     time::sleep(Duration::from_secs(1)).await;
     let req = TokenRequest {
-        grant_type: "refresh_token".to_string(),
+        grant_type: GrantType::RefreshToken,
         client_id: Some(client_id.to_string()),
         refresh_token: Some(ts.refresh_token.clone().unwrap()),
         ..Default::default()
@@ -871,7 +871,7 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
     // fetch a valid token and try again
     let url_token = format!("{}/oidc/token", backend_url);
     let body = TokenRequest {
-        grant_type: "password".to_string(),
+        grant_type: GrantType::Password,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         username: Some(USERNAME.to_string()),
@@ -1107,7 +1107,7 @@ async fn test_token_revocation() -> Result<(), Box<dyn Error>> {
 async fn fetch_token_set() -> TokenSet {
     let url_token = format!("{}/oidc/token", get_backend_url());
     let body = TokenRequest {
-        grant_type: "password".to_string(),
+        grant_type: GrantType::Password,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         username: Some(USERNAME.to_string()),

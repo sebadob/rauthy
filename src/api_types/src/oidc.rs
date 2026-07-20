@@ -4,17 +4,91 @@ use crate::sessions::SessionState;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_GRANT_TYPES,
-    RE_LOWERCASE, RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_LOWERCASE,
+    RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use time::OffsetDateTime;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
+
+/// The OAuth 2.0 / OIDC grant types (flows) Rauthy supports.
+///
+/// The wire format is the grant type identifier itself, which for the extended grants is the
+/// full URN. Keeping this an enum rather than a validated `String` makes it type-safe in code
+/// and self-documenting in the OpenAPI spec.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+pub enum GrantType {
+    #[default]
+    #[serde(rename = "authorization_code")]
+    AuthorizationCode,
+    #[serde(rename = "client_credentials")]
+    ClientCredentials,
+    #[serde(rename = "password")]
+    Password,
+    #[serde(rename = "refresh_token")]
+    RefreshToken,
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:device_code")]
+    DeviceCode,
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:token-exchange")]
+    TokenExchange,
+}
+
+impl GrantType {
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::AuthorizationCode => "authorization_code",
+            Self::ClientCredentials => "client_credentials",
+            Self::Password => "password",
+            Self::RefreshToken => "refresh_token",
+            Self::DeviceCode => "urn:ietf:params:oauth:grant-type:device_code",
+            Self::TokenExchange => "urn:ietf:params:oauth:grant-type:token-exchange",
+        }
+    }
+
+    /// Joins the given flows into the CSV format used for `clients.flows_enabled`.
+    pub fn csv(flows: &[Self]) -> String {
+        flows
+            .iter()
+            .map(|f| f.as_str())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+}
+
+impl FromStr for GrantType {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
+            "authorization_code" => Self::AuthorizationCode,
+            "client_credentials" => Self::ClientCredentials,
+            "password" => Self::Password,
+            "refresh_token" => Self::RefreshToken,
+            "urn:ietf:params:oauth:grant-type:device_code" => Self::DeviceCode,
+            "urn:ietf:params:oauth:grant-type:token-exchange" => Self::TokenExchange,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Invalid `grant_type`: {s}"),
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+impl Display for GrantType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
 
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct AddressClaim {
@@ -235,12 +309,7 @@ pub struct DeviceVerifyRequest {
 #[derive(Default, Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct TokenRequest {
-    /// Validation: `^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$`
-    #[validate(regex(
-        path = "*RE_GRANT_TYPES",
-        code = "^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$"
-    ))]
-    pub grant_type: String,
+    pub grant_type: GrantType,
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code: Option<String>,

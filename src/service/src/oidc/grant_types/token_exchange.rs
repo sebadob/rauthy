@@ -1,12 +1,9 @@
 use crate::token_set::{DpopFingerprint, TokenScopes, TokenSet};
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_api_types::oidc::TokenRequest;
-use rauthy_common::constants::{
-    GRANT_TYPE_TOKEN_EXCHANGE, HEADER_DPOP_NONCE, TOKEN_TYPE_ACCESS_TOKEN,
-};
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
+use rauthy_common::constants::{HEADER_DPOP_NONCE, TOKEN_TYPE_ACCESS_TOKEN};
 use rauthy_data::entity::clients::Client;
-use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::users::User;
@@ -29,15 +26,22 @@ pub async fn grant_type_token_exchange(
     req: HttpRequest,
     req_data: TokenRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
-    if req_data.client_secret.is_none() {
+    // RFC 8693 does not mandate a specific client authentication method, so the regular OAuth
+    // rules apply and the secret may arrive either in the body or as an `Authorization: Basic`
+    // header. `try_get_client_id_secret()` handles both, and the extracted secret is checked
+    // below, so there is deliberately no body-only pre-check here.
+    let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
+    let client = Client::find(client_id).await?;
+
+    // A dynamic client cannot manage `allowed_resources`, which every exchange is validated
+    // against. Rejecting it as soon as the client is known prevents privilege escalation.
+    if client.is_dynamic() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "'client_secret' is missing",
+            "the token exchange is not allowed for dynamic clients",
         ));
     }
 
-    let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let client = Client::find(client_id).await?;
     client.validate_enabled()?;
     if !client.confidential {
         return Err(ErrorResponse::new(
@@ -51,7 +55,7 @@ pub async fn grant_type_token_exchange(
     client.validate_secret(secret, &req).await?;
     // Deny-by-default: a client can never exchange unless it has been opted in explicitly.
     // The value inside `flows_enabled` is the grant type URN itself, like for the device code.
-    client.validate_flow(GRANT_TYPE_TOKEN_EXCHANGE)?;
+    client.validate_flow(GrantType::TokenExchange)?;
     let header_origin = client.get_validated_origin_header(&req)?;
 
     let mut headers = Vec::new();
@@ -67,10 +71,6 @@ pub async fn grant_type_token_exchange(
         } else {
             None
         };
-
-    if client.is_dynamic() {
-        ClientDyn::update_used(&client.id).await?;
-    }
 
     // Rauthy only ever issues access tokens here. `requested_token_type` is optional by RFC and
     // defaults to an access token, so only an explicit, different request is an error.
@@ -97,17 +97,21 @@ pub async fn grant_type_token_exchange(
             "'subject_token_type' is missing",
         ));
     };
-    // The claims borrow from these buffers, so they must live as long as the claims do.
-    let mut subject_buf = Vec::with_capacity(512);
-    let mut actor_buf = Vec::with_capacity(512);
+    // The claims borrow from this buffer, so a single one is enough as long as the subject claims
+    // are dropped before it is re-used for the `actor_token`. The only two values needed
+    // afterwards are `sub` and `scope`, and both are allocated into a `String` further down
+    // anyway, so extracting them here costs nothing extra and saves a second 512 byte buffer.
+    let mut buf = Vec::with_capacity(512);
 
-    let subject_claims = validate_exchange_token(
-        subject_token,
-        subject_token_type,
-        "subject_token",
-        &mut subject_buf,
-    )
-    .await?;
+    let (subject_sub, subject_scope) = {
+        let subject_claims =
+            validate_exchange_token(subject_token, subject_token_type, "subject_token", &mut buf)
+                .await?;
+        (
+            subject_claims.common.sub.map(|s| s.to_string()),
+            subject_claims.common.scope.map(|s| s.to_string()),
+        )
+    };
 
     // An `actor_token` turns this into a delegation. By RFC, `actor_token_type` is REQUIRED as
     // soon as an `actor_token` is given.
@@ -118,9 +122,10 @@ pub async fn grant_type_token_exchange(
                 "'actor_token_type' is required when an 'actor_token' is given",
             ));
         };
+        // the subject claims are out of scope by now, so the buffer is free to be re-used
+        buf.clear();
         let actor_claims =
-            validate_exchange_token(actor_token, actor_token_type, "actor_token", &mut actor_buf)
-                .await?;
+            validate_exchange_token(actor_token, actor_token_type, "actor_token", &mut buf).await?;
 
         let Some(actor_sub) = actor_claims.common.sub else {
             return Err(ErrorResponse::new(
@@ -158,10 +163,17 @@ pub async fn grant_type_token_exchange(
     }
 
     // The exchanged token can only ever narrow the subject's scopes, never widen them.
-    let subject_scope = subject_claims.common.scope.as_deref().unwrap_or_default();
+    let subject_scope = subject_scope.as_deref().unwrap_or_default();
     let scope = if let Some(requested) = req_data.scope.as_deref() {
-        let mut narrowed = Vec::new();
+        // At least `openid` plus one narrowed scope, and Rust would over-allocate from 0 anyway.
+        let mut narrowed = Vec::with_capacity(2);
+        // `openid` is mandatory for OIDC and is always part of the result, requested or not.
+        narrowed.push("openid");
+
         for s in requested.split_whitespace() {
+            if s == "openid" {
+                continue;
+            }
             if !subject_scope.split_whitespace().any(|sub| sub == s) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -179,8 +191,8 @@ pub async fn grant_type_token_exchange(
     // where the `sub` is the client itself and there is no user to look up. A `NotFound` is
     // therefore expected and fine, while any other error must not be swallowed: that would issue
     // a token without the user's claims.
-    let user = if let Some(sub) = subject_claims.common.sub {
-        match User::find(sub.to_string()).await {
+    let user = if let Some(sub) = subject_sub {
+        match User::find(sub).await {
             Ok(user) => Some(user),
             Err(err) if err.error == ErrorResponseType::NotFound => None,
             Err(err) => return Err(err),
@@ -205,7 +217,7 @@ pub async fn grant_type_token_exchange(
 
     if RauthyConfig::get().vars.events.generate_token_issued {
         Event::token_issued(
-            GRANT_TYPE_TOKEN_EXCHANGE,
+            GrantType::TokenExchange.as_str(),
             &client.id,
             user.as_ref().map(|u| u.email.as_str()),
         )

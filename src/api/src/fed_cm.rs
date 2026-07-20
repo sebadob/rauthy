@@ -5,6 +5,7 @@ use actix_web::{HttpRequest, HttpResponse, get, post};
 use chrono::Utc;
 use rauthy_api_types::clients::EphemeralClientRequest;
 use rauthy_api_types::fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest};
+use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::{COOKIE_SESSION_FED_CM, HEADER_ALLOW_ALL_ORIGINS, HEADER_JSON};
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::ListenScheme;
@@ -173,8 +174,8 @@ pub async fn get_fed_client_config() -> HttpResponse {
         redirect_uris: vec![format!("{pub_url_scheme}/auth/v1/*")],
         post_logout_redirect_uris: Some(vec![format!("{pub_url_scheme}/auth/v1/*")]),
         grant_types: Some(vec![
-            "authorization_code".to_string(),
-            "refresh_token".to_string(),
+            GrantType::AuthorizationCode.to_string(),
+            GrantType::RefreshToken.to_string(),
         ]),
         default_max_age: Some(300),
         scope: Some("openid email profile".to_string()),

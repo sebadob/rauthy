@@ -1,4 +1,5 @@
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
+use rauthy_api_types::oidc::GrantType;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -28,7 +29,7 @@ pub async fn update_client(
     client.allowed_origins = client_req.allowed_origins.map(|o| o.join(","));
 
     client.enabled = client_req.enabled;
-    client.flows_enabled = client_req.flows_enabled.join(",");
+    client.flows_enabled = GrantType::csv(&client_req.flows_enabled);
 
     client.access_token_alg = client_req.access_token_alg.to_string();
     client.id_token_alg = client_req.id_token_alg.to_string();

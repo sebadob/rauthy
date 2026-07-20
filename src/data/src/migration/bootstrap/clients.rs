@@ -9,6 +9,7 @@ use cryptr::utils::secure_random_alnum;
 use cryptr::{EncKeys, EncValue};
 use hiqlite::macros::params;
 use itertools::Itertools;
+use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::SECRET_LEN_CLIENTS;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
@@ -91,7 +92,7 @@ $18, $19, $20, $21, $22)"#;
         let post_logout_redirect_uris = opt_vec_to_csv(&client.post_logout_redirect_uris);
         let allowed_origins = opt_vec_to_csv(&client.allowed_origins);
 
-        let flows_enabled = client.flows_enabled.join(",");
+        let flows_enabled = GrantType::csv(&client.flows_enabled);
         let challenge = if secret.is_none() {
             Some("S256".to_string())
         } else {

@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use rauthy_api_types::oidc::{LoginRequest, SessionInfoResponse, TokenRequest};
+use rauthy_api_types::oidc::{GrantType, LoginRequest, SessionInfoResponse, TokenRequest};
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::sha256;
 use rauthy_common::utils::base64_url_encode;
@@ -64,7 +64,7 @@ pub async fn get_token_set_init_client() -> TokenSet {
     // get a token to validate
     let url_token = format!("{}/oidc/token", get_backend_url());
     let body = TokenRequest {
-        grant_type: "password".to_string(),
+        grant_type: GrantType::Password,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         username: Some(USERNAME.to_string()),
@@ -134,7 +134,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
 
     let (code, _state) = code_state_from_headers(res).unwrap();
     let req_token = TokenRequest {
-        grant_type: "authorization_code".to_string(),
+        grant_type: GrantType::AuthorizationCode,
         code: Some(code),
         redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some("rauthy".to_string()),
