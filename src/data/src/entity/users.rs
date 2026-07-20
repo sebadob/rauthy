@@ -46,6 +46,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::default::Default;
 use std::fmt::{Debug, Formatter};
+use std::mem;
 use std::ops::Add;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
@@ -225,15 +226,16 @@ impl User {
         Self::insert(new_user).await
     }
 
-    pub async fn create_from_new(new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
+    pub async fn create_from_new(mut new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
         // pre-uniqueness check for better UX and error handling; the DB unique index on
         // `users_values.preferred_username` is the authoritative guard (see UserValues::insert).
         if let Some(preferred_username) = &new_user_req.preferred_username {
             UserValues::validate_preferred_username_free(preferred_username.clone()).await?;
         }
 
-        let tz = new_user_req.tz.clone();
-        let preferred_username = new_user_req.preferred_username.clone();
+        // neither value is read by `from_new_user_req()`, so both can be moved out directly
+        let tz = mem::take(&mut new_user_req.tz);
+        let preferred_username = mem::take(&mut new_user_req.preferred_username);
         let new_user = User::from_new_user_req(new_user_req).await?;
         let user = User::create(new_user, None, tz.as_deref()).await?;
 
