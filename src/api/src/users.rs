@@ -1711,8 +1711,13 @@ pub async fn post_webauthn_reg_finish(
         // The registration ceremony is a fresh proof of possession for this very session, and
         // starting it already required an `MfaModToken`. Upgrade the session in place so the user
         // does not need a logout / login round-trip to satisfy `admin_force_mfa`.
-        let session = principal.get_session()?;
-        if !session.is_mfa {
+        //
+        // The session lookup is deliberately graceful: the passkey has already been persisted at
+        // this point, so a flow that gets here without a session (during an initial account setup,
+        // for instance) must never have its successful registration turned into an error.
+        if let Some(session) = &principal.session
+            && !session.is_mfa
+        {
             let mut session = session.clone();
             session.set_mfa(true).await?;
         }
