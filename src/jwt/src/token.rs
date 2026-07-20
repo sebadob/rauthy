@@ -19,14 +19,14 @@ pub struct JwtHeader<'a> {
 /// The JWT header `typ`. Not to be confused with the `typ` claim inside the payload, which is
 /// Rauthy's own token type and has different values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum JwtHeaderTyp {
+pub enum JwtHeaderType {
     /// The generic `JWT` for ID, Refresh and Logout Tokens.
     Jwt,
     /// `at+jwt` for Access Tokens as specified in RFC 9068.
     AtJwt,
 }
 
-impl JwtHeaderTyp {
+impl JwtHeaderType {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Jwt => "JWT",
@@ -41,7 +41,7 @@ impl JwtToken {
     pub fn build<C: Debug + Serialize>(
         jwk: &JwkKeyPair,
         claims: &C,
-        typ: JwtHeaderTyp,
+        typ: JwtHeaderType,
     ) -> Result<String, ErrorResponse> {
         let mut token = String::with_capacity(1024);
 
@@ -118,7 +118,8 @@ impl JwtToken {
         // Access Tokens use `at+jwt` (RFC 9068), everything else `JWT`. Both must be accepted
         // independently of the token type, because Access Tokens issued before that change are
         // still valid until they expire.
-        if header.typ != JwtHeaderTyp::Jwt.as_str() && header.typ != JwtHeaderTyp::AtJwt.as_str() {
+        if header.typ != JwtHeaderType::Jwt.as_str() && header.typ != JwtHeaderType::AtJwt.as_str()
+        {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Header `typ`",
@@ -209,15 +210,15 @@ impl ValidationClaims<'_> {
 #[cfg(test)]
 mod tests {
     use crate::claims::JwtTokenType;
-    use crate::token::{JwtHeaderTyp, ValidationClaims};
+    use crate::token::{JwtHeaderType, ValidationClaims};
     use chrono::Utc;
     use rauthy_error::{ErrorResponse, ErrorResponseType};
 
     #[test]
     fn test_jwt_header_typ() {
         // RFC 9068 specifies exactly this value for Access Tokens
-        assert_eq!(JwtHeaderTyp::AtJwt.as_str(), "at+jwt");
-        assert_eq!(JwtHeaderTyp::Jwt.as_str(), "JWT");
+        assert_eq!(JwtHeaderType::AtJwt.as_str(), "at+jwt");
+        assert_eq!(JwtHeaderType::Jwt.as_str(), "JWT");
     }
 
     #[test]
