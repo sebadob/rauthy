@@ -27,7 +27,7 @@ pub static RE_CLIENT_ID: LazyLock<Regex> =
 pub static RE_CLIENT_ID_STRICT: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9._\-]{2,256}$").unwrap());
 pub static RE_CLIENT_NAME: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[a-zA-Z0-9À-ɏ()-\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{2,128}$").unwrap()
+    Regex::new(r"^[a-zA-Z0-9À-ɏ()\-\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{2,128}$").unwrap()
 });
 pub static RE_CODE_CHALLENGE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~]{43,128}$").unwrap());
@@ -82,3 +82,19 @@ pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
 pub static RE_ATPROTO_HANDLE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_re_client_name() {
+        // the regex is built lazily, so it is only ever compiled on first use --
+        // this forces it and would catch a character class that does not parse
+        assert!(RE_CLIENT_NAME.is_match("Claude Code (nks)"));
+        assert!(RE_CLIENT_NAME.is_match("My Client"));
+        assert!(RE_CLIENT_NAME.is_match("client-name"));
+        assert!(RE_CLIENT_NAME.is_match("クライアント"));
+        assert!(!RE_CLIENT_NAME.is_match("<script>"));
+    }
+}
