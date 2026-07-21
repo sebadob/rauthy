@@ -1715,10 +1715,9 @@ pub async fn post_webauthn_reg_finish(
         // The session lookup is deliberately graceful: the passkey has already been persisted at
         // this point, so a flow that gets here without a session (during an initial account setup,
         // for instance) must never have its successful registration turned into an error.
-        if let Some(session) = &principal.session
+        if let Some(mut session) = principal.into_inner().session
             && !session.is_mfa
         {
-            let mut session = session.clone();
             session.set_mfa(true).await?;
         }
 
