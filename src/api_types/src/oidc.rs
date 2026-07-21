@@ -90,6 +90,76 @@ impl Display for GrantType {
     }
 }
 
+/// The RFC 8693 token type identifiers (RFC 8693 §3). These are a different URN namespace from
+/// [`GrantType`]: `urn:ietf:params:oauth:token-type:*` rather than
+/// `urn:ietf:params:oauth:grant-type:*`, so the two are not interchangeable.
+///
+/// Rauthy only ever accepts and issues an access token, but every RFC-defined type is listed so
+/// that "a token type we do not support" can be told apart from "not a token type at all".
+///
+/// Unlike [`GrantType`], this is deliberately *not* the wire type of `subject_token_type`,
+/// `actor_token_type` and `requested_token_type`. Those stay `Option<String>` and are parsed
+/// here in the handler: RFC 8693 §2.2.2 requires the token endpoint to answer with an OAuth
+/// error object, and rejecting at `serde` level would replace ours with a generic
+/// deserialization error before the handler ever runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+pub enum TokenType {
+    #[serde(rename = "urn:ietf:params:oauth:token-type:access_token")]
+    AccessToken,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:refresh_token")]
+    RefreshToken,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:id_token")]
+    IdToken,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:saml1")]
+    Saml1,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:saml2")]
+    Saml2,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:jwt")]
+    Jwt,
+}
+
+impl TokenType {
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::AccessToken => "urn:ietf:params:oauth:token-type:access_token",
+            Self::RefreshToken => "urn:ietf:params:oauth:token-type:refresh_token",
+            Self::IdToken => "urn:ietf:params:oauth:token-type:id_token",
+            Self::Saml1 => "urn:ietf:params:oauth:token-type:saml1",
+            Self::Saml2 => "urn:ietf:params:oauth:token-type:saml2",
+            Self::Jwt => "urn:ietf:params:oauth:token-type:jwt",
+        }
+    }
+}
+
+impl FromStr for TokenType {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
+            "urn:ietf:params:oauth:token-type:access_token" => Self::AccessToken,
+            "urn:ietf:params:oauth:token-type:refresh_token" => Self::RefreshToken,
+            "urn:ietf:params:oauth:token-type:id_token" => Self::IdToken,
+            "urn:ietf:params:oauth:token-type:saml1" => Self::Saml1,
+            "urn:ietf:params:oauth:token-type:saml2" => Self::Saml2,
+            "urn:ietf:params:oauth:token-type:jwt" => Self::Jwt,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Invalid token type: {s}"),
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+impl Display for TokenType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct AddressClaim {
     pub formatted: String,

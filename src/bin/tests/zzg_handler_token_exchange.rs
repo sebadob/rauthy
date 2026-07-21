@@ -3,8 +3,7 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
-use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest};
-use rauthy_common::constants::TOKEN_TYPE_ACCESS_TOKEN;
+use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest, TokenType};
 use rauthy_common::utils::base64_url_no_pad_decode;
 use rauthy_service::token_set::TokenSet;
 use std::error::Error;
@@ -141,7 +140,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET.to_string()),
             ..Default::default()
         })
@@ -176,7 +175,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET.to_string()),
             ..Default::default()
         })
@@ -212,7 +211,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET_FORBIDDEN.to_string()),
             ..Default::default()
         })
@@ -231,9 +230,9 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             actor_token: Some(actor_ts.access_token.clone()),
-            actor_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            actor_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET.to_string()),
             ..Default::default()
         })
@@ -254,7 +253,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             actor_token: Some(actor_ts.access_token.clone()),
             audience: Some(TARGET.to_string()),
             ..Default::default()
@@ -272,7 +271,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(refresh),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET.to_string()),
             ..Default::default()
         })
@@ -290,7 +289,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some("not.a.token".to_string()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET.to_string()),
             ..Default::default()
         })
@@ -322,7 +321,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET.to_string()),
             scope: Some("openid some_scope_the_subject_never_had".to_string()),
             ..Default::default()
@@ -341,7 +340,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
             client_id: Some(ID.to_string()),
             client_secret: Some(secret.clone()),
             subject_token: Some(subject_token.clone()),
-            subject_token_type: Some(TOKEN_TYPE_ACCESS_TOKEN.to_string()),
+            subject_token_type: Some(TokenType::AccessToken.to_string()),
             audience: Some(TARGET.to_string()),
             scope: Some(first_scope.clone()),
             ..Default::default()

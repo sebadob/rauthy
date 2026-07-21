@@ -8,7 +8,7 @@ use chrono::Utc;
 use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
-use rauthy_api_types::clients::{DynamicClientRequest, UpdateClientRequest};
+use rauthy_api_types::clients::UpdateClientRequest;
 use rauthy_api_types::oidc::{
     GrantType, JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest,
     TokenRevocationRequest, TokenValidationRequest,
@@ -1185,28 +1185,26 @@ async fn test_dcr_rejects_unsupported_grant() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
-    let payload = DynamicClientRequest {
-        redirect_uris: vec!["http://localhost:8080/*".to_string()],
-        grant_types: vec![
-            "authorization_code".to_string(),
+    // Sent as raw JSON on purpose: `DynamicClientRequest::grant_types` is a `Vec<GrantType>`,
+    // so the invalid payload this test is about cannot be expressed as a Rust value at all.
+    // Going over the wire is also what a real client does, and it pins the behaviour at the
+    // layer that now enforces it (`serde`) rather than at the validator.
+    let payload = serde_json::json!({
+        "redirect_uris": ["http://localhost:8080/*"],
+        "grant_types": [
+            "authorization_code",
             // unsupported by Rauthy -> DCR must reject the whole request
-            "urn:ietf:params:oauth:grant-type:jwt-bearer".to_string(),
+            "urn:ietf:params:oauth:grant-type:jwt-bearer"
         ],
-        client_name: Some("Dyn JWT Bearer Reject".to_string()),
-        client_uri: None,
-        contacts: None,
-        id_token_signed_response_alg: None,
-        token_endpoint_auth_method: Some("none".to_string()),
-        token_endpoint_auth_signing_alg: None,
-        post_logout_redirect_uri: None,
-        backchannel_logout_uri: None,
-    };
+        "client_name": "Dyn JWT Bearer Reject",
+        "token_endpoint_auth_method": "none",
+    });
     let res = client
         .post(format!("{backend_url}/clients_dyn"))
         .json(&payload)
         .send()
         .await?;
-    // `payload.validate()` runs before the IP rate-limit, so this is a deterministic 400
+    // deserialization fails before the IP rate-limit, so this is a deterministic 400
     assert_eq!(res.status(), 400);
 
     Ok(())

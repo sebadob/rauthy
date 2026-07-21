@@ -1,11 +1,11 @@
-use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
 use crate::oidc::GrantType;
+use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
 use rauthy_common::regex::{
     RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GROUPS, RE_LINUX_HOSTNAME, RE_ORIGIN,
     RE_RESOURCE, RE_ROLES_SCOPES, RE_URI,
 };
-use std::str::FromStr;
 use std::borrow::Cow;
+use std::str::FromStr;
 use validator::ValidationError;
 
 #[inline]
@@ -192,30 +192,53 @@ mod tests {
     }
 
     #[test]
-    fn grant_type_validators_reject_unknown_by_default() {
+    fn grant_type_validator_rejects_unknown_by_default() {
         // A spec-valid client (e.g. claude.ai) may advertise grant types Rauthy does not
-        // implement. By default BOTH validators reject them - DCR/admin/bootstrap store the
-        // list verbatim, and the ephemeral path only accepts unknown grants after they are
-        // stripped upstream (gated by `ephemeral_clients.ignore_unknown_auth_flows`).
+        // implement. The ephemeral path rejects them by default and only accepts such a
+        // document once they are stripped upstream, gated by
+        // `ephemeral_clients.ignore_unknown_auth_flows`.
+        //
+        // The admin / DCR / bootstrap side no longer needs a validator at all: those fields
+        // are `Vec<GrantType>`, so `serde` rejects an unknown grant type at deserialization.
+        // This is the one path where that cannot work, because the document is remote and the
+        // unknown value has to survive long enough to be stripped.
         let with_unknown = [
             "authorization_code",
             "refresh_token",
             "urn:ietf:params:oauth:grant-type:jwt-bearer",
         ]
         .map(String::from);
-        assert!(validate_vec_grant_types(&with_unknown).is_err());
         assert!(validate_vec_grant_type(&with_unknown).is_err());
 
-        // An all-supported list passes both validators.
-        let all_known = ["authorization_code", "refresh_token"].map(String::from);
-        assert!(validate_vec_grant_types(&all_known).is_ok());
+        // An all-supported list passes, including the extended-grant URNs.
+        let all_known = [
+            "authorization_code",
+            "refresh_token",
+            "urn:ietf:params:oauth:grant-type:device_code",
+            "urn:ietf:params:oauth:grant-type:token-exchange",
+        ]
+        .map(String::from);
         assert!(validate_vec_grant_type(&all_known).is_ok());
 
-        // The plural validator rejects an explicitly empty list; the singular has no
-        // empty-check (an ephemeral document may legitimately omit grant_types).
+        // No empty-check here: an ephemeral document may legitimately omit `grant_types`.
         let empty: [String; 0] = [];
-        assert!(validate_vec_grant_types(&empty).is_err());
         assert!(validate_vec_grant_type(&empty).is_ok());
+    }
+
+    #[test]
+    fn grant_type_validator_tracks_the_enum() {
+        // `GrantType` is the single source of truth. If a variant is ever added, it must pass
+        // the ephemeral validator too, otherwise the two drift apart silently.
+        for gt in [
+            GrantType::AuthorizationCode,
+            GrantType::ClientCredentials,
+            GrantType::Password,
+            GrantType::RefreshToken,
+            GrantType::DeviceCode,
+            GrantType::TokenExchange,
+        ] {
+            assert!(validate_vec_grant_type(&[gt.to_string()]).is_ok(), "{gt}");
+        }
     }
 
     #[test]

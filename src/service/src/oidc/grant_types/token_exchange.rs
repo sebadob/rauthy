@@ -1,8 +1,8 @@
 use crate::token_set::{DpopFingerprint, TokenScopes, TokenSet};
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_api_types::oidc::{GrantType, TokenRequest};
-use rauthy_common::constants::{HEADER_DPOP_NONCE, TOKEN_TYPE_ACCESS_TOKEN};
+use rauthy_api_types::oidc::{GrantType, TokenRequest, TokenType};
+use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::issued_tokens::IssuedToken;
@@ -73,14 +73,18 @@ pub async fn grant_type_token_exchange(
         };
 
     // Rauthy only ever issues access tokens here. `requested_token_type` is optional by RFC and
-    // defaults to an access token, so only an explicit, different request is an error.
+    // defaults to an access token, so only an explicit, different request is an error. An
+    // RFC-defined type we do not issue and a value that is no token type at all are both
+    // rejected the same way, but parsing tells them apart for the log line.
     if let Some(requested) = req_data.requested_token_type.as_deref()
-        && requested != TOKEN_TYPE_ACCESS_TOKEN
+        && TokenType::from_str(requested).ok() != Some(TokenType::AccessToken)
     {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "the only supported 'requested_token_type' is \
-             'urn:ietf:params:oauth:token-type:access_token'",
+            format!(
+                "the only supported 'requested_token_type' is '{}'",
+                TokenType::AccessToken
+            ),
         ));
     }
 
@@ -163,17 +167,13 @@ pub async fn grant_type_token_exchange(
     }
 
     // The exchanged token can only ever narrow the subject's scopes, never widen them.
-    let subject_scope = subject_scope.as_deref().unwrap_or_default();
+    // `openid` is deliberately not forced in here: only access tokens can be exchanged, so the
+    // result carries no identity part that would need it, and the caller stays in control of
+    // what the exchanged token is scoped to.
+    let subject_scope = subject_scope.unwrap_or_default();
     let scope = if let Some(requested) = req_data.scope.as_deref() {
-        // At least `openid` plus one narrowed scope, and Rust would over-allocate from 0 anyway.
-        let mut narrowed = Vec::with_capacity(2);
-        // `openid` is mandatory for OIDC and is always part of the result, requested or not.
-        narrowed.push("openid");
-
+        let mut narrowed = Vec::with_capacity(1);
         for s in requested.split_whitespace() {
-            if s == "openid" {
-                continue;
-            }
             if !subject_scope.split_whitespace().any(|sub| sub == s) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -184,7 +184,7 @@ pub async fn grant_type_token_exchange(
         }
         narrowed.join(" ")
     } else {
-        subject_scope.to_string()
+        subject_scope
     };
 
     // A token exchange without a user is only possible for a `client_credentials` subject token,
@@ -236,12 +236,12 @@ async fn validate_exchange_token<'a>(
     name: &str,
     buf: &'a mut Vec<u8>,
 ) -> Result<JwtAccessClaims<'a>, ErrorResponse> {
-    if token_type != TOKEN_TYPE_ACCESS_TOKEN {
+    if TokenType::from_str(token_type).ok() != Some(TokenType::AccessToken) {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!(
-                "the only supported '{name}_type' is \
-                 'urn:ietf:params:oauth:token-type:access_token'"
+                "the only supported '{name}_type' is '{}'",
+                TokenType::AccessToken
             ),
         ));
     }

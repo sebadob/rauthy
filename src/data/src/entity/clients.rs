@@ -1739,7 +1739,7 @@ impl Default for Client {
             redirect_uris: String::default(),
             post_logout_redirect_uris: None,
             allowed_origins: None,
-            flows_enabled: GrantType::AuthorizationCode.as_str().to_string(),
+            flows_enabled: GrantType::AuthorizationCode.to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "EdDSA".to_string(),
             auth_code_lifetime: 60,

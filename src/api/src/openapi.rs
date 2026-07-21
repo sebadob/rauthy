@@ -296,6 +296,7 @@ use utoipa::{OpenApi, openapi};
             EncKeyMigrateRequest,
             FedCMAssertionRequest,
             FedCMClientMetadataRequest,
+            GrantType,
             CertsParams,
             DeviceAcceptedRequest,
             LoginRequest,

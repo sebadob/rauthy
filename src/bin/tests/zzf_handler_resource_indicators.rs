@@ -220,10 +220,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         post_logout_redirect_uris: None,
         allowed_origins: None,
         enabled: true,
-        flows_enabled: vec![
-            "authorization_code".to_string(),
-            "refresh_token".to_string(),
-        ],
+        flows_enabled: vec![GrantType::AuthorizationCode, GrantType::RefreshToken],
         access_token_alg: JwkKeyPairAlg::EdDSA,
         id_token_alg: JwkKeyPairAlg::EdDSA,
         auth_code_lifetime: 60,
@@ -287,7 +284,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
     let (code, _state) = code_state_from_headers(res)?;
 
     let token_req = TokenRequest {
-        grant_type: "authorization_code".to_string(),
+        grant_type: GrantType::AuthorizationCode,
         code: Some(code),
         redirect_uri: Some(redirect_uri.clone()),
         client_id: Some(ID_REFRESH.to_string()),
@@ -298,6 +295,13 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         password: None,
         refresh_token: None,
         resource: Some(RES_REFRESH.to_string()),
+        subject_token: None,
+        subject_token_type: None,
+        actor_token: None,
+        actor_token_type: None,
+        requested_token_type: None,
+        audience: None,
+        scope: None,
     };
     let res = http
         .post(format!("{backend_url}/oidc/token"))
@@ -331,7 +335,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
     let (code_refresh, _state) = code_state_from_headers(res)?;
 
     let token_req = TokenRequest {
-        grant_type: "authorization_code".to_string(),
+        grant_type: GrantType::AuthorizationCode,
         code: Some(code_refresh),
         redirect_uri: Some(redirect_uri.clone()),
         client_id: Some(ID_REFRESH.to_string()),
@@ -342,6 +346,13 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         password: None,
         refresh_token: None,
         resource: Some(RES_REFRESH.to_string()),
+        subject_token: None,
+        subject_token_type: None,
+        actor_token: None,
+        actor_token_type: None,
+        requested_token_type: None,
+        audience: None,
+        scope: None,
     };
     let res = http
         .post(format!("{backend_url}/oidc/token"))
