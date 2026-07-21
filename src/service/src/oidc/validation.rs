@@ -100,7 +100,7 @@ pub async fn validate_and_refresh_token(
         (None, None)
     };
 
-    let mut user = User::find(claims.uid.to_string()).await?;
+    let user = User::find(claims.uid.to_string()).await?;
     user.check_enabled()?;
     user.check_expired()?;
     client.validate_user_groups(&user)?;
@@ -142,9 +142,9 @@ pub async fn validate_and_refresh_token(
     // at this point, everything has been validated -> we can issue a new TokenSet safely
     debug!("Refresh Token - all good!");
 
-    // set last login
-    user.last_login = Some(Utc::now().timestamp());
-    user.save(None).await?;
+    // A token refresh is NOT a fresh user authentication, so `last_login` must not be bumped
+    // here - otherwise `auth_time` (derived from `last_login`) would advance on every refresh.
+    // The `auth_time` is carried on the refresh token claims instead (see below).
 
     let auth_time = if let Some(ts) = claims.auth_time {
         AuthTime::given(ts)
