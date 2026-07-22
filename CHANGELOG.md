@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Security
+
+#### Upstream Auth Provider Callbacks are Single-Use
+
+A callback for an upstream auth provider login is deleted as soon as it has been validated now.
+Before, only a failed `state`, XSRF token or PKCE verifier check deleted it. A callback that passed
+all three stayed in the cache until its 300 second TTL ran out, whether the login then succeeded or
+failed, which left it replayable for the rest of that window by anyone holding the encrypted
+callback cookie. This also makes the behaviour match what the function documented all along.
+
+[#1660](https://github.com/sebadob/rauthy/pull/1660)
+
 ### Changes
 
 #### Session MFA Upgrade after Passkey Registration

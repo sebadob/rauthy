@@ -17,7 +17,9 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::error;
 
-/// In case of any error, the callback code will be fully deleted for security reasons.
+/// The callback is single-use: it is deleted as soon as it has been validated, no matter whether
+/// the login then succeeds or fails. A validation failure deletes it as well, so a callback never
+/// survives the request that presented it.
 pub async fn login_finish<'a>(
     req: &'a HttpRequest,
     payload: &'a ProviderCallbackRequest,
@@ -65,6 +67,16 @@ pub async fn login_finish<'a>(
             "invalid PKCE verifier",
         ));
     }
+
+    // The callback is validated at this point, which makes this the one request that is allowed
+    // to consume it. Deleting it here rather than at the end makes it single-use for real: the
+    // success path never deleted it at all and relied on the TTL, and the error paths below this
+    // line never did either, both of which left a validated callback replayable for the rest of
+    // its `CACHE_TTL_AUTH_PROVIDER_CALLBACK`.
+    //
+    // The id is cloned rather than moved out of `slf`, because `extract_user_at_proto()` still
+    // matches the state ATProto hands back against it further down.
+    AuthProviderCallback::delete(slf.callback_id.clone()).await?;
 
     // request is valid -> fetch token for the user
     let provider = AuthProvider::find(&slf.provider_id).await?;
