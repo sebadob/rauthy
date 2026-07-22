@@ -135,8 +135,8 @@ pub struct JwtAccessClaims<'a> {
     pub custom: Option<HashMap<String, serde_json::Value>>,
     /// RFC 8693 §4.1: the acting party of a delegation. Only set when a token was issued
     /// via the token exchange with an `actor_token`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub act: Option<ActClaim>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub act: Option<ActClaim<'a>>,
     /// Custom user attributes promoted to the token root, driven by the per-scope
     /// `claims_at_root` flag. Flattened, so each entry becomes a top-level claim
     /// instead of nesting under `custom`. Issuance MUST fail if any key here
@@ -149,10 +149,10 @@ pub struct JwtAccessClaims<'a> {
 /// Nests recursively, so a chain of delegation keeps the whole history: the outermost `act`
 /// is the current actor, and each nested `act` is the one it in turn acts for.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ActClaim {
-    pub sub: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub act: Option<Box<ActClaim>>,
+pub struct ActClaim<'a> {
+    pub sub: &'a str,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub act: Option<Box<ActClaim<'a>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -396,7 +396,7 @@ impl JwtAmrValue {
 #[cfg(test)]
 mod tests {
     use super::{
-        Audience, JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+        ActClaim, Audience, JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtTokenType,
         validate_no_reserved_collision,
     };
     use serde_json::json;
@@ -607,5 +607,69 @@ mod tests {
         let mut flattened = HashMap::new();
         flattened.insert("groups".to_string(), json!(["forged-admin"]));
         assert!(validate_no_reserved_collision(&flattened).is_err());
+    }
+
+    // RFC 8693 §4.1: a delegation chain nests `act` inside `act`. The chain borrows from the
+    // buffer the claims were deserialized out of, including through the `Box`, so this pins
+    // both that an arbitrarily deep chain survives a round trip and that nothing along it is
+    // silently copied into an owned `String`.
+    #[test]
+    fn act_delegation_chain_round_trips_borrowed() {
+        let mut emitted = JwtAccessClaims {
+            common: common(),
+            allowed_origins: None,
+            email: None,
+            email_verified: None,
+            roles: None,
+            groups: None,
+            custom: None,
+            act: Some(ActClaim {
+                sub: "outer",
+                act: Some(Box::new(ActClaim {
+                    sub: "middle",
+                    act: Some(Box::new(ActClaim {
+                        sub: "inner",
+                        act: None,
+                    })),
+                })),
+            }),
+            custom_flattened: None,
+        };
+        let bytes = serde_json::to_vec(&emitted).unwrap();
+
+        let claims = serde_json::from_slice::<JwtAccessClaims>(&bytes).unwrap();
+        let outer = claims.act.expect("outer act");
+        let middle = outer.act.expect("middle act");
+        let inner = middle.act.expect("inner act");
+
+        assert_eq!(outer.sub, "outer");
+        assert_eq!(middle.sub, "middle");
+        assert_eq!(inner.sub, "inner");
+        assert!(
+            inner.act.is_none(),
+            "the chain must end at the innermost act"
+        );
+
+        // Every `sub` points into `bytes` rather than into an allocation of its own.
+        let range = bytes.as_ptr_range();
+        for sub in [outer.sub, middle.sub, inner.sub] {
+            let ptr = sub.as_ptr();
+            assert!(
+                range.contains(&ptr),
+                "`{sub}` was copied instead of borrowed from the input"
+            );
+        }
+
+        // The innermost `act` is absent, not null, so a re-issued token stays RFC-shaped,
+        // and a token that never went through an exchange carries no `act` key at all.
+        let v = serde_json::to_value(&inner).unwrap();
+        assert!(v.get("act").is_none(), "an empty `act` must be omitted");
+
+        emitted.act = None;
+        let v = serde_json::to_value(&emitted).unwrap();
+        assert!(
+            v.get("act").is_none(),
+            "a token issued without an `actor_token` must not carry `act`"
+        );
     }
 }

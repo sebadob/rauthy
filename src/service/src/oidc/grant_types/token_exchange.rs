@@ -141,7 +141,7 @@ pub async fn grant_type_token_exchange(
         // A delegation chain is kept: if the actor was itself acting for someone, that history
         // stays nested inside the new `act`.
         Some(ActClaim {
-            sub: actor_sub.to_string(),
+            sub: actor_sub,
             act: actor_claims.act.map(Box::new),
         })
     } else {

@@ -133,7 +133,7 @@ impl TokenSet {
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
         sid: Option<SessionId>,
         resource: Option<&str>,
-        act: Option<ActClaim>,
+        act: Option<ActClaim<'_>>,
         device_code_flow: DeviceCodeFlow,
     ) -> Result<(AccessTokenJti, String), ErrorResponse> {
         let did = match device_code_flow {
@@ -591,7 +591,7 @@ impl TokenSet {
         dpop_fingerprint: Option<DpopFingerprint>,
         scope: TokenScopes,
         resource: Option<&str>,
-        act: Option<ActClaim>,
+        act: Option<ActClaim<'_>>,
     ) -> Result<Self, ErrorResponse> {
         let token_type = if dpop_fingerprint.is_some() {
             JwtTokenType::DPoP
