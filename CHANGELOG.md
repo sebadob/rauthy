@@ -12,7 +12,7 @@ all three stayed in the cache until its 300 second TTL ran out, whether the logi
 failed, which left it replayable for the rest of that window by anyone holding the encrypted
 callback cookie. This also makes the behaviour match what the function documented all along.
 
-[#1660](https://github.com/sebadob/rauthy/pull/1660)
+[#1664](https://github.com/sebadob/rauthy/pull/1664)
 
 ### Changes
 
