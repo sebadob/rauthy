@@ -1508,7 +1508,7 @@ cache_lifetime = 3600
 #
 # default: false
 # overwritten by: EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS
-#ignore_unknown_auth_flows = false
+ignore_unknown_auth_flows = false
 
 [events]
 # The E-Mail address event notifications should be sent to.
