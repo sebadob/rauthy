@@ -25,6 +25,7 @@ argon2 = { workspace = true }
 askama = { workspace = true }
 async-trait = { workspace = true }
 atrium-api = { workspace = true }
+bincode = { workspace = true }
 atrium-common = { workspace = true }
 atrium-identity = { workspace = true }
 atrium-oauth = { workspace = true }

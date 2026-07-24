@@ -9,6 +9,7 @@ pub mod database;
 pub mod email;
 pub mod entity;
 pub mod events;
+pub mod fido_mds;
 pub mod html;
 pub mod ipgeo;
 pub mod language;

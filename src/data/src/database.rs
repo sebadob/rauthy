@@ -240,6 +240,10 @@ impl DB {
             debug!(?report, "Database Migration Report");
         }
 
+        // seed the embedded FIDO MDS dataset when its tables are still empty (fresh instance or
+        // an existing one upgrading into this version)
+        crate::fido_mds::db::seed_embedded().await?;
+
         // migrate dynamic DB data
         let config = RauthyConfig::get();
         if !config.vars.dev.dev_mode && config.is_primary_node {

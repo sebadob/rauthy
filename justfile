@@ -156,6 +156,13 @@ clippy:
     clear
     cargo clippy
 
+# regenerate the shipped FIDO MDS dataset from the live metadata service
+fido-mds-prep out="assets/fido_mds/dataset.bin":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    cargo run --bin fido-mds-prep -- --out {{ out }}
+
 # delete the local hiqlite database
 delete-hiqlite:
     #!/usr/bin/env bash

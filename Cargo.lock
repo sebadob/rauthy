@@ -5067,6 +5067,7 @@ dependencies = [
  "atrium-common",
  "atrium-identity",
  "atrium-oauth",
+ "bincode",
  "chrono",
  "chrono-tz",
  "constant_time_eq",
