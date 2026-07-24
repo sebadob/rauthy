@@ -263,9 +263,9 @@ password, passkeys, and so on.</p>
 <p><img src="https://github.com/sebadob/rauthy/blob/a89a8e9712c567551cb2d25b9da8823e35794f0a/frontend/screenshots/account.png" alt="Account Dashboard" /></p>
 <h3 id="client-branding"><a class="header" href="#client-branding">Client Branding</a></h3>
 <p>You have a simple way to create a branding or stylized look for the Login page for each client. The
-whole color theme can be changed, and each client can have its own custom logo. Additionally, if you
-modify the branding for the default <code>rauthy</code> client, it will not only change the look for the Login
-page, but also for the Account and Admin page.</p>
+whole color theme can be changed, and each client can have its own custom logo and browser favicon
+for its Login page. Additionally, the theme and logo of the default <code>rauthy</code> client are also used
+for the Account and Admin page.</p>
 <p><img src="https://github.com/sebadob/rauthy/blob/c10e9421e65f386718528b15e3d0ace37aff1158/frontend/screenshots/branding.png" alt="Client Branding" /></p>
 <h3 id="events-and-auditing"><a class="header" href="#events-and-auditing">Events and Auditing</a></h3>
 <p>Rauthy comes with an Event- and Alerting-System. Events are generated in all kinds of scenarios.
@@ -485,7 +485,7 @@ the <a href="getting_started/../config/config_minimal.html">Minimal Production C
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing
 (don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.36.0
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.36.1
 </code></pre>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
@@ -542,7 +542,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.36.0
+    image: ghcr.io/sebadob/rauthy:0.36.1
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -676,7 +676,7 @@ the <a href="getting_started/../config/production_config.html">Production Config
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.36.0
+    ghcr.io/sebadob/rauthy:0.36.1
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -928,7 +928,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.36.0
+          image: ghcr.io/sebadob/rauthy:0.36.1
           securityContext:
             capabilities:
               drop:
@@ -4701,7 +4701,7 @@ servers, for instance a fleet of MCP servers.</p>
 <ul>
 <li>the <strong>authorization request</strong> (<code>GET /oidc/authorize</code>), carried through the issued auth code, and</li>
 <li>the <strong>token request</strong> (<code>POST /oidc/token</code>) for the <code>authorization_code</code>, <code>client_credentials</code>,
-and <code>refresh_token</code> grants.</li>
+and <code>refresh_token</code> grants, as well as the <a href="work/token_exchange.html">Token Exchange</a>.</li>
 </ul>
 <p>The requested value is matched verbatim against the client's allow-list (see below). The RFC
 recommends an absolute URI such as <code>https://api.example.com/mcp</code>, but Rauthy treats the value as
@@ -4728,7 +4728,9 @@ config or via the clients API:</p>
 <ul>
 <li><strong><code>allowed_resources</code></strong> is the allow-list against which a requested <code>resource</code> is validated. If it
 is empty, any <code>resource</code> request is rejected with <code>invalid_target</code> (deny by default). To let a
-client request a resource, add the exact value here.</li>
+client request a resource, add the exact value here. The same list is used for the target of a
+<a href="work/token_exchange.html">Token Exchange</a>, because the question is the same one: may this client mint a
+token for that target?</li>
 <li><strong><code>default_aud</code></strong> is a list of audiences that are <strong>always</strong> added to this client's access tokens,
 independent of any <code>resource</code> parameter. This is handy for less capable clients or IoT devices
 that cannot send a <code>resource</code> parameter but still need a fixed audience.</li>
@@ -4776,6 +4778,73 @@ mint tokens for an arbitrary audience.</p>
 <h2 id="introspection"><a class="header" href="#introspection">Introspection</a></h2>
 <p>The token introspection endpoint (<code>POST /oidc/introspect</code>) reflects the restricted <code>aud</code>
 automatically, using the same single-string-or-array shape as the token.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="token-exchange-rfc-8693"><a class="header" href="#token-exchange-rfc-8693">Token Exchange (RFC 8693)</a></h1>
+<p><a href="https://www.rfc-editor.org/rfc/rfc8693">RFC 8693</a> lets a client trade an existing token for a new
+one. The typical case is a service that receives an access token from a caller and needs to call a
+second service downstream: instead of forwarding the original token, which was minted for itself, it
+exchanges it for a token whose audience is the downstream service.</p>
+<p>Rauthy supports two shapes of this:</p>
+<ul>
+<li><strong>Impersonation</strong>: the new token looks like a token for the original subject. A downstream service
+cannot tell that somebody exchanged it.</li>
+<li><strong>Delegation</strong>: the new token additionally carries an <code>act</code> (actor) claim naming the acting party,
+so a downstream service can distinguish "A acting on behalf of B" from "B".</li>
+</ul>
+<h2 id="the-token-exchange-request"><a class="header" href="#the-token-exchange-request">The token exchange request</a></h2>
+<p>The exchange happens on the normal token endpoint (<code>POST /oidc/token</code>) with</p>
+<pre><code>grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+</code></pre>
+<p>The client authenticates as itself, exactly like for a <code>client_credentials</code> request, and the
+exchange is only allowed for confidential clients.</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th></th><th>Description</th></tr></thead><tbody>
+<tr><td><code>subject_token</code></td><td>required</td><td>The token representing the identity the new token should act for.</td></tr>
+<tr><td><code>subject_token_type</code></td><td>required</td><td>Must be <code>urn:ietf:params:oauth:token-type:access_token</code>.</td></tr>
+<tr><td><code>actor_token</code></td><td>optional</td><td>Presence turns the exchange into a delegation and adds the <code>act</code> claim.</td></tr>
+<tr><td><code>actor_token_type</code></td><td>required with <code>actor_token</code></td><td>Must be <code>urn:ietf:params:oauth:token-type:access_token</code>.</td></tr>
+<tr><td><code>audience</code></td><td>optional</td><td>The target the new token is for. Validated against <code>allowed_resources</code>.</td></tr>
+<tr><td><code>resource</code></td><td>optional</td><td>Same as <code>audience</code>. Only one of the two may be given.</td></tr>
+<tr><td><code>scope</code></td><td>optional</td><td>Narrows the scopes. It can never widen the <code>subject_token</code>'s scopes.</td></tr>
+<tr><td><code>requested_token_type</code></td><td>optional</td><td>Only <code>urn:ietf:params:oauth:token-type:access_token</code> is supported, which is also the default.</td></tr>
+</tbody></table>
+</div><div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="work/token_exchange.html#admonition-note"></a>
+</div>
+<div>
+<p>Rauthy only accepts <strong>access tokens</strong> as <code>subject_token</code> / <code>actor_token</code>, and the exchanged token is
+always an access token. The exchanged token never comes with a refresh token: a refresh must come
+from the client that owns the original token, with a fresh exchange on top. The <code>may_act</code> claim is
+not supported yet.</p>
+</div>
+</div>
+<h2 id="per-client-configuration-1"><a class="header" href="#per-client-configuration-1">Per-client configuration</a></h2>
+<p>The exchange is <strong>deny by default</strong> and needs two things configured on the exchanging client, in the
+Admin UI under the client config or via the clients API:</p>
+<ol>
+<li><strong><code>token_exchange</code> in the client's Authentication Flows.</strong> Without it, any exchange request from
+this client is rejected. It behaves like every other flow.</li>
+<li><strong><code>allowed_resources</code></strong> must contain the target, if an <code>audience</code> / <code>resource</code> is requested. This
+is the same allow-list used for <a href="work/resource_indicators.html">Resource Indicators</a>, because the
+question is the same one: may this client mint a token for that target? A requested target that
+is not on the list is rejected with the RFC error code <code>invalid_target</code>.</li>
+</ol>
+<p>A <code>subject_token</code> that is not a valid access token, or has been revoked, is rejected with
+<code>invalid_grant</code>.</p>
+<h2 id="the-act-claim"><a class="header" href="#the-act-claim">The <code>act</code> claim</a></h2>
+<p>With an <code>actor_token</code>, the exchanged token carries the acting party per
+<a href="https://www.rfc-editor.org/rfc/rfc8693#section-4.1">RFC 8693 section 4.1</a>:</p>
+<pre><code class="language-json">{
+  "sub": "the-original-subject",
+  "act": {
+    "sub": "the-acting-party"
+  }
+}
+</code></pre>
+<p>If the <code>actor_token</code> was itself the result of a delegation, its <code>act</code> claim is nested inside the new
+one, so the whole chain stays visible to a downstream service.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="e-mail-templates"><a class="header" href="#e-mail-templates">E-Mail Templates</a></h1>
 <p>The templates for E-Mails being sent by Rauthy are baked into the binary. This is the most efficient
 and fastest way of handling them. It simplifies the container images and speeds up the internal
@@ -7469,6 +7538,20 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # default: false
 # overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
 #danger_allow_unvalidated_resource = false
+
+# A Client ID Metadata Document may advertise a grant type Rauthy does not
+# implement (e.g. claude.ai lists `urn:ietf:params:oauth:grant-type:jwt-bearer`
+# but never actually requests it). By default such a document is rejected.
+# Enabling this strips the unsupported grant types from an ephemeral (CIMD)
+# document before validation instead of rejecting it. The effective flows still
+# come from `allowed_flows`, so nothing unsupported is ever enabled.
+#
+# This applies ONLY to ephemeral clients. Dynamic client registration (DCR) and
+# admin-managed clients always keep rejecting unknown grant types.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS
+#ignore_unknown_auth_flows = false
 
 [events]
 # The E-Mail address event notifications should be sent to.

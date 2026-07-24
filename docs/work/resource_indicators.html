@@ -180,7 +180,7 @@ servers, for instance a fleet of MCP servers.</p>
 <ul>
 <li>the <strong>authorization request</strong> (<code>GET /oidc/authorize</code>), carried through the issued auth code, and</li>
 <li>the <strong>token request</strong> (<code>POST /oidc/token</code>) for the <code>authorization_code</code>, <code>client_credentials</code>,
-and <code>refresh_token</code> grants.</li>
+and <code>refresh_token</code> grants, as well as the <a href="token_exchange.html">Token Exchange</a>.</li>
 </ul>
 <p>The requested value is matched verbatim against the client's allow-list (see below). The RFC
 recommends an absolute URI such as <code>https://api.example.com/mcp</code>, but Rauthy treats the value as
@@ -207,7 +207,9 @@ config or via the clients API:</p>
 <ul>
 <li><strong><code>allowed_resources</code></strong> is the allow-list against which a requested <code>resource</code> is validated. If it
 is empty, any <code>resource</code> request is rejected with <code>invalid_target</code> (deny by default). To let a
-client request a resource, add the exact value here.</li>
+client request a resource, add the exact value here. The same list is used for the target of a
+<a href="token_exchange.html">Token Exchange</a>, because the question is the same one: may this client mint a
+token for that target?</li>
 <li><strong><code>default_aud</code></strong> is a list of audiences that are <strong>always</strong> added to this client's access tokens,
 independent of any <code>resource</code> parameter. This is handy for less capable clients or IoT devices
 that cannot send a <code>resource</code> parameter but still need a fixed audience.</li>
@@ -264,7 +266,7 @@ automatically, using the same single-string-or-array shape as the token.</p>
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../work/email_templates.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../work/token_exchange.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -278,7 +280,7 @@ automatically, using the same single-string-or-array shape as the token.</p>
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../work/email_templates.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../work/token_exchange.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
