@@ -513,6 +513,7 @@ pre-pr-checks: build-ui fmt is-clean test-hiqlite test-postgres
 # does a `cargo update` + `npm update` for the UI
 update:
     #!/usr/bin/env bash
+    set -euxo pipefail
 
     # We need at least nightly-2026-06-21 for the min release age feature
     # from .cargo/config.toml

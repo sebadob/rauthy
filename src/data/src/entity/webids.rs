@@ -229,7 +229,7 @@ impl WebId {
                 t_user,
                 "http://xmlns.com/foaf/0.1/mbox",
                 NamedNode {
-                    iri: &format!("mailto:{}", &resp.email),
+                    iri: &format!("mailto:{}", resp.email),
                 },
             ))?;
         }

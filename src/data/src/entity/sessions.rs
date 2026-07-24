@@ -714,7 +714,7 @@ impl Session {
         if self.roles.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                format!("User '{}' is not assigned to any roles", &self.id),
+                format!("User '{}' is not assigned to any roles", self.id),
             ));
         }
         Ok(self
