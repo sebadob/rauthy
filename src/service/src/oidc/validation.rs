@@ -60,21 +60,33 @@ pub async fn validate_auth_req_param(
 }
 
 pub async fn validate_and_refresh_token(
-    // when this is some, it will be checked against the 'azp' claim, otherwise skipped and a client
-    // will be fetched inside this function
-    client_opt: Option<Client>,
+    client: Client,
     refresh_token: &str,
     req: &HttpRequest,
 ) -> Result<(TokenSet, Option<String>), ErrorResponse> {
+    let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
+
     let mut buf = Vec::with_capacity(256);
     JwtToken::validate_claims_into(refresh_token, Some(JwtTokenType::Refresh), 0, &mut buf).await?;
     let claims: JwtRefreshClaims = serde_json::from_slice(&buf)?;
 
-    let client = if let Some(c) = client_opt {
-        c
-    } else {
-        Client::find(claims.common.azp.to_string()).await?
-    };
+    if client.id != claims.common.azp {
+        // If this is a non-matching client.id, this is most probably a malicious request.
+        // -> invalidate the refresh token immediately
+        if claims.common.did.is_some()
+            && let Ok(rt) = RefreshTokenDevice::find(validation_str).await
+        {
+            rt.delete().await?;
+        } else if let Ok(rt) = RefreshToken::find(validation_str).await {
+            rt.delete().await?;
+        };
+
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Mismatch in client.id",
+        ));
+    }
+
     let header_origin = client.get_validated_origin_header(req)?;
 
     // validate DPoP proof
@@ -106,7 +118,6 @@ pub async fn validate_and_refresh_token(
     client.validate_user_groups(&user)?;
 
     // validate that it exists in the db and invalidate it afterward
-    let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
     let now = Utc::now().timestamp();
     let exp_at_secs = now + RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
     let rt_scope = if let Some(device_id) = &claims.common.did {
