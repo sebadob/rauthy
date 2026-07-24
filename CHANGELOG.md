@@ -1,24 +1,29 @@
 # Changelog
 
-## Unreleased
+## v0.36.1
 
-### Bugfix
+### Security
 
-#### Upstream Auth Provider Callbacks are Single-Use
+There was a security issue with **High** severity during token refresh under some circumstances that
+allows cross-client token minting and identity/scope confusion during token refresh. You should do a
+timely update or at least make sure you are not vulnerable. If you run the default config, you
+should be good.
 
-A callback for an upstream auth provider login is deleted as soon as it has been validated now.
-Before, only a failed `state`, XSRF token or PKCE verifier check deleted it. A callback that passed
-all three stayed in the cache until its 300 second TTL ran out, whether the login then succeeded or
-failed. This also makes the behaviour match what the function documented all along.
+If you have public clients with the `refresh_token` flow enabled and either you have configured
+`dynamic_clients.enable = true` + `dynamic_clients.reg_token not set` or
+`ephemeral_clients.enabled = true` + `ephemeral_clients.allowed_flows contains refresh_token`, it
+might be possible to abuse an issue. There is a slight chance to make it work without ephemeral or
+dynamic clients, but that is out of Rauthys control. The main thread comes from the combination of a
+public client with allowed token refresh, and a stolen or leaked refresh token.
 
-[#1664](https://github.com/sebadob/rauthy/pull/1664)
+An advisory and CVE / PoC will be made public at a later point.
 
 ### Changes
 
 #### Per-Client Favicons
 
-Client branding now supports a dedicated browser favicon for each client, independently of the
-login logo. Favicons can be uploaded, previewed, and removed from the Admin UI.
+Client branding now supports a dedicated browser favicon for each client, independently of the login
+logo. Favicons can be uploaded, previewed, and removed from the Admin UI.
 
 [#1653](https://github.com/sebadob/rauthy/pull/1653)
 
@@ -53,6 +58,106 @@ supported yet.
 
 [#1652](https://github.com/sebadob/rauthy/pull/1652)
 
+#### RFC 8414 Metadata Endpoints
+
+Rauthy now correctly serves the `.well-known` metadata documents under additional endpoints matching
+the RRFC 8414. This was necessary for CIMD discovery that's used by e.g. Claude.ai.
+
+[#1656](https://github.com/sebadob/rauthy/pull/1656)
+
+#### Opt-in to ignore unknown unknown grant-types from ephemeral clients
+
+This is a fix for clients relying on CIMD (like AI agents) when you don't have control over the
+client documents, and they include unknown / invalid grant types, even when they are unused.
+
+```toml
+[ephemeral_clients]
+# A dynamic client registration is always rejected when it advertises a grant
+# type Rauthy does not support. Some spec-valid CIMD clients (e.g. claude.ai)
+# advertise an unsupported grant (`urn:ietf:params:oauth:grant-type:jwt-bearer`)
+# in their metadata document without ever using it, which would otherwise cause
+# the whole document to be rejected. Setting this to `true` lets an ephemeral
+# (CIMD) client document through by sanitizing - stripping - the unsupported
+# grant types instead of rejecting it.
+#
+# This applies ONLY to ephemeral clients. Dynamic client registration (DCR) and
+# admin-managed clients always keep rejecting unknown grant types.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS
+ignore_unknown_auth_flows = false
+```
+
+[#1658](https://github.com/sebadob/rauthy/pull/1658)
+
+#### RFC 8252 for `localhost` callbacks
+
+Rauthy uses a more-strict requirement for `redirect_uri`s back to `localhost`. If you want to match
+any port, you need to specifically allow it using the glob pattern with e.g. `http://localhost:*`.
+However, CIMD clients do not know this and rely on RFC 8252 which allows any port for `localhost`.
+This is the standard, but less secure. You can now opt-in to it:
+
+```toml
+[access]
+# If set to `true`, loopback redirect URIs (to `localhost`, `127.0.0.1`
+# or `[::1]`) will match on any port, as required by RFC 8252 section 7.3
+# for native / CLI apps that bind an ephemeral loopback port at runtime.
+# Both the port-less form and an explicit `*` wildcard are accepted for
+# `localhost` when this is enabled.
+#
+# This only applies to dynamic and ephemeral clients. Static clients
+# always require an exact match or an explicit `*` wildcard, even with
+# this option set, because an admin has full control over their config.
+#
+# Only enable this if you need it, e.g. an MCP client whose loopback
+# redirect port is not known in advance and cannot be pre-registered.
+# It is `false` by default to keep redirect matching as strict as
+# possible out of the box.
+#
+# default: false
+# overwritten by: RFC_8252_ENABLE
+rfc_8252_enable = false
+```
+
+[#1621](https://github.com/sebadob/rauthy/pull/1621)
+
+#### UX for MFA keys
+
+UX was improved when registering the very first MFA key for an account. The old behavior was that
+you needed a round-trip and a fresh login to have an MFA session. This was changed now. The session
+is immediately upgrade after a Passkey was registered successfully, as well as the user info on the
+Account dashboard.
+
+[#1649](https://github.com/sebadob/rauthy/pull/1649)
+
+#### `preferred_username` during User Registration
+
+It is now possible to provide a `preferred_username` during the user registration when using API
+Keys. This gets rid of an additional round-trip that was necessary when working with the API instead
+of the UI.
+
+[#1640](https://github.com/sebadob/rauthy/pull/1640)
+
+#### Relaxed regex for Client Names
+
+Client names are now allowed to also contain `(` and `)`.
+
+[#1621](https://github.com/sebadob/rauthy/pull/1621)
+
+### Bugfix
+
+- The `sub` claim is not omitted from tokens if it is `null` anyway.
+  [#1655](https://github.com/sebadob/rauthy/pull/1655)
+- The `resource` claim was dropped during UI-initiated, immediate session / login refreshes.
+  [#1657](https://github.com/sebadob/rauthy/pull/1657)
+- A callback for an upstream auth provider login is deleted as soon as it has been validated now.
+  Before, only a failed `state`, XSRF token or PKCE verifier check deleted it. A callback that
+  passed all three stayed in the cache until its 300 second TTL ran out, whether the login then
+  succeeded or failed. This also makes the behaviour match what the function documented all along.
+  [#1664](https://github.com/sebadob/rauthy/pull/1664)
+- `user.last_login` was wrongly updated on token refreshes.
+  [#1659](https://github.com/sebadob/rauthy/pull/1659)
+
 ## v0.36.0
 
 ### Breaking
@@ -79,13 +184,13 @@ location" message for another user.
 #### Delegated Group Admins
 
 You can now delegate user management to non-admins via group-scoped roles. A role named
-`rauthy_admin:<group>` makes its holders a group admin for the matching group(s): an exact match by
+`rauthy_admin:<group>` makes its holders a group admin for the matching group (s): an exact match by
 default, a trailing `*` for a prefix glob, and `rauthy_admin:*` for all groups.
 
 A group admin can manage users that are members of a group it manages (create, edit profile, toggle
 `enabled`, manage in-scope group memberships, reset MFA, reset or set a password, manage the profile
 picture, view / invalidate sessions, and send a bulk E-Mail scoped to one of its managed groups) and
-gets a read-only view of Sessions, Events and the Blacklist for debugging. It can never modify
+gets a read-only view of Sessions, Events, and the Blacklist for debugging. It can never modify
 roles, delete users, send unscoped bulk E-Mails, manage other admins, or touch any non-user
 administration. This is non-breaking unless you already use a custom role starting with
 `rauthy_admin:`; such roles are logged on startup.
@@ -152,8 +257,8 @@ By default, Rauthy will look for a `./secrets.toml`. You can overwrite the path 
 `serve`ing with the `-s, --secrets-file <SECRETS_FILE>` option.
 
 You can only put real secrets inside this file. Anything additional will trigger an error. By
-default, these values are ignored unless you explicitly configure them to be read from this file.
-To do so, instead of providing a secrets inside the config directly, you can set the values to
+default, these values are ignored unless you explicitly configure them to be read from this file. To
+do so, instead of providing a secrets inside the config directly, you can set the values to
 
 ```
 "$SECRETS"
@@ -791,7 +896,7 @@ only boost performance (as seen on the 12%), but they also provide better future
 manual DB deserialization impls are now auto-generated. The same macro was created for Postgres
 types as well to have the exact same behavior. Apart from maybe the small performance improvement,
 the end user will not really notice anything about it though. It's most about future maintenance,
-stability and improved DX.
+stability, and improved DX.
 
 Another feature that was added with this version is auto-encrypted in-cluster TLS traffic. If you
 want to follow a zero trust philosophy, and you don't have something like a service mesh with auto
@@ -1320,7 +1425,7 @@ client_credentials_map_sub = false
 
 #### I18n - Ukrainian Translations
 
-Ukrainian Translations are now available for Email, Common UI and Admin UI.
+Ukrainian Translations are now available for Email, Common UI, and Admin UI.
 
 [#1307](https://github.com/sebadob/rauthy/pull/1307)
 
@@ -2170,7 +2275,7 @@ generate_self_signed = true
 OIDC / OAuth covers almost all web apps, and for those that don't have any support, Rauthy comes
 with `forward_auth` support. To not need an additional LDAP / AD / something similar for your
 backend and workstations, Rauthy now has its own custom PAM module. It does not just use JWT Tokens
-for logging in, but you can actually manage all your Linux hosts, groups and users in different
+for logging in, but you can actually manage all your Linux hosts, groups, and users in different
 ways. You have the option to secure local logins to workstations via Yubikey (only USB Passkeys
 supported, no QR-code / software keys), and all SSH logins can be done with ephemeral, auto-expiring
 passwords, that you can generate via your Account dashboard, if an Admin has created a PAM user for
@@ -2809,7 +2914,7 @@ You will need to migrate your whole configuration with this release.
 Over the last months, Rauthy got so many new features and config options, that the old approach got
 a bit messy and hard to follow. Variable names needed to become longer over time to avoid overlap,
 and so on. Also, because of the way the application grew over the last years, configs, single static
-variables and some snippets existed in many places.
+variables, and some snippets existed in many places.
 
 This needed to change.
 
@@ -5804,7 +5909,7 @@ BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID='$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx
 
 You can now set a new config variable called `USERINFO_STRICT`. If set so true, Rauthy will do
 additional validations on the `/userinfo` endpoint and actually revoke (even otherwise still valid)
-access tokens, when any user / client / device it has been issued for has been deleted, expired or
+access tokens, when any user / client / device it has been issued for has been deleted, expired, or
 disabled. The non-strict mode will simply make sure the token is valid and that the user still
 exists. The additional validations will consume more resources because they need 1-2 additional
 database lookups but will provide more strict validation and possible earlier token revocation. If
@@ -5821,9 +5926,9 @@ that a given `id_token` belongs to a specific `access_token` and has not been sw
 
 [d506865](https://github.com/sebadob/rauthy/commit/d506865898e61fce45e5cf4c754ad4300bd37161)
 
-#### Better roles, groups and scopes names
+#### Better roles, groups, and scopes names
 
-The allowed names for roles, groups and scopes have been adjusted. Rauthy allows names of up to 64
+The allowed names for roles, groups, and scopes have been adjusted. Rauthy allows names of up to 64
 characters now and containing `:` or `*`. This will make it possible to define custom scopes with
 names like `urn:matrix:client:api:guest` or `urn:matrix:client:api:*`.
 
@@ -6086,7 +6191,7 @@ be avoided if possible.
 This whole handling and logic has been rewritten. The CSP hardening has been finalized by removing
 the `data:` allowance for `img-src`. You can still upload SVG / JPG / PNG images under the client
 branding (and for the new auth providers). In the backend, Rauthy will actually parse the image
-data, convert the images to the optimized `webp` format, scale the original down and save 2
+data, convert the images to the optimized `webp` format, scale the original down, and save 2
 different versions of it. The first version will be saved internally to fit into 128x128px for
 possible later use, the second one even smaller. The smaller version will be the one actually being
 displayed on the login page for Clients and Auth Providers.   
@@ -6622,7 +6727,7 @@ The new scope `address` adds:
 - backend + frontend dependencies have been updated to the latest versions everywhere
 - The internal encryption handling has been changed to a new project of mine
   called [cryptr](https://github.com/sebadob/cryptr).  
-  This makes the whole value encryption way easier, more stable and future-proof, because values
+  This makes the whole value encryption way easier, more stable, and future-proof, because values
   have their own tiny header data with the minimal amount of information needed. It not only
   simplifies encryption key rotations, but also even encryption algorithm encryptions really easy in
   the future.
@@ -6750,9 +6855,9 @@ be used as a last resort, to make it usable by giving up some security.
 
 This is the main new feature for this release.
 
-With the now accepted `RSA` signatures for DPoP tokens, the ephemeral, dynamic clients and the basic
-serving of `webid` documents for each user, Rauthy should now fully support Solid OIDC. This feature
-just needs some more real world testing with already existing applications though.
+With the now accepted `RSA` signatures for DPoP tokens, the ephemeral, dynamic clients, and the
+basic serving of `webid` documents for each user, Rauthy should now fully support Solid OIDC. This
+feature just needs some more real world testing with already existing applications though.
 
 These 3 new features are all opt-in, because a default deployment of Rauthy will most probably not
 use them at all. There is a whole new section in
@@ -7151,8 +7256,8 @@ update available.
 ## v0.16.1
 
 This is a small bugfix release.  
-If you had an active and valid session from a v0.15.0, did an update to v0.16.0 and your session was
-still valid, it did not have valid information about the peer IP. This is mandatory for a new
+If you had an active and valid session from a v0.15.0, did an update to v0.16.0, and your session
+was still valid, it did not have valid information about the peer IP. This is mandatory for a new
 feature introduced with v0.16.0 though and the warning logging in that case had an unwrap for the
 remote IP (which can never be null from v0.16.0 on), which then would panic.
 
