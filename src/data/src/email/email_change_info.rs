@@ -48,7 +48,7 @@ pub async fn send_email_change_info_new(
         "{}users/{}/email_confirm/{}",
         RauthyConfig::get().issuer,
         magic_link.user_id,
-        &magic_link.id,
+        magic_link.id,
     );
     let exp = email_ts_prettify(magic_link.exp, &user.language, user_tz);
     let theme_vars = ThemeCssFull::find_theme_variables_email()

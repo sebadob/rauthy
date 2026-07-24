@@ -190,7 +190,7 @@ impl KvVersion {
 impl VaultSource {
     fn build_kv_read_url(&self, path: &str) -> Result<String, Box<dyn std::error::Error>> {
         let api_path = self.kv_version.get_api_path(&self.mount, path);
-        let url = format!("{}{}", &self.addr, api_path);
+        let url = format!("{}{}", self.addr, api_path);
         Ok(url)
     }
 }

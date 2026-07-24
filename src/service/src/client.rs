@@ -133,7 +133,7 @@ pub async fn get_client_secret(id: String) -> Result<ClientSecretResponse, Error
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
-            format!("'{}' is a public client", &client.id),
+            format!("'{}' is a public client", client.id),
         ));
     }
     let secret = client.get_secret_cleartext()?;

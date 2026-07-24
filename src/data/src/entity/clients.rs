@@ -1474,7 +1474,7 @@ impl Client {
         let secret_enc = self.secret.as_ref().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("'{}' has no secret while being confidential", &self.id),
+                format!("'{}' has no secret while being confidential", self.id),
             )
         })?;
         let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
