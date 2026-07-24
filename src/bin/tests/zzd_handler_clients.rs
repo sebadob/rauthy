@@ -22,10 +22,14 @@ fn extract_raw_claims(token: &str) -> Vec<u8> {
     base64_url_no_pad_decode(claims).unwrap()
 }
 
-fn image_form(bytes: &'static [u8], file_name: &'static str) -> reqwest::multipart::Form {
+fn image_form(
+    bytes: &'static [u8],
+    file_name: &'static str,
+    mime_type: &'static str,
+) -> reqwest::multipart::Form {
     let part = reqwest::multipart::Part::bytes(bytes)
         .file_name(file_name)
-        .mime_str("image/png")
+        .mime_str(mime_type)
         .unwrap();
     reqwest::multipart::Form::new().part(file_name, part)
 }
@@ -346,7 +350,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
 
     let res = client
         .put(&favicon_url)
-        .multipart(image_form(FAVICON, "favicon.png"))
+        .multipart(image_form(FAVICON, "favicon.png", "image/png"))
         .send()
         .await?;
     assert_eq!(res.status(), 401);
@@ -354,7 +358,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     let res = client
         .put(&logo_url)
         .headers(auth_headers.clone())
-        .multipart(image_form(LOGO, "logo.png"))
+        .multipart(image_form(LOGO, "logo.png", "image/png"))
         .send()
         .await?;
     assert_eq!(res.status(), 200);
@@ -368,7 +372,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     let res = client
         .put(&favicon_url)
         .headers(auth_headers.clone())
-        .multipart(image_form(FAVICON, "favicon.png"))
+        .multipart(image_form(FAVICON, "favicon.png", "image/png"))
         .send()
         .await?;
     assert_eq!(res.status(), 200);
@@ -391,7 +395,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     let res = client
         .put(&favicon_url)
         .headers(auth_headers.clone())
-        .multipart(image_form(b"not a png", "invalid.png"))
+        .multipart(image_form(b"not a png", "invalid.png", "image/png"))
         .send()
         .await?;
     assert_eq!(res.status(), 400);
@@ -424,7 +428,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     let res = client
         .put(&favicon_url)
         .headers(auth_headers.clone())
-        .multipart(image_form(FAVICON_SVG, "favicon.svg"))
+        .multipart(image_form(FAVICON_SVG, "favicon.svg", "image/svg+xml"))
         .send()
         .await?;
     assert_eq!(res.status(), 200);
