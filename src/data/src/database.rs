@@ -66,16 +66,16 @@ pub struct DB;
 
 impl DB {
     /// Builds the NodeConfig and starts the Hiqlite node
-    pub async fn init(config: hiqlite::NodeConfig) -> Result<(), ErrorResponse> {
+    pub async fn init(mut config: hiqlite::NodeConfig) -> Result<(), ErrorResponse> {
         if HIQLITE_CLIENT.get().is_some() {
             panic!("DB::init() must only be called once at startup");
         }
 
-        // Note: At the time of writing, I have not included the option to not start the DB
-        // layer when the feature is enabled, as this would mean many adoptions and additional
-        // checks in the Hiqlite code.
-        // This means, even if Postgres is configured, this will still create and start the Hiqlite
-        // DB, but it simply won't do anything else than heartbeats between the nodes.
+        // PostgreSQL is the source of truth in this mode. Keep the Hiqlite cache available for
+        // request-level caching and coordination, but do not persist its WAL or snapshots: a
+        // persistent cache can outlive a PostgreSQL cluster rollover and return objects which no
+        // longer exist in the active database.
+        configure_cache_storage(&mut config, is_postgres());
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
 
         if is_postgres() {
@@ -298,6 +298,36 @@ impl DB {
         DbVersion::upsert(db_version).await?;
 
         Ok(())
+    }
+}
+
+fn configure_cache_storage(config: &mut hiqlite::NodeConfig, postgres: bool) {
+    if postgres {
+        config.cache_storage_disk = false;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::configure_cache_storage;
+
+    #[test]
+    fn postgres_cache_is_not_persisted() {
+        let mut config = hiqlite::NodeConfig::default();
+        assert!(config.cache_storage_disk);
+
+        configure_cache_storage(&mut config, true);
+
+        assert!(!config.cache_storage_disk);
+    }
+
+    #[test]
+    fn hiqlite_cache_storage_setting_is_unchanged() {
+        let mut config = hiqlite::NodeConfig::default();
+
+        configure_cache_storage(&mut config, false);
+
+        assert!(config.cache_storage_disk);
     }
 }
 

@@ -675,7 +675,8 @@ log_sync = "interval_200"
 # In-memory only significantly increases the throughput though, so it
 # depends on your needs, what you should prefer.
 #
-# default: true
+# default: true for Hiqlite. PostgreSQL mode always forces this to false so
+# the cache cannot outlive the PostgreSQL database it is derived from.
 # overwritten by: HQL_CACHE_STORAGE_DISK
 cache_storage_disk = true
 
