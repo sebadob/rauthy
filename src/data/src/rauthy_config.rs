@@ -1103,12 +1103,13 @@ impl Vars {
                     panic!("Cannot read config from Vault. {err}");
                 }
             },
-            _ => {
-                let Ok(config) = fs::read_to_string(path_config).await else {
-                    panic!("Cannot read config file from {path_config}");
-                };
-                config
-            }
+            _ => match fs::read_to_string(path_config).await {
+                Ok(s) => s,
+                Err(err) => {
+                    warn!("Cannot read config from {}: {:?}", path_config, err);
+                    String::default()
+                }
+            },
         };
 
         Self::parse(slf, config, path_secrets).await
