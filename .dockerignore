@@ -1,0 +1,14 @@
+.devcontainer
+.github
+.helix
+.idea
+.lapce
+.gitignore
+
+book
+docs
+frontend
+postgres
+rauthy-client
+target
+README.md

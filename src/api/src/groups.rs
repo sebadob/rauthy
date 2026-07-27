@@ -1,0 +1,140 @@
+use crate::ReqPrincipal;
+use actix_web::web::Json;
+use actix_web::{HttpResponse, delete, get, post, put, web};
+use rauthy_api_types::groups::{GroupRequest, GroupResponse};
+use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::clients_scim::ClientScim;
+use rauthy_data::entity::groups::Group;
+use rauthy_error::ErrorResponse;
+use validator::Validate;
+
+/// Returns all existing *groups*
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/groups",
+    tag = "groups",
+    responses(
+        (status = 200, description = "Ok", body = [GroupResponse]),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[get("/groups")]
+pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    // group admins need to read the group list so the user management UI works
+    principal.validate_api_key_or_group_admin(AccessGroup::Groups, AccessRights::Read)?;
+
+    let groups = Group::find_all()
+        .await?
+        .into_iter()
+        .map(GroupResponse::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(groups))
+}
+
+/// Adds a new group to the database
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    post,
+    path = "/groups",
+    tag = "groups",
+    request_body = GroupRequest,
+    responses(
+        (status = 200, description = "Ok", body = GroupResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/groups")]
+pub async fn post_group(
+    Json(payload): Json<GroupRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Create)?;
+    payload.validate()?;
+
+    let group = Group::create(payload).await?;
+
+    for client in ClientScim::find_all().await? {
+        client.create_update_group(group.clone()).await?;
+    }
+
+    Ok(HttpResponse::Ok().json(GroupResponse::from(group)))
+}
+
+/// Modifies a groups name
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    put,
+    path = "/groups/{id}",
+    tag = "groups",
+    request_body = GroupRequest,
+    responses(
+        (status = 200, description = "Ok", body = GroupResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[put("/groups/{id}")]
+pub async fn put_group(
+    id: web::Path<String>,
+    Json(payload): Json<GroupRequest>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Update)?;
+    payload.validate()?;
+
+    let group = Group::update(id.into_inner(), payload.group, payload.meta).await?;
+
+    for client in ClientScim::find_all().await? {
+        client.create_update_group(group.clone()).await?;
+    }
+
+    Ok(HttpResponse::Ok().json(GroupResponse::from(group)))
+}
+
+/// Deletes a group
+///
+/// It will be deleted from all currently assigned users too and this operation cannot be reverted.
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    delete,
+    path = "/groups/{id}",
+    tag = "groups",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[delete("/groups/{id}")]
+pub async fn delete_group(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Delete)?;
+
+    let gid = id.into_inner();
+
+    let clients = ClientScim::find_all().await?;
+    if !clients.is_empty() {
+        let group = Group::find(gid.clone()).await?;
+        for client in clients {
+            client.delete_group(group.clone(), None).await?;
+        }
+    }
+
+    Group::delete(gid).await?;
+
+    Ok(HttpResponse::Ok().finish())
+}

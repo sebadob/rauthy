@@ -1,0 +1,19 @@
+[package]
+name = "rauthy-middlewares"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rauthy-common = { path = "../common" }
+rauthy-error = { path = "../error" }
+rauthy-data = { path = "../data" }
+
+actix-web = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }

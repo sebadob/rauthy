@@ -1,0 +1,193 @@
+<script lang="ts">
+    import { isDefaultScope } from '$utils/helpers';
+    import Button from '$lib5/button/Button.svelte';
+    import Input from '$lib5/form/Input.svelte';
+    import type { UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
+    import type { ScopeRequest, ScopeResponse } from '$api/types/scopes.ts';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { useI18n } from '$state/i18n.svelte';
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { fetchPut } from '$api/fetch';
+    import Form from '$lib5/form/Form.svelte';
+    import LabeledValue from '$lib5/LabeledValue.svelte';
+    import type { SelectItem } from '$lib5/select_list/props.ts';
+    import SelectList from '$lib5/select_list/SelectList.svelte';
+    import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
+    import { untrack } from 'svelte';
+    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+
+    let {
+        attrs,
+        scope,
+        scopes,
+        onSave,
+    }: {
+        attrs: UserAttrConfigValueResponse[];
+        scope: ScopeResponse;
+        scopes: ScopeResponse[];
+        onSave: () => void;
+    } = $props();
+
+    let t = useI18n();
+    let ta = useI18nAdmin();
+
+    let err = $state('');
+    let success = $state(false);
+    let isDefault = $derived(isDefaultScope(scope.name));
+
+    let name = $state(untrack(() => scope.name));
+    let itemsAccess: undefined | SelectItem[] = $state();
+    let itemsId: undefined | SelectItem[] = $state();
+    let claimsAtRoot = $state(untrack(() => scope.claims_at_root));
+
+    $effect(() => {
+        if (scope.id) {
+            name = scope.name;
+            claimsAtRoot = scope.claims_at_root;
+        }
+    });
+
+    $effect(() => {
+        if (isDefaultScope(scope.name)) {
+            itemsAccess = undefined;
+            itemsId = undefined;
+        } else {
+            itemsAccess = attrs
+                .map(a => {
+                    let i: SelectItem = {
+                        name: a.name,
+                        selected: scope.attr_include_access?.includes(a.name) || false,
+                    };
+                    return i;
+                })
+                .toSorted((a, b) => a.name.localeCompare(b.name));
+            itemsId = attrs
+                .map(a => {
+                    let i: SelectItem = {
+                        name: a.name,
+                        selected: scope.attr_include_id?.includes(a.name) || false,
+                    };
+                    return i;
+                })
+                .toSorted((a, b) => a.name.localeCompare(b.name));
+        }
+    });
+
+    async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
+        err = '';
+
+        if (isDefaultScope(name) || (scope.name !== name && scopes.find(s => s.name === name))) {
+            err = ta.common.nameExistsAlready;
+            return;
+        }
+
+        let payload: ScopeRequest = {
+            scope: name,
+        };
+        if (itemsAccess) {
+            let filtered = itemsAccess.filter(i => i.selected).map(i => i.name);
+            if (filtered.length > 0) {
+                payload.attr_include_access = filtered;
+            }
+        }
+        if (itemsId) {
+            let filtered = itemsId.filter(i => i.selected).map(i => i.name);
+            if (filtered.length > 0) {
+                payload.attr_include_id = filtered;
+            }
+        }
+        payload.claims_at_root = claimsAtRoot;
+
+        let res = await fetchPut(form.action, payload);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            success = true;
+            onSave();
+            setTimeout(() => {
+                success = false;
+            }, 2000);
+        }
+    }
+</script>
+
+<Form action={`/auth/v1/scopes/${scope.id}`} {onSubmit}>
+    <LabeledValue label="ID" mono>
+        {scope.id}
+    </LabeledValue>
+
+    <Input
+        bind:value={name}
+        autocomplete="off"
+        label={ta.scopes.name}
+        placeholder={ta.scopes.name}
+        disabled={isDefault}
+        width="14.5rem"
+        required
+        pattern={PATTERN_ROLE_SCOPE}
+    />
+
+    {#if isDefault}
+        <p>{ta.scopes.defaultNoMod}</p>
+    {:else}
+        <p>{ta.scopes.mapping1}</p>
+        <p>{ta.scopes.mapping2}</p>
+
+        {#if itemsAccess}
+            <SelectList bind:items={itemsAccess}>Access Token Mappings</SelectList>
+        {/if}
+
+        {#if itemsId}
+            <SelectList bind:items={itemsId}>Id Token Mappings</SelectList>
+        {/if}
+
+        <div class="rootClaims">
+            <InputCheckbox bind:checked={claimsAtRoot} ariaLabel={ta.scopes.claimsAtRoot}>
+                {ta.scopes.claimsAtRoot}
+            </InputCheckbox>
+        </div>
+        {#if claimsAtRoot}
+            <p class="warn">
+                {ta.scopes.claimsAtRootWarning}
+                <a
+                    href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    IANA JWT Claims Registry
+                </a>
+            </p>
+        {/if}
+    {/if}
+
+    {#if !isDefault}
+        <div class="flex gap-05 mh-10">
+            <Button type="submit">
+                {t.common.save}
+            </Button>
+
+            {#if success}
+                <IconCheck />
+            {/if}
+        </div>
+
+        {#if err}
+            <div class="err">
+                {err}
+            </div>
+        {/if}
+    {/if}
+</Form>
+
+<style>
+    .rootClaims {
+        margin: 1rem 0 0.25rem 0;
+    }
+
+    .warn {
+        max-width: 30rem;
+        color: hsl(var(--error));
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+</style>

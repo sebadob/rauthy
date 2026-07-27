@@ -1,0 +1,128 @@
+use crate::language::Language;
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+pub struct I18nEmailLoginLocation<'a> {
+    pub subject: &'a str,
+    pub unknown_location: &'a str,
+    pub if_invalid: &'a str,
+    pub revoke_link: &'a str,
+    pub account_link: &'a str,
+}
+
+impl I18nEmailLoginLocation<'_> {
+    pub fn build(lang: &Language) -> Self {
+        match lang {
+            Language::De => Self::build_de(),
+            Language::En => Self::build_en(),
+            Language::Fr => Self::build_fr(),
+            Language::Ko => Self::build_ko(),
+            Language::Nb => Self::build_nb(),
+            Language::Nl => Self::build_nl(),
+            Language::Ru => Self::build_ru(),
+            Language::Uk => Self::build_uk(),
+            Language::ZhHans => Self::build_zh_hans(),
+        }
+    }
+}
+
+impl I18nEmailLoginLocation<'_> {
+    fn build_de() -> Self {
+        Self {
+            subject: "Sicherheitswarnung",
+            unknown_location: "Login von unbekannter Adresse",
+            if_invalid: "Sollte es sicher hierbei um einen ungültigen Login handeln, sollte dieser\
+                sofort widerrufen werden und Login-Daten erneuert werden!",
+            revoke_link: "Zugriff Entziehen",
+            account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_en() -> Self {
+        Self {
+            subject: "Security Warning",
+            unknown_location: "Login from unknown location",
+            if_invalid: "If this is an invalid login, you should revoke it immediately and update \
+                your credentials!",
+            revoke_link: "Revoke Access",
+            account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_fr() -> Self {
+        Self {
+            subject: "Avertissement de sécurité",
+            unknown_location: "Connexion depuis un emplacement inconnu",
+            if_invalid: "Si cette connexion est invalide, vous devez la révoquer immédiatement et mettre à jour \
+                vos identifiants !",
+            revoke_link: "Révoquer l’accès",
+            account_link: "Tableau de bord du compte",
+        }
+    }
+
+    fn build_ko() -> Self {
+        Self {
+            subject: "Security Warning",
+            unknown_location: "Login from unknown location",
+            if_invalid: "If this is an invalid login, you should revoke it immediately and update \
+                your credentials!",
+            revoke_link: "Revoke Access",
+            account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_nb() -> Self {
+        Self {
+            subject: "Sikkerhetsvarsel",
+            unknown_location: "Innlogging fra ukjent adresse",
+            if_invalid: "Hvis dette er en ugyldig innlogging, bør du tilbakekalle den umiddelbart og \
+                oppdatere dine påloggingsopplysninger!",
+            revoke_link: "Tilbakekall tilgang",
+            account_link: "Kontodashboard",
+        }
+    }
+
+    fn build_nl() -> Self {
+        Self {
+            subject: "Beveiligingswaarschuwing",
+            unknown_location: "Inloggen vanaf onbekende locatie",
+            if_invalid: "Als dit een ongeldige login is, moet u deze onmiddellijk intrekken en \
+                uw inloggegevens bijwerken!",
+            revoke_link: "Toegang intrekken",
+            account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_uk() -> Self {
+        Self {
+            subject: "Попередження безпеки",
+            unknown_location: "Вхід з невідомого місця",
+            if_invalid: "Якщо це були не ви, вам слід негайно відкликати доступ та оновити \
+                свої облікові дані!",
+            revoke_link: "Відкликати доступ",
+            account_link: "Панель акаунта",
+        }
+    }
+
+    fn build_ru() -> Self {
+        Self {
+            subject: "Предупреждение безопасности",
+            unknown_location: "Вход с неизвестного местоположения",
+            if_invalid: "Если это был несанкционированный вход, вам следует немедленно отозвать \
+                доступ и обновить свои учётные данные!",
+            revoke_link: "Отозвать доступ",
+            account_link: "Панель аккаунта",
+        }
+    }
+
+    fn build_zh_hans() -> Self {
+        Self {
+            subject: "Security Warning",
+            unknown_location: "Login from unknown location",
+            if_invalid: "If this is an invalid login, you should revoke it immediately and update \
+                your credentials!",
+            revoke_link: "Revoke Access",
+            account_link: "Account Dashboard",
+        }
+    }
+}

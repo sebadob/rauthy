@@ -1,0 +1,142 @@
+<script lang="ts">
+    import Button from '$lib5/button/Button.svelte';
+    import { fade } from 'svelte/transition';
+    import Input from '$lib5/form/Input.svelte';
+    import { useI18n } from '$state/i18n.svelte.js';
+    import type {
+        UserAttrValueRequest,
+        UserAttrValuesUpdateRequest,
+        UserResponse,
+    } from '$api/types/user.ts';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import { fetchGet, fetchPut } from '$api/fetch';
+    import type {
+        UserEditableAttrResponse,
+        UserEditableAttrsResponse,
+    } from '$api/types/user_attrs';
+    import { onMount } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
+
+    let {
+        user = $bindable(),
+        viewModePhone,
+    }: {
+        user: UserResponse;
+        viewModePhone?: boolean;
+    } = $props();
+
+    let t = useI18n();
+
+    let err = $state('');
+    let success = $state(false);
+
+    let attrs: UserEditableAttrResponse[] = $state([]);
+
+    onMount(() => {
+        fetchAttrs();
+    });
+
+    async function fetchAttrs() {
+        let res = await fetchGet<UserEditableAttrsResponse>(
+            `/auth/v1/users/${user.id}/attr/editable`,
+        );
+        if (res.body) {
+            attrs = res.body.values.map(v => {
+                v.value = stringifyJsonValue(v.value, 1);
+                return v;
+            });
+        } else {
+            err = res.error?.message || 'Error fetching User Attributes';
+        }
+    }
+
+    async function onSubmit() {
+        err = '';
+
+        let userKeys = attrs.map(a => a.name);
+        let payload: UserAttrValuesUpdateRequest = {
+            values: attrs
+                .filter(a => (a.value && a.value.trim()) || userKeys.includes(a.name))
+                .map(a => {
+                    let v: UserAttrValueRequest = {
+                        key: a.name,
+                        value: parseJsonValue(a.value),
+                    };
+                    return v;
+                }),
+        };
+
+        let res = await fetchPut(`/auth/v1/users/${user.id}/attr`, payload);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            success = true;
+            setTimeout(() => {
+                success = false;
+            }, 3000);
+
+            await fetchAttrs();
+        }
+    }
+</script>
+
+<div class="container">
+    <div>
+        {#each attrs as a (a.name)}
+            <Input
+                bind:value={a.value}
+                autocomplete="off"
+                label={a.name}
+                placeholder={a.default_value?.toString()
+                    ? a.default_value?.toString()
+                    : a.desc || ''}
+                width="100%"
+                onEnter={onSubmit}
+            />
+        {/each}
+    </div>
+
+    {#if attrs.length > 0}
+        <div class="bottom">
+            <div>
+                <Button onclick={onSubmit}>
+                    {t.common.save}
+                </Button>
+            </div>
+
+            {#if success}
+                <div class="success" transition:fade>
+                    <IconCheck />
+                </div>
+            {/if}
+        </div>
+        {#if err}
+            <div class="err" transition:fade>
+                {err}
+            </div>
+        {/if}
+    {/if}
+</div>
+
+<style>
+    .bottom {
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .err {
+        margin-top: 0.5rem;
+        color: hsl(var(--error));
+    }
+
+    .success {
+        margin-bottom: -0.25rem;
+    }
+</style>

@@ -1,0 +1,770 @@
+use crate::cust_validation::validate_vec_scopes;
+use crate::generic::PasswordPolicyResponse;
+use crate::sessions::SessionState;
+use actix_web::HttpRequest;
+use actix_web::http::header;
+use rauthy_common::regex::{
+    RE_ALNUM, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_LOWERCASE,
+    RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
+};
+use rauthy_common::utils::base64_decode;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
+use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
+use time::OffsetDateTime;
+use utoipa::{IntoParams, ToSchema};
+use validator::Validate;
+
+/// The OAuth 2.0 / OIDC grant types (flows) Rauthy supports.
+///
+/// The wire format is the grant type identifier itself, which for the extended grants is the
+/// full URN. Keeping this an enum rather than a validated `String` makes it type-safe in code
+/// and self-documenting in the OpenAPI spec.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+pub enum GrantType {
+    #[default]
+    #[serde(rename = "authorization_code")]
+    AuthorizationCode,
+    #[serde(rename = "client_credentials")]
+    ClientCredentials,
+    #[serde(rename = "password")]
+    Password,
+    #[serde(rename = "refresh_token")]
+    RefreshToken,
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:device_code")]
+    DeviceCode,
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:token-exchange")]
+    TokenExchange,
+}
+
+impl GrantType {
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::AuthorizationCode => "authorization_code",
+            Self::ClientCredentials => "client_credentials",
+            Self::Password => "password",
+            Self::RefreshToken => "refresh_token",
+            Self::DeviceCode => "urn:ietf:params:oauth:grant-type:device_code",
+            Self::TokenExchange => "urn:ietf:params:oauth:grant-type:token-exchange",
+        }
+    }
+
+    /// Joins the given flows into the CSV format used for `clients.flows_enabled`.
+    pub fn csv(flows: &[Self]) -> String {
+        flows
+            .iter()
+            .map(|f| f.as_str())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+}
+
+impl FromStr for GrantType {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
+            "authorization_code" => Self::AuthorizationCode,
+            "client_credentials" => Self::ClientCredentials,
+            "password" => Self::Password,
+            "refresh_token" => Self::RefreshToken,
+            "urn:ietf:params:oauth:grant-type:device_code" => Self::DeviceCode,
+            "urn:ietf:params:oauth:grant-type:token-exchange" => Self::TokenExchange,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Invalid `grant_type`: {s}"),
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+impl Display for GrantType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// The RFC 8693 token type identifiers (RFC 8693 §3). These are a different URN namespace from
+/// [`GrantType`]: `urn:ietf:params:oauth:token-type:*` rather than
+/// `urn:ietf:params:oauth:grant-type:*`, so the two are not interchangeable.
+///
+/// Rauthy only ever accepts and issues an access token, but every RFC-defined type is listed so
+/// that "a token type we do not support" can be told apart from "not a token type at all".
+///
+/// Unlike [`GrantType`], this is deliberately *not* the wire type of `subject_token_type`,
+/// `actor_token_type` and `requested_token_type`. Those stay `Option<String>` and are parsed
+/// here in the handler: RFC 8693 §2.2.2 requires the token endpoint to answer with an OAuth
+/// error object, and rejecting at `serde` level would replace ours with a generic
+/// deserialization error before the handler ever runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+pub enum TokenType {
+    #[serde(rename = "urn:ietf:params:oauth:token-type:access_token")]
+    AccessToken,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:refresh_token")]
+    RefreshToken,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:id_token")]
+    IdToken,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:saml1")]
+    Saml1,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:saml2")]
+    Saml2,
+    #[serde(rename = "urn:ietf:params:oauth:token-type:jwt")]
+    Jwt,
+}
+
+impl TokenType {
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::AccessToken => "urn:ietf:params:oauth:token-type:access_token",
+            Self::RefreshToken => "urn:ietf:params:oauth:token-type:refresh_token",
+            Self::IdToken => "urn:ietf:params:oauth:token-type:id_token",
+            Self::Saml1 => "urn:ietf:params:oauth:token-type:saml1",
+            Self::Saml2 => "urn:ietf:params:oauth:token-type:saml2",
+            Self::Jwt => "urn:ietf:params:oauth:token-type:jwt",
+        }
+    }
+}
+
+impl FromStr for TokenType {
+    type Err = ErrorResponse;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let slf = match s {
+            "urn:ietf:params:oauth:token-type:access_token" => Self::AccessToken,
+            "urn:ietf:params:oauth:token-type:refresh_token" => Self::RefreshToken,
+            "urn:ietf:params:oauth:token-type:id_token" => Self::IdToken,
+            "urn:ietf:params:oauth:token-type:saml1" => Self::Saml1,
+            "urn:ietf:params:oauth:token-type:saml2" => Self::Saml2,
+            "urn:ietf:params:oauth:token-type:jwt" => Self::Jwt,
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Invalid token type: {s}"),
+                ));
+            }
+        };
+        Ok(slf)
+    }
+}
+
+impl Display for TokenType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct AddressClaim {
+    pub formatted: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub street_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locality: Option<String>,
+    // pub region: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postal_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
+pub struct AuthRequest {
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
+    ))]
+    pub client_id: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub redirect_uri: String,
+    /// Validation: `[a-z0-9-_/]{2,128}`
+    #[validate(regex(path = "*RE_LOWERCASE", code = "[a-z0-9-_/]{2,128}"))]
+    pub response_type: String,
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
+    #[serde(default = "default_scope")]
+    pub scope: String,
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
+    pub state: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub code_challenge: Option<String>,
+    /// Validation: `plain|S256`
+    #[validate(regex(path = "*RE_CODE_CHALLENGE_METHOD", code = "plain|S256"))]
+    pub code_challenge_method: Option<String>,
+    #[validate(range(min = 0))]
+    pub max_age: Option<i64>,
+    /// Validation: `[a-zA-Z0-9_\s]{0,128}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9_\\s]{0,128}"))]
+    pub prompt: Option<String>,
+    /// RFC 8707 resource indicator. Must be an absolute URI without a fragment. The
+    /// requested resource is validated against the client's `allowed_resources` and,
+    /// on success, added to the issued access token's `aud`.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
+    pub resource: Option<String>,
+}
+
+#[inline]
+fn default_scope() -> String {
+    String::from("openid")
+}
+
+#[derive(Serialize, Deserialize, Validate, ToSchema)]
+pub struct BackchannelLogoutRequest {
+    #[validate(regex(path = "*RE_BASE64"))]
+    pub logout_token: String,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct CertsParams {
+    pub skip_okp: Option<bool>,
+}
+
+#[derive(Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+#[serde(rename_all = "lowercase")]
+pub enum DeviceAcceptedRequest {
+    Accept,
+    Decline,
+    Pending,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Clone, Serialize))]
+pub struct LoginRequest {
+    /// Validation: `email`
+    #[validate(email)]
+    pub email: String,
+    /// Validation: Applies password policy - max 256 characters
+    #[validate(length(max = 256))]
+    pub password: Option<String>,
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
+    pub pow: String,
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
+    pub client_id: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub redirect_uri: String,
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
+    #[validate(custom(function = "validate_vec_scopes"))]
+    pub scopes: Option<Vec<String>>,
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
+    pub state: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub nonce: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub code_challenge: Option<String>,
+    /// Validation: `plain|S256`
+    #[validate(regex(path = "*RE_CODE_CHALLENGE_METHOD", code = "plain|S256"))]
+    pub code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator forwarded from the authorization request, carried
+    /// into the auth code so the issued access token can be audience-restricted.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
+    pub resource: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+pub struct LoginRefreshRequest {
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
+    pub client_id: String,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub redirect_uri: String,
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
+    #[validate(custom(function = "validate_vec_scopes"))]
+    pub scopes: Option<Vec<String>>,
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
+    pub state: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub nonce: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub code_challenge: Option<String>,
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator forwarded from the authorization request, carried
+    /// into the auth code so the issued access token can be audience-restricted.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
+    pub resource: Option<String>,
+}
+
+#[derive(Default, Deserialize, Validate, ToSchema, IntoParams)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct LogoutRequest {
+    /// Valid `id_token` issued by Rauthy to do an RP Initiated Logout.
+    /// https://openid.net/specs/openid-connect-rpinitiated-1_0.html
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub id_token_hint: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub post_logout_redirect_uri: Option<String>,
+    /// Validation: max length 2048
+    #[validate(length(max = 2048))]
+    pub state: Option<String>,
+    /// Logout Token used for OIDC Backchannel Logout
+    /// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub logout_token: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct DeviceGrantRequest {
+    /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
+    pub client_id: String,
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub client_secret: Option<String>,
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
+    pub scope: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub nonce: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct DeviceVerifyRequest {
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub user_code: String,
+    /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]
+    pub pow: String,
+    /// If `DeviceAcceptedRequest::Pending`, information about the request will be returned.
+    /// If `DeviceAcceptedRequest::Accept` - the device will get a Token Set
+    /// If `DeviceAcceptedRequest::Decline` - the code request will be deleted and rejected
+    pub device_accepted: DeviceAcceptedRequest,
+}
+
+#[derive(Default, Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct TokenRequest {
+    pub grant_type: GrantType,
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub code: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub redirect_uri: Option<String>,
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,128}$"
+    ))]
+    pub client_id: Option<String>,
+    /// Validation: `[a-zA-Z0-9]`
+    #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
+    pub client_secret: Option<String>,
+    /// Validation: `[a-zA-Z0-9-\\._~+/=]+`
+    #[validate(regex(path = "*RE_CODE_VERIFIER", code = "[a-zA-Z0-9-\\._~+/=]+"))]
+    pub code_verifier: Option<String>,
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub device_code: Option<String>,
+    /// Validation: `email`
+    #[validate(email)]
+    pub username: Option<String>,
+    /// max 256 characters
+    #[validate(length(max = 256))]
+    pub password: Option<String>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub refresh_token: Option<String>,
+    /// RFC 8707 resource indicator. Must be an absolute URI without a fragment. On a
+    /// `refresh_token` grant it may only narrow (be a subset of) the resources granted
+    /// to the original token, never widen them.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
+    pub resource: Option<String>,
+
+    /// RFC 8693 token exchange: the token that represents the identity on whose behalf the
+    /// request is made. Rauthy only accepts an access token here.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub subject_token: Option<String>,
+    /// RFC 8693 token exchange: the type of the `subject_token`. Rauthy only accepts
+    /// `urn:ietf:params:oauth:token-type:access_token`.
+    ///
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub subject_token_type: Option<String>,
+    /// RFC 8693 token exchange: the token that represents the identity of the acting party.
+    /// If given, the exchanged token is a delegation and will contain an `act` claim.
+    /// Rauthy only accepts an access token here.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub actor_token: Option<String>,
+    /// RFC 8693 token exchange: the type of the `actor_token`. Rauthy only accepts
+    /// `urn:ietf:params:oauth:token-type:access_token`.
+    ///
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub actor_token_type: Option<String>,
+    /// RFC 8693 token exchange: the type of token the client wants back. Rauthy only issues
+    /// `urn:ietf:params:oauth:token-type:access_token`, which is also the default.
+    ///
+    /// Validation: max length is 256
+    #[validate(length(max = 256))]
+    pub requested_token_type: Option<String>,
+    /// RFC 8693 token exchange: the target of the exchanged token. Validated against the
+    /// client's `allowed_resources`, exactly like `resource`.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub audience: Option<String>,
+    /// RFC 8693 token exchange: the scopes for the exchanged token. May only narrow the
+    /// scopes of the `subject_token`, never widen them.
+    ///
+    /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
+    #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
+    pub scope: Option<String>,
+}
+
+impl TokenRequest {
+    // by RFC, the client auth can be either sent inside the POST body, or as an Authorization header
+    pub fn try_get_client_id_secret(
+        &self,
+        req: &HttpRequest,
+    ) -> Result<(String, Option<String>), ErrorResponse> {
+        let auth_header = req.headers().get(header::AUTHORIZATION).map(|h| {
+            let (_, b64) = h
+                .to_str()
+                .unwrap_or_default()
+                .split_once(' ')
+                .unwrap_or(("", ""));
+            b64
+        });
+
+        if let Some(header) = auth_header {
+            let decoded = String::from_utf8(base64_decode(header)?)?;
+            match decoded.split_once(':') {
+                None => Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Bad Authorization header",
+                )),
+                Some((client_id, client_secret)) => {
+                    Ok((client_id.to_string(), Some(client_secret.to_string())))
+                }
+            }
+        } else {
+            Ok((
+                self.client_id.clone().unwrap_or_default(),
+                self.client_secret.clone(),
+            ))
+        }
+    }
+}
+
+#[derive(Deserialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct TokenRevocationRequest {
+    pub token: String,
+    pub token_type_hint: Option<String>,
+    pub client_id: Option<String>,
+    pub client_secret: Option<String>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct TokenValidationRequest {
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    pub token: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct DeviceCodeResponse<'a> {
+    pub device_code: &'a str,
+    pub user_code: &'a str,
+    pub verification_uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_uri_complete: Option<String>,
+    pub expires_in: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interval: Option<u32>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct DeviceVerifyResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scopes: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct JktClaim<'a> {
+    pub jkt: &'a str,
+}
+
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, ToSchema)]
+pub enum JwkKeyPairAlg {
+    RS256,
+    RS384,
+    RS512,
+    #[default]
+    EdDSA,
+}
+
+impl Display for JwkKeyPairAlg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            JwkKeyPairAlg::RS256 => "RS256",
+            JwkKeyPairAlg::RS384 => "RS384",
+            JwkKeyPairAlg::RS512 => "RS512",
+            JwkKeyPairAlg::EdDSA => "EdDSA",
+        };
+        write!(f, "{s}")
+    }
+}
+
+#[derive(Default, Serialize, Deserialize, ToSchema)]
+pub enum JwkKeyPairType {
+    RSA,
+    #[default]
+    OKP,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct JWKSPublicKeyCerts {
+    pub kty: JwkKeyPairType,
+    #[serde(rename = "use")]
+    pub _use: &'static str,
+    pub alg: JwkKeyPairAlg,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crv: Option<String>, // Ed25519
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub n: Option<String>, // RSA
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub e: Option<String>, // RSA
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x: Option<String>, // OKP
+}
+
+#[derive(Default, Serialize, ToSchema)]
+pub struct JWKSCerts {
+    pub keys: Vec<JWKSPublicKeyCerts>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PasswordResetResponse {
+    pub csrf_token: String,
+    pub password_policy: PasswordPolicyResponse,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OAuth2ErrorResponse<'a> {
+    pub error: OAuth2ErrorTypeResponse,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_description: Option<Cow<'a, str>>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OAuth2ErrorTypeResponse {
+    InvalidRequest,
+    InvalidClient,
+    InvalidGrant,
+    UnauthorizedClient,
+    UnsupportedGrantType,
+    InvalidScope,
+    // specific to the device grant
+    AuthorizationPending,
+    SlowDown,
+    AccessDenied,
+    ExpiredToken,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct SessionInfoResponse<'a> {
+    pub id: Cow<'a, str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub csrf_token: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roles: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub groups: Option<Cow<'a, str>>,
+    /// format: `OffsetDateTime`
+    #[schema(value_type = str)]
+    #[serde(with = "time::serde::rfc3339")]
+    pub exp: OffsetDateTime,
+    /// format: `OffsetDateTime`
+    #[schema(value_type = str)]
+    #[serde(with = "time::serde::rfc3339")]
+    pub timeout: OffsetDateTime,
+    pub state: SessionState,
+}
+
+/// RFC 7519 `aud` (audience) claim value: a single audience string, or an array of
+/// them. Rauthy serializes a single audience as a plain string (so there is no change
+/// for existing consumers) and only emits a JSON array when two or more audiences are
+/// present (RFC 8707 `resource` indicators, the per-client `default_aud`, or the
+/// `solid` audience for Solid-OIDC ephemeral clients). Both forms are valid per the RFC.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(untagged)]
+pub enum Audience<'a> {
+    Single(Cow<'a, str>),
+    Multiple(Vec<Cow<'a, str>>),
+}
+
+impl<'a> Audience<'a> {
+    /// A single-valued audience.
+    pub fn single(value: impl Into<Cow<'a, str>>) -> Self {
+        Self::Single(value.into())
+    }
+
+    /// Builds the most specific representation for the given audiences: a `Single` for
+    /// exactly one value, otherwise a `Multiple`. The input is expected to be
+    /// de-duplicated already by the caller.
+    pub fn from_values(mut values: Vec<Cow<'a, str>>) -> Self {
+        if values.len() == 1 {
+            Self::Single(values.swap_remove(0))
+        } else {
+            Self::Multiple(values)
+        }
+    }
+
+    /// `true` if there is no audience value at all, or all values are empty.
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Single(s) => s.is_empty(),
+            Self::Multiple(v) => v.is_empty() || v.iter().all(|s| s.is_empty()),
+        }
+    }
+
+    /// `true` if `needle` is one of the contained audiences.
+    pub fn contains(&self, needle: &str) -> bool {
+        match self {
+            Self::Single(s) => s == needle,
+            Self::Multiple(v) => v.iter().any(|s| s == needle),
+        }
+    }
+}
+
+#[derive(Default, Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct TokenInfo<'a> {
+    pub active: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sub: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<&'a str>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub aud: Option<Audience<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iat: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nbf: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exp: Option<i64>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim<'a>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use validator::Validate;
+
+    // Regression test for RFC 8707 `resource` being dropped on the silent re-auth path.
+    // The refresh authorize request must deserialize and validate a `resource` just like
+    // the full-login `LoginRequest` does, so audience-bound tokens survive later logins.
+    #[test]
+    fn login_refresh_request_carries_valid_resource() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "https://mcp.example.com/mcp"
+        }"#;
+
+        let req: LoginRefreshRequest =
+            serde_json::from_str(json).expect("must deserialize the resource field");
+        assert_eq!(req.resource.as_deref(), Some("https://mcp.example.com/mcp"));
+        assert!(
+            req.validate().is_ok(),
+            "a valid absolute-URI resource must pass validation"
+        );
+    }
+
+    #[test]
+    fn login_refresh_request_rejects_invalid_resource() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "not a valid uri"
+        }"#;
+
+        let req: LoginRefreshRequest =
+            serde_json::from_str(json).expect("must deserialize even an invalid resource");
+        assert!(
+            req.validate().is_err(),
+            "a resource with disallowed characters must fail validation"
+        );
+    }
+
+    // RFC 8707 §2: the `resource` MUST be an absolute URI without a fragment. The
+    // fragment-excluding `RE_RESOURCE` validator must reject a `#` fragment.
+    #[test]
+    fn login_refresh_request_rejects_resource_with_fragment() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "https://mcp.example.com/mcp#frag"
+        }"#;
+
+        let req: LoginRefreshRequest =
+            serde_json::from_str(json).expect("must deserialize even a fragmented resource");
+        assert!(
+            req.validate().is_err(),
+            "a resource containing a URI fragment must fail validation"
+        );
+    }
+}

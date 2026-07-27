@@ -1,0 +1,2 @@
+ALTER TABLE users_values
+    ALTER COLUMN zip TYPE VARCHAR USING zip::VARCHAR;

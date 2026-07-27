@@ -1,0 +1,193 @@
+use crate::token_set::{
+    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet,
+};
+use actix_web::HttpRequest;
+use actix_web::http::header::{HeaderName, HeaderValue};
+use chrono::Utc;
+use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::dpop_proof::DPoPProof;
+use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
+use rauthy_data::entity::users::User;
+use rauthy_data::events::event::Event;
+use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
+use rauthy_jwt::token::JwtToken;
+use tracing::debug;
+
+/// Validates request parameters for the authorization and refresh endpoints
+pub async fn validate_auth_req_param(
+    req: &HttpRequest,
+    client_id: &str,
+    redirect_uri: &str,
+    code_challenge: &Option<String>,
+    code_challenge_method: &Option<String>,
+) -> Result<(Client, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
+    let client = Client::find_maybe_ephemeral(String::from(client_id))
+        .await
+        .map_err(|mut err| {
+            if err.error == ErrorResponseType::NotFound {
+                err.message = format!("Client '{client_id}' does not exist").into();
+            }
+            err
+        })?;
+
+    let header = client.get_validated_origin_header(req)?;
+
+    client.validate_enabled()?;
+    client.validate_redirect_uri(redirect_uri)?;
+
+    if client.challenge.is_some() {
+        if code_challenge.is_none() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'code_challenge' is missing",
+            ));
+        } else {
+            // 'plain' is the default method to be assumed by the OAuth specification when it is
+            // not further specified.
+            let method = if let Some(m) = code_challenge_method {
+                m.to_owned()
+            } else {
+                String::from("plain")
+            };
+            client.validate_challenge_method(&method)?;
+        }
+    }
+
+    Ok((client, header))
+}
+
+pub async fn validate_and_refresh_token(
+    client: Client,
+    refresh_token: &str,
+    req: &HttpRequest,
+) -> Result<(TokenSet, Option<String>), ErrorResponse> {
+    let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
+
+    let mut buf = Vec::with_capacity(256);
+    JwtToken::validate_claims_into(refresh_token, Some(JwtTokenType::Refresh), 0, &mut buf).await?;
+    let claims: JwtRefreshClaims = serde_json::from_slice(&buf)?;
+
+    if client.id != claims.common.azp {
+        // If this is a non-matching client.id, this is most probably a malicious request.
+        // -> invalidate the refresh token immediately
+        if claims.common.did.is_some()
+            && let Ok(rt) = RefreshTokenDevice::find(validation_str).await
+        {
+            rt.delete().await?;
+        } else if let Ok(rt) = RefreshToken::find(validation_str).await {
+            rt.delete().await?;
+        };
+
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Mismatch in client.id",
+        ));
+    }
+
+    let header_origin = client.get_validated_origin_header(req)?;
+
+    // validate DPoP proof
+    let (dpop_fingerprint, dpop_nonce) = if let Some(cnf) = claims.common.cnf {
+        // if the refresh token contains the 'cnf' header, we must validate the DPoP as well
+        if let Some(proof) = DPoPProof::opt_validated_from(req, &header_origin).await? {
+            let fingerprint = proof.jwk_fingerprint()?;
+            if fingerprint != cnf.jkt {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "The refresh token is bound to a missing DPoP proof",
+                ));
+            }
+            debug!("DPoP-Bound refresh token accepted");
+            (Some(DpopFingerprint(fingerprint)), proof.claims.nonce)
+        } else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "The refresh token is bound to a missing DPoP proof",
+            ));
+        }
+    } else {
+        (None, None)
+    };
+
+    let user = User::find(claims.uid.to_string()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+    client.validate_user_groups(&user)?;
+
+    // validate that it exists in the db and invalidate it afterward
+    let now = Utc::now().timestamp();
+    let exp_at_secs = now + RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
+    let rt_scope = if let Some(device_id) = &claims.common.did {
+        let mut rt = RefreshTokenDevice::find(validation_str).await?;
+
+        if &rt.device_id != device_id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "'device_id' does not match",
+            ));
+        }
+        if rt.user_id != user.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "'user_id' does not match",
+            ));
+        }
+
+        if rt.exp > exp_at_secs + 1 {
+            rt.exp = exp_at_secs;
+            rt.save().await?;
+        }
+        rt.scope
+    } else {
+        let mut rt = RefreshToken::find(validation_str).await?;
+        if rt.exp > exp_at_secs + 1 {
+            rt.exp = exp_at_secs;
+            rt.save().await?;
+        }
+        rt.scope
+    };
+
+    // at this point, everything has been validated -> we can issue a new TokenSet safely
+    debug!("Refresh Token - all good!");
+
+    // A token refresh is NOT a fresh user authentication, so `last_login` must not be bumped
+    // here - otherwise `auth_time` (derived from `last_login`) would advance on every refresh.
+    // The `auth_time` is carried on the refresh token claims instead (see below).
+
+    let auth_time = if let Some(ts) = claims.auth_time {
+        AuthTime::given(ts)
+    } else {
+        // This is not 100% correct but will make the migration from older to new refresh
+        // tokens smooth. In a future release, the `auth_time` can be set to required in the claims.
+        // Optional for now to still accept older tokens.
+        // As soon as no old refresh tokens exist anymore, this branch will never be used anyway.
+        AuthTime::now()
+    };
+
+    let ts = TokenSet::from_user(
+        &user,
+        &client,
+        auth_time,
+        dpop_fingerprint,
+        None,
+        rt_scope.map(TokenScopes),
+        None,
+        // carry the granted resource forward so the refreshed access token keeps its
+        // audience binding; a refresh can never widen it
+        claims.resource.map(String::from),
+        AuthCodeFlow::No,
+        DeviceCodeFlow::No,
+    )
+    .await?;
+
+    if RauthyConfig::get().vars.events.generate_token_issued {
+        Event::token_issued("refresh", &client.id, Some(&user.email))
+            .send()
+            .await?;
+    }
+
+    Ok((ts, dpop_nonce))
+}

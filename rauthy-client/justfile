@@ -1,0 +1,84 @@
+set shell := ["bash", "-uc"]
+
+export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
+
+# prints out the currently set version
+version:
+    #!/usr/bin/env bash
+    echo "v$TAG"
+
+# makes sure clippy is fine for each example
+clippy-examples:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    cd examples/actix-web
+    cargo +nightly clippy -- -D warnings
+
+    cd ../axum
+    cargo +nightly clippy -- -D warnings
+
+    cd ../generic
+    cargo +nightly clippy -- -D warnings
+
+# clippy lint + check with minimal versions from nightly
+check: clippy-examples
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    clear
+    cargo update
+
+    cargo +nightly clippy -- -D warnings
+    cargo +nightly clippy --features actix-web -- -D warnings
+    cargo +nightly clippy --features axum -- -D warnings
+    cargo +nightly clippy --features device-code -- -D warnings
+    cargo +nightly clippy --features userinfo -- -D warnings
+    cargo +nightly clippy --features scim -- -D warnings
+    cargo +nightly clippy --features rsa -- -D warnings
+
+    cargo minimal-versions check
+    cargo minimal-versions check --features actix-web
+    cargo minimal-versions check --features axum
+    cargo minimal-versions check --features device-code
+    cargo minimal-versions check --features userinfo
+    cargo minimal-versions check --features scim,axum
+    cargo minimal-versions check --features rsa
+
+# runs the full set of tests
+test test="":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    clear
+    cargo +nightly test --features scim {{ test }}
+    echo All tests successful
+
+# builds the code
+build:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    # make sure building works
+    cargo build
+
+# verifies the MSRV - Note: Currently, you cannot specify features for this -> add features to default beforehand
+msrv-verify:
+    cargo msrv verify
+
+# find's the new MSRV, if it needs a bump
+msrv-find:
+    cargo msrv find --min 1.84.1
+
+# makes sure everything is fine
+verify: check test build msrv-verify
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    # make sure everything has been committed
+    git diff --exit-code
+
+    echo all good
+
+# publishes the current version to cargo.io
+publish: verify
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    cargo publish

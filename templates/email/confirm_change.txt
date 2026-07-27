@@ -1,0 +1,7 @@
+{{ header }} {{ email_sub_prefix }}
+
+{{ msg }}
+
+{{ email_changed_to }}
+
+{{ changed_by_admin }}

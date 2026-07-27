@@ -1,0 +1,361 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Encryption - Rauthy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././mdbook-admonish.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Rauthy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="encryption"><a class="header" href="#encryption">Encryption</a></h1>
+<p>Rauthy does additional encryption for values in lots of places, like for instance <code>client_secret</code>s
+in the database
+or session cookies. In the Getting Started for Kubernetes, we have set up the <code>encryption.keys</code> and
+<code>encryption.key_active</code>.</p>
+<p>The <code>encryption.keys</code> defines the static keys used for additional data encryption in a few places.
+This values may
+contain multiple keys, if you want to rotate them at some point without breaking the decryption of
+all already existing
+secrets.</p>
+<p><code>encryption.key_active</code> defines the key inside <code>encryption.keys</code> which will be used as the default.
+This means that all
+new / current encryption's performed by the backend will use the key with the given ID.</p>
+<h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
+<p>If you followed the Getting Started for Kubernetes, you already completed this step. If not, this is
+how you can
+generate an encryption key.</p>
+<p><strong>Option 1: CLI</strong></p>
+<pre><code class="language-bash">docker run -it --rm ghcr.io/sebadob/rauthy generate-enc-key
+</code></pre>
+<p><strong>Option 2: <code>openssl</code></strong></p>
+<pre><code class="language-bash">echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+</code></pre>
+<p>The first part until the first <code>/</code> is the key ID. This has to be between 2 and 20 characters and
+should not contain any special ones. The second part after the first <code>/</code> is the key itself. This
+value <strong>must</strong> be exactly 32 bytes long and then be base64 encoded. If it is not, Rauthy will yell
+at startup and panic early.</p>
+<p>If you have generated a key, lets say the output was</p>
+<pre><code>❯ echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI=
+</code></pre>
+<p>Your config value should look like this:</p>
+<pre><code class="language-toml">[encryption]
+keys = ["90eb6d69/U9wZG4GS/94pVh6iTH1ijf+kj+tXJHKkQNsp5eImMQI="]
+key_active = "90eb6d69"
+</code></pre>
+<p>You can add more keys if you like, <strong>separated by new lines</strong>, which is needed for the key rotation
+described below. The <code>encryption.key_active</code> will be the key being used for all new encryption's.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>It seems that in some environments, the above <code>openssl</code> command does not output proper values, which
+will make Rauthy panic on startup, when it checks the given values. If you run into that situation,
+you can generate them without <code>openssl</code> as well, with e.g:</p>
+<pre><code>echo"$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 6)/$(cat /dev/urandom | head -c 32 | base64)"</code></pre>
+<p>... or just use the CLI as described above.</p>
+</div>
+</div>
+<h2 id="key-rotation"><a class="header" href="#key-rotation">Key Rotation</a></h2>
+<p>A good practice is to rotate encryption keys from time to time. Rauthy does auto-rotate the keys for
+signing tokens, but the admin is responsible for the encryption keys, since they have a greater
+impact.</p>
+<p><strong>1. Add a new key to the <code>encryption.keys</code> in you secrets</strong></p>
+<div id="admonition-fail" class="admonition admonish-failure" role="note" aria-labelledby="admonition-fail-title">
+<div class="admonition-title">
+<div id="admonition-fail-title">
+<p>Fail</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-fail"></a>
+</div>
+<div>
+<p>You <strong>must not remove</strong> a current key, before the migration has been done via the UI.<br />
+If the old key is gone, the migration will fail.</p>
+</div>
+</div>
+<p><strong>2. Generate a new key + id</strong></p>
+<p><strong>Option 1: CLI</strong></p>
+<pre><code class="language-bash">docker run -it --rm ghcr.io/sebadob/rauthy generate-enc-key
+</code></pre>
+<p><strong>Option 2: <code>openssl</code></strong></p>
+<pre><code class="language-bash">echo "$(openssl rand -hex 4)/$(openssl rand -base64 32)"
+</code></pre>
+<p>The part before the first <code>/</code> is the <code>key_active</code> and the part afterwards is the key base64 encoded.
+You might set the new <code>encryption.key_active</code> to the newly generated key ID.</p>
+<p>Keep in mind, you need to ADD this to your existing keys and not just replace them! If you just
+replace them, almost all things will break and fall apart.</p>
+<p>The final format of the <code>encryption.keys</code> should look something like this, for instance:</p>
+<pre><code class="language-toml">[encryption]
+key = [
+  "Wx1zrbLF/5vTaB7LdUSg1aTecmqHJOu2+RnU6zgTwNkDQU52Y3JM=",
+  "6uf5QebA/9DsKMoq8A+Gn2WQrTcSpz5sg751yYs3IJlkw3dn0rII=",
+]
+</code></pre>
+<p>In this example, if the first key should be the new active default, set your <code>key_active</code> to</p>
+<pre><code class="language-toml">[encryption]
+key_active = "Wx1zrbLF"
+</code></pre>
+<p><strong>3. Set the <code>key_active</code> to the ID of your newly generated key</strong></p>
+<p>This will make sure that all new encryption will use the new key. If you do not care about removing
+the old keys, because you maybe just want to rotate because its good practice, the secrets will
+migrate "by themselves" over time.</p>
+<p>If Rauthy finds any secrets during its normal operation, that have been encrypted with an older key
+than the current <code>key_active</code>, it will re-encrypt these secrets and update the values. This means,
+you may just stop at this point, if this is good enough for you.</p>
+<p><strong>4. Migrate Keys</strong></p>
+<p>If you, however, want to trigger a re-encryption of all existing secrets on purpose, there is a
+small tool in the Admin UI which helps you with this.</p>
+<p>Log in to the Admin UI and navigate to <code>Config</code> -&gt; <code>Encryption Keys</code>.<br />
+You will see the currently recognized keys and the currently active ID.</p>
+<p>You can then make sure, that the ID you want to migrate secrets to is selected and execute the
+migrations. Please keep in mind, that if you have a lot of data, it might take a few seconds to
+perform this operation. This will migrate all encrypted data for existing OIDC clients, all JWKs,
+and so on, with the new key.</p>
+<p><strong>5. Remove old keys</strong></p>
+<p>After a successful migration via the UI tool, you could remove old keys from the <code>keys</code> value, but
+it is not recommended as long as you did not have a known data breach. Just keep them around for
+some time because of encrypted cookies with older keys.</p>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-caution"></a>
+</div>
+<div>
+<p>All cookies are encrypted with the <code>key_active</code>. This means, if you remove something from the <code>keys</code>
+which has been used to encrypt cookies, the user will be prompted to log in again, even if cookies
+have not expired yet.</p>
+</div>
+</div>
+<div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
+<div class="admonition-title">
+<div id="admonition-note-1-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note-1"></a>
+</div>
+<div>
+<p>Rauthy uses ChaCha20Poly1305 for any encryption. AES GCM is not used on purpose, because it has some
+attack vectors if its used without hardware acceleration.</p>
+<p>Usually, devices these days all come with AES-NI, even embedded ones. However, with VM's this is
+often a different story and its not guaranteed, that you will have AES acceleration when you spin
+up a VM in some cloud. Rauthy tries to be as secure as possible by default and therefore
+ChaCha20Poly1305 has a slight advantage over AES.</p>
+</div>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../config/passkeys.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../config/logging.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../config/passkeys.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../config/logging.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

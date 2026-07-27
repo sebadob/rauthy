@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}E-Mail Change Request{% endblock %}
+
+{% block content %}
+<h1>{{ header }} {{ email_sub_prefix }}</h1>
+<p>{{ msg }}</p>
+<p>{{ email_changed_to }}</p>
+<p class="err">{{ changed_by_admin }}</p>
+{% endblock %}

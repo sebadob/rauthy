@@ -1,0 +1,8 @@
+{{ header }} {{ email_sub_prefix }}
+
+{{ click_link }}
+
+{{ validity }}
+{{ expires }} {{ exp }}
+
+{{ link }}

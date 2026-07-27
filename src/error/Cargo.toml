@@ -1,0 +1,39 @@
+[package]
+name = "rauthy-error"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+actix-multipart = { workspace = true }
+actix-web = { workspace = true }
+argon2 = { workspace = true }
+chacha20poly1305 = { workspace = true }
+chrono = { workspace = true }
+css-color = { workspace = true }
+cryptr = { workspace = true }
+deadpool = { workspace = true }
+ed25519-compact = { workspace = true }
+hiqlite = { workspace = true }
+image = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
+reqwest = { workspace = true }
+ring = { workspace = true }
+rio_turtle = { workspace = true }
+rusqlite = { workspace = true }
+rsa = { workspace = true }
+s3-simple = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_json_path = { workspace = true }
+serde_urlencoded = { workspace = true }
+spow = { workspace = true }
+svg-hush = { workspace = true }
+time = { workspace = true }
+tokio-postgres = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+validator = { workspace = true }
+oxiri = { workspace = true }

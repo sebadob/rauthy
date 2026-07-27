@@ -1,0 +1,10 @@
+{{ unknown_location }}
+
+IP: {{ ip }} {% if !location.is_empty() %}({{ location }}){% endif %}
+{{ user_agent }}
+
+{{ if_invalid }}
+
+{{ revoke_link }}: {{ link_revoke }}
+
+{{ account_link }}: {{ link_account }}

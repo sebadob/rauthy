@@ -1,0 +1,23 @@
+[package]
+name = "rauthy-api-types"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rauthy-common = { path = "../common" }
+rauthy-derive = { path = "../macros" }
+rauthy-error = { path = "../error" }
+
+actix-web = { workspace = true }
+hiqlite = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+time = { workspace = true }
+tokio-postgres = { workspace = true }
+utoipa = { workspace = true }
+validator = { workspace = true }
+webauthn-rs = { workspace = true }
