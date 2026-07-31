@@ -12,6 +12,3 @@ CREATE TABLE one_time_password
     kind        TEXT    NOT NULL,
     is_active   INTEGER DEFAULT false NOT NULL
 ) STRICT;
-
-CREATE INDEX one_time_password_kind_index
-    ON one_time_password (kind);

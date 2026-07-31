@@ -196,6 +196,7 @@ export interface I18n {
             p1: string;
             p2: string;
             p3: string;
+            registerNew: string;
             docLinkText: string;
             unsupportedText: string;
         };
@@ -205,6 +206,7 @@ export interface I18n {
             titleEmail: string;
             activationCode: string;
             code: string;
+            registerNew: string;
         };
 
         errorReg: string;
@@ -214,7 +216,6 @@ export interface I18n {
         reAuthenticatePwd: string;
         reAuthenticateOtp: string;
         register: string;
-        registerNew: string;
         registerd: string;
         registerdKeys: string;
         registerdOtps: string;

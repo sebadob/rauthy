@@ -13,10 +13,11 @@ use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::login_locations::LoginLocation;
-use rauthy_data::entity::one_time_password::{OtpCookie, OtpLoginReq, OtpToSAwaitData};
+use rauthy_data::entity::mfa_cookie::MfaCookie;
+use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
-use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq, WebauthnToSAwaitData};
+use rauthy_data::entity::webauthn::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{
     AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
@@ -60,12 +61,8 @@ pub async fn post_authorize(
 
     // If a possibly existing mfa cookie does not match the given email, or the user
     // has webauthn or otp disabled in the meantime, ignore it
-    let has_mfa_cookie = if user.has_webauthn_enabled()
-        && let Ok(c) = WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
-    {
-        c.email == user.email
-    } else if user.has_otp_enabled().await.unwrap_or_default()
-        && let Ok(c) = OtpCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
+    let has_mfa_cookie = if (user.has_webauthn_enabled() || user.has_otp_enabled().await)
+        && let Ok(c) = MfaCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
     {
         c.email == user.email
     } else {
@@ -134,7 +131,7 @@ pub async fn post_authorize(
 
     // Webauthn overrides otp
     let require_webauthn = user.has_webauthn_enabled();
-    let require_otp = !require_webauthn && user.has_otp_enabled().await?;
+    let require_otp = !require_webauthn && user.has_otp_enabled().await;
     if require_webauthn || require_otp {
         session.set_mfa(true).await?;
     }
@@ -181,8 +178,8 @@ pub async fn post_authorize_refresh(
     let require_webauthn =
         user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
     let require_otp = !require_webauthn
-        && user.has_otp_enabled().await?
-        && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
+        && RauthyConfig::get().vars.lifetimes.session_renew_mfa
+        && user.has_otp_enabled().await;
 
     finish_authorize(
         user,
@@ -258,7 +255,7 @@ pub(crate) async fn finish_authorize(
         code_lifetime += config.vars.webauthn.req_exp as i32
     }
     if data.require_otp {
-        code_lifetime += config.vars.otp.exp as i32 * 60
+        code_lifetime += config.vars.otp.exp_mins.num_seconds() as i32
     }
     let need_tos_accept = user.needs_tos_update().await?;
     if need_tos_accept {

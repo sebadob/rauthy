@@ -17,11 +17,8 @@ pub struct EmailOtpHtml<'a> {
     pub theme_vars: String,
     pub email_sub_prefix: &'a str,
     pub code: &'a str,
-    pub exp: String,
     pub header: &'a str,
     pub text: &'a str,
-    pub validity: &'a str,
-    pub expires: &'a str,
 }
 
 #[derive(Default, Template)]
@@ -29,11 +26,8 @@ pub struct EmailOtpHtml<'a> {
 pub struct EmailOtpTxt<'a> {
     pub email_sub_prefix: &'a str,
     pub code: &'a str,
-    pub exp: String,
     pub header: &'a str,
     pub text: &'a str,
-    pub validity: &'a str,
-    pub expires: &'a str,
 }
 
 pub async fn send_email_otp(code: &str, user: &User) {
@@ -45,16 +39,12 @@ pub async fn send_email_otp(code: &str, user: &User) {
 
     let (subject, text, html) = {
         let i18n = I18nEmailOtp::build(&user.language);
-        let exp = RauthyConfig::get().vars.otp.exp.to_string();
 
         let text = EmailOtpTxt {
             email_sub_prefix,
             code,
-            exp: exp.clone(),
             header: i18n.header,
             text: i18n.text.unwrap_or_default(),
-            validity: i18n.validity.unwrap_or_default(),
-            expires: i18n.expires,
         };
 
         let html = EmailOtpHtml {
@@ -62,11 +52,8 @@ pub async fn send_email_otp(code: &str, user: &User) {
             theme_vars,
             email_sub_prefix,
             code,
-            exp,
             header: i18n.header,
             text: i18n.text.unwrap_or_default(),
-            validity: i18n.validity.unwrap_or_default(),
-            expires: i18n.expires,
         };
 
         (i18n.subject, text, html)

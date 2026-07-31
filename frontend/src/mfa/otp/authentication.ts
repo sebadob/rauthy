@@ -38,7 +38,6 @@ export async function otpAuthFinish(code: string, otpCode: string): Promise<OtpA
         code,
         otp_code: otpCode,
     };
-    console.log('payload start finish: ', payloadFinish);
     let res = await fetchPost<OtpAdditionalData>(`/auth/v1/users/otp_finish`, payloadFinish);
     if (res.status === 202 || res.status === 206) {
         return {

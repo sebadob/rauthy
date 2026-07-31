@@ -228,6 +228,7 @@ export const I18nKo: I18n = {
             p2: `안드로이드는 비밀번호 없이 인증하는 기술을 가장 적게 지원하는 플랫폼입니다. 안드로이드에서 등록한 키는 
                 다른 곳에서도 작동하지만, 그 반대로는 작동되지 않습니다.`,
             p3: 'For more information, see',
+            registerNew: '새 키 등록',
             docLinkText: 'the documentation about passkeys',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -237,6 +238,7 @@ export const I18nKo: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
+            registerNew: 'Register New OTP',
         },
         errorReg: '가입 절차 시작 중 오류 발생',
         lastUsed: '마지막 사용일',
@@ -248,7 +250,6 @@ export const I18nKo: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '등록',
-        registerNew: '새 키 등록',
         registerd: '등록일',
         registerdKeys: '등록된 키',
         registerdOtps: 'Registered OTPs',

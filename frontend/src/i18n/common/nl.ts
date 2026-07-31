@@ -237,6 +237,7 @@ export const I18nNl: I18n = {
                 technologie. Sleutels die u registreert met Android werken ook elders. Dit geldt echter
                 niet andersom.`,
             p3: 'Voor meer informatie, zie',
+            registerNew: 'Nieuwe sleutel registreren',
             docLinkText: 'de documentatie over passkeys',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -246,6 +247,7 @@ export const I18nNl: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
+            registerNew: 'Register New OTP',
         },
         errorReg: 'Fout bij het starten van het registratieproces',
         lastUsed: 'Laatst gebruikt',
@@ -257,7 +259,6 @@ export const I18nNl: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Registreren',
-        registerNew: 'Nieuwe sleutel registreren',
         registerd: 'Geregistreerd',
         registerdKeys: 'Geregistreerde sleutels',
         registerdOtps: 'Registered OTPs',

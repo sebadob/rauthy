@@ -7,8 +7,6 @@ pub struct I18nEmailOtp<'a> {
     pub subject: &'a str,
     pub header: &'a str,
     pub text: Option<&'a str>,
-    pub validity: Option<&'a str>,
-    pub expires: &'a str,
 }
 
 impl From<&'static VarsTemplate> for I18nEmailOtp<'_> {
@@ -17,11 +15,6 @@ impl From<&'static VarsTemplate> for I18nEmailOtp<'_> {
             subject: tpl.subject.as_ref(),
             header: tpl.header.as_ref(),
             text: tpl.text.as_deref(),
-            validity: tpl.validity.as_deref(),
-            expires: tpl
-                .expires
-                .as_ref()
-                .expect("Missing `expires` in `otp` template"),
         }
     }
 }

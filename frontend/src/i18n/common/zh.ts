@@ -220,6 +220,7 @@ export const I18nZh: I18n = {
             p2: `Android是支持无密码登录技术特性最少的平台。您在Android上注册的密钥在其他地方也能使用。
                 但是，反之则不行。`,
             p3: '欲了解更多信息，请参见',
+            registerNew: '注册新密钥',
             docLinkText: '关于通行密钥的文档',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -229,6 +230,7 @@ export const I18nZh: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
+            registerNew: 'Register New OTP',
         },
         errorReg: '开始注册过程时出现错误。',
         lastUsed: '最后使用',
@@ -238,7 +240,6 @@ export const I18nZh: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '注册',
-        registerNew: '注册新密钥',
         registerd: '已注册',
         registerdKeys: '已注册的密钥',
         registerdOtps: 'Registered OTPs',

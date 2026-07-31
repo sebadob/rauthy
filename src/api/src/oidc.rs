@@ -34,12 +34,11 @@ use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair, JwkKeyPairType};
 use rauthy_data::entity::logos::{Logo, LogoType};
-use rauthy_data::entity::one_time_password::OtpCookie;
+use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
-use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_data::entity::well_known::WellKnown;
 use rauthy_data::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
@@ -128,23 +127,16 @@ pub async fn get_authorize(
         false
     };
 
-    // check if the user needs to do the Webauthn login each time
+    // check if the user needs to do a MFA login each time
     let mut action = FrontendAction::None;
     if !force_new_session {
         // we need to check this because a user could deactivate MFA in another browser or
         // be deleted while still having existing mfa cookies somewhere else
-        if let Ok(mfa_cookie) =
-            WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
-            && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
-            && user.has_webauthn_enabled()
+        if let Ok(mfa_cooke) = MfaCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+            && let Ok(user) = User::find_by_email(mfa_cooke.email.clone()).await
+            && (user.has_webauthn_enabled() || user.has_otp_enabled().await)
         {
-            action = FrontendAction::MfaLogin(mfa_cookie.email);
-        } else if let Ok(mfa_cookie) =
-            OtpCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
-            && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
-            && user.has_otp_enabled().await?
-        {
-            action = FrontendAction::MfaLogin(mfa_cookie.email);
+                action = FrontendAction::MfaLogin(mfa_cooke.email);
         }
     }
 

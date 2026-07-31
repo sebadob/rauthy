@@ -238,6 +238,7 @@ export const I18nFr: I18n = {
                 de passe. Les clés enregistrées auprès d’Android fonctionnent également ailleurs.
                 Cependant, cela ne s'applique pas dans l'autre sens.`,
             p3: `Pour plus d'informations, consultez`,
+            registerNew: 'Enregistrer une nouvelle clé',
             docLinkText: `la documentation sur les clés d'accès`,
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -247,6 +248,7 @@ export const I18nFr: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Entrez le code à usage unique qui vous a été envoyé par e-mail',
             code: 'Code à usage unique',
+            registerNew: 'Register New OTP',
         },
         errorReg: `Erreur lors du démarrage du processus d'enregistrement`,
         lastUsed: 'Dernière utilisation',
@@ -258,7 +260,6 @@ export const I18nFr: I18n = {
         reAuthenticateOtp: `Avant de pouvoir modifier les authentifications multifactorielle,
             vous devez vous réauthentifier avec un code à usage unique :`,
         register: 'Enregistrer',
-        registerNew: 'Enregistrer une nouvelle clé',
         registerd: 'Enregistré',
         registerdKeys: 'Clés enregistrées',
         registerdOtps: 'Code à usage unique enregistrés',

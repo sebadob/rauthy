@@ -5,7 +5,5 @@
 {% block content %}
 <h1>{{ header }} {{ email_sub_prefix }}</h1>
 <p>{{ text }}</p>
-<p><b>{{ code }}</b></p>
-<p>{{ validity }}</p>
-<p><span class="font-label">{{ expires }}</span> <b>{{ exp }}</b></p>
+<p class="font-mono otp"><b>{{ code }}</b></p>
 {% endblock %}

@@ -5,6 +5,7 @@ use crate::events::listener::EventRouterMsg;
 use crate::migration::bootstrap::generated_secrets;
 use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
+use chrono::TimeDelta;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
@@ -577,7 +578,7 @@ impl Default for Vars {
             otp: VarsOtp {
                 enable: false,
                 length: 6,
-                exp: 5,
+                exp_mins: TimeDelta::minutes(5),
                 renew_exp: 2160,
                 default_digest_len: 512,
                 email: VarsOtpEmail {
@@ -1036,118 +1037,100 @@ Your account has not been compromised and no data was leaked."#.into()),
                     de: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     en: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     fr: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     ko: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     nb: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     nl: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     ru: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     uk: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                     zhhans: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
-                        text: Some("You will find your OTP code below.".into()),
+                        text: Some("Your OTP is the following:".into()),
                         click_link: None,
-                        validity:
-                        Some("This code is only valid for a short period of time for security reasons."
-                                .into()),
-                        expires: Some("Code expires: ".into()),
+                        validity: None,
+                        expires: None,
                         button: None,
-                        footer: Some("If this code has expired, you can request a new one.".into()),
+                        footer: None,
                         button_text_request_new: None,
                     },
                 },
@@ -2794,8 +2777,8 @@ impl Vars {
         if let Some(v) = t_u8(&mut table, "otp", "length", "OTP_LENGTH") {
             self.otp.length = if v < 9 { v } else { 6 };
         }
-        if let Some(v) = t_u16(&mut table, "otp", "exp", "OTP_EXP") {
-            self.otp.exp = v;
+        if let Some(v) = t_i64(&mut table, "otp", "exp_mins", "OTP_EXP_MINS") {
+            self.otp.exp_mins = TimeDelta::minutes(v);
         }
         if let Some(v) = t_u16(&mut table, "otp", "renew_exp", "OTP_RENEW_EXP") {
             self.otp.renew_exp = v;
@@ -4119,7 +4102,7 @@ pub struct VarsMfa {
 pub struct VarsOtp {
     pub enable: bool,
     pub length: u8,
-    pub exp: u16,
+    pub exp_mins: TimeDelta,
     pub renew_exp: u16,
     pub default_digest_len: u16,
     pub email: VarsOtpEmail,

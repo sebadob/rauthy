@@ -7,7 +7,7 @@
     import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
     import type { PasskeyResponse, WebauthnDeleteRequest } from '$api/types/webauthn.ts';
     import type { UserResponse } from '$api/types/user.ts';
-    import { PATTERN_OTP_CODE, PATTERN_USER_NAME } from '$utils/patterns';
+    import { PATTERN_USER_NAME } from '$utils/patterns';
     import { webauthnReg } from '$mfa/webauthn/registration';
     import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
     import type { WebauthnAdditionalData, WebauthnServiceReq } from '$mfa/webauthn/types.ts';
@@ -19,13 +19,13 @@
     import IconArrowPathSquare from '$icons/IconArrowPathSquare.svelte';
     import Template from '$lib5/Template.svelte';
     import { TPL_OTP_LENGTH, TPL_IS_OTP_ENABLED } from '$utils/constants';
-    import type { _ } from '$env/static/private';
     import type { OtpResponse } from '$api/types/otp';
-    import { otpActivate, otpDelete, otpRequest } from '$mfa/otp/mod';
+    import { deleteOtp, postOtp, putOtp } from '$mfa/otp/mod';
     import type { MfaPurpose } from '$api/types/mfa';
     import type { OtpAdditionalData, OtpKind, OtpServiceReq } from '$mfa/otp/types';
     import UserOtp from '$lib5/UserOtp.svelte';
     import OtpRequest from '$lib5/OtpRequest.svelte';
+    import InputOtp from '$lib5/form/InputOtp.svelte';
 
     let { user }: { user: UserResponse } = $props();
 
@@ -218,7 +218,7 @@
             showModal = true;
             return;
         }
-        let res = await otpRequest(userId, otpKind, otpName, tokenId);
+        let res = await postOtp(userId, otpKind, otpName, tokenId);
         if (res.data) {
             otps.push(res.data);
             showOtpInput = true;
@@ -246,7 +246,7 @@
             return;
         }
 
-        let res = await otpActivate(userId, otpId, params.get('otp') || '', tokenId);
+        let res = await putOtp(userId, otpId, params.get('otp')?.replace(/ /g, '') || '', tokenId);
         if (res.error) {
             err = true;
             msg = res.error || 'Error';
@@ -275,7 +275,7 @@
             return;
         }
 
-        let res = await otpDelete(userId, otpId, tokenId);
+        let res = await deleteOtp(userId, otpId, tokenId);
         if (res.error) {
             err = true;
             msg = res.error || 'Error';
@@ -335,10 +335,10 @@
     }
 
     function onMfaError(error: string) {
-        mfaPurpose = undefined;
-        mfaKind = undefined;
         err = true;
         msg = error;
+        mfaPurpose = undefined;
+        mfaKind = undefined;
         setTimeout(() => {
             err = false;
             msg = '';
@@ -382,6 +382,9 @@
 <Template id={TPL_OTP_LENGTH} bind:value={otpSize} />
 
 <div class="container">
+    <div class:success={!err} class:err>
+        {msg}
+    </div>
     {#if mfaModSecs && mfaModSecs > 0}
         <div class="modToken">
             <div>
@@ -440,7 +443,7 @@
         {:else}
             <div class="regNewBtn">
                 <Button level={passkeys.length === 0 ? 1 : 2} onclick={onRegisterClick}>
-                    {t.mfa.registerNew}
+                    {t.mfa.webauthn.registerNew}
                 </Button>
             </div>
         {/if}
@@ -466,10 +469,6 @@
                 >
             </div>
         {/if}
-
-        <div class:success={!err} class:err>
-            {msg}
-        </div>
     {/if}
     {#if isOtpEnabled}
         <b>{t.mfa.otp.title}</b>
@@ -486,15 +485,8 @@
         {#if showOtpInput}
             <p>{t.mfa.otp.activationCode}</p>
             <Form action="" onSubmit={handleActivateOtp}>
-                <Input
+                <InputOtp
                     bind:ref={refInput}
-                    name="otp"
-                    autocomplete="one-time-code"
-                    label={t.mfa.otp.code}
-                    placeholder={'0'.repeat(otpSize)}
-                    maxLength={otpSize}
-                    minLength={otpSize}
-                    pattern={PATTERN_OTP_CODE}
                     bind:isError={isInputError}
                 />
                 <Button type="submit">{t.mfa.register}</Button>
@@ -505,10 +497,10 @@
                     }}>{t.common.cancel}</Button
                 >
             </Form>
-        {:else}
+        {:else if !hasOtp} <!-- Currently support email otp only, if user has otp setup they don't need to see a 'regsiter new otp' button  -->
             <div class="button">
                 <Button level={hasOtp === false ? 1 : 2} onclick={handleCreateOtp}
-                    >{t.mfa.registerNew}</Button
+                    >{t.mfa.otp.registerNew}</Button
                 >
             </div>
         {/if}
@@ -535,10 +527,6 @@
                 >
             </div>
         {/if}
-
-        <div class:success={!err} class:err>
-            {msg}
-        </div>
     {/if}
 </div>
 

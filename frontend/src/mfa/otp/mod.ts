@@ -10,7 +10,7 @@ import type {
     OtpKind,
 } from '$mfa/otp/types.ts';
 
-export async function otpRequest(
+export async function postOtp(
     userId: string,
     kind: OtpKind,
     name: undefined | string,
@@ -37,7 +37,7 @@ export async function otpRequest(
     return { data: res.body };
 }
 
-export async function otpActivate(
+export async function putOtp(
     userId: string,
     id: string,
     code: string,
@@ -58,7 +58,7 @@ export async function otpActivate(
     return {};
 }
 
-export async function otpDelete(
+export async function deleteOtp(
     userId: string,
     id: string,
     mfaModTokenId?: string,

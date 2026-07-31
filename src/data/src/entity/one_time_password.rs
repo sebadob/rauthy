@@ -1,5 +1,4 @@
 use crate::{
-    api_cookie::ApiCookie,
     database::{
         Cache::{self},
         DB,
@@ -13,7 +12,6 @@ use crate::{
 };
 use actix_web::{
     HttpRequest, HttpResponse, HttpResponseBuilder,
-    cookie::Cookie,
     http::{
         StatusCode,
         header::{
@@ -21,21 +19,16 @@ use actix_web::{
         },
     },
 };
-use chrono::Utc;
-use cryptr::EncValue;
+use chrono::{TimeDelta, Utc};
 use hiqlite::macros::params;
 use image::EncodableLayout;
 use rauthy_api_types::{
-    tos::ToSAwaitLoginResponse,
-    users::{
-        MfaPurpose, OtpAuthFinishRequest, OtpAuthStartRequest, OtpAuthStartResponse,
-        OtpGetResponse, OtpLoginFinishResponse,
+    tos::ToSAwaitLoginResponse, users::{
+        MfaPurpose, OtpAuthFinishRequest, OtpAuthStartRequest, OtpAuthStartResponse, OtpGetResponse, OtpKind, OtpLoginFinishResponse,
     },
 };
 use rauthy_common::{
-    constants::COOKIE_MFA,
-    is_hiqlite,
-    utils::{base64_decode, base64_encode, deserialize, get_rand, serialize},
+    is_hiqlite, utils::{get_rand, new_store_id},
 };
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -46,63 +39,20 @@ use ring::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::{Debug, Display, Formatter},
-    ops::Add,
+    fmt::{Debug, Formatter},
 };
-use time::OffsetDateTime;
+use time::{OffsetDateTime};
 use tracing::info;
 use utoipa::ToSchema;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize, strum::EnumIter)]
-#[serde(rename_all = "lowercase")]
-pub enum OtpKind {
-    #[default]
-    Email,
-    Phone,
-    Time,
-}
-
-impl OtpKind {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            OtpKind::Email => "email",
-            OtpKind::Phone => "phone",
-            OtpKind::Time => "time",
-        }
-    }
-}
-
-impl Display for OtpKind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-impl From<String> for OtpKind {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for OtpKind {
-    fn from(value: &str) -> Self {
-        match value {
-            "email" => Self::Email,
-            "phone" => Self::Phone,
-            "time" => Self::Time,
-            _ => Self::default(),
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, FromPgRow)]
+#[derive(Clone, Deserialize, FromPgRow)]
 pub struct OneTimePassword {
     pub id: String,
     pub user_id: String,
     pub name: Option<String>,
     pub secret: Vec<u8>,
     pub last_used: i64,
-    #[column(from_string)]
+    #[column(parse)]
     pub kind: OtpKind,
     pub is_active: bool,
 }
@@ -129,15 +79,22 @@ impl OneTimePassword {
         name: Option<String>,
         kind: OtpKind,
     ) -> Result<Self, ErrorResponse> {
-        // if the len is longer than the algorithm it will be compressed by the digest
-        // if the len is shorter than the algorithm it will be padded with 0x30
-        let secret: [u8; digest::SHA512_OUTPUT_LEN] =
-            rand::generate(&rand::SystemRandom::new())?.expose();
+        let secret = match kind {
+            OtpKind::Time => {
+                // if the len is longer than the algorithm it will be compressed by the digest
+                // if the len is shorter than the algorithm it will be padded with 0x30
+                let secret: [u8; digest::SHA512_OUTPUT_LEN] = rand::generate(&rand::SystemRandom::new())?.expose();
+                secret.to_vec()
+            },
+            _ => {
+                Vec::default()
+            },
+        };
         let otp = Self {
-            id: get_rand(64),
+            id: new_store_id(),
             user_id,
             name,
-            secret: secret.to_vec(),
+            secret,
             last_used: 0,
             kind,
             is_active: false,
@@ -246,8 +203,35 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
         Ok(res)
     }
 
+    pub async fn find_active_kind_for_user(
+        kind: &OtpKind,
+        user_id: &String,
+    ) -> Result<Self, ErrorResponse> {
+        let sql = "SELECT * FROM one_time_password WHERE user_id = $1 AND kind = $2 AND is_active = true";
+        let res = if is_hiqlite() {
+            DB::hql()
+                .query_as_one(sql, params!(user_id, kind.as_str()))
+                .await?
+        } else {
+            DB::pg_query_one(sql, &[&user_id, &kind.as_str()]).await?
+        };
+
+        Ok(res)
+    }
+
     pub async fn find_for_user(user_id: &String) -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM one_time_password WHERE user_id = $1";
+        let res = if is_hiqlite() {
+            DB::hql().query_as(sql, params!(user_id)).await?
+        } else {
+            DB::pg_query(sql, &[&user_id], 1).await?
+        };
+
+        Ok(res)
+    }
+
+    pub async fn find_active_for_user(user_id: &String) -> Result<Vec<Self>, ErrorResponse> {
+        let sql = "SELECT * FROM one_time_password WHERE user_id = $1 AND is_active = true";
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!(user_id)).await?
         } else {
@@ -320,18 +304,16 @@ impl OneTimePassword {
         self.save().await
     }
 
-    pub async fn validate(&self, user_id: &str, code: &str) -> Result<(), ErrorResponse> {
-        if self.user_id != user_id {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                "otp does not exist",
-            ));
-        }
+    pub async fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
         match self.kind {
             OtpKind::Email => {
-                let current_time = OffsetDateTime::now_utc().unix_timestamp();
-                let timeout = (current_time - self.last_used) / 60;
-                if timeout >= RauthyConfig::get().vars.otp.exp as i64 {
+                let Some(timeout) = TimeDelta::try_seconds(self.last_used - Utc::now().timestamp()) else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "couldn't parse otp's timeout",
+                    ));
+                };
+                if timeout >= RauthyConfig::get().vars.otp.exp_mins {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "otp code expired",
@@ -363,16 +345,19 @@ impl OneTimePassword {
         let user = User::find(self.user_id.clone()).await?;
 
         let current_time = OffsetDateTime::now_utc().unix_timestamp();
+        let code_len = RauthyConfig::get().vars.otp.length;
         let code = Self::generate_otp(
             &self.secret,
             current_time,
             RauthyConfig::get().vars.otp.default_digest_len,
-            RauthyConfig::get().vars.otp.length,
+            code_len,
         );
         self.last_used = current_time;
         self.save().await?;
         match self.kind {
             OtpKind::Email => {
+                let code_len = code_len as usize;
+                let code = format!("{} {}", &code[0..code_len/2], &code[code_len/2..]);
                 send_email_otp(&code, &user).await;
             }
             // Unreachable should never panic since these kind aren't implemented
@@ -390,53 +375,8 @@ impl From<OneTimePassword> for OtpGetResponse {
             id: value.id,
             name: value.name,
             last_used: value.last_used,
-            kind: value.kind.to_string(),
+            kind: value.kind,
             is_active: value.is_active,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct OtpCookie {
-    pub email: String,
-    pub exp: OffsetDateTime,
-}
-
-impl OtpCookie {
-    pub fn new(email: String) -> Self {
-        let renew = RauthyConfig::get().vars.otp.renew_exp as i64;
-        let exp = OffsetDateTime::now_utc().add(::time::Duration::hours(renew));
-        Self { email, exp }
-    }
-
-    pub fn build(&self) -> Result<Cookie<'_>, ErrorResponse> {
-        let set = serialize(self)?;
-        let enc = EncValue::encrypt(&set)?.into_bytes();
-        let b64 = base64_encode(&enc);
-
-        let max_age = self.exp.unix_timestamp() - Utc::now().timestamp();
-        Ok(ApiCookie::build(COOKIE_MFA, b64, max_age))
-    }
-
-    pub fn parse_validate(cookie: &Option<String>) -> Result<Self, ErrorResponse> {
-        if cookie.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "One time password Cookie is missing",
-            ));
-        }
-        let cookie = cookie.as_ref().unwrap();
-        let bytes = base64_decode(cookie)?;
-        let dec = EncValue::try_from(bytes)?.decrypt()?;
-        let slf = deserialize::<Self>(&dec)?;
-
-        if slf.exp < OffsetDateTime::now_utc() {
-            Err(ErrorResponse::new(
-                ErrorResponseType::SessionExpired,
-                "One time password Cookie has expired",
-            ))
-        } else {
-            Ok(slf)
         }
     }
 }
@@ -469,7 +409,7 @@ impl OtpData {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.otp.exp as i64 * 60);
+        let ttl = Some(RauthyConfig::get().vars.otp.exp_mins.num_seconds());
         DB::hql()
             .put(Cache::OneTimePassword, self.code.clone(), &self, ttl)
             .await?;
@@ -593,7 +533,7 @@ impl OtpLoginReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.otp.exp as i64 * 60);
+        let ttl = Some(RauthyConfig::get().vars.otp.exp_mins.num_seconds());
         DB::hql()
             .put(Cache::OneTimePassword, self.code.clone(), self, ttl)
             .await?;
@@ -635,7 +575,7 @@ impl OtpServiceReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.otp.exp as i64 * 60);
+        let ttl = Some(RauthyConfig::get().vars.otp.exp_mins.num_seconds());
         DB::hql()
             .put(Cache::OneTimePassword, self.code.clone(), self, ttl)
             .await?;
@@ -709,7 +649,7 @@ pub async fn auth_finish(
     };
 
     let otp = OneTimePassword::find(&auth_data.otp_id).await?;
-    match otp.validate(user_id, &payload.otp_code).await {
+    match otp.validate(&payload.otp_code).await {
         Ok(_) => {
             let mut user = User::find(user_id.clone()).await?;
 

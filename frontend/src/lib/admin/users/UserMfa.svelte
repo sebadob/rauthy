@@ -7,7 +7,7 @@
     import type { OtpResponse } from '$api/types/otp';
     import Template from '$lib5/Template.svelte';
     import { TPL_IS_OTP_ENABLED } from '$utils/constants';
-    import { otpDelete } from '$mfa/otp/mod';
+    import { deleteOtp } from '$mfa/otp/mod';
     import UserOtp from '$lib5/UserOtp.svelte';
 
     let {
@@ -72,7 +72,7 @@
     }
 
     async function onDeleteOtp(id: string) {
-        let res = await otpDelete(user.id, id, undefined);
+        let res = await deleteOtp(user.id, id, undefined);
         if (res.error) {
             err = res.error || 'Error';
         } else {

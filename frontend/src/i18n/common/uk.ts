@@ -240,6 +240,7 @@ export const I18nUk: I18n = {
             p2: `Android — це платформа з найменшою кількістю підтримуваних функцій для технології
                 безпарольного доступу.\nКлючі, зареєстровані на Android, працюватимуть і в інших місцях. Однак, це не працює у зворотному напрямку.`,
             p3: 'Для отримання додаткової інформації дивіться',
+            registerNew: 'Зареєструвати новий ключ',
             docLinkText: 'документацію про ключі доступу (passkeys)',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -249,6 +250,7 @@ export const I18nUk: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
+            registerNew: 'Register New OTP',
         },
         errorReg: 'Помилка під час запуску процесу реєстрації',
         lastUsed: 'Востаннє використано',
@@ -260,7 +262,6 @@ export const I18nUk: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Зареєструвати',
-        registerNew: 'Зареєструвати новий ключ',
         registerd: 'Зареєстровано',
         registerdKeys: 'Зареєстровані ключі',
         registerdOtps: 'Registered OTPs',

@@ -232,6 +232,7 @@ export const I18nNb: I18n = {
                 passordløse teknologien. Nøkler som registreres der, fungerer på andre enheter på samme 
                 måte. Dette gjelder imidlertid ikke omvendt.`,
             p3: 'For more information, see',
+            registerNew: 'Registrer ny nøkkel',
             docLinkText: 'the documentation about passkeys',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -241,6 +242,7 @@ export const I18nNb: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'Engangspassord',
+            registerNew: 'Register New OTP',
         },
         errorReg: 'Feil ved oppstart av registrering',
         lastUsed: 'Sist brukt',
@@ -252,7 +254,6 @@ export const I18nNb: I18n = {
         reAuthenticateOtp:
             'Før engangspassord kan redigeres, må en av de eksisterende først verifiseres:',
         register: 'Registrer',
-        registerNew: 'Registrer ny nøkkel',
         registerd: 'Registrert',
         registerdKeys: 'Registrerte nøkler',
         registerdOtps: 'Registrerte engangspassord',

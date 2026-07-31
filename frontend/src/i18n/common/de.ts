@@ -242,6 +242,7 @@ export const I18nDe: I18n = {
                 Technologie unterstützt. Schlüssel, die dort registriert werden, funktionieren auf 
                 anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.`,
             p3: 'Für weitere Informationen, siehe',
+            registerNew: 'Neuen Key Registrieren',
             docLinkText: 'die Dokumentation zu Passkeys',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -251,6 +252,7 @@ export const I18nDe: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'Einmalpasswort',
+            registerNew: 'Register New OTP',
         },
         errorReg: 'Fehler beim Starten der Registrierung',
         lastUsed: 'Zuletzt genutzt',
@@ -262,7 +264,6 @@ export const I18nDe: I18n = {
         reAuthenticateOtp: `Bevor Einmalpasswort bearbeitet werden können, muss zuerst einer der 
             bestehenden überprüft werden:`,
         register: 'Registrieren',
-        registerNew: 'Neuen Key Registrieren',
         registerd: 'Registriert',
         registerdKeys: 'Registrierte Keys',
         registerdOtps: 'Registrierte Einmalpasswort',

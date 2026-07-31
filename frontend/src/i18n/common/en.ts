@@ -235,6 +235,7 @@ export const I18nEn: I18n = {
                 technology. Keys you register with Android work elsewhere too. However, this does not 
                 apply the other way around.`,
             p3: 'For more information, see',
+            registerNew: 'Register New',
             docLinkText: 'the documentation about passkeys',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -244,6 +245,7 @@ export const I18nEn: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
+            registerNew: 'Register New OTP',
         },
         errorReg: 'Error starting the Registration process',
         lastUsed: 'Last used',
@@ -255,7 +257,6 @@ export const I18nEn: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Register',
-        registerNew: 'Register New',
         registerd: 'Registered',
         registerdKeys: 'Registered Keys',
         registerdOtps: 'Registered OTPs',

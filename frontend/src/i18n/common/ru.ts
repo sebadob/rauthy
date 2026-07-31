@@ -235,6 +235,7 @@ export const I18nRu: I18n = {
                 беспарольной аутентификации. Ключи, зарегистрированные с Android, работают и в других местах. Однако это не
                 работает в обратном направлении.`,
             p3: 'Для получения дополнительной информации см.',
+            registerNew: 'Зарегистрировать новый ключ',
             docLinkText: 'документацию о ключах доступа',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
@@ -244,6 +245,7 @@ export const I18nRu: I18n = {
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
+            registerNew: 'Register New OTP',
         },
 
         errorReg: 'Ошибка при запуске процесса регистрации',
@@ -256,7 +258,6 @@ export const I18nRu: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Зарегистрировать',
-        registerNew: 'Зарегистрировать новый ключ',
         registerd: 'Зарегистрирован',
         registerdKeys: 'Зарегистрированные ключи',
         registerdOtps: 'Registered OTPs',

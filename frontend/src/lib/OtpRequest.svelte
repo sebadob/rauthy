@@ -9,14 +9,13 @@
         OtpAuthStartResult,
     } from '$mfa/otp/types';
     import { otpAuthFinish, otpAuthStart } from '$mfa/otp/authentication';
-    import Input from './form/Input.svelte';
     import { TPL_OTP_LENGTH } from '$utils/constants';
     import Template from './Template.svelte';
-    import { PATTERN_OTP_CODE } from '$utils/patterns';
     import Form from './form/Form.svelte';
     import Button from './button/Button.svelte';
     import type { ActiveOtp } from '$api/types/authorize';
     import type { OtpResponse } from '$api/types/otp';
+    import InputOtp from './form/InputOtp.svelte';
 
     let {
         activeOtps,
@@ -78,7 +77,7 @@
     });
 
     async function onLoginOtpSubmit(_form: HTMLFormElement, params: URLSearchParams) {
-        let otpCode = params.get('otp');
+        let otpCode = params.get('otp')?.replace(/ /g, '');
         if (otpStartRes && otpStartRes.data && otpCode) {
             otpFinishRes = await otpAuthFinish(otpStartRes.data.code, otpCode);
         }
@@ -114,15 +113,8 @@
                         {:else}
                             <div class="good">
                                 <Form action="" onSubmit={onLoginOtpSubmit}>
-                                    <Input
+                                    <InputOtp
                                         bind:ref={refInput}
-                                        name="otp"
-                                        autocomplete="one-time-code"
-                                        label={t.mfa.otp.code}
-                                        placeholder={'0'.repeat(otpSize)}
-                                        maxLength={otpSize}
-                                        minLength={otpSize}
-                                        pattern={PATTERN_OTP_CODE}
                                         bind:isError={isInputError}
                                     />
                                     <Button type="submit">send</Button>
@@ -172,14 +164,6 @@
     .good {
         color: hsl(var(--action));
     }
-
-    /*.muted {*/
-    /*    color: hsla(var(--text) / .8)*/
-    /*}*/
-
-    /*progress {*/
-    /*    accent-color: hsl(var(--accent));*/
-    /*}*/
 
     .wrapperOuter {
         position: absolute;

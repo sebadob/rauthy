@@ -2178,8 +2178,8 @@ length = 6
 # this time, an OTP request must have been validated.
 #
 # default = 5
-# overwritten by: OTP_EXP
-exp = 5
+# overwritten by: OTP_EXP_MINS
+exp_mins = 5
 
 # Default digest algorithm's length, HMAC using SHA-X
 #
