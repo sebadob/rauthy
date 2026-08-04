@@ -58,14 +58,15 @@ export let I18nAdminFr: I18nAdmin = {
             faviconPreviewAlt: 'Aperçu du favicon du client',
             faviconUpload: 'Téléverser un favicon',
         },
-        claimsAtRoot: 'Emit claims at the token root',
-        claimsAtRootWarning: `This client's claims are written at the token root
-            instead of being nested under 'custom'. You own collision-correctness: if a claim
-            name collides with a reserved JWT claim, token issuance fails. Root-level custom
-            claims may also break with future protocol or feature changes. Reference:`,
+        claimsAtRoot: 'Émettre les claims à la racine du token',
+        claimsAtRootWarning: `Les claims de ce client sont écrits à la racine du token au lieu d'être
+            imbriqués sous « custom ». C'est à vous de garantir la correction face aux collisions : si
+            le nom d'un claim entre en collision avec une revendication JWT réservée, l'émission du
+            token échoue. Les claims personnalisés placés à la racine peuvent aussi casser lors de
+            futures évolutions du protocole ou de nouvelles fonctionnalités. Référence :`,
         claims: 'Custom claims (client_credentials)',
-        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
-            custom claim. Max 1024 serialized characters.`,
+        claimsDesc: `Un objet JSON émis dans les tokens client_credentials, imbriqué sous le claim
+            custom. Maximum 1024 caractères sérialisés.`,
         confidential: 'Confidentiel',
         confidentialNoSecret: 'Ce client n’est pas confidentiel et ne possède donc aucun secret.',
         config: 'Configuration du client',
@@ -479,11 +480,13 @@ export let I18nAdminFr: I18nAdmin = {
         name: 'Nom du rôle',
     },
     scopes: {
-        claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
-            instead of being nested under 'custom'. You own collision-correctness: if a mapped
-            attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
-            claims may also break with future protocol or feature changes. Reference:`,
+        claimsAtRoot: 'Émettre les claims à la racine du token',
+        claimsAtRootWarning: `Les attributs associés à cette étendue sont écrits à la racine du token au
+            lieu d'être imbriqués sous « custom ». C'est à vous de garantir la correction face aux
+            collisions : si le nom d'un attribut associé entre en collision avec une revendication JWT
+            réservée, l'émission du token échoue. Les claims personnalisés placés à la racine peuvent
+            aussi casser lors de futures évolutions du protocole ou de nouvelles fonctionnalités.
+            Référence :`,
         defaultNoMod: `Il s'agit d'une étendue OIDC par défaut. Ces étendues sont immuables.`,
         delete1: 'Êtes-vous sûr de vouloir supprimer cette étendue ?',
         deleteDefault: 'Les étendues OIDC par défaut ne peuvent pas être supprimées.',
