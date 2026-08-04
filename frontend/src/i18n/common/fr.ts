@@ -181,7 +181,8 @@ export const I18nFr: I18n = {
             valeurs avant de pouvoir poursuivre la connexion.`,
         orLoginWith: 'ou se connecter avec',
         password: 'Mot de passe',
-        passwordExpired: 'Le mot de passe a expiré. Un e-mail contenant un lien de réinitialisation a été envoyé.',
+        passwordExpired:
+            'Le mot de passe a expiré. Un e-mail contenant un lien de réinitialisation a été envoyé.',
         passwordForgotten: 'Mot de passe oublié ?',
         passwordRequest: 'Demander',
         passwordRequired: 'Le mot de passe est requis',
