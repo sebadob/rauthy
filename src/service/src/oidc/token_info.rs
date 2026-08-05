@@ -60,8 +60,22 @@ pub async fn get_token_info(
     })?;
 
     buf.clear();
-    let client = check_client_auth(req, client_id, &mut buf).await?;
-    let cors_header = client.get_validated_origin_header(req)?;
+    let cors_header = if RauthyConfig::get()
+        .vars
+        .access
+        .danger_disable_introspect_auth
+    {
+        // With introspection authz disabled, don't look up the token's
+        // client at all. check_client_auth resolves the token's `azp` via
+        // find_enabled_client first and only checks the flag afterwards, so
+        // an ephemeral client (never persisted) makes it 401 before the flag
+        // applies. Skipping the lookup lets a resource server introspect
+        // tokens of any client. No client means no client-scoped CORS header.
+        None
+    } else {
+        let client = check_client_auth(req, client_id, &mut buf).await?;
+        client.get_validated_origin_header(req)?
+    };
 
     Ok((info, cors_header))
 }

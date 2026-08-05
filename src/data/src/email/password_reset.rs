@@ -51,7 +51,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
         "{}users/{}/reset/{}?type={}",
         RauthyConfig::get().issuer,
         magic_link.user_id,
-        &magic_link.id,
+        magic_link.id,
         magic_link.usage,
     );
     let exp = email_ts_prettify(magic_link.exp, &user.language, user_tz);

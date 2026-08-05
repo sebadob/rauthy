@@ -4,7 +4,7 @@ use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
-use rauthy_api_types::oidc::TokenRequest;
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_data::entity::clients::Client;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -34,13 +34,13 @@ pub async fn grant_type_refresh(
         client.validate_secret(secret, &req).await?;
     }
 
-    client.validate_flow("refresh_token")?;
+    client.validate_flow(GrantType::RefreshToken)?;
 
     let refresh_token = req_data.refresh_token.unwrap();
 
     // validate common refresh token claims first and get the payload
     let (ts, dpop_none) =
-        validation::validate_and_refresh_token(Some(client), &refresh_token, &req).await?;
+        validation::validate_and_refresh_token(client, &refresh_token, &req).await?;
 
     let mut headers = Vec::new();
     if let Some(h) = header_origin {

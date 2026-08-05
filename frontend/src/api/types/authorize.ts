@@ -40,6 +40,9 @@ export interface LoginRefreshRequest {
     /// Validation: PATTERN_CODE_CHALLENGE
     code_challenge?: string;
     code_challenge_method?: CodeChallengeMethod;
+    /// RFC 8707 resource indicator forwarded from the authorization request.
+    /// Validation: PATTERN_RESOURCE
+    resource?: string;
 }
 
 export interface RequestResetRequest {

@@ -189,7 +189,7 @@
                 {:else if selected === t.common.password}
                     <AccPassword {user} {authProvider} viewModePhone />
                 {:else if selected === t.account.navMfa}
-                    <AccMFA {user} />
+                    <AccMFA bind:user />
                 {:else if selected === 'WebID'}
                     {#if webIdData}
                         <AccWebId bind:webIdData />
@@ -228,7 +228,7 @@
                     {:else if selected === t.common.password}
                         <AccPassword {user} {authProvider} />
                     {:else if selected === t.account.navMfa}
-                        <AccMFA {user} />
+                        <AccMFA bind:user />
                     {:else if selected === 'WebID'}
                         {#if webIdData}
                             <AccWebId bind:webIdData />

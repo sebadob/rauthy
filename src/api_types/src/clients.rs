@@ -1,5 +1,5 @@
 use crate::cust_validation::*;
-use crate::oidc::JwkKeyPairAlg;
+use crate::oidc::{GrantType, JwkKeyPairAlg};
 use rauthy_common::regex::{
     RE_CLIENT_ID, RE_CLIENT_ID_STRICT, RE_CLIENT_NAME, RE_GROUPS, RE_SCOPE_SPACE,
     RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
@@ -15,9 +15,9 @@ pub struct DynamicClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
-    #[validate(custom(function = "validate_vec_grant_types"))]
-    pub grant_types: Vec<String>,
+    /// Validation: cannot be empty
+    #[validate(length(min = 1))]
+    pub grant_types: Vec<GrantType>,
     /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
     #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
     pub client_name: Option<String>,
@@ -98,7 +98,13 @@ pub struct EphemeralClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
+    /// Deliberately a `Vec<String>` and not a `Vec<GrantType>`, unlike every other grant-type
+    /// field: this document is fetched from a remote source and
+    /// `ephemeral_clients.ignore_unknown_auth_flows` (#1644) strips unsupported grant types
+    /// *after* deserialization. Typing this as the enum would make `serde` reject the whole
+    /// document before the strip could run, which would defeat the opt-in entirely.
+    ///
+    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
     pub grant_types: Option<Vec<String>>,
     /// Validation: `60 <= access_token_lifetime <= 86400`
@@ -117,8 +123,8 @@ pub struct EphemeralClientRequest {
     /// requested `resource` is validated against this list; when absent, `resource` is
     /// only honored if `ephemeral_clients.danger_allow_unvalidated_resource` is enabled.
     ///
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
     pub allowed_resources: Option<Vec<String>>,
 }
 
@@ -161,9 +167,9 @@ pub struct UpdateClientRequest {
     #[validate(custom(function = "validate_vec_origin"))]
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
-    #[validate(custom(function = "validate_vec_grant_types"))]
-    pub flows_enabled: Vec<String>,
+    /// Validation: cannot be empty
+    #[validate(length(min = 1))]
+    pub flows_enabled: Vec<GrantType>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_alg: JwkKeyPairAlg,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
@@ -207,14 +213,14 @@ pub struct UpdateClientRequest {
     /// RFC 8707 allow-list of resource indicators this client may request. An empty /
     /// missing list rejects any `resource` request parameter with `invalid_target`.
     ///
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
     pub allowed_resources: Option<Vec<String>>,
     /// Audiences that are always added to this client's tokens, independent of any
     /// `resource` request parameter. Useful for clients that cannot send a `resource`.
     ///
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+$>`
-    #[validate(custom(function = "validate_vec_uri"))]
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
     pub default_aud: Option<Vec<String>>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
@@ -255,7 +261,7 @@ pub struct ClientResponse {
     pub post_logout_redirect_uris: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_origins: Option<Vec<String>>,
-    pub flows_enabled: Vec<String>,
+    pub flows_enabled: Vec<GrantType>,
     pub access_token_alg: JwkKeyPairAlg,
     pub id_token_alg: JwkKeyPairAlg,
     pub auth_code_lifetime: i32,
@@ -324,7 +330,7 @@ pub struct DynamicClientResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_client_uri: Option<String>,
 
-    pub grant_types: Vec<String>,
+    pub grant_types: Vec<GrantType>,
     pub id_token_signed_response_alg: String,
     pub token_endpoint_auth_method: String,
     pub token_endpoint_auth_signing_alg: String,

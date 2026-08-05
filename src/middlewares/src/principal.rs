@@ -104,10 +104,10 @@ async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>
         Some(v)
     };
 
-    if let Some(api_key_value) = api_key_value {
-        ApiKeyEntity::api_key_from_token_validated(api_key_value)
-            .await
-            .map(Some)
+    if let Some(api_key_value) = api_key_value
+        && let Ok(key) = ApiKeyEntity::api_key_from_token_validated(api_key_value).await
+    {
+        Ok(Some(key))
     } else {
         Ok(None)
     }

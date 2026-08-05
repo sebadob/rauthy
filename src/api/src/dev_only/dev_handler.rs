@@ -16,8 +16,14 @@ use rauthy_service::oidc::logout;
 use tokio::fs;
 use validator::Validate;
 
+#[derive(serde::Deserialize)]
+pub struct TemplateQuery {
+    client_id: Option<String>,
+}
+
 pub async fn get_template(
     id: web::Path<String>,
+    query: web::Query<TemplateQuery>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.dev.dev_mode {
@@ -26,7 +32,8 @@ pub async fn get_template(
 
     let principal = web::ReqData::<Principal>::extract(&req).await?;
     let session = principal.validate_session_auth().ok().cloned();
-    let (tpl, cookie) = HtmlTemplate::build_from_str(id.as_str(), session).await?;
+    let client_id = query.into_inner().client_id;
+    let (tpl, cookie) = HtmlTemplate::build_from_str(id.as_str(), session, client_id).await?;
 
     if let Some(cookie) = cookie {
         Ok(HttpResponse::Ok()

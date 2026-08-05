@@ -1,6 +1,7 @@
 use crate::common::get_backend_url;
 use pretty_assertions::{assert_eq, assert_ne};
 use rauthy_api_types::clients::{DynamicClientRequest, DynamicClientResponse};
+use rauthy_api_types::oidc::GrantType;
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 
@@ -14,7 +15,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let url = format!("{}/clients_dyn", backend_url);
     let mut payload = DynamicClientRequest {
         redirect_uris: vec!["http://localhost:8080/*".to_string()],
-        grant_types: vec!["authorization_code".to_string()],
+        grant_types: vec![GrantType::AuthorizationCode],
         client_name: Some("Dyn Test Client 123".to_string()),
         client_uri: None,
         contacts: None,
@@ -30,7 +31,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     assert_eq!(resp.client_name, payload.client_name);
     // currently, we don't have a secret expiration
     assert_eq!(resp.client_secret_expires_at, 0);
-    assert!(resp.grant_types.contains(&"authorization_code".to_string()));
+    assert!(resp.grant_types.contains(&GrantType::AuthorizationCode));
     // with token_endpoint_auth_method == "none", the client must be public
     assert!(resp.client_secret.is_none());
 
@@ -109,8 +110,8 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
 
     // self-modify
     payload.client_name = Some("Dyn Test Client 12345".to_string());
-    payload.grant_types.push("client_credentials".to_string());
-    payload.grant_types.push("refresh_token".to_string());
+    payload.grant_types.push(GrantType::ClientCredentials);
+    payload.grant_types.push(GrantType::RefreshToken);
     payload.token_endpoint_auth_method = Some("client_secret_post".to_string());
     payload.contacts = Some(vec![
         "batman@localhost.de".to_string(),
@@ -130,8 +131,8 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     // we changed token_endpoint_auth_method -> should be a confidential client now
     assert!(resp.client_secret.is_some());
     assert_eq!(resp.client_name, payload.client_name);
-    assert!(resp.grant_types.contains(&"client_credentials".to_string()));
-    assert!(resp.grant_types.contains(&"refresh_token".to_string()));
+    assert!(resp.grant_types.contains(&GrantType::ClientCredentials));
+    assert!(resp.grant_types.contains(&GrantType::RefreshToken));
     let contacts = resp.contacts.expect("contacts to be set");
     assert!(contacts.contains(&"batman@localhost.de".to_string()));
     assert!(contacts.contains(&"@alfred:matrix.org".to_string()));

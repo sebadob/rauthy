@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
+use crate::entity::logos::{Logo, LogoRes, LogoType};
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
@@ -21,6 +22,7 @@ impl HtmlTemplate {
     pub async fn build_from_str(
         s: &str,
         session: Option<Session>,
+        client_id: Option<String>,
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
         match s {
             "tpl_admin_btn_hide" => Ok((
@@ -46,6 +48,15 @@ impl HtmlTemplate {
                 Self::ClientLogoUpdated(Some(Utc::now().timestamp_millis())),
                 None,
             )),
+            "tpl_client_favicon_updated" => {
+                let updated = if let Some(client_id) = client_id {
+                    Logo::find_updated_with_res(&client_id, LogoRes::Favicon, &LogoType::Client)
+                        .await?
+                } else {
+                    None
+                };
+                Ok((Self::ClientFaviconUpdated(updated), None))
+            }
             "tpl_csrf_token" => {
                 if let Some(s) = session {
                     Ok((Self::CsrfToken(s.csrf_token), None))

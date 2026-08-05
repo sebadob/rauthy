@@ -23,6 +23,11 @@ pub enum ErrorResponseType {
     UseDpopNonce((Option<String>, String)),
     Forbidden,
     Internal,
+    /// RFC 6749 §5.2: the provided grant is invalid, expired, revoked, or was issued to
+    /// another client. Serialized as the RFC error code `invalid_grant`. Used by the RFC 8693
+    /// token exchange for a `subject_token` / `actor_token` that cannot be accepted.
+    #[serde(rename = "invalid_grant")]
+    InvalidGrant,
     /// RFC 8707 §2: the requested `resource` is invalid, unknown, malformed, or not
     /// allowed for the client. Serialized as the RFC error code `invalid_target`.
     #[serde(rename = "invalid_target")]

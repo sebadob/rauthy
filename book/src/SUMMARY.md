@@ -34,6 +34,7 @@
   - [Delegated Group Admins](work/group_admins.md)
   - [Ephemeral Clients](work/ephemeral_clients.md)
   - [Resource Indicators (RFC 8707)](work/resource_indicators.md)
+  - [Token Exchange (RFC 8693)](work/token_exchange.md)
   - [E-Mail Templates](work/email_templates.md)
   - [IP Blacklisting](work/ip_blacklist.md)
   - [JSON Web Keys](work/jwks.md)

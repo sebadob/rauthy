@@ -13,6 +13,7 @@
     import { genKey } from '$utils/helpers';
     import InputFile from '$lib5/form/InputFile.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
+    import IconTrash from '$icons/IconTrash.svelte';
 
     let {
         client,
@@ -31,6 +32,9 @@
 
     let logoKey = $state(genKey());
     let logoUrl = $derived(`/auth/v1/clients/${client.id}/logo?${logoKey}`);
+    let faviconKey = $state(genKey());
+    let faviconLoaded = $state(false);
+    let faviconUrl = $derived(`/auth/v1/clients/${client.id}/favicon?${faviconKey}`);
     let url = $derived(`/auth/v1/theme/${client.id}`);
 
     $effect(() => {
@@ -73,9 +77,12 @@
             err = res.error.message;
         } else {
             await fetchDelete(`/auth/v1/clients/${client.id}/logo`);
+            await fetchDelete(`/auth/v1/clients/${client.id}/favicon`);
 
             await fetchTheme();
             logoKey = genKey();
+            faviconLoaded = false;
+            faviconKey = genKey();
             success = true;
             setTimeout(() => {
                 success = false;
@@ -85,6 +92,30 @@
 
     async function onUploadSuccess() {
         logoKey = genKey();
+    }
+
+    async function onLogoDelete() {
+        let res = await fetchDelete(`/auth/v1/clients/${client.id}/logo`);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            logoKey = genKey();
+        }
+    }
+
+    async function onFaviconDelete() {
+        let res = await fetchDelete(`/auth/v1/clients/${client.id}/favicon`);
+        if (res.error) {
+            err = res.error.message;
+        } else {
+            faviconLoaded = false;
+            faviconKey = genKey();
+        }
+    }
+
+    function onFaviconUploadSuccess() {
+        faviconLoaded = false;
+        faviconKey = genKey();
     }
 </script>
 
@@ -119,12 +150,41 @@
                 <hr />
 
                 <p>Logo Upload</p>
-                <InputFile
-                    method="PUT"
-                    url={`/auth/v1/clients/${client.id}/logo`}
-                    fileName="logo"
-                    onSuccess={onUploadSuccess}
-                />
+                <div class="logo">
+                    <InputFile
+                        method="PUT"
+                        url={`/auth/v1/clients/${client.id}/logo`}
+                        fileName="logo"
+                        width="100%"
+                        onSuccess={onUploadSuccess}
+                    />
+                    <Button ariaLabel={t.common.delete} invisible onclick={onLogoDelete}>
+                        <IconTrash width="1.25rem" />
+                    </Button>
+                </div>
+
+                <p>{ta.clients.branding.faviconUpload}</p>
+                <div class="favicon">
+                    {#key faviconKey}
+                        <img
+                            class:loaded={faviconLoaded}
+                            src={faviconUrl}
+                            alt={ta.clients.branding.faviconPreviewAlt}
+                            onload={() => (faviconLoaded = true)}
+                            onerror={() => (faviconLoaded = false)}
+                        />
+                    {/key}
+                    <InputFile
+                        method="PUT"
+                        url={`/auth/v1/clients/${client.id}/favicon`}
+                        fileName="favicon"
+                        width="100%"
+                        onSuccess={onFaviconUploadSuccess}
+                    />
+                    <Button ariaLabel={t.common.delete} invisible onclick={onFaviconDelete}>
+                        <IconTrash width="1.25rem" />
+                    </Button>
+                </div>
 
                 <div class="buttons">
                     <Button type="submit">
@@ -155,6 +215,29 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
+    }
+
+    .logo,
+    .favicon {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .favicon {
+        grid-template-columns: 2rem minmax(0, 1fr) auto;
+    }
+
+    .favicon img {
+        width: 2rem;
+        height: 2rem;
+        visibility: hidden;
+        object-fit: contain;
+    }
+
+    .favicon img.loaded {
+        visibility: visible;
     }
 
     .container {

@@ -304,6 +304,7 @@ impl Default for Vars {
             access: VarsAccess {
                 userinfo_strict: true,
                 danger_disable_introspect_auth: false,
+                rfc_8252_enable: false,
                 disable_refresh_token_nbf: false,
                 sec_header_block: true,
                 session_validate_ip: true,
@@ -458,6 +459,7 @@ impl Default for Vars {
                 ],
                 cache_lifetime: 3600,
                 danger_allow_unvalidated_resource: false,
+                ignore_unknown_auth_flows: false,
             },
             events: VarsEvents {
                 email: None,
@@ -1214,12 +1216,13 @@ impl Vars {
                     panic!("Cannot read config from Vault. {err}");
                 }
             },
-            _ => {
-                let Ok(config) = fs::read_to_string(path_config).await else {
-                    panic!("Cannot read config file from {path_config}");
-                };
-                config
-            }
+            _ => match fs::read_to_string(path_config).await {
+                Ok(s) => s,
+                Err(err) => {
+                    warn!("Cannot read config from {}: {:?}", path_config, err);
+                    String::default()
+                }
+            },
         };
 
         Self::parse(slf, config, path_secrets).await
@@ -1348,6 +1351,9 @@ impl Vars {
             "DANGER_DISABLE_INTROSPECT_AUTH",
         ) {
             self.access.danger_disable_introspect_auth = v;
+        }
+        if let Some(v) = t_bool(&mut table, "access", "rfc_8252_enable", "RFC_8252_ENABLE") {
+            self.access.rfc_8252_enable = v;
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -2194,6 +2200,15 @@ impl Vars {
             "EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE",
         ) {
             self.ephemeral_clients.danger_allow_unvalidated_resource = v;
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "ignore_unknown_auth_flows",
+            "EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS",
+        ) {
+            self.ephemeral_clients.ignore_unknown_auth_flows = v;
         }
 
         check_table_empty(table, "ephemeral_clients");
@@ -3787,6 +3802,7 @@ pub struct VarsDev {
 pub struct VarsAccess {
     pub userinfo_strict: bool,
     pub danger_disable_introspect_auth: bool,
+    pub rfc_8252_enable: bool,
     pub disable_refresh_token_nbf: bool,
     pub sec_header_block: bool,
     pub session_validate_ip: bool,
@@ -3967,6 +3983,15 @@ pub struct VarsEphemeralClients {
     /// only enable it if you fully understand the implications and have a good reason.
     /// Default deny.
     pub danger_allow_unvalidated_resource: bool,
+    /// A dynamic client registration is always rejected when it advertises a grant type
+    /// Rauthy does not support. Some spec-valid CIMD clients (e.g. claude.ai) advertise
+    /// an unsupported grant (`urn:ietf:params:oauth:grant-type:jwt-bearer`) in their
+    /// metadata document without ever using it. Setting this to `true` lets an ephemeral
+    /// (CIMD) client document through by sanitizing — stripping — the unsupported grant
+    /// types, rather than rejecting the whole document. This applies ONLY to ephemeral
+    /// clients; dynamic client registration (DCR) and admin-managed clients keep rejecting
+    /// unknown grant types. Default reject.
+    pub ignore_unknown_auth_flows: bool,
 }
 
 #[derive(Debug)]

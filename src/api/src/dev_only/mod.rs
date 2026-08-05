@@ -11,9 +11,10 @@ pub mod dev_handler;
 #[get("/template/{id}")]
 pub async fn get_template(
     id: actix_web::web::Path<String>,
+    query: actix_web::web::Query<dev_handler::TemplateQuery>,
     req: actix_web::HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
-    dev_handler::get_template(id, req).await
+    dev_handler::get_template(id, query, req).await
 }
 
 #[cfg(not(debug_assertions))]

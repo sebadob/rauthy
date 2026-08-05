@@ -15,6 +15,7 @@ use crate::language::Language;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights};
 use rauthy_api_types::clients::ScimClientRequestResponse;
 use rauthy_api_types::cust_validation::*;
+use rauthy_api_types::oidc::GrantType;
 use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
 use rauthy_common::regex::*;
@@ -187,9 +188,9 @@ pub struct Client {
     #[validate(custom(function = "validate_vec_origin"))]
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
-    #[validate(custom(function = "validate_vec_grant_types"))]
-    pub flows_enabled: Vec<String>,
+    /// Validation: cannot be empty
+    #[validate(length(min = 1))]
+    pub flows_enabled: Vec<GrantType>,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_alg: JwkKeyPairAlg,
     /// Validation: `^(RS256|RS384|RS512|EdDSA)$`

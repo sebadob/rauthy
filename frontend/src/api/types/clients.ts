@@ -2,12 +2,14 @@ import type { JwkKeyPairAlg } from './oidc';
 import type { JsonValue } from '$utils/jsonValue';
 
 export const AuthFlowDeviceCode = 'urn:ietf:params:oauth:grant-type:device_code';
+export const AuthFlowTokenExchange = 'urn:ietf:params:oauth:grant-type:token-exchange';
 export type AuthFlow =
     | 'authorization_code'
     | 'client_credentials'
     | 'password'
     | 'refresh_token'
-    | 'urn:ietf:params:oauth:grant-type:device_code';
+    | 'urn:ietf:params:oauth:grant-type:device_code'
+    | 'urn:ietf:params:oauth:grant-type:token-exchange';
 export type CodeChallengeMethod = 'plain' | 'S256';
 
 export interface NewClientRequest {

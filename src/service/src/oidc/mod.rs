@@ -2,10 +2,11 @@ use crate::oidc::grant_types::authorization_code::grant_type_authorization_code;
 use crate::oidc::grant_types::client_credentials::grant_type_credentials;
 use crate::oidc::grant_types::password::grant_type_password;
 use crate::oidc::grant_types::refresh_token::grant_type_refresh;
+use crate::oidc::grant_types::token_exchange::grant_type_token_exchange;
 use crate::token_set::TokenSet;
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_api_types::oidc::TokenRequest;
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 
 pub use grant_types::device_code::grant_type_device_code;
@@ -28,12 +29,14 @@ pub async fn get_token_set(
     browser_id: BrowserId,
     req: HttpRequest,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
-    match req_data.grant_type.as_str() {
-        "authorization_code" => grant_type_authorization_code(req, req_data).await,
-        "client_credentials" => grant_type_credentials(req, req_data).await,
-        "password" => grant_type_password(req, browser_id, req_data).await,
-        "refresh_token" => grant_type_refresh(req, req_data).await,
-        _ => Err(ErrorResponse::new(
+    match req_data.grant_type {
+        GrantType::AuthorizationCode => grant_type_authorization_code(req, req_data).await,
+        GrantType::ClientCredentials => grant_type_credentials(req, req_data).await,
+        GrantType::Password => grant_type_password(req, browser_id, req_data).await,
+        GrantType::RefreshToken => grant_type_refresh(req, req_data).await,
+        GrantType::TokenExchange => grant_type_token_exchange(req, req_data).await,
+        // the device code grant is intercepted earlier, before the request even gets here
+        GrantType::DeviceCode => Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Invalid 'grant_type'",
         )),

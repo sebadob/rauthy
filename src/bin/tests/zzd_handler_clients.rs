@@ -4,7 +4,7 @@ use rauthy_api_types::clients::{
     ClientResponse, ClientSecretRequest, ClientSecretResponse, NewClientRequest,
     UpdateClientRequest,
 };
-use rauthy_api_types::oidc::{JwkKeyPairAlg, TokenRequest};
+use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest};
 use rauthy_common::constants::APPLICATION_JSON;
 use rauthy_common::utils::base64_url_no_pad_decode;
 use rauthy_jwt::claims::JwtAccessClaims;
@@ -22,13 +22,33 @@ fn extract_raw_claims(token: &str) -> Vec<u8> {
     base64_url_no_pad_decode(claims).unwrap()
 }
 
+fn image_form(
+    bytes: &'static [u8],
+    file_name: &'static str,
+    mime_type: &'static str,
+) -> reqwest::multipart::Form {
+    let part = reqwest::multipart::Part::bytes(bytes)
+        .file_name(file_name)
+        .mime_str(mime_type)
+        .unwrap();
+    reqwest::multipart::Form::new().part(file_name, part)
+}
+
+fn template_value<'a>(html: &'a str, id: &str) -> &'a str {
+    let start = format!(r#"<template id="{id}">"#);
+    html.split_once(&start)
+        .and_then(|(_, rest)| rest.split_once("</template>"))
+        .map(|(value, _)| value)
+        .unwrap_or_else(|| panic!("template {id} missing from authorize HTML"))
+}
+
 /// GETs the client, rebuilds the full `UpdateClientRequest` (so we don't depend
 /// on `JwkKeyPairAlg` being `Clone`), overrides `flows_enabled` + `claims`, PUTs
 /// it back and returns the response.
 async fn put_client_claims(
     auth_headers: &reqwest::header::HeaderMap,
     id: &str,
-    flows_enabled: Vec<String>,
+    flows_enabled: Vec<GrantType>,
     claims: Option<Value>,
     claims_at_root: bool,
 ) -> Result<ClientResponse, Box<dyn Error>> {
@@ -145,7 +165,10 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     );
     assert_eq!(client.allowed_origins, None);
     // authorization_code should be the only default flow since it is secure
-    assert_eq!(client.flows_enabled.get(0).unwrap(), "authorization_code");
+    assert_eq!(
+        client.flows_enabled.get(0).unwrap(),
+        &GrantType::AuthorizationCode
+    );
     // S256 code challenge by default for better security
     assert_eq!(client.challenges.as_ref().unwrap().get(0).unwrap(), "S256");
 
@@ -174,7 +197,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     let allowed_origins = Some(vec!["http://origin.test.client.io".to_string()]);
 
     let mut flows_enabled = client.flows_enabled;
-    flows_enabled.push("password".to_string());
+    flows_enabled.push(GrantType::Password);
 
     let update_client = UpdateClientRequest {
         name: None,
@@ -237,7 +260,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.enabled, false);
     assert_eq!(
         client.flows_enabled,
-        vec!["authorization_code".to_string(), "password".to_string()]
+        vec![GrantType::AuthorizationCode, GrantType::Password]
     );
     assert_eq!(client.access_token_alg, JwkKeyPairAlg::RS256);
     assert_eq!(client.id_token_alg, JwkKeyPairAlg::RS256);
@@ -278,6 +301,173 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test]
+async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Error>> {
+    const LOGO: &[u8] = include_bytes!("../../../assets/logo/rauthy_dark_small.png");
+    const FAVICON: &[u8] = include_bytes!("../../../assets/logo/rauthy_light_small.png");
+    const FAVICON_SVG: &[u8] = include_bytes!("../../../assets/logo/rauthy_light.svg");
+
+    let auth_headers = get_auth_headers().await?;
+    let backend_url = get_backend_url();
+    let client = reqwest::Client::new();
+    let client_id = "favicon_client";
+    let clients_url = format!("{backend_url}/clients");
+    let client_url = format!("{clients_url}/{client_id}");
+    let logo_url = format!("{client_url}/logo");
+    let favicon_url = format!("{client_url}/favicon");
+    let authorize_url = format!(
+        "{backend_url}/oidc/authorize?client_id={client_id}\
+         &redirect_uri=http://favicon.client.io/callback\
+         &response_type=code&code_challenge=test&code_challenge_method=S256"
+    );
+
+    // Allow a rerun after an interrupted test.
+    let _ = client
+        .delete(&favicon_url)
+        .headers(auth_headers.clone())
+        .send()
+        .await;
+    let _ = client
+        .delete(&client_url)
+        .headers(auth_headers.clone())
+        .send()
+        .await;
+
+    let new_client = NewClientRequest {
+        id: client_id.to_string(),
+        secret: None,
+        name: Some("Favicon Client".to_string()),
+        confidential: false,
+        redirect_uris: vec!["http://favicon.client.io/callback".to_string()],
+        post_logout_redirect_uris: None,
+    };
+    let res = client
+        .post(&clients_url)
+        .headers(auth_headers.clone())
+        .json(&new_client)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .put(&favicon_url)
+        .multipart(image_form(FAVICON, "favicon.png", "image/png"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 401);
+
+    let res = client
+        .put(&logo_url)
+        .headers(auth_headers.clone())
+        .multipart(image_form(LOGO, "logo.png", "image/png"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client.get(&authorize_url).send().await?;
+    assert_eq!(res.status(), 200);
+    let html = res.text().await?;
+    assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
+    assert!(template_value(&html, "tpl_client_favicon_updated").is_empty());
+
+    let res = client
+        .put(&favicon_url)
+        .headers(auth_headers.clone())
+        .multipart(image_form(FAVICON, "favicon.png", "image/png"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client.get(&logo_url).send().await?;
+    assert_eq!(res.status(), 200);
+    let logo = res.bytes().await?;
+    assert!(!logo.is_empty());
+
+    let res = client.get(&favicon_url).send().await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(
+        res.headers().get(CONTENT_TYPE).unwrap().to_str().unwrap(),
+        "image/webp"
+    );
+    let favicon = res.bytes().await?;
+    assert!(!favicon.is_empty());
+    assert_ne!(logo, favicon);
+
+    let res = client
+        .put(&favicon_url)
+        .headers(auth_headers.clone())
+        .multipart(image_form(b"not a png", "invalid.png", "image/png"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 400);
+
+    let res = client.get(&favicon_url).send().await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.bytes().await?, favicon);
+
+    let res = client
+        .put(&favicon_url)
+        .headers(auth_headers.clone())
+        .multipart(reqwest::multipart::Form::new())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 400);
+
+    let res = client.get(&authorize_url).send().await?;
+    assert_eq!(res.status(), 200);
+    let html = res.text().await?;
+    assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
+    assert!(!template_value(&html, "tpl_client_favicon_updated").is_empty());
+
+    let res = client.delete(&favicon_url).send().await?;
+    assert_eq!(res.status(), 401);
+
+    let res = client.get(&favicon_url).send().await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.bytes().await?, favicon);
+
+    let res = client
+        .put(&favicon_url)
+        .headers(auth_headers.clone())
+        .multipart(image_form(FAVICON_SVG, "favicon.svg", "image/svg+xml"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client.get(&logo_url).send().await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.bytes().await?, logo);
+
+    let res = client
+        .delete(&favicon_url)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client.get(&favicon_url).send().await?;
+    assert_eq!(res.status(), 404);
+
+    let res = client.get(&logo_url).send().await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.bytes().await?, logo);
+
+    let res = client.get(&authorize_url).send().await?;
+    assert_eq!(res.status(), 200);
+    let html = res.text().await?;
+    assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
+    assert!(template_value(&html, "tpl_client_favicon_updated").is_empty());
+
+    let res = client
+        .delete(&client_url)
+        .headers(auth_headers)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
@@ -310,17 +500,10 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
 
     // try to get a token with the credentials
     let mut token_req = TokenRequest {
-        grant_type: "client_credentials".to_string(),
-        code: None,
-        redirect_uri: None,
+        grant_type: GrantType::ClientCredentials,
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(secret.clone()),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let url_token = format!("{}/oidc/token", backend_url);
     let res = client.post(&url_token).form(&token_req).send().await?;
@@ -433,7 +616,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let resp = put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         Some(claims.clone()),
         false,
     )
@@ -456,17 +639,10 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
         .expect("a confidential client to have a secret");
 
     let token_req = TokenRequest {
-        grant_type: "client_credentials".to_string(),
-        code: None,
-        redirect_uri: None,
+        grant_type: GrantType::ClientCredentials,
         client_id: Some(client_id.to_string()),
         client_secret: Some(secret),
-        code_verifier: None,
-        device_code: None,
-        username: None,
-        password: None,
-        refresh_token: None,
-        resource: None,
+        ..Default::default()
     };
     let res = client.post(&url_token).form(&token_req).send().await?;
     assert_eq!(res.status(), 200);
@@ -491,7 +667,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let resp = put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         Some(claims.clone()),
         true,
     )
@@ -515,7 +691,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         Some(json!({ "iss": "evil" })),
         true,
     )
@@ -531,7 +707,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let resp = put_client_claims(
         &auth_headers,
         client_id,
-        vec!["client_credentials".to_string()],
+        vec![GrantType::ClientCredentials],
         None,
         false,
     )

@@ -2,6 +2,7 @@ use crate::database::DB;
 use crate::entity::clients::Client;
 use crate::rauthy_config::RauthyConfig;
 use deadpool_postgres::GenericClient;
+use rauthy_api_types::oidc::GrantType;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use tracing::debug;
@@ -47,7 +48,7 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
         redirect_uris,
         post_logout_redirect_uris: None,
         allowed_origins,
-        flows_enabled: "authorization_code".to_string(),
+        flows_enabled: GrantType::AuthorizationCode.to_string(),
         access_token_alg: "EdDSA".to_string(),
         id_token_alg: "EdDSA".to_string(),
         auth_code_lifetime: 10,

@@ -53,6 +53,8 @@ export let I18nAdminRu: I18nAdmin = {
                 Вы также можете использовать сложные вычисления или определённые выше CSS-переменные.`,
             descVariables: `Каждая следующая метка одновременно является именем CSS-переменной. Это означает,
                 что вы можете ссылаться на них в свободных полях ввода, например, с помощью <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Предварительный просмотр фавикона клиента',
+            faviconUpload: 'Загрузить фавикон',
         },
         claimsAtRoot: 'Emit claims at the token root',
         claimsAtRootWarning: `This client's claims are written at the token root
@@ -234,9 +236,8 @@ export let I18nAdminRu: I18nAdmin = {
         },
         openapi:
             'Если вы хотите интегрировать внешнее приложение и использовать API Rauthy, ознакомьтесь с',
-        openapiNote: `В зависимости от конфигурации бэкенда, Swagger UI может быть недоступен публично в данный момент.
-            Однако по умолчанию он доступен через внутренний HTTP-сервер метрик, чтобы не раскрывать
-            информацию.`,
+        openapiNote: `В стандартной конфигурации интерфейс Swagger не активен по ссылке выше. Это можно активировать с 
+            помощью конфигурации 'server.swagger_ui_enable' и, возможно, 'server.swagger_ui_public'.`,
         source: 'Исходный код можно найти здесь',
     },
     editor: {

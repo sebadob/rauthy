@@ -52,6 +52,8 @@ export let I18nAdminNb: I18nAdmin = {
             descVariables: `Hver påfølgende etikett er samtidig navnet på CSS variabelen. Det betyr at
                 for eksempel fritekst kan referere til variablene, like som med
                 <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Forhåndsvisning av klientens favicon',
+            faviconUpload: 'Last opp favicon',
         },
         claimsAtRoot: 'Emit claims at the token root',
         claimsAtRootWarning: `This client's claims are written at the token root
@@ -165,13 +167,13 @@ export let I18nAdminNb: I18nAdmin = {
             migrate: 'Migrere',
             migrateToKey: 'Migrere alle verdiene til følgende krypteringsnøkkel',
             p1: `Disse nøklene brukes for ekstra kryptering i forskjellige situasjoner, som for eksempel
-            visse verdier i databasen eller sesjonscookies. De er statisk konfigurert, men kan roteres
-            manuelt som en beste praksis.`,
+                visse verdier i databasen eller sesjonscookies. De er statisk konfigurert, men kan roteres
+                manuelt som en beste praksis.`,
             p2: `Den aktive nøkkelen er også statisk satt i Rauthy konfigurasjonsfilen. Alle ny-krypterte
-            verdier vil bli kryptert med den aktive nøkkelen, mens gamle kan eksistere parallelt for
-            bakoverkompatibilitet.`,
+                verdier vil bli kryptert med den aktive nøkkelen, mens gamle kan eksistere parallelt for
+                bakoverkompatibilitet.`,
             p3: `Migrering av alle krypterte verdier på dette tidspunktet kan, avhengig av systemet,
-            ta litt tid.`,
+                ta litt tid.`,
             pNotPossible: 'For å migrere må det finnes minst 2 kypteringsnøkler.',
         },
         hashing: {
@@ -180,40 +182,47 @@ export let I18nAdminNb: I18nAdmin = {
             currValuesHead: 'Nåværende verdier',
             currValues1: 'Nåværende konfigurerte veridene i backenden er følgende:',
             currValuesNote: `Notat: Logintiden fra backenden vil kun være en god retningslinje etter at minst
-            5 gylidge Logins har blitt gjort siden siste omstart. Startverdien er alltid 2000 ms og vil
-            tilpasses med hver gylidg Login.`,
+                5 gylidge Logins har blitt gjort siden siste omstart. Startverdien er alltid 2000 ms og vil
+                tilpasses med hver gylidg Login.`,
             currValuesThreadsAccess: 'Tråder (p_cost) tilgjengelig for Rauthy',
 
             loginTimeHead: 'Noe ord om login tid',
             loginTime1: `Generelt ønsker brukere at alt skal gå så raskt som mulig. For en sikker
-            login prosedyre bør imidlertid en tid på minst 500 - 1000 ms siktes mot og bør ikke være
-            et problem. Tiden for passord hashing bør ikke være for kort, da dette vil redusere styrken
-            til hashen.`,
+                login prosedyre bør imidlertid en tid på minst 500 - 1000 ms siktes mot og bør ikke være
+                et problem. Tiden for passord hashing bør ikke være for kort, da dette vil redusere styrken
+                til hashen.`,
             loginTime2: `For å sikre tilstrekkelig sikkerhet som standard, tillater dette verktøyet ikke
-            småere verider enn 500ms for login tid.`,
+                småere verider enn 500ms for login tid.`,
 
             mCost1: `<code>m_cost</code> definerer mengden <b>minne (i kB)</b> som brukes til hashing. Jo høyere
-            denne verdien er,jo bedre (sikrere), men de nødvendige ressursene må selvfølgelig være tilgjengelige.<br>
-            Hvis f.eks. 4 passord skal hashes samtidig, vil det naturligvis kreves <code>4 x m_cost</code> minne, som
-            alltid må være tilgjengelig.`,
+                denne verdien er,jo bedre (sikrere), men de nødvendige ressursene må selvfølgelig være tilgjengelige.<br>
+                Hvis f.eks. 4 passord skal hashes samtidig, vil det naturligvis kreves <code>4 x m_cost</code> minne, som
+                alltid må være tilgjengelig.`,
             mCost2: `Å finne den "riktige" verdien for <code>m_cost</code> er heldigvis veldig enkelt.
-            Definer maksimum minne Rauthy skal bruke, del mengden på antall parallelle innlogginger som skal
-            være mulig (<code>MAX_HASH_THREADS</code>) og trekk fra en viss statisk mengde.
-            Mengden statisk minne som trengs avhenger av valgt database og antall brukere, men vil i de fleste
-            tilfeller ligge mellom 32 - 96 MB.`,
+                Definer maksimum minne Rauthy skal bruke, del mengden på antall parallelle innlogginger som skal
+                være mulig (<code>MAX_HASH_THREADS</code>) og trekk fra en viss statisk mengde.
+                Mengden statisk minne som trengs avhenger av valgt database og antall brukere, men vil i de fleste
+                tilfeller ligge mellom 32 - 96 MB.`,
 
             pCost1: `<code>p_cost</code> definerer parallellismen for hashing.<br>
-            I de fleste tilfeller vil verdier over 8 ikke øke den nødvendige tiden, fordi algoritmen vil være mettet. Dette er også standardverdien for Rauthy.`,
+                I de fleste tilfeller vil verdier over 8 ikke øke den nødvendige tiden, fordi algoritmen vil være mettet. 
+                Dette er også standardverdien for Rauthy.`,
             pCost2: `Den generelle regelen er:<br>
-            Sett <code>p_cost</code> til det dobbelte av antall tilgjengelige CPU-kjerner.<br>
-            Hvis f.eks. 4 kjerner er tilgjengelig, vil en <code>p_cost</code> på 8 være en god verdi.<br>
-            Verdien må imidlertid ta hensyn til maksimalt antall tillatte parallelle innlogginger (<code>MAX_HASH_THREADS</code>) og eventuelt justeres deretter.`,
+                Sett <code>p_cost</code> til det dobbelte av antall tilgjengelige CPU-kjerner.<br>
+                Hvis f.eks. 4 kjerner er tilgjengelig, vil en <code>p_cost</code> på 8 være en god verdi.<br>
+                Verdien må imidlertid ta hensyn til maksimalt antall tillatte parallelle innlogginger 
+                (<code>MAX_HASH_THREADS</code>) og eventuelt justeres deretter.`,
 
-            tCost1: `<code>t_cost</code> er en multiplikator for <b>tiden</b> til hashing. Dette er den eneste verdien som må finnes ved testing på målarkitekturen, fordi <code>m_cost</code> og <code>p_cost</code> i stor grad er forhåndsdefinert.`,
-            tCost2: `Å finne verdien er enkelt: Sett <code>m_cost</code> og <code>p_cost</code> som forklart ovenfor og øk <code>t_cost</code> til ønsket innloggingstid er oppnådd.`,
+            tCost1: `<code>t_cost</code> er en multiplikator for <b>tiden</b> til hashing. Dette er den eneste verdien 
+                som må finnes ved testing på målarkitekturen, fordi <code>m_cost</code> og <code>p_cost</code> i stor 
+                grad er forhåndsdefinert.`,
+            tCost2: `Å finne verdien er enkelt: Sett <code>m_cost</code> og <code>p_cost</code> som forklart ovenfor 
+                og øk <code>t_cost</code> til ønsket innloggingstid er oppnådd.`,
 
             utilityHead: 'Parameter Beregningsverktøy',
-            utility1: `Verktøyet nedenfor kan brukes til å finne passende verdier for denne Rauthy-installasjonen. Siden verdiene avhenger av mange faktorer, bør de settes på den endelige arkitekturen, helst på tidspunkter med forventet høyest belastning, for å unngå å sette for høye verdier.`,
+            utility1: `Verktøyet nedenfor kan brukes til å finne passende verdier for denne Rauthy-installasjonen. 
+                Siden verdiene avhenger av mange faktorer, bør de settes på den endelige arkitekturen, helst på 
+                tidspunkter med forventet høyest belastning, for å unngå å sette for høye verdier.`,
             utility2: `<code>m_cost</code> er valgfritt og den minimale sikre verdien på 32768 vil automatisk
             vælges. Skulle <code>p_cost</code> heller ikke være angitt, vil Rauthy bruke den maksimale
             tilgjengelige mengden kjerner.`,
@@ -221,17 +230,17 @@ export let I18nAdminNb: I18nAdmin = {
             targetTime: 'Mål-Tid',
             tune: 'Viktig: Disse verdiene må settes på den endelige arkitekturen!',
             pDetials: `For en mer detaljert innføring i Argon2ID-algoritmen finnes det mange kilder på nettet.
-            Her forklares bare verdiene veldig kort. De følgende tre verdiene må konfigureres:`,
+                Her forklares bare verdiene veldig kort. De følgende tre verdiene må konfigureres:`,
             pTune: `Verdiene kan variere sterkt avhengig av systemet og den generelle systembelastningen. Jo
-            kraftigere systemet er, desto sikrere verdier kan velges.`,
+                kraftigere systemet er, desto sikrere verdier kan velges.`,
             pUtility: `Dette verktøyet er en hjelp til å finne de beste Argon2ID-verdiene for det aktuelle systemet.
-            Argon2ID er den for tiden sikreste tilgjengelige passordhash-algoritmen. For å kunne utnytte det fulle potensialet
-            må imidlertid verdiene tilpasses systemet.`,
+                Argon2ID er den for tiden sikreste tilgjengelige passordhash-algoritmen. For å kunne utnytte det fulle potensialet
+                må imidlertid verdiene tilpasses systemet.`,
             mCost3: 'Den minimale tillatte verdien for <code>m_cost</code> er <code>32768</code>.',
         },
         openapi: 'For integrering av en ekstern applikasjon via Rauthys API, se',
-        openapiNote: `Avhengig av konfigurasjonen er Swagger UI kanskje ikke offentlig tilgjengelig via lenken over.
-            Den er imidlertid (som standard) tilgjengelig via den interne metrics-serveren for å redusere angrepsflaten.`,
+        openapiNote: `I standardkonfigurasjonen er ikke Swagger-grensesnittet aktivt via lenken ovenfor. Det kan 
+            aktiveres via konfigurasjon 'server.swagger_ui_enable' og muligens 'server.swagger_ui_public'.`,
         source: 'Kildekoden finnes her',
     },
     editor: {

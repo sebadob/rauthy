@@ -55,6 +55,8 @@ export let I18nAdminDe: I18nAdmin = {
             descVariables: `Jede nachfolgende Beschriftung ist gleichzeitig der Name der CSS Variable. Das heisst,
                 dass z.B. die freien Eingaben wiederum die Variablen referenzieren können, z.B. mit
                 <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Vorschau des Client-Favicons',
+            faviconUpload: 'Favicon hochladen',
         },
         claimsAtRoot: 'Setze claims auf Token root Ebene',
         claimsAtRootWarning: `Die zusätzlichen claims werden auf Token root Ebene gesetzt anstatt
@@ -247,9 +249,8 @@ export let I18nAdminDe: I18nAdmin = {
             mCost3: 'Der minimal erlaubte Wert für <code>m_cost</code> ist <code>32768</code>.',
         },
         openapi: "Zur Integration einer externen Applikation via Rauthy's API gibt es das",
-        openapiNote: `In Abhängigkeit von der Konfiguration ist das Swagger  UI nicht öffentlich zugänglich übber den
-            oben genannten Link. Es ist allerdings (standardmäßig) über den internen metrics server verfügbar zur
-            Reduzierung der Angriffsfläche.`,
+        openapiNote: `In der Standard Konfiguration ist das Swagger UI über den oben genannten Link nicht aktiv. Es 
+            kann per Konfiguration 'server.swagger_ui_enable' und ggf. 'server.swagger_ui_public' aktiviert werden.`,
         source: 'Der source code kann hier gefunden werden',
     },
     editor: {

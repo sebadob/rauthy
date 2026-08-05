@@ -17,7 +17,7 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::error;
 
-/// In case of any error, the callback code will be fully deleted for security reasons.
+/// The callback is single-use: it is deleted as soon as it has been validated.
 pub async fn login_finish<'a>(
     req: &'a HttpRequest,
     payload: &'a ProviderCallbackRequest,
@@ -65,6 +65,9 @@ pub async fn login_finish<'a>(
             "invalid PKCE verifier",
         ));
     }
+
+    // The callback is validated at this point, so we can safely clean up the cache.
+    AuthProviderCallback::delete(slf.callback_id.clone()).await?;
 
     // request is valid -> fetch token for the user
     let provider = AuthProvider::find(&slf.provider_id).await?;

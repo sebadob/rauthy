@@ -59,3 +59,38 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+// Regression for issue #1643: because the issuer carries a path
+// (`.../auth/v1/`), RFC 8414 §3.1 mandates the AS-metadata URL be formed by
+// INSERTING `/.well-known/oauth-authorization-server` between host and path.
+// claude.ai probes exactly this path-insertion form; it must return the same
+// JSON well-known document (not the SPA fallback) so the client can read
+// `client_id_metadata_document_supported`.
+#[tokio::test]
+async fn test_get_well_known_oauth_rfc8414() -> Result<(), Box<dyn Error>> {
+    let backend = get_backend_url();
+    let root = backend.strip_suffix("/auth/v1").unwrap_or(&backend);
+
+    // Both the no-slash form (probed by claude.ai) and the trailing-slash form
+    // (issuer path is `/auth/v1/`) must return the well-known document, not the SPA.
+    for url in [
+        format!("{root}/.well-known/oauth-authorization-server/auth/v1"),
+        format!("{root}/.well-known/oauth-authorization-server/auth/v1/"),
+    ] {
+        let res = reqwest::get(&url).await?;
+
+        assert_eq!(res.status(), 200, "unexpected status for {url}");
+        assert_eq!(
+            res.headers()
+                .get(reqwest::header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok()),
+            Some("application/json"),
+            "unexpected content-type for {url}",
+        );
+        let content = res.json::<WellKnown>().await?;
+        // strip trailing /
+        assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
+    }
+
+    Ok(())
+}

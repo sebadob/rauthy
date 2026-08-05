@@ -10,6 +10,7 @@ use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
+use tracing::debug;
 use zeroize::Zeroize;
 
 #[derive(Clone, Serialize, Deserialize, FromPgRow)]
@@ -284,7 +285,7 @@ impl ApiKeyEntity {
     #[inline(always)]
     pub async fn api_key_from_token_validated(token: &str) -> Result<ApiKey, ErrorResponse> {
         let (name, secret) = token.split_once('$').ok_or_else(|| {
-            ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key")
+            ErrorResponse::new(ErrorResponseType::BadRequest, "Malformed API-Key in Cache")
         })?;
 
         let client = DB::hql();
@@ -292,7 +293,13 @@ impl ApiKeyEntity {
         let api_key = if let Some(key) = client.get(Cache::App, &idx).await? {
             key
         } else {
-            let key = Self::find(name).await?.into_api_key()?;
+            let key = Self::find(name).await?.into_api_key().map_err(|_| {
+                debug!("No API Key found with name: '{name}'");
+                ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "Invalid API Key name - no data found",
+                )
+            })?;
             client.put(Cache::App, idx, &key, CACHE_TTL_APP).await?;
             key
         };

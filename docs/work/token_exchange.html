@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>E-Mail Templates - Rauthy Documentation</title>
+        <title>Token Exchange (RFC 8693) - Rauthy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -167,96 +167,83 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="e-mail-templates"><a class="header" href="#e-mail-templates">E-Mail Templates</a></h1>
-<p>The templates for E-Mails being sent by Rauthy are baked into the binary. This is the most efficient
-and fastest way of handling them. It simplifies the container images and speeds up the internal
-generation of new ones from templates compared to dynamic ones. At the same time, Rauthy checks
-these templates for correctness at compile time. It makes sure, that each templated value exists in
-the internal application logic and vice versa.</p>
-<p>If you need to modify the content of these E-Mails, you have 2 options:</p>
+                        <h1 id="token-exchange-rfc-8693"><a class="header" href="#token-exchange-rfc-8693">Token Exchange (RFC 8693)</a></h1>
+<p><a href="https://www.rfc-editor.org/rfc/rfc8693">RFC 8693</a> lets a client trade an existing token for a new
+one. The typical case is a service that receives an access token from a caller and needs to call a
+second service downstream: instead of forwarding the original token, which was minted for itself, it
+exchanges it for a token whose audience is the downstream service.</p>
+<p>Rauthy supports two shapes of this:</p>
 <ul>
-<li>Use the pre-defined config variables</li>
-<li>Clone the repo, modify the templates and build it from source</li>
+<li><strong>Impersonation</strong>: the new token looks like a token for the original subject. A downstream service
+cannot tell that somebody exchanged it.</li>
+<li><strong>Delegation</strong>: the new token additionally carries an <code>act</code> (actor) claim naming the acting party,
+so a downstream service can distinguish "A acting on behalf of B" from "B".</li>
 </ul>
-<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<h2 id="the-token-exchange-request"><a class="header" href="#the-token-exchange-request">The token exchange request</a></h2>
+<p>The exchange happens on the normal token endpoint (<code>POST /oidc/token</code>) with</p>
+<pre><code>grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+</code></pre>
+<p>The client authenticates as itself, exactly like for a <code>client_credentials</code> request, and the
+exchange is only allowed for confidential clients.</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th></th><th>Description</th></tr></thead><tbody>
+<tr><td><code>subject_token</code></td><td>required</td><td>The token representing the identity the new token should act for.</td></tr>
+<tr><td><code>subject_token_type</code></td><td>required</td><td>Must be <code>urn:ietf:params:oauth:token-type:access_token</code>.</td></tr>
+<tr><td><code>actor_token</code></td><td>optional</td><td>Presence turns the exchange into a delegation and adds the <code>act</code> claim.</td></tr>
+<tr><td><code>actor_token_type</code></td><td>required with <code>actor_token</code></td><td>Must be <code>urn:ietf:params:oauth:token-type:access_token</code>.</td></tr>
+<tr><td><code>audience</code></td><td>optional</td><td>The target the new token is for. Validated against <code>allowed_resources</code>.</td></tr>
+<tr><td><code>resource</code></td><td>optional</td><td>Same as <code>audience</code>. Only one of the two may be given.</td></tr>
+<tr><td><code>scope</code></td><td>optional</td><td>Narrows the scopes. It can never widen the <code>subject_token</code>'s scopes.</td></tr>
+<tr><td><code>requested_token_type</code></td><td>optional</td><td>Only <code>urn:ietf:params:oauth:token-type:access_token</code> is supported, which is also the default.</td></tr>
+</tbody></table>
+</div><div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
-<div id="admonition-info-title">
-<p>Info</p>
+<div id="admonition-note-title">
+<p>Note</p>
 </div>
-<a class="admonition-anchor-link" href="#admonition-info"></a>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
 </div>
 <div>
-<p>You can only modify the <em>New Password</em> and <em>Password Reset</em> E-Mail currently. There was no need yet for any of the
-others.</p>
+<p>Rauthy only accepts <strong>access tokens</strong> as <code>subject_token</code> / <code>actor_token</code>, and the exchanged token is
+always an access token. The exchanged token never comes with a refresh token: a refresh must come
+from the client that owns the original token, with a fresh exchange on top. The <code>may_act</code> claim is
+not supported yet.</p>
 </div>
 </div>
-<h2 id="existing-config-values"><a class="header" href="#existing-config-values">Existing Config Values</a></h2>
-<p>Modifying the E-Mail contents via config variables is very straight forward. You don't need to
-compile from source, therefore can't make any mistakes and for all variables that are not set,
-Rauthy will simply fall back to the default.</p>
-<p>You can take a look at the raw templates directly in the repo, so you can see which value will be
-mapped to which location in the final message.</p>
-<p><a href="https://github.com/sebadob/rauthy/blob/main/templates/email/reset.txt">Text Version</a></p>
-<p><a href="https://github.com/sebadob/rauthy/blob/main/templates/email/reset.html">HTML Version</a></p>
-<p>The values are given as multiplem <code>[[templates]]</code> blocks. Each given block must match a separate
-<code>lang</code> / <code>typ</code> combination to be valid:</p>
-<pre><code class="language-toml">[[templates]]
-# You can overwrite some default email templating values.
-# If you want to modify the basic templates themselves, this is
-# only possible with a custom build from source. The content
-# however can mostly be set here.
-# If the below values are not set, the default will be taken.
-#
-# NOTE: This is an array value, and you can specify it multiple
-# times for different `lang` / `typ` combinations.
-
-# one of: en de ko uk zh_hans
-lang = 'en'
-# one of: password_new, password_reset, email_registered_already
-typ = 'password_new'
-
-subject = 'New Password'
-header = 'New password for'
-
-# Note: This value will be empty for `password_new` and `password_reset`.
-# You can set custom content that you wish to add to your emails though.
-# For `email_registered_already`, it will have a default text.
-#text = """Someone tried to register a new account with your E-Mail address
-#while an account exists already. If that was you, and it was a mistake, you
-#can ignore this message. However, if you forgot your password, you can use
-#the link belopw to reset it.
-#If it was not you trying to register the new account - no need to worry.
-#Your account has not been compromised and no data was leaked."""
-
-# Exists only for: password_new, password_reset
-click_link = 'Click the link below to get forwarded to the password form.'
-# Exists only for: password_new, password_reset
-validity = 'This link is only valid for a short period of time for security reasons.'
-# Exists only for: password_new, password_reset
-expires = 'Link expires:'
-footer = ''
-
-# Exists only for password reset E-Mails for initialized accounts or
-# `email_registered_already`
-button_text_request_new = ''
+<h2 id="per-client-configuration"><a class="header" href="#per-client-configuration">Per-client configuration</a></h2>
+<p>The exchange is <strong>deny by default</strong> and needs two things configured on the exchanging client, in the
+Admin UI under the client config or via the clients API:</p>
+<ol>
+<li><strong><code>token_exchange</code> in the client's Authentication Flows.</strong> Without it, any exchange request from
+this client is rejected. It behaves like every other flow.</li>
+<li><strong><code>allowed_resources</code></strong> must contain the target, if an <code>audience</code> / <code>resource</code> is requested. This
+is the same allow-list used for <a href="resource_indicators.html">Resource Indicators</a>, because the
+question is the same one: may this client mint a token for that target? A requested target that
+is not on the list is rejected with the RFC error code <code>invalid_target</code>.</li>
+</ol>
+<p>A <code>subject_token</code> that is not a valid access token, or has been revoked, is rejected with
+<code>invalid_grant</code>.</p>
+<h2 id="the-act-claim"><a class="header" href="#the-act-claim">The <code>act</code> claim</a></h2>
+<p>With an <code>actor_token</code>, the exchanged token carries the acting party per
+<a href="https://www.rfc-editor.org/rfc/rfc8693#section-4.1">RFC 8693 section 4.1</a>:</p>
+<pre><code class="language-json">{
+  "sub": "the-original-subject",
+  "act": {
+    "sub": "the-acting-party"
+  }
+}
 </code></pre>
-<h2 id="modify-templates-directly"><a class="header" href="#modify-templates-directly">Modify Templates Directly</a></h2>
-<p>Modifying templates directly gives you the most amount of control of course. You can change
-everything you like about them. However, you need to clone the whole repo, modify the templates in
-<a href="https://github.com/sebadob/rauthy/tree/main/templates/email">templates/email/</a>, and then rebuild
-the whole project from source on your own. The existing setup should make it pretty easy to do. To
-get started, take a look at
-the <a href="https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+<p>If the <code>actor_token</code> was itself the result of a delegation, its <code>act</code> claim is nested inside the new
+one, so the whole chain stays visible to a downstream service.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../work/token_exchange.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../work/resource_indicators.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../work/ip_blacklist.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../work/email_templates.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -266,11 +253,11 @@ the <a href="https://github.com/sebadob/rauthy/blob/main/CONTRIBUTING.md">CONTRI
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../work/token_exchange.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../work/resource_indicators.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../work/ip_blacklist.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../work/email_templates.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

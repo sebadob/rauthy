@@ -49,6 +49,8 @@ export let I18nAdminEn: I18nAdmin = {
                 You can also use complex calculations or the above defined CSS variables.`,
             descVariables: `Each following label is at the same time the name of the CSS variable. This means,
                 that you can reference these in the free inputs, e.g. with <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Client favicon preview',
+            faviconUpload: 'Favicon Upload',
         },
         claimsAtRoot: 'Emit claims at the token root',
         claimsAtRootWarning: `This client's claims are written at the token root
@@ -229,9 +231,8 @@ export let I18nAdminEn: I18nAdmin = {
         },
         openapi:
             "If you want to integrate an external application and use Rauthy's API, take a look at the",
-        openapiNote: `Depending on the backend configuration, the Swagger UI may not be exposed publicly at this point.
-            It is however by default available via the internal metrics HTTP server to not expose any 
-            information.`,
+        openapiNote: `In the default configuration, the Swagger UI is not active via the link above. It can be activated
+            via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.`,
         source: 'The source code can be found here',
     },
     editor: {

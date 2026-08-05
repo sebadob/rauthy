@@ -46,6 +46,7 @@ export const TPL_ATPROTO_ID = 'tpl_atproto_id';
 export const TPL_AUTH_PROVIDERS = 'tpl_auth_providers';
 export const TPL_CLIENT_NAME = 'tpl_client_name';
 export const TPL_CLIENT_URL = 'tpl_client_url';
+export const TPL_CLIENT_FAVICON_UPDATED = 'tpl_client_favicon_updated';
 export const TPL_CLIENT_LOGO_UPDATED = 'tpl_client_logo_updated';
 export const TPL_CSRF_TOKEN = 'tpl_csrf_token';
 export const TPL_EMAIL_OLD = 'tpl_email_old';

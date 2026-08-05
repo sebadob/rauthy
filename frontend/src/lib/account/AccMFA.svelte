@@ -27,7 +27,7 @@
     import OtpRequest from '$lib5/OtpRequest.svelte';
     import InputOtp from '$lib5/form/InputOtp.svelte';
 
-    let { user }: { user: UserResponse } = $props();
+    let { user = $bindable() }: { user: UserResponse } = $props();
 
     const isWebauthnSupported = 'credentials' in navigator;
 
@@ -125,6 +125,15 @@
         }
     }
 
+    // `webauthn_user_id` is set by the backend with the very first passkey, and reset with the
+    // last deletion. Refetch so the MFA indicator updates without a manual page reload.
+    async function fetchUser() {
+        let res = await fetchGet<UserResponse>(`/auth/v1/users/${user.id}`);
+        if (res.body) {
+            user = res.body;
+        }
+    }
+
     async function handleRegister() {
         resetMsgErr();
 
@@ -159,6 +168,7 @@
             showRegInput = false;
             passkeyName = '';
             await fetchPasskeys();
+            await fetchUser();
         }
     }
 
@@ -174,6 +184,7 @@
         let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`, payload);
         if (res.status === 200) {
             await fetchPasskeys();
+            await fetchUser();
         } else {
             msg = res.error?.message || 'Error';
         }

@@ -7,9 +7,11 @@
 
     let {
         id,
+        clientId,
         value = $bindable(),
     }: {
         id: string;
+        clientId?: string;
         value: boolean | string | number | T;
     } = $props();
 
@@ -20,7 +22,8 @@
                 assign(tpl.innerHTML);
             }
         } else {
-            let res = await fetchGet<typeof value>(`/auth/v1/template/${id}`);
+            let query = clientId ? `?client_id=${encodeURIComponent(clientId)}` : '';
+            let res = await fetchGet<typeof value>(`/auth/v1/template/${id}${query}`);
             if (res.error) {
                 console.error(res.error);
             } else if (res.text) {

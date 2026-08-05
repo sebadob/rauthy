@@ -53,6 +53,8 @@ export let I18nAdminNl: I18nAdmin = {
                 U kunt ook complexe berekeningen of de hierboven gedefinieerde CSS-variabelen gebruiken.`,
             descVariables: `Elk volgend label is tegelijkertijd de naam van de CSS-variabele. Dit betekent,
                 dat u er in de vrije invoervelden naar kunt verwijzen, bijv. met <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Voorbeeld van clientfavicon',
+            faviconUpload: 'Favicon uploaden',
         },
         claims: 'Custom claims (client_credentials)',
         claimsAtRoot: 'Emit claims at the token root',
@@ -241,9 +243,8 @@ export let I18nAdminNl: I18nAdmin = {
         },
         openapi:
             "Als u een externe applicatie wilt integreren en Rauthy's API wilt gebruiken, kijk dan naar het",
-        openapiNote: `Afhankelijk van de backendconfiguratie is de Swagger UI mogelijk niet publiekelijk
-            beschikbaar op dit punt. Het is echter standaard beschikbaar via de interne metrics HTTP-server
-            om geen informatie bloot te stellen.`,
+        openapiNote: `In de standaardconfiguratie is de Swagger UI niet actief via de bovenstaande link. Het kan worden 
+            geactiveerd via configuratie 'server.swagger_ui_enable' en mogelijk 'server.swagger_ui_public'.`,
         source: 'De broncode is hier te vinden',
     },
     editor: {

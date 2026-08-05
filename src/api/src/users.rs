@@ -2072,6 +2072,20 @@ pub async fn post_webauthn_reg_finish(
         principal.is_user(&id)?;
 
         webauthn::reg_finish(id, payload).await?;
+
+        // The registration ceremony is a fresh proof of possession for this very session, and
+        // starting it already required an `MfaModToken`. Upgrade the session in place so the user
+        // does not need a logout / login round-trip to satisfy `admin_force_mfa`.
+        //
+        // The session lookup is deliberately graceful: the passkey has already been persisted at
+        // this point, so a flow that gets here without a session (during an initial account setup,
+        // for instance) must never have its successful registration turned into an error.
+        if let Some(mut session) = principal.into_inner().session
+            && !session.is_mfa
+        {
+            session.set_mfa(true).await?;
+        }
+
         Ok(HttpResponse::Created().finish())
     }
 }

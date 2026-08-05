@@ -18,6 +18,8 @@ use tracing::debug;
 
 // The default height a client logo will be resized to
 const RES_CLIENT_LOGO: u32 = 84;
+// The favicon size served on authorize pages
+const RES_CLIENT_FAVICON: u32 = 32;
 // The default height an auth provider logo will be resized to
 const RES_PROVIDER_LOGO: u32 = 20;
 // The default height for any logo how it will be saved for possible later use
@@ -32,6 +34,7 @@ pub enum LogoRes {
     Large,
     Custom,
     Svg,
+    Favicon,
 }
 
 impl From<String> for LogoRes {
@@ -41,6 +44,7 @@ impl From<String> for LogoRes {
             "medium" => Self::Medium,
             "large" => Self::Large,
             "svg" => Self::Svg,
+            "favicon" => Self::Favicon,
             _ => Self::Custom,
         }
     }
@@ -54,6 +58,7 @@ impl LogoRes {
             LogoRes::Large => "large",
             LogoRes::Svg => "svg",
             LogoRes::Custom => "custom",
+            LogoRes::Favicon => "favicon",
         }
     }
 }
@@ -105,6 +110,56 @@ impl Logo {
         Ok(())
     }
 
+    pub async fn delete_client_logo(id: &str) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM client_logos WHERE client_id = $1 AND res != 'favicon'";
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(id)).await?;
+        } else {
+            DB::pg_execute(sql, &[&id]).await?;
+        }
+
+        DB::hql()
+            .delete(Cache::App, Self::cache_idx(&LogoType::Client, id))
+            .await?;
+        DB::hql()
+            .delete(Cache::App, Self::cache_idx_updated(&LogoType::Client, id))
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn delete_res(id: &str, typ: &LogoType, res: LogoRes) -> Result<(), ErrorResponse> {
+        let res = res.as_str();
+        match typ {
+            LogoType::Client => {
+                let sql = "DELETE FROM client_logos WHERE client_id = $1 AND res = $2";
+                if is_hiqlite() {
+                    DB::hql().execute(sql, params!(id, res)).await?;
+                } else {
+                    DB::pg_execute(sql, &[&id, &res]).await?;
+                }
+            }
+            LogoType::AuthProvider => {
+                let sql =
+                    "DELETE FROM auth_provider_logos WHERE auth_provider_id = $1 AND res = $2";
+                if is_hiqlite() {
+                    DB::hql().execute(sql, params!(id, res)).await?;
+                } else {
+                    DB::pg_execute(sql, &[&id, &res]).await?;
+                }
+            }
+        };
+
+        DB::hql()
+            .delete(Cache::App, Self::cache_idx(typ, id))
+            .await?;
+        DB::hql()
+            .delete(Cache::App, Self::cache_idx_updated(typ, id))
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn upsert(
         id: String,
         logo: Vec<u8>,
@@ -125,57 +180,106 @@ impl Logo {
             "image/jpeg" | "image/png" => Self::upsert_jpg_png(id, logo, typ).await,
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid mime type for auth provider logo",
+                "Invalid mime type for image asset",
             )),
+        }
+    }
+
+    pub async fn upsert_with_res(
+        id: String,
+        logo: Vec<u8>,
+        content_type: mime::Mime,
+        typ: LogoType,
+        res: LogoRes,
+    ) -> Result<(), ErrorResponse> {
+        if res == LogoRes::Favicon && typ == LogoType::Client {
+            match content_type.as_ref() {
+                "image/svg+xml" => {
+                    Self::upsert_svg_with_res(
+                        id,
+                        logo,
+                        content_type.to_string(),
+                        &typ,
+                        LogoRes::Favicon,
+                    )
+                    .await
+                }
+                "image/jpeg" | "image/png" => Self::upsert_favicon_jpg_png(id, logo, typ).await,
+                _ => Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Invalid mime type for client favicon",
+                )),
+            }
+        } else {
+            Self::upsert(id, logo, content_type, typ).await
         }
     }
 
     async fn upsert_svg(
         id: String,
-        mut logo: Vec<u8>,
+        logo: Vec<u8>,
         content_type: String,
         typ: &LogoType,
     ) -> Result<(), ErrorResponse> {
-        Self::delete(&id, typ).await?;
+        Self::upsert_svg_with_res(id, logo, content_type, typ, LogoRes::Svg).await
+    }
 
-        // SVG's don't have a resolution, save them as they are
+    async fn upsert_svg_with_res(
+        id: String,
+        mut logo: Vec<u8>,
+        content_type: String,
+        typ: &LogoType,
+        res: LogoRes,
+    ) -> Result<(), ErrorResponse> {
+        // SVG's don't have a resolution, sanitize and validate them before replacing an asset.
         let slf = Self {
             id,
-            res: LogoRes::Svg,
+            res,
             content_type,
             data: Self::sanitize_svg(logo.as_mut_slice())?,
             updated: Utc::now().timestamp_millis(),
         };
-        slf.upsert_self(typ, true).await
+
+        match typ {
+            LogoType::Client => {
+                if slf.res == LogoRes::Favicon {
+                    Self::delete_res(&slf.id, typ, LogoRes::Favicon).await?;
+                } else {
+                    Self::delete_client_logo(&slf.id).await?;
+                }
+            }
+            LogoType::AuthProvider => Self::delete(&slf.id, typ).await?,
+        }
+
+        slf.upsert_self(typ, slf.res != LogoRes::Favicon).await
     }
 
     async fn upsert_jpg_png(id: String, logo: Vec<u8>, typ: LogoType) -> Result<(), ErrorResponse> {
-        Self::delete(&id, &typ).await?;
-
         // we will save jpg / png in 2 downscaled and optimized resolutions:
         // - `RES_LATER_USE`px for possible later use
         // - smaller for the login page
-        let img = image::load_from_memory(&logo)?;
-        debug!(
-            "current logo width: {}, height: {}",
-            img.width(),
-            img.height()
-        );
-
-        // make sure the image is not too small
         let size_small = match &typ {
             LogoType::Client => RES_CLIENT_LOGO,
             LogoType::AuthProvider => RES_PROVIDER_LOGO,
         };
-        if img.height() < size_small {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("size must be at least {size_small} px"),
-            ));
-        }
 
-        // image resizing can be expensive -> do not block main thread
-        web::block(move || async move {
+        // Decode and resize before deleting the existing asset. Image processing can be expensive,
+        // so keep all of it off the main thread.
+        let (slf_medium, slf_small) = web::block(move || {
+            let img = image::load_from_memory(&logo)?;
+            debug!(
+                "current logo width: {}, height: {}",
+                img.width(),
+                img.height()
+            );
+
+            if img.height() < size_small {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("size must be at least {size_small} px"),
+                ));
+            }
+
             let (image_medium, logo_res) = if img.height() < RES_LATER_USE
                 && img.width() < RES_LATER_USE
             {
@@ -189,34 +293,76 @@ impl Logo {
             let mut buf = Cursor::new(Vec::with_capacity(48 * 1024));
             image_medium.write_to(&mut buf, ImageFormat::WebP)?;
             let slf_medium = Self {
-                id,
+                id: id.clone(),
                 res: logo_res, // will not always be `Medium`, if the given size is smaller than that
                 content_type: CONTENT_TYPE_WEBP.to_string(),
                 data: buf.into_inner(),
                 updated: Utc::now().timestamp_millis(),
             };
-            slf_medium.upsert_self(&typ, false).await?;
 
             let img_small =
                 image_medium.resize_to_fill(size_small, size_small, FilterType::Lanczos3);
             let mut buf = Cursor::new(Vec::with_capacity(8 * 1024));
             img_small.write_to(&mut buf, ImageFormat::WebP)?;
-            Self {
-                id: slf_medium.id,
+            let slf_small = Self {
+                id,
                 res: LogoRes::Small,
-                content_type: slf_medium.content_type,
+                content_type: CONTENT_TYPE_WEBP.to_string(),
                 data: buf.into_inner(),
                 updated: Utc::now().timestamp_millis(),
-            }
-            .upsert_self(&typ, true)
-            .await?;
+            };
 
-            Ok::<(), ErrorResponse>(())
+            Ok::<(Self, Self), ErrorResponse>((slf_medium, slf_small))
         })
-        .await?
-        .await?;
+        .await??;
 
-        Ok(())
+        match typ {
+            LogoType::Client => Self::delete_client_logo(&slf_medium.id).await?,
+            LogoType::AuthProvider => Self::delete(&slf_medium.id, &typ).await?,
+        }
+
+        slf_medium.upsert_self(&typ, false).await?;
+        slf_small.upsert_self(&typ, true).await
+    }
+
+    async fn upsert_favicon_jpg_png(
+        id: String,
+        logo: Vec<u8>,
+        typ: LogoType,
+    ) -> Result<(), ErrorResponse> {
+        let slf = web::block(move || {
+            let img = image::load_from_memory(&logo)?;
+            let size_small = RES_CLIENT_FAVICON;
+
+            debug!(
+                "current logo width: {}, height: {}",
+                img.width(),
+                img.height()
+            );
+
+            if img.height() < size_small {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("size must be at least {size_small} px"),
+                ));
+            }
+
+            let img_small = img.resize_to_fill(size_small, size_small, FilterType::Lanczos3);
+            let mut buf = Cursor::new(Vec::with_capacity(8 * 1024));
+            img_small.write_to(&mut buf, ImageFormat::WebP)?;
+
+            Ok::<Self, ErrorResponse>(Self {
+                id,
+                res: LogoRes::Favicon,
+                content_type: CONTENT_TYPE_WEBP.to_string(),
+                data: buf.into_inner(),
+                updated: Utc::now().timestamp_millis(),
+            })
+        })
+        .await??;
+
+        Self::delete_res(&slf.id, &typ, LogoRes::Favicon).await?;
+        slf.upsert_self(&typ, false).await
     }
 
     async fn upsert_self(&self, typ: &LogoType, with_cache: bool) -> Result<(), ErrorResponse> {
@@ -294,29 +440,49 @@ SET content_type = $3, data = $4, updated = $5"#
 
     pub async fn find(id: &str, res: LogoRes, typ: &LogoType) -> Result<Self, ErrorResponse> {
         let res = res.as_str();
-        let res_svg = LogoRes::Svg.as_str();
+        let use_svg_fallback = res != LogoRes::Favicon.as_str();
 
         let sql = match typ {
             LogoType::Client => {
-                r#"
+                if use_svg_fallback {
+                    r#"
 SELECT client_id AS id, res, content_type, data, updated
 FROM client_logos
 WHERE client_id = $1 AND (res = $2 OR res = $3)"#
+                } else {
+                    r#"
+SELECT client_id AS id, res, content_type, data, updated
+FROM client_logos
+WHERE client_id = $1 AND res = $2"#
+                }
             }
             LogoType::AuthProvider => {
-                r#"
+                if use_svg_fallback {
+                    r#"
 SELECT auth_provider_id AS id, res, content_type, data, updated
 FROM auth_provider_logos
 WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
+                } else {
+                    r#"
+SELECT auth_provider_id AS id, res, content_type, data, updated
+FROM auth_provider_logos
+WHERE auth_provider_id = $1 AND res = $2"#
+                }
             }
         };
 
         let slf = if is_hiqlite() {
-            DB::hql()
-                .query_map_one(sql, params!(id, res, res_svg))
-                .await?
+            if use_svg_fallback {
+                DB::hql()
+                    .query_map_one(sql, params!(id, res, LogoRes::Svg.as_str()))
+                    .await?
+            } else {
+                DB::hql().query_map_one(sql, params!(id, res)).await?
+            }
+        } else if use_svg_fallback {
+            DB::pg_query_one(sql, &[&id, &res, &LogoRes::Svg.as_str()]).await?
         } else {
-            DB::pg_query_one(sql, &[&id, &res, &res_svg]).await?
+            DB::pg_query_one(sql, &[&id, &res]).await?
         };
 
         Ok(slf)
@@ -339,41 +505,81 @@ WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
     }
 
     pub async fn find_updated(id: &str, typ: &LogoType) -> Result<Option<i64>, ErrorResponse> {
+        Self::find_updated_with_res(id, LogoRes::Small, typ).await
+    }
+
+    pub async fn find_updated_with_res(
+        id: &str,
+        res: LogoRes,
+        typ: &LogoType,
+    ) -> Result<Option<i64>, ErrorResponse> {
         let client = DB::hql();
-        if let Some(updated) = client
-            .get(Cache::App, Self::cache_idx_updated(typ, id))
-            .await?
+        let cacheable = matches!(typ, LogoType::Client) && matches!(res, LogoRes::Small);
+        if cacheable
+            && let Some(updated) = client
+                .get(Cache::App, Self::cache_idx_updated(typ, id))
+                .await?
         {
             return Ok(updated);
         }
 
+        let use_svg_fallback = res != LogoRes::Favicon;
         let sql = match typ {
-            LogoType::Client => "SELECT updated FROM client_logos WHERE client_id = $1 LIMIT 1",
+            LogoType::Client => {
+                if use_svg_fallback {
+                    "SELECT updated FROM client_logos WHERE client_id = $1 AND (res = $2 OR res = $3)"
+                } else {
+                    "SELECT updated FROM client_logos WHERE client_id = $1 AND res = $2"
+                }
+            }
             LogoType::AuthProvider => {
-                "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 LIMIT 1"
+                if use_svg_fallback {
+                    "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"
+                } else {
+                    "SELECT updated FROM auth_provider_logos WHERE auth_provider_id = $1 AND res = $2"
+                }
             }
         };
+
+        let res = res.as_str();
         let updated = if is_hiqlite() {
-            DB::hql()
-                .query_raw(sql, params!(id))
-                .await?
-                .first_mut()
-                .map(|r| r.get::<i64>("updated"))
+            if use_svg_fallback {
+                DB::hql()
+                    .query_raw(sql, params!(id, res, LogoRes::Svg.as_str()))
+                    .await?
+                    .first_mut()
+                    .map(|r| r.get::<i64>("updated"))
+            } else {
+                DB::hql()
+                    .query_raw(sql, params!(id, res))
+                    .await?
+                    .first_mut()
+                    .map(|r| r.get::<i64>("updated"))
+            }
         } else {
-            DB::pg_query_rows(sql, &[&id], 1)
-                .await?
-                .first()
-                .map(|r| r.get::<_, i64>("updated"))
+            if use_svg_fallback {
+                DB::pg_query_rows(sql, &[&id, &res, &LogoRes::Svg.as_str()], 1)
+                    .await?
+                    .first()
+                    .map(|r| r.get::<_, i64>("updated"))
+            } else {
+                DB::pg_query_rows(sql, &[&id, &res], 1)
+                    .await?
+                    .first()
+                    .map(|r| r.get::<_, i64>("updated"))
+            }
         };
 
-        client
-            .put(
-                Cache::App,
-                Self::cache_idx_updated(typ, id),
-                &updated,
-                CACHE_TTL_APP,
-            )
-            .await?;
+        if cacheable {
+            client
+                .put(
+                    Cache::App,
+                    Self::cache_idx_updated(typ, id),
+                    &updated,
+                    CACHE_TTL_APP,
+                )
+                .await?;
+        }
 
         Ok(updated)
     }

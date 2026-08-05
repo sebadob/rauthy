@@ -51,6 +51,8 @@ export let I18nAdminUk: I18nAdmin = {
                 Ви також можете використовувати складні обчислення або визначені вище CSS-змінні.`,
             descVariables: `Кожна наступна мітка є водночас назвою CSS-змінної. Це означає,
                 що ви можете посилатися на них у довільних полях, наприклад: <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Попередній перегляд фавікона клієнта',
+            faviconUpload: 'Завантажити фавікон',
         },
         claimsAtRoot: 'Emit claims at the token root',
         claimsAtRootWarning: `This client's claims are written at the token root
@@ -236,9 +238,8 @@ export let I18nAdminUk: I18nAdmin = {
         },
         openapi:
             'Якщо ви хочете інтегрувати зовнішній додаток і використовувати API Rauthy, перегляньте',
-        openapiNote: `Залежно від конфігурації бекенду, Swagger UI може не бути доступним публічно.
-            Однак, за замовчуванням він доступний через внутрішній HTTP-сервер метрик,
-            щоб не розкривати жодної інформації.`,
+        openapiNote: `У стандартній конфігурації інтерфейс Swagger не активний через посилання вище. Це можна 
+            активувати за допомогою конфігурації 'server.swagger_ui_enable' і, можливо, 'server.swagger_ui_public'.`,
         source: 'Вихідний код можна знайти тут',
     },
     editor: {

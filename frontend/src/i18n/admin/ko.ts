@@ -48,6 +48,8 @@ export let I18nAdminKo: I18nAdmin = {
                 정의된 <code>CSS 변수</code> 를 사용할 수도 있습니다.`,
             descVariables: `색상의 각 레이블들은 동시에 CSS 변수의 이름입니다. 즉, 입력 칸에서 이를 참조할 수
                 있습니다. (예: <code>hsla(var(--action) / .7)</code>)`,
+            faviconPreviewAlt: '클라이언트 파비콘 미리보기',
+            faviconUpload: '파비콘 업로드',
         },
         claimsAtRoot: 'Emit claims at the token root',
         claimsAtRootWarning: `This client's claims are written at the token root
@@ -219,8 +221,9 @@ export let I18nAdminKo: I18nAdmin = {
                 맞게 조정해야 합니다.`,
         },
         openapi: '외부 애플리케이션을 통합하기 위한 Rauthy의 API 사용 방법:',
-        openapiNote: `백엔드 설정에 따라 Swagger UI가 외부에 노출되지 않을 수도 있습니다.
-            하지만 기본적으로 내부에서는 Swagger UI를 통해 정보를 확인할 수 있습니다.`,
+        openapiNote: `기본 구성에서는 위 링크를 통해 Swagger UI가 활성화되지 않습니다. 그건 
+            'server.swagger_ui_enable' 및 가능하다면 'server.swagger_ui_public' 설정을 통해 활성화할 수 
+            있습니다.`,
         source: 'Rauthy의 소스코드',
     },
     editor: {

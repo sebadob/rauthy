@@ -45,6 +45,8 @@ export interface I18nAdmin {
             // inserted as html
             descFullCss: string;
             descVariables: string;
+            faviconPreviewAlt: string;
+            faviconUpload: string;
         };
         claims: string;
         claimsAtRoot: string;

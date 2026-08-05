@@ -15,7 +15,7 @@ use rauthy_data::entity::webids::WebId;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
-    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+    ActClaim, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
     validate_no_reserved_collision,
 };
 use rauthy_jwt::token::JwtToken;
@@ -133,6 +133,7 @@ impl TokenSet {
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
         sid: Option<SessionId>,
         resource: Option<&str>,
+        act: Option<ActClaim<'_>>,
         device_code_flow: DeviceCodeFlow,
     ) -> Result<(AccessTokenJti, String), ErrorResponse> {
         let did = match device_code_flow {
@@ -214,6 +215,7 @@ impl TokenSet {
             roles,
             groups,
             custom: None,
+            act,
             custom_flattened: None,
         };
 
@@ -565,6 +567,84 @@ impl TokenSet {
             None,
             None,
             resource,
+            None,
+            DeviceCodeFlow::No,
+        )
+        .await?;
+
+        Ok(Self {
+            access_token,
+            token_type,
+            id_token: None,
+            expires_in: client.access_token_lifetime,
+            refresh_token: None,
+        })
+    }
+
+    /// Builds the token set for an RFC 8693 token exchange. Deliberately never contains a
+    /// refresh token: a refresh must come from the client that owns the original token, with a
+    /// fresh exchange on top. There is no id token either, because an exchanged token is meant
+    /// for a resource server and not for authenticating an end user.
+    pub async fn for_token_exchange(
+        user: Option<&User>,
+        client: &Client,
+        dpop_fingerprint: Option<DpopFingerprint>,
+        scope: TokenScopes,
+        resource: Option<&str>,
+        act: Option<ActClaim<'_>>,
+    ) -> Result<Self, ErrorResponse> {
+        let token_type = if dpop_fingerprint.is_some() {
+            JwtTokenType::DPoP
+        } else {
+            JwtTokenType::Bearer
+        };
+
+        // Custom scope mappings are resolved the same way as in `from_user`, so an exchanged
+        // token carries the same custom claims a directly issued one would for these scopes.
+        let cust = Scope::extract_custom(&scope.0);
+        let scps;
+        let attrs;
+        let customs_access = if let Some(user) = user
+            && !cust.is_empty()
+        {
+            scps = Some(Scope::find_all().await?);
+            let mut customs_access = Vec::with_capacity(cust.len());
+            for s in scps.as_ref().unwrap() {
+                if cust.contains(s.name.as_str()) && s.attr_include_access.is_some() {
+                    customs_access.push(s);
+                }
+            }
+
+            attrs = if customs_access.is_empty() {
+                None
+            } else {
+                let attrs = UserAttrValueEntity::find_for_user_with_defaults(&user.id).await?;
+                let mut res = HashMap::with_capacity(attrs.len());
+                for a in attrs {
+                    res.insert(a.key, a.value);
+                }
+                Some(res)
+            };
+
+            if customs_access.is_empty() {
+                None
+            } else {
+                Some((customs_access, &attrs))
+            }
+        } else {
+            None
+        };
+
+        let (_jti, access_token) = Self::build_access_token(
+            user,
+            client,
+            dpop_fingerprint,
+            client.access_token_lifetime as i64,
+            Some(scope),
+            customs_access,
+            None,
+            resource,
+            act,
             DeviceCodeFlow::No,
         )
         .await?;
@@ -625,9 +705,9 @@ impl TokenSet {
             attrs = if !customs_access.is_empty() || !customs_id.is_empty() {
                 let attrs = UserAttrValueEntity::find_for_user_with_defaults(&user.id).await?;
                 let mut res = HashMap::with_capacity(attrs.len());
-                attrs.iter().for_each(|a| {
-                    res.insert(a.key.clone(), a.value.clone());
-                });
+                for a in attrs {
+                    res.insert(a.key, a.value);
+                }
                 Some(res)
             } else {
                 None
@@ -681,6 +761,7 @@ impl TokenSet {
             customs_access,
             sid.clone(),
             resource.as_deref(),
+            None,
             device_code_flow.clone(),
         )
         .await?;

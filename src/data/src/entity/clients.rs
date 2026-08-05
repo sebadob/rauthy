@@ -18,6 +18,7 @@ use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
 };
+use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::{http_client, is_hiqlite};
@@ -846,7 +847,7 @@ WHERE id = $4"#;
 
 impl Client {
     pub fn allow_refresh_token(&self) -> bool {
-        self.flows_enabled.contains("refresh_token")
+        self.is_flow_enabled(GrantType::RefreshToken)
     }
 
     // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
@@ -971,6 +972,16 @@ impl Client {
             ));
         }
 
+        // A dynamic client is never allowed to set `allowed_resources` in the first place, so it
+        // can never have a match below. Rejecting it explicitly is cheap and keeps this robust if
+        // anything about the dynamic registration rules changes in the future.
+        if self.is_dynamic() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "dynamic clients must not request a `resource`",
+            ));
+        }
+
         let mut allowed = self.allowed_resources_iter().peekable();
         if allowed.peek().is_some() {
             if allowed.any(|r| r == resource) {
@@ -1049,14 +1060,24 @@ impl Client {
         JwkKeyPairAlg::from_str(self.id_token_alg.as_str())
     }
 
+    /// The enabled flows for this client. Values are validated as [GrantType] on the way in, so
+    /// anything unparsable here is corrupted data and gets skipped rather than failing the read.
     #[inline]
-    pub fn get_flows(&self) -> Vec<String> {
-        let mut res = Vec::new();
+    pub fn get_flows(&self) -> Vec<GrantType> {
         self.flows_enabled
             .split(',')
-            .map(|f| f.trim().to_owned())
-            .for_each(|f| res.push(f));
-        res
+            .filter_map(|f| match GrantType::from_str(f.trim()) {
+                Ok(flow) => Some(flow),
+                Err(_) => {
+                    warn!(
+                        client_id = self.id,
+                        flow = f,
+                        "Skipping unknown `flows_enabled` entry"
+                    );
+                    None
+                }
+            })
+            .collect()
     }
 
     #[inline]
@@ -1291,9 +1312,14 @@ impl Client {
 
     #[inline]
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
+        // RFC 8252 loopback any-port matching — opt-in via access.rfc_8252_enable,
+        // and only for dynamic and ephemeral clients (never static ones).
+        let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
+            && (self.is_dynamic() || self.is_ephemeral());
         let has_any = self.get_redirect_uris().iter().any(|uri| {
             (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
                 || uri.as_str().eq(redirect_uri)
+                || (loopback && loopback_redirect_match(uri, redirect_uri))
         });
 
         if has_any {
@@ -1405,9 +1431,18 @@ impl Client {
         Ok(())
     }
 
+    /// `true` if the given flow is listed in `flows_enabled`. Matches on whole CSV entries, so a
+    /// flow name can never be satisfied by being a substring of a different one.
     #[inline]
-    pub fn validate_flow(&self, flow: &str) -> Result<(), ErrorResponse> {
-        if flow.is_empty() || !self.flows_enabled.contains(flow) {
+    pub fn is_flow_enabled(&self, flow: GrantType) -> bool {
+        self.flows_enabled
+            .split(',')
+            .any(|f| f.trim() == flow.as_str())
+    }
+
+    #[inline]
+    pub fn validate_flow(&self, flow: GrantType) -> Result<(), ErrorResponse> {
+        if !self.is_flow_enabled(flow) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("'{flow}' flow is not allowed for this client"),
@@ -1440,7 +1475,7 @@ impl Client {
         let secret_enc = self.secret.as_ref().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("'{}' has no secret while being confidential", &self.id),
+                format!("'{}' has no secret while being confidential", self.id),
             )
         })?;
         let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
@@ -1488,6 +1523,30 @@ impl Client {
     }
 }
 
+/// RFC 8252 section 7.3: for a loopback redirect URI, the authorization
+/// server MUST allow any port chosen by the client at request time. Native
+/// apps (and CLI OAuth clients) bind an ephemeral loopback port, so a
+/// registered `http://127.0.0.1/cb` must match a requested
+/// `http://127.0.0.1:52345/cb`. Everything except the port must be equal,
+/// and both sides must be loopback hosts. Gated behind access.rfc_8252_enable
+/// and applied to dynamic and ephemeral clients only (see `validate_redirect_uri`).
+fn loopback_redirect_match(registered: &str, requested: &str) -> bool {
+    fn parts(u: &str) -> Option<(String, String, String)> {
+        let url = Url::parse(u).ok()?;
+        let host = url.host_str()?.to_string();
+        Some((url.scheme().to_string(), host, url.path().to_string()))
+    }
+    fn is_loopback(host: &str) -> bool {
+        host == "localhost" || host == "127.0.0.1" || host == "[::1]" || host == "::1"
+    }
+    match (parts(registered), parts(requested)) {
+        (Some((rs, rh, rp)), Some((qs, qh, qp))) => {
+            is_loopback(&rh) && is_loopback(&qh) && rs == qs && rh == qh && rp == qp
+        }
+        _ => false,
+    }
+}
+
 impl Client {
     async fn ephemeral_from_url(value: &str) -> Result<Self, ErrorResponse> {
         let res = http_client()
@@ -1508,7 +1567,7 @@ impl Client {
             return Err(ErrorResponse::new(ErrorResponseType::Connection, msg));
         }
 
-        let body = match res.json::<EphemeralClientRequest>().await {
+        let mut body = match res.json::<EphemeralClientRequest>().await {
             Ok(b) => b,
             Err(err) => {
                 let msg =
@@ -1517,6 +1576,23 @@ impl Client {
                 return Err(ErrorResponse::new(ErrorResponseType::BadRequest, msg));
             }
         };
+
+        // A spec-valid CIMD document may advertise a grant type Rauthy does not support
+        // (e.g. claude.ai lists `urn:ietf:params:oauth:grant-type:jwt-bearer` but never uses
+        // it). Rejecting the whole document over an advertised-but-unused grant would block
+        // an otherwise-valid client. When the operator opts in, sanitize the list - strip the
+        // unsupported grant types - so validation passes; the flow set is derived from
+        // `ephemeral_clients.allowed_flows` regardless. Off by default: unknown grant types
+        // are rejected by `validate()` below, keeping the upfront error.
+        if RauthyConfig::get()
+            .vars
+            .ephemeral_clients
+            .ignore_unknown_auth_flows
+            && let Some(grant_types) = body.grant_types.as_mut()
+        {
+            retain_supported_grant_types(grant_types);
+        }
+
         body.validate()?;
 
         let slf = Self::from(body);
@@ -1664,7 +1740,7 @@ impl Default for Client {
             redirect_uris: String::default(),
             post_logout_redirect_uris: None,
             allowed_origins: None,
-            flows_enabled: "authorization_code".to_string(),
+            flows_enabled: GrantType::AuthorizationCode.to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "EdDSA".to_string(),
             auth_code_lifetime: 60,
@@ -1794,7 +1870,7 @@ impl Client {
             redirect_uris: req.redirect_uris.join(","),
             post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
             allowed_origins,
-            flows_enabled: req.grant_types.join(","),
+            flows_enabled: GrantType::csv(&req.grant_types),
             access_token_alg,
             id_token_alg,
             access_token_lifetime: min(
@@ -1892,12 +1968,50 @@ fn extract_external_origin<'a>(
     Ok(Some(origin))
 }
 
+/// Strips grant types Rauthy does not support from an ephemeral (CIMD) client document. Used
+/// when `ephemeral_clients.ignore_unknown_auth_flows` is enabled so an operator can accept a
+/// document that advertises an unsupported grant (e.g. claude.ai's
+/// `urn:ietf:params:oauth:grant-type:jwt-bearer`) without enabling anything unsupported - the
+/// effective flows still come from `ephemeral_clients.allowed_flows` (#1644).
+pub(crate) fn retain_supported_grant_types(grant_types: &mut Vec<String>) {
+    grant_types.retain(|g| GrantType::from_str(g).is_ok());
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn retain_supported_grant_types_strips_unknown() {
+        // #1644: an ephemeral/CIMD document advertising an unsupported grant (claude.ai's
+        // jwt-bearer) is sanitized down to the grants Rauthy supports; would fail if the strip
+        // were dropped or matched the wrong set.
+        let mut advertised = vec![
+            "authorization_code".to_string(),
+            "refresh_token".to_string(),
+            "urn:ietf:params:oauth:grant-type:jwt-bearer".to_string(),
+        ];
+        retain_supported_grant_types(&mut advertised);
+        assert_eq!(
+            advertised,
+            vec![
+                "authorization_code".to_string(),
+                "refresh_token".to_string()
+            ],
+        );
+
+        // an all-supported list is unchanged; an only-unknown list collapses to empty
+        let mut supported = vec!["authorization_code".to_string()];
+        retain_supported_grant_types(&mut supported);
+        assert_eq!(supported, vec!["authorization_code".to_string()]);
+
+        let mut only_unknown = vec!["urn:ietf:params:oauth:grant-type:jwt-bearer".to_string()];
+        retain_supported_grant_types(&mut only_unknown);
+        assert!(only_unknown.is_empty());
+    }
 
     #[test]
     fn test_client_impl() {
@@ -2007,10 +2121,10 @@ mod tests {
         assert!(client.validate_challenge_method("blabla").is_err());
         assert!(client.validate_challenge_method("").is_err());
 
-        assert_eq!(client.validate_flow("authorization_code"), Ok(()));
-        assert_eq!(client.validate_flow("password"), Ok(()));
-        assert!(client.validate_flow("blabla").is_err());
-        assert!(client.validate_flow("").is_err());
+        assert_eq!(client.validate_flow(GrantType::AuthorizationCode), Ok(()));
+        assert_eq!(client.validate_flow(GrantType::Password), Ok(()));
+        assert!(client.validate_flow(GrantType::ClientCredentials).is_err());
+        assert!(client.validate_flow(GrantType::DeviceCode).is_err());
 
         // contacts
         assert_eq!(

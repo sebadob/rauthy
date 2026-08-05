@@ -35,6 +35,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         given_name: Some("Alfred".to_string()),
         family_name: Some("Batman".to_string()),
         email: "alfred@batcave.io".to_string(),
+        preferred_username: Some("alfredo".to_string()),
         language: Language::En,
         roles: vec![
             "admin".to_string(),
@@ -93,6 +94,11 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let user_by_id = res.json::<UserResponse>().await?;
     assert_eq!(user_by_id.email, "alfred@batcave.io");
+    // the preferred_username given at creation must round-trip onto the created user
+    assert_eq!(
+        user_by_id.user_values.preferred_username.as_deref(),
+        Some("alfredo")
+    );
 
     // get the new user by email
     let url_email = format!("{}/users/email/{}", get_backend_url(), alfred.email);

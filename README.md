@@ -97,9 +97,9 @@ password, passkeys, and so on.
 ### Client Branding
 
 You have a simple way to create a branding or stylized look for the Login page for each client. The
-whole color theme can be changed, and each client can have its own custom logo. Additionally, if you
-modify the branding for the default `rauthy` client, it will not only change the look for the Login
-page, but also for the Account and Admin page.
+whole color theme can be changed, and each client can have its own custom logo and browser favicon
+for its Login page. Additionally, the theme and logo of the default `rauthy` client are also used
+for the Account and Admin page.
 
 ![Client Branding](https://github.com/sebadob/rauthy/blob/c10e9421e65f386718528b15e3d0ace37aff1158/frontend/screenshots/branding.png)
 
@@ -239,7 +239,7 @@ setting for very quick and easy local testing and taking a first look. By settin
 a demo config is being loaded at startup.
 
 ```
-docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.36.0
+docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.36.1
 ```
 
 > [!CAUTION]

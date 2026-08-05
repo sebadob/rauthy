@@ -49,6 +49,8 @@ export let I18nAdminZh: I18nAdmin = {
                 您也可以使用复杂计算或上面定义的CSS变量。`,
             descVariables: `每个标签同时也是CSS变量名。这意味着，
                 您可以在自由输入框中引用它们，例如<code>hsla(var(--action) / .7)</code>。`,
+            faviconPreviewAlt: '客户端网站图标预览',
+            faviconUpload: '上传网站图标',
         },
         claimsAtRoot: 'Emit claims at the token root',
         claimsAtRootWarning: `This client's claims are written at the token root
@@ -218,8 +220,8 @@ export let I18nAdminZh: I18nAdmin = {
             必须针对每个部署进行调整。`,
         },
         openapi: '如果您想集成外部应用程序并使用Rauthy的API，请查看',
-        openapiNote: `根据后端配置，Swagger UI可能在此时不公开暴露。
-            但它默认可通过内部指标HTTP服务器获得，以免暴露任何信息。`,
+        openapiNote: `在默认配置中，Swagger UI不会通过上面的链接激活。它 
+            可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。`,
         source: '源代码可以在这里找到',
     },
     editor: {

@@ -43,6 +43,7 @@ async fn create_user(
         given_name: Some("Test".to_string()),
         family_name: Some("User".to_string()),
         email: email.to_string(),
+        preferred_username: None,
         language: Language::En,
         roles,
         groups: Some(groups),

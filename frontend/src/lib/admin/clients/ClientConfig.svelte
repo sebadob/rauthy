@@ -12,10 +12,12 @@
         PATTERN_CONTACT,
         PATTERN_GROUP,
         PATTERN_ORIGIN,
+        PATTERN_RESOURCE,
         PATTERN_URI,
     } from '$utils/patterns';
     import {
         AuthFlowDeviceCode,
+        AuthFlowTokenExchange,
         type ClientResponse,
         type ScimClientRequestResponse,
         type UpdateClientRequest,
@@ -84,6 +86,7 @@
         password: client.flows_enabled.includes('password'),
         refreshToken: client.flows_enabled.includes('refresh_token'),
         deviceCode: client.flows_enabled.includes(AuthFlowDeviceCode),
+        tokenExchange: client.flows_enabled.includes(AuthFlowTokenExchange),
     });
 
     const optionsAlgs: JwkKeyPairAlg[] = ['RS256', 'RS384', 'RS512', 'EdDSA'];
@@ -147,6 +150,7 @@
             flows.password = client.flows_enabled.includes('password');
             flows.refreshToken = client.flows_enabled.includes('refresh_token');
             flows.deviceCode = client.flows_enabled.includes(AuthFlowDeviceCode);
+            flows.tokenExchange = client.flows_enabled.includes(AuthFlowTokenExchange);
 
             accessTokenAlg = client.access_token_alg;
             idTokenAlg = client.id_token_alg;
@@ -251,6 +255,9 @@
         }
         if (flows.deviceCode) {
             payload.flows_enabled.push(AuthFlowDeviceCode);
+        }
+        if (flows.tokenExchange) {
+            payload.flows_enabled.push(AuthFlowTokenExchange);
         }
 
         if (challenges.plain) {
@@ -359,6 +366,12 @@
         <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
             refresh_token
         </InputCheckbox>
+        <InputCheckbox
+            ariaLabel="urn:ietf:params:oauth:grant-type:token-exchange"
+            bind:checked={flows.tokenExchange}
+        >
+            token_exchange
+        </InputCheckbox>
 
         <div style:height=".5rem"></div>
         <p class="mb-0"><b>PKCE</b></p>
@@ -405,14 +418,14 @@
             bind:values={allowedResources}
             label={ta.clients.allowedResources}
             errMsg={ta.validation.uri}
-            pattern={PATTERN_URI}
+            pattern={PATTERN_RESOURCE}
         />
         <p class="desc">{ta.clients.descDefaultAud}</p>
         <InputTags
             bind:values={defaultAud}
             label={ta.clients.defaultAud}
             errMsg={ta.validation.uri}
-            pattern={PATTERN_URI}
+            pattern={PATTERN_RESOURCE}
         />
 
         <div style:height=".5rem"></div>
