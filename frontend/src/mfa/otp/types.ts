@@ -15,6 +15,16 @@ export interface OtpAuthStartResult {
 
 export interface OtpAuthStartResponse {
     code: string;
+    exp: number;
+}
+
+export interface OtpAuthResendRequest {
+    code: string;
+}
+
+export interface OtpAuthResendResult {
+    error?: string;
+    data?: undefined;
 }
 
 export interface OtpAuthFinishRequest {

@@ -494,6 +494,14 @@ pub struct OtpAuthStartRequest {
 #[derive(Serialize, ToSchema)]
 pub struct OtpAuthStartResponse {
     pub code: String,
+    pub exp: i64,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthResendRequest {
+    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    pub code: String,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

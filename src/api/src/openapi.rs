@@ -246,6 +246,7 @@ use utoipa::{OpenApi, openapi};
         users::put_user_otp,
         users::delete_user_otp,
         users::post_otp_auth_start_login,
+        users::post_otp_auth_resend,
         users::post_otp_auth_finish_login,
     ),
     components(
@@ -330,6 +331,7 @@ use utoipa::{OpenApi, openapi};
             OtpActivateRequest,
             OtpDeleteRequest,
             OtpAuthStartRequest,
+            OtpAuthResendRequest,
             OtpAuthFinishRequest,
             PamGroupType,
             PamGroupUserLink,

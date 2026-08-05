@@ -46,6 +46,7 @@ export const I18nRu: I18n = {
         search: 'Поиск',
         seconds: 'секунды',
         selectI18n: 'Выбрать язык',
+        send: 'send',
         show: 'Показать',
         summary: 'Сводка',
         timezone: 'Часовой пояс',
@@ -246,6 +247,9 @@ export const I18nRu: I18n = {
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
             registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
         },
 
         errorReg: 'Ошибка при запуске процесса регистрации',

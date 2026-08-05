@@ -1597,10 +1597,39 @@ pub async fn post_otp_auth_start_login(
         .map(|res| HttpResponse::Ok().json(res))
 }
 
+/// Request another send of an active code in the authentication process for this user.
+///
+/// *Permissions**
+/// - authenticated and logged in user
+#[utoipa::path(
+    post,
+    path = "/users/otp_resend",
+    tag = "mfa",
+    request_body = OtpAuthResendRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    )
+)]
+#[post("/users/otp_resend")]
+pub async fn post_otp_auth_resend(
+    Json(payload): Json<OtpAuthResendRequest>
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    // We do not need to validate the principal here.
+    // All of this is done at the /start endpoint.
+    // This here will simply fail, if the secret code from the /start does not exist
+    // -> indirect validation through existing code.
+    one_time_password::auth_resend(payload).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
 /// Finishes the authentication process using OTP for this user.
 ///
 /// **Permissions**
-/// - authenticated and logged in user for this very {id}
+/// - authenticated and logged in user
 #[utoipa::path(
     post,
     path = "/users/otp_finish",

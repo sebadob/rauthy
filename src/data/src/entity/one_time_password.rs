@@ -24,7 +24,7 @@ use hiqlite::macros::params;
 use image::EncodableLayout;
 use rauthy_api_types::{
     tos::ToSAwaitLoginResponse, users::{
-        MfaPurpose, OtpAuthFinishRequest, OtpAuthStartRequest, OtpAuthStartResponse, OtpGetResponse, OtpKind, OtpLoginFinishResponse,
+        MfaPurpose, OtpAuthFinishRequest, OtpAuthResendRequest, OtpAuthStartRequest, OtpAuthStartResponse, OtpGetResponse, OtpKind, OtpLoginFinishResponse,
     },
 };
 use rauthy_common::{
@@ -39,7 +39,7 @@ use ring::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::{Debug, Formatter},
+    fmt::{Debug, Formatter}, ops::Add,
 };
 use time::{OffsetDateTime};
 use tracing::info;
@@ -359,7 +359,31 @@ impl OneTimePassword {
                 let code_len = code_len as usize;
                 let code = format!("{} {}", &code[0..code_len/2], &code[code_len/2..]);
                 send_email_otp(&code, &user).await;
+            },
+            // Unreachable should never panic since these kind aren't implemented
+            OtpKind::Time | OtpKind::Phone => {
+                unreachable!()
             }
+        };
+        Ok(())
+    }
+
+    pub async fn resend_otp(&self) -> Result<(), ErrorResponse> {
+        let user = User::find(self.user_id.clone()).await?;
+
+        let code_len = RauthyConfig::get().vars.otp.length;
+        let code = Self::generate_otp(
+            &self.secret,
+            self.last_used,
+            RauthyConfig::get().vars.otp.default_digest_len,
+            code_len,
+        );
+        match self.kind {
+            OtpKind::Email => {
+                let code_len = code_len as usize;
+                let code = format!("{} {}", &code[0..code_len/2], &code[code_len/2..]);
+                send_email_otp(&code, &user).await;
+            },
             // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time | OtpKind::Phone => {
                 unreachable!()
@@ -629,7 +653,19 @@ pub async fn auth_start(
 
     Ok(OtpAuthStartResponse {
         code: auth_data.code,
+        exp: Utc::now()
+            .add(RauthyConfig::get().vars.otp.exp_mins)
+            .timestamp(),
     })
+}
+
+pub async fn auth_resend(
+    payload: OtpAuthResendRequest,
+) -> Result<(), ErrorResponse> {
+    let auth_data = OtpData::find(payload.code).await?;
+
+    let otp = OneTimePassword::find(&auth_data.otp_id).await?;
+    otp.resend_otp().await
 }
 
 pub async fn auth_finish(

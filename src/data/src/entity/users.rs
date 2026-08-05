@@ -1813,7 +1813,7 @@ impl User {
     pub async fn has_otp_enabled(&self) -> bool {
         OneTimePassword::find_active_for_user(&self.id)
             .await
-            .is_ok_and(|f| f.is_empty() )
+            .is_ok_and(|f| !f.is_empty() )
     }
 
     #[inline(always)]

@@ -4,6 +4,8 @@ import type {
     OtpAdditionalData,
     OtpAuthFinishRequest,
     OtpAuthFinishResult,
+    OtpAuthResendRequest,
+    OtpAuthResendResult,
     OtpAuthStartRequest,
     OtpAuthStartResponse,
     OtpAuthStartResult,
@@ -31,6 +33,23 @@ export async function otpAuthStart(
     }
 
     return { data: res.body };
+}
+
+export async function otpAuthResend(code: string): Promise<OtpAuthResendResult> {
+    let payloadResend: OtpAuthResendRequest = {
+        code,
+    };
+    let res = await fetchPost<undefined>(`/auth/v1/users/otp_resend`, payloadResend);
+    if (res.error) {
+        console.error(res.error);
+        return {
+            error: res.error?.message || 'Authentication Error',
+        };
+    } else {
+        return {
+            data: undefined,
+        }
+    }
 }
 
 export async function otpAuthFinish(code: string, otpCode: string): Promise<OtpAuthFinishResult> {

@@ -35,6 +35,7 @@ export interface I18n {
         search: string;
         seconds: string;
         selectI18n: string;
+        send: string;
         show: string;
         summary: string;
         timezone: string;
@@ -207,6 +208,9 @@ export interface I18n {
             activationCode: string;
             code: string;
             registerNew: string;
+            resendOtp: string;
+            sessionExpiresIn: string;
+            sessionExpired: string;
         };
 
         errorReg: string;

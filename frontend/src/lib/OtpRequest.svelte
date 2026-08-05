@@ -8,7 +8,7 @@
         OtpAuthFinishResult,
         OtpAuthStartResult,
     } from '$mfa/otp/types';
-    import { otpAuthFinish, otpAuthStart } from '$mfa/otp/authentication';
+    import { otpAuthFinish, otpAuthResend, otpAuthStart } from '$mfa/otp/authentication';
     import { TPL_OTP_LENGTH } from '$utils/constants';
     import Template from './Template.svelte';
     import Form from './form/Form.svelte';
@@ -38,6 +38,8 @@
     let otpStartRes: undefined | OtpAuthStartResult = $state();
     let otpFinishRes: undefined | OtpAuthFinishResult = $state();
 
+    let requestCoolDown: boolean = $state(false);
+
     // todo: The current implementation only allows one kind of OTP to be active, and the only kind is email.
     // Since we could have multiple OTPs in the future, we should the allow users to select which OTP they want to use.
     onMount(async () => {
@@ -48,6 +50,15 @@
             otpId = activeOtps[0].id.toString();
         }
         otpStartRes = await otpAuthStart(otpId, purpose);
+        if (otpStartRes.data) {
+            if (interval) {
+                clearInterval(interval);
+            }
+            calcTimeoutSecs();
+            interval = window.setInterval(() => {
+                calcTimeoutSecs();
+            }, 1000);
+        }
     });
 
     $effect(() => {
@@ -76,10 +87,43 @@
         refInput?.focus();
     });
 
+    async function onRequestNewOtp() {
+        if (otpStartRes && otpStartRes.data && !requestCoolDown) {
+            let res = await otpAuthResend(otpStartRes.data.code);
+            if (!res.error) {
+                requestCoolDown = true;
+                setTimeout(() => {
+                    requestCoolDown = false;
+                }, 6000);
+            }
+        }
+    }
+
     async function onLoginOtpSubmit(_form: HTMLFormElement, params: URLSearchParams) {
         let otpCode = params.get('otp')?.replace(/ /g, '');
         if (otpStartRes && otpStartRes.data && otpCode) {
             otpFinishRes = await otpAuthFinish(otpStartRes.data.code, otpCode);
+        }
+    }
+
+    let otpTimeoutSecs: undefined | number = $state();
+    let interval: number | undefined = $state();
+    function calcTimeoutSecs() {
+        let timeoutSecs = 0;
+        if (otpStartRes?.data) {
+            let ts = new Date().getTime() / 1000;
+            timeoutSecs = Math.floor(otpStartRes.data.exp - ts);
+        }
+        if (timeoutSecs > 0) {
+            otpTimeoutSecs = timeoutSecs;
+        } else {
+            otpTimeoutSecs = undefined;
+            if (otpStartRes?.data) {
+                otpStartRes.data = undefined;
+            }
+            clearInterval(interval);
+            interval = undefined;
+            onError(t.mfa.otp.sessionExpired);
         }
     }
 </script>
@@ -103,24 +147,31 @@
                         {/if}
                     </div>
                 </div>
-
                 <div class="contentRow">
-                    {#if otpStartRes}
-                        {#if otpStartRes.error}
-                            <div class="err">
-                                {otpStartRes.error}
-                            </div>
-                        {:else}
-                            <div class="good">
-                                <Form action="" onSubmit={onLoginOtpSubmit}>
-                                    <InputOtp
-                                        bind:ref={refInput}
-                                        bind:isError={isInputError}
-                                    />
-                                    <Button type="submit">send</Button>
-                                </Form>
-                            </div>
-                        {/if}
+                    {#if otpStartRes && otpStartRes.error}
+                        <div class="err">
+                            {otpStartRes.error}
+                        </div>
+                    {:else}
+                        <div class="good">
+                            <Form action="" onSubmit={onLoginOtpSubmit}>
+                                <InputOtp
+                                    bind:ref={refInput}
+                                    bind:isError={isInputError}
+                                />
+                                <Button onclick={onRequestNewOtp} isLoading={requestCoolDown} >{t.mfa.otp.resendOtp}</Button>
+                                <Button type="submit">{t.common.send}</Button>
+                            </Form>
+                            {#if otpTimeoutSecs && otpTimeoutSecs > 0}
+                                <div>
+                                    {t.mfa.otp.sessionExpiresIn}
+                                    <span>
+                                        {otpTimeoutSecs}
+                                        {t.common.seconds}
+                                    </span>
+                                </div>
+                            {/if}
+                        </div>
                     {/if}
                 </div>
             </div>
