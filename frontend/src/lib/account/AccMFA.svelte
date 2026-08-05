@@ -485,10 +485,7 @@
         {#if showOtpInput}
             <p>{t.mfa.otp.activationCode}</p>
             <Form action="" onSubmit={handleActivateOtp}>
-                <InputOtp
-                    bind:ref={refInput}
-                    bind:isError={isInputError}
-                />
+                <InputOtp bind:ref={refInput} bind:isError={isInputError} />
                 <Button type="submit">{t.mfa.register}</Button>
                 <Button
                     level={3}
@@ -497,7 +494,8 @@
                     }}>{t.common.cancel}</Button
                 >
             </Form>
-        {:else if !hasOtp} <!-- Currently support email otp only, if user has otp setup they don't need to see a 'regsiter new otp' button  -->
+        {:else if !hasOtp}
+            <!-- Currently support email otp only, if user has otp setup they don't need to see a 'regsiter new otp' button  -->
             <div class="button">
                 <Button level={hasOtp === false ? 1 : 2} onclick={handleCreateOtp}
                     >{t.mfa.otp.registerNew}</Button

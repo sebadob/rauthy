@@ -1,4 +1,4 @@
-import type { OtpKind } from "$mfa/otp/types";
+import type { OtpKind } from '$mfa/otp/types';
 
 export interface OtpResponse {
     id: String;

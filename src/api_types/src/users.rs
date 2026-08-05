@@ -420,8 +420,7 @@ impl Display for OtpKind {
 }
 
 impl FromStr for OtpKind {
-    type Err = ErrorResponse
-    ;
+    type Err = ErrorResponse;
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "email" => Ok(Self::Email),

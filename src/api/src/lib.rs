@@ -176,8 +176,7 @@ pub async fn map_auth_step(
             }
 
             // if there is no mfa_cookie present, set a new one
-            if let Ok(mfa_cookie) =
-                MfaCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
+            if let Ok(mfa_cookie) = MfaCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
             {
                 if mfa_cookie.email != res.email {
                     builder.cookie(MfaCookie::new_webauthn(res.email.clone()).build()?);

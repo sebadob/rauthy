@@ -19,7 +19,10 @@
 
         autocomplete = 'one-time-code',
         // todo: when the code length is odd, this will render badly.
-        placeholder = '0'.repeat(otpSize/2) + ' ' + '0'.repeat(otpSize/2) + '0'.repeat(otpSize%2),
+        placeholder = '0'.repeat(otpSize / 2) +
+            ' ' +
+            '0'.repeat(otpSize / 2) +
+            '0'.repeat(otpSize % 2),
         disabled = false,
 
         minLength = otpSize,
@@ -139,7 +142,6 @@
 </div>
 
 <style>
-
     input {
         font-size: 2.5em;
         text-align: center;

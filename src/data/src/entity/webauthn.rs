@@ -20,9 +20,9 @@ use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
-use rauthy_common::constants::{IDX_WEBAUTHN};
+use rauthy_common::constants::IDX_WEBAUTHN;
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{get_rand};
+use rauthy_common::utils::get_rand;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};

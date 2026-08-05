@@ -23,12 +23,15 @@ use chrono::{TimeDelta, Utc};
 use hiqlite::macros::params;
 use image::EncodableLayout;
 use rauthy_api_types::{
-    tos::ToSAwaitLoginResponse, users::{
-        MfaPurpose, OtpAuthFinishRequest, OtpAuthResendRequest, OtpAuthStartRequest, OtpAuthStartResponse, OtpGetResponse, OtpKind, OtpLoginFinishResponse,
+    tos::ToSAwaitLoginResponse,
+    users::{
+        MfaPurpose, OtpAuthFinishRequest, OtpAuthResendRequest, OtpAuthStartRequest,
+        OtpAuthStartResponse, OtpGetResponse, OtpKind, OtpLoginFinishResponse,
     },
 };
 use rauthy_common::{
-    is_hiqlite, utils::{get_rand, new_store_id},
+    is_hiqlite,
+    utils::{get_rand, new_store_id},
 };
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -39,9 +42,10 @@ use ring::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::{Debug, Formatter}, ops::Add,
+    fmt::{Debug, Formatter},
+    ops::Add,
 };
-use time::{OffsetDateTime};
+use time::OffsetDateTime;
 use tracing::info;
 use utoipa::ToSchema;
 
@@ -83,12 +87,11 @@ impl OneTimePassword {
             OtpKind::Time => {
                 // if the len is longer than the algorithm it will be compressed by the digest
                 // if the len is shorter than the algorithm it will be padded with 0x30
-                let secret: [u8; digest::SHA512_OUTPUT_LEN] = rand::generate(&rand::SystemRandom::new())?.expose();
+                let secret: [u8; digest::SHA512_OUTPUT_LEN] =
+                    rand::generate(&rand::SystemRandom::new())?.expose();
                 secret.to_vec()
-            },
-            _ => {
-                Vec::default()
-            },
+            }
+            _ => Vec::default(),
         };
         let otp = Self {
             id: new_store_id(),
@@ -207,7 +210,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
         kind: &OtpKind,
         user_id: &String,
     ) -> Result<Self, ErrorResponse> {
-        let sql = "SELECT * FROM one_time_password WHERE user_id = $1 AND kind = $2 AND is_active = true";
+        let sql =
+            "SELECT * FROM one_time_password WHERE user_id = $1 AND kind = $2 AND is_active = true";
         let res = if is_hiqlite() {
             DB::hql()
                 .query_as_one(sql, params!(user_id, kind.as_str()))
@@ -307,7 +311,8 @@ impl OneTimePassword {
     pub async fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
         match self.kind {
             OtpKind::Email => {
-                let Some(timeout) = TimeDelta::try_seconds(self.last_used - Utc::now().timestamp()) else {
+                let Some(timeout) = TimeDelta::try_seconds(self.last_used - Utc::now().timestamp())
+                else {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "couldn't parse otp's timeout",
@@ -357,9 +362,9 @@ impl OneTimePassword {
         match self.kind {
             OtpKind::Email => {
                 let code_len = code_len as usize;
-                let code = format!("{} {}", &code[0..code_len/2], &code[code_len/2..]);
+                let code = format!("{} {}", &code[0..code_len / 2], &code[code_len / 2..]);
                 send_email_otp(&code, &user).await;
-            },
+            }
             // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time | OtpKind::Phone => {
                 unreachable!()
@@ -381,9 +386,9 @@ impl OneTimePassword {
         match self.kind {
             OtpKind::Email => {
                 let code_len = code_len as usize;
-                let code = format!("{} {}", &code[0..code_len/2], &code[code_len/2..]);
+                let code = format!("{} {}", &code[0..code_len / 2], &code[code_len / 2..]);
                 send_email_otp(&code, &user).await;
-            },
+            }
             // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time | OtpKind::Phone => {
                 unreachable!()
@@ -659,9 +664,7 @@ pub async fn auth_start(
     })
 }
 
-pub async fn auth_resend(
-    payload: OtpAuthResendRequest,
-) -> Result<(), ErrorResponse> {
+pub async fn auth_resend(payload: OtpAuthResendRequest) -> Result<(), ErrorResponse> {
     let auth_data = OtpData::find(payload.code).await?;
 
     let otp = OneTimePassword::find(&auth_data.otp_id).await?;

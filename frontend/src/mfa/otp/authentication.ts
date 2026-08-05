@@ -48,7 +48,7 @@ export async function otpAuthResend(code: string): Promise<OtpAuthResendResult> 
     } else {
         return {
             data: undefined,
-        }
+        };
     }
 }
 

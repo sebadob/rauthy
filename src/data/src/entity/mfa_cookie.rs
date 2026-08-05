@@ -3,10 +3,13 @@ use std::ops::Add;
 use actix_web::cookie::Cookie;
 use chrono::Utc;
 use cryptr::EncValue;
-use rauthy_common::{constants::COOKIE_MFA, utils::{base64_decode, base64_encode, deserialize, serialize}};
+use rauthy_common::{
+    constants::COOKIE_MFA,
+    utils::{base64_decode, base64_encode, deserialize, serialize},
+};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use time::{OffsetDateTime};
+use time::OffsetDateTime;
 
 use crate::{api_cookie::ApiCookie, rauthy_config::RauthyConfig};
 

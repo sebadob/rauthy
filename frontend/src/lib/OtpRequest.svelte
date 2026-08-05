@@ -155,11 +155,10 @@
                     {:else}
                         <div class="good">
                             <Form action="" onSubmit={onLoginOtpSubmit}>
-                                <InputOtp
-                                    bind:ref={refInput}
-                                    bind:isError={isInputError}
-                                />
-                                <Button onclick={onRequestNewOtp} isLoading={requestCoolDown} >{t.mfa.otp.resendOtp}</Button>
+                                <InputOtp bind:ref={refInput} bind:isError={isInputError} />
+                                <Button onclick={onRequestNewOtp} isLoading={requestCoolDown}
+                                    >{t.mfa.otp.resendOtp}</Button
+                                >
                                 <Button type="submit">{t.common.send}</Button>
                             </Form>
                             {#if otpTimeoutSecs && otpTimeoutSecs > 0}

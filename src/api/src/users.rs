@@ -1405,7 +1405,8 @@ pub async fn post_user_otp(
 
     // this prevent users from having multiple OTPs of the same kind, except for time-base OTPs
     let mut otp = if payload.otp_kind.ne(&OtpKind::Time)
-        && let Ok(otp) = OneTimePassword::find_kind_for_user(&payload.otp_kind, &user_id).await {
+        && let Ok(otp) = OneTimePassword::find_kind_for_user(&payload.otp_kind, &user_id).await
+    {
         if otp.is_active {
             return Err(ErrorResponse::new(
                 ErrorResponseType::NotAccepted,
@@ -1502,7 +1503,10 @@ pub async fn delete_user_otp(
 
     let user_id: String = id.into_inner();
 
-    if principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete).is_ok() {
+    if principal
+        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)
+        .is_ok()
+    {
         if principal.is_admin() {
             warn!(
                 "Otp delete request from admin for user {} for otp {}",
@@ -1522,7 +1526,7 @@ pub async fn delete_user_otp(
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "missing `mfa_mod_token_id`",
-                )); 
+                ));
             };
             let token = MfaModToken::find(&token_id).await?;
             let ip = real_ip_from_req(&req)?;
@@ -1546,9 +1550,7 @@ pub async fn delete_user_otp(
     OneTimePassword::delete(&otp.id).await?;
     // make sure to delete any existing MFA cookie when a key is deleted
     let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
-    Ok(HttpResponse::Ok()
-        .cookie(cookie)
-        .finish())
+    Ok(HttpResponse::Ok().cookie(cookie).finish())
 }
 
 /// Starts the authentication process using OTP for this user. This only works during
@@ -1614,7 +1616,7 @@ pub async fn post_otp_auth_start_login(
 )]
 #[post("/users/otp_resend")]
 pub async fn post_otp_auth_resend(
-    Json(payload): Json<OtpAuthResendRequest>
+    Json(payload): Json<OtpAuthResendRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 

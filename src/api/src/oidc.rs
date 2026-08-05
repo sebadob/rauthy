@@ -136,7 +136,7 @@ pub async fn get_authorize(
             && let Ok(user) = User::find_by_email(mfa_cooke.email.clone()).await
             && (user.has_webauthn_enabled() || user.has_otp_enabled().await)
         {
-                action = FrontendAction::MfaLogin(mfa_cooke.email);
+            action = FrontendAction::MfaLogin(mfa_cooke.email);
         }
     }
 
