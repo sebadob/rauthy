@@ -48,6 +48,7 @@ Run Rauthy as usual; it will decide whether to load config locally vs remotely b
 Warning: These examples are dangerous as written! They include secrets (e.g., in `vault kv put ...`) only for automated demonstration purposes, and it would never be included in such a file for production.
 
 Example docker compose file using a predefined root token:
+IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or edit the compose file.
 
 ```yaml
 # Example using a manually defined  root token
@@ -105,7 +106,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.31.0-20250703
+    image: ghcr.io/sebadob/rauthy:0.36.1
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443
@@ -199,7 +200,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.31.0-20250703
+    image: ghcr.io/sebadob/rauthy:0.36.1
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443
