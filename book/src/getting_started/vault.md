@@ -48,7 +48,9 @@ Run Rauthy as usual; it will decide whether to load config locally vs remotely b
 Warning: These examples are dangerous as written! They include secrets (e.g., in `vault kv put ...`) only for automated demonstration purposes, and it would never be included in such a file for production.
 
 Example docker compose file using a predefined root token:
-IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or edit the compose file.
+
+IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or edit the compose file, else you will see something like this error in the logs:
+`http://:8202/v1/auth/token/lookup-self": dial tcp :8202: connect: connection refused`
 
 ```yaml
 # Example using a manually defined  root token
