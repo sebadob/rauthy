@@ -4,6 +4,7 @@ use crate::token_set::{
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
+use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
@@ -64,11 +65,21 @@ pub async fn validate_and_refresh_token(
     refresh_token: &str,
     req: &HttpRequest,
 ) -> Result<(TokenSet, Option<String>), ErrorResponse> {
-    let (_, validation_str) = refresh_token.split_at(refresh_token.len() - 49);
-
     let mut buf = Vec::with_capacity(256);
     JwtToken::validate_claims_into(refresh_token, Some(JwtTokenType::Refresh), 0, &mut buf).await?;
     let claims: JwtRefreshClaims = serde_json::from_slice(&buf)?;
+
+    // An underflow is impossible because the token is already validated at this point.
+    // However, doing this additional check is a bit safer.
+    // TODO use `std::hint::unlikely` as soon as it's part of stable rust
+    if refresh_token.len() < REFRESH_TOKEN_VALIDATION_LEN {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid refresh token",
+        ));
+    }
+    let (_, validation_str) =
+        refresh_token.split_at(refresh_token.len() - REFRESH_TOKEN_VALIDATION_LEN);
 
     if client.id != claims.common.azp {
         // If this is a non-matching client.id, this is most probably a malicious request.

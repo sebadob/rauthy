@@ -123,4 +123,5 @@ pub static PROXY_MODE: OnceLock<bool> = OnceLock::new();
 
 pub static TRUSTED_PROXIES: OnceLock<Vec<cidr::IpCidr>> = OnceLock::new();
 
-pub static SECRET_LEN_CLIENTS: usize = 64;
+pub const REFRESH_TOKEN_VALIDATION_LEN: usize = 49;
+pub const SECRET_LEN_CLIENTS: usize = 64;

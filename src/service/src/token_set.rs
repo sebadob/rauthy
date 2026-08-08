@@ -1,6 +1,7 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use rauthy_api_types::oidc::{Audience, JktClaim};
+use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
@@ -518,7 +519,8 @@ impl TokenSet {
         };
 
         // only save the last 50 characters for validation
-        let validation_string = String::from(&token).split_off(token.len() - 49);
+        let validation_string =
+            String::from(&token).split_off(token.len() - REFRESH_TOKEN_VALIDATION_LEN);
 
         if let Some(device_id) = did {
             RefreshTokenDevice::create(
