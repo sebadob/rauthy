@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.36.2
+
+### Security
+
+There were 2 reachable `panic`s in certain situations. Especially in one case it was easy to abuse
+it for an unauthenticated DoS if you had a public client with enabled token refresh. A security
+advisory with more information will be released in the upcoming days.
+
 ## v0.36.1
 
 ### Security
@@ -120,15 +128,6 @@ rfc_8252_enable = false
 ```
 
 [#1621](https://github.com/sebadob/rauthy/pull/1621)
-
-#### UX for MFA keys
-
-UX was improved when registering the very first MFA key for an account. The old behavior was that
-you needed a round-trip and a fresh login to have an MFA session. This was changed now. The session
-is immediately upgrade after a Passkey was registered successfully, as well as the user info on the
-Account dashboard.
-
-[#1649](https://github.com/sebadob/rauthy/pull/1649)
 
 #### `preferred_username` during User Registration
 
