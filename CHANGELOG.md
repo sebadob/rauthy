@@ -5,7 +5,7 @@
 ### Security
 
 There were 2 reachable `panic`s in certain situations. Especially in one case it was easy to abuse
-it for an unauthenticated DoS if you had a public client with enabled token refresh. A security
+it for an unauthenticated DoS **if you had a public client with enabled token refresh**. A security
 advisory with more information will be released in the upcoming days.
 
 ## v0.36.1
