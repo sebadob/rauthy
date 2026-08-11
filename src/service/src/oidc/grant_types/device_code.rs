@@ -3,6 +3,7 @@ use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
 use rauthy_common::utils::new_store_id;
+use rauthy_data::database::DB;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_data::entity::users::User;
@@ -25,6 +26,22 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         }
         Some(dc) => dc,
     };
+
+    // Serialize polling / verification of the SAME device code via a distributed lock: the
+    // find-check-delete of the device code is not atomic on its own, so two concurrent polls
+    // could both pass the `verified_by` check and each issue a full TokenSet. Holding the
+    // lock for the whole poll makes the grant strictly single-use.
+    let _lock = match DB::hql().lock(format!("device_code_{device_code}")).await {
+        Ok(lock) => lock,
+        Err(err) => {
+            error!(?err, "acquiring distributed lock for device code");
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(Cow::from("internal error")),
+            });
+        }
+    };
+
     let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {

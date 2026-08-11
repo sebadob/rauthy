@@ -5,7 +5,6 @@ use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::ops::Add;
 use tracing::debug;
 
 #[derive(Debug, Clone, FromRow, FromPgRow)]
@@ -21,12 +20,15 @@ pub struct IssuedToken {
 impl IssuedToken {
     pub async fn cleanup_expired() -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM issued_tokens WHERE exp < $1";
-        let now_plus_1 = Utc::now().add(chrono::Duration::minutes(1)).timestamp();
+        // Do NOT delete rows early: `validate_not_revoked` rejects tokens whose row is gone,
+        // so deleting anything with `exp < now + X` would make still-valid access tokens fail
+        // on userinfo / introspection / token exchange for up to X seconds before expiry.
+        let now = Utc::now().timestamp();
 
         let rows_affected = if is_hiqlite() {
-            DB::hql().execute(sql, params!(now_plus_1)).await?
+            DB::hql().execute(sql, params!(now)).await?
         } else {
-            DB::pg_execute(sql, &[&now_plus_1]).await?
+            DB::pg_execute(sql, &[&now]).await?
         };
 
         if rows_affected > 0 {

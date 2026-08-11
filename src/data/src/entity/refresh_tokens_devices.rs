@@ -92,17 +92,17 @@ impl RefreshTokenDevice {
         Ok(())
     }
 
-    // pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
-    //     let now = Utc::now().timestamp();
-    //     let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
-    //     if is_hiqlite() {
-    //         DB::hql().execute(sql, params!(now, user_id)).await?;
-    //     } else {
-    //         DB::pg_execute(sql, &[&now, &user_id]).await?;
-    //     }
-    //
-    //     Ok(())
-    // }
+    pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
+        let now = Utc::now().timestamp();
+        let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(now, user_id)).await?;
+        } else {
+            DB::pg_execute(sql, &[&now, &user_id]).await?;
+        }
+
+        Ok(())
+    }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
         let now = Utc::now().timestamp();
@@ -138,6 +138,19 @@ impl RefreshTokenDevice {
         };
 
         Ok(slf)
+    }
+
+    /// Atomically claims this device refresh token for one-time use. See `RefreshToken::claim`.
+    pub async fn claim(id: &str, now: i64) -> Result<bool, ErrorResponse> {
+        let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE id = $2 AND exp > $1";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(now, id)).await?
+        } else {
+            DB::pg_execute(sql, &[&now, &id]).await?
+        };
+
+        Ok(rows_affected == 1)
     }
 
     pub async fn find_by_user_id_jti(

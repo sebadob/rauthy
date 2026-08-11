@@ -7,15 +7,17 @@ use chrono::Utc;
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
+use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Validates request parameters for the authorization and refresh endpoints
 pub async fn validate_auth_req_param(
@@ -58,6 +60,17 @@ pub async fn validate_auth_req_param(
     }
 
     Ok((client, header))
+}
+
+/// Revokes the whole refresh-token family for a user after a detected replay: all refresh
+/// tokens (regular + device), all issued tokens and all sessions. RFC 6819 §5.2.1.3: on
+/// token reuse the authorization server SHOULD revoke the grant family.
+async fn revoke_refresh_family(user_id: &str) -> Result<(), ErrorResponse> {
+    RefreshToken::invalidate_for_user(user_id).await?;
+    RefreshTokenDevice::invalidate_for_user(user_id).await?;
+    IssuedToken::revoke_for_user(user_id, true).await?;
+    Session::invalidate_for_user(user_id).await?;
+    Ok(())
 }
 
 pub async fn validate_and_refresh_token(
@@ -128,11 +141,14 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
-    // validate that it exists in the db and invalidate it afterward
+    // validate that it exists in the db and atomically claim it for one-time use.
+    // The old token is expired by the claim (rotation), so a stolen token cannot be replayed
+    // after legitimate use and two concurrent refreshes with the same token cannot both win.
+    // Note: this supersedes the previous grace-period extension
+    // (`refresh_token_grace_time` no longer keeps the old token usable after a refresh).
     let now = Utc::now().timestamp();
-    let exp_at_secs = now + RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
     let rt_scope = if let Some(device_id) = &claims.common.did {
-        let mut rt = RefreshTokenDevice::find(validation_str).await?;
+        let rt = RefreshTokenDevice::find(validation_str).await?;
 
         if &rt.device_id != device_id {
             return Err(ErrorResponse::new(
@@ -147,16 +163,33 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
-        if rt.exp > exp_at_secs + 1 {
-            rt.exp = exp_at_secs;
-            rt.save().await?;
+        if !RefreshTokenDevice::claim(validation_str, now).await? {
+            // Replay / reuse of an already-used refresh token — treat as theft
+            // (RFC 6819 §5.2.1.3): revoke the whole token family for the user.
+            warn!(
+                "Detected device refresh token reuse for user '{}' - revoking token family",
+                user.id
+            );
+            revoke_refresh_family(&user.id).await?;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Refresh token has already been used - all sessions for this user have been revoked",
+            ));
         }
         rt.scope
     } else {
-        let mut rt = RefreshToken::find(validation_str).await?;
-        if rt.exp > exp_at_secs + 1 {
-            rt.exp = exp_at_secs;
-            rt.save().await?;
+        let rt = RefreshToken::find(validation_str).await?;
+        if !RefreshToken::claim(validation_str, now).await? {
+            // see above — replay of an already-used refresh token
+            warn!(
+                "Detected refresh token reuse for user '{}' - revoking token family",
+                user.id
+            );
+            revoke_refresh_family(&user.id).await?;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Refresh token has already been used - all sessions for this user have been revoked",
+            ));
         }
         rt.scope
     };

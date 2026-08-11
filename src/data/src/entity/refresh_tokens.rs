@@ -168,6 +168,23 @@ impl RefreshToken {
         Ok(slf)
     }
 
+    /// Atomically claims this refresh token for one-time use. Returns `true` if the claim
+    /// succeeded (the token was still valid and this caller won), `false` if it was already
+    /// claimed or expired. The conditional UPDATE (`exp > now`) makes the claim atomic, so
+    /// two concurrent refreshes with the same token cannot both succeed, and a stolen token
+    /// cannot be replayed after legitimate use.
+    pub async fn claim(id: &str, now: i64) -> Result<bool, ErrorResponse> {
+        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE id = $2 AND exp > $1";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(now, id)).await?
+        } else {
+            DB::pg_execute(sql, &[&now, &id]).await?
+        };
+
+        Ok(rows_affected == 1)
+    }
+
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti)
