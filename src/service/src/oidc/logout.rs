@@ -70,16 +70,13 @@ pub async fn get_logout_html(
 
         let uri_vec = client.get_post_logout_uris();
 
+        // same host-boundary wildcard semantics + validation direction as
+        // `Client::validate_post_logout_redirect_uri`: a given target must match a
+        // configured URI (exact or wildcard with host/path boundary), otherwise reject.
         let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
-            if uri.ends_with('*') && target.starts_with(uri.split_once('*').unwrap().0) {
-                return true;
-            }
-            if target.eq(uri) {
-                return true;
-            }
-            false
+            rauthy_data::entity::clients::wildcard_prefix_match(uri, &target) || target.eq(uri)
         });
-        if valid_redirect {
+        if !valid_redirect {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Given 'post_logout_redirect_uri' is not allowed",

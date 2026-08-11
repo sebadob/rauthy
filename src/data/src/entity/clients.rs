@@ -31,6 +31,7 @@ use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
+use std::net::IpAddr;
 use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
@@ -705,6 +706,29 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
+    /// Atomically migrates the encrypted secret to a new key, but only while the row still
+    /// uses `old_kid`. Returns `true` when the update applied, `false` when the secret was
+    /// changed concurrently (then the migration must not clobber it). Used by the encryption
+    /// key migration (`service::encryption::migrate_encryption_alg`).
+    pub async fn update_secret_migrated(
+        &self,
+        secret: Vec<u8>,
+        new_kid: String,
+        old_kid: &str,
+    ) -> Result<bool, ErrorResponse> {
+        let sql = "UPDATE clients SET secret = $1, secret_kid = $2 WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(secret, new_kid, self.id.clone(), old_kid))
+                .await?
+        } else {
+            DB::pg_execute(sql, &[&secret, &new_kid, &self.id, &old_kid]).await?
+        };
+
+        Ok(rows_affected == 1)
+    }
+
     pub async fn update_dynamic(
         client_req: DynamicClientRequest,
         mut client_dyn: ClientDyn,
@@ -1341,7 +1365,7 @@ impl Client {
         let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
             && (self.is_dynamic() || self.is_ephemeral());
         let has_any = self.get_redirect_uris().iter().any(|uri| {
-            (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+            wildcard_prefix_match(uri, redirect_uri)
                 || uri.as_str().eq(redirect_uri)
                 || (loopback && loopback_redirect_match(uri, redirect_uri))
         });
@@ -1370,8 +1394,7 @@ impl Client {
             .unwrap_or_default()
             .iter()
             .any(|uri| {
-                (uri.ends_with('*')
-                    && post_logout_redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                wildcard_prefix_match(uri, post_logout_redirect_uri)
                     || uri.as_str().eq(post_logout_redirect_uri)
             });
 
@@ -1557,6 +1580,77 @@ impl Client {
             }
         } else {
             Ok(())
+        }
+    }
+}
+
+/// Validates a single dynamic-client `redirect_uri`: absolute, https (http loopback allowed
+/// for RFC 8252 native apps), and no wildcard (the wildcard prefix matching in
+/// `validate_redirect_uri` would otherwise turn a registered `https://*` into an open redirect
+/// / authorization-code leak).
+/// Dynamic client registration may be unauthenticated: the `backchannel_logout_uri` field is
+/// rejected outright (RFC 7591 does not require it), because it is fetched server-side on
+/// logout and a hostname-based SSRF surface cannot be closed with a sync allow-list check
+/// (DNS rebinding). See fork-todo.md decision 1.
+fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
+    if opt.is_some() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`backchannel_logout_uri` is not supported for dynamic clients",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
+    if uri.contains('*') {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "wildcard `redirect_uris` are not allowed for dynamic clients",
+        ));
+    }
+    let url = Url::parse(uri).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("invalid `redirect_uri`: '{uri}'"),
+        )
+    })?;
+    let loopback = url
+        .host_str()
+        .map(|h| {
+            h.eq_ignore_ascii_case("localhost")
+                || h.parse::<IpAddr>()
+                    .map(|ip| ip.is_loopback())
+                    .unwrap_or(false)
+        })
+        .unwrap_or(false);
+    if url.scheme() != "https" && !(url.scheme() == "http" && loopback) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`redirect_uris` must be https (http loopback allowed)",
+        ));
+    }
+    Ok(())
+}
+
+/// Wildcard redirect-URI match with a host/path boundary.
+///
+/// A registered `https://app.example.com/callback*` matches any URI starting with
+/// `https://app.example.com/callback` (path boundary inherent). A bare-host wildcard such as
+/// `https://app.example.com*` must NOT match `https://app.example.com.evil.com`: the
+/// requested URI must continue at a path / query / fragment boundary (or match exactly),
+/// which keeps the host confusion class closed for static clients as well.
+pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
+    let Some((prefix, _)) = registered.split_once('*') else {
+        return false;
+    };
+    match requested.strip_prefix(prefix) {
+        None => false,
+        Some(rest) => {
+            rest.is_empty()
+                || rest.starts_with('/')
+                || rest.starts_with('?')
+                || rest.starts_with('#')
         }
     }
 }
@@ -1898,6 +1992,27 @@ impl Client {
             .default_scopes
             .join(",");
 
+        // Dynamic client registration may be unauthenticated, so the URIs we accept must be
+        // strictly validated here:
+        // - `redirect_uris` must be absolute and https (http loopback allowed for RFC 8252
+        //   native apps). Wildcards (`*`) are rejected: the wildcard prefix matching in
+        //   `validate_redirect_uri` would otherwise turn a registered `https://*` into an open
+        //   redirect / authorization-code leak.
+        // - `backchannel_logout_uri` is NOT accepted for dynamic clients at all: it is fetched
+        //   server-side on logout, and dynamic registration may be unauthenticated, so even a
+        //   hardened allow-list leaves a hostname-based SSRF surface (DNS rebinding defeats any
+        //   sync IP check). RFC 7591 does not require the field; static clients (admin-created)
+        //   keep the capability. See fork-todo.md decision 1.
+        validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
+
+        let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
+        for uri in &req.redirect_uris {
+            validate_dyn_redirect_uri(uri)?;
+            redirect_uris.push(uri.clone());
+        }
+
+        let backchannel_logout_uri = None;
+
         Ok(Self {
             id,
             name: req.client_name,
@@ -1905,7 +2020,7 @@ impl Client {
             confidential,
             secret,
             secret_kid,
-            redirect_uris: req.redirect_uris.join(","),
+            redirect_uris: redirect_uris.join(","),
             post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
             allowed_origins,
             flows_enabled: GrantType::csv(&req.grant_types),
@@ -1924,7 +2039,7 @@ impl Client {
             force_mfa: false,
             client_uri: req.client_uri,
             contacts: req.contacts.map(|c| c.join(",")).filter(|c| !c.is_empty()),
-            backchannel_logout_uri: req.backchannel_logout_uri,
+            backchannel_logout_uri,
             ..Default::default()
         })
     }
@@ -2020,6 +2135,43 @@ mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
+
+    #[test]
+    #[test]
+    fn test_validate_no_backchannel_logout_uri() {
+        // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)
+        assert!(validate_no_backchannel_logout_uri(&None).is_ok());
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("https://app.example.com/logout".to_string()))
+                .is_err()
+        );
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("https://169.254.169.254/".to_string()))
+                .is_err()
+        );
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("http://127.0.0.1:8080/".to_string()))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_validate_dyn_redirect_uri() {
+        // https allowed
+        assert!(validate_dyn_redirect_uri("https://app.example.com/cb").is_ok());
+        // http loopback allowed (RFC 8252 native apps)
+        assert!(validate_dyn_redirect_uri("http://127.0.0.1:52345/cb").is_ok());
+        assert!(validate_dyn_redirect_uri("http://localhost:8080/cb").is_ok());
+        // wildcards rejected
+        assert!(validate_dyn_redirect_uri("https://*").is_err());
+        assert!(validate_dyn_redirect_uri("https://app.example.com/*").is_err());
+        // non-https and non-loopback http rejected
+        assert!(validate_dyn_redirect_uri("http://app.example.com/cb").is_err());
+        assert!(validate_dyn_redirect_uri("ftp://app.example.com/cb").is_err());
+        // not a URI at all
+        assert!(validate_dyn_redirect_uri("not a uri").is_err());
+        assert!(validate_dyn_redirect_uri("").is_err());
+    }
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -2092,6 +2244,43 @@ mod tests {
                 .validate_code_challenge(&challenge, &Some("S256".to_string()))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn test_wildcard_prefix_match() {
+        // path-suffixed wildcards keep working
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback?state=x"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback/deep"
+        ));
+        // bare-host wildcard must not match a different host
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com.evil.com"
+        ));
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com.evil.com/cb"
+        ));
+        // but path continuation on the same host is fine
+        assert!(wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com/cb"
+        ));
+        // non-wildcard registered URIs never match via the helper
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com/cb",
+            "https://app.example.com/cb"
+        ));
+        assert!(!wildcard_prefix_match("no-star", "no-star"));
     }
 
     #[test]

@@ -113,7 +113,11 @@ impl ClientDyn {
     }
 
     pub fn validate_token(&self, bearer: &str) -> Result<(), ErrorResponse> {
-        if self.registration_token_plain()? != bearer {
+        // constant-time comparison to avoid leaking the registration token via timing
+        if !constant_time_eq::constant_time_eq(
+            self.registration_token_plain()?.as_bytes(),
+            bearer.as_bytes(),
+        ) {
             Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid_token".to_string()),
                 "Invalid registration_token",
