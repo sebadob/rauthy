@@ -15,7 +15,7 @@ use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::net::IpAddr;
 use tokio::task;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[derive(Debug, FromRow, FromPgRow)]
 pub struct LoginLocation {
@@ -167,6 +167,22 @@ WHERE user_id = $3 AND browser_id = $4 AND ip = $5"#;
     }
 }
 
+/// Bounds the per-login background location checks (spawned on every login via
+/// `spawn_background_check`). A login storm must not grow the spawned-task fan-out
+/// without limit: the geo / location check is best-effort, so when the cap is reached
+/// newer checks are skipped with a warning instead of piling up memory.
+static BACKGROUND_CHECK_LIMIT: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(64);
+
+fn try_background_permit() -> Option<tokio::sync::SemaphorePermit<'static>> {
+    match BACKGROUND_CHECK_LIMIT.try_acquire() {
+        Ok(permit) => Some(permit),
+        Err(_) => {
+            warn!("Login location background check skipped - too many concurrent checks");
+            None
+        }
+    }
+}
+
 impl LoginLocation {
     pub fn spawn_background_check(
         user: User,
@@ -198,7 +214,13 @@ impl LoginLocation {
 
         let location = get_location(req, ip)?;
 
+        let permit = match try_background_permit() {
+            Some(permit) => permit,
+            None => return Ok(()),
+        };
+
         task::spawn(async move {
+            let _permit = permit;
             if let Err(err) =
                 Self::background_check(user, ip, user_agent, location, browser_id).await
             {
@@ -255,5 +277,24 @@ impl LoginLocation {
         .await;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_background_permit_skips_when_saturated() {
+        // saturate the shared cap
+        let mut permits = Vec::new();
+        while let Ok(p) = BACKGROUND_CHECK_LIMIT.try_acquire() {
+            permits.push(p);
+        }
+        // saturated -> the per-login background check is skipped, not queued
+        assert!(try_background_permit().is_none());
+        // a free slot becomes available again once one permit is released
+        permits.pop();
+        assert!(try_background_permit().is_some());
     }
 }
