@@ -28,9 +28,13 @@ impl PowEntity {
         Ok(pow)
     }
 
-    /// Checks re-usages of PoWs and prevents a future re-use
+    /// Checks re-usages of PoWs and prevents a future re-use.
+    /// The get+delete is serialized per challenge via a distributed lock, so two concurrent
+    /// requests cannot both consume the same challenge.
     pub async fn check_prevent_reuse(challenge: String) -> Result<(), ErrorResponse> {
         let client = DB::hql();
+
+        let _lock = client.lock(format!("pow_{challenge}")).await?;
 
         let opt: Option<Pow> = client.get(Cache::PoW, challenge).await?;
         let pow = match opt {
