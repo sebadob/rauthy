@@ -13,6 +13,9 @@ pub static HASH_CHANNELS: OnceLock<(
     flume::Sender<PasswordHashMessage>,
     flume::Receiver<PasswordHashMessage>,
 )> = OnceLock::new();
+/// Number of concurrent argon2 worker loops. Set at startup from
+/// `hashing.max_hash_threads`; defaults to 1 when unset (tests).
+pub static HASH_THREADS: OnceLock<usize> = OnceLock::new();
 pub static HASH_AWAIT_WARN_TIME: OnceLock<u32> = OnceLock::new();
 
 pub struct HashPassword {
@@ -83,8 +86,28 @@ pub enum PasswordHashMessage {
 // To limit the theoretical concurrent hashes while still setting a fairly high memory for the
 // operation, this simple function makes sure that at no point in time, any more than the configured
 // amount of max concurrent hashes do happen to not exceed system memory.
+#[inline]
+fn worker_count() -> usize {
+    // defaults to 1 when unset (tests / before init), matching the historical single-consumer
+    // behavior; set from hashing.max_hash_threads in init_static_vars
+    HASH_THREADS.get().copied().unwrap_or(1)
+}
+
 pub async fn run() {
-    while let Ok(msg) = HASH_CHANNELS.get().unwrap().1.recv_async().await {
+    let workers = worker_count();
+    let rx = HASH_CHANNELS.get().unwrap().1.clone();
+
+    let mut handles = Vec::with_capacity(workers);
+    for _ in 0..workers {
+        handles.push(tokio::spawn(hash_worker(rx.clone())));
+    }
+    for handle in handles {
+        let _ = handle.await;
+    }
+}
+
+async fn hash_worker(rx: flume::Receiver<PasswordHashMessage>) {
+    while let Ok(msg) = rx.recv_async().await {
         let res = match msg {
             PasswordHashMessage::Hash(m) => {
                 check_await_threshold(&m.created);
@@ -170,6 +193,37 @@ mod tests {
     use pretty_assertions::assert_eq;
     use std::time::{Duration, Instant};
     use tokio::time;
+
+    // Covers the concurrency change (HASH_THREADS workers draining the bounded channel).
+    // Uses a low memory cost and no timing assertions, so it is fast and not flaky.
+    #[tokio::test]
+    async fn test_run_workers_process_all_messages() {
+        let params = argon2::Params::new(8 * 1024, 1, 1, None).unwrap();
+        let _ = ARGON2_PARAMS.set(params);
+        let _ = HASH_AWAIT_WARN_TIME.set(10_000);
+        let _ = HASH_CHANNELS.set(flume::bounded(2));
+        let _ = HASH_THREADS.set(2);
+
+        assert_eq!(worker_count(), 2);
+
+        let handle = tokio::spawn(run());
+
+        let mut hashes = Vec::with_capacity(4);
+        for _ in 0..4 {
+            hashes.push(
+                HashPassword::hash_password("test-password-123".to_string())
+                    .await
+                    .unwrap(),
+            );
+        }
+        for h in &hashes {
+            assert!(h.len() >= 32, "expected a non-empty argon2 hash string");
+        }
+        assert!(
+            !handle.is_finished(),
+            "workers keep running after processing"
+        );
+    }
 
     // pretty intensive test -> ignored by default
     #[tokio::test]

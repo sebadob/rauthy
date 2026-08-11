@@ -69,6 +69,9 @@ pub fn trigger() {
     HASH_CHANNELS
         .set(flume::bounded(vars.hashing.max_hash_threads as usize))
         .unwrap();
+    HASH_THREADS
+        .set(vars.hashing.max_hash_threads as usize)
+        .unwrap();
     HASH_AWAIT_WARN_TIME
         .set(vars.hashing.hash_await_warn_time)
         .unwrap();
