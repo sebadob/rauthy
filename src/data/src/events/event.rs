@@ -16,7 +16,7 @@ use std::cmp::max;
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
-use tracing::error;
+use tracing::{error, warn};
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -1066,15 +1066,28 @@ impl Event {
 
     #[inline(always)]
     pub async fn send(self) -> Result<(), ErrorResponse> {
-        match RauthyConfig::get().tx_events.send_async(self).await {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                error!(?err, "Event::send()");
-                Err(ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    format!("Error sending event internally: {err:?}"),
-                ))
-            }
+        // Non-blocking on purpose: the queue is bounded, and once it is saturated we drop
+        // the event with a warning instead of stalling the request handler or growing
+        // memory without limit. Events are best-effort notifications/audit.
+        try_send_event(&RauthyConfig::get().tx_events, self)
+    }
+}
+
+/// Non-blocking event send used by `Event::send`. A saturated bounded queue drops the
+/// event with a warning (Ok), a disconnected channel errors like before.
+fn try_send_event(tx: &flume::Sender<Event>, event: Event) -> Result<(), ErrorResponse> {
+    match tx.try_send(event) {
+        Ok(()) => Ok(()),
+        Err(flume::TrySendError::Full(_)) => {
+            warn!("Event queue full - dropping event");
+            Ok(())
+        }
+        Err(err) => {
+            error!(?err, "Event::send()");
+            Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!("Error sending event internally: {err:?}"),
+            ))
         }
     }
 }
@@ -1090,5 +1103,30 @@ impl From<Event> for EventResponse {
             data: e.data,
             text: e.text,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_event() -> Event {
+        Event::new(EventLevel::Info, EventType::InvalidLogins, None, None, None)
+    }
+
+    #[test]
+    fn test_try_send_event_full_queue_drops_ok() {
+        let (tx, _rx) = flume::bounded::<Event>(1);
+        // normal send
+        assert!(try_send_event(&tx, test_event()).is_ok());
+        // queue saturated -> event dropped, still Ok (never blocks the caller)
+        assert!(try_send_event(&tx, test_event()).is_ok());
+    }
+
+    #[test]
+    fn test_try_send_event_disconnected_errors() {
+        let (tx, rx) = flume::bounded::<Event>(1);
+        drop(rx);
+        assert!(try_send_event(&tx, test_event()).is_err());
     }
 }
