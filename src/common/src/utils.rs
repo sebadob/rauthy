@@ -1,4 +1,5 @@
 use crate::constants::{PEER_IP_HEADER_NAME, PROXY_MODE, TRUSTED_PROXIES};
+use actix_web::HttpMessage;
 use actix_web::HttpRequest;
 use actix_web::dev::ServiceRequest;
 use actix_web::http::header::HeaderMap;
@@ -126,9 +127,43 @@ const DUMMY_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(192, 0, 0, 8));
 // dummy address should be enabled for UNIX domain socket support
 pub struct UseDummyAddress;
 
-// TODO unify real_ip_from_req and real_ip_from_svc_req by using an impl Trait
+/// Per-request cache of the resolved real client IP, stored in `req.extensions()`.
+/// Populated on first resolution; all subsequent `real_ip_from_*` calls for the same
+/// request return the cached value, because neither the peer address nor the relevant
+/// headers can change mid-request. This turns the previously repeated header parsing and
+/// trusted-proxy validation into a single pass per request.
+#[derive(Debug, Clone, Copy)]
+pub struct CachedRealIp(pub IpAddr);
+
 #[inline(always)]
 pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
+    cached_real_ip(req, || compute_real_ip_req(req))
+}
+
+#[inline(always)]
+pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorResponse> {
+    // middleware and handler handle the same request, so the cache is shared between both
+    cached_real_ip(req, || compute_real_ip_svc(req))
+}
+
+/// Per-request cache check + store, shared by both request types. The IP is resolved once
+/// per request (headers / peer address cannot change mid-request) and reused by every
+/// `real_ip_from_*` call, which previously re-parsed the headers and re-validated the
+/// trusted proxies on every call.
+fn cached_real_ip(
+    req: &impl HttpMessage,
+    compute: impl FnOnce() -> Result<IpAddr, ErrorResponse>,
+) -> Result<IpAddr, ErrorResponse> {
+    if let Some(ip) = req.extensions().get::<CachedRealIp>() {
+        return Ok(ip.0);
+    }
+
+    let ip = compute()?;
+    req.extensions_mut().insert(CachedRealIp(ip));
+    Ok(ip)
+}
+
+fn compute_real_ip_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
     let use_dummy_addr = req.app_data::<UseDummyAddress>().is_some();
     let peer_ip = parse_peer_addr(req.connection_info().peer_addr(), use_dummy_addr)?;
     if let Some(ip) = ip_from_cust_header(req.headers()) {
@@ -142,8 +177,7 @@ pub fn real_ip_from_req(req: &HttpRequest) -> Result<IpAddr, ErrorResponse> {
     }
 }
 
-#[inline(always)]
-pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorResponse> {
+fn compute_real_ip_svc(req: &ServiceRequest) -> Result<IpAddr, ErrorResponse> {
     let use_dummy_addr = req.app_data::<UseDummyAddress>().is_some();
     let peer_ip = parse_peer_addr(req.connection_info().peer_addr(), use_dummy_addr)?;
     if let Some(ip) = ip_from_cust_header(req.headers()) {
@@ -316,5 +350,38 @@ mod tests {
         assert!(check_trusted_proxy(&IpAddr::from_str("192.0.0.8").unwrap(), false).is_err());
         assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.11").unwrap(), true).is_ok());
         assert!(check_trusted_proxy(&IpAddr::from_str("10.10.10.9").unwrap(), true).is_err());
+    }
+
+    #[test]
+    fn test_real_ip_is_cached_per_request() {
+        use actix_web::HttpMessage;
+        use actix_web::test::TestRequest;
+        use std::net::SocketAddr;
+
+        // fast path: a pre-seeded cache wins without touching headers / connection info
+        let req = TestRequest::default().to_http_request();
+        req.extensions_mut()
+            .insert(CachedRealIp(IpAddr::from([203, 0, 113, 7])));
+        assert_eq!(
+            real_ip_from_req(&req).unwrap(),
+            IpAddr::from([203, 0, 113, 7])
+        );
+
+        // compute path: the peer address is resolved once, cached, and reused
+        let _ = PEER_IP_HEADER_NAME.set(None);
+        let _ = PROXY_MODE.set(false);
+        let req2 = TestRequest::default()
+            .peer_addr(SocketAddr::from(([192, 0, 2, 55], 8080)))
+            .to_http_request();
+        assert_eq!(
+            real_ip_from_req(&req2).unwrap(),
+            IpAddr::from([192, 0, 2, 55])
+        );
+        // second call hits the per-request cache
+        assert_eq!(
+            real_ip_from_req(&req2).unwrap(),
+            IpAddr::from([192, 0, 2, 55])
+        );
+        assert!(req2.extensions().get::<CachedRealIp>().is_some());
     }
 }
