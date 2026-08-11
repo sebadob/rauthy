@@ -536,7 +536,27 @@ impl Default for Vars {
                 argon2_p_cost: 1,
                 max_hash_threads: 2,
                 hash_await_warn_time: 500,
+                argon2_preset: None,
             },
+
+            // ── Argon2id presets ──────────────────────────────────────────────────────
+            // Use `argon2_preset = "speed" | "memory" | "hardened"` (or ARGON2_PRESET env).
+            // The preset sets the intended defaults for m / t / p / max_hash_threads; each
+            // of those fields can still be overridden individually (explicit value wins).
+            // Stable per-worker rule: 1 CPU core per hash thread (argon2 is CPU-bound),
+            // RAM = m per in-flight hash + ~2 MiB overhead. Measured peaks (Apple Silicon,
+            // release, argon2 0.5.3): 66 MiB @ m=64 MiB, 130 MiB @ m=128 MiB.
+            // All numbers are PER NODE (per pod/container); a cluster needs N x per-node.
+            // Memory request formula (see book/src/getting_started/k8s.md):
+            //   m_cost/1024 * max_hash_threads Mi + idle memory
+            //   (idle ~100 MiB with HA/hiqlite, ~30 MiB with external Postgres)
+            // Per-node request/limit guidance (HA idle):
+            //   speed     threads=2  RAM req 256 MiB / limit 512 MiB;  CPU req 2 / limit 4
+            //   memory    threads=1  RAM req 192 MiB / limit 384 MiB;  CPU req 1 / limit 2
+            //   hardened  threads=2  RAM req 384 MiB / limit 768 MiB;  CPU req 2 / limit 4
+            // CPU limit is optional (DDoS guard); MAX_HASH_THREADS is the main CPU limiter.
+            // Override example: argon2_preset = "hardened" with argon2_m_cost = 262144
+            // raises only the memory (262 MiB/hash) while keeping t=4, p=1, threads=2.
             http_client: VarsHttpClient {
                 connect_timeout: 10,
                 request_timeout: 10,
@@ -2622,24 +2642,17 @@ impl Vars {
     fn parse_hashing(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "hashing");
 
-        if let Some(v) = t_u32(&mut table, "hashing", "argon2_m_cost", "ARGON2_M_COST") {
-            self.hashing.argon2_m_cost = v;
-        }
-        if let Some(v) = t_u32(&mut table, "hashing", "argon2_t_cost", "ARGON2_T_COST") {
-            self.hashing.argon2_t_cost = v;
-        }
-        if let Some(v) = t_u32(&mut table, "hashing", "argon2_p_cost", "ARGON2_P_COST") {
-            self.hashing.argon2_p_cost = v;
-        }
-
-        if let Some(v) = t_u32(
+        // Parse the hashing values into locals so the effective values can be resolved
+        // with the precedence: explicit user value > named preset > built-in default.
+        let m_cost = t_u32(&mut table, "hashing", "argon2_m_cost", "ARGON2_M_COST");
+        let t_cost = t_u32(&mut table, "hashing", "argon2_t_cost", "ARGON2_T_COST");
+        let p_cost = t_u32(&mut table, "hashing", "argon2_p_cost", "ARGON2_P_COST");
+        let max_threads = t_u32(
             &mut table,
             "hashing",
             "max_hash_threads",
             "MAX_HASH_THREADS",
-        ) {
-            self.hashing.max_hash_threads = v;
-        }
+        );
         if let Some(v) = t_u32(
             &mut table,
             "hashing",
@@ -2648,6 +2661,32 @@ impl Vars {
         ) {
             self.hashing.hash_await_warn_time = v;
         }
+
+        let preset = match t_str(&mut table, "hashing", "argon2_preset", "ARGON2_PRESET") {
+            Some(v) => Some(Argon2Preset::from(v.as_str())),
+            None => self.hashing.argon2_preset,
+        };
+        self.hashing.argon2_preset = preset;
+
+        // A preset provides the intended defaults for m / t / p / threads, but each value can
+        // still be overridden individually by the user. Without a preset, the built-in
+        // defaults apply.
+        let defaults = self
+            .hashing
+            .argon2_preset
+            .map(Argon2Preset::params)
+            .unwrap_or((
+                self.hashing.argon2_m_cost,
+                self.hashing.argon2_t_cost,
+                self.hashing.argon2_p_cost,
+                self.hashing.max_hash_threads,
+            ));
+        let (m, t, p, threads) =
+            resolve_hashing_values(m_cost, t_cost, p_cost, max_threads, defaults);
+        self.hashing.argon2_m_cost = m;
+        self.hashing.argon2_t_cost = t;
+        self.hashing.argon2_p_cost = p;
+        self.hashing.max_hash_threads = threads;
 
         check_table_empty(table, "hashing");
     }
@@ -3928,6 +3967,66 @@ pub struct ConfigVarsGeo {
     pub maxmind_update_cron: Cow<'static, str>,
 }
 
+/// Named Argon2id hashing presets, selectable at startup via `hashing.argon2_preset`
+/// (config file) or `ARGON2_PRESET` (env var). When set, the preset overrides the explicit
+/// `argon2_m_cost` / `argon2_t_cost` / `argon2_p_cost` / `max_hash_threads` values.
+/// Measured on Apple Silicon (release, argon2 0.5.3) vs the original main default
+/// (single hash 275 ms / 130 MiB peak):
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Argon2Preset {
+    /// OWASP low-memory profile (m=64 MiB, t=3), 2 workers: 94 ms/hash (2.8x faster,
+    /// 51% memory); 8 concurrent logins in 382 ms (5.6x) at ~100% peak memory.
+    Speed,
+    /// Same crypto profile as `Speed`, 1 worker: 94 ms/hash; peak memory stays at 51%
+    /// of the original default (best for memory-constrained deployments).
+    Memory,
+    /// Original strongest profile (m=128 MiB, t=4), 2 workers: 269 ms/hash (100% time);
+    /// 8 concurrent logins in 1076 ms (2x) at ~199% peak memory.
+    Hardened,
+}
+
+impl Argon2Preset {
+    /// Returns `(argon2_m_cost, argon2_t_cost, argon2_p_cost, max_hash_threads)`.
+    pub const fn params(self) -> (u32, u32, u32, u32) {
+        match self {
+            Self::Speed => (65536, 3, 1, 2),
+            Self::Memory => (65536, 3, 1, 1),
+            Self::Hardened => (131072, 4, 1, 2),
+        }
+    }
+}
+
+impl From<&str> for Argon2Preset {
+    fn from(value: &str) -> Self {
+        match value {
+            "speed" => Self::Speed,
+            "memory" => Self::Memory,
+            "hardened" => Self::Hardened,
+            other => {
+                warn!("Unknown argon2_preset '{other}', defaulting to 'speed'");
+                Self::Speed
+            }
+        }
+    }
+}
+
+/// Resolves the effective argon2 hashing values from an explicit user override, a named
+/// preset and the built-in defaults. Precedence: explicit value > preset > default.
+fn resolve_hashing_values(
+    m: Option<u32>,
+    t: Option<u32>,
+    p: Option<u32>,
+    threads: Option<u32>,
+    dflt: (u32, u32, u32, u32),
+) -> (u32, u32, u32, u32) {
+    (
+        m.unwrap_or(dflt.0),
+        t.unwrap_or(dflt.1),
+        p.unwrap_or(dflt.2),
+        threads.unwrap_or(dflt.3),
+    )
+}
+
 #[derive(Debug)]
 pub struct VarsHashing {
     pub argon2_m_cost: u32,
@@ -3935,6 +4034,7 @@ pub struct VarsHashing {
     pub argon2_p_cost: u32,
     pub max_hash_threads: u32,
     pub hash_await_warn_time: u32,
+    pub argon2_preset: Option<Argon2Preset>,
 }
 
 #[derive(Debug)]
@@ -4331,4 +4431,55 @@ fn err_env(var_name: &str, typ: &str) -> String {
 pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
     format!("Expected type `{typ}` for {parent}{sep}{key}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_argon2_preset_mapping() {
+        assert_eq!(Argon2Preset::from("speed"), Argon2Preset::Speed);
+        assert_eq!(Argon2Preset::from("memory"), Argon2Preset::Memory);
+        assert_eq!(Argon2Preset::from("hardened"), Argon2Preset::Hardened);
+        // unknown values fall back to the default preset
+        assert_eq!(Argon2Preset::from("bogus"), Argon2Preset::Speed);
+    }
+
+    #[test]
+    fn test_argon2_preset_params() {
+        assert_eq!(Argon2Preset::Speed.params(), (65536, 3, 1, 2));
+        assert_eq!(Argon2Preset::Memory.params(), (65536, 3, 1, 1));
+        assert_eq!(Argon2Preset::Hardened.params(), (131072, 4, 1, 2));
+    }
+
+    #[test]
+    fn test_resolve_hashing_values_precedence() {
+        // explicit user value wins over the preset
+        assert_eq!(
+            resolve_hashing_values(Some(131072), None, None, None, Argon2Preset::Speed.params()),
+            (131072, 3, 1, 2)
+        );
+        // preset provides the defaults
+        assert_eq!(
+            resolve_hashing_values(None, None, None, None, Argon2Preset::Memory.params()),
+            (65536, 3, 1, 1)
+        );
+        // neither preset nor explicit -> built-in defaults
+        assert_eq!(
+            resolve_hashing_values(None, None, None, None, (65536, 3, 1, 2)),
+            (65536, 3, 1, 2)
+        );
+        // mixed: one explicit override, the rest from the preset
+        assert_eq!(
+            resolve_hashing_values(
+                None,
+                Some(2),
+                None,
+                Some(4),
+                Argon2Preset::Hardened.params()
+            ),
+            (131072, 2, 1, 4)
+        );
+    }
 }
