@@ -521,9 +521,19 @@ impl Default for Vars {
                 maxmind_update_cron: "0 0 5 * * * *".into(),
             },
             hashing: VarsHashing {
-                argon2_m_cost: 131072,
-                argon2_t_cost: 4,
-                argon2_p_cost: 8,
+                argon2_m_cost: 65536,
+                argon2_t_cost: 3,
+                // OWASP CheatSheet Argon2id "low memory" profile (m=64 MiB, t=3, p=4);
+                // p=1 for the scalar RustCrypto implementation (lanes are sequential, p>1
+                // adds no speedup - RFC 9106 §4.2 prefers a small parallelism factor for
+                // password hashing). Measured on Apple Silicon (release, argon2 0.5.3):
+                // 94 ms/hash vs 275 ms at the old 128 MiB/t=4, at ~half the memory; with
+                // max_hash_threads=2 the concurrency memory cost is absorbed (peak equals
+                // the old single-hash memory) while 8 concurrent logins finish ~5.6x
+                // faster. Tradeoff: an offline GPU/ASIC attacker spends ~2.7x less work per
+                // candidate (total m*t 192 vs 512 MiB-passes). Existing hashes re-hash on
+                // the next successful login via is_argon2_uptodate.
+                argon2_p_cost: 1,
                 max_hash_threads: 2,
                 hash_await_warn_time: 500,
             },
