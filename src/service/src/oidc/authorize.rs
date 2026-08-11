@@ -219,6 +219,17 @@ pub(crate) async fn finish_authorize(
     user_needs_mfa: Option<&mut bool>,
     provider_mfa_login: Option<ProviderMfaLogin>,
 ) -> Result<AuthStep, ErrorResponse> {
+    // Guard against resurrecting a session that was concurrently invalidated (global logout
+    // via `Session::invalidate_all`, user logout / password reset via `invalidate_for_user`).
+    // Without this, `session.set_authenticated` / `upsert` below would restore the original
+    // `exp` and keep the session alive after a force logout.
+    if session.exp <= Utc::now().timestamp() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Session has expired",
+        ));
+    }
+
     client.validate_enabled()?;
     client
         .validate_mfa(&user, provider_mfa_login)

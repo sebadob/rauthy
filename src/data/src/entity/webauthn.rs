@@ -878,6 +878,15 @@ pub async fn auth_finish(
                     ));
                 }
 
+                // never resurrect a session that was concurrently invalidated while the
+                // webauthn challenge was pending
+                if session.exp <= Utc::now().timestamp() {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        "Session has expired",
+                    ));
+                }
+
                 session.set_authenticated(&user).await?;
                 user.last_login = Some(Utc::now().timestamp());
                 user.last_failed_login = None;

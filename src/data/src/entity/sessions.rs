@@ -416,6 +416,32 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         Ok(())
     }
 
+    /// Refreshes only the `last_seen` timestamp of a session that is still valid.
+    ///
+    /// Unlike `upsert`, this never inserts a row and never resurrects a session that was
+    /// concurrently invalidated (force-logout via `invalidate_all` / `invalidate_for_user`
+    /// or an expired `exp`): the UPDATE is guarded by `exp > now`, and the cache is only
+    /// refreshed when the UPDATE actually matched a row. Used by the auth middleware for
+    /// the periodic last-seen bump, so an in-flight request cannot undo a logout.
+    pub async fn touch_last_seen(&self) -> Result<(), ErrorResponse> {
+        let now = Utc::now().timestamp();
+        let sql = "UPDATE sessions SET last_seen = $1 WHERE id = $2 AND exp > $1";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(now, &self.id)).await?
+        } else {
+            DB::pg_execute(sql, &[&now, &self.id]).await?
+        };
+
+        if rows_affected == 1 {
+            DB::hql()
+                .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
+                .await?;
+        }
+
+        Ok(())
+    }
+
     /// Caution: Uses regex / LIKE on the database -> very costly query
     pub async fn search(
         idx: &SearchParamsIdx,
@@ -633,16 +659,13 @@ impl Session {
             }
         };
 
-        if remote_ip.is_none() {
-            return true;
-        }
-
-        let session_ip = self
-            .remote_ip
-            .as_ref()
-            .and_then(|ip| IpAddr::from_str(ip).ok());
-        if remote_ip == session_ip {
-            if state == SessionState::Init {
+        // A session in `SessionState::Init` is only allowed on explicitly listed login
+        // endpoints. This must hold regardless of whether IP validation is enabled
+        // (`session_validate_ip`): otherwise the exception list is silently bypassed for
+        // every path whenever no remote IP is passed in.
+        let init_allowed = match state {
+            SessionState::Auth => true,
+            SessionState::Init => {
                 #[cfg(debug_assertions)]
                 let exceptions = [
                     "/auth/v1/oidc/authorize",
@@ -670,30 +693,37 @@ impl Session {
                     "/auth/v1/tos/accept",
                     "/auth/v1/tos/deny",
                 ];
-                if exceptions.contains(&req_path) {
-                    return true;
+                let allowed = exceptions.contains(&req_path);
+                if !allowed {
+                    trace!(
+                        "Session in Init state used on invalid path: {:?} -> {}",
+                        self, req_path
+                    );
                 }
+                allowed
+            }
+            _ => false,
+        };
 
-                trace!(
-                    "Session in Init state used on invalid path: {:?} -> {}",
-                    self, req_path
+        // The IP check only applies when a remote IP is passed in (i.e. when
+        // `session_validate_ip` is enabled).
+        if let Some(remote_ip) = remote_ip {
+            let session_ip = self
+                .remote_ip
+                .as_ref()
+                .and_then(|ip| IpAddr::from_str(ip).ok());
+            if Some(remote_ip) != session_ip {
+                warn!(
+                    session_id = self.id,
+                    ?session_ip,
+                    ?remote_ip,
+                    "Invalid access for session",
                 );
+                return false;
             }
-
-            if state == SessionState::Auth {
-                return true;
-            }
-        } else {
-            warn!(
-                session_id = self.id,
-                ?session_ip,
-                ?remote_ip,
-                "Invalid access for session",
-            );
-            return false;
         }
 
-        false
+        init_allowed
     }
 
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
@@ -741,7 +771,8 @@ impl Session {
                 "CSRF Token not present in HTTP Header",
             ));
         }
-        if self.csrf_token.eq(csrf?) {
+        // constant-time comparison to avoid leaking the token via timing
+        if constant_time_eq::constant_time_eq(self.csrf_token.as_bytes(), csrf?.as_bytes()) {
             return Ok(());
         }
 
@@ -783,9 +814,29 @@ pub fn get_header_value<'a>(
 #[cfg(test)]
 mod tests {
     use crate::entity::sessions::{Session, SessionState};
+    use actix_web::test::TestRequest;
+    use rauthy_common::constants::CSRF_HEADER;
     use rauthy_error::ErrorResponse;
     use std::net::IpAddr;
     use std::str::FromStr;
+
+    #[test]
+    fn test_validate_csrf() {
+        let s = Session::new(3600, None);
+
+        let ok = TestRequest::default()
+            .insert_header((CSRF_HEADER, s.csrf_token.clone()))
+            .to_http_request();
+        assert!(s.validate_csrf(&ok).is_ok());
+
+        let wrong = TestRequest::default()
+            .insert_header((CSRF_HEADER, "wrong-token"))
+            .to_http_request();
+        assert!(s.validate_csrf(&wrong).is_err());
+
+        let missing = TestRequest::default().to_http_request();
+        assert!(s.validate_csrf(&missing).is_err());
+    }
 
     #[test]
     fn test_session_validation() -> Result<(), ErrorResponse> {
@@ -811,5 +862,32 @@ mod tests {
         assert!(s.is_valid(600, Some(ip), "/"));
 
         Ok(())
+    }
+
+    #[test]
+    fn test_init_session_needs_exception_path_without_ip_validation() {
+        // Regression: with `session_validate_ip` disabled (remote_ip = None), an Init-state
+        // session must NOT be accepted on arbitrary paths. Before the fix, `is_valid`
+        // returned early with `true` whenever no remote IP was passed in.
+        let s = Session::new(3600, None);
+        assert!(!s.is_valid(600, None, "/"));
+        assert!(!s.is_valid(600, None, "/auth/v1/users"));
+
+        // the explicit exception paths stay allowed
+        assert!(s.is_valid(600, None, "/auth/v1/oidc/authorize"));
+        assert!(s.is_valid(600, None, "/auth/v1/oidc/token"));
+
+        // Auth-state sessions remain valid without IP validation
+        let mut a = Session::new(3600, None);
+        a.state = SessionState::Auth;
+        assert!(a.is_valid(600, None, "/"));
+
+        // LoggedOut / Unknown states are never valid
+        let mut l = Session::new(3600, None);
+        l.state = SessionState::LoggedOut;
+        assert!(!l.is_valid(600, None, "/"));
+        let mut u = Session::new(3600, None);
+        u.state = SessionState::Unknown;
+        assert!(!u.is_valid(600, None, "/"));
     }
 }
