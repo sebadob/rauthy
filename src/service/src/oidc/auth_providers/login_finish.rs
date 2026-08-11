@@ -44,7 +44,8 @@ pub async fn login_finish<'a>(
 
     // validate csrf token
     let slf = AuthProviderCallback::find(callback_id).await?;
-    if slf.xsrf_token != payload.xsrf_token {
+    if !constant_time_eq::constant_time_eq(slf.xsrf_token.as_bytes(), payload.xsrf_token.as_bytes())
+    {
         AuthProviderCallback::delete(slf.callback_id).await?;
 
         error!("invalid CSRF token");
@@ -56,7 +57,7 @@ pub async fn login_finish<'a>(
 
     // validate PKCE verifier
     let hash_base64 = base64_url_encode(sha256!(payload.pkce_verifier.as_bytes()));
-    if slf.pkce_challenge != hash_base64 {
+    if !constant_time_eq::constant_time_eq(slf.pkce_challenge.as_bytes(), hash_base64.as_bytes()) {
         AuthProviderCallback::delete(slf.callback_id).await?;
 
         error!("invalid PKCE verifier");

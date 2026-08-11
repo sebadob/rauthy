@@ -111,7 +111,7 @@ impl ForwardAuthSession {
         let decrypted = EncValue::try_from_bytes(decoded)?.decrypt()?;
         let token = String::from_utf8_lossy(decrypted.as_ref());
 
-        if token != self.inner.csrf_token {
+        if !constant_time_eq::constant_time_eq(token.as_bytes(), self.inner.csrf_token.as_bytes()) {
             warn!("CSRF Token mismatch");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

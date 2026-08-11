@@ -115,7 +115,10 @@ pub async fn handle_put_user_passkey_finish(
             ));
         }
         Some(token) => {
-            if ml.csrf_token != token.to_str().unwrap_or("") {
+            if !constant_time_eq::constant_time_eq(
+                ml.csrf_token.as_bytes(),
+                token.to_str().unwrap_or("").as_bytes(),
+            ) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     "Invalid CSRF Token",

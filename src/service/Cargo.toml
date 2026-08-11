@@ -18,6 +18,7 @@ atrium-common = { workspace = true }
 atrium-oauth = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
+constant_time_eq = { workspace = true }
 cryptr = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }

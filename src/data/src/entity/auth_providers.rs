@@ -869,7 +869,7 @@ impl AuthProviderCallback {
             ));
         };
 
-        if app_state != self.callback_id {
+        if !constant_time_eq::constant_time_eq(app_state.as_bytes(), self.callback_id.as_bytes()) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "callback state mismatch for ATProto",
