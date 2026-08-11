@@ -5298,6 +5298,7 @@ dependencies = [
  "atrium-oauth",
  "chrono",
  "chrono-tz",
+ "constant_time_eq",
  "cryptr",
  "openssl",
  "openssl-sys",
