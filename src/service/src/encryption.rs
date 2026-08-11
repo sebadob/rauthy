@@ -32,15 +32,31 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
             continue;
         }
 
-        let dec = EncValue::try_from(client.secret.unwrap())?.decrypt()?;
+        let dec = EncValue::try_from(client.secret.clone().unwrap())?.decrypt()?;
         let enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
             .into_bytes()
             .to_vec();
 
+        // atomic conditional update: never clobber a secret that was changed concurrently
+        // while the migration ran (the row's secret_kid must still be the old one)
+        let old_kid = client.secret_kid.clone().unwrap_or_default();
         client.secret = Some(enc);
         client.secret_kid = Some(new_kid.to_string());
-        client.save().await?;
-        modified += 1;
+        if client
+            .update_secret_migrated(
+                client.secret.clone().unwrap(),
+                new_kid.to_string(),
+                &old_kid,
+            )
+            .await?
+        {
+            modified += 1;
+        } else {
+            error!(
+                "Skipped client '{}' during secret migration - secret was changed concurrently",
+                client.id
+            );
+        }
     }
     info!("Finished clients secrets migration to key id: {new_kid}");
 
@@ -55,23 +71,32 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
         // filter out all keys that already use the new key
         .filter(|k| k.enc_key_id != new_kid)
         .collect::<Vec<ApiKeyEntity>>();
-    for mut api_key in api_keys {
+    for api_key in api_keys {
         // secret
-        let dec = EncValue::try_from(api_key.secret)?.decrypt()?;
-        api_key.secret = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+        let dec = EncValue::try_from(api_key.secret.clone())?.decrypt()?;
+        let secret_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
             .into_bytes()
             .to_vec();
 
         // access rights
-        let dec = EncValue::try_from(api_key.access)?.decrypt()?;
-        api_key.access = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+        let dec = EncValue::try_from(api_key.access.clone())?.decrypt()?;
+        let access_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
             .into_bytes()
             .to_vec();
 
-        api_key.enc_key_id = new_kid.to_string();
-
-        api_key.save().await?;
-        modified += 1;
+        // atomic conditional update, see clients above
+        let old_kid = api_key.enc_key_id.clone();
+        if api_key
+            .save_migrated(secret_enc, access_enc, new_kid.to_string(), &old_kid)
+            .await?
+        {
+            modified += 1;
+        } else {
+            error!(
+                "Skipped API key '{}' during secret migration - secret was changed concurrently",
+                api_key.name
+            );
+        }
     }
     info!("Finished ApiKeys migration to key id: {new_kid}");
 
