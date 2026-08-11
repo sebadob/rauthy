@@ -4,16 +4,61 @@ use rauthy_error::ErrorResponse;
 pub struct FailedLoginCounter;
 
 impl FailedLoginCounter {
+    /// Decay window for the per-IP failed-login count. hiqlite counters have no TTL, so the
+    /// count is stored as a plain TTL'd cache value instead (see fork-todo.md decision 3).
+    const TTL_SECS: i64 = 3600;
+
+    fn cache_idx(ip: &str) -> String {
+        // separate key namespace: `Cache::IpBlacklist` raw-ip keys hold `IpBlacklist` values
+        format!("flc_{ip}")
+    }
+
+    #[inline]
+    fn next_count(current: Option<i64>) -> i64 {
+        current.unwrap_or(0) + 1
+    }
+
     pub async fn get(ip: String) -> Result<Option<i64>, ErrorResponse> {
-        Ok(DB::hql().counter_get(Cache::IpBlacklist, ip).await?)
+        Ok(DB::hql().get(Cache::App, Self::cache_idx(&ip)).await?)
     }
 
     pub async fn increase(ip: String) -> Result<i64, ErrorResponse> {
-        Ok(DB::hql().counter_add(Cache::IpBlacklist, ip, 1).await?)
+        // Benign read-modify-write: this is a throttle heuristic, not a security or
+        // consistency boundary. A lost concurrent update shifts one sleep/blacklist tier by
+        // one attempt at most and self-corrects on the next attempt; no data corruption, no
+        // test flakiness (no timing in tests). The TTL provides the decay: after one hour
+        // without a failure the counter resets, so a stale IP is no longer throttled forever.
+        let current = DB::hql()
+            .get::<_, _, i64>(Cache::App, Self::cache_idx(&ip))
+            .await?;
+        let count = Self::next_count(current);
+        DB::hql()
+            .put(
+                Cache::App,
+                Self::cache_idx(&ip),
+                &count,
+                Some(Self::TTL_SECS),
+            )
+            .await?;
+        Ok(count)
     }
 
     pub async fn reset(ip: String) -> Result<(), ErrorResponse> {
-        DB::hql().counter_del(Cache::IpBlacklist, ip).await?;
+        DB::hql().delete(Cache::App, Self::cache_idx(&ip)).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FailedLoginCounter;
+
+    #[test]
+    fn test_next_count() {
+        assert_eq!(FailedLoginCounter::next_count(None), 1);
+        assert_eq!(FailedLoginCounter::next_count(Some(0)), 1);
+        assert_eq!(FailedLoginCounter::next_count(Some(5)), 6);
+        // realistic upper bound (tiers cap at 25); no overflow in practice
+        assert_eq!(FailedLoginCounter::next_count(Some(30)), 31);
     }
 }

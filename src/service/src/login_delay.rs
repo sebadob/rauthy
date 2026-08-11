@@ -120,6 +120,12 @@ async fn build_send_event(
         .unwrap();
     IpBlacklist::put(peer_ip.to_string(), nbf_seconds as i64).await?;
 
+    // Reset the failure counter when the IP gets blacklisted: the blacklist TTL then acts as
+    // the decay window. Without this, a shared / NAT'd IP that suffered a brute-force burst
+    // would stay permanently throttled - once blacklisted, even a legit user behind the same
+    // IP can never log in successfully to reset the counter, keeping the IP locked forever.
+    FailedLoginCounter::reset(peer_ip.to_string()).await?;
+
     Err(ErrorResponse::new(
         ErrorResponseType::TooManyRequests(ts),
         html,
