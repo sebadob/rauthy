@@ -45,10 +45,8 @@ pub async fn run(
     test_mode: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (tx_email, rx_email) = mpsc::channel::<mailer::EMail>(16);
-    // Bounded event queues: under an event storm (login bursts, credential-stuffing
-    // events, blacklists) the pipeline must not grow without limit. Event::send drops
-    // (with a warning) once the queue is saturated, so request handlers never block and
-    // memory stays capped at queue_capacity x event size.
+    // Bounded event queues: Event::send drops with a warning when saturated, so the
+    // pipeline memory stays capped and handlers never block.
     let (tx_events, rx_events) = flume::bounded(8192);
     let (tx_events_router, rx_events_router) = flume::bounded(4096);
 

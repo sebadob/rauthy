@@ -167,10 +167,7 @@ WHERE user_id = $3 AND browser_id = $4 AND ip = $5"#;
     }
 }
 
-/// Bounds the per-login background location checks (spawned on every login via
-/// `spawn_background_check`). A login storm must not grow the spawned-task fan-out
-/// without limit: the geo / location check is best-effort, so when the cap is reached
-/// newer checks are skipped with a warning instead of piling up memory.
+/// Caps per-login background location checks (best-effort): saturated -> skip + warn.
 static BACKGROUND_CHECK_LIMIT: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(64);
 
 fn try_background_permit() -> Option<tokio::sync::SemaphorePermit<'static>> {

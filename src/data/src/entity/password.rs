@@ -1,8 +1,7 @@
 use crate::database::{Cache, DB};
 use actix_web::web;
-use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
-use argon2::{Algorithm, Argon2, PasswordHasher, Version};
+use argon2_rust::params::{Memory, TagLen};
+use argon2_rust::{Algorithm, Argon2, Params, Version};
 use hiqlite::macros::params;
 use rauthy_api_types::generic::{
     PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
@@ -38,7 +37,12 @@ impl PasswordHashTimes {
         let mut time_taken = 0u32;
 
         // get a good baseline for t_cost == 1
-        let params = argon2::Params::new(m_cost, 1, p_cost, None)?;
+        let params = Params::builder()
+            .memory(Memory::kib(m_cost as u64))
+            .passes(1)
+            .lanes(p_cost)
+            .tag_len(TagLen::bytes(32))
+            .build()?;
         let now = time::Instant::now();
         let _ = Self::new_password_hash("SuperRandomString1337", &params).await?;
         let t_one = now.elapsed().as_millis() as u32;
@@ -48,7 +52,12 @@ impl PasswordHashTimes {
         let mut t_cost = max(ARGON2ID_T_COST_MIN, approx);
 
         while time_taken < target {
-            let params = argon2::Params::new(m_cost, t_cost, p_cost, None)?;
+            let params = Params::builder()
+                .memory(Memory::kib(m_cost as u64))
+                .passes(t_cost)
+                .lanes(p_cost)
+                .tag_len(TagLen::bytes(32))
+                .build()?;
 
             let now = time::Instant::now();
             let _ = Self::new_password_hash("SuperRandomString1337", &params).await?;
@@ -82,18 +91,16 @@ impl PasswordHashTimes {
     // Generates a new Argon2id hash from the given cleartext password and returns the hash.
     pub async fn new_password_hash(
         plain: &str,
-        params: &argon2::Params,
+        params: &argon2_rust::Params,
     ) -> Result<String, ErrorResponse> {
-        let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params.to_owned());
+        let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, *params);
         let plain_pwd = plain.to_owned();
 
         // hashing should not happen on the event loop
         let hash = web::block(move || {
-            let salt = SaltString::generate(&mut OsRng);
             argon2
-                .hash_password(plain_pwd.as_bytes(), &salt)
+                .hash_password_with_random_salt(plain_pwd.as_bytes())
                 .expect("Error hashing the Password")
-                .to_string()
         })
         .await
         .map_err(ErrorResponse::from)?;

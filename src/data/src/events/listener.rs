@@ -38,10 +38,8 @@ impl EventListener {
         tokio::spawn(Self::router(rx_router));
         tokio::spawn(Self::raft_events_listener(tx_router));
 
-        // Cap the number of concurrently processed events so an event storm cannot grow
-        // the spawned-task fan-out without limit. Once the permits are exhausted the
-        // consumer stops dequeuing, the bounded channel fills up, and producers drop
-        // events with a warning (see Event::send) instead of growing memory.
+        // Cap concurrent event processing: when permits are exhausted the consumer stops
+        // dequeuing, the bounded queue fills, and producers drop events (Event::send).
         let sem = Arc::new(Semaphore::new(256));
         while let Ok(event) = rx_event.recv_async().await {
             let sem = Arc::clone(&sem);
@@ -269,10 +267,8 @@ mod tests {
         Event::new(EventLevel::Info, EventType::InvalidLogins, None, None, None)
     }
 
-    // Covers the consumer-loop change (acquire-before-spawn with a permit semaphore): the
-    // number of concurrently processed events is structurally capped at the permit count,
-    // so an event storm cannot grow the spawned-task fan-out without limit. The assertion
-    // is structural (semaphore), not timing-based; the wait is a bounded completion wait.
+    // Structural cap: acquire-before-spawn limits concurrent processing to the permits;
+    // assertion is semaphore-guaranteed, the wait is completion-bounded.
     #[tokio::test]
     async fn test_event_consumer_caps_concurrency() {
         let (tx, rx) = flume::bounded::<Event>(2);

@@ -22,7 +22,7 @@ rauthy-service = { path = "../service" }
 
 actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
-argon2 = { workspace = true }
+argon2-rust = { workspace = true }
 chrono = { workspace = true }
 cidr = { workspace = true }
 clap = { workspace = true }

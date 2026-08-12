@@ -1066,15 +1066,13 @@ impl Event {
 
     #[inline(always)]
     pub async fn send(self) -> Result<(), ErrorResponse> {
-        // Non-blocking on purpose: the queue is bounded, and once it is saturated we drop
-        // the event with a warning instead of stalling the request handler or growing
-        // memory without limit. Events are best-effort notifications/audit.
+        // Non-blocking: drop with a warning when the bounded queue is saturated, so
+        // handlers never stall; events are best-effort.
         try_send_event(&RauthyConfig::get().tx_events, self)
     }
 }
 
-/// Non-blocking event send used by `Event::send`. A saturated bounded queue drops the
-/// event with a warning (Ok), a disconnected channel errors like before.
+/// Non-blocking send used by `Event::send`: full queue -> warn + drop (Ok), closed -> Err.
 fn try_send_event(tx: &flume::Sender<Event>, event: Event) -> Result<(), ErrorResponse> {
     match tx.try_send(event) {
         Ok(()) => Ok(()),

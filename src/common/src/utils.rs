@@ -127,11 +127,8 @@ const DUMMY_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(192, 0, 0, 8));
 // dummy address should be enabled for UNIX domain socket support
 pub struct UseDummyAddress;
 
-/// Per-request cache of the resolved real client IP, stored in `req.extensions()`.
-/// Populated on first resolution; all subsequent `real_ip_from_*` calls for the same
-/// request return the cached value, because neither the peer address nor the relevant
-/// headers can change mid-request. This turns the previously repeated header parsing and
-/// trusted-proxy validation into a single pass per request.
+/// Per-request cache of the resolved client IP (`req.extensions()`): resolve once,
+/// reuse for the whole request (headers / peer cannot change mid-request).
 #[derive(Debug, Clone, Copy)]
 pub struct CachedRealIp(pub IpAddr);
 
@@ -146,10 +143,7 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorRespons
     cached_real_ip(req, || compute_real_ip_svc(req))
 }
 
-/// Per-request cache check + store, shared by both request types. The IP is resolved once
-/// per request (headers / peer address cannot change mid-request) and reused by every
-/// `real_ip_from_*` call, which previously re-parsed the headers and re-validated the
-/// trusted proxies on every call.
+/// Resolve once per request; both request types share the same extensions.
 fn cached_real_ip(
     req: &impl HttpMessage,
     compute: impl FnOnce() -> Result<IpAddr, ErrorResponse>,

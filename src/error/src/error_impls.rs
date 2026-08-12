@@ -182,9 +182,9 @@ impl From<actix_web::error::HttpError> for ErrorResponse {
     }
 }
 
-impl From<argon2::Error> for ErrorResponse {
-    fn from(err: argon2::Error) -> Self {
-        debug!("argon2::Error: {err:?}");
+impl From<argon2_rust::Error> for ErrorResponse {
+    fn from(err: argon2_rust::Error) -> Self {
+        debug!("argon2_rust::Error: {err:?}");
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Argon2Id Error: {err}"),

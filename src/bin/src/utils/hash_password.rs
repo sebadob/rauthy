@@ -1,9 +1,8 @@
 use crate::cli_args::ArgsPasswordHash;
 use crate::utils::StdError;
 use crate::utils::stdin::PromptPassword;
-use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
-use argon2::{Algorithm, Argon2, PasswordHasher, Version};
+use argon2_rust::params::{Memory, TagLen};
+use argon2_rust::{Algorithm, Argon2, Params, Version};
 use colored::Colorize;
 use tokio::time::Instant;
 use zeroize::Zeroize;
@@ -51,16 +50,16 @@ password policy you must match. At least:
 
     println!("Hashing password ...");
 
-    let params = argon2::ParamsBuilder::new()
-        .m_cost(m_cost)
-        .t_cost(t_cost)
-        .p_cost(p_cost)
+    let params = Params::builder()
+        .memory(Memory::kib(m_cost as u64))
+        .passes(t_cost)
+        .lanes(p_cost)
+        .tag_len(TagLen::bytes(32))
         .build()?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    let salt = SaltString::generate(&mut OsRng);
 
     let start = Instant::now();
-    let hashed = argon2.hash_password(plain.as_bytes(), &salt)?;
+    let hashed = argon2.hash_password_with_random_salt(plain.as_bytes())?;
 
     let elapsed = start.elapsed().as_millis();
     if elapsed < 500 {

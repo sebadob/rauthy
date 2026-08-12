@@ -32,7 +32,7 @@ const FROM_SECRETS: &str = "$SECRETS";
 
 #[derive(Debug)]
 pub struct RauthyConfig {
-    pub argon2_params: argon2::Params,
+    pub argon2_params: argon2_rust::Params,
     pub issuer: String,
     pub is_primary_node: bool,
     pub is_ha_cluster: bool,
@@ -56,7 +56,7 @@ impl RauthyConfig {
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
-        let (vars, node_config) = Vars::load(&path_config, path_secrets).await;
+        let (mut vars, node_config) = Vars::load(&path_config, path_secrets).await;
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {err}");
@@ -100,13 +100,24 @@ impl RauthyConfig {
             ),
         };
 
-        let argon2_params = argon2::Params::new(
-            vars.hashing.argon2_m_cost,
-            vars.hashing.argon2_t_cost,
+        // Clamp p to the host cores: lanes serialize on small hosts (work conserved),
+        // and p <= cores avoids oversubscription. Memory-hardness (m) is unaffected.
+        vars.hashing.argon2_p_cost = clamp_hash_lanes(
             vars.hashing.argon2_p_cost,
-            None,
-        )
-        .expect("Unable to build Argon2id params, check the values in the [hashing] section");
+            std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1),
+        );
+
+        let argon2_params = argon2_rust::Params::builder()
+            .memory(argon2_rust::params::Memory::kib(
+                vars.hashing.argon2_m_cost as u64,
+            ))
+            .passes(vars.hashing.argon2_t_cost)
+            .lanes(vars.hashing.argon2_p_cost)
+            .tag_len(argon2_rust::params::TagLen::bytes(32))
+            .build()
+            .expect("Unable to build Argon2id params, check the values in the [hashing] section");
 
         #[cfg(target_os = "windows")]
         let is_https = matches!(listen_scheme, ListenScheme::HttpHttps | ListenScheme::Https)
@@ -216,9 +227,9 @@ impl RauthyConfig {
         debug!("HA Deployment: {}", slf.is_ha_cluster);
         debug!(
             "Argon2id Params: m_code: {}, t_cost: {}, p_cost: {}",
-            slf.argon2_params.m_cost(),
-            slf.argon2_params.t_cost(),
-            slf.argon2_params.p_cost()
+            slf.argon2_params.memory_kib(),
+            slf.argon2_params.passes(),
+            slf.argon2_params.lanes()
         );
 
         if slf.vars.dev.dev_mode {
@@ -523,40 +534,17 @@ impl Default for Vars {
             hashing: VarsHashing {
                 argon2_m_cost: 65536,
                 argon2_t_cost: 3,
-                // OWASP CheatSheet Argon2id "low memory" profile (m=64 MiB, t=3, p=4);
-                // p=1 for the scalar RustCrypto implementation (lanes are sequential, p>1
-                // adds no speedup - RFC 9106 §4.2 prefers a small parallelism factor for
-                // password hashing). Measured on Apple Silicon (release, argon2 0.5.3):
-                // 94 ms/hash vs 275 ms at the old 128 MiB/t=4, at ~half the memory; with
-                // max_hash_threads=2 the concurrency memory cost is absorbed (peak equals
-                // the old single-hash memory) while 8 concurrent logins finish ~5.6x
-                // faster. Tradeoff: an offline GPU/ASIC attacker spends ~2.7x less work per
-                // candidate (total m*t 192 vs 512 MiB-passes). Existing hashes re-hash on
-                // the next successful login via is_argon2_uptodate.
-                argon2_p_cost: 1,
+                // OWASP "low memory" profile (m=64 MiB, t=3); p=8 lanes (best measured,
+                // parallelized by the SIMD backend). Existing hashes re-hash on next login.
+                argon2_p_cost: 8,
                 max_hash_threads: 2,
                 hash_await_warn_time: 500,
                 argon2_preset: None,
             },
 
             // ── Argon2id presets ──────────────────────────────────────────────────────
-            // Use `argon2_preset = "speed" | "memory" | "hardened"` (or ARGON2_PRESET env).
-            // The preset sets the intended defaults for m / t / p / max_hash_threads; each
-            // of those fields can still be overridden individually (explicit value wins).
-            // Stable per-worker rule: 1 CPU core per hash thread (argon2 is CPU-bound),
-            // RAM = m per in-flight hash + ~2 MiB overhead. Measured peaks (Apple Silicon,
-            // release, argon2 0.5.3): 66 MiB @ m=64 MiB, 130 MiB @ m=128 MiB.
-            // All numbers are PER NODE (per pod/container); a cluster needs N x per-node.
-            // Memory request formula (see book/src/getting_started/k8s.md):
-            //   m_cost/1024 * max_hash_threads Mi + idle memory
-            //   (idle ~100 MiB with HA/hiqlite, ~30 MiB with external Postgres)
-            // Per-node request/limit guidance (HA idle):
-            //   speed     threads=2  RAM req 256 MiB / limit 512 MiB;  CPU req 2 / limit 4
-            //   memory    threads=1  RAM req 192 MiB / limit 384 MiB;  CPU req 1 / limit 2
-            //   hardened  threads=2  RAM req 384 MiB / limit 768 MiB;  CPU req 2 / limit 4
-            // CPU limit is optional (DDoS guard); MAX_HASH_THREADS is the main CPU limiter.
-            // Override example: argon2_preset = "hardened" with argon2_m_cost = 262144
-            // raises only the memory (262 MiB/hash) while keeping t=4, p=1, threads=2.
+            // `argon2_preset = "speed" | "memory" | "hardened"` sets m/t/p/threads defaults;
+            // any field can still be overridden individually (explicit wins).
             http_client: VarsHttpClient {
                 connect_timeout: 10,
                 request_timeout: 10,
@@ -2668,8 +2656,7 @@ impl Vars {
         };
         self.hashing.argon2_preset = preset;
 
-        // A preset provides the intended defaults for m / t / p / threads, but each value can
-        // still be overridden individually by the user. Without a preset, the built-in
+        // A preset provides m/t/p/threads defaults; each value is still overridable.
         // defaults apply.
         let defaults = self
             .hashing
@@ -3967,21 +3954,17 @@ pub struct ConfigVarsGeo {
     pub maxmind_update_cron: Cow<'static, str>,
 }
 
-/// Named Argon2id hashing presets, selectable at startup via `hashing.argon2_preset`
-/// (config file) or `ARGON2_PRESET` (env var). When set, the preset overrides the explicit
-/// `argon2_m_cost` / `argon2_t_cost` / `argon2_p_cost` / `max_hash_threads` values.
-/// Measured on Apple Silicon (release, argon2 0.5.3) vs the original main default
-/// (single hash 275 ms / 130 MiB peak):
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Named Argon2id presets, selected at startup via `hashing.argon2_preset` /
+/// `ARGON2_PRESET`. Sets m / t / p / max_hash_threads; individual fields can still be
+/// overridden per-value (explicit > preset > default).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Argon2Preset {
-    /// OWASP low-memory profile (m=64 MiB, t=3), 2 workers: 94 ms/hash (2.8x faster,
-    /// 51% memory); 8 concurrent logins in 382 ms (5.6x) at ~100% peak memory.
+    /// OWASP-low profile (m=64 MiB, t=3), 2 workers - the default.
     Speed,
-    /// Same crypto profile as `Speed`, 1 worker: 94 ms/hash; peak memory stays at 51%
-    /// of the original default (best for memory-constrained deployments).
+    /// Same crypto profile, 1 worker - lowest memory, no concurrency.
+    #[default]
     Memory,
-    /// Original strongest profile (m=128 MiB, t=4), 2 workers: 269 ms/hash (100% time);
-    /// 8 concurrent logins in 1076 ms (2x) at ~199% peak memory.
+    /// Original strongest profile (m=128 MiB, t=4), 2 workers.
     Hardened,
 }
 
@@ -3989,9 +3972,11 @@ impl Argon2Preset {
     /// Returns `(argon2_m_cost, argon2_t_cost, argon2_p_cost, max_hash_threads)`.
     pub const fn params(self) -> (u32, u32, u32, u32) {
         match self {
-            Self::Speed => (65536, 3, 1, 2),
-            Self::Memory => (65536, 3, 1, 1),
-            Self::Hardened => (131072, 4, 1, 2),
+            // p=8: the argon2-rust backend parallelizes lanes across cores; best measured.
+            // Total memory m is unchanged, so p does not weaken memory-hardness.
+            Self::Speed => (65536, 3, 8, 2),
+            Self::Memory => (65536, 3, 8, 1),
+            Self::Hardened => (131072, 4, 8, 2),
         }
     }
 }
@@ -4003,15 +3988,22 @@ impl From<&str> for Argon2Preset {
             "memory" => Self::Memory,
             "hardened" => Self::Hardened,
             other => {
-                warn!("Unknown argon2_preset '{other}', defaulting to 'speed'");
-                Self::Speed
+                warn!("Unknown argon2_preset '{other}', defaulting to 'memory'");
+                Self::Memory
             }
         }
     }
 }
 
-/// Resolves the effective argon2 hashing values from an explicit user override, a named
-/// preset and the built-in defaults. Precedence: explicit value > preset > default.
+/// Clamps the argon2 lane parallelism `p` to the host's available cores, so the p=8
+/// presets do not oversubscribe on small / single-core hosts. Lanes serialize when there
+/// are fewer cores than lanes (total work is conserved), and p <= cores avoids scheduler
+/// and cache pressure. Never below 1.
+fn clamp_hash_lanes(p: u32, cores: usize) -> u32 {
+    p.min((cores as u32).max(1))
+}
+
+/// Effective hashing values: explicit override > preset > built-in default.
 fn resolve_hashing_values(
     m: Option<u32>,
     t: Option<u32>,
@@ -4443,14 +4435,14 @@ mod tests {
         assert_eq!(Argon2Preset::from("memory"), Argon2Preset::Memory);
         assert_eq!(Argon2Preset::from("hardened"), Argon2Preset::Hardened);
         // unknown values fall back to the default preset
-        assert_eq!(Argon2Preset::from("bogus"), Argon2Preset::Speed);
+        assert_eq!(Argon2Preset::from("bogus"), Argon2Preset::Memory);
     }
 
     #[test]
     fn test_argon2_preset_params() {
-        assert_eq!(Argon2Preset::Speed.params(), (65536, 3, 1, 2));
-        assert_eq!(Argon2Preset::Memory.params(), (65536, 3, 1, 1));
-        assert_eq!(Argon2Preset::Hardened.params(), (131072, 4, 1, 2));
+        assert_eq!(Argon2Preset::Speed.params(), (65536, 3, 8, 2));
+        assert_eq!(Argon2Preset::Memory.params(), (65536, 3, 8, 1));
+        assert_eq!(Argon2Preset::Hardened.params(), (131072, 4, 8, 2));
     }
 
     #[test]
@@ -4458,17 +4450,17 @@ mod tests {
         // explicit user value wins over the preset
         assert_eq!(
             resolve_hashing_values(Some(131072), None, None, None, Argon2Preset::Speed.params()),
-            (131072, 3, 1, 2)
+            (131072, 3, 8, 2)
         );
         // preset provides the defaults
         assert_eq!(
             resolve_hashing_values(None, None, None, None, Argon2Preset::Memory.params()),
-            (65536, 3, 1, 1)
+            (65536, 3, 8, 1)
         );
         // neither preset nor explicit -> built-in defaults
         assert_eq!(
-            resolve_hashing_values(None, None, None, None, (65536, 3, 1, 2)),
-            (65536, 3, 1, 2)
+            resolve_hashing_values(None, None, None, None, (65536, 3, 8, 1)),
+            (65536, 3, 8, 1)
         );
         // mixed: one explicit override, the rest from the preset
         assert_eq!(
@@ -4479,7 +4471,21 @@ mod tests {
                 Some(4),
                 Argon2Preset::Hardened.params()
             ),
-            (131072, 2, 1, 4)
+            (131072, 2, 8, 4)
         );
+    }
+
+    #[test]
+    fn test_clamp_hash_lanes() {
+        // p=8 presets are clamped to the host's cores
+        assert_eq!(clamp_hash_lanes(8, 1), 1);
+        assert_eq!(clamp_hash_lanes(8, 2), 2);
+        assert_eq!(clamp_hash_lanes(8, 12), 8);
+        assert_eq!(clamp_hash_lanes(8, 16), 8);
+        // p below the core count is untouched
+        assert_eq!(clamp_hash_lanes(2, 12), 2);
+        // degenerate zero-core report clamps to 1 (p is never 0)
+        assert_eq!(clamp_hash_lanes(8, 0), 1);
+        assert_eq!(clamp_hash_lanes(1, 1), 1);
     }
 }

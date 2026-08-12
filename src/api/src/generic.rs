@@ -231,9 +231,9 @@ pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, Err
 
     let params = &RauthyConfig::get().argon2_params;
     let argon2_params = Argon2ParamsResponse {
-        m_cost: params.m_cost(),
-        t_cost: params.t_cost(),
-        p_cost: params.p_cost(),
+        m_cost: params.memory_kib(),
+        t_cost: params.passes(),
+        p_cost: params.lanes(),
     };
     let resp = LoginTimeResponse {
         argon2_params,

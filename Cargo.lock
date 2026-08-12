@@ -507,6 +507,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "argon2-rust"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9116a9e4fd543b4e7ae219c3d7f1259b59615105c0c27b3d75939a8b8cf8af86"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4956,7 +4965,7 @@ version = "0.36.2"
 dependencies = [
  "actix-web",
  "actix-web-prom",
- "argon2",
+ "argon2-rust",
  "chrono",
  "cidr",
  "clap",
@@ -5026,7 +5035,7 @@ version = "0.36.2"
 dependencies = [
  "actix-web",
  "ammonia",
- "argon2",
+ "argon2-rust",
  "base64 0.22.1",
  "bincode",
  "brotli",
@@ -5060,7 +5069,7 @@ dependencies = [
  "actix-web",
  "actix-web-lab",
  "arc-swap",
- "argon2",
+ "argon2-rust",
  "askama",
  "async-trait",
  "atrium-api",
@@ -5152,7 +5161,7 @@ version = "0.36.2"
 dependencies = [
  "actix-multipart",
  "actix-web",
- "argon2",
+ "argon2-rust",
  "chacha20poly1305",
  "chrono",
  "cryptr",
