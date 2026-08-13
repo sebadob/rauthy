@@ -36,4 +36,9 @@ zeroize = { workspace = true }
 chrono = { version = "0.4", default-features = false, features = ["now"] }
 
 [dev-dependencies]
+criterion = "0.5"
 pretty_assertions = "1"
+
+[[bench]]
+name = "hashing"
+harness = false
