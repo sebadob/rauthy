@@ -6,11 +6,11 @@
 //
 // Run: BENCH_HASH_THREADS=1 cargo bench --bench hashing   (memory default)
 //      BENCH_HASH_THREADS=2 cargo bench --bench hashing   (speed preset)
-use argon2_rust::params::{Memory, TagLen};
 use argon2_rust::Params;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use argon2_rust::params::{Memory, TagLen};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use rauthy_common::password_hasher::{
-    run, HashPassword, ARGON2_PARAMS, HASH_AWAIT_WARN_TIME, HASH_CHANNELS, HASH_THREADS,
+    ARGON2_PARAMS, HASH_AWAIT_WARN_TIME, HASH_CHANNELS, HASH_THREADS, HashPassword, run,
 };
 use tokio::runtime::Runtime;
 
