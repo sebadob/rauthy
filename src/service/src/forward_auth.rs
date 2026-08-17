@@ -267,13 +267,6 @@ pub async fn get_forward_auth_client_callback(
 
     // update session metadata
     let mut session = Session::find(sid).await?;
-    // Guard against resurrecting a session that was concurrently invalidated (global logout via `Session::invalidate_all`, ...
-    if session.exp <= Utc::now().timestamp() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "Session has expired",
-        ));
-    }
     if session.state != SessionState::Auth {
         // A Session is only set to `SessionState::Auth` AFTER a successful and complete
         // auth code flow. Because of this, it is possible to get here with an `init` session.

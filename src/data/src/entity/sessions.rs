@@ -362,6 +362,16 @@ OFFSET $3"#;
     }
 
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
+        // An expired session must never be written back: that would resurrect a
+        // force-logged-out or expired session (state promotion, last_seen, mfa).
+        // Invalidation has dedicated functions and never goes through upsert.
+        if self.exp < Utc::now().timestamp() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
+        }
+
         let state_str = self.state.as_str();
 
         let sql = r#"
