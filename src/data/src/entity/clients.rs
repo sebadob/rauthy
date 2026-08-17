@@ -1365,7 +1365,8 @@ impl Client {
         let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
             && (self.is_dynamic() || self.is_ephemeral());
         let has_any = self.get_redirect_uris().iter().any(|uri| {
-            wildcard_prefix_match(uri, redirect_uri)
+            // cheap `ends_with('*')` gate first; wildcard matching only for wildcard entries
+            (uri.ends_with('*') && wildcard_prefix_match(uri, redirect_uri))
                 || uri.as_str().eq(redirect_uri)
                 || (loopback && loopback_redirect_match(uri, redirect_uri))
         });
@@ -1394,7 +1395,8 @@ impl Client {
             .unwrap_or_default()
             .iter()
             .any(|uri| {
-                wildcard_prefix_match(uri, post_logout_redirect_uri)
+                // cheap `ends_with('*')` gate first, same as `validate_redirect_uri`
+                (uri.ends_with('*') && wildcard_prefix_match(uri, post_logout_redirect_uri))
                     || uri.as_str().eq(post_logout_redirect_uri)
             });
 
@@ -1640,8 +1642,11 @@ fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
 /// `https://app.example.com*` must NOT match `https://app.example.com.evil.com`: the
 /// requested URI must continue at a path / query / fragment boundary (or match exactly),
 /// which keeps the host confusion class closed for static clients as well.
+#[inline]
 pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
-    let Some((prefix, _)) = registered.split_once('*') else {
+    // `strip_suffix` enforces that the wildcard is the very last character and
+    // scans from the end, which is the only place a wildcard is allowed.
+    let Some(prefix) = registered.strip_suffix('*') else {
         return false;
     };
     match requested.strip_prefix(prefix) {
@@ -1651,6 +1656,10 @@ pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
                 || rest.starts_with('/')
                 || rest.starts_with('?')
                 || rest.starts_with('#')
+                // the boundary is already given if the prefix itself ends at one
+                || prefix.ends_with('/')
+                || prefix.ends_with('?')
+                || prefix.ends_with('#')
         }
     }
 }
@@ -2136,7 +2145,6 @@ mod tests {
     use actix_web::http::header;
     use actix_web::test::TestRequest;
 
-    #[test]
     #[test]
     fn test_validate_no_backchannel_logout_uri() {
         // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)

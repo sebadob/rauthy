@@ -7,7 +7,7 @@ use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
 use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM};
 use rauthy_common::http_client;
 use rauthy_data::api_cookie::ApiCookie;
-use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients::{Client, wildcard_prefix_match};
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
@@ -71,10 +71,11 @@ pub async fn get_logout_html(
 
         let uri_vec = client.get_post_logout_uris();
 
-        // same host-boundary wildcard semantics + validation direction as
-        // `Client::validate_post_logout_redirect_uri`: a given target must match a configured URI (exact or wildcard with host/...
+        // same host-boundary wildcard semantics as `validate_post_logout_redirect_uri`:
+        // a given target must match a configured URI (exact or wildcard with host
+        // boundary); the cheap `ends_with('*')` gate skips non-wildcard entries
         let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
-            rauthy_data::entity::clients::wildcard_prefix_match(uri, &target) || target.eq(uri)
+            (uri.ends_with('*') && wildcard_prefix_match(uri, &target)) || target.eq(uri)
         });
         if !valid_redirect {
             return Err(ErrorResponse::new(
