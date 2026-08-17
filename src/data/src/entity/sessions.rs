@@ -781,7 +781,6 @@ impl Session {
                 "CSRF Token not present in HTTP Header",
             ));
         }
-        // constant-time comparison to avoid leaking the token via timing
         if constant_time_eq::constant_time_eq(self.csrf_token.as_bytes(), csrf?.as_bytes()) {
             return Ok(());
         }

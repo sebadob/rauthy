@@ -113,7 +113,6 @@ impl ClientDyn {
     }
 
     pub fn validate_token(&self, bearer: &str) -> Result<(), ErrorResponse> {
-        // constant-time comparison to avoid leaking the registration token via timing
         if !constant_time_eq::constant_time_eq(
             self.registration_token_plain()?.as_bytes(),
             bearer.as_bytes(),

@@ -443,7 +443,6 @@ impl ApiKey {
             ));
         }
 
-        // constant-time comparison to avoid leaking the secret via timing
         if constant_time_eq::constant_time_eq(self.secret.as_slice(), sha256!(secret.as_bytes())) {
             Ok(())
         } else {
