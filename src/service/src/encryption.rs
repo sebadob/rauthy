@@ -5,8 +5,14 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::jwk::JWKS;
 use rauthy_data::entity::kv::{KVAccess, KVValue};
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::{error, info};
+
+/// How often the atomic per-row migration update is retried before the whole
+/// migration fails loudly. A concurrently changed row must be picked up by the
+/// retry (it re-reads the row); when it keeps losing the race, the migration
+/// errors instead of silently leaving a row behind.
+const MIGRATION_ATTEMPTS: u8 = 5;
 
 /// Migrates encrypted data in the backend to a new key.
 /// JWKS's are just rotated and a new set will be created.
@@ -32,30 +38,45 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
             continue;
         }
 
-        let dec = EncValue::try_from(client.secret.clone().unwrap())?.decrypt()?;
-        let enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
-            .into_bytes()
-            .to_vec();
+        // Atomic conditional update with bounded retry: a secret changed
+        // concurrently while the migration runs must be picked up on the next
+        // attempt (the row is re-read), never silently skipped. When the race is
+        // lost on every attempt, the whole migration fails loudly — when it
+        // returns Ok, ALL encrypted rows must have been migrated.
+        let mut migrated = false;
+        for _ in 0..MIGRATION_ATTEMPTS {
+            let dec = EncValue::try_from(client.secret.clone().unwrap())?.decrypt()?;
+            let enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+                .into_bytes()
+                .to_vec();
 
-        // atomic conditional update: never clobber a secret that was changed concurrently while the migration ran (the row's se...
-        let old_kid = client.secret_kid.clone().unwrap_or_default();
-        client.secret = Some(enc);
-        client.secret_kid = Some(new_kid.to_string());
-        if client
-            .update_secret_migrated(
-                client.secret.clone().unwrap(),
-                new_kid.to_string(),
-                &old_kid,
-            )
-            .await?
-        {
-            modified += 1;
-        } else {
-            error!(
-                "Skipped client '{}' during secret migration - secret was changed concurrently",
-                client.id
-            );
+            let old_kid = client.secret_kid.clone().unwrap_or_default();
+            client.secret = Some(enc);
+            client.secret_kid = Some(new_kid.to_string());
+            if client
+                .update_secret_migrated(
+                    client.secret.clone().unwrap(),
+                    new_kid.to_string(),
+                    &old_kid,
+                )
+                .await?
+            {
+                migrated = true;
+                break;
+            }
+            client = Client::find(client.id.clone()).await?;
         }
+        if !migrated {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!(
+                    "Secret migration failed for client '{}': the secret changed \
+                     concurrently on every attempt. Please re-run the migration.",
+                    client.id
+                ),
+            ));
+        }
+        modified += 1;
     }
     info!("Finished clients secrets migration to key id: {new_kid}");
 
@@ -70,32 +91,43 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
         // filter out all keys that already use the new key
         .filter(|k| k.enc_key_id != new_kid)
         .collect::<Vec<ApiKeyEntity>>();
-    for api_key in api_keys {
-        // secret
-        let dec = EncValue::try_from(api_key.secret.clone())?.decrypt()?;
-        let secret_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
-            .into_bytes()
-            .to_vec();
+    for mut api_key in api_keys {
+        // atomic conditional update with retry, same as for clients above
+        let mut migrated = false;
+        for _ in 0..MIGRATION_ATTEMPTS {
+            // secret
+            let dec = EncValue::try_from(api_key.secret.clone())?.decrypt()?;
+            let secret_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+                .into_bytes()
+                .to_vec();
 
-        // access rights
-        let dec = EncValue::try_from(api_key.access.clone())?.decrypt()?;
-        let access_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
-            .into_bytes()
-            .to_vec();
+            // access rights
+            let dec = EncValue::try_from(api_key.access.clone())?.decrypt()?;
+            let access_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+                .into_bytes()
+                .to_vec();
 
-        // atomic conditional update, see clients above
-        let old_kid = api_key.enc_key_id.clone();
-        if api_key
-            .save_migrated(secret_enc, access_enc, new_kid.to_string(), &old_kid)
-            .await?
-        {
-            modified += 1;
-        } else {
-            error!(
-                "Skipped API key '{}' during secret migration - secret was changed concurrently",
-                api_key.name
-            );
+            let old_kid = api_key.enc_key_id.clone();
+            if api_key
+                .save_migrated(secret_enc, access_enc, new_kid.to_string(), &old_kid)
+                .await?
+            {
+                migrated = true;
+                break;
+            }
+            api_key = ApiKeyEntity::find(&api_key.name).await?;
         }
+        if !migrated {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!(
+                    "Secret migration failed for API key '{}': the key changed \
+                     concurrently on every attempt. Please re-run the migration.",
+                    api_key.name
+                ),
+            ));
+        }
+        modified += 1;
     }
     info!("Finished ApiKeys migration to key id: {new_kid}");
 
