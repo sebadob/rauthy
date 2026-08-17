@@ -4,8 +4,7 @@ use rauthy_error::ErrorResponse;
 pub struct FailedLoginCounter;
 
 impl FailedLoginCounter {
-    /// Decay window for the per-IP failed-login count. hiqlite counters have no TTL, so the
-    /// count is stored as a plain TTL'd cache value instead (see fork-todo.md decision 3).
+    // / Decay window for the per-IP failed-login count. hiqlite counters have no TTL, so the / count is stored as a plain T...
     const TTL_SECS: i64 = 3600;
 
     fn cache_idx(ip: &str) -> String {
@@ -23,11 +22,7 @@ impl FailedLoginCounter {
     }
 
     pub async fn increase(ip: String) -> Result<i64, ErrorResponse> {
-        // Benign read-modify-write: this is a throttle heuristic, not a security or
-        // consistency boundary. A lost concurrent update shifts one sleep/blacklist tier by
-        // one attempt at most and self-corrects on the next attempt; no data corruption, no
-        // test flakiness (no timing in tests). The TTL provides the decay: after one hour
-        // without a failure the counter resets, so a stale IP is no longer throttled forever.
+        // Benign read-modify-write: this is a throttle heuristic, not a security or consistency boundary. A lost concurrent upd...
         let current = DB::hql()
             .get::<_, _, i64>(Cache::App, Self::cache_idx(&ip))
             .await?;

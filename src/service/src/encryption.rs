@@ -37,8 +37,7 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
             .into_bytes()
             .to_vec();
 
-        // atomic conditional update: never clobber a secret that was changed concurrently
-        // while the migration ran (the row's secret_kid must still be the old one)
+        // atomic conditional update: never clobber a secret that was changed concurrently while the migration ran (the row's se...
         let old_kid = client.secret_kid.clone().unwrap_or_default();
         client.secret = Some(enc);
         client.secret_kid = Some(new_kid.to_string());

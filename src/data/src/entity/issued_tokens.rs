@@ -20,9 +20,7 @@ pub struct IssuedToken {
 impl IssuedToken {
     pub async fn cleanup_expired() -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM issued_tokens WHERE exp < $1";
-        // Do NOT delete rows early: `validate_not_revoked` rejects tokens whose row is gone,
-        // so deleting anything with `exp < now + X` would make still-valid access tokens fail
-        // on userinfo / introspection / token exchange for up to X seconds before expiry.
+        // Do NOT delete rows early: `validate_not_revoked` rejects tokens whose row is gone, so deleting anything with `exp < n...
         let now = Utc::now().timestamp();
 
         let rows_affected = if is_hiqlite() {

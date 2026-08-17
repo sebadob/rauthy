@@ -267,11 +267,7 @@ pub async fn get_forward_auth_client_callback(
 
     // update session metadata
     let mut session = Session::find(sid).await?;
-    // Guard against resurrecting a session that was concurrently invalidated (global logout
-    // via `Session::invalidate_all`, user logout / password reset via `invalidate_for_user`):
-    // the auth code may still be valid while its session has already been killed. Without
-    // this check, the `upsert` below would restore the original `exp` and keep the session
-    // alive after a force logout.
+    // Guard against resurrecting a session that was concurrently invalidated (global logout via `Session::invalidate_all`, ...
     if session.exp <= Utc::now().timestamp() {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,

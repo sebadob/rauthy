@@ -96,10 +96,7 @@ pub async fn grant_type_authorization_code(
         ));
     }
 
-    // get the oidc code from the cache. A distributed lock serializes redemption of the
-    // SAME code, making single-use strict: two concurrent requests with one code cannot both
-    // pass (the cache get/delete alone is not atomic). The lock is held only for the
-    // find-validate-delete section below, before any token is issued.
+    // get the oidc code from the cache. A distributed lock serializes redemption of the SAME code, making single-use strict...
     let idx = req_data.code.as_ref().unwrap().to_owned();
     let _lock = DB::hql().lock(format!("auth_code_{idx}")).await?;
     let code = match AuthCode::find(idx).await? {
@@ -173,8 +170,7 @@ pub async fn grant_type_authorization_code(
         (None, granted) => granted.map(String::from),
     };
 
-    // claim the code (strict single-use, inside the distributed lock) BEFORE issuing any
-    // token: a replay after this point will not find the code anymore.
+    // claim the code (strict single-use, inside the distributed lock) BEFORE issuing any token: a replay after this point w...
     code.delete().await?;
 
     let user = User::find(code.user_id.clone()).await?;

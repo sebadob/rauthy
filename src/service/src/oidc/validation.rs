@@ -48,8 +48,7 @@ pub async fn validate_auth_req_param(
                 "'code_challenge' is missing",
             ));
         } else {
-            // 'plain' is the default method to be assumed by the OAuth specification when it is
-            // not further specified.
+            // 'plain' is the default method to be assumed by the OAuth specification when it is not further specified.
             let method = if let Some(m) = code_challenge_method {
                 m.to_owned()
             } else {
@@ -141,11 +140,7 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
-    // validate that it exists in the db and atomically claim it for one-time use.
-    // The old token is expired by the claim (rotation), so a stolen token cannot be replayed
-    // after legitimate use and two concurrent refreshes with the same token cannot both win.
-    // Note: this supersedes the previous grace-period extension
-    // (`refresh_token_grace_time` no longer keeps the old token usable after a refresh).
+    // validate that it exists in the db and atomically claim it for one-time use. The old token is expired by the claim (ro...
     let now = Utc::now().timestamp();
     let rt_scope = if let Some(device_id) = &claims.common.did {
         let rt = RefreshTokenDevice::find(validation_str).await?;

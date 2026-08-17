@@ -47,7 +47,7 @@ impl RefreshToken {
         scope: Option<String>,
         // TODO should we even save mfa for refresh tokens?
         //  even if the original token has been issued with mfa, the refresh
-        //  token not really is, because it can be given without user interaction.
+        // token not really is, because it can be given without user interaction.
         is_mfa: bool,
         session_id: Option<String>,
         access_token_jti: Option<String>,
@@ -168,11 +168,7 @@ impl RefreshToken {
         Ok(slf)
     }
 
-    /// Atomically claims this refresh token for one-time use. Returns `true` if the claim
-    /// succeeded (the token was still valid and this caller won), `false` if it was already
-    /// claimed or expired. The conditional UPDATE (`exp > now`) makes the claim atomic, so
-    /// two concurrent refreshes with the same token cannot both succeed, and a stolen token
-    /// cannot be replayed after legitimate use.
+    // / Atomically claims this refresh token for one-time use. Returns `true` if the claim / succeeded (the token was still...
     pub async fn claim(id: &str, now: i64) -> Result<bool, ErrorResponse> {
         let sql = "UPDATE refresh_tokens SET exp = $1 WHERE id = $2 AND exp > $1";
 

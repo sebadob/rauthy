@@ -14,7 +14,7 @@ use std::net::IpAddr;
 use std::ops::{Add, Sub};
 use tracing::{debug, error, warn};
 
-/// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
+// / Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
 pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> HttpResponse {
     let device_code = match &payload.device_code {
@@ -27,10 +27,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         Some(dc) => dc,
     };
 
-    // Serialize polling / verification of the SAME device code via a distributed lock: the
-    // find-check-delete of the device code is not atomic on its own, so two concurrent polls
-    // could both pass the `verified_by` check and each issue a full TokenSet. Holding the
-    // lock for the whole poll makes the grant strictly single-use.
+    // Serialize polling / verification of the SAME device code via a distributed lock: the find-check-delete of the device ...
     let _lock = match DB::hql().lock(format!("device_code_{device_code}")).await {
         Ok(lock) => lock,
         Err(err) => {

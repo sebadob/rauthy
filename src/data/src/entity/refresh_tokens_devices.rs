@@ -140,7 +140,7 @@ impl RefreshTokenDevice {
         Ok(slf)
     }
 
-    /// Atomically claims this device refresh token for one-time use. See `RefreshToken::claim`.
+    // / Atomically claims this device refresh token for one-time use. See `RefreshToken::claim`.
     pub async fn claim(id: &str, now: i64) -> Result<bool, ErrorResponse> {
         let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE id = $2 AND exp > $1";
 

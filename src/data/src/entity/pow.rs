@@ -29,8 +29,7 @@ impl PowEntity {
     }
 
     /// Checks re-usages of PoWs and prevents a future re-use.
-    /// The get+delete is serialized per challenge via a distributed lock, so two concurrent
-    /// requests cannot both consume the same challenge.
+    // / The get+delete is serialized per challenge via a distributed lock, so two concurrent / requests cannot both consume...
     pub async fn check_prevent_reuse(challenge: String) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 

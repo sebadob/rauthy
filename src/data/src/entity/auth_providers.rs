@@ -577,8 +577,7 @@ impl AuthProvider {
             client_secret_basic,
             client_secret_post,
             scope,
-            // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
-            // instead of typing them in?
+            // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI instead of typing them in?
         })
     }
 
@@ -811,8 +810,7 @@ impl AuthProviderCallback {
 
         if let Some(access_token) = ts.access_token {
             // the id_token only exists, if we actually have an OIDC provider.
-            // If we only get an access token, we need to do another request to the
-            // userinfo endpoint
+            // If we only get an access token, we need to do another request to the userinfo endpoint
             let res = http_client()
                 .get(&provider.userinfo_endpoint)
                 .header(AUTHORIZATION, format!("Bearer {access_token}"))

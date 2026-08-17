@@ -37,8 +37,7 @@ pub struct LogoutToken<'a> {
     pub sub: Option<&'a str>,
     pub sid: Option<&'a str>,
 
-    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
-    // `.is_none()` validation.
+    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy `.is_none()` validation.
     nonce: Option<&'a str>,
 }
 
@@ -153,9 +152,7 @@ impl LogoutToken<'_> {
         let mut buf = Vec::with_capacity(256);
         jwk.validate_token_signature(logout_token, &mut buf)?;
 
-        // Replay protection: an intercepted backchannel logout token must not be usable twice
-        // (a replay would re-trigger session termination / backchannel fan-out). Cache the `jti`
-        // for the token's validity window + clock skew; a second presentation is rejected.
+        // Replay protection: an intercepted backchannel logout token must not be usable twice (a replay would re-trigger sessio...
         let ttl = RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64
             + RauthyConfig::get().vars.backchannel_logout.allow_clock_skew as i64;
         let jti_idx = format!("bcl_jti_{}", slf.jti);

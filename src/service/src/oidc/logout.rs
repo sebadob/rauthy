@@ -30,6 +30,7 @@ use tracing::{debug, error, info};
 // We will allow more clock skew here for the token expiration validation to not be too
 // strict, as long as the signature of the token and all other things are valid.
 // This value could be made configurable, but it is probably not really worth it.
+/// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 static LOGOUT_TOKEN_CLOCK_SKEW: u16 = 600;
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
@@ -71,8 +72,7 @@ pub async fn get_logout_html(
         let uri_vec = client.get_post_logout_uris();
 
         // same host-boundary wildcard semantics + validation direction as
-        // `Client::validate_post_logout_redirect_uri`: a given target must match a
-        // configured URI (exact or wildcard with host/path boundary), otherwise reject.
+        // `Client::validate_post_logout_redirect_uri`: a given target must match a configured URI (exact or wildcard with host/...
         let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
             rauthy_data::entity::clients::wildcard_prefix_match(uri, &target) || target.eq(uri)
         });

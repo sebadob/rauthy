@@ -80,9 +80,7 @@ pub async fn grant_type_password(
         ));
     }
 
-    // This Error must be the same if user does not exist AND passwords do not match to prevent
-    // username enumeration. Returning the original NotFound / Forbidden errors here would leak
-    // whether an account exists and whether it is disabled or expired.
+    // This Error must be the same if user does not exist AND passwords do not match to prevent username enumeration. Return...
     let mut user = match User::find_by_email(String::from(email)).await {
         Ok(user) => user,
         Err(_) => {

@@ -24,11 +24,7 @@ impl CredStuffDetect {
 
     #[inline]
     async fn handle_trigger(ip: IpAddr, email: &str, password: &str) -> Result<(), ErrorResponse> {
-        // Each distinct (email, password) pair is stored under its own cache key with a
-        // scan-window TTL. This makes the counting race-free (previously a shared BTreeSet
-        // was read-modify-written, losing updates under parallel requests from the same IP,
-        // which let the blacklist threshold be bypassed), while keeping the de-duplication
-        // and TTL semantics of the old approach.
+        // Each distinct (email, password) pair is stored under its own cache key with a scan-window TTL. This makes the countin...
         let hash = sha256!(format!("{email}/{password}").as_bytes()).to_vec();
         let ip = ip.to_string();
         let key = format!("{ip}#{}", base64_url_no_pad_encode(&hash));
