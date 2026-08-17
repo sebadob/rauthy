@@ -80,22 +80,11 @@ pub async fn grant_type_password(
         ));
     }
 
-    // This Error must be the same if user does not exist AND passwords do not match to prevent username enumeration. Return...
-    let mut user = match User::find_by_email(String::from(email)).await {
-        Ok(user) => user,
-        Err(_) => {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid user credentials",
-            ));
-        }
-    };
-    if user.check_enabled().is_err() || user.check_expired().is_err() {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::Unauthorized,
-            "Invalid user credentials",
-        ));
-    }
+    // The password grant errors are normalized to one uniform response in
+    // `post_token` (never reveal whether the user exists, is disabled or expired).
+    let mut user = User::find_by_email(String::from(email)).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
 
     match user.validate_password(password.clone()).await {
         Ok(_) => {

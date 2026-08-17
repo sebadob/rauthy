@@ -1008,8 +1008,23 @@ pub async fn post_token(
             if !has_password_been_hashed {
                 return Err(err);
             }
-            // TODO return always the same error here as well, just like during authorize?
-            Err(err)
+            // One uniform error for every credential failure of the password grant:
+            // the caller must not learn whether the user exists, is disabled or
+            // expired, or the password was wrong. `PasswordExpired` is returned
+            // without verifying the password and would leak the account state, so
+            // it is masked too; `PasswordRefresh` (only reachable with the correct
+            // password) keeps its reset-email flow. Non-credential failures
+            // (client errors, rate limits, internal errors) pass through unchanged.
+            match &err.error {
+                ErrorResponseType::Disabled
+                | ErrorResponseType::NotFound
+                | ErrorResponseType::PasswordExpired
+                | ErrorResponseType::Unauthorized => Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Invalid user credentials",
+                )),
+                _ => Err(err),
+            }
         }
     };
 
