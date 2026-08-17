@@ -168,17 +168,28 @@ impl RefreshToken {
         Ok(slf)
     }
 
-    // / Atomically claims this refresh token for one-time use. Returns `true` if the claim / succeeded (the token was still...
-    pub async fn claim(id: &str, now: i64) -> Result<bool, ErrorResponse> {
-        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE id = $2 AND exp > $1";
+    /// Atomically claims this refresh token: the row must still be usable
+    /// (`exp > now`), and its exp moves to `now + grace`, so concurrent
+    /// refreshes within the grace window still succeed. Errors with `Forbidden`
+    /// when the token was already claimed or expired.
+    pub async fn claim(id: &str, now: i64, grace: i64) -> Result<(), ErrorResponse> {
+        let exp_at = now + grace;
+        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE id = $2 AND exp > $3";
 
         let rows_affected = if is_hiqlite() {
-            DB::hql().execute(sql, params!(now, id)).await?
+            DB::hql().execute(sql, params!(exp_at, id, now)).await?
         } else {
-            DB::pg_execute(sql, &[&now, &id]).await?
+            DB::pg_execute(sql, &[&exp_at, &id, &now]).await?
         };
 
-        Ok(rows_affected == 1)
+        if rows_affected == 1 {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Refresh token has already been used",
+            ))
+        }
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {

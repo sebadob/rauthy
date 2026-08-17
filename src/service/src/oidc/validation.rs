@@ -66,8 +66,14 @@ pub async fn validate_auth_req_param(
 /// token reuse the authorization server SHOULD revoke the grant family.
 async fn revoke_refresh_family(user_id: &str) -> Result<(), ErrorResponse> {
     RefreshToken::invalidate_for_user(user_id).await?;
-    RefreshTokenDevice::invalidate_for_user(user_id).await?;
-    IssuedToken::revoke_for_user(user_id, true).await?;
+    if RauthyConfig::get().vars.access.token_revoke_device_tokens {
+        RefreshTokenDevice::invalidate_for_user(user_id).await?;
+    }
+    IssuedToken::revoke_for_user(
+        user_id,
+        RauthyConfig::get().vars.access.token_revoke_device_tokens,
+    )
+    .await?;
     Session::invalidate_for_user(user_id).await?;
     Ok(())
 }
@@ -140,8 +146,12 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
-    // validate that it exists in the db and atomically claim it for one-time use. The old token is expired by the claim (ro...
+    // validate that it exists in the db and atomically claim it: the claim moves
+    // the row's exp to `now + refresh_token_grace_time`, so concurrent refreshes
+    // within the grace window still succeed, while a replay after it is detected
+    // and revokes the whole token family (RFC 6819 §5.2.1.3).
     let now = Utc::now().timestamp();
+    let grace = RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
     let rt_scope = if let Some(device_id) = &claims.common.did {
         let rt = RefreshTokenDevice::find(validation_str).await?;
 
@@ -158,9 +168,14 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
-        if !RefreshTokenDevice::claim(validation_str, now).await? {
+        if RefreshTokenDevice::claim(validation_str, now, grace)
+            .await
+            .is_err()
+        {
             // Replay / reuse of an already-used refresh token — treat as theft
             // (RFC 6819 §5.2.1.3): revoke the whole token family for the user.
+            // Device refresh tokens are only revoked if the admin opted in via
+            // `token_revoke_device_tokens` — they are painful to re-auth.
             warn!(
                 "Detected device refresh token reuse for user '{}' - revoking token family",
                 user.id
@@ -174,7 +189,10 @@ pub async fn validate_and_refresh_token(
         rt.scope
     } else {
         let rt = RefreshToken::find(validation_str).await?;
-        if !RefreshToken::claim(validation_str, now).await? {
+        if RefreshToken::claim(validation_str, now, grace)
+            .await
+            .is_err()
+        {
             // see above — replay of an already-used refresh token
             warn!(
                 "Detected refresh token reuse for user '{}' - revoking token family",
