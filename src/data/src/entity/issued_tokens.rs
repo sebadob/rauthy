@@ -20,8 +20,10 @@ pub struct IssuedToken {
 impl IssuedToken {
     pub async fn cleanup_expired() -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM issued_tokens WHERE exp < $1";
-        // Do NOT delete rows early: `validate_not_revoked` rejects tokens whose row is gone, so deleting anything with `exp < n...
-        let now = Utc::now().timestamp();
+        // Only a 1s clock-skew margin: `validate_not_revoked` rejects tokens whose
+        // row is gone, so deleting rows further before their expiry would reject
+        // still-valid tokens (the old 60s margin did exactly that).
+        let now = Utc::now().timestamp() - 1;
 
         let rows_affected = if is_hiqlite() {
             DB::hql().execute(sql, params!(now)).await?
