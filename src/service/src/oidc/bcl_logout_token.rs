@@ -2,7 +2,6 @@ use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use rauthy_api_types::oidc::Audience;
 use rauthy_common::utils::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
-use rauthy_data::database::{Cache, DB};
 use rauthy_data::entity::auth_providers::AuthProvider;
 use rauthy_data::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -151,24 +150,6 @@ impl LogoutToken<'_> {
         }
         let mut buf = Vec::with_capacity(256);
         jwk.validate_token_signature(logout_token, &mut buf)?;
-
-        // Replay protection: an intercepted backchannel logout token must not be usable twice (a replay would re-trigger sessio...
-        let ttl = RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64
-            + RauthyConfig::get().vars.backchannel_logout.allow_clock_skew as i64;
-        let jti_idx = format!("bcl_jti_{}", slf.jti);
-        if DB::hql()
-            .get::<_, _, ()>(Cache::App, &jti_idx)
-            .await?
-            .is_some()
-        {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "logout token has already been used",
-            ));
-        }
-        DB::hql()
-            .put(Cache::App, jti_idx, &(), Some(ttl.max(1)))
-            .await?;
 
         Ok(slf)
     }
