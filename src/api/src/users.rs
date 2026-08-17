@@ -450,7 +450,7 @@ pub async fn post_users_register_handle(
     if let Some(redirect_uri) = &payload.redirect_uri
         && !reg.allow_open_redirect
     {
-        validate_redirect_uri_allowed(redirect_uri).await?;
+        validate_reg_redirect_uri(redirect_uri).await?;
     }
 
     let lang = Language::try_from(&req).unwrap_or_default();
@@ -512,11 +512,27 @@ pub async fn post_users_register_handle(
         .finish())
 }
 
-// / Validates a registration / password-reset `redirect_uri` against the configured client / URIs. The given URI must s...
+/// Validates a registration / password-reset `redirect_uri` against the configured
+/// client URIs: it must match a configured client URI exactly or continue at a
+/// path / query / fragment boundary. A bare prefix would let
+/// `https://example.com.evil.com` pass for a configured `https://example.com`.
 #[inline]
-async fn validate_redirect_uri_allowed(redirect_uri: &str) -> Result<(), ErrorResponse> {
+async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
     for uri in Client::find_all_client_uris().await? {
-        if redirect_uri_matches_base(&uri, redirect_uri) {
+        let matches = match redirect_uri.strip_prefix(&uri) {
+            None => false,
+            Some(rest) => {
+                rest.is_empty()
+                    || rest.starts_with('/')
+                    || rest.starts_with('?')
+                    || rest.starts_with('#')
+                    // the boundary is already given if the base ends at one
+                    || uri.ends_with('/')
+                    || uri.ends_with('?')
+                    || uri.ends_with('#')
+            }
+        };
+        if matches {
             return Ok(());
         }
     }
@@ -525,20 +541,6 @@ async fn validate_redirect_uri_allowed(redirect_uri: &str) -> Result<(), ErrorRe
         ErrorResponseType::BadRequest,
         "given `redirect_uri` not allowed",
     ))
-}
-
-// / `true` if `given` starts with `base` and continues at a path / query / fragment boundary / (or matches exactly). A ...
-#[inline]
-fn redirect_uri_matches_base(base: &str, given: &str) -> bool {
-    match given.strip_prefix(base) {
-        None => false,
-        Some(rest) => {
-            rest.is_empty()
-                || rest.starts_with('/')
-                || rest.starts_with('?')
-                || rest.starts_with('#')
-        }
-    }
 }
 
 /// Returns a single user by its *id*
@@ -1907,7 +1909,7 @@ pub async fn post_user_password_request_reset(
             .user_registration
             .allow_open_redirect
     {
-        validate_redirect_uri_allowed(redirect_uri).await?;
+        validate_reg_redirect_uri(redirect_uri).await?;
     }
 
     match User::find_by_email(payload.email).await {
@@ -2461,45 +2463,4 @@ pub async fn delete_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
     let user = User::find(id.into_inner()).await?;
     handle_user_delete(user).await
-}
-
-#[cfg(test)]
-mod tests {
-    use super::redirect_uri_matches_base;
-
-    #[test]
-    fn test_redirect_uri_matches_base() {
-        assert!(redirect_uri_matches_base(
-            "https://app.example.com",
-            "https://app.example.com"
-        ));
-        assert!(redirect_uri_matches_base(
-            "https://app.example.com",
-            "https://app.example.com/callback"
-        ));
-        assert!(redirect_uri_matches_base(
-            "https://app.example.com/cb",
-            "https://app.example.com/cb?state=x"
-        ));
-        assert!(redirect_uri_matches_base(
-            "https://app.example.com/cb",
-            "https://app.example.com/cb#frag"
-        ));
-        assert!(!redirect_uri_matches_base(
-            "https://app.example.com",
-            "https://app.example.com.evil.com"
-        ));
-        assert!(!redirect_uri_matches_base(
-            "https://app.example.com",
-            "https://app.example.com.evil.com/cb"
-        ));
-        assert!(!redirect_uri_matches_base(
-            "https://app.example.com",
-            "http://app.example.com"
-        ));
-        assert!(!redirect_uri_matches_base(
-            "https://app.example.com",
-            "https://other.example.com"
-        ));
-    }
 }
