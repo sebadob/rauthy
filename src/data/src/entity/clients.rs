@@ -960,8 +960,11 @@ impl Client {
 
     /// Validates an RFC 8707 `resource` request value against this client's policy: it
     /// must match one of the client's configured `allowed_resources`. The entries are
-    /// matched verbatim, so an operator decides what a valid value looks like. Ephemeral
-    /// clients without their own allow-list are only permitted when
+    /// matched verbatim, so an operator decides what a valid value looks like. Dynamic
+    /// clients, and ephemeral clients whose document declares no allow-list of its own,
+    /// are matched against `dynamic_clients.allowed_resources` /
+    /// `ephemeral_clients.allowed_resources` instead, resolved from the live config and
+    /// never stored with the client; ephemeral clients are otherwise only permitted when
     /// `ephemeral_clients.danger_allow_unvalidated_resource` is enabled. On any failure
     /// an `invalid_target` error (RFC 8707 §2) is returned.
     pub fn validate_resource_request(&self, resource: &str) -> Result<(), ErrorResponse> {
@@ -972,14 +975,26 @@ impl Client {
             ));
         }
 
-        // A dynamic client is never allowed to set `allowed_resources` in the first place, so it
-        // can never have a match below. Rejecting it explicitly is cheap and keeps this robust if
-        // anything about the dynamic registration rules changes in the future.
+        // A dynamic client is never allowed to set `allowed_resources` in the first place, so
+        // it can never have a match below. The operator may allow-list specific resources for
+        // dynamic clients via `dynamic_clients.allowed_resources`, which is resolved from the
+        // live config on every request and never stored with the client. The list is empty by
+        // default, which keeps rejecting these requests like before.
         if self.is_dynamic() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::InvalidTarget,
-                "dynamic clients must not request a `resource`",
-            ));
+            let allowed = &RauthyConfig::get().vars.dynamic_clients.allowed_resources;
+            return if allowed.is_empty() {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "dynamic clients must not request a `resource`",
+                ))
+            } else if allowed.iter().any(|r| r == resource) {
+                Ok(())
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "the requested `resource` is not allowed for this client",
+                ))
+            };
         }
 
         let mut allowed = self.allowed_resources_iter().peekable();
@@ -993,10 +1008,20 @@ impl Client {
                 ))
             }
         } else if self.is_ephemeral()
-            && RauthyConfig::get()
+            // An ephemeral client document that declares its own `allowed_resources` has
+            // matched above; for one that declares none the operator's
+            // `ephemeral_clients.allowed_resources` is resolved from the live config the
+            // same way, without the blunt `danger_allow_unvalidated_resource`.
+            && (RauthyConfig::get()
                 .vars
                 .ephemeral_clients
-                .danger_allow_unvalidated_resource
+                .allowed_resources
+                .iter()
+                .any(|r| r == resource)
+                || RauthyConfig::get()
+                    .vars
+                    .ephemeral_clients
+                    .danger_allow_unvalidated_resource)
         {
             Ok(())
         } else {
