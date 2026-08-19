@@ -2283,6 +2283,47 @@ mod tests {
             "https://app.example.com*",
             "https://app.example.com/cb"
         ));
+        // a wildcard must only ever appear at the very end
+        assert!(!wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com/a/cb"
+        ));
+        assert!(!wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com/cb"
+        ));
+        assert!(!wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com//cb"
+        ));
+        // a prefix that already ends at a boundary matches any continuation
+        assert!(wildcard_prefix_match(
+            "https://example.com/*",
+            "https://example.com/app"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://example.com/*",
+            "https://example.com/"
+        ));
+        // a registered base with a trailing slash matches continuations after it
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app/foo"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app/"
+        ));
+        // but the bare base without the trailing slash is still not under `base/`
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app"
+        ));
+        // non-boundary continuation is still rejected
+        assert!(!wildcard_prefix_match(
+            "https://example.com/cb*",
+            "https://example.com/cbX"
+        ));
         // non-wildcard registered URIs never match via the helper
         assert!(!wildcard_prefix_match(
             "https://app.example.com/cb",
