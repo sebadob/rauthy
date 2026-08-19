@@ -120,9 +120,6 @@ async fn build_send_event(
         .unwrap();
     IpBlacklist::put(peer_ip.to_string(), nbf_seconds as i64).await?;
 
-    // Reset the counter when the IP gets blacklisted: the blacklist TTL then acts as the decay window.
-    FailedLoginCounter::reset(peer_ip.to_string()).await?;
-
     Err(ErrorResponse::new(
         ErrorResponseType::TooManyRequests(ts),
         html,
