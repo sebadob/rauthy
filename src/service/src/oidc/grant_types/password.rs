@@ -80,11 +80,17 @@ pub async fn grant_type_password(
         ));
     }
 
-    // The password grant errors are normalized to one uniform response in
-    // `post_token` (never reveal whether the user exists, is disabled or expired).
-    let mut user = User::find_by_email(String::from(email)).await?;
-    user.check_enabled()?;
-    user.check_expired()?;
+    // The token endpoint must not reveal whether the user exists, is disabled or
+    // expired, or whether the password was wrong: every error from the credential
+    // checks below is converted to this one uniform response. `PasswordRefresh`
+    // (only reachable with the correct password) keeps its reset-email flow.
+    let mut user = match User::find_by_email(String::from(email)).await {
+        Ok(user) => user,
+        Err(_) => return Err(invalid_credentials()),
+    };
+    if user.check_enabled().is_err() || user.check_expired().is_err() {
+        return Err(invalid_credentials());
+    }
 
     match user.validate_password(password.clone()).await {
         Ok(_) => {
@@ -148,7 +154,20 @@ pub async fn grant_type_password(
             user.save(None).await?;
 
             // TODO add expo increasing sleeps after failed login attempts here?
-            Err(err)
+            // the reset-email flow passes through (only reachable with the correct
+            // password); every other failure is a credential probe and gets masked
+            match err.error {
+                ErrorResponseType::PasswordRefresh => Err(err),
+                ErrorResponseType::Unauthorized
+                | ErrorResponseType::PasswordExpired
+                | ErrorResponseType::Disabled => Err(invalid_credentials()),
+                _ => Err(err),
+            }
         }
     }
+}
+
+/// The one error the token endpoint may return for a failed password grant.
+fn invalid_credentials() -> ErrorResponse {
+    ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid user credentials")
 }
