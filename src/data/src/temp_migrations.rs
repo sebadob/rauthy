@@ -1,52 +1,78 @@
-use crate::database::DB;
-use crate::entity::roles::Role;
-use hiqlite::macros::params;
-use rauthy_common::constants::RAUTHY_ADMIN_GROUP_PREFIX;
-use rauthy_common::is_hiqlite;
+use crate::database::{Cache, DB};
+use crate::entity::db_version::DbVersion;
 use rauthy_error::ErrorResponse;
-use tracing::{info, warn};
+use semver::Version;
+use tracing::info;
 
-pub async fn apply_temp_migrations() -> Result<(), ErrorResponse> {
-    // cleanup possibly lingering PAM user groups
-    let sql = r#"
-DELETE FROM pam_groups
-WHERE typ = 'user' AND NOT EXISTS (
-    SELECT 1 FROM pam_users
-    WHERE pam_users.name = pam_groups.name
-)"#;
-    let rows_affected = if is_hiqlite() {
-        DB::hql().execute(sql, params!()).await?
-    } else {
-        DB::pg_execute(sql, &[]).await?
-    };
-    if rows_affected > 0 {
-        info!("Cleaned up {rows_affected} lingering PAM Groups from and older cleanup bug");
+/// Cache namespaces that must not survive a minor upgrade. The hiqlite cache is
+/// persisted in the WAL and restored on restart: single-use claims, per-IP abuse
+/// counters and ephemeral client state written by the previous version would
+/// otherwise linger until the next WAL compaction.
+const CACHE_WAL_CLEANUP: [Cache; 12] = [
+    Cache::AuthCode,
+    Cache::AuthProviderCallback,
+    Cache::ClientDynamic,
+    Cache::ClientEphemeral,
+    Cache::ClientSecret,
+    Cache::CredStuffDetect,
+    Cache::DeviceCode,
+    Cache::DPoPNonce,
+    Cache::EmailRateLimit,
+    Cache::IpBlacklist,
+    Cache::IpRateLimit,
+    Cache::PoW,
+];
+
+/// `previous_db_version` is the version the database was created / last upgraded
+/// to (captured by [`crate::database::DB::migrate`] before the upgrade) and is
+/// `None` on a fresh install.
+pub async fn apply_temp_migrations(
+    previous_db_version: Option<Version>,
+) -> Result<(), ErrorResponse> {
+    if let Some(previous) = previous_db_version {
+        let app = DbVersion::app_version();
+        if needs_cache_wal_cleanup(&previous, &app) {
+            info!("Cleaning up cache WAL entries written by v{previous}");
+            let client = DB::hql();
+            for cache in CACHE_WAL_CLEANUP {
+                client.clear_cache(cache).await?;
+            }
+        }
     }
-
-    warn_existing_group_admin_roles().await?;
 
     Ok(())
 }
 
-/// The delegated group-admin feature reads roles named `rauthy_admin:<prefix>`
-/// as group admins. This is non-breaking unless such a role already existed before the
-/// upgrade, in which case its holders silently gain group-admin rights. We warn about
-/// any matching role on each startup for the whole `v0.36` cycle so operators can spot
-/// an unintended collision; roles created intentionally afterwards can ignore it.
-async fn warn_existing_group_admin_roles() -> Result<(), ErrorResponse> {
-    let found = Role::find_all()
-        .await?
-        .into_iter()
-        .filter(|r| r.name.starts_with(RAUTHY_ADMIN_GROUP_PREFIX))
-        .map(|r| r.name)
-        .collect::<Vec<_>>();
-    if !found.is_empty() {
-        warn!(
-            "Found custom roles matching the delegated group-admin scheme \
-            `rauthy_admin:<prefix>`: {found:?}. Their holders are now group admins for \
-            the matching groups. If you created these intentionally, you \
-            can safely ignore this warning."
-        );
+/// The cache WAL cleanup runs when the stored DB version predates the current
+/// minor release: cache entries from an older minor are stale by definition.
+fn needs_cache_wal_cleanup(previous: &Version, app: &Version) -> bool {
+    previous.major != app.major || previous.minor < app.minor
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn v(s: &str) -> Version {
+        Version::parse(s).unwrap()
     }
-    Ok(())
+
+    #[test]
+    fn cache_wal_cleanup_runs_on_minor_upgrade() {
+        assert!(needs_cache_wal_cleanup(
+            &v("0.36.2"),
+            &v("0.37.0-nightly.1")
+        ));
+        assert!(needs_cache_wal_cleanup(&v("0.36.0"), &v("0.37.0")));
+    }
+
+    #[test]
+    fn cache_wal_cleanup_skips_same_or_newer_minor() {
+        assert!(!needs_cache_wal_cleanup(
+            &v("0.37.0-nightly.1"),
+            &v("0.37.0-nightly.2"),
+        ));
+        assert!(!needs_cache_wal_cleanup(&v("0.37.0"), &v("0.37.0")));
+        assert!(!needs_cache_wal_cleanup(&v("0.37.0"), &v("0.36.2")));
+    }
 }

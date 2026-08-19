@@ -107,7 +107,7 @@ pub async fn run(
     tokio::spawn(password_hasher::run());
 
     debug!("Applying database migrations");
-    DB::migrate().await.expect("Database migration error");
+    let previous_db_version = DB::migrate().await.expect("Database migration error");
 
     debug!("Starting Events handler");
     EventNotifier::init_notifiers(tx_email).await.unwrap();
@@ -121,7 +121,9 @@ pub async fn run(
     tokio::spawn(watch_health());
 
     // Loop, because you could get into a race condition when recovery a HA Leader after lost volume
-    while let Err(err) = version_migration::manual_version_migrations().await {
+    while let Err(err) =
+        version_migration::manual_version_migrations(previous_db_version.clone()).await
+    {
         error!("Error during version migration: {err:?}");
         time::sleep(Duration::from_secs(1)).await;
     }

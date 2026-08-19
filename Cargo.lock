@@ -4952,7 +4952,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4986,6 +4986,7 @@ dependencies = [
  "rpassword",
  "rustls",
  "s3-simple",
+ "semver",
  "serde",
  "serde_json",
  "spow",
@@ -5002,7 +5003,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -5022,7 +5023,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -5053,7 +5054,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5139,7 +5140,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5148,7 +5149,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5185,7 +5186,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5222,7 +5223,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "chrono",
  "openssl",
@@ -5239,7 +5240,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5255,7 +5256,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5271,7 +5272,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5290,7 +5291,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5318,7 +5319,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.36.2"
+version = "0.37.0-nightly.1"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
