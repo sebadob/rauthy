@@ -1394,6 +1394,20 @@ impl Client {
                 ))
             }
         } else if code_challenge.is_some() || code_challenge_method.is_some() {
+            // A dynamic client cannot say at registration time whether it is going to use
+            // PKCE, which is why confidential dynamic clients have no `challenge` configured.
+            // When such a client decides to send one anyway, it is accepted as an optional
+            // addon instead of being rejected: the challenge is saved with the auth code and
+            // the `code_verifier` is validated during the token exchange as usual. It is
+            // still not required - a confidential dynamic client without a challenge keeps
+            // working like before.
+            if self.is_dynamic()
+                && code_challenge.is_some()
+                && code_challenge_method.as_deref() == Some("S256")
+            {
+                return Ok(());
+            }
+
             trace!("'code_challenge' not enabled for this client");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -2010,6 +2024,49 @@ mod tests {
         let mut only_unknown = vec!["urn:ietf:params:oauth:grant-type:jwt-bearer".to_string()];
         retain_supported_grant_types(&mut only_unknown);
         assert!(only_unknown.is_empty());
+    }
+
+    #[test]
+    fn validate_code_challenge_optional_for_dynamic_clients() {
+        // A confidential dynamic client registers without a `challenge`, but one it sends
+        // on its own is accepted as an optional addon (S256 only) instead of being
+        // rejected with "'code_challenge' not enabled for this client".
+        let client = Client {
+            id: "dyn$WdCH3aeUpM5NDF8fDBHTLTqLLLZ8gwWl".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+
+        let challenge = Some("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM".to_string());
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_ok()
+        );
+        // still not required
+        assert!(client.validate_code_challenge(&None, &None).is_ok());
+        // `plain` adds nothing for a confidential client and stays rejected, as does
+        // a challenge without a method (which implies `plain`)
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("plain".to_string()))
+                .is_err()
+        );
+        assert!(client.validate_code_challenge(&challenge, &None).is_err());
+
+        // any other client without a configured challenge keeps the strict behaviour
+        let client = Client {
+            id: "not_dynamic".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_err()
+        );
     }
 
     #[test]
