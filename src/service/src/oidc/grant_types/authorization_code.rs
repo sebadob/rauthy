@@ -10,6 +10,7 @@ use chrono::Utc;
 use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
+use rauthy_data::database::Cache;
 use rauthy_data::database::DB;
 use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::clients::Client;
@@ -96,10 +97,9 @@ pub async fn grant_type_authorization_code(
         ));
     }
 
-    // get the oidc code from the cache. A distributed lock serializes redemption of the SAME code, making single-use strict...
+    // peek the oidc code for validation; the atomic single-use claim happens right before token issuance
     let idx = req_data.code.as_ref().unwrap().to_owned();
-    let _lock = DB::hql().lock(format!("auth_code_{idx}")).await?;
-    let code = match AuthCode::find(idx).await? {
+    let code = match AuthCode::find(idx.clone()).await? {
         None => {
             warn!(
                 "'auth_code' could not be found inside the cache - Host: {}",
@@ -170,8 +170,18 @@ pub async fn grant_type_authorization_code(
         (None, granted) => granted.map(String::from),
     };
 
-    // claim the code (strict single-use, inside the distributed lock) BEFORE issuing any token: a replay after this point w...
-    code.delete().await?;
+    // claim the code atomically right before issuing any token: a concurrent
+    // redemption gets `None` here and is rejected
+    let code: AuthCode = match DB::hql().get_remove(Cache::AuthCode, idx).await? {
+        Some(code) => code,
+        None => {
+            warn!("'auth_code' has already been claimed");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "'auth_code' could not be found inside the cache",
+            ));
+        }
+    };
 
     let user = User::find(code.user_id.clone()).await?;
     let token_set = TokenSet::from_user(

@@ -28,25 +28,19 @@ impl PowEntity {
         Ok(pow)
     }
 
-    /// Checks re-usages of PoWs and prevents a future re-use.
-    // / The get+delete is serialized per challenge via a distributed lock, so two concurrent / requests cannot both consume...
+    /// Checks re-usages of PoWs and prevents a future re-use. The challenge is
+    /// consumed atomically: `get_remove` claims it in one raft entry, so two
+    /// concurrent requests cannot both consume it.
     pub async fn check_prevent_reuse(challenge: String) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let _lock = client.lock(format!("pow_{challenge}")).await?;
-
-        let opt: Option<Pow> = client.get(Cache::PoW, challenge).await?;
-        let pow = match opt {
-            Some(pow) => pow,
-            None => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::NotFound,
-                    "PoW not found",
-                ));
-            }
-        };
-
-        client.delete(Cache::PoW, pow.challenge).await?;
-        Ok(())
+        let claimed: Option<Pow> = client.get_remove(Cache::PoW, challenge).await?;
+        match claimed {
+            Some(_) => Ok(()),
+            None => Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "PoW not found",
+            )),
+        }
     }
 }

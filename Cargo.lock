@@ -2801,8 +2801,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8711815c093414290a5fcbc0bf74e1e70e3d6ef37e21735000178d25cee6fcf0"
+source = "git+https://github.com/sebadob/hiqlite.git#1a4e345beb6c934e87a9f6d3255332fb30f5f2c4"
 dependencies = [
  "argon2",
  "axum",
@@ -2861,8 +2860,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-derive"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "262ec752546b183ecab006d9a34e2a0811a7141ad0b575cc68c7ac61f30de53e"
+source = "git+https://github.com/sebadob/hiqlite.git#1a4e345beb6c934e87a9f6d3255332fb30f5f2c4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2872,8 +2870,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "247fc29e082f38fdf25270f6a5d7148284c9710384c3bce21636608dc104fddf"
+source = "git+https://github.com/sebadob/hiqlite.git#1a4e345beb6c934e87a9f6d3255332fb30f5f2c4"
 dependencies = [
  "bincode",
  "byteorder",

@@ -3,6 +3,7 @@ use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
 use rauthy_common::utils::new_store_id;
+use rauthy_data::database::Cache;
 use rauthy_data::database::DB;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::{DeviceAuthCode, DeviceEntity};
@@ -14,7 +15,7 @@ use std::net::IpAddr;
 use std::ops::{Add, Sub};
 use tracing::{debug, error, warn};
 
-// / Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
+// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
 pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> HttpResponse {
     let device_code = match &payload.device_code {
@@ -27,18 +28,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         Some(dc) => dc,
     };
 
-    // Serialize polling / verification of the SAME device code via a distributed lock: the find-check-delete of the device ...
-    let _lock = match DB::hql().lock(format!("device_code_{device_code}")).await {
-        Ok(lock) => lock,
-        Err(err) => {
-            error!(?err, "acquiring distributed lock for device code");
-            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidRequest,
-                error_description: Some(Cow::from("internal error")),
-            });
-        }
-    };
-
+    // Polls and verifications are serialized by the atomic claim below: the code
+    // stays readable while pending and is consumed exactly once when verified.
     let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {
@@ -141,10 +132,28 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             None
         };
 
-        if let Err(err) = code.delete().await {
-            // should really never happen - in cache only
-            error!(?err, "deleting DeviceAuthCode");
-        }
+        // claim the code atomically: a concurrent verified poll gets `None` here and is rejected
+        let code: DeviceAuthCode = match DB::hql()
+            .get_remove(Cache::DeviceCode, code.user_code().to_string())
+            .await
+        {
+            Ok(Some(code)) => code,
+            Ok(None) => {
+                return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::ExpiredToken,
+                    error_description: Some(Cow::from(
+                        "invalid `device_code` or request has expired",
+                    )),
+                });
+            }
+            Err(err) => {
+                error!(?err, "claiming DeviceAuthCode");
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from("internal error")),
+                });
+            }
+        };
 
         let id = new_store_id();
         let device = DeviceEntity {
