@@ -648,6 +648,11 @@ pub struct AuthProviderCallback {
     pub req_nonce: Option<String>,
     pub req_code_challenge: Option<String>,
     pub req_code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator from the authorization request (#1702).
+    /// `default` so a callback cached by the previous version still decodes
+    /// during a rolling upgrade.
+    #[serde(default)]
+    pub req_resource: Option<String>,
 
     pub provider_id: String,
 

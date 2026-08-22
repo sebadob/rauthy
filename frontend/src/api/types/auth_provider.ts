@@ -71,6 +71,8 @@ export interface ProviderLoginRequest {
     /// Validation: PATTERN_CODE_CHALLENGE
     code_challenge?: string;
     code_challenge_method?: CodeChallengeMethod;
+    /// Validation: PATTERN_RESOURCE — RFC 8707 resource indicator
+    resource?: string;
 
     // values for the callback from upstream
     /// Validation: PATTERN_URI
