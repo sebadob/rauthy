@@ -120,9 +120,7 @@ pub async fn login_finish<'a>(
             nonce: slf.req_nonce,
             code_challenge: slf.req_code_challenge,
             code_challenge_method: slf.req_code_challenge_method,
-            // brokered logins via an upstream IdP do not propagate RFC 8707 resource
-            // indicators yet
-            resource: None,
+            resource: slf.req_resource,
             header_origin,
             require_webauthn,
         },

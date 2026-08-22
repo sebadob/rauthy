@@ -1,7 +1,7 @@
 use crate::cust_validation::validate_vec_scopes;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_SCOPE_SPACE,
-    RE_URI,
+    RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_RESOURCE,
+    RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_derive::FromPgRow;
 use serde::{Deserialize, Serialize};
@@ -125,6 +125,13 @@ pub struct ProviderLoginRequest {
     /// Validation: `[a-zA-Z0-9]`
     #[validate(regex(path = "*RE_ALNUM", code = "[a-zA-Z0-9]"))]
     pub code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator from the authorization request. Carried
+    /// through the upstream-provider round trip and into the auth code, exactly
+    /// like `LoginRequest.resource`, so the token request may repeat it.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
+    pub resource: Option<String>,
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
         path = "*RE_CLIENT_ID",
@@ -205,4 +212,52 @@ pub struct ProviderLookupResponse {
     pub use_pkce: bool,
     pub client_secret_basic: bool,
     pub client_secret_post: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use validator::Validate;
+
+    // Regression tests for RFC 8707 `resource` being dropped on upstream-provider
+    // logins (#1702). The provider login request must carry a `resource` just like
+    // `LoginRequest` / `LoginRefreshRequest`, so the auth code minted after the
+    // upstream round trip is audience-bound and the token request may repeat it.
+    #[test]
+    fn provider_login_request_carries_valid_resource() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "https://mcp.example.com/mcp",
+            "pow": "abc123",
+            "provider_id": "google",
+            "pkce_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        }"#;
+
+        let req: ProviderLoginRequest =
+            serde_json::from_str(json).expect("must deserialize the resource field");
+        assert_eq!(req.resource.as_deref(), Some("https://mcp.example.com/mcp"));
+        assert!(
+            req.validate().is_ok(),
+            "a valid absolute-URI resource must pass validation"
+        );
+    }
+
+    #[test]
+    fn provider_login_request_rejects_invalid_resource() {
+        let json = r#"{
+            "client_id": "my-client",
+            "redirect_uri": "https://app.example.com/callback",
+            "resource": "https://mcp.example.com/mcp#fragment",
+            "pow": "abc123",
+            "provider_id": "google",
+            "pkce_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        }"#;
+
+        let req: ProviderLoginRequest = serde_json::from_str(json).expect("must deserialize");
+        assert!(
+            req.validate().is_err(),
+            "RFC 8707 forbids a fragment in `resource`; validation must reject it"
+        );
+    }
 }
