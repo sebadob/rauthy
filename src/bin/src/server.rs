@@ -95,6 +95,12 @@ pub async fn run(
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
 
+    let cache_data_dir = node_config.data_dir.to_string();
+    let cache_storage_disk = node_config.cache_storage_disk;
+    rauthy_data::temp_migrations::prepare_cache_wal(&cache_data_dir, cache_storage_disk)
+        .await
+        .map_err(|err| std::io::Error::other(err.to_string()))?;
+
     DB::init(node_config)
         .await
         .expect("Error starting the database / cache layer");
@@ -127,6 +133,10 @@ pub async fn run(
         error!("Error during version migration: {err:?}");
         time::sleep(Duration::from_secs(1)).await;
     }
+
+    rauthy_data::temp_migrations::mark_cache_wal_current(&cache_data_dir, cache_storage_disk)
+        .await
+        .map_err(|err| std::io::Error::other(err.to_string()))?;
 
     UserPicture::test_config().await.unwrap();
 

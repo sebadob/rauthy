@@ -169,7 +169,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .await?;
     res = check_status(res, 200).await?;
     let ts = res.json::<TokenSet>().await?;
-    assert!(ts.access_token.len() > 0);
+    assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
     assert_eq!(ts.expires_in, 60);
@@ -243,7 +243,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     res = check_status(res, 200).await?;
 
     let ts = res.json::<TokenSet>().await?;
-    assert!(ts.access_token.len() > 0);
+    assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
     assert_eq!(ts.expires_in, 60);
@@ -340,7 +340,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     res = check_status(res, 200).await?;
 
     let ts = res.json::<TokenSet>().await?;
-    assert!(ts.access_token.len() > 0);
+    assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
     assert_eq!(ts.expires_in, 60);
@@ -378,7 +378,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     res = check_status(res, 200).await?;
 
     let ts = res.json::<TokenSet>().await?;
-    assert!(ts.access_token.len() > 0);
+    assert!(!ts.access_token.is_empty());
     assert_eq!(ts.token_type, JwtTokenType::Bearer);
     assert_eq!(ts.expires_in, 60);
     // important: no id token for client_credentials and not refresh token
@@ -518,11 +518,11 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     res = check_status(res, 200).await?;
 
     let ts = res.json::<TokenSet>().await?;
-    assert!(ts.access_token.len() > 0);
+    assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
-    assert!(ts.id_token.as_ref().unwrap().len() > 0);
+    assert!(!ts.id_token.as_ref().unwrap().is_empty());
     assert!(ts.refresh_token.is_some());
-    assert!(ts.refresh_token.as_ref().unwrap().len() > 0);
+    assert!(!ts.refresh_token.as_ref().unwrap().is_empty());
     // test token is valid for only 60 seconds to make the refresh token valid immediately
     assert_eq!(ts.expires_in, 60);
 
@@ -550,11 +550,11 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     let res = reqwest::Client::new().post(&url).form(&req).send().await?;
     assert_eq!(res.status(), 200);
     let new_ts = res.json::<TokenSet>().await?;
-    assert!(new_ts.access_token.len() > 0);
+    assert!(!new_ts.access_token.is_empty());
     assert!(new_ts.id_token.is_some());
-    assert!(new_ts.id_token.as_ref().unwrap().len() > 0);
+    assert!(!new_ts.id_token.as_ref().unwrap().is_empty());
     assert!(new_ts.refresh_token.is_some());
-    assert!(new_ts.refresh_token.as_ref().unwrap().len() > 0);
+    assert!(!new_ts.refresh_token.as_ref().unwrap().is_empty());
     assert_eq!(new_ts.expires_in, 60);
 
     assert_ne!(ts.refresh_token, new_ts.refresh_token);
@@ -795,7 +795,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     assert!(res.status().is_success());
 
     let ts = res.json::<TokenSet>().await?;
-    assert!(ts.access_token.len() > 0);
+    assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
     assert_eq!(ts.expires_in, 60);
@@ -812,7 +812,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     assert!(res.status().is_success());
 
     let new_ts = res.json::<TokenSet>().await?;
-    assert!(ts.access_token.len() > 0);
+    assert!(!ts.access_token.is_empty());
     assert!(new_ts.id_token.is_some());
     assert!(new_ts.refresh_token.is_some());
 
@@ -1065,7 +1065,7 @@ async fn test_token_revocation() -> Result<(), Box<dyn Error>> {
 
     // make sure it works for the userinfo in the same way
     let res = reqwest::Client::new()
-        .get(&format!("{}/oidc/userinfo", get_backend_url()))
+        .get(format!("{}/oidc/userinfo", get_backend_url()))
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
         .send()
         .await?;
@@ -1165,7 +1165,7 @@ async fn validate_token(
 
 async fn validate_token_request(token: String) -> Result<reqwest::Response, Box<dyn Error>> {
     let res = reqwest::Client::new()
-        .post(&format!("{}/oidc/introspect", get_backend_url()))
+        .post(format!("{}/oidc/introspect", get_backend_url()))
         .header(AUTHORIZATION, format!("Bearer {}", token))
         .form(&TokenValidationRequest { token })
         .send()

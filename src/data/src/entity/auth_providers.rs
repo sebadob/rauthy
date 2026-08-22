@@ -1483,7 +1483,7 @@ mod tests {
 
         let path = JsonPath::parse("$.foo.bar[*]").unwrap();
         let nodes = path.query(&value).all();
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("baz"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("baz"));
         assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
         assert_eq!(
             nodes.get(2).unwrap().as_number(),
@@ -1503,7 +1503,7 @@ mod tests {
         let path = JsonPath::parse("$.foo.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
 
         // we cannot query for single values with the wildcard in the end
         // -> add 2 possible cases in the checking code for best UX
@@ -1515,7 +1515,7 @@ mod tests {
         let path = JsonPath::parse("$.*.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
     }
 
     #[test]

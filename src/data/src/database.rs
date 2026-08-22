@@ -224,10 +224,7 @@ impl DB {
         Ok(())
     }
 
-    /// Applies the SQL migrations and updates the stored DB version.
-    ///
-    /// Returns the DB version from *before* this upgrade (or `None` for a fresh
-    /// install) — temp migrations use it to run upgrade-only cleanups.
+    /// Applies migrations and returns the pre-migration DB version.
     pub async fn migrate() -> Result<Option<Version>, ErrorResponse> {
         // before we do any db migrations, we need to check the current DB version
         // for compatibility

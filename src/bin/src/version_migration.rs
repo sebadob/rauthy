@@ -2,12 +2,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use semver::Version;
 
-/// If it's necessary to apply manual migrations between major versions, which are
-/// not handled automatically by database migrations, put them here. This function
-/// will be executed at startup after DB init and before the API start.
-///
-/// `previous_db_version` is the version the database was created / last upgraded
-/// to, captured by `DB::migrate()` before it applied this upgrade.
+/// Runs upgrade-only work after database migrations.
 pub async fn manual_version_migrations(
     previous_db_version: Option<Version>,
 ) -> Result<(), ErrorResponse> {
