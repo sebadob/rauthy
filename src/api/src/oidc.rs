@@ -1005,8 +1005,6 @@ pub async fn post_token(
         }
         Err(err) => {
             error!("{}", err.message);
-            // credential failures of the password grant are already normalized to
-            // one uniform response inside `grant_type_password`
             Err(err)
         }
     };

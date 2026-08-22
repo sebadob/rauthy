@@ -27,10 +27,7 @@ use std::string::ToString;
 use tokio::task::JoinSet;
 use tracing::{debug, error, info};
 
-// We will allow more clock skew here for the token expiration validation to not be too
-// strict, as long as the signature of the token and all other things are valid.
-// This value could be made configurable, but it is probably not really worth it.
-/// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
+// Allow a small clock-skew margin for logout token validation.
 static LOGOUT_TOKEN_CLOCK_SKEW: u16 = 600;
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)

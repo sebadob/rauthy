@@ -97,7 +97,6 @@ pub async fn grant_type_authorization_code(
         ));
     }
 
-    // peek the oidc code for validation; the atomic single-use claim happens right before token issuance
     let idx = req_data.code.as_ref().unwrap().to_owned();
     let code = match AuthCode::find(idx.clone()).await? {
         None => {
@@ -170,8 +169,7 @@ pub async fn grant_type_authorization_code(
         (None, granted) => granted.map(String::from),
     };
 
-    // claim the code atomically right before issuing any token: a concurrent
-    // redemption gets `None` here and is rejected
+    // Claim immediately before issuing tokens.
     let code: AuthCode = match DB::hql().get_remove(Cache::AuthCode, idx).await? {
         Some(code) => code,
         None => {
@@ -201,8 +199,6 @@ pub async fn grant_type_authorization_code(
     // update session metadata
     if let Some(sid) = code.session_id.clone() {
         let mut session = Session::find(sid).await?;
-        // never resurrect a session that was concurrently invalidated (force logout / password
-        // reset) while the auth code was waiting to be redeemed
         if session.exp > Utc::now().timestamp() {
             session.set_authenticated(&user).await?;
         }

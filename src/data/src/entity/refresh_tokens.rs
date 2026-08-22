@@ -168,10 +168,7 @@ impl RefreshToken {
         Ok(slf)
     }
 
-    /// Atomically claims this refresh token: the row must still be usable
-    /// (`exp > now`), and its exp moves to `now + grace`, so concurrent
-    /// refreshes within the grace window still succeed. Errors with `Forbidden`
-    /// when the token was already claimed or expired.
+    /// Claims the token while it is still usable and advances its expiry by `grace`.
     pub async fn claim(id: &str, now: i64, grace: i64) -> Result<(), ErrorResponse> {
         let exp_at = now + grace;
         let sql = "UPDATE refresh_tokens SET exp = $1 WHERE id = $2 AND exp > $3";

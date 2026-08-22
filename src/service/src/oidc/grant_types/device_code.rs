@@ -28,8 +28,6 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         Some(dc) => dc,
     };
 
-    // Polls and verifications are serialized by the atomic claim below: the code
-    // stays readable while pending and is consumed exactly once when verified.
     let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {
@@ -132,7 +130,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             None
         };
 
-        // claim the code atomically: a concurrent verified poll gets `None` here and is rejected
+        // Claim immediately before issuing tokens.
         let code: DeviceAuthCode = match DB::hql()
             .get_remove(Cache::DeviceCode, code.user_code().to_string())
             .await

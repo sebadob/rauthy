@@ -75,11 +75,7 @@ pub async fn login_start<'a>(
         .handle
         .filter(|_| provider.issuer == PROVIDER_ATPROTO)
     {
-        // SSRF hardening: the atproto OAuth client resolves the user-supplied identifier
-        // server-side (did:web -> https fetch of the DID document, handle -> DNS + HTTPS).
-        // Validate the target host BEFORE handing it to the resolver so a crafted
-        // `did:web:127.0.0.1...` / `user@localhost` cannot probe loopback / private /
-        // cloud-metadata endpoints.
+        // Reject literal internal hosts before server-side atproto resolution.
         validate_atproto_identifier(&input)?;
 
         let atproto = atproto::Client::get();
@@ -119,37 +115,27 @@ pub async fn login_start<'a>(
     ))
 }
 
-/// Rejects atproto identifiers whose resolution target is a loopback / private / link-local /
-/// multicast / unspecified host. The atproto OAuth client fetches the DID document or handle
-/// resolution target server-side, so a user-supplied identifier must not point at internal
-/// endpoints (SSRF surface, e.g. `did:web:127.0.0.1:443` or `alice@localhost`).
+/// Rejects literal internal hosts in atproto identifiers.
 fn validate_atproto_identifier(input: &str) -> Result<(), ErrorResponse> {
     let host: String = if let Some((_, host)) = input.rsplit_once('@') {
-        // handle: `alice@example.com`
         host.to_string()
     } else if let Some(rest) = input.strip_prefix("did:web:") {
-        // did:web:example.com[:user][:path]  (':' separators, '%3A' encodes a port)
         rest.split(':')
             .next()
             .unwrap_or_default()
             .replace("%3A", ":")
+            .replace("%3a", ":")
     } else {
-        // did:plc / did:key / other — resolved via the fixed, admin-configured
-        // PLC directory; no user-controlled host to validate here
         return Ok(());
     };
 
     let host = host.trim();
 
-    // Extract the raw IP literal, ignoring brackets and an optional port, so that
-    // `alice@127.0.0.1:8080` / `alice@[::1]:8080` are still caught.
     let ip_literal = if let Some(rest) = host.strip_prefix('[') {
-        // [ipv6] or [ipv6]:port
         rest.split(']').next().unwrap_or("")
     } else if host.parse::<std::net::IpAddr>().is_ok() {
         host
     } else if let Some((h, _)) = host.rsplit_once(':') {
-        // possibly `<ipv4>:<port>` — check the part before the last colon
         if h.parse::<std::net::IpAddr>().is_ok() {
             h
         } else {
@@ -159,7 +145,16 @@ fn validate_atproto_identifier(input: &str) -> Result<(), ErrorResponse> {
         host
     };
 
-    let host_plain = host.trim_matches(['[', ']']);
+    let host_plain = if let Some(rest) = host.strip_prefix('[') {
+        rest.split(']').next().unwrap_or(rest)
+    } else if let Some((prefix, port)) = host.rsplit_once(':')
+        && !prefix.ends_with(':')
+        && port.chars().all(|c| c.is_ascii_digit())
+    {
+        prefix
+    } else {
+        host.trim_matches(['[', ']'])
+    };
     if host_plain.is_empty() || host_plain.eq_ignore_ascii_case("localhost") {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -196,20 +191,20 @@ mod tests {
 
     #[test]
     fn test_validate_atproto_identifier() {
-        // public handles / DIDs pass
         assert!(validate_atproto_identifier("alice@example.com").is_ok());
         assert!(validate_atproto_identifier("did:web:example.com").is_ok());
         assert!(validate_atproto_identifier("did:web:example.com:user:path").is_ok());
         assert!(validate_atproto_identifier("did:plc:abc123").is_ok());
         assert!(validate_atproto_identifier("did:key:z6Mk...").is_ok());
-        // loopback / localhost rejected
         assert!(validate_atproto_identifier("alice@localhost").is_err());
+        assert!(validate_atproto_identifier("alice@localhost:8080").is_err());
         assert!(validate_atproto_identifier("alice@127.0.0.1").is_err());
         assert!(validate_atproto_identifier("alice@127.0.0.1:8080").is_err());
         assert!(validate_atproto_identifier("alice@[::1]:8080").is_err());
         assert!(validate_atproto_identifier("did:web:localhost").is_err());
+        assert!(validate_atproto_identifier("did:web:localhost%3A8080").is_err());
+        assert!(validate_atproto_identifier("did:web:127.0.0.1%3a443").is_err());
         assert!(validate_atproto_identifier("did:web:127.0.0.1:443:user").is_err());
-        // private / link-local / metadata ranges rejected
         assert!(validate_atproto_identifier("did:web:10.0.0.1").is_err());
         assert!(validate_atproto_identifier("did:web:172.16.0.1").is_err());
         assert!(validate_atproto_identifier("did:web:192.168.1.1").is_err());

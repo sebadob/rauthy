@@ -8,10 +8,7 @@ use rauthy_data::entity::kv::{KVAccess, KVValue};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::{error, info};
 
-/// How often the atomic per-row migration update is retried before the whole
-/// migration fails loudly. A concurrently changed row must be picked up by the
-/// retry (it re-reads the row); when it keeps losing the race, the migration
-/// errors instead of silently leaving a row behind.
+/// Maximum retries for a concurrent per-row migration update.
 const MIGRATION_ATTEMPTS: u8 = 5;
 
 /// Migrates encrypted data in the backend to a new key.
@@ -38,11 +35,6 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
             continue;
         }
 
-        // Atomic conditional update with bounded retry: a secret changed
-        // concurrently while the migration runs must be picked up on the next
-        // attempt (the row is re-read), never silently skipped. When the race is
-        // lost on every attempt, the whole migration fails loudly — when it
-        // returns Ok, ALL encrypted rows must have been migrated.
         let mut migrated = false;
         for _ in 0..MIGRATION_ATTEMPTS {
             let dec = EncValue::try_from(client.secret.clone().unwrap())?.decrypt()?;
@@ -92,16 +84,13 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
         .filter(|k| k.enc_key_id != new_kid)
         .collect::<Vec<ApiKeyEntity>>();
     for mut api_key in api_keys {
-        // atomic conditional update with retry, same as for clients above
         let mut migrated = false;
         for _ in 0..MIGRATION_ATTEMPTS {
-            // secret
             let dec = EncValue::try_from(api_key.secret.clone())?.decrypt()?;
             let secret_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
                 .into_bytes()
                 .to_vec();
 
-            // access rights
             let dec = EncValue::try_from(api_key.access.clone())?.decrypt()?;
             let access_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
                 .into_bytes()

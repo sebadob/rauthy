@@ -80,10 +80,7 @@ pub async fn grant_type_password(
         ));
     }
 
-    // The token endpoint must not reveal whether the user exists, is disabled or
-    // expired, or whether the password was wrong: every error from the credential
-    // checks below is converted to this one uniform response. `PasswordRefresh`
-    // (only reachable with the correct password) keeps its reset-email flow.
+    // Normalize credential failures; PasswordRefresh remains actionable.
     let mut user = match User::find_by_email(String::from(email)).await {
         Ok(user) => user,
         Err(_) => return Err(invalid_credentials()),
@@ -154,8 +151,6 @@ pub async fn grant_type_password(
             user.save(None).await?;
 
             // TODO add expo increasing sleeps after failed login attempts here?
-            // the reset-email flow passes through (only reachable with the correct
-            // password); every other failure is a credential probe and gets masked
             match err.error {
                 ErrorResponseType::PasswordRefresh => Err(err),
                 ErrorResponseType::Unauthorized
@@ -167,7 +162,7 @@ pub async fn grant_type_password(
     }
 }
 
-/// The one error the token endpoint may return for a failed password grant.
+/// Returns the uniform password-grant failure.
 fn invalid_credentials() -> ErrorResponse {
     ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid user credentials")
 }

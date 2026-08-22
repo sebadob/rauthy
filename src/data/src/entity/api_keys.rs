@@ -268,9 +268,7 @@ WHERE name = $5"#;
         Ok(())
     }
 
-    /// Atomically migrates the encrypted secret + access rights to a new key, but only while
-    /// the row still uses `old_kid`. Returns `true` when the update applied. Used by the
-    /// encryption key migration so a concurrently changed API key is not clobbered.
+    /// Migrates encrypted fields only when the row still uses `old_kid`.
     pub async fn save_migrated(
         &self,
         secret: Vec<u8>,

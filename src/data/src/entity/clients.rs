@@ -1586,14 +1586,8 @@ impl Client {
     }
 }
 
-/// Validates a single dynamic-client `redirect_uri`: absolute, https (http loopback allowed
-/// for RFC 8252 native apps), and no wildcard (the wildcard prefix matching in
-/// `validate_redirect_uri` would otherwise turn a registered `https://*` into an open redirect
-/// / authorization-code leak).
-/// Dynamic client registration may be unauthenticated: the `backchannel_logout_uri` field is
-/// rejected outright (RFC 7591 does not require it), because it is fetched server-side on
-/// logout and a hostname-based SSRF surface cannot be closed with a sync allow-list check
-/// (DNS rebinding). See fork-todo.md decision 1.
+/// Validates a dynamic-client redirect URI.
+/// Rejects backchannel callbacks for dynamic clients.
 fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
     if opt.is_some() {
         return Err(ErrorResponse::new(
@@ -1635,17 +1629,9 @@ fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-/// Wildcard redirect-URI match with a host/path boundary.
-///
-/// A registered `https://app.example.com/callback*` matches any URI starting with
-/// `https://app.example.com/callback` (path boundary inherent). A bare-host wildcard such as
-/// `https://app.example.com*` must NOT match `https://app.example.com.evil.com`: the
-/// requested URI must continue at a path / query / fragment boundary (or match exactly),
-/// which keeps the host confusion class closed for static clients as well.
+/// Matches wildcard redirect URIs without crossing a host/path boundary.
 #[inline]
 pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
-    // `strip_suffix` enforces that the wildcard is the very last character and
-    // scans from the end, which is the only place a wildcard is allowed.
     let Some(prefix) = registered.strip_suffix('*') else {
         return false;
     };
@@ -1656,7 +1642,6 @@ pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
                 || rest.starts_with('/')
                 || rest.starts_with('?')
                 || rest.starts_with('#')
-                // the boundary is already given if the prefix itself ends at one
                 || prefix.ends_with('/')
                 || prefix.ends_with('?')
                 || prefix.ends_with('#')
@@ -2001,17 +1986,7 @@ impl Client {
             .default_scopes
             .join(",");
 
-        // Dynamic client registration may be unauthenticated, so the URIs we accept must be
-        // strictly validated here:
-        // - `redirect_uris` must be absolute and https (http loopback allowed for RFC 8252
-        //   native apps). Wildcards (`*`) are rejected: the wildcard prefix matching in
-        //   `validate_redirect_uri` would otherwise turn a registered `https://*` into an open
-        //   redirect / authorization-code leak.
-        // - `backchannel_logout_uri` is NOT accepted for dynamic clients at all: it is fetched
-        //   server-side on logout, and dynamic registration may be unauthenticated, so even a
-        //   hardened allow-list leaves a hostname-based SSRF surface (DNS rebinding defeats any
-        //   sync IP check). RFC 7591 does not require the field; static clients (admin-created)
-        //   keep the capability. See fork-todo.md decision 1.
+        // Dynamic registration accepts only validated redirect URIs and no backchannel callback.
         validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
 
         let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
@@ -2021,6 +1996,10 @@ impl Client {
         }
 
         let backchannel_logout_uri = None;
+        let post_logout_redirect_uri = req.post_logout_redirect_uri.filter(|uri| !uri.is_empty());
+        if let Some(uri) = &post_logout_redirect_uri {
+            validate_dyn_redirect_uri(uri)?;
+        }
 
         Ok(Self {
             id,
@@ -2030,7 +2009,7 @@ impl Client {
             secret,
             secret_kid,
             redirect_uris: redirect_uris.join(","),
-            post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
+            post_logout_redirect_uris: post_logout_redirect_uri,
             allowed_origins,
             flows_enabled: GrantType::csv(&req.grant_types),
             access_token_alg,

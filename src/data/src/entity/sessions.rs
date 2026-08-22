@@ -362,9 +362,7 @@ OFFSET $3"#;
     }
 
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
-        // An expired session must never be written back: that would resurrect a
-        // force-logged-out or expired session (state promotion, last_seen, mfa).
-        // Invalidation has dedicated functions and never goes through upsert.
+        // Never write expired sessions back.
         if self.exp < Utc::now().timestamp() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -426,13 +424,7 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         Ok(())
     }
 
-    /// Refreshes only the `last_seen` timestamp of a session that is still valid.
-    ///
-    /// Unlike `upsert`, this never inserts a row and never resurrects a session that was
-    /// concurrently invalidated (force-logout via `invalidate_all` / `invalidate_for_user`
-    /// or an expired `exp`): the UPDATE is guarded by `exp > now`, and the cache is only
-    /// refreshed when the UPDATE actually matched a row. Used by the auth middleware for
-    /// the periodic last-seen bump, so an in-flight request cannot undo a logout.
+    /// Refreshes `last_seen` without inserting or resurrecting a session.
     pub async fn touch_last_seen(&self) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         let sql = "UPDATE sessions SET last_seen = $1 WHERE id = $2 AND exp > $1";
@@ -639,14 +631,7 @@ impl Session {
             .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "invalid SessionState"))
     }
 
-    /// Checks if the current session is valid: has not expired and has not timed out (last_seen).
-    /// Also makes sure that a session in `SessionState::Init` is only allowed if the `req_path`
-    /// is included in the exceptions.
-    ///
-    /// If this returns `true` the session is valid AND authenticated, or it is in init state and
-    /// explicitly allowed for endpoints like `/auth/v1/oidc/authorize` and `/auth/v1/oidc/token`.
-    ///
-    /// Only validates `session.remote_ip` if `remote_ip` is `Some(_)`.
+    /// Checks expiry, timeout, state, and the optional remote IP.
     pub fn is_valid(
         &self,
         session_timeout: u32,
@@ -669,10 +654,7 @@ impl Session {
             }
         };
 
-        // A session in `SessionState::Init` is only allowed on explicitly listed login
-        // endpoints. This must hold regardless of whether IP validation is enabled
-        // (`session_validate_ip`): otherwise the exception list is silently bypassed for
-        // every path whenever no remote IP is passed in.
+        // Init sessions are valid only on the explicit login endpoints.
         let init_allowed = match state {
             SessionState::Auth => true,
             SessionState::Init => {
@@ -715,8 +697,6 @@ impl Session {
             _ => false,
         };
 
-        // The IP check only applies when a remote IP is passed in (i.e. when
-        // `session_validate_ip` is enabled).
         if let Some(remote_ip) = remote_ip {
             let session_ip = self
                 .remote_ip
@@ -851,7 +831,6 @@ mod tests {
     fn test_session_validation() -> Result<(), ErrorResponse> {
         let mut s = Session::new(3600, None);
 
-        // New sessions are always in init state. Make sure they are correctly validated.
         let path_exep_1 = "/auth/v1/oidc/authorize";
         let path_exep_2 = "/auth/v1/oidc/token";
 
@@ -863,10 +842,8 @@ mod tests {
         assert!(s.is_valid(600, Some(ip), path_exep_1));
         assert!(s.is_valid(600, Some(ip), path_exep_2));
 
-        // only exact path matches may be exceptions, so anything else will be invalid
         assert!(!s.is_valid(600, Some(ip), "/"));
 
-        // check authenticated sessions
         s.state = SessionState::Auth;
         assert!(s.is_valid(600, Some(ip), "/"));
 
@@ -875,23 +852,17 @@ mod tests {
 
     #[test]
     fn test_init_session_needs_exception_path_without_ip_validation() {
-        // Regression: with `session_validate_ip` disabled (remote_ip = None), an Init-state
-        // session must NOT be accepted on arbitrary paths. Before the fix, `is_valid`
-        // returned early with `true` whenever no remote IP was passed in.
         let s = Session::new(3600, None);
         assert!(!s.is_valid(600, None, "/"));
         assert!(!s.is_valid(600, None, "/auth/v1/users"));
 
-        // the explicit exception paths stay allowed
         assert!(s.is_valid(600, None, "/auth/v1/oidc/authorize"));
         assert!(s.is_valid(600, None, "/auth/v1/oidc/token"));
 
-        // Auth-state sessions remain valid without IP validation
         let mut a = Session::new(3600, None);
         a.state = SessionState::Auth;
         assert!(a.is_valid(600, None, "/"));
 
-        // LoggedOut / Unknown states are never valid
         let mut l = Session::new(3600, None);
         l.state = SessionState::LoggedOut;
         assert!(!l.is_valid(600, None, "/"));

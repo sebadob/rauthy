@@ -512,10 +512,7 @@ pub async fn post_users_register_handle(
         .finish())
 }
 
-/// Validates a registration / password-reset `redirect_uri` against the configured
-/// client URIs: it must match a configured client URI exactly or continue at a
-/// path / query / fragment boundary. A bare prefix would let
-/// `https://example.com.evil.com` pass for a configured `https://example.com`.
+/// Validates a registration or password-reset redirect URI against configured clients.
 #[inline]
 async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
     for uri in Client::find_all_client_uris().await? {
@@ -526,7 +523,6 @@ async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorRespon
                     || rest.starts_with('/')
                     || rest.starts_with('?')
                     || rest.starts_with('#')
-                    // the boundary is already given if the base ends at one
                     || uri.ends_with('/')
                     || uri.ends_with('?')
                     || uri.ends_with('#')
@@ -1611,7 +1607,7 @@ pub async fn delete_webauthn(
 
             warn!("Passkey delete for user {} for key {}", id, name);
         } else {
-            // a group admin resetting MFA for a user it manages; the cheap group-admin check runs before the DB lookup
+            // Check group-admin scope before loading the target.
             principal.validate_group_admin_session()?;
             let target = User::find(id.clone()).await?;
             principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
@@ -1900,9 +1896,7 @@ pub async fn post_user_password_request_reset(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    // The post-reset redirect must be allow-listed: it ends up as a Location header in the
-    // browser after the password reset. Without validation, a crafted request_reset link
-    // could funnel the victim into an attacker-controlled page after the reset.
+    // Keep password-reset redirects on the configured client allow-list.
     if let Some(redirect_uri) = &payload.redirect_uri
         && !RauthyConfig::get()
             .vars
@@ -2322,12 +2316,8 @@ pub async fn post_user_self_convert_passkey(
 pub async fn get_user_values_config(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // There is no need to validate session or API key if the registration is open anyway.
-    // In this case, anyone can pull out the same information from the HTML.
-    // a delegated group admin needs this read-only config too: the Admin UI cannot render
-    // the user details view without it
+    // Open registration exposes this config in the registration page.
     if !RauthyConfig::get().vars.user_registration.enable {
-        // a delegated group admin needs this read-only config too: the Admin UI cannot render the user details view without it
         principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     }
     Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
