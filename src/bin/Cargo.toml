@@ -5,10 +5,17 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description.workspace = true
+# keeps `cargo run` on the server binary now that a second bin target exists
+default-run = "rauthy"
 
 [features]
 default = ["jemalloc"]
 jemalloc = ["dep:tikv-jemallocator"]
+
+# Offline tool that regenerates the shipped FIDO MDS dataset. Not built into the server image.
+[[bin]]
+name = "fido-mds-prep"
+path = "src/fido_mds_prep.rs"
 
 [dependencies]
 rauthy-common = { path = "../common" }

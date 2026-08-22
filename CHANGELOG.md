@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+
+#### FIDO Metadata Service Dataset (Groundwork)
+
+Rauthy now ships a prepared snapshot of the FIDO Alliance Metadata Service (MDS) and seeds it into
+three new tables on startup, on a fresh instance or one upgrading into this version. This is the
+groundwork for optionally enforcing authenticator attestation later on (rejecting Passkeys whose
+authenticator is unknown to, or not certified strongly enough by, the MDS). No enforcement happens
+yet: a nullable `passkeys.aaguid` column is added but never written, and existing logins are
+unaffected. The dataset can be regenerated from the live service with `just fido-mds-prep`.
+
+[#1677](https://github.com/sebadob/rauthy/pull/1677)
+
 ## v0.36.2
 
 ### Security
