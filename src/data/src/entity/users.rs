@@ -1807,10 +1807,10 @@ impl User {
     pub async fn get_otp_kind(&self) -> Result<Vec<ActiveOtp>, ErrorResponse> {
         Ok(OneTimePassword::find_for_user(&self.id)
             .await?
-            .iter()
-            .map(|f: &OneTimePassword| ActiveOtp {
-                otp_kind: f.kind.clone(),
-                otp_id: f.id.clone(),
+            .into_iter()
+            .map(|f| ActiveOtp {
+                otp_id: f.id,
+                otp_kind: f.kind,
             })
             .collect())
     }

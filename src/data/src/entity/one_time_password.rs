@@ -45,7 +45,6 @@ use std::{
     fmt::{Debug, Formatter},
     ops::Add,
 };
-use time::OffsetDateTime;
 use tracing::info;
 use utoipa::ToSchema;
 
@@ -337,9 +336,8 @@ impl OneTimePassword {
                     ));
                 }
             }
-            // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time | OtpKind::Phone => {
-                unreachable!()
+                unimplemented!()
             }
         };
 
@@ -349,7 +347,7 @@ impl OneTimePassword {
     pub async fn request_otp(&mut self) -> Result<(), ErrorResponse> {
         let user = User::find(self.user_id.clone()).await?;
 
-        let current_time = OffsetDateTime::now_utc().unix_timestamp();
+        let current_time = Utc::now().timestamp();
         let code_len = RauthyConfig::get().vars.otp.length;
         let code = Self::generate_otp(
             &self.secret,
@@ -365,9 +363,8 @@ impl OneTimePassword {
                 let code = format!("{} {}", &code[0..code_len / 2], &code[code_len / 2..]);
                 send_email_otp(&code, &user).await;
             }
-            // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time | OtpKind::Phone => {
-                unreachable!()
+                unimplemented!()
             }
         };
         Ok(())

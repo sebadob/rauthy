@@ -12,3 +12,6 @@ create table one_time_password
     kind        varchar    not null,
     is_active   boolean default false not null
 );
+
+create index one_time_password_user_id_index
+    on one_time_password (user_id);
