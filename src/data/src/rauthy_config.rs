@@ -403,6 +403,7 @@ impl Default for Vars {
                 cleanup_minutes: 60,
                 cleanup_inactive_days: 0,
                 rate_limit_sec: 60,
+                allowed_resources: Vec::default(),
             },
             email: VarsEmail {
                 rauthy_admin_email: None,
@@ -460,6 +461,7 @@ impl Default for Vars {
                 cache_lifetime: 3600,
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
+                allowed_resources: Vec::default(),
             },
             events: VarsEvents {
                 email: None,
@@ -1931,6 +1933,14 @@ impl Vars {
         ) {
             self.dynamic_clients.rate_limit_sec = v;
         }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "dynamic_clients",
+            "allowed_resources",
+            "DYN_CLIENT_ALLOWED_RESOURCES",
+        ) {
+            self.dynamic_clients.allowed_resources = v;
+        }
 
         check_table_empty(table, "dynamic_clients");
     }
@@ -2209,6 +2219,15 @@ impl Vars {
             "EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS",
         ) {
             self.ephemeral_clients.ignore_unknown_auth_flows = v;
+        }
+
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "ephemeral_clients",
+            "allowed_resources",
+            "EPHEMERAL_CLIENTS_ALLOWED_RESOURCES",
+        ) {
+            self.ephemeral_clients.allowed_resources = v;
         }
 
         check_table_empty(table, "ephemeral_clients");
@@ -3915,6 +3934,10 @@ pub struct VarsDynamicClients {
     pub cleanup_minutes: u32,
     pub cleanup_inactive_days: u32,
     pub rate_limit_sec: u32,
+    /// RFC 8707 allow-list for dynamic clients, which cannot declare `allowed_resources`
+    /// themselves. Resolved from the live config on every request, never stored with the
+    /// client. Empty by default, which keeps deny-by-default.
+    pub allowed_resources: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -3992,6 +4015,10 @@ pub struct VarsEphemeralClients {
     /// clients; dynamic client registration (DCR) and admin-managed clients keep rejecting
     /// unknown grant types. Default reject.
     pub ignore_unknown_auth_flows: bool,
+    /// RFC 8707 allow-list applied when an ephemeral client document declares no
+    /// `allowed_resources` of its own. Keeps deny-by-default while letting an operator
+    /// permit specific resources without `danger_allow_unvalidated_resource`.
+    pub allowed_resources: Vec<String>,
 }
 
 #[derive(Debug)]

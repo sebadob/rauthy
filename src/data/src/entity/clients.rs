@@ -960,8 +960,11 @@ impl Client {
 
     /// Validates an RFC 8707 `resource` request value against this client's policy: it
     /// must match one of the client's configured `allowed_resources`. The entries are
-    /// matched verbatim, so an operator decides what a valid value looks like. Ephemeral
-    /// clients without their own allow-list are only permitted when
+    /// matched verbatim, so an operator decides what a valid value looks like. Dynamic
+    /// clients, and ephemeral clients whose document declares no allow-list of its own,
+    /// are matched against `dynamic_clients.allowed_resources` /
+    /// `ephemeral_clients.allowed_resources` instead, resolved from the live config and
+    /// never stored with the client; ephemeral clients are otherwise only permitted when
     /// `ephemeral_clients.danger_allow_unvalidated_resource` is enabled. On any failure
     /// an `invalid_target` error (RFC 8707 §2) is returned.
     pub fn validate_resource_request(&self, resource: &str) -> Result<(), ErrorResponse> {
@@ -972,14 +975,26 @@ impl Client {
             ));
         }
 
-        // A dynamic client is never allowed to set `allowed_resources` in the first place, so it
-        // can never have a match below. Rejecting it explicitly is cheap and keeps this robust if
-        // anything about the dynamic registration rules changes in the future.
+        // A dynamic client is never allowed to set `allowed_resources` in the first place, so
+        // it can never have a match below. The operator may allow-list specific resources for
+        // dynamic clients via `dynamic_clients.allowed_resources`, which is resolved from the
+        // live config on every request and never stored with the client. The list is empty by
+        // default, which keeps rejecting these requests like before.
         if self.is_dynamic() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::InvalidTarget,
-                "dynamic clients must not request a `resource`",
-            ));
+            let allowed = &RauthyConfig::get().vars.dynamic_clients.allowed_resources;
+            return if allowed.is_empty() {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "dynamic clients must not request a `resource`",
+                ))
+            } else if allowed.iter().any(|r| r == resource) {
+                Ok(())
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "the requested `resource` is not allowed for this client",
+                ))
+            };
         }
 
         let mut allowed = self.allowed_resources_iter().peekable();
@@ -993,10 +1008,20 @@ impl Client {
                 ))
             }
         } else if self.is_ephemeral()
-            && RauthyConfig::get()
+            // An ephemeral client document that declares its own `allowed_resources` has
+            // matched above; for one that declares none the operator's
+            // `ephemeral_clients.allowed_resources` is resolved from the live config the
+            // same way, without the blunt `danger_allow_unvalidated_resource`.
+            && (RauthyConfig::get()
                 .vars
                 .ephemeral_clients
-                .danger_allow_unvalidated_resource
+                .allowed_resources
+                .iter()
+                .any(|r| r == resource)
+                || RauthyConfig::get()
+                    .vars
+                    .ephemeral_clients
+                    .danger_allow_unvalidated_resource)
         {
             Ok(())
         } else {
@@ -1395,6 +1420,20 @@ impl Client {
                 ))
             }
         } else if code_challenge.is_some() || code_challenge_method.is_some() {
+            // A dynamic client cannot say at registration time whether it is going to use
+            // PKCE, which is why confidential dynamic clients have no `challenge` configured.
+            // When such a client decides to send one anyway, it is accepted as an optional
+            // addon instead of being rejected: the challenge is saved with the auth code and
+            // the `code_verifier` is validated during the token exchange as usual. It is
+            // still not required - a confidential dynamic client without a challenge keeps
+            // working like before.
+            if self.is_dynamic()
+                && code_challenge.is_some()
+                && code_challenge_method.as_deref() == Some("S256")
+            {
+                return Ok(());
+            }
+
             trace!("'code_challenge' not enabled for this client");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -2011,6 +2050,49 @@ mod tests {
         let mut only_unknown = vec!["urn:ietf:params:oauth:grant-type:jwt-bearer".to_string()];
         retain_supported_grant_types(&mut only_unknown);
         assert!(only_unknown.is_empty());
+    }
+
+    #[test]
+    fn validate_code_challenge_optional_for_dynamic_clients() {
+        // A confidential dynamic client registers without a `challenge`, but one it sends
+        // on its own is accepted as an optional addon (S256 only) instead of being
+        // rejected with "'code_challenge' not enabled for this client".
+        let client = Client {
+            id: "dyn$WdCH3aeUpM5NDF8fDBHTLTqLLLZ8gwWl".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+
+        let challenge = Some("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM".to_string());
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_ok()
+        );
+        // still not required
+        assert!(client.validate_code_challenge(&None, &None).is_ok());
+        // `plain` adds nothing for a confidential client and stays rejected, as does
+        // a challenge without a method (which implies `plain`)
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("plain".to_string()))
+                .is_err()
+        );
+        assert!(client.validate_code_challenge(&challenge, &None).is_err());
+
+        // any other client without a configured challenge keeps the strict behaviour
+        let client = Client {
+            id: "not_dynamic".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_err()
+        );
     }
 
     #[test]

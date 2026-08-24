@@ -1112,6 +1112,17 @@ enable = true
 # overwritten by: DYN_CLIENT_ALLOWED_SCOPES - single String, \n separated values
 allowed_scopes = ['openid', 'profile', 'email', 'groups']
 
+# RFC 8707 resource indicators a dynamically registered client may request. A
+# dynamic client cannot declare `allowed_resources` itself, so without this it can
+# never request a `resource`; an MCP client, which must send one, would otherwise
+# get `invalid_target`. Resolved from the live config on every request and never
+# stored with the client. Entries are matched verbatim. An empty list keeps the
+# default deny.
+#
+# default: []
+# overwritten by: DYN_CLIENT_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
+
 # The default scopes separated by ' ' for dynamic clients.
 #
 # default: ['openid']
@@ -1494,6 +1505,16 @@ cache_lifetime = 3600
 # default: false
 # overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
 #danger_allow_unvalidated_resource = false
+
+# RFC 8707 resource indicators allowed when an ephemeral client document declares
+# none of its own (a CIMD document you do not control cannot declare them). Keeps
+# the default deny without the blunt `danger_allow_unvalidated_resource`. A document
+# that declares its own resources still wins. Resolved from the live config on every
+# request. Entries are matched verbatim.
+#
+# default: []
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
 
 # A dynamic client registration is always rejected when it advertises a grant
 # type Rauthy does not support. Some spec-valid CIMD clients (e.g. claude.ai)

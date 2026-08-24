@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.36.1"
+version = "0.36.2"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
@@ -119,7 +119,7 @@ lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
 libflate = "2.1.0"
-maxminddb = "0.29"
+maxminddb = "0.30"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
