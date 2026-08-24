@@ -105,6 +105,12 @@ theme's timestamp, which is what busts the long-lived client-side cache for the 
 
 [#1706](https://github.com/sebadob/rauthy/pull/1706)
 
+### Bugfix
+
+- The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`
+  instead of `360`, so the gradient ended on red instead of spanning the full spectrum.
+  [#1706](https://github.com/sebadob/rauthy/pull/1706)
+
 ## v0.36.2
 
 ### Security

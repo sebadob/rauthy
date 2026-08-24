@@ -42,7 +42,7 @@
                     hsl(180 ${sat}% ${lum}%) 50%,
                     hsl(240 ${sat}% ${lum}%) 67%,
                     hsl(300 ${sat}% ${lum}%) 83%,
-                    hsl(3600 ${sat}% ${lum}%) 100%
+                    hsl(360 ${sat}% ${lum}%) 100%
                 )`;
             }
             if (bgMode === 'sat') {
