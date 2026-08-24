@@ -36,20 +36,20 @@
             if (bgMode === 'hue') {
                 return `linear-gradient(
                     to right,
-                    hsl(0 ${sat} ${lum}) 0%,
-                    hsl(60 ${sat} ${lum}) 17%,
-                    hsl(120 ${sat} ${lum}) 33%,
-                    hsl(180 ${sat} ${lum}) 50%,
-                    hsl(240 ${sat} ${lum}) 67%,
-                    hsl(300 ${sat} ${lum}) 83%,
-                    hsl(3600 ${sat} ${lum}) 100%
+                    hsl(0 ${sat}% ${lum}%) 0%,
+                    hsl(60 ${sat}% ${lum}%) 17%,
+                    hsl(120 ${sat}% ${lum}%) 33%,
+                    hsl(180 ${sat}% ${lum}%) 50%,
+                    hsl(240 ${sat}% ${lum}%) 67%,
+                    hsl(300 ${sat}% ${lum}%) 83%,
+                    hsl(3600 ${sat}% ${lum}%) 100%
                 )`;
             }
             if (bgMode === 'sat') {
-                return `linear-gradient(to right, hsl(${hue} 0 ${lum}), hsl(${hue} 100 ${lum}))`;
+                return `linear-gradient(to right, hsl(${hue} 0% ${lum}%), hsl(${hue} 100% ${lum}%))`;
             }
             if (bgMode === 'lum') {
-                return `linear-gradient(to right, hsl(${hue} ${sat} 0), hsl(${hue} ${sat} 100))`;
+                return `linear-gradient(to right, hsl(${hue} ${sat}% 0%), hsl(${hue} ${sat}% 100%))`;
             }
         }
 

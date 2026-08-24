@@ -17,6 +17,8 @@
         typ: 'light' | 'dark';
     } = $props();
 
+    const hslVar = (v: number[]) => `${v[0]} ${v[1]}% ${v[2]}%`;
+
     let isLoading = $state(false);
     let showDefault = $state(false);
 
@@ -38,13 +40,13 @@
 <div
     aria-label="Preview: All components inside are only for theme and colors preview and have no effect or interaction"
     style:--border-radius={borderRadius}
-    style:--text={theme.text.join(' ')}
-    style:--text-high={theme.text_high.join(' ')}
-    style:--bg={theme.bg.join(' ')}
-    style:--bg-high={theme.bg_high.join(' ')}
-    style:--action={theme.action.join(' ')}
-    style:--accent={theme.accent.join(' ')}
-    style:--error={theme.error.join(' ')}
+    style:--text={hslVar(theme.text)}
+    style:--text-high={hslVar(theme.text_high)}
+    style:--bg={hslVar(theme.bg)}
+    style:--bg-high={hslVar(theme.bg_high)}
+    style:--action={hslVar(theme.action)}
+    style:--accent={hslVar(theme.accent)}
+    style:--error={hslVar(theme.error)}
     style:--btn-text={theme.btn_text}
     style:--theme-sun={theme.theme_sun}
     style:--theme-moon={theme.theme_moon}
