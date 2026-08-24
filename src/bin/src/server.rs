@@ -97,6 +97,7 @@ pub async fn run(
 
     let cache_data_dir = node_config.data_dir.to_string();
     let cache_storage_disk = node_config.cache_storage_disk;
+    // TODO remove this cache-WAL compatibility cleanup in the next minor version.
     rauthy_data::temp_migrations::prepare_cache_wal(&cache_data_dir, cache_storage_disk)
         .await
         .map_err(|err| std::io::Error::other(err.to_string()))?;

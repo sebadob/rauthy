@@ -2139,11 +2139,11 @@ mod tests {
 
     fn check_password_expired(user: &User) -> Result<(), ErrorResponse> {
         if let Some(exp) = user.password_expires
-            && exp < OffsetDateTime::now_utc().unix_timestamp()
+            && exp < Utc::now().timestamp()
         {
             return Err(ErrorResponse::new(
                 ErrorResponseType::PasswordExpired,
-                String::from("The password has expired"),
+                "The password has expired",
             ));
         }
         Ok(())
