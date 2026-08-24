@@ -10,8 +10,6 @@ use chrono::Utc;
 use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
-use rauthy_data::database::Cache;
-use rauthy_data::database::DB;
 use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
@@ -98,7 +96,7 @@ pub async fn grant_type_authorization_code(
     }
 
     let idx = req_data.code.as_ref().unwrap().to_owned();
-    let code = match AuthCode::find(idx.clone()).await? {
+    let code = match AuthCode::find(idx).await? {
         None => {
             warn!(
                 "'auth_code' could not be found inside the cache - Host: {}",
@@ -169,18 +167,6 @@ pub async fn grant_type_authorization_code(
         (None, granted) => granted.map(String::from),
     };
 
-    // Claim immediately before issuing tokens.
-    let code: AuthCode = match DB::hql().get_remove(Cache::AuthCode, idx).await? {
-        Some(code) => code,
-        None => {
-            warn!("'auth_code' has already been claimed");
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "'auth_code' could not be found inside the cache",
-            ));
-        }
-    };
-
     let user = User::find(code.user_id.clone()).await?;
     let token_set = TokenSet::from_user(
         &user,
@@ -199,9 +185,7 @@ pub async fn grant_type_authorization_code(
     // update session metadata
     if let Some(sid) = code.session_id.clone() {
         let mut session = Session::find(sid).await?;
-        if session.exp > Utc::now().timestamp() {
-            session.set_authenticated(&user).await?;
-        }
+        session.set_authenticated(&user).await?;
     }
 
     if client.is_dynamic() {

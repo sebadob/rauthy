@@ -80,14 +80,9 @@ pub async fn grant_type_password(
         ));
     }
 
-    // Normalize credential failures; PasswordRefresh remains actionable.
-    let mut user = match User::find_by_email(String::from(email)).await {
-        Ok(user) => user,
-        Err(_) => return Err(invalid_credentials()),
-    };
-    if user.check_enabled().is_err() || user.check_expired().is_err() {
-        return Err(invalid_credentials());
-    }
+    let mut user = User::find_by_email(String::from(email)).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
 
     match user.validate_password(password.clone()).await {
         Ok(_) => {
@@ -150,19 +145,7 @@ pub async fn grant_type_password(
 
             user.save(None).await?;
 
-            // TODO add expo increasing sleeps after failed login attempts here?
-            match err.error {
-                ErrorResponseType::PasswordRefresh => Err(err),
-                ErrorResponseType::Unauthorized
-                | ErrorResponseType::PasswordExpired
-                | ErrorResponseType::Disabled => Err(invalid_credentials()),
-                _ => Err(err),
-            }
+            Err(err)
         }
     }
-}
-
-/// Returns the uniform password-grant failure.
-fn invalid_credentials() -> ErrorResponse {
-    ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid user credentials")
 }

@@ -138,7 +138,6 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
                 let now = Utc::now().timestamp();
                 // only update the last_seen, if it is older than 10 seconds
                 if session.last_seen < now - 10 {
-                    session.last_seen = now;
                     session.touch_last_seen().await?;
                 }
 

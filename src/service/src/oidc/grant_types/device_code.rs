@@ -3,8 +3,6 @@ use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
 use rauthy_common::utils::new_store_id;
-use rauthy_data::database::Cache;
-use rauthy_data::database::DB;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_data::entity::users::User;
@@ -15,7 +13,7 @@ use std::net::IpAddr;
 use std::ops::{Add, Sub};
 use tracing::{debug, error, warn};
 
-// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
+/// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
 pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> HttpResponse {
     let device_code = match &payload.device_code {
@@ -131,10 +129,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         };
 
         // Claim immediately before issuing tokens.
-        let code: DeviceAuthCode = match DB::hql()
-            .get_remove(Cache::DeviceCode, code.user_code().to_string())
-            .await
-        {
+        let code: DeviceAuthCode = match DeviceAuthCode::find(code.user_code().to_string()).await {
             Ok(Some(code)) => code,
             Ok(None) => {
                 return HttpResponse::BadRequest().json(OAuth2ErrorResponse {

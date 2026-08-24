@@ -48,7 +48,8 @@ pub async fn validate_auth_req_param(
                 "'code_challenge' is missing",
             ));
         } else {
-            // 'plain' is the default method to be assumed by the OAuth specification when it is not further specified.
+            // 'plain' is the default method to be assumed by the OAuth specification when it is not
+            // further specified.
             let method = if let Some(m) = code_challenge_method {
                 m.to_owned()
             } else {

@@ -129,8 +129,7 @@ pub async fn get_forward_auth_client(
     // we don't have the middleware auto-updater for last_seen at this point
     let now = Utc::now().timestamp();
     if session.last_seen < now - 10 {
-        session.last_seen = now;
-        session.upsert().await?;
+        session.touch_last_seen().await?;
     }
 
     debug!("Checking user and client validity");
@@ -236,7 +235,6 @@ pub async fn get_forward_auth_client_callback(
             "Invalid auth code or code expired",
         ));
     };
-    auth_code.delete().await?;
     if auth_code.client_id != client.id {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,

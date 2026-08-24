@@ -716,7 +716,10 @@ VALUES ($1, $2, $3, $4)"#;
         new_kid: String,
         old_kid: &str,
     ) -> Result<bool, ErrorResponse> {
-        let sql = "UPDATE clients SET secret = $1, secret_kid = $2 WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)";
+        let sql = r#"
+UPDATE clients
+SET secret = $1, secret_kid = $2
+WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -1365,8 +1368,7 @@ impl Client {
         let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
             && (self.is_dynamic() || self.is_ephemeral());
         let has_any = self.get_redirect_uris().iter().any(|uri| {
-            // cheap `ends_with('*')` gate first; wildcard matching only for wildcard entries
-            (uri.ends_with('*') && wildcard_prefix_match(uri, redirect_uri))
+            wildcard_prefix_match(uri, redirect_uri)
                 || uri.as_str().eq(redirect_uri)
                 || (loopback && loopback_redirect_match(uri, redirect_uri))
         });
@@ -1395,8 +1397,7 @@ impl Client {
             .unwrap_or_default()
             .iter()
             .any(|uri| {
-                // cheap `ends_with('*')` gate first, same as `validate_redirect_uri`
-                (uri.ends_with('*') && wildcard_prefix_match(uri, post_logout_redirect_uri))
+                wildcard_prefix_match(uri, post_logout_redirect_uri)
                     || uri.as_str().eq(post_logout_redirect_uri)
             });
 
@@ -1995,7 +1996,6 @@ impl Client {
             redirect_uris.push(uri.clone());
         }
 
-        let backchannel_logout_uri = None;
         let post_logout_redirect_uri = req.post_logout_redirect_uri.filter(|uri| !uri.is_empty());
         if let Some(uri) = &post_logout_redirect_uri {
             validate_dyn_redirect_uri(uri)?;
@@ -2027,7 +2027,6 @@ impl Client {
             force_mfa: false,
             client_uri: req.client_uri,
             contacts: req.contacts.map(|c| c.join(",")).filter(|c| !c.is_empty()),
-            backchannel_logout_uri,
             ..Default::default()
         })
     }

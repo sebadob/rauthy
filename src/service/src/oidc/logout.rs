@@ -68,12 +68,12 @@ pub async fn get_logout_html(
 
         let uri_vec = client.get_post_logout_uris();
 
-        // same host-boundary wildcard semantics as `validate_post_logout_redirect_uri`:
-        // a given target must match a configured URI (exact or wildcard with host
-        // boundary); the cheap `ends_with('*')` gate skips non-wildcard entries
-        let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
-            (uri.ends_with('*') && wildcard_prefix_match(uri, &target)) || target.eq(uri)
-        });
+        // same host-boundary wildcard semantics as `validate_post_logout_redirect_uri`
+        let valid_redirect = uri_vec
+            .as_ref()
+            .unwrap()
+            .iter()
+            .any(|uri| wildcard_prefix_match(uri, &target) || target.eq(uri));
         if !valid_redirect {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

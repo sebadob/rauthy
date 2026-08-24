@@ -45,7 +45,7 @@ impl RefreshToken {
         nbf: i64,
         exp: i64,
         scope: Option<String>,
-        // TODO should we even save mfa for refresh tokens?
+        //  TODO should we even save mfa for refresh tokens?
         //  even if the original token has been issued with mfa, the refresh
         // token not really is, because it can be given without user interaction.
         is_mfa: bool,

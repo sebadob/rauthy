@@ -361,8 +361,8 @@ OFFSET $3"#;
         Ok(sids)
     }
 
+    /// Inserts or updates a live session; expired sessions are rejected.
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
-        // Never write expired sessions back.
         if self.exp < Utc::now().timestamp() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -371,6 +371,7 @@ OFFSET $3"#;
         }
 
         let state_str = self.state.as_str();
+        let now = Utc::now().timestamp();
 
         let sql = r#"
 INSERT INTO
@@ -378,9 +379,10 @@ sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen,
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
-    remote_ip = $10"#;
+    remote_ip = $10
+WHERE sessions.exp > $11"#;
 
-        if is_hiqlite() {
+        let rows_affected = if is_hiqlite() {
             DB::hql()
                 .execute(
                     sql,
@@ -394,10 +396,11 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
                         state_str,
                         self.exp,
                         self.last_seen,
-                        &self.remote_ip
+                        &self.remote_ip,
+                        now
                     ),
                 )
-                .await?;
+                .await?
         } else {
             DB::pg_execute(
                 sql,
@@ -412,9 +415,17 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
                     &self.exp,
                     &self.last_seen,
                     &self.remote_ip,
+                    &now,
                 ],
             )
-            .await?;
+            .await?
+        };
+
+        if rows_affected == 0 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
         }
 
         DB::hql()
@@ -425,7 +436,7 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
     }
 
     /// Refreshes `last_seen` without inserting or resurrecting a session.
-    pub async fn touch_last_seen(&self) -> Result<(), ErrorResponse> {
+    pub async fn touch_last_seen(&mut self) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         let sql = "UPDATE sessions SET last_seen = $1 WHERE id = $2 AND exp > $1";
 
@@ -436,6 +447,7 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         };
 
         if rows_affected == 1 {
+            self.last_seen = now;
             DB::hql()
                 .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
                 .await?;
@@ -483,7 +495,14 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
 
     #[inline]
     pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
-        self.last_seen = Utc::now().timestamp();
+        let now = Utc::now().timestamp();
+        if self.exp < now {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
+        }
+        self.last_seen = now;
         self.state = SessionState::Auth;
         self.validate_user_expiry(user)?;
         self.user_id = Some(user.id.clone());

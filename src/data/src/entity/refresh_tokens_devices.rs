@@ -93,7 +93,7 @@ impl RefreshTokenDevice {
     }
 
     pub async fn invalidate_for_user(user_id: &str) -> Result<(), ErrorResponse> {
-        let now = Utc::now().timestamp();
+        let now = Utc::now().timestamp() - 1;
         let sql = "UPDATE refresh_tokens_devices SET exp = $1 WHERE exp > $1 AND user_id = $2";
         if is_hiqlite() {
             DB::hql().execute(sql, params!(now, user_id)).await?;

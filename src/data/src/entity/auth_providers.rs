@@ -577,7 +577,8 @@ impl AuthProvider {
             client_secret_basic,
             client_secret_post,
             scope,
-            // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI instead of typing them in?
+            // TODO add `scopes_supported` Vec and make them selectable with checkboxes in the UI
+            // instead of typing them in?
         })
     }
 
