@@ -255,6 +255,7 @@ export const I18nFr: I18n = {
             sessionExpiresIn: 'OTP session will expire in:',
             sessionExpired: 'OTP session has expired.',
         },
+        requestCanceled: 'Request was canceled',
         errorReg: `Erreur lors du démarrage du processus d'enregistrement`,
         lastUsed: 'Dernière utilisation',
         noKey: 'Aucune clé de sécurité enregistrée pour cet emplacement',

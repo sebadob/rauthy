@@ -251,6 +251,7 @@ export const I18nEn: I18n = {
             sessionExpiresIn: 'OTP session will expire in:',
             sessionExpired: 'OTP session has expired.',
         },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Error starting the Registration process',
         lastUsed: 'Last used',
         noKey: 'No Security key registered on this slot',

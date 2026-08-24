@@ -17,7 +17,7 @@
         value = $bindable(''),
         label = t.mfa.otp.code,
 
-        autocomplete = 'one-time-code',
+        autocomplete = 'off',
         // todo: when the code length is odd, this will render badly.
         placeholder = '0'.repeat(otpSize / 2) +
             ' ' +
@@ -32,8 +32,6 @@
         pattern = PATTERN_OTP_CODE,
         errMsg,
         isError = $bindable(false),
-
-        width = 'inherit',
 
         onBlur,
         onEnter,
@@ -55,7 +53,6 @@
         pattern?: string;
         errMsg?: string;
         isError?: boolean;
-        width?: string;
 
         onBlur?: () => void;
         onEnter?: () => void;
@@ -98,7 +95,7 @@
 
 <Template id={TPL_OTP_LENGTH} bind:value={otpSize} />
 
-<div style:width>
+<div>
     <div aria-live="assertive" class="label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
@@ -143,6 +140,7 @@
 
 <style>
     input {
+        max-inline-size: 40rem;
         font-size: 2.5em;
         text-align: center;
         letter-spacing: 0.7em;

@@ -256,6 +256,7 @@ export const I18nUk: I18n = {
             sessionExpiresIn: 'OTP session will expire in:',
             sessionExpired: 'OTP session has expired.',
         },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Помилка під час запуску процесу реєстрації',
         lastUsed: 'Востаннє використано',
         noKey: 'На цьому слоті не зареєстровано ключ безпеки',

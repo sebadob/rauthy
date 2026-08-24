@@ -236,6 +236,7 @@ export const I18nZh: I18n = {
             sessionExpiresIn: 'OTP session will expire in:',
             sessionExpired: 'OTP session has expired.',
         },
+        requestCanceled: 'Request was canceled',
         errorReg: '开始注册过程时出现错误。',
         lastUsed: '最后使用',
         noKey: '此插槽没有已注册的安全密钥',

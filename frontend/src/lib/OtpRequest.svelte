@@ -16,6 +16,7 @@
     import type { ActiveOtp } from '$api/types/authorize';
     import type { OtpResponse } from '$api/types/otp';
     import InputOtp from './form/InputOtp.svelte';
+    import Modal from './Modal.svelte';
 
     let {
         activeOtps,
@@ -40,6 +41,19 @@
 
     let requestCoolDown: boolean = $state(false);
 
+    let showModal = $state(false);
+    let closeModal: undefined | (() => void) = $state();
+    let onModalClose = async () => {
+        if (otpStartRes?.data) {
+            otpStartRes.data = undefined;
+        }
+        otpStartRes = undefined;
+        showModal = false;
+        clearInterval(interval);
+        interval = undefined;
+        onError(t.mfa.requestCanceled);
+    };
+
     // todo: The current implementation only allows one kind of OTP to be active, and the only kind is email.
     // Since we could have multiple OTPs in the future, we should the allow users to select which OTP they want to use.
     onMount(async () => {
@@ -54,6 +68,7 @@
             if (interval) {
                 clearInterval(interval);
             }
+            showModal = true;
             calcTimeoutSecs();
             interval = window.setInterval(() => {
                 calcTimeoutSecs();
@@ -121,6 +136,7 @@
             if (otpStartRes?.data) {
                 otpStartRes.data = undefined;
             }
+            showModal = false;
             clearInterval(interval);
             interval = undefined;
             onError(t.mfa.otp.sessionExpired);
@@ -131,51 +147,46 @@
 <Template id={TPL_OTP_LENGTH} bind:value={otpSize} />
 
 {#if purpose}
-    <div class="wrapperOuter">
-        <div class="wrapperInner">
-            <div class="content">
-                <div class="contentRow">
-                    <div class="contentHeader">
-                        {t.authorize.expectingOtp}
-                    </div>
-                </div>
+    <Modal bind:showModal bind:closeModal onClose={onModalClose}>
+        <div class="content">
+            <h2>
+                {t.authorize.expectingOtp}
+            </h2>
 
-                <div class="contentRow">
-                    <div>
-                        {#if !otpStartRes}
-                            <Loading />
-                        {/if}
-                    </div>
-                </div>
-                <div class="contentRow">
-                    {#if otpStartRes && otpStartRes.error}
-                        <div class="err">
-                            {otpStartRes.error}
-                        </div>
-                    {:else}
-                        <div class="good">
-                            <Form action="" onSubmit={onLoginOtpSubmit}>
-                                <InputOtp bind:ref={refInput} bind:isError={isInputError} />
-                                <Button onclick={onRequestNewOtp} isLoading={requestCoolDown}
-                                    >{t.mfa.otp.resendOtp}</Button
-                                >
-                                <Button type="submit">{t.common.send}</Button>
-                            </Form>
-                            {#if otpTimeoutSecs && otpTimeoutSecs > 0}
-                                <div>
-                                    {t.mfa.otp.sessionExpiresIn}
-                                    <span>
-                                        {otpTimeoutSecs}
-                                        {t.common.seconds}
-                                    </span>
-                                </div>
-                            {/if}
-                        </div>
-                    {/if}
-                </div>
+            <div>
+                {#if !otpStartRes}
+                    <Loading />
+                {/if}
             </div>
+
+            {#if otpStartRes && otpStartRes.error}
+                <div class="err">
+                    {otpStartRes.error}
+                </div>
+            {:else}
+                <div class="good">
+                    <Form action="" onSubmit={onLoginOtpSubmit}>
+                        <div class="spacing">
+                            <InputOtp bind:ref={refInput} bind:isError={isInputError} />
+                        </div>
+                        <Button level={1} type="submit">{t.common.send}</Button>
+                        <Button level={2} onclick={onRequestNewOtp} isLoading={requestCoolDown}
+                            >{t.mfa.otp.resendOtp}</Button
+                        >
+                    </Form>
+                </div>
+                {#if otpTimeoutSecs && otpTimeoutSecs > 0}
+                    <div class="spacing">
+                        {t.mfa.otp.sessionExpiresIn}
+                        <span>
+                            {otpTimeoutSecs}
+                            {t.common.seconds}
+                        </span>
+                    </div>
+                {/if}
+            {/if}
         </div>
-    </div>
+    </Modal>
 {/if}
 
 <style>
@@ -193,17 +204,8 @@
         background: hsla(var(--bg) / 0.9);
     }
 
-    .contentRow {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        margin: 0.25em;
-    }
-
-    .contentHeader {
-        margin-bottom: 0.2em;
-        font-weight: bold;
+    .spacing {
+        margin: 1rem 0;
     }
 
     .err,
@@ -213,23 +215,5 @@
 
     .good {
         color: hsl(var(--action));
-    }
-
-    .wrapperOuter {
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
-
-    .wrapperInner {
-        width: 100vw;
-        height: 100vh;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 20;
     }
 </style>

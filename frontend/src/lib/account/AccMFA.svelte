@@ -292,6 +292,7 @@
             msg = res.error || 'Error';
         } else {
             await fetchOtps();
+            if (otps.length == 0) hasOtp = false;
         }
     }
 
@@ -481,62 +482,64 @@
             </div>
         {/if}
     {/if}
-    {#if isOtpEnabled}
-        <b>{t.mfa.otp.title}</b>
+    <div class="modOtp">
+        {#if isOtpEnabled}
+            <b>{t.mfa.otp.title}</b>
 
-        {#if mfaPurpose && mfaKind == 'otp'}
-            <OtpRequest
-                activeOtps={otps}
-                purpose={mfaPurpose}
-                onSuccess={onMfaSuccess}
-                onError={onMfaError}
-            />
-        {/if}
+            {#if mfaPurpose && mfaKind == 'otp'}
+                <OtpRequest
+                    activeOtps={otps}
+                    purpose={mfaPurpose}
+                    onSuccess={onMfaSuccess}
+                    onError={onMfaError}
+                />
+            {/if}
 
-        {#if showOtpInput}
-            <p>{t.mfa.otp.activationCode}</p>
-            <Form action="" onSubmit={handleActivateOtp}>
-                <InputOtp bind:ref={refInput} bind:isError={isInputError} />
-                <Button type="submit">{t.mfa.register}</Button>
-                <Button
-                    level={3}
-                    onclick={() => {
-                        showOtpInput = false;
-                    }}>{t.common.cancel}</Button
-                >
-            </Form>
-        {:else if !hasOtp}
-            <!-- Currently support email otp only, if user has otp setup they don't need to see a 'regsiter new otp' button  -->
-            <div class="button">
-                <Button level={hasOtp === false ? 1 : 2} onclick={handleCreateOtp}
-                    >{t.mfa.otp.registerNew}</Button
-                >
+            {#if showOtpInput}
+                <p>{t.mfa.otp.activationCode}</p>
+                <Form action="" onSubmit={handleActivateOtp}>
+                    <InputOtp bind:ref={refInput} bind:isError={isInputError} />
+                    <Button type="submit">{t.mfa.register}</Button>
+                    <Button
+                        level={3}
+                        onclick={() => {
+                            showOtpInput = false;
+                        }}>{t.common.cancel}</Button
+                    >
+                </Form>
+            {:else if !hasOtp}
+                <!-- Currently support email otp only, if user has otp setup they don't need to see a 'regsiter new otp' button  -->
+                <div class="button">
+                    <Button level={hasOtp === false ? 1 : 2} onclick={handleCreateOtp}
+                        >{t.mfa.otp.registerNew}</Button
+                    >
+                </div>
+            {/if}
+
+            {#if hasOtp}
+                <div class="keysHeader">
+                    {t.mfa.registerdOtps}
+                </div>
+            {/if}
+            <div class="keysContainer">
+                {#each otps as otp}
+                    <!-- Todo: inactive otp could be shown when having other kind of otp? -->
+                    <UserOtp {otp} showInactive={false} onDelete={handleDeleteOtp} />
+                {/each}
             </div>
-        {/if}
 
-        {#if hasOtp}
-            <div class="keysHeader">
-                {t.mfa.registerdOtps}
-            </div>
+            {#if hasOtp}
+                <div class="button">
+                    <Button
+                        onclick={() => {
+                            mfaPurpose = 'Test';
+                            mfaKind = 'otp';
+                        }}>{t.mfa.test}</Button
+                    >
+                </div>
+            {/if}
         {/if}
-        <div class="keysContainer">
-            {#each otps as otp}
-                <!-- Todo: inactive otp could be shown when having other kind of otp? -->
-                <UserOtp {otp} showInactive={false} onDelete={handleDeleteOtp} />
-            {/each}
-        </div>
-
-        {#if hasOtp}
-            <div class="button">
-                <Button
-                    onclick={() => {
-                        mfaPurpose = 'Test';
-                        mfaKind = 'otp';
-                    }}>{t.mfa.test}</Button
-                >
-            </div>
-        {/if}
-    {/if}
+    </div>
 </div>
 
 <Modal bind:showModal bind:closeModal>
@@ -609,6 +612,10 @@
         flex-direction: column;
         justify-content: flex-start;
         align-items: flex-start;
+    }
+
+    .modOtp {
+        margin: 1rem 0;
     }
 
     .button {

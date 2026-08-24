@@ -244,6 +244,7 @@ export const I18nKo: I18n = {
             sessionExpiresIn: 'OTP session will expire in:',
             sessionExpired: 'OTP session has expired.',
         },
+        requestCanceled: 'Request was canceled',
         errorReg: '가입 절차 시작 중 오류 발생',
         lastUsed: '마지막 사용일',
         noKey: '이 슬롯에 등록된 보안 키가 없습니다.',

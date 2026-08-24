@@ -213,6 +213,7 @@ export interface I18n {
             sessionExpired: string;
         };
 
+        requestCanceled: string;
         errorReg: string;
         lastUsed: string;
         noKey: string;

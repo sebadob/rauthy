@@ -252,6 +252,7 @@ export const I18nRu: I18n = {
             sessionExpired: 'OTP session has expired.',
         },
 
+        requestCanceled: 'Request was canceled',
         errorReg: 'Ошибка при запуске процесса регистрации',
         lastUsed: 'Последнее использование',
         noKey: 'На этом слоте не зарегистрирован ключ безопасности',

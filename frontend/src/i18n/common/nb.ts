@@ -248,6 +248,7 @@ export const I18nNb: I18n = {
             sessionExpiresIn: 'OTP session will expire in:',
             sessionExpired: 'OTP session has expired.',
         },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Feil ved oppstart av registrering',
         lastUsed: 'Sist brukt',
         noKey: 'Det er ikke registrert noen sikkerhetsnøkkel i denne lagringen ennå',
