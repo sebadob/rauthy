@@ -783,7 +783,7 @@
         justify-content: center;
         max-width: 21rem;
         padding: 20px;
-        border-radius: 5px;
+        border-radius: var(--border-radius);
         border: 1px solid hsl(var(--bg-high));
         background: hsl(var(--bg));
     }
