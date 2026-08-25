@@ -19,7 +19,7 @@ use rauthy_jwt::claims::{
     ActClaim, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
     validate_no_reserved_collision,
 };
-use rauthy_jwt::token::JwtToken;
+use rauthy_jwt::token::{JwtHeaderType, JwtToken};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -283,7 +283,7 @@ impl TokenSet {
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        let token = JwtToken::build(&kp, &claims_new_impl)?;
+        let token = JwtToken::build(&kp, &claims_new_impl, JwtHeaderType::AtJwt)?;
 
         Ok((AccessTokenJti(issued_token.jti), token))
     }
@@ -448,7 +448,7 @@ impl TokenSet {
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        JwtToken::build(&kp, &claims)
+        JwtToken::build(&kp, &claims, JwtHeaderType::Jwt)
     }
 
     /// Builds the refresh token for a user after all validation has been successful
@@ -515,7 +515,7 @@ impl TokenSet {
             };
 
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
-            JwtToken::build(&kp, &claims)?
+            JwtToken::build(&kp, &claims, JwtHeaderType::Jwt)?
         };
 
         // only save the last 50 characters for validation

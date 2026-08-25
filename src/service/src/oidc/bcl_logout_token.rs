@@ -8,6 +8,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_error::ErrorResponseType;
 use rauthy_jwt::claims::{JwtCommonClaims, JwtLogoutClaims, JwtTokenType};
+use rauthy_jwt::token::{JwtHeaderType, JwtToken};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -98,7 +99,7 @@ impl LogoutToken<'_> {
             sid: self.sid,
             nonce: None,
         };
-        rauthy_jwt::token::JwtToken::build(kp, &claims)
+        JwtToken::build(kp, &claims, JwtHeaderType::Jwt)
     }
 
     /// Parse and validate the token as specified in
