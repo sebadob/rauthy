@@ -46,7 +46,6 @@ export const I18nFr: I18n = {
         search: 'Rechercher',
         seconds: 'secondes',
         selectI18n: 'Sélectionner la langue',
-        send: 'send',
         show: 'Afficher',
         summary: 'Résumé',
         timezone: 'Fuseau horaire',

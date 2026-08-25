@@ -46,7 +46,6 @@ export const I18nUk: I18n = {
         search: 'Пошук',
         seconds: 'секунд',
         selectI18n: 'Вибрати мову',
-        send: 'send',
         show: 'Показати',
         summary: 'Підсумок',
         timezone: 'Часовий пояс',
@@ -247,7 +246,7 @@ export const I18nUk: I18n = {
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
-            title: 'One time password',
+            title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',

@@ -46,7 +46,6 @@ export const I18nRu: I18n = {
         search: 'Поиск',
         seconds: 'секунды',
         selectI18n: 'Выбрать язык',
-        send: 'send',
         show: 'Показать',
         summary: 'Сводка',
         timezone: 'Часовой пояс',
@@ -242,7 +241,7 @@ export const I18nRu: I18n = {
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
-            title: 'One time password',
+            title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
@@ -251,7 +250,6 @@ export const I18nRu: I18n = {
             sessionExpiresIn: 'OTP session will expire in:',
             sessionExpired: 'OTP session has expired.',
         },
-
         requestCanceled: 'Request was canceled',
         errorReg: 'Ошибка при запуске процесса регистрации',
         lastUsed: 'Последнее использование',
