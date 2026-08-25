@@ -23,11 +23,13 @@
         purpose,
         onError,
         onSuccess,
+        // onCancel,
     }: {
         activeOtps: ActiveOtp[] | OtpResponse[];
         purpose: MfaPurpose;
         onError: (error: string) => void;
         onSuccess: (res?: OtpAdditionalData) => void;
+        // onCancel: () => void;
     } = $props();
 
     let t = useI18n();
@@ -35,6 +37,7 @@
     let isInputError = $state(false);
 
     let otpSize = $state(6);
+    let otpValue = $state('');
 
     let otpStartRes: undefined | OtpAuthStartResult = $state();
     let otpFinishRes: undefined | OtpAuthFinishResult = $state();
@@ -99,7 +102,17 @@
     });
 
     $effect(() => {
-        refInput?.focus();
+        if (refInput) {
+            requestAnimationFrame(() => {
+                refInput?.focus();
+            });
+        }
+    });
+
+    $effect(() => {
+        if (otpValue.replaceAll(' ', '').length === otpSize) {
+            onLoginOtpSubmit();
+        }
     });
 
     async function onRequestNewOtp() {
@@ -114,8 +127,8 @@
         }
     }
 
-    async function onLoginOtpSubmit(_form: HTMLFormElement, params: URLSearchParams) {
-        let otpCode = params.get('otp')?.replace(/ /g, '');
+    async function onLoginOtpSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+        let otpCode = otpValue.replace(' ', '');
         if (otpStartRes && otpStartRes.data && otpCode) {
             otpFinishRes = await otpAuthFinish(otpStartRes.data.code, otpCode);
         }
@@ -167,12 +180,18 @@
                 <div class="good">
                     <Form action="" onSubmit={onLoginOtpSubmit}>
                         <div class="spacing">
-                            <InputOtp bind:ref={refInput} bind:isError={isInputError} />
+                            <InputOtp
+                                bind:ref={refInput}
+                                bind:isError={isInputError}
+                                bind:value={otpValue}
+                            />
                         </div>
-                        <Button level={1} type="submit">{t.common.send}</Button>
-                        <Button level={2} onclick={onRequestNewOtp} isLoading={requestCoolDown}
-                            >{t.mfa.otp.resendOtp}</Button
-                        >
+                        <div class="btns">
+                            <Button level={1} type="submit">Ok</Button>
+                            <Button level={2} onclick={onRequestNewOtp} isLoading={requestCoolDown}>
+                                {t.mfa.otp.resendOtp}
+                            </Button>
+                        </div>
                     </Form>
                 </div>
                 {#if otpTimeoutSecs && otpTimeoutSecs > 0}
@@ -190,6 +209,10 @@
 {/if}
 
 <style>
+    .btns {
+        margin: 1rem 0;
+    }
+
     .content {
         padding: 1rem;
         border: 1px solid hsl(var(--bg-high));
