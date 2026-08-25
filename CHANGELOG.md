@@ -74,7 +74,8 @@ renew_exp = 2160
 enable = true
 ```
 
-[#1620 (https://github.com/sebadob/rauthy/pull/1620)
+[#1620](https://github.com/sebadob/rauthy/pull/1620)
+[#1705](https://github.com/sebadob/rauthy/pull/1705)
 
 ## v0.36.2
 
