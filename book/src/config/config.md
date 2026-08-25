@@ -2118,6 +2118,64 @@ level_access = 'modifying'
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = true
 
+[otp]
+# Enable E-Mail or HMAC-based One Time Passwords as 2FA.
+#
+# CAUTION: Passkeys are much safer than OTP. Only enable
+# OTP if you really need / want to.
+#
+# default: 'false'
+# overwritten by: OTP_ENABLE
+enable = false
+
+# The length of the generated one-time passwords.
+# Must be 6 - 8 digits.
+#
+# default: 6
+# overwritten by: OTP_LENGTH
+#length = 6
+
+# The lifetime in minutes for OTP requests. Within
+# this time, an OTP request must have been validated.
+#
+# default: 5
+# overwritten by: OTP_EXP_MINS
+#exp_mins = 5
+
+# Default digest algorithm's length, HMAC using SHA-X.
+# SHA-1 is forbidden.
+#
+# NOTE: This value currently has no effect. It's a 
+# preparation for future support for TOTP. At the time
+# of writing, only E-Mail-based OTP is implemented.
+#
+# Possible values: 256, 384, 512
+# default: 512
+# overwritten by: OTP_DIGEST_LEN_DEFAULT
+#digest_len_default = 512
+
+# The expiration in hours when an MFA cookie set via OTP
+# must be revalidated.
+#
+# While such a cookie exists and is valid, a user may not
+# need to provide a password on a new login on this known
+# device, only a new OTP.
+#
+# You can disable this feature by setting the value to 0.
+#
+# The value is in hours
+# default: 2160
+# overwritten by: OTP_RENEW_EXP
+renew_exp = 2160
+
+[otp.email]
+# Wether to enable or disable OTPs via E-Mail.
+# This value is ignored if `otp.enable` is set to `false`.
+#
+# default: 'true'
+# overwritten by: OTP_EMAIL_ENABLE
+enable = true
+
 [pam]
 # The length of newly generated PAM remote passwords via the
 # account dashboard. The default is fine as long as you can copy
