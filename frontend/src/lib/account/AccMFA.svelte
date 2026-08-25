@@ -65,6 +65,7 @@
     let otpKind: undefined | OtpKind = $state();
     let otpName: undefined | string = $state();
     let otpId: undefined | string = $state();
+    let otpValueNew = $state('');
     let hasOtp = $state(false);
 
     onMount(() => {
@@ -84,11 +85,25 @@
     });
 
     $effect(() => {
-        refInput?.focus();
+        if (refInput) {
+            requestAnimationFrame(() => {
+                refInput?.focus();
+            });
+        }
     });
 
     $effect(() => {
-        refPkAuthBtn?.focus();
+        if (refPkAuthBtn) {
+            requestAnimationFrame(() => {
+                refPkAuthBtn?.focus();
+            });
+        }
+    });
+
+    $effect(() => {
+        if (mfaModToken && otpValueNew.replaceAll(' ', '').length === otpSize) {
+            handleActivateOtp();
+        }
     });
 
     function calcModSecs() {
@@ -216,11 +231,12 @@
     }
 
     async function handleCreateOtp() {
-        // todo currently implement email kind only
+        // 'email' is the only implemented type for now
         otpKind = 'email';
 
         resetMsgErr();
         if (isInputError || !userId || !otpKind) {
+            console.error('missing create OTP data', isInputError, userId, otpKind);
             return;
         }
 
@@ -241,8 +257,8 @@
         }
     }
 
-    async function handleActivateOtp(_form: HTMLFormElement, params: URLSearchParams) {
-        // todo currently implement one otp only
+    async function handleActivateOtp(form?: HTMLFormElement, params?: URLSearchParams) {
+        // 'email' is the only implemented type for now
         otpId = otps[0].id.toString();
         resetMsgErr();
 
@@ -257,12 +273,14 @@
             return;
         }
 
-        let res = await putOtp(userId, otpId, params.get('otp')?.replace(/ /g, '') || '', tokenId);
+        let res = await putOtp(userId, otpId, otpValueNew.replaceAll(' ', '') || '', tokenId);
         if (res.error) {
             err = true;
             msg = res.error || 'Error';
         } else {
             showOtpInput = false;
+            otpValueNew = '';
+
             for (let otp of otps) {
                 if (otp.id == otpId) {
                     otp.is_active = true;
@@ -292,7 +310,9 @@
             msg = res.error || 'Error';
         } else {
             await fetchOtps();
-            if (otps.length == 0) hasOtp = false;
+            if (otps.length == 0) {
+                hasOtp = false;
+            }
         }
     }
 
@@ -413,14 +433,13 @@
             </Button>
         </div>
     {/if}
-    {#if isOtpEnabled}
-        <b>{t.mfa.webauthn.title}</b>
-    {/if}
     {#if !isWebauthnSupported}
         <div class="err">
             <b>{t.mfa.webauthn.unsupportedText}</b>
         </div>
     {:else}
+        <b>{t.mfa.webauthn.title}</b>
+
         {#if mfaPurpose && mfaKind == 'webauthn'}
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {/if}
@@ -477,13 +496,16 @@
                     onclick={() => {
                         mfaPurpose = 'Test';
                         mfaKind = 'webauthn';
-                    }}>{t.mfa.test}</Button
+                    }}
                 >
+                    {t.mfa.test}
+                </Button>
             </div>
         {/if}
     {/if}
-    <div class="modOtp">
-        {#if isOtpEnabled}
+
+    {#if isOtpEnabled}
+        <div class="modOtp">
             <b>{t.mfa.otp.title}</b>
 
             {#if mfaPurpose && mfaKind == 'otp'}
@@ -495,24 +517,26 @@
                 />
             {/if}
 
-            {#if showOtpInput}
+            {#if mfaModToken && showOtpInput}
                 <p>{t.mfa.otp.activationCode}</p>
                 <Form action="" onSubmit={handleActivateOtp}>
-                    <InputOtp bind:ref={refInput} bind:isError={isInputError} />
-                    <Button type="submit">{t.mfa.register}</Button>
-                    <Button
-                        level={3}
-                        onclick={() => {
-                            showOtpInput = false;
-                        }}>{t.common.cancel}</Button
-                    >
+                    <InputOtp
+                        bind:ref={refInput}
+                        bind:isError={isInputError}
+                        bind:value={otpValueNew}
+                    />
+                    <div class="mh-05 flex gap-05">
+                        <Button type="submit">{t.mfa.register}</Button>
+                        <Button level={3} onclick={() => (showOtpInput = false)}>
+                            {t.common.cancel}
+                        </Button>
+                    </div>
                 </Form>
             {:else if !hasOtp}
-                <!-- Currently support email otp only, if user has otp setup they don't need to see a 'regsiter new otp' button  -->
                 <div class="button">
-                    <Button level={hasOtp === false ? 1 : 2} onclick={handleCreateOtp}
-                        >{t.mfa.otp.registerNew}</Button
-                    >
+                    <Button level={2} onclick={handleCreateOtp}>
+                        {t.mfa.otp.registerNew}
+                    </Button>
                 </div>
             {/if}
 
@@ -527,19 +551,8 @@
                     <UserOtp {otp} showInactive={false} onDelete={handleDeleteOtp} />
                 {/each}
             </div>
-
-            {#if hasOtp}
-                <div class="button">
-                    <Button
-                        onclick={() => {
-                            mfaPurpose = 'Test';
-                            mfaKind = 'otp';
-                        }}>{t.mfa.test}</Button
-                    >
-                </div>
-            {/if}
-        {/if}
-    </div>
+        </div>
+    {/if}
 </div>
 
 <Modal bind:showModal bind:closeModal>

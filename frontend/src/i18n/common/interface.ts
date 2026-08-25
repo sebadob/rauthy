@@ -35,7 +35,6 @@ export interface I18n {
         search: string;
         seconds: string;
         selectI18n: string;
-        send: string;
         show: string;
         summary: string;
         timezone: string;

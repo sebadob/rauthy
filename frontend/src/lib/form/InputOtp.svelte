@@ -17,19 +17,7 @@
         value = $bindable(''),
         label = t.mfa.otp.code,
 
-        autocomplete = 'off',
-        // todo: when the code length is odd, this will render badly.
-        placeholder = '0'.repeat(otpSize / 2) +
-            ' ' +
-            '0'.repeat(otpSize / 2) +
-            '0'.repeat(otpSize % 2),
-        disabled = false,
-
-        minLength = otpSize,
-        maxLength = otpSize * 2,
-
-        required,
-        pattern = PATTERN_OTP_CODE,
+        autocomplete = 'one-time-code',
         errMsg,
         isError = $bindable(false),
 
@@ -45,12 +33,6 @@
         label?: string;
         autocomplete?: FullAutoFill | null | undefined;
         placeholder?: string;
-        disabled?: boolean | null | undefined;
-        minLength?: number | null | undefined;
-        maxLength?: number | null | undefined;
-        step?: number;
-        required?: boolean;
-        pattern?: string;
         errMsg?: string;
         isError?: boolean;
 
@@ -58,6 +40,8 @@
         onEnter?: () => void;
         onInput?: () => void;
     } = $props();
+
+    let placeholder = $derived('0'.repeat(otpSize));
 
     function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
         isValid();
@@ -97,7 +81,7 @@
 
 <div>
     <div aria-live="assertive" class="label">
-        <label for={id} class="font-label noselect" data-required={required}>
+        <label for={id} class="font-label noselect" data-required="true">
             {label}
         </label>
     </div>
@@ -112,19 +96,16 @@
         {autocomplete}
         {placeholder}
         aria-placeholder={placeholder}
-        {disabled}
-        aria-disabled={disabled}
-        minlength={minLength || undefined}
-        maxlength={maxLength || undefined}
-        required={required || undefined}
-        aria-required={required || false}
+        minlength="6"
+        maxlength="8"
+        required={true}
+        aria-required={true}
         aria-invalid={isError}
-        pattern={pattern || undefined}
+        pattern={PATTERN_OTP_CODE}
         class:invalid={isError}
         {oninput}
         {oninvalid}
         {onblur}
-        {onkeydown}
     />
     {#if isError}
         <div

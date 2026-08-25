@@ -584,9 +584,9 @@ impl Default for Vars {
                 length: 6,
                 exp_mins: TimeDelta::minutes(5),
                 renew_exp: 2160,
-                default_digest_len: 512,
+                digest_len_default: 512,
                 email: VarsOtpEmail {
-                    enable: false,
+                    enable: true,
                 }
             },
             pam: VarsPam {
@@ -2803,13 +2803,15 @@ impl Vars {
     }
 
     fn parse_otp(&mut self, table: &mut toml::Table) {
-        // [otp]
         let mut table = t_table(table, "otp");
         if let Some(v) = t_bool(&mut table, "otp", "enable", "OTP_ENABLE") {
             self.otp.enable = v;
         }
         if let Some(v) = t_u8(&mut table, "otp", "length", "OTP_LENGTH") {
-            self.otp.length = if v < 9 { v } else { 6 };
+            if !(6..9).contains(&v) {
+                panic!("otp.length must be between 6 and 8");
+            }
+            self.otp.length = v;
         }
         if let Some(v) = t_i64(&mut table, "otp", "exp_mins", "OTP_EXP_MINS") {
             self.otp.exp_mins = TimeDelta::minutes(v);
@@ -2820,21 +2822,23 @@ impl Vars {
         if let Some(v) = t_u16(
             &mut table,
             "otp",
-            "default_digest_len",
-            "OTP_DEFAULT_DIGEST_LEN",
+            "digest_len_default",
+            "OTP_DIGEST_LEN_DEFAULT",
         ) {
-            self.otp.default_digest_len = if v == 256 || v == 384 || v == 512 {
+            self.otp.digest_len_default = if v == 256 || v == 384 || v == 512 {
                 v
             } else {
                 512
             };
         }
 
-        // [otp.email]
-        let mut table = t_table(&mut table, "email");
-        if let Some(v) = t_bool(&mut table, "otp.email", "enable", "OTP_EMAIL_ENABLE") {
+        let mut table_email = t_table(&mut table, "email");
+        if let Some(v) = t_bool(&mut table_email, "otp.email", "enable", "OTP_EMAIL_ENABLE") {
             self.otp.email.enable = v;
         }
+
+        check_table_empty(table, "otp");
+        check_table_empty(table_email, "otp.email");
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
@@ -4156,7 +4160,7 @@ pub struct VarsOtp {
     pub length: u8,
     pub exp_mins: TimeDelta,
     pub renew_exp: u16,
-    pub default_digest_len: u16,
+    pub digest_len_default: u16,
     pub email: VarsOtpEmail,
 }
 

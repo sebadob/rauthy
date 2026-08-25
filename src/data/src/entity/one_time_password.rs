@@ -326,7 +326,7 @@ impl OneTimePassword {
                 let valid_code = Self::generate_otp(
                     &self.secret,
                     self.last_used,
-                    RauthyConfig::get().vars.otp.default_digest_len,
+                    RauthyConfig::get().vars.otp.digest_len_default,
                     RauthyConfig::get().vars.otp.length,
                 );
                 if code != valid_code {
@@ -352,7 +352,7 @@ impl OneTimePassword {
         let code = Self::generate_otp(
             &self.secret,
             current_time,
-            RauthyConfig::get().vars.otp.default_digest_len,
+            RauthyConfig::get().vars.otp.digest_len_default,
             code_len,
         );
         self.last_used = current_time;
@@ -377,7 +377,7 @@ impl OneTimePassword {
         let code = Self::generate_otp(
             &self.secret,
             self.last_used,
-            RauthyConfig::get().vars.otp.default_digest_len,
+            RauthyConfig::get().vars.otp.digest_len_default,
             code_len,
         );
         match self.kind {
@@ -386,9 +386,8 @@ impl OneTimePassword {
                 let code = format!("{} {}", &code[0..code_len / 2], &code[code_len / 2..]);
                 send_email_otp(&code, &user).await;
             }
-            // Unreachable should never panic since these kind aren't implemented
             OtpKind::Time | OtpKind::Phone => {
-                unreachable!()
+                unimplemented!()
             }
         };
         Ok(())

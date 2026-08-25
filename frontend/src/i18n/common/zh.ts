@@ -46,7 +46,6 @@ export const I18nZh: I18n = {
         search: '搜索',
         seconds: '秒',
         selectI18n: '选择语言',
-        send: 'send',
         show: '显示',
         summary: '概要',
         timezone: '时区',
@@ -227,7 +226,7 @@ export const I18nZh: I18n = {
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
-            title: 'One time password',
+            title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',

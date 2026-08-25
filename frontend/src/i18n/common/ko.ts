@@ -46,7 +46,6 @@ export const I18nKo: I18n = {
         search: '검색',
         seconds: 'seconds',
         selectI18n: '언어 선택',
-        send: 'send',
         show: '보이기',
         summary: '요약',
         timezone: 'Timezone',
@@ -235,7 +234,7 @@ export const I18nKo: I18n = {
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
-            title: 'One time password',
+            title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',

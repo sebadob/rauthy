@@ -46,7 +46,6 @@ export const I18nEn: I18n = {
         search: 'Search',
         seconds: 'seconds',
         selectI18n: 'Select Language',
-        send: 'send',
         show: 'Show',
         summary: 'Summary',
         timezone: 'Timezone',
@@ -236,13 +235,13 @@ export const I18nEn: I18n = {
                 technology. Keys you register with Android work elsewhere too. However, this does not 
                 apply the other way around.`,
             p3: 'For more information, see',
-            registerNew: 'Register New',
+            registerNew: 'Register New Passkey',
             docLinkText: 'the documentation about passkeys',
             unsupportedText:
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
-            title: 'One time password',
+            title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',

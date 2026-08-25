@@ -46,7 +46,6 @@ export const I18nNl: I18n = {
         search: 'Zoeken',
         seconds: 'seconden',
         selectI18n: 'Taal kiezen',
-        send: 'send',
         show: 'Tonen',
         summary: 'Samenvatting',
         timezone: 'Tijdzone',
@@ -244,7 +243,7 @@ export const I18nNl: I18n = {
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
-            title: 'One time password',
+            title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
             code: 'One Time Password',
