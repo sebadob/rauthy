@@ -1,4 +1,3 @@
-use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
@@ -7,14 +6,12 @@ use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
 use crate::entity::users::{AccountType, User};
 use crate::rauthy_config::RauthyConfig;
-use actix_web::cookie::Cookie;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderValue,
 };
 use actix_web::http::{StatusCode, header};
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use chrono::Utc;
-use cryptr::EncValue;
 use deadpool_postgres::GenericClient;
 use hiqlite::Params;
 use hiqlite::macros::params;
@@ -23,16 +20,15 @@ use rauthy_api_types::users::{
     MfaPurpose, PasskeyResponse, WebauthnAuthFinishRequest, WebauthnAuthStartResponse,
     WebauthnLoginFinishResponse, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
-use rauthy_common::constants::{COOKIE_MFA, IDX_WEBAUTHN};
+use rauthy_common::constants::IDX_WEBAUTHN;
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{base64_decode, base64_encode, deserialize, get_rand, serialize};
+use rauthy_common::utils::get_rand;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use std::str::FromStr;
-use time::OffsetDateTime;
 use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::*;
@@ -468,51 +464,6 @@ impl From<PasskeyEntity> for PasskeyResponse {
             registered: value.registered,
             last_used: value.last_used,
             user_verified: value.user_verified,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct WebauthnCookie {
-    pub email: String,
-    pub exp: OffsetDateTime,
-}
-
-impl WebauthnCookie {
-    pub fn new(email: String) -> Self {
-        let renew = RauthyConfig::get().vars.webauthn.renew_exp as i64;
-        let exp = OffsetDateTime::now_utc().add(::time::Duration::hours(renew));
-        Self { email, exp }
-    }
-
-    pub fn build(&self) -> Result<Cookie<'_>, ErrorResponse> {
-        let ser = serialize(self)?;
-        let enc = EncValue::encrypt(&ser)?.into_bytes();
-        let b64 = base64_encode(&enc);
-
-        let max_age = self.exp.unix_timestamp() - Utc::now().timestamp();
-        Ok(ApiCookie::build(COOKIE_MFA, b64, max_age))
-    }
-
-    pub fn parse_validate(cookie: &Option<String>) -> Result<Self, ErrorResponse> {
-        if cookie.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Webauthn Cookie is missing",
-            ));
-        }
-        let cookie = cookie.as_ref().unwrap();
-        let bytes = base64_decode(cookie)?;
-        let dec = EncValue::try_from(bytes)?.decrypt()?;
-        let slf = deserialize::<Self>(&dec)?;
-
-        if slf.exp < OffsetDateTime::now_utc() {
-            Err(ErrorResponse::new(
-                ErrorResponseType::SessionExpired,
-                "Webauthn Cookie has expired",
-            ))
-        } else {
-            Ok(slf)
         }
     }
 }

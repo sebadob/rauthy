@@ -9,6 +9,7 @@ use rauthy_common::regex::{
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
 use utoipa::ToSchema;
@@ -393,6 +394,129 @@ pub struct MfaModTokenResponse {
     pub user_id: String,
     pub exp: i64,
     pub ip: String,
+}
+
+#[derive(Clone, PartialEq, Eq, Deserialize, ToSchema, Default)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+#[serde(rename_all = "lowercase")]
+pub enum OtpKind {
+    #[default]
+    Email,
+    Phone,
+    Time,
+}
+
+impl OtpKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            OtpKind::Email => "email",
+            OtpKind::Phone => "phone",
+            OtpKind::Time => "time",
+        }
+    }
+}
+
+impl Display for OtpKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl FromStr for OtpKind {
+    type Err = ErrorResponse;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "email" => Ok(Self::Email),
+            "phone" => Ok(Self::Phone),
+            "time" => Ok(Self::Time),
+            _ => Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Cannot parse OtpKind",
+            )),
+        }
+    }
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct OtpGetResponse {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub last_used: i64,
+    pub kind: OtpKind,
+    pub is_active: bool,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpCreateRequest {
+    pub otp_name: Option<String>,
+    pub otp_kind: OtpKind,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpActivateRequest {
+    pub otp_id: String,
+    pub otp_code: String,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpDeleteRequest {
+    pub otp_id: String,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct ActiveOtp {
+    pub otp_id: String,
+    pub otp_kind: OtpKind,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpLoginResponse {
+    pub code: String,
+    pub active_otps: Vec<ActiveOtp>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthStartRequest {
+    pub otp_id: String,
+    pub purpose: MfaPurpose,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpAuthStartResponse {
+    pub code: String,
+    pub exp: i64,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthResendRequest {
+    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    pub code: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthFinishRequest {
+    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    pub code: String,
+    pub otp_code: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpLoginFinishResponse {
+    pub loc: String,
 }
 
 #[derive(Serialize, ToSchema)]

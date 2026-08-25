@@ -22,10 +22,10 @@ const config = {
             $css: 'src/css',
             $icons: 'src/icons',
             $lib5: 'src/lib',
+            $mfa: 'src/mfa',
             $state: 'src/global_state',
             $types: 'src/types',
             $utils: 'src/utils',
-            $webauthn: 'src/webauthn',
         },
         csp: {
             directives: {

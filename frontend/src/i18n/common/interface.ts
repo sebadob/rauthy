@@ -35,6 +35,7 @@ export interface I18n {
         search: string;
         seconds: string;
         selectI18n: string;
+        send: string;
         show: string;
         summary: string;
         timezone: string;
@@ -151,6 +152,7 @@ export interface I18n {
         passwordResetDesc: string;
         passwordResetSuccess: string;
         expectingPasskey: string;
+        expectingOtp: string;
         requestExpires: string;
         requestExpired: string;
         signUp: string;
@@ -190,20 +192,38 @@ export interface I18n {
         cancel: string;
     };
     mfa: {
-        p1: string;
-        p2: string;
-        p3: string;
-        docLinkText: string;
+        webauthn: {
+            title: string;
+            p1: string;
+            p2: string;
+            p3: string;
+            registerNew: string;
+            docLinkText: string;
+            unsupportedText: string;
+        };
 
+        otp: {
+            title: string;
+            titleEmail: string;
+            activationCode: string;
+            code: string;
+            registerNew: string;
+            resendOtp: string;
+            sessionExpiresIn: string;
+            sessionExpired: string;
+        };
+
+        requestCanceled: string;
         errorReg: string;
         lastUsed: string;
         noKey: string;
         reAuthenticatePasskey: string;
         reAuthenticatePwd: string;
+        reAuthenticateOtp: string;
         register: string;
-        registerNew: string;
         registerd: string;
         registerdKeys: string;
+        registerdOtps: string;
         passkeyName: string;
         passkeyNameErr: string;
         passwordInvalid: string;

@@ -5,6 +5,7 @@ use crate::email::password_reset::send_pwd_reset;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
+use crate::entity::one_time_password::OneTimePassword;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
@@ -30,9 +31,9 @@ use hiqlite::macros::params;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
-    NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
-    UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesRequest,
-    UserValuesResponse,
+    ActiveOtp, NewUserRegistrationRequest, NewUserRequest, OtpKind, UpdateUserRequest,
+    UpdateUserSelfRequest, UserAccountTypeResponse, UserResponse, UserResponseSimple,
+    UserValuesRequest, UserValuesResponse,
 };
 use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
@@ -1801,6 +1802,30 @@ impl User {
     #[inline]
     pub fn roles_iter(&self) -> Split<'_, char> {
         self.roles.as_str().split(',')
+    }
+
+    pub async fn get_otp_kind(&self) -> Result<Vec<ActiveOtp>, ErrorResponse> {
+        Ok(OneTimePassword::find_for_user(&self.id)
+            .await?
+            .into_iter()
+            .map(|f| ActiveOtp {
+                otp_id: f.id,
+                otp_kind: f.kind,
+            })
+            .collect())
+    }
+
+    pub async fn has_otp_of_kind_enabled(&self, kind: &OtpKind) -> bool {
+        OneTimePassword::find_active_kind_for_user(kind, &self.id)
+            .await
+            .is_ok()
+    }
+
+    #[inline(always)]
+    pub async fn has_otp_enabled(&self) -> bool {
+        OneTimePassword::find_active_for_user(&self.id)
+            .await
+            .is_ok_and(|f| !f.is_empty())
     }
 
     #[inline(always)]

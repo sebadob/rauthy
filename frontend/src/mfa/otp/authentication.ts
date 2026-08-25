@@ -1,0 +1,73 @@
+import { fetchPost } from '$api/fetch';
+import type { MfaPurpose } from '$api/types/mfa';
+import type {
+    OtpAdditionalData,
+    OtpAuthFinishRequest,
+    OtpAuthFinishResult,
+    OtpAuthResendRequest,
+    OtpAuthResendResult,
+    OtpAuthStartRequest,
+    OtpAuthStartResponse,
+    OtpAuthStartResult,
+} from './types';
+
+export async function otpAuthStart(
+    otpId: string,
+    purpose: MfaPurpose,
+): Promise<OtpAuthStartResult> {
+    let payloadStart: OtpAuthStartRequest = {
+        otp_id: otpId,
+        purpose,
+    };
+    let res = await fetchPost<OtpAuthStartResponse>(`/auth/v1/users/otp_start`, payloadStart);
+    if (res.error) {
+        console.error(res.error);
+        return {
+            error: res.error.message || 'Error starting the Authentication',
+        };
+    }
+    if (!res.body) {
+        let error = 'Did not receive a valid otp body';
+        console.error(error);
+        return { error };
+    }
+
+    return { data: res.body };
+}
+
+export async function otpAuthResend(code: string): Promise<OtpAuthResendResult> {
+    let payloadResend: OtpAuthResendRequest = {
+        code,
+    };
+    let res = await fetchPost<undefined>(`/auth/v1/users/otp_resend`, payloadResend);
+    if (res.error) {
+        console.error(res.error);
+        return {
+            error: res.error?.message || 'Authentication Error',
+        };
+    } else {
+        return {
+            data: undefined,
+        };
+    }
+}
+
+export async function otpAuthFinish(code: string, otpCode: string): Promise<OtpAuthFinishResult> {
+    let payloadFinish: OtpAuthFinishRequest = {
+        code,
+        otp_code: otpCode,
+    };
+    let res = await fetchPost<OtpAdditionalData>(`/auth/v1/users/otp_finish`, payloadFinish);
+    if (res.status === 202 || res.status === 206) {
+        return {
+            data: res.body,
+        };
+    } else if (res.status === 205) {
+        return {};
+    } else {
+        console.error(res.error);
+        return {
+            error: res.error?.message || 'Authentication Error',
+        };
+    }
+}

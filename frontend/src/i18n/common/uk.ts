@@ -46,6 +46,7 @@ export const I18nUk: I18n = {
         search: 'Пошук',
         seconds: 'секунд',
         selectI18n: 'Вибрати мову',
+        send: 'send',
         show: 'Показати',
         summary: 'Підсумок',
         timezone: 'Часовий пояс',
@@ -174,6 +175,7 @@ export const I18nUk: I18n = {
         emailRequired: "E-Mail обов'язковий",
         emailSentMsg: 'Якщо ваш E-Mail існує, запит було надіслано',
         expectingPasskey: 'Очікується автентифікація за ключем доступу',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: 'Забагато невдалих спроб. Заблоковано до:',
         invalidCredentials: 'Невірні облікові дані',
         invalidKeyUsed: 'Недійсний ключ',
@@ -232,12 +234,29 @@ export const I18nUk: I18n = {
         cancel: 'Скасувати',
     },
     mfa: {
-        p1: `Якщо ви плануєте використовувати свій MFA-ключ з різними системами, як-от Windows та
-            Android,\nрекомендується виконувати реєстрацію на Android.`,
-        p2: `Android — це платформа з найменшою кількістю підтримуваних функцій для технології
-            безпарольного доступу.\nКлючі, зареєстровані на Android, працюватимуть і в інших місцях. Однак, це не працює у зворотному напрямку.`,
-        p3: 'Для отримання додаткової інформації дивіться',
-        docLinkText: 'документацію про ключі доступу (passkeys)',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Якщо ви плануєте використовувати свій MFA-ключ з різними системами, як-от Windows та
+                Android,\nрекомендується виконувати реєстрацію на Android.`,
+            p2: `Android — це платформа з найменшою кількістю підтримуваних функцій для технології
+                безпарольного доступу.\nКлючі, зареєстровані на Android, працюватимуть і в інших місцях. Однак, це не працює у зворотному напрямку.`,
+            p3: 'Для отримання додаткової інформації дивіться',
+            registerNew: 'Зареєструвати новий ключ',
+            docLinkText: 'документацію про ключі доступу (passkeys)',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One time password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Помилка під час запуску процесу реєстрації',
         lastUsed: 'Востаннє використано',
         noKey: 'На цьому слоті не зареєстровано ключ безпеки',
@@ -245,10 +264,12 @@ export const I18nUk: I18n = {
             автентифікуватися\nза допомогою вже зареєстрованого ключа:`,
         reAuthenticatePwd:
             'Перш ніж ви зможете змінювати ключі доступу, вам потрібно повторно автентифікуватися за допомогою пароля.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Зареєструвати',
-        registerNew: 'Зареєструвати новий ключ',
         registerd: 'Зареєстровано',
         registerdKeys: 'Зареєстровані ключі',
+        registerdOtps: 'Registered OTPs',
         passkeyName: 'Назва ключа доступу',
         passkeyNameErr: '2 - 32 символи, без спецсимволів',
         passwordInvalid: 'Неправильний пароль',

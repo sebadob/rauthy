@@ -4,6 +4,7 @@ pub mod confirm_change;
 pub mod confirm_change_html;
 pub mod email_registered_already;
 pub mod login_location;
+pub mod otp;
 pub mod password_new;
 pub mod reset;
 pub mod reset_info;

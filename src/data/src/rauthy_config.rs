@@ -5,6 +5,7 @@ use crate::events::listener::EventRouterMsg;
 use crate::migration::bootstrap::generated_secrets;
 use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
+use chrono::TimeDelta;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
@@ -275,6 +276,7 @@ pub struct Vars {
     pub logging: VarsLogging,
     pub matrix: VarsMatrix,
     pub mfa: VarsMfa,
+    pub otp: VarsOtp,
     pub pam: VarsPam,
     pub pow: VarsPow,
     pub scim: VarsScim,
@@ -576,6 +578,16 @@ impl Default for Vars {
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
+            },
+            otp: VarsOtp {
+                enable: false,
+                length: 6,
+                exp_mins: TimeDelta::minutes(5),
+                renew_exp: 2160,
+                default_digest_len: 512,
+                email: VarsOtpEmail {
+                    enable: false,
+                }
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -1025,6 +1037,107 @@ Your account has not been compromised and no data was leaked."#.into()),
                         button_text_request_new: Some("Request password reset Link".into()),
                     },
                 },
+                email_otp: VarsTemplatesLanguages {
+                    de: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    en: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    fr: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ko: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    nb: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    nl: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ru: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    uk: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    zhhans: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                },
             },
             tls: VarsTls {
                 cert_path: None,
@@ -1152,6 +1265,7 @@ impl Vars {
         slf.parse_fedcm(&mut table);
         slf.parse_geo(&mut table, &mut secrets);
         slf.parse_hashing(&mut table);
+        slf.parse_otp(&mut table);
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
@@ -2688,6 +2802,41 @@ impl Vars {
         }
     }
 
+    fn parse_otp(&mut self, table: &mut toml::Table) {
+        // [otp]
+        let mut table = t_table(table, "otp");
+        if let Some(v) = t_bool(&mut table, "otp", "enable", "OTP_ENABLE") {
+            self.otp.enable = v;
+        }
+        if let Some(v) = t_u8(&mut table, "otp", "length", "OTP_LENGTH") {
+            self.otp.length = if v < 9 { v } else { 6 };
+        }
+        if let Some(v) = t_i64(&mut table, "otp", "exp_mins", "OTP_EXP_MINS") {
+            self.otp.exp_mins = TimeDelta::minutes(v);
+        }
+        if let Some(v) = t_u16(&mut table, "otp", "renew_exp", "OTP_RENEW_EXP") {
+            self.otp.renew_exp = v;
+        }
+        if let Some(v) = t_u16(
+            &mut table,
+            "otp",
+            "default_digest_len",
+            "OTP_DEFAULT_DIGEST_LEN",
+        ) {
+            self.otp.default_digest_len = if v == 256 || v == 384 || v == 512 {
+                v
+            } else {
+                512
+            };
+        }
+
+        // [otp.email]
+        let mut table = t_table(&mut table, "email");
+        if let Some(v) = t_bool(&mut table, "otp.email", "enable", "OTP_EMAIL_ENABLE") {
+            self.otp.email.enable = v;
+        }
+    }
+
     fn parse_http_client(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "http_client");
 
@@ -4002,6 +4151,21 @@ pub struct VarsMfa {
 }
 
 #[derive(Debug)]
+pub struct VarsOtp {
+    pub enable: bool,
+    pub length: u8,
+    pub exp_mins: TimeDelta,
+    pub renew_exp: u16,
+    pub default_digest_len: u16,
+    pub email: VarsOtpEmail,
+}
+
+#[derive(Debug)]
+pub struct VarsOtpEmail {
+    pub enable: bool,
+}
+
+#[derive(Debug)]
 pub struct VarsPam {
     pub remote_password_len: u8,
     pub remote_password_ttl: u16,
@@ -4062,6 +4226,7 @@ pub struct VarsTemplates {
     pub password_new: VarsTemplatesLanguages,
     pub password_reset: VarsTemplatesLanguages,
     pub email_registered_already: VarsTemplatesLanguages,
+    pub email_otp: VarsTemplatesLanguages,
 }
 
 #[derive(Debug)]

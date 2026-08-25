@@ -17,6 +17,7 @@ use crate::entity::kv::{KVAccess, KVNamespace, KVValue};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::one_time_password::OneTimePassword;
 use crate::entity::pam::authorized_keys::AuthorizedKey;
 use crate::entity::pam::groups::PamGroup;
 use crate::entity::pam::hosts::PamHost;
@@ -183,6 +184,11 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = query_sqlite::<MagicLink>(&conn, "SELECT * FROM magic_links").await?;
     inserts::magic_links(before).await?;
+
+    // ONE TIME PASSWORD
+    debug!("Migrating table: one_time_password");
+    let before = query_sqlite::<OneTimePassword>(&conn, "SELECT * FROM one_time_password").await?;
+    inserts::one_time_password(before).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
@@ -725,6 +731,11 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM magic_links", &[], 0).await?;
     inserts::magic_links(before).await?;
+
+    // ONE TIME PASSWORD
+    debug!("Migrating table: one_time_password");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM one_time_password", &[], 0).await?;
+    inserts::one_time_password(before).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");

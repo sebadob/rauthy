@@ -24,6 +24,7 @@ pub enum EmailType {
     Notification,
     PasswordReset,
     PasswordResetInfo,
+    OtpRequest,
 }
 
 impl Display for EmailType {
@@ -37,6 +38,7 @@ impl Display for EmailType {
             Self::Notification => write!(f, "Notification"),
             Self::PasswordReset => write!(f, "PasswordReset"),
             Self::PasswordResetInfo => write!(f, "PasswordResetInfo"),
+            Self::OtpRequest => write!(f, "OtpRequest"),
         }
     }
 }

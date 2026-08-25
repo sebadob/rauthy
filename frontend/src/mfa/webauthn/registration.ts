@@ -1,5 +1,5 @@
 import { arrBufToBase64UrlSafe, base64UrlSafeToArrBuf } from './utils';
-import type { WebauthnRegFinishRequest, WebauthnRegStartRequest } from '$webauthn/types.ts';
+import type { WebauthnRegFinishRequest, WebauthnRegStartRequest } from '$mfa/webauthn/types.ts';
 import { getCsrfToken, promiseTimeout } from '$utils/helpers';
 
 export interface WebauthnRegResult {

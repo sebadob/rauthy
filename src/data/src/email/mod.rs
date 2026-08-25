@@ -13,6 +13,7 @@ pub mod login_location;
 pub mod mailer;
 mod mailer_microsoft_graph;
 pub mod notification;
+pub mod otp;
 pub mod password_reset;
 pub mod password_reset_info;
 pub mod smtp_oauth_token;
