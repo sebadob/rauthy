@@ -2569,9 +2569,11 @@ mod tests {
 
     #[test]
     fn test_delete_client_custom_scope() {
-        let mut client = Client::default();
-        client.scopes = "email,openid,profile,groups".to_string();
-        client.default_scopes = "email,openid,cust_scope".to_string();
+        let mut client = Client {
+            scopes: "email,openid,profile,groups".to_string(),
+            default_scopes: "email,openid,cust_scope".to_string(),
+            ..Default::default()
+        };
 
         client.delete_scope("profile");
         assert_eq!(&client.scopes, "email,openid,groups");

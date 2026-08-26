@@ -1,6 +1,5 @@
 use crate::common::{get_auth_headers, get_backend_url, get_token_set};
 use rauthy_api_types::clients::{ClientResponse, UpdateClientRequest};
-use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_api_types::users::{
     UserAttrConfigRequest, UserAttrConfigResponse, UserAttrValueRequest, UserAttrValuesResponse,
@@ -119,8 +118,8 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         allowed_origins: c.allowed_origins,
         enabled: c.enabled,
         flows_enabled: c.flows_enabled,
-        access_token_alg: JwkKeyPairAlg::from(c.access_token_alg),
-        id_token_alg: JwkKeyPairAlg::from(c.id_token_alg),
+        access_token_alg: c.access_token_alg,
+        id_token_alg: c.id_token_alg,
         auth_code_lifetime: c.auth_code_lifetime,
         access_token_lifetime: c.access_token_lifetime,
         scopes,
@@ -168,7 +167,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let resp = res.json::<UserAttrValuesResponse>().await?;
     assert_eq!(resp.values.len(), 1);
-    let user_attr = resp.values.get(0).unwrap();
+    let user_attr = resp.values.first().unwrap();
     assert_eq!(user_attr.key, cust_attr.name);
     assert_eq!(user_attr.value, test_val);
 
@@ -275,7 +274,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .filter(|s| s.id == scope.id)
         .take(1)
         .collect::<Vec<ScopeResponse>>();
-    let scope_mapped = scopes_reduced.get(0).unwrap();
+    let scope_mapped = scopes_reduced.first().unwrap();
     assert_eq!(
         scope_mapped.attr_include_access,
         Some(vec!["cust2".to_string()])
@@ -294,7 +293,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let resp = res.json::<UserAttrValuesResponse>().await?;
     assert_eq!(resp.values.len(), 1);
-    let user_attr_mod = resp.values.get(0).unwrap();
+    let user_attr_mod = resp.values.first().unwrap();
     assert_eq!(&user_attr_mod.key, "cust2");
     // the value must be the same
     assert_eq!(user_attr_mod.value, user_attr.value);
@@ -333,7 +332,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .filter(|s| s.id == scope.id)
         .take(1)
         .collect::<Vec<ScopeResponse>>();
-    let scope_mapped = scopes_reduced.get(0).unwrap();
+    let scope_mapped = scopes_reduced.first().unwrap();
     assert_eq!(scope_mapped.attr_include_access, None);
     assert_eq!(scope_mapped.attr_include_id, None);
 

@@ -191,6 +191,21 @@ fn api_key_secret_plain(secret: ApiKeySecret) -> String {
     }
 }
 
+impl From<crate::migration::bootstrap::types::ApiKeyAccess>
+    for crate::entity::api_keys::ApiKeyAccess
+{
+    fn from(value: crate::migration::bootstrap::types::ApiKeyAccess) -> Self {
+        Self {
+            group: value.group.into(),
+            access_rights: value
+                .access_rights
+                .into_iter()
+                .map(|ar| ar.into())
+                .collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -250,20 +265,5 @@ mod tests {
         assert!(!err.message.is_empty());
 
         let _ = tokio::fs::remove_file(&path).await;
-    }
-}
-
-impl From<crate::migration::bootstrap::types::ApiKeyAccess>
-    for crate::entity::api_keys::ApiKeyAccess
-{
-    fn from(value: crate::migration::bootstrap::types::ApiKeyAccess) -> Self {
-        Self {
-            group: value.group.into(),
-            access_rights: value
-                .access_rights
-                .into_iter()
-                .map(|ar| ar.into())
-                .collect(),
-        }
     }
 }

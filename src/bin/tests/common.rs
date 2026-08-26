@@ -52,7 +52,7 @@ pub fn get_backend_url() -> String {
 
 #[allow(dead_code)]
 pub fn get_issuer() -> String {
-    format!("{}", get_backend_url())
+    get_backend_url()
 }
 
 pub async fn get_token_set() -> TokenSet {
@@ -220,7 +220,7 @@ pub async fn cookie_csrf_headers_from_res_direct(
     let (session_cookie, _) = cookie.to_str()?.split_once(';').unwrap();
 
     let mut headers = HeaderMap::new();
-    headers.append(header::COOKIE, HeaderValue::from_str(&session_cookie)?);
+    headers.append(header::COOKIE, HeaderValue::from_str(session_cookie)?);
 
     let session_info = res.json::<SessionInfoResponse>().await.unwrap();
     headers.append(
@@ -238,7 +238,7 @@ pub async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Bo
         if cookie.starts_with("__Host-RauthySession=") {
             println!("Extracted session cookie: {:?}", cookie);
             let mut headers = HeaderMap::new();
-            headers.append(header::COOKIE, HeaderValue::from_str(&cookie)?);
+            headers.append(header::COOKIE, HeaderValue::from_str(cookie)?);
 
             let content = res.text().await?;
             let (_, content_split) = content

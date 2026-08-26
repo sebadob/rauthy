@@ -8,6 +8,7 @@ use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
+use semver::Version;
 use std::env;
 use std::ops::DerefMut;
 use std::sync::{Arc, OnceLock};
@@ -224,7 +225,8 @@ impl DB {
         Ok(())
     }
 
-    pub async fn migrate() -> Result<(), ErrorResponse> {
+    /// Applies migrations and returns the pre-migration DB version.
+    pub async fn migrate() -> Result<Option<Version>, ErrorResponse> {
         // before we do any db migrations, we need to check the current DB version
         // for compatibility
         let db_version = DbVersion::check_app_version().await?;
@@ -296,9 +298,9 @@ impl DB {
         }
 
         // update the DbVersion after successful pool creation and migrations
-        DbVersion::upsert(db_version).await?;
+        DbVersion::upsert(db_version.clone()).await?;
 
-        Ok(())
+        Ok(db_version)
     }
 }
 

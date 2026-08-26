@@ -53,7 +53,7 @@ async fn test_backchannel_logout() -> Result<(), Box<dyn Error>> {
     let now = Utc::now().timestamp();
     assert!(token.iat <= now);
     assert!(token.exp > now);
-    pretty_assertions::assert_eq!(token.sub.as_deref(), Some("m4PJ3TnyP32LA8hzY23deme3"));
+    pretty_assertions::assert_eq!(token.sub, Some("m4PJ3TnyP32LA8hzY23deme3"));
     // Usually, the `sid` would be given, but we did as `password` flow login here, which cannot
     // be linked to a session.
     assert!(token.sid.is_none());
