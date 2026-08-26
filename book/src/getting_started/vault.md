@@ -45,15 +45,17 @@ Run Rauthy as usual; it will decide whether to load config locally vs remotely b
 
 ## Local Vault Example using Docker
 
-Warning: These examples are dangerous as written! They include secrets (e.g., in `vault kv put ...`) only for automated demonstration purposes, and it would never be included in such a file for production.
+Warning: These examples are dangerous as written! They include secrets (e.g., in `vault kv put ...`)
+only for automated demonstration purposes, and it would never be included in such a file for production.
 
 Example docker compose file using a predefined root token:
 
-IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or edit the compose file, else you will see something like this error in the logs:
+IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or edit the compose file,
+else you will see something like this error in the logs:
 `http://:8202/v1/auth/token/lookup-self": dial tcp :8202: connect: connection refused`
 
 ```yaml
-# Example using a manually defined  root token
+# Example using a manually defined root token
 # export DOCKER_MACHINE_IP=$(docker-machine ip)
 # or fixed ip:
 # export DOCKER_MACHINE_IP=10.0.0.100
@@ -91,12 +93,71 @@ services:
     depends_on:
       - dev-vault-svc
     restart: "no"
-    entrypoint: [ "sh", "-c", "sleep 5 && vault login unsafe && vault kv put /secret/rauthy_config config.toml='[auth_headers]\nenable = true\n[cluster]\nnode_id = 1\nnodes = [\"1 localhost:8100 localhost:8200\"]\n# 123SuperMegaSafe\npassword_dashboard = \"JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==\"\nsecret_raft = \"SuperSecureSecret1337\"\nsecret_api = \"SuperSecureSecret1337\"\n[database]\npg_host = \"localhost\"\npg_user = \"rauthy\"\npg_password = \"123SuperSafe\"\n[dynamic_clients]\nenable = true\n[email]\nrauthy_admin_email = \"admin@localhost\"\n[encryption]\nkeys = [\"bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=\"]\nkey_active = \"bVCyTsGaggVy5yqQ\"\n[ephemeral_clients]\nenable = true\nenable_web_id = true\nenable_solid_aud = true\nallowed_flows = [\"authorization_code\", \"refresh_token\"]\n[http_client]\ndanger_unencrypted = true\ndanger_insecure = true\n[mfa]\nadmin_force_mfa = false\n[pow]\ndifficulty = 10\n[server]\nport_http = 8080\nport_https = 8443\nscheme = \"https\"\npub_url = \"localhost:8443\"\nhttp_workers = 1\nmetrics_enable = false\nswagger_ui_enable = true\n[tls]\ncert_path = \"tls/cert-chain.pem\"\nkey_path = \"tls/key.pem\"\n[user_registration]\nenable = true\n[webauthn]\nrp_id = \"localhost\"\nrp_origin = \"http://localhost:8080\"'"]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sleep 5 &&
+        vault login unsafe &&
+        vault kv put /secret/rauthy_config \
+          config.toml='[auth_headers]
+        enable = true
+        [cluster]
+        node_id = 1
+        nodes = ["1 localhost:8100 localhost:8200"]
+        # 123SuperMegaSafe
+        password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+        secret_raft = "SuperSecureSecret1337"
+        secret_api = "SuperSecureSecret1337"
+        [database]
+        pg_host = "localhost"
+        pg_user = "rauthy"
+        pg_password = "123SuperSafe"
+        [dynamic_clients]
+        enable = true
+        [email]
+        rauthy_admin_email = "admin@localhost"
+        [encryption]
+        keys = ["bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ="]
+        key_active = "bVCyTsGaggVy5yqQ"
+        [ephemeral_clients]
+        enable = true
+        enable_web_id = true
+        enable_solid_aud = true
+        allowed_flows = ["authorization_code", "refresh_token"]
+        [http_client]
+        danger_unencrypted = true
+        danger_insecure = true
+        [mfa]
+        admin_force_mfa = false
+        [pow]
+        difficulty = 10
+        [server]
+        port_http = 8080
+        port_https = 8443
+        scheme = "https"
+        pub_url = "localhost:8443"
+        http_workers = 1
+        metrics_enable = false
+        swagger_ui_enable = true
+        [tls]
+        cert_path = "tls/cert-chain.pem"
+        key_path = "tls/key.pem"
+        [user_registration]
+        enable = true
+        [webauthn]
+        rp_id = "localhost"
+        rp_origin = "http://localhost:8080"'
     healthcheck:
-        test: ["CMD", "vault", "kv", "get", "rauthy_config/config.toml"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
+      test:
+        - "CMD"
+        - "vault"
+        - "kv"
+        - "get"
+        - "rauthy_config/config.toml"
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   mailcrab-svc:
     image: marlonb/mailcrab:latest
@@ -108,7 +169,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.36.1
+    image: ghcr.io/sebadob/rauthy:0.36.2
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443
@@ -140,14 +201,20 @@ services:
 Example docker compose file for one time use token:
 
 ```yaml
-# Example for a one-time-use token using a shared .env file to transfer the token from vault-setup to rauthy
-# first create the .env file in the current dir where docker compose up is run from, next to the docker-copose file and set HOSTIP env var
+# Example for a one-time-use token using a shared .env file to transfer
+# the token from vault-setup to rauthy.
+#
+# First create the .env file in the current directory where
+# docker compose up is run from, next to the compose file.
+#
 # touch .env
 # export DOCKER_MACHINE_IP=$(docker-machine ip)
 # or fixed ip:
 # export DOCKER_MACHINE_IP=10.0.0.100
 # docker compose up
-# now a restart of the rauthy-test container is expected to fail, as the one-time-use token is now expired/invalid
+#
+# A restart of the rauthy-test container is expected to fail because
+# the one-time-use token is now expired/invalid.
 
 version: "3"
 
@@ -164,7 +231,7 @@ services:
     environment:
       - VAULT_DEV_ROOT_TOKEN_ID=unsafe
       - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
-      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}  # Set the Vault address
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}
     ports:
       - "8202:8200"  # Expose Vault port 8200 on host port 8202
     command: server -dev  # Start Vault in development mode
@@ -185,12 +252,85 @@ services:
       - type: bind
         source: ./.env
         target: /vault/tokens/.env
-    entrypoint: [ "sh", "-c", "sleep 5 && vault login unsafe && vault kv put /secret/rauthy_config config.toml='[auth_headers]\nenable = true\n[cluster]\nnode_id = 1\nnodes = [\"1 localhost:8100 localhost:8200\"]\n# 123SuperMegaSafe\npassword_dashboard = \"JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ==\"\nsecret_raft = \"SuperSecureSecret1337\"\nsecret_api = \"SuperSecureSecret1337\"\n[database]\npg_host = \"localhost\"\npg_user = \"rauthy\"\npg_password = \"123SuperSafe\"\n[dynamic_clients]\nenable = true\n[email]\nrauthy_admin_email = \"admin@localhost\"\n[encryption]\nkeys = [\"bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ=\"]\nkey_active = \"bVCyTsGaggVy5yqQ\"\n[ephemeral_clients]\nenable = true\nenable_web_id = true\nenable_solid_aud = true\nallowed_flows = [\"authorization_code\", \"refresh_token\"]\n[http_client]\ndanger_unencrypted = true\ndanger_insecure = true\n[mfa]\nadmin_force_mfa = false\n[pow]\ndifficulty = 10\n[server]\nport_http = 8080\nport_https = 8443\nscheme = \"https\"\npub_url = \"localhost:8443\"\nhttp_workers = 1\nmetrics_enable = false\nswagger_ui_enable = true\n[tls]\ncert_path = \"tls/cert-chain.pem\"\nkey_path = \"tls/key.pem\"\n[user_registration]\nenable = true\n[webauthn]\nrp_id = \"localhost\"\nrp_origin = \"http://localhost:8080\"' && echo 'path \"secret/data/rauthy_config\" {capabilities = [\"read\"]}' | vault policy write rauthy_config_acl_policy -  && export ONETIME_TOKEN=$$(vault token create -policy=rauthy_config_acl_policy -use-limit=1 -orphan=true -renewable=false -ttl=10m | grep -m 1 token | awk '{print $$2}') && echo \"VAULT_TOKEN=$$ONETIME_TOKEN\" > /vault/tokens/.env && cat /vault/tokens/.env"]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sleep 5 &&
+        vault login unsafe &&
+        vault kv put /secret/rauthy_config \
+          config.toml='[auth_headers]
+        enable = true
+        [cluster]
+        node_id = 1
+        nodes = ["1 localhost:8100 localhost:8200"]
+        # 123SuperMegaSafe
+        password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+        secret_raft = "SuperSecureSecret1337"
+        secret_api = "SuperSecureSecret1337"
+        [database]
+        pg_host = "localhost"
+        pg_user = "rauthy"
+        pg_password = "123SuperSafe"
+        [dynamic_clients]
+        enable = true
+        [email]
+        rauthy_admin_email = "admin@localhost"
+        [encryption]
+        keys = ["bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ="]
+        key_active = "bVCyTsGaggVy5yqQ"
+        [ephemeral_clients]
+        enable = true
+        enable_web_id = true
+        enable_solid_aud = true
+        allowed_flows = ["authorization_code", "refresh_token"]
+        [http_client]
+        danger_unencrypted = true
+        danger_insecure = true
+        [mfa]
+        admin_force_mfa = false
+        [pow]
+        difficulty = 10
+        [server]
+        port_http = 8080
+        port_https = 8443
+        scheme = "https"
+        pub_url = "localhost:8443"
+        http_workers = 1
+        metrics_enable = false
+        swagger_ui_enable = true
+        [tls]
+        cert_path = "tls/cert-chain.pem"
+        key_path = "tls/key.pem"
+        [user_registration]
+        enable = true
+        [webauthn]
+        rp_id = "localhost"
+        rp_origin = "http://localhost:8080"' &&
+        echo 'path "secret/data/rauthy_config" {
+          capabilities = ["read"]
+        }' |
+        vault policy write rauthy_config_acl_policy - &&
+        export ONETIME_TOKEN=$$(vault token create \
+          -policy=rauthy_config_acl_policy \
+          -use-limit=1 \
+          -orphan=true \
+          -renewable=false \
+          -ttl=10m |
+          grep -m 1 token |
+          awk '{print $$2}') &&
+        echo "VAULT_TOKEN=$$ONETIME_TOKEN" > /vault/tokens/.env &&
+        cat /vault/tokens/.env
     healthcheck:
-        test: ["CMD", "vault", "kv", "get", "rauthy_config/config.toml"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
+      test:
+        - "CMD"
+        - "vault"
+        - "kv"
+        - "get"
+        - "rauthy_config/config.toml"
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   mailcrab-svc:
     image: marlonb/mailcrab:latest
@@ -202,7 +342,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.36.1
+    image: ghcr.io/sebadob/rauthy:0.36.2
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443
