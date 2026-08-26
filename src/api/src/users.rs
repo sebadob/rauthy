@@ -2273,7 +2273,6 @@ pub async fn post_user_password_request_reset(
             .user_registration
             .allow_open_redirect
     {
-        warn!("{redirect_uri}");
         validate_reg_redirect_uri(redirect_uri).await?;
     }
 
