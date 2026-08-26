@@ -518,6 +518,11 @@ pub async fn post_users_register_handle(
 /// Validates a registration or password-reset redirect URI against configured clients.
 #[inline]
 async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
+    // Rauthys own relative links are always safe
+    if redirect_uri.starts_with("/") {
+        return Ok(());
+    }
+
     for uri in Client::find_all_client_uris().await? {
         let matches = match redirect_uri.strip_prefix(&uri) {
             None => false,
@@ -2085,7 +2090,7 @@ pub async fn post_webauthn_reg_finish(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_finish(id, payload).await?;
+        webauthn::reg_finish(id, payload, false).await?;
 
         // The registration ceremony is a fresh proof of possession for this very session, and
         // starting it already required an `MfaModToken`. Upgrade the session in place so the user
@@ -2268,6 +2273,7 @@ pub async fn post_user_password_request_reset(
             .user_registration
             .allow_open_redirect
     {
+        warn!("{redirect_uri}");
         validate_reg_redirect_uri(redirect_uri).await?;
     }
 

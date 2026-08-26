@@ -104,7 +104,11 @@ pub async fn handle_put_user_passkey_finish(
 
     // finish webauthn request -> always force UV for passkey only accounts
     debug!("ml is valid - finishing webauthn request");
-    webauthn::reg_finish(user_id.clone(), req_data).await?;
+    let is_new_user = matches!(
+        MagicLinkUsage::try_from(&ml.usage),
+        Ok(MagicLinkUsage::NewUser(_))
+    );
+    webauthn::reg_finish(user_id.clone(), req_data, is_new_user).await?;
 
     // validate csrf token
     match req.headers().get(PWD_CSRF_HEADER) {
