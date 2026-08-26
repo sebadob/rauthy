@@ -1,0 +1,376 @@
+# Rauthy + Vault config
+
+Support for loading the config from a Vault source was added in v0.31.0. To enable it, 
+set the environment variable `USE_VAULT_CONFIG=true` and include a [vault.toml](../../vault.toml) file, 
+that specifies the Vault connection details and how configuration values can be overridden using environment variables.
+If you are testing with an insecure connection (e.g., http://), also set `DANGER_VAULT_INSECURE=true` — use this only for development/testing, never in production.
+
+## Load config from Vault
+
+1) Put your config into Vault (KV)
+   Store the Rauthy config values under a KV path (most examples assume KV v2).
+   - Mount: secret
+   - Path: rauthy
+   - Version: 2
+
+   So the effective secret would be at something like secret/data/rauthy (KV v2 layout).
+
+
+2) Provide Vault connection info to Rauthy via environment variables
+   When Vault token is available, Rauthy loads its config from Vault.
+
+   Set:
+
+   ```toml
+   VAULT_ADDR="http://127.0.0.1:8201"
+   VAULT_TOKEN="hvs...."
+   VAULT_MOUNT="secret"
+   VAULT_PATH="rauthy"
+   VAULT_VERSION="2"
+   ```
+
+3) Start Rauthy normally
+Run Rauthy as usual; it will decide whether to load config locally vs remotely based on the Vault env setup (e.g., if `USE_VAULT_CONFIG=true` is set, it uses the Vault path).
+
+## Example ENV vars for Docker
+
+```
+-e VAULT_ADDR=https://myvault.example.com:8200 \
+-e VAULT_TOKEN=hvs.... \
+-e VAULT_MOUNT=secret \
+-e VAULT_PATH=rauthy_config \
+-e VAULT_CONFIG_KEY=config.toml \
+-e VAULT_KV_VERSION=2 \
+```
+
+## Local Vault Example using Docker
+
+Warning: These examples are dangerous as written! They include secrets (e.g., in `vault kv put ...`)
+only for automated demonstration purposes, and it would never be included in such a file for production.
+
+Example docker compose file using a predefined root token:
+
+IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or edit the compose file,
+else you will see something like this error in the logs:
+`http://:8202/v1/auth/token/lookup-self": dial tcp :8202: connect: connection refused`
+
+```yaml
+# Example using a manually defined root token
+# export DOCKER_MACHINE_IP=$(docker-machine ip)
+# or fixed ip:
+# export DOCKER_MACHINE_IP=10.0.0.100
+# docker compose up
+
+version: "3"
+
+networks:
+  rauthy-test:
+    driver: bridge
+
+services:
+  dev-vault-svc:
+    image: hashicorp/vault:1.20.0
+    container_name: dev-vault
+    cap_add:
+      - IPC_LOCK  # Lock memory to prevent sensitive data from swapping to disk
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=unsafe
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}  # Set the Vault address
+    ports:
+      - "8202:8200"  # Expose Vault port 8200 on host port 8202
+    command: server -dev  # Start Vault in development mode
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  vault-setup-svc:
+    image: hashicorp/vault:1.20.0
+    environment:
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+    depends_on:
+      - dev-vault-svc
+    restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sleep 5 &&
+        vault login unsafe &&
+        vault kv put /secret/rauthy_config \
+          config.toml='[auth_headers]
+        enable = true
+        [cluster]
+        node_id = 1
+        nodes = ["1 localhost:8100 localhost:8200"]
+        # 123SuperMegaSafe
+        password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+        secret_raft = "SuperSecureSecret1337"
+        secret_api = "SuperSecureSecret1337"
+        [database]
+        pg_host = "localhost"
+        pg_user = "rauthy"
+        pg_password = "123SuperSafe"
+        [dynamic_clients]
+        enable = true
+        [email]
+        rauthy_admin_email = "admin@localhost"
+        [encryption]
+        keys = ["bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ="]
+        key_active = "bVCyTsGaggVy5yqQ"
+        [ephemeral_clients]
+        enable = true
+        enable_web_id = true
+        enable_solid_aud = true
+        allowed_flows = ["authorization_code", "refresh_token"]
+        [http_client]
+        danger_unencrypted = true
+        danger_insecure = true
+        [mfa]
+        admin_force_mfa = false
+        [pow]
+        difficulty = 10
+        [server]
+        port_http = 8080
+        port_https = 8443
+        scheme = "https"
+        pub_url = "localhost:8443"
+        http_workers = 1
+        metrics_enable = false
+        swagger_ui_enable = true
+        [tls]
+        cert_path = "tls/cert-chain.pem"
+        key_path = "tls/key.pem"
+        [user_registration]
+        enable = true
+        [webauthn]
+        rp_id = "localhost"
+        rp_origin = "http://localhost:8080"'
+    healthcheck:
+      test:
+        - "CMD"
+        - "vault"
+        - "kv"
+        - "get"
+        - "rauthy_config/config.toml"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mailcrab-svc:
+    image: marlonb/mailcrab:latest
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+    networks:
+      - rauthy-test
+
+  rauthy-svc:
+    container_name: rauthy-test
+    image: ghcr.io/sebadob/rauthy:0.36.2
+    environment:
+      - DANGER_VAULT_INSECURE=true
+      - PUB_URL=${DOCKER_MACHINE_IP}:8443
+      #- TLS_CERT=tls/cert-chain.pem
+      #- TLS_KEY=tls/key.pem
+      - USE_VAULT_CONFIG=true
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+      - VAULT_TOKEN=unsafe
+      - VAULT_MOUNT=secret
+      - VAULT_PATH=rauthy_config
+      - VAULT_CONFIG_KEY=config.toml
+      - VAULT_KV_VERSION=2
+      - SMTP_URL=${DOCKER_MACHINE_IP}
+      - SMTP_PORT=1025
+      - SMTP_DANGER_INSECURE=true
+    ports:
+      - "8443:8443"
+    depends_on:
+      mailcrab-svc:
+        condition: service_started
+      dev-vault-svc:
+        condition: service_started
+      vault-setup-svc:
+        condition: service_completed_successfully
+    networks:
+      - rauthy-test
+```
+
+Example docker compose file for one time use token:
+
+```yaml
+# Example for a one-time-use token using a shared .env file to transfer
+# the token from vault-setup to rauthy.
+#
+# First create the .env file in the current directory where
+# docker compose up is run from, next to the compose file.
+#
+# touch .env
+# export DOCKER_MACHINE_IP=$(docker-machine ip)
+# or fixed ip:
+# export DOCKER_MACHINE_IP=10.0.0.100
+# docker compose up
+#
+# A restart of the rauthy-test container is expected to fail because
+# the one-time-use token is now expired/invalid.
+
+version: "3"
+
+networks:
+  rauthy-test:
+    driver: bridge
+
+services:
+  dev-vault-svc:
+    image: hashicorp/vault:1.20.0
+    container_name: dev-vault
+    cap_add:
+      - IPC_LOCK  # Lock memory to prevent sensitive data from swapping to disk
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=unsafe
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}
+    ports:
+      - "8202:8200"  # Expose Vault port 8200 on host port 8202
+    command: server -dev  # Start Vault in development mode
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  vault-setup-svc:
+    image: hashicorp/vault:1.20.0
+    environment:
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+    depends_on:
+      - dev-vault-svc
+    restart: "no"
+    volumes:
+      - type: bind
+        source: ./.env
+        target: /vault/tokens/.env
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sleep 5 &&
+        vault login unsafe &&
+        vault kv put /secret/rauthy_config \
+          config.toml='[auth_headers]
+        enable = true
+        [cluster]
+        node_id = 1
+        nodes = ["1 localhost:8100 localhost:8200"]
+        # 123SuperMegaSafe
+        password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+        secret_raft = "SuperSecureSecret1337"
+        secret_api = "SuperSecureSecret1337"
+        [database]
+        pg_host = "localhost"
+        pg_user = "rauthy"
+        pg_password = "123SuperSafe"
+        [dynamic_clients]
+        enable = true
+        [email]
+        rauthy_admin_email = "admin@localhost"
+        [encryption]
+        keys = ["bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ="]
+        key_active = "bVCyTsGaggVy5yqQ"
+        [ephemeral_clients]
+        enable = true
+        enable_web_id = true
+        enable_solid_aud = true
+        allowed_flows = ["authorization_code", "refresh_token"]
+        [http_client]
+        danger_unencrypted = true
+        danger_insecure = true
+        [mfa]
+        admin_force_mfa = false
+        [pow]
+        difficulty = 10
+        [server]
+        port_http = 8080
+        port_https = 8443
+        scheme = "https"
+        pub_url = "localhost:8443"
+        http_workers = 1
+        metrics_enable = false
+        swagger_ui_enable = true
+        [tls]
+        cert_path = "tls/cert-chain.pem"
+        key_path = "tls/key.pem"
+        [user_registration]
+        enable = true
+        [webauthn]
+        rp_id = "localhost"
+        rp_origin = "http://localhost:8080"' &&
+        echo 'path "secret/data/rauthy_config" {
+          capabilities = ["read"]
+        }' |
+        vault policy write rauthy_config_acl_policy - &&
+        export ONETIME_TOKEN=$$(vault token create \
+          -policy=rauthy_config_acl_policy \
+          -use-limit=1 \
+          -orphan=true \
+          -renewable=false \
+          -ttl=10m |
+          grep -m 1 token |
+          awk '{print $$2}') &&
+        echo "VAULT_TOKEN=$$ONETIME_TOKEN" > /vault/tokens/.env &&
+        cat /vault/tokens/.env
+    healthcheck:
+      test:
+        - "CMD"
+        - "vault"
+        - "kv"
+        - "get"
+        - "rauthy_config/config.toml"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mailcrab-svc:
+    image: marlonb/mailcrab:latest
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+    networks:
+      - rauthy-test
+
+  rauthy-svc:
+    container_name: rauthy-test
+    image: ghcr.io/sebadob/rauthy:0.36.2
+    environment:
+      - DANGER_VAULT_INSECURE=true
+      - PUB_URL=${DOCKER_MACHINE_IP}:8443
+      #- TLS_CERT=tls/cert-chain.pem
+      #- TLS_KEY=tls/key.pem
+      - USE_VAULT_CONFIG=true
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+      #- VAULT_TOKEN=unsafe
+      - VAULT_MOUNT=secret
+      - VAULT_PATH=rauthy_config
+      - VAULT_CONFIG_KEY=config.toml
+      - VAULT_KV_VERSION=2
+      - SMTP_URL=${DOCKER_MACHINE_IP}
+      - SMTP_PORT=1025
+      - SMTP_DANGER_INSECURE=true
+    ports:
+      - "8443:8443"
+    volumes:
+      - type: bind
+        source: ./.env
+        target: /app/.env
+    depends_on:
+      mailcrab-svc:
+        condition: service_started
+      dev-vault-svc:
+        condition: service_started
+      vault-setup-svc:
+        condition: service_completed_successfully
+    networks:
+      - rauthy-test
+```
