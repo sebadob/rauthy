@@ -281,11 +281,11 @@ pub struct User {
     /// Validation: `[user_values.preferred_username] -> regex_rust`
     #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub given_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
     pub password: UserPassword,

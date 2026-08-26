@@ -19,8 +19,11 @@ pub enum AuthProviderType {
 
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct ProviderRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-\s]{2,128}]`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub name: String,
     pub typ: AuthProviderType,
     pub enabled: bool,
