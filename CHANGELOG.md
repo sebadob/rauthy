@@ -77,6 +77,20 @@ enable = true
 [#1620](https://github.com/sebadob/rauthy/pull/1620)
 [#1705](https://github.com/sebadob/rauthy/pull/1705)
 
+#### Updated Validation Regexes
+
+Validation Regexes for both user given and family name, and also for client names were updated once
+again. Instead of even trying to define all possible ranges in all languages, we are now relying on
+automatic resolution. All control characters, possibly dangerous and nonsense chars like emojis are
+still forbidden, but apart from that, it's a lot more loose. The new definition is the following:
+
+```
+RE_USER_NAME:   ^[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}$
+RE_CLIENT_NAME: ^[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}$
+```
+
+[#1708](https://github.com/sebadob/rauthy/pull/1708)
+
 ## v0.36.2
 
 ### Security
