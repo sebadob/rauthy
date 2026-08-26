@@ -361,8 +361,17 @@ OFFSET $3"#;
         Ok(sids)
     }
 
+    /// Inserts or updates a live session; expired sessions are rejected.
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
+        if self.exp < Utc::now().timestamp() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
+        }
+
         let state_str = self.state.as_str();
+        let now = Utc::now().timestamp();
 
         let sql = r#"
 INSERT INTO
@@ -370,9 +379,10 @@ sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen,
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
-    remote_ip = $10"#;
+    remote_ip = $10
+WHERE sessions.exp > $11"#;
 
-        if is_hiqlite() {
+        let rows_affected = if is_hiqlite() {
             DB::hql()
                 .execute(
                     sql,
@@ -386,10 +396,11 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
                         state_str,
                         self.exp,
                         self.last_seen,
-                        &self.remote_ip
+                        &self.remote_ip,
+                        now
                     ),
                 )
-                .await?;
+                .await?
         } else {
             DB::pg_execute(
                 sql,
@@ -404,14 +415,43 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
                     &self.exp,
                     &self.last_seen,
                     &self.remote_ip,
+                    &now,
                 ],
             )
-            .await?;
+            .await?
+        };
+
+        if rows_affected == 0 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
         }
 
         DB::hql()
             .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
             .await?;
+
+        Ok(())
+    }
+
+    /// Refreshes `last_seen` without inserting or resurrecting a session.
+    pub async fn touch_last_seen(&mut self) -> Result<(), ErrorResponse> {
+        let now = Utc::now().timestamp();
+        let sql = "UPDATE sessions SET last_seen = $1 WHERE id = $2 AND exp > $1";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(now, &self.id)).await?
+        } else {
+            DB::pg_execute(sql, &[&now, &self.id]).await?
+        };
+
+        if rows_affected == 1 {
+            self.last_seen = now;
+            DB::hql()
+                .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
+                .await?;
+        }
 
         Ok(())
     }
@@ -455,7 +495,14 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
 
     #[inline]
     pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
-        self.last_seen = Utc::now().timestamp();
+        let now = Utc::now().timestamp();
+        if self.exp < now {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
+        }
+        self.last_seen = now;
         self.state = SessionState::Auth;
         self.validate_user_expiry(user)?;
         self.user_id = Some(user.id.clone());
@@ -603,14 +650,7 @@ impl Session {
             .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "invalid SessionState"))
     }
 
-    /// Checks if the current session is valid: has not expired and has not timed out (last_seen).
-    /// Also makes sure that a session in `SessionState::Init` is only allowed if the `req_path`
-    /// is included in the exceptions.
-    ///
-    /// If this returns `true` the session is valid AND authenticated, or it is in init state and
-    /// explicitly allowed for endpoints like `/auth/v1/oidc/authorize` and `/auth/v1/oidc/token`.
-    ///
-    /// Only validates `session.remote_ip` if `remote_ip` is `Some(_)`.
+    /// Checks expiry, timeout, state, and the optional remote IP.
     pub fn is_valid(
         &self,
         session_timeout: u32,
@@ -633,16 +673,10 @@ impl Session {
             }
         };
 
-        if remote_ip.is_none() {
-            return true;
-        }
-
-        let session_ip = self
-            .remote_ip
-            .as_ref()
-            .and_then(|ip| IpAddr::from_str(ip).ok());
-        if remote_ip == session_ip {
-            if state == SessionState::Init {
+        // Init sessions are valid only on the explicit login endpoints.
+        let init_allowed = match state {
+            SessionState::Auth => true,
+            SessionState::Init => {
                 #[cfg(debug_assertions)]
                 let exceptions = [
                     "/auth/v1/oidc/authorize",
@@ -674,30 +708,35 @@ impl Session {
                     "/auth/v1/tos/accept",
                     "/auth/v1/tos/deny",
                 ];
-                if exceptions.contains(&req_path) {
-                    return true;
+                let allowed = exceptions.contains(&req_path);
+                if !allowed {
+                    trace!(
+                        "Session in Init state used on invalid path: {:?} -> {}",
+                        self, req_path
+                    );
                 }
+                allowed
+            }
+            _ => false,
+        };
 
-                trace!(
-                    "Session in Init state used on invalid path: {:?} -> {}",
-                    self, req_path
+        if let Some(remote_ip) = remote_ip {
+            let session_ip = self
+                .remote_ip
+                .as_ref()
+                .and_then(|ip| IpAddr::from_str(ip).ok());
+            if Some(remote_ip) != session_ip {
+                warn!(
+                    session_id = self.id,
+                    ?session_ip,
+                    ?remote_ip,
+                    "Invalid access for session",
                 );
+                return false;
             }
-
-            if state == SessionState::Auth {
-                return true;
-            }
-        } else {
-            warn!(
-                session_id = self.id,
-                ?session_ip,
-                ?remote_ip,
-                "Invalid access for session",
-            );
-            return false;
         }
 
-        false
+        init_allowed
     }
 
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
@@ -745,7 +784,7 @@ impl Session {
                 "CSRF Token not present in HTTP Header",
             ));
         }
-        if self.csrf_token.eq(csrf?) {
+        if constant_time_eq::constant_time_eq(self.csrf_token.as_bytes(), csrf?.as_bytes()) {
             return Ok(());
         }
 
@@ -787,15 +826,34 @@ pub fn get_header_value<'a>(
 #[cfg(test)]
 mod tests {
     use crate::entity::sessions::{Session, SessionState};
+    use actix_web::test::TestRequest;
+    use rauthy_common::constants::CSRF_HEADER;
     use rauthy_error::ErrorResponse;
     use std::net::IpAddr;
     use std::str::FromStr;
 
     #[test]
+    fn test_validate_csrf() {
+        let s = Session::new(3600, None);
+
+        let ok = TestRequest::default()
+            .insert_header((CSRF_HEADER, s.csrf_token.clone()))
+            .to_http_request();
+        assert!(s.validate_csrf(&ok).is_ok());
+
+        let wrong = TestRequest::default()
+            .insert_header((CSRF_HEADER, "wrong-token"))
+            .to_http_request();
+        assert!(s.validate_csrf(&wrong).is_err());
+
+        let missing = TestRequest::default().to_http_request();
+        assert!(s.validate_csrf(&missing).is_err());
+    }
+
+    #[test]
     fn test_session_validation() -> Result<(), ErrorResponse> {
         let mut s = Session::new(3600, None);
 
-        // New sessions are always in init state. Make sure they are correctly validated.
         let path_exep_1 = "/auth/v1/oidc/authorize";
         let path_exep_2 = "/auth/v1/oidc/token";
 
@@ -807,13 +865,32 @@ mod tests {
         assert!(s.is_valid(600, Some(ip), path_exep_1));
         assert!(s.is_valid(600, Some(ip), path_exep_2));
 
-        // only exact path matches may be exceptions, so anything else will be invalid
         assert!(!s.is_valid(600, Some(ip), "/"));
 
-        // check authenticated sessions
         s.state = SessionState::Auth;
         assert!(s.is_valid(600, Some(ip), "/"));
 
         Ok(())
+    }
+
+    #[test]
+    fn test_init_session_needs_exception_path_without_ip_validation() {
+        let s = Session::new(3600, None);
+        assert!(!s.is_valid(600, None, "/"));
+        assert!(!s.is_valid(600, None, "/auth/v1/users"));
+
+        assert!(s.is_valid(600, None, "/auth/v1/oidc/authorize"));
+        assert!(s.is_valid(600, None, "/auth/v1/oidc/token"));
+
+        let mut a = Session::new(3600, None);
+        a.state = SessionState::Auth;
+        assert!(a.is_valid(600, None, "/"));
+
+        let mut l = Session::new(3600, None);
+        l.state = SessionState::LoggedOut;
+        assert!(!l.is_valid(600, None, "/"));
+        let mut u = Session::new(3600, None);
+        u.state = SessionState::Unknown;
+        assert!(!u.is_valid(600, None, "/"));
     }
 }

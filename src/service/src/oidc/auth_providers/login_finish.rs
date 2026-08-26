@@ -44,7 +44,8 @@ pub async fn login_finish<'a>(
 
     // validate csrf token
     let slf = AuthProviderCallback::find(callback_id).await?;
-    if slf.xsrf_token != payload.xsrf_token {
+    if !constant_time_eq::constant_time_eq(slf.xsrf_token.as_bytes(), payload.xsrf_token.as_bytes())
+    {
         AuthProviderCallback::delete(slf.callback_id).await?;
 
         error!("invalid CSRF token");
@@ -56,7 +57,7 @@ pub async fn login_finish<'a>(
 
     // validate PKCE verifier
     let hash_base64 = base64_url_encode(sha256!(payload.pkce_verifier.as_bytes()));
-    if slf.pkce_challenge != hash_base64 {
+    if !constant_time_eq::constant_time_eq(slf.pkce_challenge.as_bytes(), hash_base64.as_bytes()) {
         AuthProviderCallback::delete(slf.callback_id).await?;
 
         error!("invalid PKCE verifier");
@@ -121,8 +122,7 @@ pub async fn login_finish<'a>(
             nonce: slf.req_nonce,
             code_challenge: slf.req_code_challenge,
             code_challenge_method: slf.req_code_challenge_method,
-            // brokered logins via an upstream IdP do not propagate RFC 8707 resource
-            // indicators yet
+            // brokered logins via an upstream IdP do not propagate RFC 8707 resource indicators yet
             resource: None,
             header_origin,
             require_webauthn,

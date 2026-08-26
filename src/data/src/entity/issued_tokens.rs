@@ -5,7 +5,6 @@ use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use std::ops::Add;
 use tracing::debug;
 
 #[derive(Debug, Clone, FromRow, FromPgRow)]
@@ -21,12 +20,15 @@ pub struct IssuedToken {
 impl IssuedToken {
     pub async fn cleanup_expired() -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM issued_tokens WHERE exp < $1";
-        let now_plus_1 = Utc::now().add(chrono::Duration::minutes(1)).timestamp();
+        // Only a 1s clock-skew margin: `validate_not_revoked` rejects tokens whose
+        // row is gone, so deleting rows further before their expiry would reject
+        // still-valid tokens (the old 60s margin did exactly that).
+        let now = Utc::now().timestamp() - 1;
 
         let rows_affected = if is_hiqlite() {
-            DB::hql().execute(sql, params!(now_plus_1)).await?
+            DB::hql().execute(sql, params!(now)).await?
         } else {
-            DB::pg_execute(sql, &[&now_plus_1]).await?
+            DB::pg_execute(sql, &[&now]).await?
         };
 
         if rows_affected > 0 {

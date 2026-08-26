@@ -516,8 +516,8 @@ impl WebauthnAdditionalData {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         match self {
             Self::Login(d) => d.delete().await,
-            // The service req data is not deleted here, but actually further down the road
-            // after the service req has been made.
+            // The service req data is not deleted here, but actually further down the road after the
+            // service req has been made.
             Self::Service(_) => Ok(()),
             Self::Test(_) => Ok(()),
             Self::LoginToSAwait(_) => Ok(()),

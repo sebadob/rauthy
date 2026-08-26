@@ -37,8 +37,8 @@ pub struct LogoutToken<'a> {
     pub sub: Option<&'a str>,
     pub sid: Option<&'a str>,
 
-    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
-    // `.is_none()` validation.
+    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for
+    // easy `.is_none()` validation.
     nonce: Option<&'a str>,
 }
 

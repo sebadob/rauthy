@@ -75,6 +75,9 @@ pub async fn login_start<'a>(
         .handle
         .filter(|_| provider.issuer == PROVIDER_ATPROTO)
     {
+        // Reject literal internal hosts before server-side atproto resolution.
+        validate_atproto_identifier(&input)?;
+
         let atproto = atproto::Client::get();
 
         let options = AuthorizeOptions {
@@ -110,4 +113,104 @@ pub async fn login_start<'a>(
         slf.xsrf_token,
         HeaderValue::from_str(&location).expect("Location HeaderValue to be correct"),
     ))
+}
+
+/// Rejects literal internal hosts in atproto identifiers.
+fn validate_atproto_identifier(input: &str) -> Result<(), ErrorResponse> {
+    let host: String = if let Some((_, host)) = input.rsplit_once('@') {
+        host.to_string()
+    } else if let Some(rest) = input.strip_prefix("did:web:") {
+        rest.split(':')
+            .next()
+            .unwrap_or_default()
+            .replace("%3A", ":")
+            .replace("%3a", ":")
+    } else {
+        return Ok(());
+    };
+
+    let host = host.trim();
+
+    let ip_literal = if let Some(rest) = host.strip_prefix('[') {
+        rest.split(']').next().unwrap_or("")
+    } else if host.parse::<std::net::IpAddr>().is_ok() {
+        host
+    } else if let Some((h, _)) = host.rsplit_once(':') {
+        if h.parse::<std::net::IpAddr>().is_ok() {
+            h
+        } else {
+            host
+        }
+    } else {
+        host
+    };
+
+    let host_plain = if let Some(rest) = host.strip_prefix('[') {
+        rest.split(']').next().unwrap_or(rest)
+    } else if let Some((prefix, port)) = host.rsplit_once(':')
+        && !prefix.ends_with(':')
+        && port.chars().all(|c| c.is_ascii_digit())
+    {
+        prefix
+    } else {
+        host.trim_matches(['[', ']'])
+    };
+    if host_plain.is_empty() || host_plain.eq_ignore_ascii_case("localhost") {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "atproto identifier must not point to loopback / internal hosts",
+        ));
+    }
+    if let Ok(ip) = ip_literal
+        .parse::<std::net::IpAddr>()
+        .map(|ip| ip.to_canonical())
+    {
+        let unsafe_ip = ip.is_loopback()
+            || ip.is_unspecified()
+            || ip.is_multicast()
+            || matches!(ip, std::net::IpAddr::V4(v4) if v4.octets()[0] == 10)
+            || matches!(ip, std::net::IpAddr::V4(v4) if v4.octets()[0] == 172 && (16..=31).contains(&v4.octets()[1]))
+            || matches!(ip, std::net::IpAddr::V4(v4) if v4.octets()[0] == 192 && v4.octets()[1] == 168)
+            || matches!(ip, std::net::IpAddr::V4(v4) if v4.octets()[0] == 169 && v4.octets()[1] == 254)
+            || matches!(ip, std::net::IpAddr::V6(v6) if (v6.segments()[0] & 0xfe00) == 0xfc00)
+            || matches!(ip, std::net::IpAddr::V6(v6) if (v6.segments()[0] & 0xffc0) == 0xfe80);
+        if unsafe_ip {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "atproto identifier must not point to loopback / private networks",
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_atproto_identifier() {
+        assert!(validate_atproto_identifier("alice@example.com").is_ok());
+        assert!(validate_atproto_identifier("did:web:example.com").is_ok());
+        assert!(validate_atproto_identifier("did:web:example.com:user:path").is_ok());
+        assert!(validate_atproto_identifier("did:plc:abc123").is_ok());
+        assert!(validate_atproto_identifier("did:key:z6Mk...").is_ok());
+        assert!(validate_atproto_identifier("alice@localhost").is_err());
+        assert!(validate_atproto_identifier("alice@localhost:8080").is_err());
+        assert!(validate_atproto_identifier("alice@127.0.0.1").is_err());
+        assert!(validate_atproto_identifier("alice@127.0.0.1:8080").is_err());
+        assert!(validate_atproto_identifier("alice@[::1]:8080").is_err());
+        assert!(validate_atproto_identifier("did:web:localhost").is_err());
+        assert!(validate_atproto_identifier("did:web:localhost%3A8080").is_err());
+        assert!(validate_atproto_identifier("did:web:127.0.0.1%3a443").is_err());
+        assert!(validate_atproto_identifier("did:web:127.0.0.1:443:user").is_err());
+        assert!(validate_atproto_identifier("did:web:10.0.0.1").is_err());
+        assert!(validate_atproto_identifier("did:web:172.16.0.1").is_err());
+        assert!(validate_atproto_identifier("did:web:192.168.1.1").is_err());
+        assert!(validate_atproto_identifier("did:web:169.254.169.254").is_err());
+        assert!(validate_atproto_identifier("alice@[::1]").is_err());
+        assert!(validate_atproto_identifier("alice@[fc00::1]").is_err());
+        assert!(validate_atproto_identifier("alice@[fe80::1]").is_err());
+    }
 }

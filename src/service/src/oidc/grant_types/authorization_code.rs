@@ -95,7 +95,6 @@ pub async fn grant_type_authorization_code(
         ));
     }
 
-    // get the oidc code from the cache
     let idx = req_data.code.as_ref().unwrap().to_owned();
     let code = match AuthCode::find(idx).await? {
         None => {
@@ -182,8 +181,6 @@ pub async fn grant_type_authorization_code(
         DeviceCodeFlow::No,
     )
     .await?;
-
-    code.delete().await?;
 
     // update session metadata
     if let Some(sid) = code.session_id.clone() {

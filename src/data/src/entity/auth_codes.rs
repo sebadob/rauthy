@@ -49,9 +49,9 @@ impl AuthCode {
         Ok(())
     }
 
-    // Returns an Authorization code from the cache
+    // Claims an Authorization code from the cache
     pub async fn find(id: String) -> Result<Option<Self>, ErrorResponse> {
-        Ok(DB::hql().get(Cache::AuthCode, id).await?)
+        Ok(DB::hql().get_remove(Cache::AuthCode, id).await?)
     }
 
     // Saves an Authorization Code

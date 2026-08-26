@@ -58,7 +58,7 @@ impl PamRemotePassword {
     }
 
     pub fn compare_password(&self, password: &[u8]) -> Result<(), ErrorResponse> {
-        if self.password.as_slice() == sha256!(password) {
+        if constant_time_eq::constant_time_eq(self.password.as_slice(), sha256!(password)) {
             Ok(())
         } else {
             Err(ErrorResponse::new(

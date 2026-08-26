@@ -453,19 +453,7 @@ pub async fn post_users_register_handle(
     if let Some(redirect_uri) = &payload.redirect_uri
         && !reg.allow_open_redirect
     {
-        let mut allow = false;
-        for uri in Client::find_all_client_uris().await? {
-            if uri.starts_with(redirect_uri) {
-                allow = true;
-                break;
-            }
-        }
-        if !allow {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "given `redirect_uri` not allowed",
-            ));
-        }
+        validate_reg_redirect_uri(redirect_uri).await?;
     }
 
     let lang = Language::try_from(&req).unwrap_or_default();
@@ -525,6 +513,33 @@ pub async fn post_users_register_handle(
     Ok(HttpResponse::NoContent()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
         .finish())
+}
+
+/// Validates a registration or password-reset redirect URI against configured clients.
+#[inline]
+async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
+    for uri in Client::find_all_client_uris().await? {
+        let matches = match redirect_uri.strip_prefix(&uri) {
+            None => false,
+            Some(rest) => {
+                rest.is_empty()
+                    || rest.starts_with('/')
+                    || rest.starts_with('?')
+                    || rest.starts_with('#')
+                    || uri.ends_with('/')
+                    || uri.ends_with('?')
+                    || uri.ends_with('#')
+            }
+        };
+        if matches {
+            return Ok(());
+        }
+    }
+
+    Err(ErrorResponse::new(
+        ErrorResponseType::BadRequest,
+        "given `redirect_uri` not allowed",
+    ))
 }
 
 /// Returns a single user by its *id*
@@ -1957,8 +1972,7 @@ pub async fn delete_webauthn(
 
             warn!("Passkey delete for user {} for key {}", id, name);
         } else {
-            // a group admin resetting MFA for a user it manages; the cheap group-admin
-            // check runs before the DB lookup
+            // Check group-admin scope before loading the target.
             principal.validate_group_admin_session()?;
             let target = User::find(id.clone()).await?;
             principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
@@ -2246,6 +2260,16 @@ pub async fn post_user_password_request_reset(
     );
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
+
+    // Keep password-reset redirects on the configured client allow-list.
+    if let Some(redirect_uri) = &payload.redirect_uri
+        && !RauthyConfig::get()
+            .vars
+            .user_registration
+            .allow_open_redirect
+    {
+        validate_reg_redirect_uri(redirect_uri).await?;
+    }
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user
@@ -2657,11 +2681,8 @@ pub async fn post_user_self_convert_passkey(
 pub async fn get_user_values_config(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // There is no need to validate session or API key if the registration is open anyway.
-    // In this case, anyone can pull out the same information from the HTML.
+    // Open registration exposes this config in the registration page.
     if !RauthyConfig::get().vars.user_registration.enable {
-        // a delegated group admin needs this read-only config too: the Admin UI cannot render
-        // the user details view without it
         principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     }
     Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))

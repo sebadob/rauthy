@@ -7,7 +7,7 @@ use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
 use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM};
 use rauthy_common::http_client;
 use rauthy_data::api_cookie::ApiCookie;
-use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients::{Client, wildcard_prefix_match};
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
@@ -27,9 +27,7 @@ use std::string::ToString;
 use tokio::task::JoinSet;
 use tracing::{debug, error, info};
 
-// We will allow more clock skew here for the token expiration validation to not be too
-// strict, as long as the signature of the token and all other things are valid.
-// This value could be made configurable, but it is probably not really worth it.
+// Allow a small clock-skew margin for logout token validation.
 static LOGOUT_TOKEN_CLOCK_SKEW: u16 = 600;
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
@@ -70,16 +68,13 @@ pub async fn get_logout_html(
 
         let uri_vec = client.get_post_logout_uris();
 
-        let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
-            if uri.ends_with('*') && target.starts_with(uri.split_once('*').unwrap().0) {
-                return true;
-            }
-            if target.eq(uri) {
-                return true;
-            }
-            false
-        });
-        if valid_redirect {
+        // same host-boundary wildcard semantics as `validate_post_logout_redirect_uri`
+        let valid_redirect = uri_vec
+            .as_ref()
+            .unwrap()
+            .iter()
+            .any(|uri| wildcard_prefix_match(uri, &target) || target.eq(uri));
+        if !valid_redirect {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Given 'post_logout_redirect_uri' is not allowed",

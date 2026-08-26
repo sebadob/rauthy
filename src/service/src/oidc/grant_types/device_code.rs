@@ -25,6 +25,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         }
         Some(dc) => dc,
     };
+
     let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {
@@ -127,10 +128,25 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             None
         };
 
-        if let Err(err) = code.delete().await {
-            // should really never happen - in cache only
-            error!(?err, "deleting DeviceAuthCode");
-        }
+        // Claim immediately before issuing tokens.
+        let code: DeviceAuthCode = match DeviceAuthCode::find(code.user_code().to_string()).await {
+            Ok(Some(code)) => code,
+            Ok(None) => {
+                return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::ExpiredToken,
+                    error_description: Some(Cow::from(
+                        "invalid `device_code` or request has expired",
+                    )),
+                });
+            }
+            Err(err) => {
+                error!(?err, "claiming DeviceAuthCode");
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from("internal error")),
+                });
+            }
+        };
 
         let id = new_store_id();
         let device = DeviceEntity {

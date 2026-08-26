@@ -668,7 +668,7 @@ pub async fn post_device_verify(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    let mut device_code = DeviceAuthCode::find(payload.user_code)
+    let mut device_code = DeviceAuthCode::find_pending(payload.user_code)
         .await?
         .ok_or_else(|| {
             ErrorResponse::new(
@@ -1010,8 +1010,16 @@ pub async fn post_token(
             if !has_password_been_hashed {
                 return Err(err);
             }
-            // TODO return always the same error here as well, just like during authorize?
-            Err(err)
+            match &err.error {
+                ErrorResponseType::Disabled
+                | ErrorResponseType::NotFound
+                | ErrorResponseType::PasswordExpired
+                | ErrorResponseType::Unauthorized => Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Invalid user credentials",
+                )),
+                _ => Err(err),
+            }
         }
     };
 

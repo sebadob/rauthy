@@ -45,9 +45,9 @@ impl RefreshToken {
         nbf: i64,
         exp: i64,
         scope: Option<String>,
-        // TODO should we even save mfa for refresh tokens?
+        //  TODO should we even save mfa for refresh tokens?
         //  even if the original token has been issued with mfa, the refresh
-        //  token not really is, because it can be given without user interaction.
+        // token not really is, because it can be given without user interaction.
         is_mfa: bool,
         session_id: Option<String>,
         access_token_jti: Option<String>,
@@ -166,6 +166,27 @@ impl RefreshToken {
         };
 
         Ok(slf)
+    }
+
+    /// Claims the token while it is still usable and advances its expiry by `grace`.
+    pub async fn claim(id: &str, now: i64, grace: i64) -> Result<(), ErrorResponse> {
+        let exp_at = now + grace;
+        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE id = $2 AND exp > $3";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(exp_at, id, now)).await?
+        } else {
+            DB::pg_execute(sql, &[&exp_at, &id, &now]).await?
+        };
+
+        if rows_affected == 1 {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Refresh token has already been used",
+            ))
+        }
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {

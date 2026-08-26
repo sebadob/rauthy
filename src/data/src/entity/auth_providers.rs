@@ -811,8 +811,7 @@ impl AuthProviderCallback {
 
         if let Some(access_token) = ts.access_token {
             // the id_token only exists, if we actually have an OIDC provider.
-            // If we only get an access token, we need to do another request to the
-            // userinfo endpoint
+            // If we only get an access token, we need to do another request to the userinfo endpoint
             let res = http_client()
                 .get(&provider.userinfo_endpoint)
                 .header(AUTHORIZATION, format!("Bearer {access_token}"))
@@ -869,7 +868,7 @@ impl AuthProviderCallback {
             ));
         };
 
-        if app_state != self.callback_id {
+        if !constant_time_eq::constant_time_eq(app_state.as_bytes(), self.callback_id.as_bytes()) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "callback state mismatch for ATProto",

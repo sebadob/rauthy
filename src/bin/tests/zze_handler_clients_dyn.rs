@@ -14,7 +14,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
 
     let url = format!("{}/clients_dyn", backend_url);
     let mut payload = DynamicClientRequest {
-        redirect_uris: vec!["http://localhost:8080/*".to_string()],
+        redirect_uris: vec!["http://localhost:8080/cb".to_string()],
         grant_types: vec![GrantType::AuthorizationCode],
         client_name: Some("Dyn Test Client 123".to_string()),
         client_uri: None,
