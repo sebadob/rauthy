@@ -965,6 +965,7 @@ pub async fn reg_start(
 pub async fn reg_finish(
     id: String,
     payload: WebauthnRegFinishRequest,
+    is_new_user: bool,
 ) -> Result<(), ErrorResponse> {
     let mut user = User::find(id).await?;
 
@@ -1006,6 +1007,22 @@ pub async fn reg_finish(
             let user_id = user.id.clone();
             let create_user = if user.webauthn_user_id.is_none() {
                 user.webauthn_user_id = Some(reg_data.passkey_user_id.to_string());
+
+                // We need to check if the user is a possibly manually initialized one, and we
+                // need to reset a password. This can happen when an admin adds a user, does a
+                // manual init to prevent auto-removal, and then the initial password reset link
+                // is used to add a passkey instead. In such a situation, the user would have a
+                // random password but never logged in even once, and the Magic Link Usage is
+                // NewUser.
+                if is_new_user && user.password.is_some() && user.last_login.is_none() {
+                    info!(
+                        "Resetting manually initialized password for user {}",
+                        user.email
+                    );
+                    user.password = None;
+                    user.save(None).await?;
+                }
+
                 if user.password.is_none() || cfg.no_password_exp {
                     user.password_expires = None;
                 }
