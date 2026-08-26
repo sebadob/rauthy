@@ -18,8 +18,11 @@ pub struct DynamicClientRequest {
     /// Validation: cannot be empty
     #[validate(length(min = 1))]
     pub grant_types: Vec<GrantType>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
@@ -83,8 +86,11 @@ pub struct EphemeralClientRequest {
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
@@ -137,8 +143,11 @@ pub struct NewClientRequest {
     /// Validation: None - will not be deserialized
     #[serde(skip_deserializing)]
     pub secret: Option<Vec<u8>>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub name: Option<String>,
     /// Validation: bool
     pub confidential: bool,
@@ -153,8 +162,11 @@ pub struct NewClientRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateClientRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub name: Option<String>,
     pub confidential: bool,
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
