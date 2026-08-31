@@ -91,6 +91,28 @@ RE_CLIENT_NAME: ^[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}$
 
 [#1708](https://github.com/sebadob/rauthy/pull/1708)
 
+#### Theme CSS uses explicit percent units
+
+The generated theme CSS now writes saturation and lightness with an explicit `%`, so a color is
+emitted as `--action: 34 100% 40%` rather than `--action: 34 100 40`. Unitless values inside `hsl()`
+are a CSS Color 4 addition supported from Safari 18, Chrome 121 and Firefox 122. Browsers below that
+drop the whole declaration, which left buttons with no background while `--btn-text` still applied,
+rendering them invisible. It affects every iOS below 18, where no alternative browser engine is
+available.
+
+If you use a custom theme, save it once after upgrading even if you change nothing. That updates the
+theme's timestamp, which is what busts the long-lived client-side cache for the generated CSS.
+
+[#1706](https://github.com/sebadob/rauthy/pull/1706)
+
+### Bugfix
+
+- The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`
+  instead of `360`, so the gradient ended on red instead of spanning the full spectrum.
+  [#1706](https://github.com/sebadob/rauthy/pull/1706)
+- Theme validation checked `accent` twice and never validated `action`.
+  [#1706](https://github.com/sebadob/rauthy/pull/1706)
+
 ## v0.36.2
 
 ### Security

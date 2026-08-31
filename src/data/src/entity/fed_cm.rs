@@ -115,11 +115,11 @@ impl FedCMIdPBranding {
         // this is pretty inefficient, but FedCM is in experimental testing only anyway
         let css = ThemeCssFull::find_with_default("rauthy".to_string()).await?;
         let background_color = format!(
-            "hsl({} {} {})",
+            "hsl({} {}% {}%)",
             css.light.bg[0], css.light.bg[1], css.light.bg[2]
         );
         let color = format!(
-            "hsl({} {} {})",
+            "hsl({} {}% {}%)",
             css.light.text[0], css.light.text[1], css.light.text[2]
         );
 
