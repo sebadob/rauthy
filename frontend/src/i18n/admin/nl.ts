@@ -128,7 +128,7 @@ export let I18nAdminNl: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `De token-levensduur is van toepassing op Access- en ID-tokens en wordt opgegeven in seconden.`,
-            p2: `Als de client EdDSA / ed25519-algoritmen ondersteunt, moet dit altijd de voorkeurskeuze
+            p2: `Als de client EdDSA / Ed25519-algoritmen ondersteunt, moet dit altijd de voorkeurskeuze
                 zijn. RSA-algoritmen bestaan alleen voor compatibiliteit.`,
             p3: `Het algoritme voor vernieuwingstokens kan niet worden gewijzigd, omdat deze alleen door Rauthy
                 worden gebruikt.`,

@@ -34,8 +34,11 @@ pub enum JwkKeyPairAlg {
     RS256,
     RS384,
     RS512,
+    // Current or "old" notation for Ed25519
     #[default]
     EdDSA,
+    // New notation for EdDSA (RFC 9864)
+    Ed25519,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -192,7 +195,7 @@ impl JwkPublicKey {
                 error!("Cannot validate RSA tokens without the `rsa` feature");
             }
 
-            JwkKeyPairAlg::EdDSA => {
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
                 let pubkey = ed25519_compact::PublicKey::from_slice(self.x()?)?;
                 let signature = ed25519_compact::Signature::from_slice(buf)?;
                 if pubkey.verify(message, &signature).is_ok() {

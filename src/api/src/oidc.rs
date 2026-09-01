@@ -465,17 +465,17 @@ pub async fn get_callback_html(
 pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, ErrorResponse> {
     let mut jwks = JWKS::find_pk().await?;
 
-    if params.skip_okp == Some(true) {
+    if params.skip_okp.unwrap_or(false) {
         jwks.keys.retain(|k| k.kty != JwkKeyPairType::OKP);
     }
 
-    let res = JWKSCerts::from(jwks);
+    let certs = jwks.into_certs(params.rfc_9864.unwrap_or(false));
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(res))
+        .json(certs))
 }
 
 /// Single JWK by kid
@@ -488,15 +488,19 @@ pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, Error
     responses((status = 200, description = "Ok", body = JWKSPublicKeyCerts)),
 )]
 #[get("/oidc/certs/{kid}")]
-pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_cert_by_kid(
+    kid: web::Path<String>,
+    params: Query<CertsParams>,
+) -> Result<HttpResponse, ErrorResponse> {
     let kp = JwkKeyPair::find(kid.into_inner()).await?;
     let pub_key = JWKSPublicKey::from_key_pair(&kp)?;
+
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(JWKSPublicKeyCerts::from(pub_key)))
+        .json(pub_key.into_pub_cert(params.rfc_9864.unwrap_or(false))))
 }
 
 /// POST for starting an OAuth 2 Device Authorization Grant flow
