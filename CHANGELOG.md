@@ -105,6 +105,30 @@ theme's timestamp, which is what busts the long-lived client-side cache for the 
 
 [#1706](https://github.com/sebadob/rauthy/pull/1706)
 
+#### More resilient Password Expiry E-Mails
+
+The E-Mail reminders about an expiring password could get lost when the SMTP server was not working
+properly and all retries were exceeded. Sent reminders are not remembered and saved into the DB, and
+the scheduler will run more often. It will be able to pick up failed attempts and retry. This should
+make these mails a lot more resilient.
+
+In addition, you can now configure the time when users will be reminded of an expiring password:
+
+```toml
+[email]
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
+#
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: 10
+# overwritten by: EMAIL_PWD_EXP_DAYS
+password_exp_days = 10
+```
+
+[]()
+
 ### Bugfix
 
 - The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`

@@ -9,6 +9,7 @@ use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::magic_links::{MagicLink, MagicLinkUsage};
 use rauthy_data::entity::password::PasswordPolicy;
+use rauthy_data::entity::pwd_exp_mails::PasswordExpMail;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
@@ -202,6 +203,9 @@ pub async fn handle_put_user_password_reset<'a>(
 
     // delete all existing user sessions to have a clean flow
     Session::invalidate_for_user(&user.id).await?;
+
+    // reset password exp reminder emails
+    PasswordExpMail::delete(user.id).await?;
 
     // check if we got a custom `redirect_uri` during registration
     let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {

@@ -1,17 +1,18 @@
-create table one_time_password
+CREATE TABLE one_time_password
 (
-    id          varchar    not null
-        constraint one_time_password_pk
-            primary key,
-    user_id     varchar    not null
+    id        VARCHAR               NOT NULL
+        CONSTRAINT one_time_password_pk
+            PRIMARY KEY,
+    user_id   VARCHAR               NOT NULL
         references users
-            on update cascade on delete cascade,
-    name        varchar    null,
-    secret      bytea    not null,
-    last_used   bigint not null,
-    kind        varchar    not null,
-    is_active   boolean default false not null
+            ON DELETE CASCADE,
+    name      VARCHAR,
+    secret    BYTEA NUT             NOT NULL,
+    last_used BIGINT
+                                    NOT NULL,
+    kind      VARCHAR               NOT NULL,
+    is_active BOOLEAN DEFAULT false NOT NULL
 );
 
-create index one_time_password_user_id_index
-    on one_time_password (user_id);
+CREATE INDEX one_time_password_user_id_index
+    ON one_time_password (user_id);

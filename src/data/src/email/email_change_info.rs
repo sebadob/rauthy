@@ -1,6 +1,7 @@
 use crate::email::email_ts_prettify;
 use crate::email::i18n::change_info_new::I18nEmailChangeInfoNew;
 use crate::email::mailer::{EMail, EmailType};
+use crate::email::mailer_callback::EMailCallback;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
@@ -97,7 +98,7 @@ pub async fn send_email_change_info_new(
 
     let res = RauthyConfig::get()
         .tx_email
-        .send_timeout(req, Duration::from_secs(10))
+        .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
         Ok(_) => {}

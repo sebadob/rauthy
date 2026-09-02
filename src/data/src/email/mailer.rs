@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::email::mailer_callback::EMailCallback;
 use crate::email::mailer_microsoft_graph::sender_microsoft_graph;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
 use crate::events::event::Event;
@@ -73,7 +74,7 @@ impl From<&str> for SmtpConnMode {
     }
 }
 
-pub async fn sender(rx: mpsc::Receiver<EMail>) {
+pub async fn sender(rx: mpsc::Receiver<(EMail, EMailCallback)>) {
     debug!("E-Mail sender started");
 
     let vars = &RauthyConfig::get().vars.email;
@@ -91,11 +92,11 @@ pub async fn sender(rx: mpsc::Receiver<EMail>) {
     }
 }
 
-async fn sender_test_debug(mut rx: mpsc::Receiver<EMail>) {
+async fn sender_test_debug(mut rx: mpsc::Receiver<(EMail, EMailCallback)>) {
     warn!("SMTP_URL is not configured or test mode is set, cannot send out any E-Mails!");
 
     loop {
-        if let Some(email) = rx.recv().await {
+        if let Some((email, _callback)) = rx.recv().await {
             debug!("New E-Mail for address: {}", email.address);
         } else {
             warn!("Received 'None' in email 'sender' - exiting");
@@ -104,7 +105,7 @@ async fn sender_test_debug(mut rx: mpsc::Receiver<EMail>) {
     }
 }
 
-async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
+async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<(EMail, EMailCallback)>) {
     let vars = &RauthyConfig::get().vars.email;
     let from: message::Mailbox = vars
         .smtp_from
@@ -115,7 +116,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
     let mut mailer = create_mailer(smtp_url).await;
     loop {
         debug!("Listening for incoming send E-Mail requests");
-        if let Some(req) = rx.recv().await {
+        if let Some((req, callback)) = rx.recv().await {
             debug!("New E-Mail for address: {:?}", req.address);
 
             let to = format!("{} <{}>", req.recipient_name, req.address);
@@ -156,6 +157,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
                     match mailer.send(message.clone()).await {
                         Ok(_) => {
                             info!("E-Mail to '{}' sent successfully!", req.address);
+                            callback.call().await;
                             continue;
                         }
                         Err(err) => {
@@ -176,6 +178,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<EMail>) {
                     match mailer.send(message.clone()).await {
                         Ok(_) => {
                             info!("E-Mail to '{}' sent successfully after retry!", req.address);
+                            callback.call().await;
                         }
                         Err(err) => {
                             // Log loudly and emit an event so admins see the failure.

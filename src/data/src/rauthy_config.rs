@@ -1,5 +1,6 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
+use crate::email::mailer_callback::EMailCallback;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::migration::bootstrap::generated_secrets;
@@ -42,7 +43,7 @@ pub struct RauthyConfig {
     pub provider_callback_uri: String,
     pub provider_callback_uri_encoded: String,
     pub pub_url_with_scheme: String,
-    pub tx_email: mpsc::Sender<EMail>,
+    pub tx_email: mpsc::Sender<(EMail, EMailCallback)>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub webauthn: Webauthn,
@@ -53,7 +54,7 @@ impl RauthyConfig {
     pub async fn build(
         path_config: String,
         path_secrets: String,
-        tx_email: mpsc::Sender<EMail>,
+        tx_email: mpsc::Sender<(EMail, EMailCallback)>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
@@ -441,6 +442,7 @@ impl Default for Vars {
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
+                password_exp_days: 10,
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -2038,6 +2040,14 @@ impl Vars {
             "SMTP_DANGER_INSECURE",
         ) {
             self.email.danger_insecure = v;
+        }
+        if let Some(v) = t_u8(
+            &mut table,
+            "email",
+            "password_exp_days",
+            "EMAIL_PWD_EXP_DAYS",
+        ) {
+            self.email.password_exp_days = v;
         }
 
         // [email.jobs]
@@ -3965,6 +3975,7 @@ pub struct VarsEmail {
     pub starttls_only: bool,
     pub danger_insecure: bool,
     pub tz_fmt: VarsEmailTzFmt,
+    pub password_exp_days: u8,
 }
 
 #[derive(Debug)]

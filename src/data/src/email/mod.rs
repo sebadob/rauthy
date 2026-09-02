@@ -11,6 +11,7 @@ pub mod email_registered_already;
 pub mod i18n;
 pub mod login_location;
 pub mod mailer;
+pub mod mailer_callback;
 mod mailer_microsoft_graph;
 pub mod notification;
 pub mod otp;

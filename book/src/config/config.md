@@ -1246,6 +1246,16 @@ smtp_url = 'localhost'
 # overwritten by: SMTP_DANGER_INSECURE
 #danger_insecure = false
 
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
+#
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: 10
+# overwritten by: EMAIL_PWD_EXP_DAYS
+#password_exp_days = 10
+
 [email.jobs]
 
 # This section cares about email sending to users, which can

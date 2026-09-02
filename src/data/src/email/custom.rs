@@ -1,4 +1,5 @@
 use crate::email::mailer::{EMail, EmailType};
+use crate::email::mailer_callback::EMailCallback;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -98,7 +99,7 @@ pub async fn send_custom(
 
     RauthyConfig::get()
         .tx_email
-        .send_timeout(req, Duration::from_secs(10))
+        .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await
         .map_err(|_| ErrorResponse::new(ErrorResponseType::Timeout, "email send timeout"))
 }
