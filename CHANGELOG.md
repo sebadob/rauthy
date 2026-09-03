@@ -4,6 +4,39 @@
 
 ### Changes
 
+#### Discoverable Credentials
+
+Even though it was strongly discouraged up until now, Rauthy now supports Webauthn Discoverable
+Credentials (Resident Keys). The reason it was discouraged (and still is by default) is that it had
+the possibility in the past to brick some hardware devices when the available storage slots were
+exceeded and not handled properly.
+
+There are a few reasons why I decided to implement it now:
+
+- The default is still "the old way": Passkey yes, but not creating a resident key, and therefore
+  not consuming a storage slot on the device.
+- The user now has the choice. The default option is a "normal" Passkey. When a Resident Key is
+  selected, the user will see a warning about the storage on the device, and that it's the users
+  responsibility to manage it. This can be ignored for all software keys, but is important for
+  "real" passkeys like Yubikeys.
+- Some software implementations (e.g. Apple) do not work with discouraged Resident Keys (which is
+  pretty stupid, but that's how it works). Having compatibility in these cases was another reason.
+
+If a user has a Resident Key, it can be used as a normal Passkey just like it behaves now, but it
+can also be used during logins via the new "Passkey" button. When pressed, you don't even need to
+provide your E-Mail anymore. All data is looked up via the Resident Keys `cred_id` and the
+Rauthy-provided `user_handle`.
+
+The Passkeys list now also shows a small indicator if a Passkey is also a Resident Key. This does
+NOT automatically work for already registered keys. If you want to change your current Passkey to a
+Resident Key (if your device actually supports it), you need to re-register it with the Resident Key
+option selected.
+
+There are no config values. Everything is the users choice to provide as much compatibility as
+possible.
+
+[]()
+
 #### OTP
 
 Rauthy now supports One Time Passwords (OTP) via E-Mail. Since the security of them if a lot lower
