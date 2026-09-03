@@ -113,6 +113,13 @@ export const I18nKo: I18n = {
             username: 'Username',
             validFor: 'Password valid for {{ secs }} seconds',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: '비밀번호 확인',
         passwordCurr: '현재 비밀번호',
         passwordCurrReq: '현재 비밀번호가 필요합니다.',
@@ -148,6 +155,8 @@ export const I18nKo: I18n = {
         userEnabled: '사용자 활성화',
         userExpiry: '사용자 만료',
         userVerifiedTooltip: '지문 또는 PIN을 통해 보호',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `WebID를 통해 게시되는 필드를 정의할 수 있습니다.\n이는 일부 네트워크에서 분산 로그인을 위해 
             사용하는 기능입니다. WebID가 무엇인지 모른다면 필요하지 않을 것입니다.`,
         webIdDescData: '유효한 FOAF 어휘로 자신의 데이터를 WebID에 추가할 수 있습니다:',

@@ -245,7 +245,7 @@ pub enum DeviceAcceptedRequest {
 pub struct LoginRequest {
     /// Validation: `email`
     #[validate(email)]
-    pub email: String,
+    pub email: Option<String>,
     /// Validation: Applies password policy - max 256 characters
     #[validate(length(max = 256))]
     pub password: Option<String>,
@@ -285,6 +285,8 @@ pub struct LoginRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
     #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
     pub resource: Option<String>,
+    #[validate(length(max = 64))]
+    pub resident_key_token: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

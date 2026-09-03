@@ -22,6 +22,8 @@
     import { PATTERN_USER_NAME } from '$utils/patterns';
     import type { PasswordResetRequest } from '$api/types/password_reset.ts';
     import type { MfaPurpose } from '$api/types/mfa';
+    import LabeledValue from '$lib/LabeledValue.svelte';
+    import Options from '$lib/Options.svelte';
 
     const inputWidth = '20rem';
 
@@ -45,6 +47,8 @@
     let passkeyName = $state('');
     let password = $state('');
     let passwordConfirm = $state('');
+
+    let passkeyType = $state(t.account.passkeys.types[0]);
 
     let reportValidityNew: undefined | (() => void) = $state();
     let reportValidityConfirm: undefined | (() => void) = $state();
@@ -112,6 +116,9 @@
             t.authorize.requestExpired,
             tplData.magic_link_id,
             tplData.csrf_token,
+            undefined,
+            // the 2nd type is the resident key
+            passkeyType === t.account.passkeys.types[1],
         );
         if (res.error) {
             err = `${t.mfa.errorReg} - ${res.error}`;
@@ -319,6 +326,19 @@
                     {:else if accountTypeNew === 'passkey'}
                         <div transition:slide>
                             <Form action="" onSubmit={handleRegister}>
+                                <LabeledValue label={t.account.passkeys.type}>
+                                    <Options
+                                        options={[
+                                            t.account.passkeys.types[0],
+                                            t.account.passkeys.types[1],
+                                        ]}
+                                        bind:value={passkeyType}
+                                        ariaLabel={t.account.passkeys.type}
+                                    />
+                                    {#if passkeyType === t.account.passkeys.types[1]}
+                                        <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
+                                    {/if}
+                                </LabeledValue>
                                 <Input
                                     bind:ref={refPasskey}
                                     bind:value={passkeyName}
@@ -330,9 +350,11 @@
                                     pattern={PATTERN_USER_NAME}
                                     required
                                 />
-                                <Button type="submit" level={success ? 2 : 1}>
-                                    {t.mfa.register}
-                                </Button>
+                                <div class="btnReg">
+                                    <Button type="submit" level={success ? 2 : 1}>
+                                        {t.mfa.register}
+                                    </Button>
+                                </div>
                             </Form>
 
                             {#if success}
@@ -366,6 +388,10 @@
 <LangSelector absolute />
 
 <style>
+    .btnReg {
+        margin-top: 1rem;
+    }
+
     .container {
         margin-top: -1.75rem;
         max-height: calc(100dvh - 2.5rem);
@@ -395,6 +421,11 @@
     .policy {
         max-width: 100dvw;
         overflow: clip;
+    }
+
+    .rkWarn {
+        color: hsl(var(--error));
+        font-size: 0.9rem;
     }
 
     .typeChoice {

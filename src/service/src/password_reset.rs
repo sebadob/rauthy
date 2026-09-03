@@ -13,7 +13,7 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::WebauthnServiceReq;
+use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::events::event::Event;
 use rauthy_data::html::templates::{PwdResetHtml, TplPasswordReset};
 use rauthy_data::language::Language;
@@ -86,7 +86,7 @@ pub async fn handle_put_user_passkey_start(
         }
     }
 
-    webauthn::reg_start(user.id, req_data)
+    webauthn::register::reg_start(user.id, req_data)
         .await
         .map(|ccr| HttpResponse::Ok().json(ccr))
 }
@@ -108,7 +108,7 @@ pub async fn handle_put_user_passkey_finish(
         MagicLinkUsage::try_from(&ml.usage),
         Ok(MagicLinkUsage::NewUser(_))
     );
-    webauthn::reg_finish(user_id.clone(), req_data, is_new_user).await?;
+    webauthn::register::reg_finish(user_id.clone(), req_data, is_new_user).await?;
 
     // validate csrf token
     match req.headers().get(PWD_CSRF_HEADER) {
