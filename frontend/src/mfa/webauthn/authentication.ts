@@ -94,8 +94,10 @@ export async function webauthnAuth(
                 clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
                 // @ts-ignore the `response.signature` actually exists
                 signature: arrBufToBase64UrlSafe(credential.response.signature),
+                // @ts-ignore the `response.userHandle` actually exists
                 userHandle: credential.response.userHandle
-                    ? arrBufToBase64UrlSafe(credential.response.userHandle)
+                    ? // @ts-ignore the `response.userHandle` actually exists
+                      arrBufToBase64UrlSafe(credential.response.userHandle)
                     : undefined,
             },
             // @ts-ignore the `response.getClientExtensionResults()` actually exists
