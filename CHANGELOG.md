@@ -105,6 +105,12 @@ theme's timestamp, which is what busts the long-lived client-side cache for the 
 
 [#1706](https://github.com/sebadob/rauthy/pull/1706)
 
+#### API Key Passkey Deletion
+
+API Keys with `Users` + `Delete` can now call
+`DELETE /auth/v1/users/{id}/webauthn/delete/{name}`. Passkey registration stays
+session-only.
+
 ### Bugfix
 
 - The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`

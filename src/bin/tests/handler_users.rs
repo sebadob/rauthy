@@ -351,3 +351,88 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error>> {
+    let auth_headers = get_auth_headers().await?;
+    let client = reqwest::Client::new();
+
+    let new_user = NewUserRequest {
+        given_name: Some("Pk".to_string()),
+        family_name: Some("Delete".to_string()),
+        email: format!("{}@batcave.io", new_store_id()),
+        preferred_username: None,
+        language: Language::En,
+        roles: vec!["user".to_string()],
+        groups: None,
+        user_expires: None,
+        tz: None,
+    };
+    let res = client
+        .post(format!("{}/users", get_backend_url()))
+        .headers(auth_headers.clone())
+        .json(&new_user)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user = res.json::<UserResponse>().await?;
+
+    let mut key = ApiKeyRequest {
+        name: new_store_id(),
+        exp: None,
+        access: vec![ApiKeyAccess {
+            group: AccessGroup::Users,
+            access_rights: vec![AccessRights::Read],
+        }],
+    };
+    let res = client
+        .post(format!("{}/api_keys", get_backend_url()))
+        .headers(auth_headers.clone())
+        .json(&key)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let key_header = format!("API-Key {}", res.text().await.unwrap());
+
+    let delete_url = format!(
+        "{}/users/{}/webauthn/delete/missing",
+        get_backend_url(),
+        user.id
+    );
+    let res = client
+        .delete(&delete_url)
+        .header(AUTHORIZATION, &key_header)
+        .json(&serde_json::json!({}))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    key.access = vec![ApiKeyAccess {
+        group: AccessGroup::Users,
+        access_rights: vec![AccessRights::Delete],
+    }];
+    let res = client
+        .put(format!("{}/api_keys/{}", get_backend_url(), key.name))
+        .headers(auth_headers.clone())
+        .json(&key)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+
+    let res = client
+        .delete(&delete_url)
+        .header(AUTHORIZATION, &key_header)
+        .json(&serde_json::json!({}))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+
+    let res = client
+        .delete(format!("{}/users/{}", get_backend_url(), user.id))
+        .headers(auth_headers)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}

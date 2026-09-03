@@ -1928,6 +1928,7 @@ pub async fn post_webauthn_auth_finish_login(
 ///
 /// **Permissions**
 /// - rauthy_admin
+/// - API key with Users + Delete
 /// - authenticated and logged in user for this very {id}
 #[utoipa::path(
     delete,
@@ -1951,40 +1952,41 @@ pub async fn delete_webauthn(
 
     let (id, name) = path.into_inner();
 
-    // Note: Currently, this is not allowed with an ApiKey on purpose.
-    // Access tiers:
-    // - full Rauthy admin: may reset MFA for any user,
-    // - group admin: may reset MFA for a user it manages,
-    // - the user itself: only with a valid `mfa_mod_token`.
-    if principal.validate_admin_session().is_ok() {
-        if principal.is_user(&id).is_err() {
-            warn!("Passkey delete from admin for user {} for key {}", id, name);
+    match principal.validate_api_key(AccessGroup::Users, AccessRights::Delete) {
+        Ok(()) => warn!(
+            "Passkey delete request from API for user {} for key {}",
+            id, name
+        ),
+        Err(err) if err.error == ErrorResponseType::Forbidden => return Err(err),
+        Err(_) if principal.validate_admin_session().is_ok() => {
+            if principal.is_user(&id).is_err() {
+                warn!("Passkey delete from admin for user {} for key {}", id, name);
+            }
         }
-    } else {
-        principal.validate_session_auth()?;
+        Err(_) => {
+            principal.validate_session_auth()?;
 
-        if principal.is_user(&id).is_ok() {
-            // a user deleting its own passkey always needs a valid `mfa_mod_token`
-            let Some(token_id) = payload.mfa_mod_token_id else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "missing `mfa_mod_token_id`",
-                ));
-            };
-            let token = MfaModToken::find(&token_id).await?;
-            let ip = real_ip_from_req(&req)?;
-            token.validate(principal.user_id()?, ip)?;
-
-            warn!("Passkey delete for user {} for key {}", id, name);
-        } else {
-            // Check group-admin scope before loading the target.
-            principal.validate_group_admin_session()?;
-            let target = User::find(id.clone()).await?;
-            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
-            warn!(
-                "Passkey delete from group admin for user {} for key {}",
-                id, name
-            );
+            if principal.is_user(&id).is_ok() {
+                let Some(token_id) = payload.mfa_mod_token_id else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "missing `mfa_mod_token_id`",
+                    ));
+                };
+                let token = MfaModToken::find(&token_id).await?;
+                let ip = real_ip_from_req(&req)?;
+                token.validate(principal.user_id()?, ip)?;
+                warn!("Passkey delete for user {} for key {}", id, name);
+            } else {
+                principal.validate_group_admin_session()?;
+                let target = User::find(id.clone()).await?;
+                principal
+                    .validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+                warn!(
+                    "Passkey delete from group admin for user {} for key {}",
+                    id, name
+                );
+            }
         }
     }
 
