@@ -121,6 +121,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
+        resident_key_token: None,
     };
 
     let res = client
@@ -190,6 +191,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
+        resident_key_token: None,
     };
 
     let res = client
