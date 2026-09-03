@@ -35,7 +35,7 @@ option selected.
 There are no config values. Everything is the users choice to provide as much compatibility as
 possible.
 
-[]()
+[#1715](https://github.com/sebadob/rauthy/pull/1715)
 
 #### OTP
 
