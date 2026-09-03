@@ -384,14 +384,18 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
-            let err = Err(ErrorResponse::new(
+            // let err = Err(ErrorResponse::new(
+            //     ErrorResponseType::Unauthorized,
+            //     "Invalid user credentials",
+            // ));
+            // if !add_login_delay {
+            //     return err;
+            // }
+            // err
+            Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "Invalid user credentials",
-            ));
-            if !add_login_delay {
-                return err;
-            }
-            err
+            ))
         }
     };
 

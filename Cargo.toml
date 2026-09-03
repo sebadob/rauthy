@@ -185,7 +185,7 @@ validator = { version = "0.20.0", features = ["derive"] }
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.55"
 webauthn-rs = { version = "0.5", features = [
-    "danger-allow-state-serialisation", "danger-credential-internals"
+    "danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"

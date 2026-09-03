@@ -262,7 +262,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
     );
     let url_auth = format!("{backend_url}/oidc/authorize?{query_pkce}");
     let req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
         client_id: ID_REFRESH.to_string(),

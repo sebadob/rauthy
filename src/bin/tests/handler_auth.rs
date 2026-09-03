@@ -99,7 +99,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     // Step 2: POST /authorize with CSRF token cookie
     let nonce = get_rand(32);
     let mut req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some("IAmSoWrong1337".to_string()),
         pow: get_solved_pow().await,
         client_id: CLIENT_ID.to_string(),
@@ -433,7 +433,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
 
     // Step 2: POST /authorize with CSRF token cookie
     let mut req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some("IAmSoWrong1337".to_string()),
         pow: get_solved_pow().await,
         client_id: CLIENT_ID.to_string(),
@@ -771,7 +771,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     // login and get an authorization code
     let nonce = get_rand(32);
     let req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
         client_id: client_id.to_string(),

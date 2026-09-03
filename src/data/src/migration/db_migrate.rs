@@ -37,7 +37,7 @@ use crate::entity::user_login_states::UserLoginState;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
-use crate::entity::webauthn::PasskeyEntity;
+use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::migration::inserts;

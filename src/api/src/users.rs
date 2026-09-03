@@ -42,7 +42,9 @@ use rauthy_data::entity::user_revoke::UserRevoke;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData, WebauthnServiceReq};
+use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
+use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
+use rauthy_data::entity::webauthn::passkey::PasskeyEntity;
 use rauthy_data::entity::webids::WebId;
 use rauthy_data::events::event::Event;
 use rauthy_data::html::HtmlCached;
@@ -1800,7 +1802,7 @@ pub async fn post_webauthn_auth_start(
         }
     };
 
-    webauthn::auth_start(Some(id), payload.purpose)
+    webauthn::authenticate::auth_start(Some(id), payload.purpose)
         .await
         .map(|res| HttpResponse::Ok().json(res))
 }
@@ -1836,7 +1838,8 @@ pub async fn post_webauthn_auth_finish(
     // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
-    let res = webauthn::auth_finish(&req, browser_id, principal.session, payload).await?;
+    let res =
+        webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload).await?;
     Ok(res.into_response())
 }
 
@@ -1860,7 +1863,7 @@ pub async fn post_webauthn_auth_start_login(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let id = match payload.purpose {
+    let (id, is_discover) = match payload.purpose {
         MfaPurpose::Login(_) => {
             // During Login, the session is allowed to be in init-only state. Realistically, the
             // session middleware will not accept an init-session on this path, only authenticated
@@ -1868,7 +1871,12 @@ pub async fn post_webauthn_auth_start_login(
             principal.validate_session_auth_or_init()?;
             // The user.id might not exist in the session yet at this point. However, it's stored
             // inside the webauthn login data. The `start_start()` will take care of it.
-            None
+            (None, false)
+        }
+
+        MfaPurpose::Discover => {
+            principal.validate_session_auth_or_init()?;
+            (None, true)
         }
 
         MfaPurpose::PasswordReset => {
@@ -1881,13 +1889,19 @@ pub async fn post_webauthn_auth_start_login(
         _ => {
             // for all other purposes, we need an authenticated session
             principal.validate_session_auth()?;
-            Some(principal.user_id()?.to_string())
+            (Some(principal.user_id()?.to_string()), false)
         }
     };
 
-    webauthn::auth_start(id, payload.purpose)
-        .await
-        .map(|res| HttpResponse::Ok().json(res))
+    if is_discover {
+        webauthn::authenticate_rk::auth_start_discover()
+            .await
+            .map(|res| HttpResponse::Ok().json(res))
+    } else {
+        webauthn::authenticate::auth_start(id, payload.purpose)
+            .await
+            .map(|res| HttpResponse::Ok().json(res))
+    }
 }
 
 /// Finishes the authentication process for a WebAuthn Device for this user
@@ -1920,7 +1934,8 @@ pub async fn post_webauthn_auth_finish_login(
     // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
-    let res = webauthn::auth_finish(&req, browser_id, principal.session, payload).await?;
+    let res =
+        webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload).await?;
     Ok(res.into_response())
 }
 
@@ -2046,7 +2061,7 @@ pub async fn post_webauthn_reg_start(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_start(id, payload)
+        webauthn::register::reg_start(id, payload)
             .await
             .map(|ccr| HttpResponse::Ok().json(ccr))
     }
@@ -2090,7 +2105,7 @@ pub async fn post_webauthn_reg_finish(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_finish(id, payload, false).await?;
+        webauthn::register::reg_finish(id, payload, false).await?;
 
         // The registration ceremony is a fresh proof of possession for this very session, and
         // starting it already required an `MfaModToken`. Upgrade the session in place so the user

@@ -94,6 +94,9 @@ export async function webauthnAuth(
                 clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
                 // @ts-ignore the `response.signature` actually exists
                 signature: arrBufToBase64UrlSafe(credential.response.signature),
+                userHandle: credential.response.userHandle
+                    ? arrBufToBase64UrlSafe(credential.response.userHandle)
+                    : undefined,
             },
             // @ts-ignore the `response.getClientExtensionResults()` actually exists
             extensions: credential.getClientExtensionResults(),
@@ -109,12 +112,17 @@ export async function webauthnAuth(
     // 202 -> normal success
     // 205 -> Webauthn success during login, but needs user values updates
     // 206 -> Webauthn success during login, but needs additional ToS update accept
+    // 404 -> Usually only happens for direct Resident Key logins when the key is unknown
     if (resFinish.status === 202 || resFinish.status === 206) {
         return {
             data: resFinish.body,
         };
     } else if (resFinish.status === 205) {
         return {};
+    } else if (resFinish.status === 404) {
+        return {
+            error: errorI18nInvalidKey,
+        };
     } else {
         console.error(resFinish);
         return {
