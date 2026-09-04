@@ -39,3 +39,28 @@ jobs:
       - name: Code Style UI
         working-directory: ./frontend
         run: npm run check
+
+  bench:
+    if: github.event.pull_request.draft == false
+    name: Password Hashing Bench
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/sebadob/rauthy-builder:20260519
+    steps:
+      - uses: actions/checkout@v4
+      # persist the criterion baseline between runs (ephemeral runners) so PRs compare
+      # against the last saved result of the base branch
+      - uses: actions/cache@v4
+        with:
+          path: target/criterion
+          key: criterion-baseline-${{ github.base_ref }}
+          restore-keys: criterion-baseline-
+      - name: Run hashing pipeline benchmark
+        run: |
+          if find target/criterion -maxdepth 3 -type d -name main 2>/dev/null | grep -q .; then
+            # baseline exists: compare (50% leniency against run-to-run noise) then re-save
+            cargo bench --bench hashing -- --save-baseline main --load-baseline main --baseline-lenient 50
+          else
+            # first run: record the baseline only
+            cargo bench --bench hashing -- --save-baseline main
+          fi

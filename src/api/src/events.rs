@@ -81,13 +81,12 @@ pub async fn sse_events(
     let level = params.level.map(|l| l.into()).unwrap_or_default();
     if let Err(err) = RauthyConfig::get()
         .tx_events_router
-        .send_async(EventRouterMsg::ClientReg {
+        .try_send(EventRouterMsg::ClientReg {
             ip,
             tx,
             latest: params.latest,
             level,
         })
-        .await
     {
         Err(ErrorResponse::new(
             ErrorResponseType::Internal,

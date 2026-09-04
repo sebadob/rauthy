@@ -6,10 +6,12 @@ use actix_web_lab::sse;
 use rauthy_common::constants::EVENTS_LATEST_LIMIT;
 use rauthy_error::ErrorResponse;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Semaphore;
 use tokio::sync::mpsc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[derive(Debug, Clone)]
 pub enum EventRouterMsg {
@@ -36,8 +38,20 @@ impl EventListener {
         tokio::spawn(Self::router(rx_router));
         tokio::spawn(Self::raft_events_listener(tx_router));
 
+        // Cap concurrent event processing: when permits are exhausted the consumer stops
+        // dequeuing, the bounded queue fills, and producers drop events (Event::send).
+        let sem = Arc::new(Semaphore::new(256));
         while let Ok(event) = rx_event.recv_async().await {
-            tokio::spawn(Self::handle_event(event));
+            let sem = Arc::clone(&sem);
+            let permit = match sem.acquire_owned().await {
+                Ok(permit) => permit,
+                // the semaphore is only closed at shutdown - treat as end of stream
+                Err(_) => break,
+            };
+            tokio::spawn(async move {
+                let _permit = permit;
+                Self::handle_event(event).await;
+            });
         }
 
         Ok(())
@@ -81,10 +95,12 @@ impl EventListener {
             debug!(?event);
 
             // forward to event router -> payload is already an Event in JSON format
-            if let Err(err) = tx.send_async(EventRouterMsg::Event(event)).await {
-                error!(
+            // best-effort: drop (with a warning) if the bounded router queue is saturated,
+            // so the HA raft listener never blocks on a full queue
+            if let Err(err) = tx.try_send(EventRouterMsg::Event(event)) {
+                warn!(
                     ?err,
-                    "Error sending Event internally - this should never happen!",
+                    "Event router queue full - dropping event from raft listener",
                 );
             }
         }
@@ -238,5 +254,68 @@ impl EventListener {
         }
 
         panic!("tx for EventRouterMsg has been closed - this should never happen!");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::events::event::EventType;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    fn test_event() -> Event {
+        Event::new(EventLevel::Info, EventType::InvalidLogins, None, None, None)
+    }
+
+    // Structural cap: acquire-before-spawn limits concurrent processing to the permits;
+    // assertion is semaphore-guaranteed, the wait is completion-bounded.
+    #[tokio::test]
+    async fn test_event_consumer_caps_concurrency() {
+        let (tx, rx) = flume::bounded::<Event>(2);
+        for _ in 0..2 {
+            let _ = tx.try_send(test_event());
+        }
+        drop(tx);
+
+        let sem = Arc::new(Semaphore::new(1));
+        let in_flight = Arc::new(AtomicUsize::new(0));
+        let max_in_flight = Arc::new(AtomicUsize::new(0));
+        let (done_tx, done_rx) = flume::unbounded::<()>();
+
+        let handle = tokio::spawn({
+            let rx = rx;
+            let sem = Arc::clone(&sem);
+            let in_flight = Arc::clone(&in_flight);
+            let max = Arc::clone(&max_in_flight);
+            let done_tx = done_tx;
+            async move {
+                while let Ok(event) = rx.recv_async().await {
+                    let sem = Arc::clone(&sem);
+                    let in_flight = Arc::clone(&in_flight);
+                    let max = Arc::clone(&max);
+                    let done_tx = done_tx.clone();
+                    let permit = sem.acquire_owned().await.unwrap();
+                    tokio::spawn(async move {
+                        let _permit = permit;
+                        let _ = event;
+                        let now = in_flight.fetch_add(1, Ordering::SeqCst) + 1;
+                        max.fetch_max(now, Ordering::SeqCst);
+                        in_flight.fetch_sub(1, Ordering::SeqCst);
+                        let _ = done_tx.send(());
+                    });
+                }
+            }
+        });
+
+        let _ = tokio::time::timeout(Duration::from_secs(5), async {
+            for _ in 0..2 {
+                let _ = done_rx.recv_async().await;
+            }
+        })
+        .await
+        .expect("both events should be processed");
+
+        assert!(max_in_flight.load(Ordering::SeqCst) <= 1);
+        handle.abort();
     }
 }

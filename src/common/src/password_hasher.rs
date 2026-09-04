@@ -1,6 +1,5 @@
 use actix_web::web;
-use argon2::password_hash::{SaltString, rand_core::OsRng};
-use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
+use argon2_rust::{Algorithm, Argon2, Version};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::sync::OnceLock;
 use std::thread;
@@ -8,11 +7,13 @@ use tokio::time::Instant;
 use tracing::{debug, error, warn};
 use zeroize::Zeroize;
 
-pub static ARGON2_PARAMS: OnceLock<argon2::Params> = OnceLock::new();
+pub static ARGON2_PARAMS: OnceLock<argon2_rust::Params> = OnceLock::new();
 pub static HASH_CHANNELS: OnceLock<(
     flume::Sender<PasswordHashMessage>,
     flume::Receiver<PasswordHashMessage>,
 )> = OnceLock::new();
+/// Concurrent argon2 worker loops; set from `max_hash_threads`, defaults to 1 (tests).
+pub static HASH_THREADS: OnceLock<usize> = OnceLock::new();
 pub static HASH_AWAIT_WARN_TIME: OnceLock<u32> = OnceLock::new();
 
 pub struct HashPassword {
@@ -83,8 +84,28 @@ pub enum PasswordHashMessage {
 // To limit the theoretical concurrent hashes while still setting a fairly high memory for the
 // operation, this simple function makes sure that at no point in time, any more than the configured
 // amount of max concurrent hashes do happen to not exceed system memory.
+#[inline]
+fn worker_count() -> usize {
+    // defaults to 1 when unset (tests / before init), matching the historical single-consumer
+    // behavior; set from hashing.max_hash_threads in init_static_vars
+    HASH_THREADS.get().copied().unwrap_or(1)
+}
+
 pub async fn run() {
-    while let Ok(msg) = HASH_CHANNELS.get().unwrap().1.recv_async().await {
+    let workers = worker_count();
+    let rx = HASH_CHANNELS.get().unwrap().1.clone();
+
+    let mut handles = Vec::with_capacity(workers);
+    for _ in 0..workers {
+        handles.push(tokio::spawn(hash_worker(rx.clone())));
+    }
+    for handle in handles {
+        let _ = handle.await;
+    }
+}
+
+async fn hash_worker(rx: flume::Receiver<PasswordHashMessage>) {
+    while let Ok(msg) = rx.recv_async().await {
         let res = match msg {
             PasswordHashMessage::Hash(m) => {
                 check_await_threshold(&m.created);
@@ -119,14 +140,12 @@ fn hash_password(mut msg: HashPassword) {
     let argon2 = Argon2::new(
         Algorithm::Argon2id,
         Version::V0x13,
-        (*ARGON2_PARAMS.get().unwrap()).clone(),
+        *ARGON2_PARAMS.get().unwrap(),
     );
-    let salt = SaltString::generate(&mut OsRng);
 
     let hash = argon2
-        .hash_password(msg.plain_text.as_bytes(), &salt)
-        .expect("Error hashing the Password")
-        .to_string();
+        .hash_password_with_random_salt(msg.plain_text.as_bytes())
+        .expect("Error hashing the Password");
 
     msg.plain_text.as_mut().zeroize();
 
@@ -142,20 +161,10 @@ fn compare_passwords(mut msg: ComparePasswords) {
 
     let mut is_match = false;
 
-    match PasswordHash::new(&msg.hash) {
-        Ok(parsed_hash) => {
-            if Argon2::default()
-                .verify_password(msg.plain_text.as_bytes(), &parsed_hash)
-                .is_ok()
-            {
-                is_match = true;
-            }
-            msg.plain_text.as_mut().zeroize();
-        }
-        Err(err) => {
-            error!("Error parsing the original password hash: {err}");
-        }
+    if Argon2::verify_password(&msg.hash, msg.plain_text.as_bytes(), Algorithm::Argon2id).is_ok() {
+        is_match = true;
     }
+    msg.plain_text.as_mut().zeroize();
 
     if let Err(err) = msg.tx.send(is_match) {
         error!("{}", err);
@@ -167,15 +176,57 @@ fn compare_passwords(mut msg: ComparePasswords) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use argon2_rust::Params;
+    use argon2_rust::params::{Memory, TagLen};
     use pretty_assertions::assert_eq;
     use std::time::{Duration, Instant};
     use tokio::time;
+
+    // End-to-end: 2 workers drain a bounded channel; low cost, no timing asserts.
+    #[tokio::test]
+    async fn test_run_workers_process_all_messages() {
+        let params = Params::builder()
+            .memory(Memory::kib(8 * 1024))
+            .passes(1)
+            .lanes(1)
+            .tag_len(TagLen::bytes(32))
+            .build_or_panic();
+        let _ = ARGON2_PARAMS.set(params);
+        let _ = HASH_AWAIT_WARN_TIME.set(10_000);
+        let _ = HASH_CHANNELS.set(flume::bounded(2));
+        let _ = HASH_THREADS.set(2);
+
+        assert_eq!(worker_count(), 2);
+
+        let handle = tokio::spawn(run());
+
+        let mut hashes = Vec::with_capacity(4);
+        for _ in 0..4 {
+            hashes.push(
+                HashPassword::hash_password("test-password-123".to_string())
+                    .await
+                    .unwrap(),
+            );
+        }
+        for h in &hashes {
+            assert!(h.len() >= 32, "expected a non-empty argon2 hash string");
+        }
+        assert!(
+            !handle.is_finished(),
+            "workers keep running after processing"
+        );
+    }
 
     // pretty intensive test -> ignored by default
     #[tokio::test]
     #[ignore]
     async fn test_limiter() {
-        let argon2_params = argon2::Params::new(32768, 3, 2, None).unwrap();
+        let argon2_params = Params::builder()
+            .memory(Memory::kib(32768))
+            .passes(3)
+            .lanes(2)
+            .tag_len(TagLen::bytes(32))
+            .build_or_panic();
         let _ = ARGON2_PARAMS.set(argon2_params);
         let _ = HASH_CHANNELS.set(flume::bounded(1));
         let _ = HASH_AWAIT_WARN_TIME.set(100);

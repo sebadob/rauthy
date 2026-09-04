@@ -1,8 +1,6 @@
 use crate::database::DB;
 use crate::rauthy_config::RauthyConfig;
-use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
-use argon2::{Algorithm, Argon2, PasswordHasher, Version};
+use argon2_rust::{Algorithm, Argon2, Version};
 use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, new_store_id};
@@ -58,13 +56,11 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
                 }
             };
 
-            let params = RauthyConfig::get().argon2_params.clone();
+            let params = RauthyConfig::get().argon2_params;
             let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-            let salt = SaltString::generate(&mut OsRng);
             argon2
-                .hash_password(plain.as_bytes(), &salt)
+                .hash_password_with_random_salt(plain.as_bytes())
                 .expect("Error hashing the Password")
-                .to_string()
         }
     };
 

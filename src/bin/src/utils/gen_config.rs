@@ -1,9 +1,8 @@
 use crate::cli_args::ArgsGenConfig;
 use crate::utils::StdError;
 use crate::utils::stdin::{PromptPassword, read_line_stdin, read_line_stdin_yes};
-use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
-use argon2::{Algorithm, Argon2, PasswordHasher, Version};
+use argon2_rust::params::{Memory, TagLen};
+use argon2_rust::{Algorithm, Argon2, Params, Version};
 use chrono::Utc;
 use cidr::IpCidr;
 use colored::Colorize;
@@ -717,14 +716,14 @@ password policy you must match. At least:
             }
 
             println!("Hashing password ...");
-            let params = argon2::ParamsBuilder::new()
-                .m_cost(131_072)
-                .t_cost(4)
-                .p_cost(8)
+            let params = Params::builder()
+                .memory(Memory::kib(131_072))
+                .passes(4)
+                .lanes(8)
+                .tag_len(TagLen::bytes(32))
                 .build()?;
             let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-            let salt = SaltString::generate(&mut OsRng);
-            let hashed = argon2.hash_password(plain.as_bytes(), &salt)?;
+            let hashed = argon2.hash_password_with_random_salt(plain.as_bytes())?;
 
             plain.zeroize();
 

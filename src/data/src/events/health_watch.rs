@@ -3,7 +3,7 @@ use crate::entity::is_db_alive;
 use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
 use std::time::Duration;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub async fn watch_health() {
     debug!("Rauthy health watcher started");
@@ -47,7 +47,11 @@ pub async fn watch_health() {
 
         if is_good_now && !last_state {
             // let only the cache leader send healthy message in HA deployment
-            tx_events.send_async(Event::rauthy_healthy()).await.unwrap();
+            // best-effort: never block the health watcher or panic if the bounded
+            // event queue is saturated
+            if let Err(err) = tx_events.try_send(Event::rauthy_healthy()) {
+                warn!(?err, "Cannot send rauthy_healthy event - event queue full");
+            }
         }
 
         last_state = is_good_now;

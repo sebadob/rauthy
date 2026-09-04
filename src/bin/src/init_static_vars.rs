@@ -64,10 +64,13 @@ pub fn trigger() {
         .unwrap();
 
     ARGON2_PARAMS
-        .set(RauthyConfig::get().argon2_params.clone())
+        .set(RauthyConfig::get().argon2_params)
         .unwrap();
     HASH_CHANNELS
         .set(flume::bounded(vars.hashing.max_hash_threads as usize))
+        .unwrap();
+    HASH_THREADS
+        .set(vars.hashing.max_hash_threads as usize)
         .unwrap();
     HASH_AWAIT_WARN_TIME
         .set(vars.hashing.hash_await_warn_time)

@@ -70,7 +70,7 @@ actix-web-lab = "0.26"
 actix-web-prom = "0.10"
 ammonia = "4.1"
 arc-swap = "1.7"
-argon2 = { version = "0.5", features = ["std", "zeroize"] }
+argon2-rust = "1"
 askama = "0.16"
 async-trait = "0.1.74"
 atrium-api = "0.25.3"

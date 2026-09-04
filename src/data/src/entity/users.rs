@@ -24,7 +24,7 @@ use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
-use argon2::PasswordHash;
+use argon2_rust::decode_phc;
 use chrono::Utc;
 use core::str::Split;
 use hiqlite::Params;
@@ -1874,7 +1874,7 @@ impl User {
         }
     }
 
-    pub fn is_argon2_uptodate(&self, params: &argon2::Params) -> Result<bool, ErrorResponse> {
+    pub fn is_argon2_uptodate(&self, params: &argon2_rust::Params) -> Result<bool, ErrorResponse> {
         if self.password.is_none() {
             error!(
                 user_id = self.id,
@@ -1885,14 +1885,19 @@ impl User {
                 "Cannot validate argon2 param - password is not set",
             ));
         }
-        let hash = PasswordHash::new(self.password.as_ref().unwrap())
-            .expect("Could not build Hash from password string");
-        let curr_params =
-            argon2::Params::try_from(&hash).expect("Could not extract params from hash");
+        // decode the stored PHC string with the crate's parser and compare the params
+        let hash_str = self.password.as_ref().unwrap();
+        let curr = decode_phc(hash_str).map_err(|err| {
+            error!("Could not parse the stored password hash: {err}");
+            ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "Cannot parse the stored password hash",
+            )
+        })?;
 
-        if curr_params.m_cost() == params.m_cost()
-            && curr_params.t_cost() == params.t_cost()
-            && curr_params.p_cost() == params.p_cost()
+        if curr.params.memory_kib() == params.memory_kib()
+            && curr.params.passes() == params.passes()
+            && curr.params.lanes() == params.lanes()
         {
             return Ok(true);
         }
@@ -2277,19 +2282,39 @@ mod tests {
 
         // argon2 params
         // defaults: argon2_m_cost = 16384, argon2_t_cost = 3, argon2_p_cost = 2
-        let mut wrapped_params = argon2::Params::new(16384, 3, 2, None)?;
+        let mut wrapped_params = argon2_rust::Params::builder()
+            .memory(argon2_rust::params::Memory::kib(16384))
+            .passes(3)
+            .lanes(2)
+            .tag_len(argon2_rust::params::TagLen::bytes(32))
+            .build_or_panic();
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, true);
 
-        wrapped_params = argon2::Params::new(8192, 3, 2, None)?;
+        wrapped_params = argon2_rust::Params::builder()
+            .memory(argon2_rust::params::Memory::kib(8192))
+            .passes(3)
+            .lanes(2)
+            .tag_len(argon2_rust::params::TagLen::bytes(32))
+            .build_or_panic();
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, false);
 
-        wrapped_params = argon2::Params::new(16384, 4, 2, None)?;
+        wrapped_params = argon2_rust::Params::builder()
+            .memory(argon2_rust::params::Memory::kib(16384))
+            .passes(4)
+            .lanes(2)
+            .tag_len(argon2_rust::params::TagLen::bytes(32))
+            .build_or_panic();
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, false);
 
-        wrapped_params = argon2::Params::new(16384, 3, 5, None)?;
+        wrapped_params = argon2_rust::Params::builder()
+            .memory(argon2_rust::params::Memory::kib(16384))
+            .passes(3)
+            .lanes(5)
+            .tag_len(argon2_rust::params::TagLen::bytes(32))
+            .build_or_panic();
         let res = user.is_argon2_uptodate(&wrapped_params)?;
         assert_eq!(res, false);
 
