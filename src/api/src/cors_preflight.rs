@@ -4,7 +4,10 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpResponse, options};
 
-static ALLOW_HEADERS_WITH_AUTH: &str = "Accept, Accept-Language, Content-Type, Range, \
+const ALLOW_HEADERS_NO_AUTH: &str = "Accept, Accept-Language, Content-Type, Range, \
+    Sec-Fetch-Site, Sec-Fetch-Dest, Sec-Fetch-Mode";
+
+const ALLOW_HEADERS_WITH_AUTH: &str = "Accept, Accept-Language, Content-Type, Range, \
     Authorization, Sec-Fetch-Site, Sec-Fetch-Dest, Sec-Fetch-Mode";
 
 #[options("/clients_dyn")]
@@ -113,6 +116,7 @@ pub async fn options_users_register() -> HttpResponse {
     HttpResponse::NoContent()
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "POST, OPTIONS"))
+        .insert_header((ACCESS_CONTROL_ALLOW_HEADERS, ALLOW_HEADERS_NO_AUTH))
         .insert_header((ACCESS_CONTROL_MAX_AGE, "31536000"))
         .finish()
 }
@@ -121,7 +125,7 @@ pub async fn options_users_register() -> HttpResponse {
 pub async fn options_atproto_metadata() -> HttpResponse {
     HttpResponse::NoContent()
         .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
-        .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "POST, OPTIONS"))
+        .insert_header((ACCESS_CONTROL_ALLOW_METHODS, "GET, OPTIONS"))
         .insert_header((ACCESS_CONTROL_MAX_AGE, "31536000"))
         .finish()
 }
