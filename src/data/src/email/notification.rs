@@ -1,7 +1,9 @@
 use crate::email::mailer::{EMail, EmailType};
 use crate::entity::theme::ThemeCssFull;
+use crate::entity::users::User;
+use crate::rauthy_config::RauthyConfig;
 use askama::Template;
-use rauthy_notify::Notification;
+use rauthy_notify::{Notification, NotificationLevel};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::error;
@@ -62,5 +64,42 @@ pub async fn send_email_notification(
         Err(ref err) => {
             error!(?err, "sending Event E-Mail notification");
         }
+    }
+}
+
+pub async fn send_email_passkey_removed(user: &User, passkey_name: &str) {
+    let notification = passkey_removed_notification(passkey_name);
+    send_email_notification(
+        user.email_recipient_name(),
+        user.email.clone(),
+        &RauthyConfig::get().tx_email,
+        &notification,
+    )
+    .await;
+}
+
+fn passkey_removed_notification(passkey_name: &str) -> Notification {
+    Notification {
+        level: NotificationLevel::Warning,
+        head: "Passkey removed from your account".to_string(),
+        row_1: format!("The passkey '{passkey_name}' was removed by an administrator."),
+        row_2: Some(
+            "If you did not expect this change, contact your administrator immediately."
+                .to_string(),
+        ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn passkey_removed_email_identifies_the_key_and_warns_the_user() {
+        let notification = passkey_removed_notification("security-key");
+
+        assert_eq!(notification.level, NotificationLevel::Warning);
+        assert!(notification.row_1.contains("security-key"));
+        assert!(notification.row_2.unwrap().contains("immediately"));
     }
 }

@@ -16,6 +16,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::email::email_registered_already::send_email_registered_already;
+use rauthy_data::email::notification::send_email_passkey_removed;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
@@ -1943,7 +1944,12 @@ pub async fn post_webauthn_auth_finish_login(
 ///
 /// **Permissions**
 /// - rauthy_admin
+/// - API key with Users + Delete
+/// - group admin for a user it manages
 /// - authenticated and logged in user for this very {id}
+///
+/// API keys are administrative principals. Any deletion by someone other than the user itself
+/// triggers an informational email to the affected user.
 #[utoipa::path(
     delete,
     path = "/users/{id}/webauthn/delete/{name}",
@@ -1966,44 +1972,37 @@ pub async fn delete_webauthn(
 
     let (id, name) = path.into_inner();
 
-    // Note: Currently, this is not allowed with an ApiKey on purpose.
-    // Access tiers:
-    // - full Rauthy admin: may reset MFA for any user,
-    // - group admin: may reset MFA for a user it manages,
-    // - the user itself: only with a valid `mfa_mod_token`.
-    if principal.validate_admin_session().is_ok() {
-        if principal.is_user(&id).is_err() {
-            warn!("Passkey delete from admin for user {} for key {}", id, name);
-        }
+    let notify_user = if principal.is_user(&id).is_ok() {
+        let Some(token_id) = payload.mfa_mod_token_id else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing `mfa_mod_token_id`",
+            ));
+        };
+        let token = MfaModToken::find(&token_id).await?;
+        let ip = real_ip_from_req(&req)?;
+        token.validate(principal.user_id()?, ip)?;
+        warn!("Passkey delete for user {} for key {}", id, name);
+        None
     } else {
-        principal.validate_session_auth()?;
-
-        if principal.is_user(&id).is_ok() {
-            // a user deleting its own passkey always needs a valid `mfa_mod_token`
-            let Some(token_id) = payload.mfa_mod_token_id else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "missing `mfa_mod_token_id`",
-                ));
-            };
-            let token = MfaModToken::find(&token_id).await?;
-            let ip = real_ip_from_req(&req)?;
-            token.validate(principal.user_id()?, ip)?;
-
-            warn!("Passkey delete for user {} for key {}", id, name);
-        } else {
-            // Check group-admin scope before loading the target.
+        if principal.is_session_group_admin() {
             principal.validate_group_admin_session()?;
-            let target = User::find(id.clone()).await?;
-            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
-            warn!(
-                "Passkey delete from group admin for user {} for key {}",
-                id, name
-            );
+        } else {
+            principal
+                .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
         }
-    }
 
-    PasskeyEntity::delete(id, name).await?;
+        let target = User::find(id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+        warn!("Passkey delete from admin for user {} for key {}", id, name);
+        Some(target)
+    };
+
+    PasskeyEntity::delete(id, name.clone()).await?;
+
+    if let Some(user) = notify_user {
+        send_email_passkey_removed(&user, &name).await;
+    }
 
     // make sure to delete any existing MFA cookie when a key is deleted
     let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
