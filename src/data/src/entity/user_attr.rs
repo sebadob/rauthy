@@ -87,21 +87,15 @@ VALUES ($1, $2, $3, $4, $5)"#,
             .await?;
         };
 
-        let mut attrs = UserAttrConfigEntity::find_all().await?;
+        Self::clear_cache_all().await?;
 
-        let slf = Self {
-            name: new_attr.name.clone(),
-            desc: new_attr.desc.clone(),
-            default_value: default_value.clone(),
-            typ: new_attr.typ.clone(),
+        Ok(Self {
+            name: new_attr.name,
+            desc: new_attr.desc,
+            default_value,
+            typ: new_attr.typ,
             user_editable: new_attr.user_editable.unwrap_or(false),
-        };
-        attrs.push(slf.clone());
-        DB::hql()
-            .put(Cache::App, IDX_USER_ATTR_CONFIG, &attrs, CACHE_TTL_APP)
-            .await?;
-
-        Ok(slf)
+        })
     }
 
     pub async fn delete(name: String) -> Result<(), ErrorResponse> {
@@ -197,6 +191,8 @@ VALUES ($1, $2, $3, $4, $5)"#,
             .delete(Cache::App, Self::cache_idx(&slf.name))
             .await?;
         Self::clear_cache_all().await?;
+
+        // There might be scope mappings inside the cache
         Scope::clear_cache().await?;
 
         Ok(())
