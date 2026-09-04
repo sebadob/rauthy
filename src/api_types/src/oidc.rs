@@ -226,9 +226,10 @@ pub struct BackchannelLogoutRequest {
     pub logout_token: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CertsParams {
     pub skip_okp: Option<bool>,
+    pub rfc_9864: Option<bool>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -545,8 +546,11 @@ pub enum JwkKeyPairAlg {
     RS256,
     RS384,
     RS512,
+    // Current or "old" notation for Ed25519
     #[default]
     EdDSA,
+    // New notation for EdDSA (RFC 9864)
+    Ed25519,
 }
 
 impl Display for JwkKeyPairAlg {
@@ -556,6 +560,7 @@ impl Display for JwkKeyPairAlg {
             JwkKeyPairAlg::RS384 => "RS384",
             JwkKeyPairAlg::RS512 => "RS512",
             JwkKeyPairAlg::EdDSA => "EdDSA",
+            JwkKeyPairAlg::Ed25519 => "Ed25519",
         };
         write!(f, "{s}")
     }

@@ -63,7 +63,7 @@ impl JWKSPublicKey {
                 }
             }
 
-            JwkKeyPairAlg::EdDSA => {
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
                 let x = self.x()?;
                 let pubkey = ed25519_compact::PublicKey::from_slice(x.as_slice())?;
                 let signature = ed25519_compact::Signature::from_slice(buf)?;
