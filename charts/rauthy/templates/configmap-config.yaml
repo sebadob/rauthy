@@ -1,0 +1,14 @@
+{{- if not .Values.config.existingConfigMap -}}
+{{- if not .Values.config.content -}}
+{{- fail "\n\nrauthy: no configuration provided.\nSet either:\n  - config.existingConfigMap  a ConfigMap holding your (non-secret) config.toml, or\n  - config.content            the full config.toml inline (the chart creates the ConfigMap).\nKeep secrets out of here: reference them with \"$SECRETS\" and put the values in the `secrets` block.\nSee values.yaml and files/config.toml.example.\n" -}}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rauthy.configMapName" . }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+data:
+  {{ .Values.config.existingConfigMapKey }}: |
+{{ .Values.config.content | indent 4 }}
+{{- end }}
