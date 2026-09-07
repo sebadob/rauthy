@@ -3,7 +3,7 @@ use crate::email::mailer_callback::EMailCallback;
 use crate::email::mailer_microsoft_graph::sender_microsoft_graph;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
 use crate::events::event::Event;
-use crate::rauthy_config::RauthyConfig;
+use crate::rauthy_config::{EmailTlsMode, RauthyConfig};
 use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Mechanism;
 use lettre::transport::smtp::{authentication, client};
@@ -215,7 +215,7 @@ async fn sender_default_smtp(smtp_url: &str, mut rx: mpsc::Receiver<(EMail, EMai
 async fn create_mailer(smtp_url: &str) -> AsyncSmtpTransport<Tokio1Executor> {
     let vars = &RauthyConfig::get().vars.email;
 
-    let mut conn = if vars.danger_insecure {
+    let mut conn = if vars.smtp_tls_mode == EmailTlsMode::DangerInsecure {
         conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
     } else {
         connect_test_smtp(smtp_url, vars.smtp_port).await
@@ -237,7 +237,7 @@ async fn create_mailer(smtp_url: &str) -> AsyncSmtpTransport<Tokio1Executor> {
         retries += 1;
         tokio::time::sleep(Duration::from_secs(5)).await;
 
-        conn = if vars.danger_insecure {
+        conn = if vars.smtp_tls_mode == EmailTlsMode::DangerInsecure {
             conn_test_smtp_insecure(smtp_url, vars.smtp_port).await
         } else {
             connect_test_smtp(smtp_url, vars.smtp_port).await
@@ -280,11 +280,11 @@ async fn connect_test_smtp(
         authentication::Credentials::new(username, password)
     };
 
-    let mut builder = if vars.starttls_only {
-        AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
+    let mut builder = if vars.smtp_tls_mode == EmailTlsMode::Tls {
+        AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
             .expect("Connection Error with 'SMTP_URL'")
     } else {
-        AsyncSmtpTransport::<lettre::Tokio1Executor>::relay(smtp_url)
+        AsyncSmtpTransport::<lettre::Tokio1Executor>::starttls_relay(smtp_url)
             .expect("Connection Error with 'SMTP_URL'")
     };
 
@@ -311,38 +311,27 @@ async fn connect_test_smtp(
         .build();
     info!("SMTP connection opened");
 
-    if vars.starttls_only {
-        match conn.test_connection().await {
-            Ok(true) => {
-                info!(smtp_url, "Successfully connected via STARTTLS");
-                return Ok(conn);
-            }
-            Ok(false) => {
-                error!(smtp_url, "Could not connect via STARTTLS");
-            }
-            Err(err) => {
-                error!(
-                    smtp_url,
-                    ?err,
-                    "Could not connect via STARTTLS. Check credentials",
-                );
-            }
+    match conn.test_connection().await {
+        Ok(true) => {
+            info!(
+                "Successfully connected to {} via {}",
+                smtp_url, vars.smtp_tls_mode
+            );
+            return Ok(conn);
         }
-    } else {
-        match conn.test_connection().await {
-            Ok(true) => {
-                info!("Successfully connected to {smtp_url} via TLS");
-                return Ok(conn);
-            }
-            Ok(false) => {
-                error!("Could not connect to {} via TLS.", smtp_url,);
-            }
-            Err(err) => {
-                error!(
-                    ?err,
-                    "Could not connect to {smtp_url} via TLS. Check credentials"
-                );
-            }
+        Ok(false) => {
+            error!(
+                "Could not connect to {} via {}: Connected but SMTP test failed.",
+                smtp_url, vars.smtp_tls_mode
+            );
+        }
+        Err(err) => {
+            error!(
+                ?err,
+                "Could not connect to {} via {}. Check your credentials",
+                smtp_url,
+                vars.smtp_tls_mode
+            );
         }
     }
 
