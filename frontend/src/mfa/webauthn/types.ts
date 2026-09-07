@@ -34,6 +34,7 @@ export interface WebauthnRegStartRequest {
     magic_link_id?: string;
     /// Validation: length === 32
     mfa_mod_token_id?: string;
+    allow_rk?: boolean;
 }
 
 export interface WebauthnRegFinishRequest {

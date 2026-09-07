@@ -626,6 +626,12 @@ pub async fn auth_start(
             let user_id = d.user_id.clone();
             (OtpAdditionalData::Login(d), user_id)
         }
+        MfaPurpose::Discover => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "User discovery does not exist for OTP",
+            ));
+        }
         MfaPurpose::MfaModToken
         | MfaPurpose::PamLogin
         | MfaPurpose::PasswordNew

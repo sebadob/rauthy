@@ -14,11 +14,13 @@ export async function webauthnReg(
     magicLinkId?: string,
     pwdCsrfToken?: string,
     mfaModTokenId?: string,
+    allowRk?: boolean,
 ): Promise<WebauthnRegResult> {
     let payloadStart: WebauthnRegStartRequest = {
         passkey_name: passkeyName,
         magic_link_id: magicLinkId,
         mfa_mod_token_id: mfaModTokenId,
+        allow_rk: allowRk,
     };
     let headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -76,6 +78,10 @@ export async function webauthnReg(
             };
         }
     } catch (e) {
+        // If there is no space left on the device when trying to register a Resident Key, we will
+        // get `err.name === 'NotAllowedError'`. However, This name has multiple meanings, and it
+        // also shows up when the user cancels the operation or something like that. There is no
+        // good way to know when the device has no space left.
         console.error(e);
         const timeout = new Date().getTime() >= expTime;
         return {

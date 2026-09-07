@@ -99,7 +99,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     // Step 2: POST /authorize with CSRF token cookie
     let nonce = get_rand(32);
     let mut req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some("IAmSoWrong1337".to_string()),
         pow: get_solved_pow().await,
         client_id: CLIENT_ID.to_string(),
@@ -110,6 +110,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         code_challenge: Some(challenge_plain.to_owned()),
         code_challenge_method: Some("plain".to_string()),
         resource: None,
+        resident_key_token: None,
     };
     let res = reqwest::Client::new()
         .post(&url_auth)
@@ -152,6 +153,18 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     // should be 400 - no code verifier given
     check_status(res, 400).await?;
 
+    // each failed attempt invalidates the auth code, we need to re-fetch
+    req_login.pow = get_solved_pow().await;
+    let mut res = reqwest::Client::new()
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&req_login)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 202);
+    let (code, _) = code_state_from_headers(res)?;
+    req_token.code = Some(code);
+
     req_token.code_verifier = Some("IAmSoWrong1337".to_string());
     let res = reqwest::Client::new()
         .post(&url_token)
@@ -159,7 +172,19 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // should be 401 - wrong code verifier given
-    check_status(res, 401).await?;
+    assert_eq!(res.status(), 401);
+
+    // each failed attempt invalidates the auth code, we need to re-fetch
+    req_login.pow = get_solved_pow().await;
+    let mut res = reqwest::Client::new()
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&req_login)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 202);
+    let (code, _) = code_state_from_headers(res)?;
+    req_token.code = Some(code);
 
     req_token.code_verifier = Some(challenge_plain.to_string());
     let mut res = reqwest::Client::new()
@@ -167,7 +192,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .form(&req_token)
         .send()
         .await?;
-    res = check_status(res, 200).await?;
+    assert_eq!(res.status(), 200);
     let ts = res.json::<TokenSet>().await?;
     assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
@@ -433,7 +458,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
 
     // Step 2: POST /authorize with CSRF token cookie
     let mut req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some("IAmSoWrong1337".to_string()),
         pow: get_solved_pow().await,
         client_id: CLIENT_ID.to_string(),
@@ -444,6 +469,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         code_challenge: Some(challenge_plain.to_owned()),
         code_challenge_method: None,
         resource: None,
+        resident_key_token: None,
     };
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -771,7 +797,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     // login and get an authorization code
     let nonce = get_rand(32);
     let req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
         client_id: client_id.to_string(),
@@ -782,6 +808,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
+        resident_key_token: None,
     };
     let res = client
         .post(&url_auth)

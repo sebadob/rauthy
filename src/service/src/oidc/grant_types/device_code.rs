@@ -43,17 +43,41 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         });
     }
 
-    // We need to check the device_code again, because the `find_by_device_code` uses
-    // the `user_code` as cache index under the hood for smaller footprints and the
-    // ability to find it in both ways without duplicated data.
-    if &code.device_code != device_code {
+    // We need to check the device_code again, because the `find_by_device_code` uses the
+    // `user_code` as cache index under the hood for smaller footprints and the ability to find it
+    // in both ways without duplicated data.
+    //
+    // The constant time comparison for both the device code and the client secret don't make
+    // any sense in terms of security here, but I don't want any other brain-dead AI security report
+    // about it.
+    //
+    // The device code is very short-lived, rate-limited and even deleted after 3 times rate-limit
+    // abuse. The client secret comparison will never be reached until the full device code is valid.
+    // Apart from that, this comparison happens in single digit nanoseconds and is practically
+    // impossible to measure in this API. Scheduling an async task that is ready for work takes even
+    // longer than that, and we won't even talk about network latency!
+    //
+    // This means from a security standpoint, constant time comparison does not make any difference.
+    // We are doing it for best practice only, just don't annoy me with this anymore. Use some
+    // common sense instead of blindly reporting AI findings and saying "that's a score of 7.4!".
+    if !constant_time_eq::constant_time_eq(code.device_code.as_bytes(), device_code.as_bytes()) {
         return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(Cow::from("Invalid `device_code`")),
         });
     }
 
-    if code.client_secret != payload.client_secret {
+    if !constant_time_eq::constant_time_eq(
+        code.client_secret
+            .as_ref()
+            .map(|s| s.as_bytes())
+            .unwrap_or_default(),
+        payload
+            .client_secret
+            .as_ref()
+            .map(|s| s.as_bytes())
+            .unwrap_or_default(),
+    ) {
         return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(Cow::from("Invalid `client_secret`")),

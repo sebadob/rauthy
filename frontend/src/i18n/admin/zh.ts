@@ -120,7 +120,7 @@ export let I18nAdminZh: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `令牌生命周期适用于访问令牌和ID令牌，以秒为单位。`,
-            p2: `如果客户端支持EdDSA / ed25519算法，这应该是首选。
+            p2: `如果客户端支持EdDSA / Ed25519算法，这应该是首选。
                 RSA算法仅出于兼容性考虑而存在。`,
             p3: `刷新令牌的算法无法更改，因为这些令牌仅供Rauthy使用。`,
         },

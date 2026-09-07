@@ -17,7 +17,8 @@ use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
-use rauthy_data::entity::webauthn::{WebauthnLoginReq, WebauthnToSAwaitData};
+use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
+use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{
     AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
@@ -37,7 +38,19 @@ pub async fn post_authorize(
 ) -> Result<AuthStep, ErrorResponse> {
     *add_login_delay = true;
 
-    let mut user = match User::find_by_email(req_data.email.clone()).await {
+    let (user_res, is_rk_authenticated) = if let Some(code) = req_data.resident_key_token {
+        let user_id = ResidentKeyToken::get_validated_user_id(&code, &session, &browser_id).await?;
+        (User::find(user_id).await, true)
+    } else if let Some(email) = req_data.email.clone() {
+        (User::find_by_email(email).await, false)
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "One of `resident_key_token` or `email` must be provided",
+        ));
+    };
+
+    let mut user = match user_res {
         Ok(u) => u,
         Err(err) => {
             // The UI does not show the password input form when there is no user yet.
@@ -49,7 +62,12 @@ pub async fn post_authorize(
             }
 
             let ip = real_ip_from_req(req)?;
-            CredStuffDetect::trigger(ip, &req_data.email, req_data.password.as_deref()).await;
+            CredStuffDetect::trigger(
+                ip,
+                req_data.email.as_deref().unwrap_or_default(),
+                req_data.password.as_deref(),
+            )
+            .await;
 
             if let Some(mut pwd) = req_data.password {
                 pwd.zeroize();
@@ -72,8 +90,10 @@ pub async fn post_authorize(
     let account_type = user.account_type();
 
     // Only allow an empty password, if the user has a passkey only account or a valid MFA cookie.
-    let user_must_provide_password =
-        req_data.password.is_none() && account_type != AccountType::Passkey && !has_mfa_cookie;
+    let user_must_provide_password = !is_rk_authenticated
+        && req_data.password.is_none()
+        && account_type != AccountType::Passkey
+        && !has_mfa_cookie;
     if user_must_provide_password {
         // if we get here, the UI did the first step from the login form
         // -> username only without password
@@ -129,10 +149,13 @@ pub async fn post_authorize(
     let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;
 
-    // Webauthn overrides otp
-    let require_webauthn = user.has_webauthn_enabled();
+    // Webauthn overrides otp.
+    // If we had a Resident Key authentication already, there is no need for another Webauthn
+    // request.
+    let require_webauthn = !is_rk_authenticated && user.has_webauthn_enabled();
     let require_otp = !require_webauthn && user.has_otp_enabled().await;
     if require_webauthn || require_otp {
+        *user_needs_mfa = true;
         session.set_mfa(true).await?;
     }
 

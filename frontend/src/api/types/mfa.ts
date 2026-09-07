@@ -1,2 +1,2 @@
 export type MfaPurpose =
-    { Login: string } | 'MfaModToken' | 'PasswordNew' | 'PasswordReset' | 'Test';
+    { Login: string } | 'Discover' | 'MfaModToken' | 'PasswordNew' | 'PasswordReset' | 'Test';

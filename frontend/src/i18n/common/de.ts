@@ -119,6 +119,14 @@ export const I18nDe: I18n = {
             username: 'Benutzername',
             validFor: 'Passwort gültig für {{ secs }} Sekunden',
         },
+        passkeys: {
+            type: 'Passkey Typ',
+            types: ['Normal', 'Verknüpft'],
+            rkWarning: `ACHTUNG: Ein verknüpfter Passkey (Resident Key) kann zwar zum direkten Login 
+                ohne die Eingabe der E-Mail Addresse genutzt werden, aber es wird auch ein 
+                zusätzlicher Speicherplatz für jede Anwendung gebraucht. Es muss dafür gesorgt 
+                werden, dass genug Speicher vorhanden ist.`,
+        },
         passwordConfirm: 'Passwort bestätigen',
         passwordCurr: 'Derzeitiges Passwort',
         passwordCurrReq: 'Derzeitiges Passwort ist notwendig',
@@ -155,6 +163,8 @@ export const I18nDe: I18n = {
         userEnabled: 'Benutzer Aktiviert',
         userExpiry: 'Benutzer Ablauf',
         userVerifiedTooltip: 'Abgesichert durch Fingerabdruck oder PIN',
+        residentKeyTooltip: `Dies ist ein Resident Key. Er kann für direkten Login ohne Eingabe der E-Mail verwendet 
+            werden.`,
         webIdDesc: `Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\n
             werden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt 
             wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie 

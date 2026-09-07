@@ -5,6 +5,7 @@ export interface PasskeyResponse {
     /// Unix timestamp in seconds
     last_used: number;
     user_verified?: boolean;
+    resident_key?: boolean;
 }
 
 export interface WebauthnDeleteRequest {

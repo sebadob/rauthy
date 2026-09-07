@@ -116,6 +116,13 @@ export const I18nNb: I18n = {
             username: 'Brukernavn',
             validFor: 'Passord gyldig i {{ secs }} sekunder',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: 'Bekreft passord',
         passwordCurr: 'Nåværende passord',
         passwordCurrReq: 'Nåværende passord er påkrevd',
@@ -151,6 +158,8 @@ export const I18nNb: I18n = {
         userEnabled: 'Bruker aktivert',
         userExpiry: 'Bruker utløper',
         userVerifiedTooltip: 'Sikret med fingeravtrykk eller PIN',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `Her kan du angi feltene som skal publiseres via din WebID. Dette er en 
             funksjon som brukes av enkelte nettverk for desentraliserte pålogginger. Hvis du ikke 
             vet hva WebID er, trenger du sannsynligvis ikke å bruke det.`,

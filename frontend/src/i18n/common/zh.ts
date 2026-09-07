@@ -109,6 +109,13 @@ export const I18nZh: I18n = {
             username: '用户名',
             validFor: '密码有效期 {{ secs }} 秒',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: '确认密码',
         passwordCurr: '当前密码',
         passwordCurrReq: '当前密码必填。',
@@ -141,6 +148,8 @@ export const I18nZh: I18n = {
         userEnabled: '启用',
         userExpiry: '过期',
         userVerifiedTooltip: '指纹或PIN保护',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `您可以选择哪些字段能够通过WebID发布。\n
             WebID被一些网络用于去中心化登陆。如果您不知道这是什么，您通常不需要选择。`,
         webIdDescData: '您可以以FOAF词汇格式向您的 WebID 添加自定义数据字段',

@@ -26,6 +26,9 @@
     import UserOtp from '$lib5/UserOtp.svelte';
     import OtpRequest from '$lib5/OtpRequest.svelte';
     import InputOtp from '$lib5/form/InputOtp.svelte';
+    import IconCheck from '$icons/IconCheck.svelte';
+    import Options from '$lib/Options.svelte';
+    import LabeledValue from '$lib/LabeledValue.svelte';
 
     let { user = $bindable() }: { user: UserResponse } = $props();
 
@@ -50,11 +53,13 @@
     let passkeyName = $state('');
     let isInputError = $state(false);
     let isLoading = $state(false);
+    let testSuccess = $state(false);
 
     let showModal = $state(false);
     let closeModal: undefined | (() => void) = $state();
 
     let passkeys: PasskeyResponse[] = $state([]);
+    let passkeyType = $state(t.account.passkeys.types[0]);
     let mfaModToken: undefined | MfaModTokenResponse = $state();
     let mfaModSecs: undefined | number = $state();
     let interval: undefined | number;
@@ -175,6 +180,8 @@
             undefined,
             undefined,
             tokenId,
+            // the 2nd type is the resident key
+            passkeyType === t.account.passkeys.types[1],
         );
         if (res.error) {
             err = true;
@@ -399,8 +406,10 @@
             };
             fetchMfaToken(payload);
         } else {
+            testSuccess = true;
             msg = t.mfa.testSuccess;
             setTimeout(() => {
+                testSuccess = false;
                 msg = '';
             }, 3000);
         }
@@ -414,9 +423,6 @@
 <Template id={TPL_OTP_LENGTH} bind:value={otpSize} />
 
 <div class="container">
-    <div class:success={!err} class:err>
-        {msg}
-    </div>
     {#if mfaModSecs && mfaModSecs > 0}
         <div class="modToken">
             <div>
@@ -444,32 +450,50 @@
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {/if}
 
-        <p>
-            {t.mfa.webauthn.p1}
-            <br /><br />
-            {t.mfa.webauthn.p2}
-            <br /><br />
-            {t.mfa.webauthn.p3}
-            <a href="https://sebadob.github.io/rauthy/config/passkeys.html"
-                >{t.mfa.webauthn.docLinkText}</a
-            >.
-        </p>
-
         {#if showRegInput}
-            <Input
-                bind:ref={refInput}
-                bind:value={passkeyName}
-                autocomplete="off"
-                label={t.mfa.passkeyName}
-                placeholder={t.mfa.passkeyName}
-                maxLength={32}
-                pattern={PATTERN_USER_NAME}
-                bind:isError={isInputError}
-                onEnter={handleRegister}
-            />
-            <div class="regBtns">
-                <Button onclick={handleRegister}>{t.mfa.register}</Button>
-                <Button level={3} onclick={() => (showRegInput = false)}>{t.common.cancel}</Button>
+            <p>
+                {t.mfa.webauthn.p1}
+                <br /><br />
+                {t.mfa.webauthn.p2}
+                <br /><br />
+                {t.mfa.webauthn.p3}
+                <a href="https://sebadob.github.io/rauthy/config/passkeys.html"
+                    >{t.mfa.webauthn.docLinkText}</a
+                >.
+            </p>
+
+            <div class="pkReg">
+                <Form action="" onSubmit={handleRegister}>
+                    <LabeledValue label={t.account.passkeys.type}>
+                        <Options
+                            options={[t.account.passkeys.types[0], t.account.passkeys.types[1]]}
+                            bind:value={passkeyType}
+                            ariaLabel={t.account.passkeys.type}
+                        />
+                        {#if passkeyType === t.account.passkeys.types[1]}
+                            <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
+                        {/if}
+                    </LabeledValue>
+                    <Input
+                        bind:ref={refInput}
+                        bind:value={passkeyName}
+                        autocomplete="off"
+                        label={t.mfa.passkeyName}
+                        placeholder={t.mfa.passkeyName}
+                        maxLength={32}
+                        pattern={PATTERN_USER_NAME}
+                        bind:isError={isInputError}
+                        required
+                    />
+                    <div class="regBtns">
+                        <Button type="submit" isDisabled={passkeyType === '-'}>
+                            {t.mfa.register}
+                        </Button>
+                        <Button level={3} onclick={() => (showRegInput = false)}
+                            >{t.common.cancel}</Button
+                        >
+                    </div>
+                </Form>
             </div>
         {:else}
             <div class="regNewBtn">
@@ -478,30 +502,35 @@
                 </Button>
             </div>
         {/if}
+    {/if}
 
-        {#if passkeys.length > 0}
-            <div class="keysHeader">
-                {t.mfa.registerdKeys}
-            </div>
-        {/if}
-        <div class="keysContainer">
-            {#each passkeys as passkey (passkey.name)}
-                <UserPasskey {passkey} {showDelete} onDelete={handleDelete} />
-            {/each}
+    {#if passkeys.length > 0}
+        <div class="keysHeader">
+            {t.mfa.registerdKeys}
         </div>
+    {/if}
+    <div class="keysContainer">
+        {#each passkeys as passkey (passkey.name)}
+            <UserPasskey {passkey} {showDelete} onDelete={handleDelete} />
+        {/each}
+    </div>
+    {#if passkeys.length > 0}
+        <div class="button">
+            <Button
+                onclick={() => {
+                    mfaPurpose = 'Test';
+                    mfaKind = 'webauthn';
+                }}
+            >
+                {t.mfa.test}
+            </Button>
 
-        {#if passkeys.length > 0}
-            <div class="button">
-                <Button
-                    onclick={() => {
-                        mfaPurpose = 'Test';
-                        mfaKind = 'webauthn';
-                    }}
-                >
-                    {t.mfa.test}
-                </Button>
-            </div>
-        {/if}
+            {#if testSuccess}
+                <div>
+                    <IconCheck />
+                </div>
+            {/if}
+        </div>
     {/if}
 
     {#if isOtpEnabled}
@@ -553,6 +582,10 @@
             </div>
         </div>
     {/if}
+
+    <div class:success={!err} class:err>
+        {msg}
+    </div>
 </div>
 
 <Modal bind:showModal bind:closeModal>
@@ -633,6 +666,9 @@
 
     .button {
         margin-top: 0.33rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .keysContainer {
@@ -662,6 +698,19 @@
         text-align: left;
     }
 
+    .pkReg {
+        margin: 1rem 0;
+        padding: 0.5rem 1rem;
+        background-color: hsla(var(--bg-high) / 0.25);
+        border: 1px solid hsl(var(--bg-high));
+        border-radius: var(--border-radius);
+    }
+
+    .rkWarn {
+        color: hsl(var(--error));
+        font-size: 0.9rem;
+    }
+
     .success {
         margin-left: 0.2rem;
         color: hsl(var(--action));
@@ -672,7 +721,7 @@
     }
 
     .regBtns {
-        margin: 0.25rem 0;
+        margin: 0.5rem 0;
         display: flex;
         align-items: center;
         gap: 0.5rem;

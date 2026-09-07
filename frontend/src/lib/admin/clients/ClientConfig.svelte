@@ -89,7 +89,7 @@
         tokenExchange: client.flows_enabled.includes(AuthFlowTokenExchange),
     });
 
-    const optionsAlgs: JwkKeyPairAlg[] = ['RS256', 'RS384', 'RS512', 'EdDSA'];
+    const optionsAlgs: JwkKeyPairAlg[] = ['RS256', 'RS384', 'RS512', 'EdDSA', 'Ed25519'];
     let accessTokenAlg: JwkKeyPairAlg = $state(client.access_token_alg);
     let idTokenAlg: JwkKeyPairAlg = $state(client.id_token_alg);
     let tokenLifetime: string = $state(client.access_token_lifetime.toString());

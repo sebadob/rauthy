@@ -117,6 +117,13 @@ export const I18nEn: I18n = {
             username: 'Username',
             validFor: 'Password valid for {{ secs }} seconds',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: 'Confirm Password',
         passwordCurr: 'Current Password',
         passwordCurrReq: 'Current password is required',
@@ -152,6 +159,8 @@ export const I18nEn: I18n = {
         userEnabled: 'User Enabled',
         userExpiry: 'User Expires',
         userVerifiedTooltip: 'Secured with fingerprint or PIN',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `You can configure the fields that should be exposed with your WebID.\nThis is a 
             feature used by some networks for decentralized logins. If you do not know what it is,
             \nyou most probably do not need it.`,

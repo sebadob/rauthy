@@ -52,6 +52,7 @@
     import OtpRequest from '$lib5/OtpRequest.svelte';
     import type { MfaPurpose } from '$api/types/mfa';
     import type { OtpAdditionalData } from '$mfa/otp/types';
+    import IconKey from '$icons/IconKey.svelte';
 
     const inputWidth = '18rem';
 
@@ -266,7 +267,16 @@
         await handleAuthRes(res);
     }
 
-    async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+    function onPasskeyDiscover() {
+        mfaKind = 'webauthn';
+        mfaPurpose = 'Discover';
+    }
+
+    async function onSubmit(
+        form?: HTMLFormElement,
+        params?: URLSearchParams,
+        residentKeyToken?: string,
+    ) {
         if (isAtproto) {
             return providerLogin(atprotoId);
         }
@@ -287,13 +297,14 @@
         let pow = (await fetchSolvePow()) || '';
 
         const payload: LoginRequest = {
-            email,
+            email: email || undefined,
             pow,
             client_id: clientId,
             redirect_uri: redirectUri,
             state: stateEncoded,
             nonce: nonce,
             scopes,
+            resident_key_token: residentKeyToken,
         };
         if (
             challenge &&
@@ -508,6 +519,9 @@
 
         if ('loc' in data) {
             window.location.replace(data.loc as string);
+        } else if ('resident_key_token' in data) {
+            mfaPurpose = undefined;
+            onSubmit(undefined, undefined, data.resident_key_token as string);
         } else if ('tos_await_code' in data) {
             // login successful, but the user needs to accept updated ToS
             tosAcceptCode = data.tos_await_code as string;
@@ -686,6 +700,19 @@
                                         {isLoading}
                                     >
                                         {t.authorize.login}
+                                    </Button>
+                                </div>
+                                <div class="btn flex-col">
+                                    <Button
+                                        level={2}
+                                        ariaLabel={t.authorize.login}
+                                        onclick={onPasskeyDiscover}
+                                        {isLoading}
+                                    >
+                                        <div class="flex gap-05">
+                                            <IconKey width="1.2rem" />
+                                            Passkey
+                                        </div>
                                     </Button>
                                 </div>
                                 {#if isAtproto}

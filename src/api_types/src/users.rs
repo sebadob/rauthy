@@ -48,6 +48,7 @@ pub struct MfaAwaitRequest {
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub enum MfaPurpose {
     Login(String),
+    Discover,
     MfaModToken,
     PamLogin,
     PasswordNew,
@@ -350,6 +351,7 @@ pub struct WebauthnRegStartRequest {
     pub magic_link_id: Option<String>,
     #[validate(length(min = 32, max = 32))]
     pub mfa_mod_token_id: Option<String>,
+    pub allow_rk: Option<bool>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -532,6 +534,14 @@ pub struct PasskeyResponse {
     pub last_used: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_verified: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resident_key: Option<bool>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct ResidentKeyToken {
+    pub resident_key_token: String,
 }
 
 #[derive(Serialize, ToSchema)]

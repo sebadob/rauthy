@@ -43,7 +43,7 @@ impl TryFrom<&str> for AtHashAlg {
             "RS256" => Self::Sha256,
             "RS384" => Self::Sha384,
             "RS512" => Self::Sha512,
-            "EdDSA" => Self::Sha512,
+            "EdDSA" | "Ed25519" => Self::Sha512,
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,

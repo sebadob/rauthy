@@ -92,6 +92,12 @@ export interface I18n {
             username: string;
             validFor: string;
         };
+        passkeys: {
+            type: string;
+            // [Default, Resident Key]
+            types: string[];
+            rkWarning: string;
+        };
         passwordConfirm: string;
         passwordCurr: string;
         passwordCurrReq: string;
@@ -123,6 +129,7 @@ export interface I18n {
         userEnabled: string;
         userExpiry: string;
         userVerifiedTooltip: string;
+        residentKeyTooltip: string;
         webIdDesc: string;
         webIdDescData: string;
         webIdExpertMode: string;

@@ -110,7 +110,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
     let req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
@@ -121,6 +121,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
+        resident_key_token: None,
     };
 
     let res = client
@@ -179,7 +180,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
     let req_login = LoginRequest {
-        email: email.to_string(),
+        email: Some(email.to_string()),
         password: Some(password.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
@@ -190,6 +191,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
+        resident_key_token: None,
     };
 
     let res = client
