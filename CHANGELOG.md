@@ -45,7 +45,7 @@ cannot get confused. The default implicit TLS will be the correct mode for almos
 smtp_tls_mode = 'tls'
 ```
 
-[]()
+[#1721](https://github.com/sebadob/rauthy/pull/1721)
 
 ### Changes
 
@@ -205,7 +205,7 @@ In addition, you can now configure the time when users will be reminded of an ex
 password_exp_days = 10
 ```
 
-[]()
+[#1721](https://github.com/sebadob/rauthy/pull/1721)
 
 #### API Key Passkey Deletion
 
