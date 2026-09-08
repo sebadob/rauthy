@@ -126,7 +126,9 @@ impl JwtToken {
             ));
         }
         let jwk = JwkKeyPair::find(header.kid.to_string()).await?;
-        if jwk.typ != header.alg {
+        // EdDSA (RFC 8812) and Ed25519 (RFC 9864) name the same OKP key family, so both
+        // spellings must validate against keys of that family.
+        if !jwk.typ.is_compatible_with(&header.alg) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Header `alg` does not match `kid`",
@@ -210,8 +212,10 @@ impl ValidationClaims<'_> {
 #[cfg(test)]
 mod tests {
     use crate::claims::JwtTokenType;
-    use crate::token::{JwtHeaderType, ValidationClaims};
+    use crate::token::{JwtHeaderType, JwtToken, ValidationClaims};
     use chrono::Utc;
+    use rauthy_common::utils::base64_url_no_pad_decode_buf;
+    use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
     use rauthy_error::{ErrorResponse, ErrorResponseType};
 
     #[test]
@@ -219,6 +223,61 @@ mod tests {
         // RFC 9068 specifies exactly this value for Access Tokens
         assert_eq!(JwtHeaderType::AtJwt.as_str(), "at+jwt");
         assert_eq!(JwtHeaderType::Jwt.as_str(), "JWT");
+    }
+
+    #[test]
+    fn test_ed25519_header_validates_against_stored_edsa_key() -> Result<(), ErrorResponse> {
+        // Regression test for the EdDSA/Ed25519 alg mismatch: OKP keys are always stored in
+        // the DB as `EdDSA`, while clients configured with `Ed25519` get tokens carrying
+        // `"alg":"Ed25519"` (RFC 9864). Validation must accept both spellings for the same
+        // key family — without confusion or shifts.
+        let kp = ed25519_compact::KeyPair::generate();
+
+        // Issuance side: an Ed25519-configured client signs with `typ = Ed25519`
+        let issuing_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::Ed25519,
+            bytes: kp.sk.to_der().to_vec(),
+        };
+        let claims = serde_json::json!({
+            "iss": "http://localhost:8080/auth/v1",
+            "exp": Utc::now().timestamp() + 60,
+            "iat": Utc::now().timestamp(),
+            "nbf": Utc::now().timestamp(),
+            "typ": "Bearer",
+        });
+        let token = JwtToken::build(&issuing_kp, &claims, JwtHeaderType::AtJwt)?;
+
+        // The header must carry the specific RFC 9864 spelling for Ed25519 clients
+        let mut buf = Vec::new();
+        base64_url_no_pad_decode_buf(token.split('.').next().unwrap(), &mut buf)?;
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&buf)?["alg"],
+            "Ed25519"
+        );
+
+        // Verification side: `JwkKeyPair::find(kid)` decrypts with the stored DB column, which
+        // is always `EdDSA` for OKP keys. Both spellings must validate against it.
+        let stored_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::EdDSA,
+            bytes: kp.sk.to_der().to_vec(),
+        };
+        assert!(stored_kp.typ.is_compatible_with(&JwkKeyPairAlg::Ed25519));
+        buf.clear();
+        stored_kp.verify_token(&token, &mut buf)?;
+
+        // And the reverse direction: an `EdDSA`-configured client's token must still validate
+        let eddsa_issuing_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::EdDSA,
+            bytes: kp.sk.to_der().to_vec(),
+        };
+        let token = JwtToken::build(&eddsa_issuing_kp, &claims, JwtHeaderType::AtJwt)?;
+        buf.clear();
+        stored_kp.verify_token(&token, &mut buf)?;
+
+        Ok(())
     }
 
     #[test]
