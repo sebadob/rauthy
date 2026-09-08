@@ -155,7 +155,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .post(&url_auth)
         .headers(headers.clone())
         .json(&req_login)
@@ -176,7 +176,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .post(&url_auth)
         .headers(headers.clone())
         .json(&req_login)
@@ -187,7 +187,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     req_token.code = Some(code);
 
     req_token.code_verifier = Some(challenge_plain.to_string());
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .post(&url_token)
         .form(&req_token)
         .send()

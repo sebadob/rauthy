@@ -144,7 +144,9 @@ impl LogoutToken<'_> {
         // validates signature
         let jwk =
             JWKSPublicKey::fetch_remote(provider.jwks_endpoint.as_ref().unwrap(), kid).await?;
-        if jwk.alg != Some(alg) {
+        // EdDSA (RFC 8812) and Ed25519 (RFC 9864) name the same OKP key family, so both
+        // spellings must validate against JWKs of that family.
+        if !jwk.alg.as_ref().is_some_and(|a| a.is_compatible_with(&alg)) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "`alg` mismatch between token header and fetched JWK",

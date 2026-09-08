@@ -191,9 +191,7 @@ pub struct Client {
     /// Validation: cannot be empty
     #[validate(length(min = 1))]
     pub flows_enabled: Vec<GrantType>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_alg: JwkKeyPairAlg,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_alg: JwkKeyPairAlg,
     /// Validation: `10 <= auth_code_lifetime <= 300`
     #[validate(range(min = 10, max = 300))]

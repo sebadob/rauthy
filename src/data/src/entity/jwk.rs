@@ -265,6 +265,12 @@ impl JWKS {
                 format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::EdDSA.as_str()),
             )
             .await?;
+        client
+            .delete(
+                Cache::App,
+                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::Ed25519.as_str()),
+            )
+            .await?;
 
         // clear the all_certs / JWKS cache
         client.delete(Cache::App, IDX_JWKS).await?;
@@ -920,6 +926,21 @@ impl JwkKeyPairAlg {
             JwkKeyPairAlg::Ed25519 => "Ed25519",
         }
     }
+
+    /// Whether this algorithm may be used to verify a token whose header carries `other`.
+    ///
+    /// `EdDSA` (RFC 8812) and `Ed25519` (RFC 9864) name the same underlying OKP key family, so
+    /// tokens carrying either spelling must validate against keys of that family. All other
+    /// algorithms only match themselves exactly — no confusion between families is possible.
+    #[inline]
+    pub fn is_compatible_with(&self, other: &Self) -> bool {
+        match self {
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
+                other == &Self::EdDSA || other == &Self::Ed25519
+            }
+            slf => slf == other,
+        }
+    }
 }
 
 impl Display for JwkKeyPairAlg {
@@ -963,6 +984,29 @@ impl From<JwkKeyPairAlg> for rauthy_api_types::oidc::JwkKeyPairAlg {
 #[cfg(test)]
 mod tests {
     use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
+
+    #[test]
+    fn test_alg_compatibility() {
+        let algs = [
+            JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512,
+            JwkKeyPairAlg::EdDSA,
+            JwkKeyPairAlg::Ed25519,
+        ];
+
+        // EdDSA (RFC 8812) and Ed25519 (RFC 9864) name the same underlying OKP key family, so
+        // they must be mutually compatible. Every other algorithm only matches itself — no
+        // confusion between families is allowed.
+        let okp =
+            |alg: &JwkKeyPairAlg| matches!(alg, JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519);
+        for a in &algs {
+            for b in &algs {
+                let expected = a == b || (okp(a) && okp(b));
+                assert_eq!(a.is_compatible_with(b), expected, "{a:?} vs {b:?}");
+            }
+        }
+    }
 
     #[test]
     fn test_fingerprint() {

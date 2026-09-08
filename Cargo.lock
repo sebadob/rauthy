@@ -5223,6 +5223,7 @@ name = "rauthy-jwt"
 version = "0.37.0-20260819"
 dependencies = [
  "chrono",
+ "ed25519-compact",
  "openssl",
  "openssl-sys",
  "rauthy-api-types",
