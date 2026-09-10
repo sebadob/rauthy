@@ -358,6 +358,7 @@ impl JwtTokenType {
 pub enum JwtAmrValue {
     Pwd,
     Mfa,
+    Otp,
 }
 
 impl FromStr for JwtAmrValue {
@@ -367,6 +368,7 @@ impl FromStr for JwtAmrValue {
         let slf = match s {
             "pwd" => Self::Pwd,
             "mfa" => Self::Mfa,
+            "otp" => Self::Otp,
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -389,6 +391,7 @@ impl JwtAmrValue {
         match self {
             Self::Pwd => "pwd",
             Self::Mfa => "mfa",
+            Self::Otp => "otp",
         }
     }
 }
