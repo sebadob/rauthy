@@ -52,7 +52,7 @@ use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{error, info, warn};
 use validator::Validate;
 
@@ -124,6 +124,12 @@ pub async fn get_authorize(
             true
         }
     } else {
+        // TODO we should add a new DB table that tracks to which clients a user has logged-in
+        //  in the past. When we have that information and we find a `consent` prompt, we would
+        //  never trigger the automatic refresh frontend action. This would mean the user has to
+        //  click the login button which works as a consent.
+        //  We can keep ignoring `select_account|create` options as they have no meaning with
+        //  Rauthy.
         false
     };
 
@@ -672,7 +678,7 @@ pub async fn post_device_verify(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    let mut device_code = DeviceAuthCode::find_pending(payload.user_code)
+    let mut device_code = DeviceAuthCode::find_pending(payload.user_code.clone())
         .await?
         .ok_or_else(|| {
             ErrorResponse::new(
@@ -685,6 +691,25 @@ pub async fn post_device_verify(
         DeviceAcceptedRequest::Accept => {
             device_code.verified_by = Some(principal.user_id()?.to_string());
             device_code.save().await?;
+
+            // If very unlucky, we might get a race-condition here because of no distributed
+            // lock and the consistent, concurrent polling from the device waiting for approval.
+            // The polling device will update the cached code with the last poll timestamp. When
+            // this happens, there is a tiny window between fetching and validation, where a client
+            // might update a just approved code with a stale device code that reverts the approval.
+            // To counter this, we have this very short wait and refetch here to make sure our
+            // approval got through.
+            // 50ms is very conservative. The full poll check request will usually take less than
+            // 1ms, and we also only need to do it once, since devices will usually wait at least
+            // 5s between polls and are rate-limited.
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if let Some(mut device_code) = DeviceAuthCode::find_pending(payload.user_code).await?
+                && device_code.verified_by.is_none()
+            {
+                device_code.verified_by = Some(principal.user_id()?.to_string());
+                device_code.save().await?;
+            }
+
             Ok(HttpResponse::Accepted().finish())
         }
         DeviceAcceptedRequest::Decline => {
