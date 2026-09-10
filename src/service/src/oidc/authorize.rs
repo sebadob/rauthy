@@ -24,8 +24,20 @@ use rauthy_data::{
     AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+use tokio::time;
+use tokio::time::Instant;
 use tracing::trace;
 use zeroize::Zeroize;
+
+// The time taken between a "user does not exists" and a "user needs to provide password".
+// To prevent username enumeration, and since there is some work work todo between these 2 steps,
+// we are recording the time it takes between these 2 points to delay a "user does not exist"
+// response properly.
+// The initial value is just a starting point. It will be moved to the actual time taken for each
+// instance on the specific hardware after a couple of logins.
+static TIME_TAKEN_FAST_PATH_MICROS: AtomicU64 = AtomicU64::new(100);
 
 pub async fn post_authorize(
     req: &HttpRequest,
@@ -36,7 +48,9 @@ pub async fn post_authorize(
     user_needs_mfa: &mut bool,
     browser_id: BrowserId,
 ) -> Result<AuthStep, ErrorResponse> {
-    *add_login_delay = true;
+    debug_assert!(*add_login_delay);
+    debug_assert!(!*has_password_been_hashed);
+    debug_assert!(!*user_needs_mfa);
 
     let (user_res, is_rk_authenticated) = if let Some(code) = req_data.resident_key_token {
         let user_id = ResidentKeyToken::get_validated_user_id(&code, &session, &browser_id).await?;
@@ -60,22 +74,29 @@ pub async fn post_authorize(
             if req_data.password.is_none() {
                 *add_login_delay = false;
             }
-
-            let ip = real_ip_from_req(req)?;
             CredStuffDetect::trigger(
-                ip,
+                real_ip_from_req(req)?,
                 req_data.email.as_deref().unwrap_or_default(),
                 req_data.password.as_deref(),
             )
             .await;
-
             if let Some(mut pwd) = req_data.password {
                 pwd.zeroize();
             }
 
+            // Make sure to prevent username enumeration between "user does not exist" and
+            // "user needs to provide a password". We need to do some work between those 2 points,
+            // but for the best UX, we also don't want to apply the big login delay when hashing
+            // passwords.
+            time::sleep(Duration::from_micros(
+                TIME_TAKEN_FAST_PATH_MICROS.load(Ordering::Relaxed),
+            ))
+            .await;
+
             return Err(err);
         }
     };
+    let inst_user_found = Instant::now();
 
     // If a possibly existing mfa cookie does not match the given email, or the user
     // has webauthn or otp disabled in the meantime, ignore it
@@ -95,18 +116,21 @@ pub async fn post_authorize(
         && account_type != AccountType::Passkey
         && !has_mfa_cookie;
     if user_must_provide_password {
+        trace!("No user password has been provided");
+
         // if we get here, the UI did the first step from the login form
         // -> username only without password
         // We should not add a delay in that case, because the user did nothing wrong, we just need
         // to get the password, because it is no passkey-only account.
         *add_login_delay = false;
+        update_time_taken_fp(inst_user_found);
 
-        trace!("No user password has been provided");
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
             "User needs to provide a password",
         ));
     }
+    update_time_taken_fp(inst_user_found);
 
     if account_type == AccountType::New {
         // the user has created an account, but no password has been set so far
@@ -116,26 +140,26 @@ pub async fn post_authorize(
         ));
     }
 
-    user.check_enabled()?;
-    user.check_expired()?;
-
     if let Some(pwd) = req_data.password {
         *has_password_been_hashed = true;
         if let Err(err) = user.validate_password(pwd.clone()).await {
             let ip = real_ip_from_req(req)?;
             CredStuffDetect::trigger(ip, &user.email, Some(&pwd)).await;
 
+            user.last_failed_login = Some(Utc::now().timestamp());
+            user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or_default() + 1);
+            user.save(None).await?;
+
             return Err(err);
         }
 
-        // This would also send a location notification if an attacker only knows a password, but
+        // This would also send a location notification if an attacker only knows a password but
         // is later on unable to fully compromise an account when MFA is missing. However, this is
         // not really a false positive. We want to inform a user even if only the password got
         // stolen, so that users change them even without full account compromise.
         LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
-        // update user info
-        // in case of webauthn login, the info will be updated in the oidc finish step
+        // In case of a webauthn login, the info will be updated on ceremony auth_finish.
         user.last_login = Some(Utc::now().timestamp());
         user.last_failed_login = None;
         user.failed_login_attempts = None;
@@ -144,6 +168,14 @@ pub async fn post_authorize(
     // If the password was correct, we don't want a login delay anymore.
     // It should only prevent username enumeration and brute force, not degrade the UX.
     *add_login_delay = false;
+
+    // Very important to do these checks only AFTER a possibly existing password for the user was
+    // validated to never leak data. The errors of these 2 checks are forwarded to the UI for better
+    // UX, to inform the user about an issue with their account while their password was ok.
+    // This means we do the work for hashing the password even for a disabled user, but it leaks
+    // no data at all to someone who does not know the correct password.
+    user.check_enabled()?;
+    user.check_expired()?;
 
     // client validations
     let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
@@ -179,6 +211,20 @@ pub async fn post_authorize(
         None,
     )
     .await
+}
+
+#[inline]
+fn update_time_taken_fp(start: Instant) {
+    // The way in which it's updated is not really thread-safe, and some values could get lost, but
+    // we don't care. All we need is a good middle ground to prevent the enumeration. We only care
+    // about doing it quickly here, hence the relaxed ordering and possibility to lose an update.
+    TIME_TAKEN_FAST_PATH_MICROS.store(
+        // The downcast of `start.elapsed().as_micros()` is fine. We will never even nearly need a
+        // u128 for these. The expected micros are in the 2-digit or lower 3-digit range.
+        (TIME_TAKEN_FAST_PATH_MICROS.load(Ordering::Relaxed) + start.elapsed().as_micros() as u64)
+            / 2,
+        Ordering::Relaxed,
+    );
 }
 
 pub async fn post_authorize_refresh(
