@@ -168,6 +168,9 @@ pub async fn grant_type_authorization_code(
     };
 
     let user = User::find(code.user_id.clone()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+
     let token_set = TokenSet::from_user(
         &user,
         &client,
