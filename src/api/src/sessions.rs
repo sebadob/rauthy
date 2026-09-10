@@ -180,7 +180,11 @@ pub async fn delete_sessions_for_user(
     if RauthyConfig::get().vars.access.token_revoke_device_tokens {
         RefreshTokenDevice::invalidate_all_for_user(&user.id).await?;
     }
-    IssuedToken::revoke_for_user(&user.id, true).await?;
+    IssuedToken::revoke_for_user(
+        &user.id,
+        RauthyConfig::get().vars.access.token_revoke_device_tokens,
+    )
+    .await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Event::force_logout(user.email).send().await?;

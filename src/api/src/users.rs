@@ -1105,7 +1105,7 @@ pub async fn delete_user_device(
         ));
     }
 
-    DeviceEntity::revoke_refresh_tokens(&payload.device_id).await?;
+    DeviceEntity::delete_refresh_tokens(&payload.device_id).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -2362,7 +2362,6 @@ pub async fn put_user_by_id(
     }
     .validate()?;
 
-    // cheap auth gate before any DB lookup
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
 
     let id = id.into_inner();
@@ -2407,7 +2406,6 @@ pub async fn patch_user(
     principal: ReqPrincipal,
     Json(payload): Json<PatchOp>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // cheap auth gate before any DB lookup
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
 
     let user_id = id.into_inner();

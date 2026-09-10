@@ -2023,8 +2023,12 @@ impl User {
                 ));
             }
 
-            // if the given password does match, send out a reset link to set a new one
+            // If the given password does match, send out a reset link to set a new one.
             return if self.match_passwords(plain_password.clone()).await? {
+                // Sending a new magic link without rate-limiting may seem bad at first, but the
+                // user has to be in a specific state AND the currently set password must be known.
+                // This means there is no real way for an attacker that knows a users' email that
+                // also has an expired password to trigger email spam.
                 let magic_link = MagicLink::create(
                     self.id.clone(),
                     RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
