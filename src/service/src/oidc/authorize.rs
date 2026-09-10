@@ -39,6 +39,7 @@ use zeroize::Zeroize;
 // instance on the specific hardware after a couple of logins.
 static TIME_TAKEN_FAST_PATH_MICROS: AtomicU64 = AtomicU64::new(100);
 
+#[allow(clippy::too_many_arguments)]
 pub async fn post_authorize(
     req: &HttpRequest,
     req_data: LoginRequest,
@@ -46,11 +47,13 @@ pub async fn post_authorize(
     has_password_been_hashed: &mut bool,
     add_login_delay: &mut bool,
     user_needs_mfa: &mut bool,
+    user_failed_logins: &mut Option<i64>,
     browser_id: BrowserId,
 ) -> Result<AuthStep, ErrorResponse> {
     debug_assert!(*add_login_delay);
     debug_assert!(!*has_password_been_hashed);
     debug_assert!(!*user_needs_mfa);
+    debug_assert!(user_failed_logins.is_none());
 
     let (user_res, is_rk_authenticated) = if let Some(code) = req_data.resident_key_token {
         let user_id = ResidentKeyToken::get_validated_user_id(&code, &session, &browser_id).await?;
@@ -149,6 +152,8 @@ pub async fn post_authorize(
             user.last_failed_login = Some(Utc::now().timestamp());
             user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or_default() + 1);
             user.save(None).await?;
+
+            *user_failed_logins = user.failed_login_attempts;
 
             return Err(err);
         }

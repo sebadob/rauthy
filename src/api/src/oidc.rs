@@ -354,6 +354,7 @@ pub async fn post_authorize_handle(
     let mut has_password_been_hashed = false;
     let mut add_login_delay = true;
     let mut user_needs_mfa = false;
+    let mut user_failed_logins = None;
 
     let res = match authorize::post_authorize(
         &req,
@@ -362,6 +363,7 @@ pub async fn post_authorize_handle(
         &mut has_password_been_hashed,
         &mut add_login_delay,
         &mut user_needs_mfa,
+        &mut user_failed_logins,
         browser_id,
     )
     .await
@@ -402,7 +404,8 @@ pub async fn post_authorize_handle(
     };
 
     let ip = real_ip_from_req(&req)?;
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed, user_failed_logins)
+        .await
 }
 
 /// Immediate login refresh with valid session
@@ -1024,8 +1027,9 @@ pub async fn post_token(
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let has_password_been_hashed = payload.grant_type == GrantType::Password;
+    let mut user_failed_logins = None;
 
-    let res = match oidc::get_token_set(payload, browser_id, req).await {
+    let res = match oidc::get_token_set(payload, browser_id, req, &mut user_failed_logins).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {
@@ -1052,7 +1056,8 @@ pub async fn post_token(
         }
     };
 
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed, user_failed_logins)
+        .await
 }
 
 #[utoipa::path(

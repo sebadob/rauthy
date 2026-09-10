@@ -308,7 +308,7 @@ impl TokenSet {
         let amr = if auth_code_flow == AuthCodeFlow::Yes {
             if user.has_webauthn_enabled() {
                 JwtAmrValue::Mfa.as_str()
-            } else if user.has_otp_enabled() {
+            } else if user.has_otp_enabled().await {
                 JwtAmrValue::Otp.as_str()
             } else {
                 JwtAmrValue::Pwd.as_str()

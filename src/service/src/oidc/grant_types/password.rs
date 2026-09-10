@@ -28,6 +28,7 @@ pub async fn grant_type_password(
     req: HttpRequest,
     browser_id: BrowserId,
     req_data: TokenRequest,
+    user_failed_logins: &mut Option<i64>,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
     if req_data.username.is_none() {
         return Err(ErrorResponse::new(
@@ -164,8 +165,9 @@ pub async fn grant_type_password(
 
             user.last_failed_login = Some(Utc::now().timestamp());
             user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
-
             user.save(None).await?;
+
+            *user_failed_logins = user.failed_login_attempts;
 
             Err(err)
         }
