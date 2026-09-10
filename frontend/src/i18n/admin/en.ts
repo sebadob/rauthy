@@ -87,6 +87,10 @@ export let I18nAdminEn: I18nAdmin = {
         forceMfa: 'Force MFA',
         groupLoginPrefix: 'Login Group Prefix',
         name: 'Client Name',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 
                 <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,

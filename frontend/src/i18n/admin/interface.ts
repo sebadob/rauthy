@@ -73,6 +73,7 @@ export interface I18nAdmin {
         forceMfa: string;
         groupLoginPrefix: string;
         name: string;
+        passwordFlowMfaWarn: string;
         scim: {
             // inserted as html
             baseUri: string;

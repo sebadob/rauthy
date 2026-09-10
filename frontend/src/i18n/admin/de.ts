@@ -95,6 +95,11 @@ export let I18nAdminDe: I18nAdmin = {
         forceMfa: 'MFA Erzwingen',
         groupLoginPrefix: 'Login Gruppen Prefix',
         name: 'Client Name',
+        passwordFlowMfaWarn: `ACHTUNG: Es sind gleichzeitig 'MFA Erzwingen' und der 'password' Flow 
+            aktiviert. MFA kann NICHT erzwungen werden bei diesem Authentication Flow, weil es gegen 
+            das OIDC RFC verstoßen würde. Das bedeutet, dass bei genutztem 'password' Flow und 
+            notwendigem MFA auf der Client Seite überprüft werden muss. Hierzu eignet sich das 'amr' 
+            claim.`,
         scim: {
             baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie 
                 <code>{base_uri}/Users/{id}</base_uri></code> korrekt abgeleitet werden können.`,
