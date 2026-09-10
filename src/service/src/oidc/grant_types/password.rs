@@ -11,6 +11,7 @@ use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
+use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::user_login_states::UserLoginState;
@@ -20,6 +21,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::str::FromStr;
 use tracing::{info, warn};
+use zeroize::Zeroize;
 
 #[tracing::instrument(skip_all, fields(client_id = req_data.client_id, username = req_data.username))]
 pub async fn grant_type_password(
@@ -41,8 +43,8 @@ pub async fn grant_type_password(
     }
 
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let email = req_data.username.as_ref().unwrap();
-    let password = req_data.password.unwrap();
+    let email = req_data.username.unwrap();
+    let mut password = req_data.password.unwrap();
 
     let client = Client::find(client_id).await?;
     client.validate_enabled()?;
@@ -80,12 +82,27 @@ pub async fn grant_type_password(
         ));
     }
 
-    let mut user = User::find_by_email(String::from(email)).await?;
-    user.check_enabled()?;
-    user.check_expired()?;
+    let ip = real_ip_from_req(&req)?;
+
+    let mut user = match User::find_by_email(email.clone()).await {
+        Ok(u) => u,
+        Err(err) => {
+            CredStuffDetect::trigger(ip, &email, Some(&password)).await;
+            password.zeroize();
+            return Err(err);
+        }
+    };
 
     match user.validate_password(password.clone()).await {
         Ok(_) => {
+            // Very important to do these checks only AFTER a possibly existing password for the user was
+            // validated to never leak data. The errors of these 2 checks are forwarded to the UI for better
+            // UX, to inform the user about an issue with their account while their password was ok.
+            // This means we do the work for hashing the password even for a disabled user, but it leaks
+            // no data at all to someone who does not know the correct password.
+            user.check_enabled()?;
+            user.check_expired()?;
+
             client.validate_user_groups(&user)?;
 
             user.last_login = Some(Utc::now().timestamp());
@@ -136,9 +153,14 @@ pub async fn grant_type_password(
         Err(err) => {
             warn!(
                 "False Login attempt from Host: '{}' for user: '{}'",
-                real_ip_from_req(&req)?,
-                user.email
+                ip, user.email
             );
+
+            // The password grant receives username + password, so it is subject to credential
+            // stuffing just like the authorize flow. Trigger the detection here as well.
+            CredStuffDetect::trigger(ip, &user.email, Some(&password)).await;
+
+            password.zeroize();
 
             user.last_failed_login = Some(Utc::now().timestamp());
             user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
