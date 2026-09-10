@@ -496,10 +496,18 @@ WHERE sessions.exp > $11"#;
     #[inline]
     pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
+        // An expired session must never be resurrected
         if self.exp < now {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Session has expired",
+            ));
+        }
+        // A logged-out session must never be resurrected
+        if self.state == SessionState::LoggedOut {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::SessionExpired,
+                "Session has been logged out",
             ));
         }
         self.last_seen = now;
