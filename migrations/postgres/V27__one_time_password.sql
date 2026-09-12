@@ -7,7 +7,7 @@ CREATE TABLE one_time_password
         references users
             ON DELETE CASCADE,
     name      VARCHAR,
-    secret    BYTEA NUT             NOT NULL,
+    secret    BYTEA                 NOT NULL,
     last_used BIGINT
                                     NOT NULL,
     kind      VARCHAR               NOT NULL,
