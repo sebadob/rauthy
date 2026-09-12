@@ -399,6 +399,17 @@
         overflow-y: auto;
     }
 
+    /* Keep the whole form (incl. the Save button) inside short landscape
+       viewports (e.g. iPad landscape ~700px, where the on-screen keyboard
+       shrinks only the visual viewport and hides anything below it). */
+    .container h1 {
+        margin: 0.5rem 0;
+    }
+
+    .container p {
+        margin: 0.25rem 0;
+    }
+
     .err {
         margin-top: 0.5rem;
         max-width: 20rem;
@@ -415,7 +426,7 @@
     }
 
     .generate {
-        margin-bottom: 0.66rem;
+        margin-bottom: 0.25rem;
     }
 
     .policy {
@@ -429,7 +440,7 @@
     }
 
     .typeChoice {
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
         display: flex;
         gap: 0.5rem;
     }
