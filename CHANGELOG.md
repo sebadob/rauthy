@@ -138,6 +138,9 @@ and usability was improved in lots of places with small changes:
   it's at least a UX improvement. At the same time, more modern types of SSH keys are now allowed as
   well.
 - SCIM operartions have been made more robust and fault-tolerant in general.
+- Backchannel logouts + retries have been made more robust for certain edge cases.
+- SSE Events dropped the per-IP keys, so they don't evict each other all the time, and has improved
+  logging now with better information and insight both for debugging and / or auditing.
 
 #### Discoverable Credentials
 
@@ -319,6 +322,9 @@ API Keys with `Users` + `Delete` can now call `DELETE /auth/v1/users/{id}/webaut
   [#1706](https://github.com/sebadob/rauthy/pull/1706)
 - Theme validation checked `accent` twice and never validated `action`.
   [#1706](https://github.com/sebadob/rauthy/pull/1706)
+- The SSE event listeners were keyed by IP internally. This was a left-over from the very old days.
+  The issue with this was that it was not possible to listen from multiple sources that share the
+  same IP without them evicting each other all the time.
 
 ## v0.36.2
 
