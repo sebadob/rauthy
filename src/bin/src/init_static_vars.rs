@@ -104,7 +104,7 @@ pub fn trigger() {
             .pool_idle_timeout(Duration::from_secs(vars.http_client.idle_timeout as u64))
             .min_tls_version(tls_version)
             .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
-            .https_only(!vars.http_client.danger_unencrypted || !vars.dev.dev_mode)
+            .https_only(!(vars.http_client.danger_unencrypted || vars.dev.dev_mode))
             .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode)
             .use_rustls_tls();
 
