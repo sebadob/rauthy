@@ -1759,12 +1759,13 @@ pub async fn post_webauthn_auth_start(
     payload.validate()?;
 
     let id = match payload.purpose {
-        // only for a Login purpose, this can be accessed without authentication (yet)
         MfaPurpose::Login(_) => {
-            // TODO this can be rejected in versions >= 0.37
-            // During Login, the session is allowed to be in init only state
-            principal.validate_session_auth_or_init()?;
-            id.into_inner()
+            // A Login should never be done via this endpoint to never possibly leak a `user_id`.
+            // Logins must use the user id agnostic endpoint.
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid endpoint for Webauthn auth ceremony",
+            ));
         }
 
         MfaPurpose::PasswordReset => {
@@ -1895,14 +1896,18 @@ pub async fn post_webauthn_auth_start_login(
     };
 
     if is_discover {
-        webauthn::authenticate_rk::auth_start_discover()
-            .await
-            .map(|res| HttpResponse::Ok().json(res))
+        webauthn::authenticate_rk::auth_start_discover().await
     } else {
-        webauthn::authenticate::auth_start(id, payload.purpose)
-            .await
-            .map(|res| HttpResponse::Ok().json(res))
+        webauthn::authenticate::auth_start(id, payload.purpose).await
     }
+    .map_err(|err| {
+        error!("Webauthn Auth Start error: {err:?}");
+        ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Error during Webauthn auth start ceremony",
+        )
+    })
+    .map(|res| HttpResponse::Ok().json(res))
 }
 
 /// Finishes the authentication process for a WebAuthn Device for this user
@@ -1935,8 +1940,15 @@ pub async fn post_webauthn_auth_finish_login(
     // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
-    let res =
-        webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload).await?;
+    let res = webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload)
+        .await
+        .map_err(|err| {
+            error!("Webauthn Auth Finish error: {err:?}");
+            ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Error during Webauthn auth finish ceremony",
+            )
+        })?;
     Ok(res.into_response())
 }
 
