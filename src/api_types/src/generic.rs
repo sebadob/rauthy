@@ -110,8 +110,8 @@ pub struct SearchParams {
     pub ty: SearchParamsType,
     /// Index
     pub idx: SearchParamsIdx,
-    /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+`
-    #[validate(regex(path = "*RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+"))]
+    /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+@]+`
+    #[validate(regex(path = "*RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+@]+"))]
     pub q: String,
     pub limit: Option<u16>,
 }

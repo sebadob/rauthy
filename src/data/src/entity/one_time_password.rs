@@ -1,50 +1,34 @@
-use crate::{
-    database::{
-        Cache::{self},
-        DB,
-    },
-    email::otp::send_email_otp,
-    entity::{
-        auth_codes::AuthCodeToSAwait, browser_id::BrowserId, login_locations::LoginLocation,
-        sessions::Session, users::User,
-    },
-    rauthy_config::RauthyConfig,
+use crate::database::{Cache, DB};
+use crate::email::otp::send_email_otp;
+use crate::entity::auth_codes::AuthCodeToSAwait;
+use crate::entity::browser_id::BrowserId;
+use crate::entity::login_locations::LoginLocation;
+use crate::entity::sessions::Session;
+use crate::entity::users::User;
+use crate::rauthy_config::RauthyConfig;
+use actix_web::http::StatusCode;
+use actix_web::http::header::{
+    self, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderValue,
 };
-use actix_web::{
-    HttpRequest, HttpResponse, HttpResponseBuilder,
-    http::{
-        StatusCode,
-        header::{
-            self, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderValue,
-        },
-    },
-};
+use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use chrono::{TimeDelta, Utc};
 use hiqlite::macros::params;
 use image::EncodableLayout;
-use rauthy_api_types::{
-    tos::ToSAwaitLoginResponse,
-    users::{
-        MfaPurpose, OtpAuthFinishRequest, OtpAuthResendRequest, OtpAuthStartRequest,
-        OtpAuthStartResponse, OtpGetResponse, OtpKind, OtpLoginFinishResponse,
-    },
+use rauthy_api_types::tos::ToSAwaitLoginResponse;
+use rauthy_api_types::users::{
+    MfaPurpose, OtpAuthFinishRequest, OtpAuthResendRequest, OtpAuthStartRequest,
+    OtpAuthStartResponse, OtpGetResponse, OtpKind, OtpLoginFinishResponse,
 };
-use rauthy_common::{
-    is_hiqlite,
-    utils::{get_rand, new_store_id},
-};
+use rauthy_common::is_hiqlite;
+use rauthy_common::utils::{get_rand, new_store_id};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use ring::{
-    digest,
-    hmac::{self},
-    rand::{self},
-};
+use ring::digest;
+use ring::hmac;
+use ring::rand;
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{Debug, Formatter},
-    ops::Add,
-};
+use std::fmt::{Debug, Formatter};
+use std::ops::Add;
 use tracing::info;
 use utoipa::ToSchema;
 
@@ -329,7 +313,7 @@ impl OneTimePassword {
                     RauthyConfig::get().vars.otp.digest_len_default,
                     RauthyConfig::get().vars.otp.length,
                 );
-                if code != valid_code {
+                if !constant_time_eq::constant_time_eq(code.as_bytes(), valid_code.as_bytes()) {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "code is incorrect",
@@ -337,7 +321,10 @@ impl OneTimePassword {
                 }
             }
             OtpKind::Time | OtpKind::Phone => {
-                unimplemented!()
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "unimplemented",
+                ));
             }
         };
 
@@ -364,7 +351,10 @@ impl OneTimePassword {
                 send_email_otp(&code, &user).await;
             }
             OtpKind::Time | OtpKind::Phone => {
-                unimplemented!()
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "unimplemented",
+                ));
             }
         };
         Ok(())
@@ -387,7 +377,10 @@ impl OneTimePassword {
                 send_email_otp(&code, &user).await;
             }
             OtpKind::Time | OtpKind::Phone => {
-                unimplemented!()
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "unimplemented",
+                ));
             }
         };
         Ok(())

@@ -1426,9 +1426,9 @@ pub async fn post_user_otp(
     let ip = real_ip_from_req(&req)?;
     token.validate(principal.user_id()?, ip)?;
 
-    // this prevent users from having multiple OTPs of the same kind, except for time-base OTPs
+    // Prevents users from having multiple OTPs of the same kind, except for time-base OTPs.
     let mut otp = if payload.otp_kind.ne(&OtpKind::Time)
-        && let Ok(otp) = OneTimePassword::find_kind_for_user(&payload.otp_kind, &user_id).await
+        && let Ok(mut otp) = OneTimePassword::find_kind_for_user(&payload.otp_kind, &user_id).await
     {
         if otp.is_active {
             return Err(ErrorResponse::new(
@@ -1436,6 +1436,8 @@ pub async fn post_user_otp(
                 "otp already exist",
             ));
         }
+        // reuse the existing inactive row, but keep the name requested in this call
+        otp.name = payload.otp_name;
         otp
     } else {
         OneTimePassword::create(user_id, payload.otp_name, payload.otp_kind).await?

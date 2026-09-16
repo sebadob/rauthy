@@ -61,7 +61,7 @@ pub static RE_PREFERRED_USERNAME: OnceLock<Regex> = OnceLock::new();
 pub static RE_SCOPE_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/:\p{Zs}*.]{0,512}$").unwrap());
 pub static RE_SEARCH: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+@]+$").unwrap());
 pub static RE_STREET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-.\p{Zs}]{0,48}$").unwrap());
 pub static RE_URI: LazyLock<Regex> =
