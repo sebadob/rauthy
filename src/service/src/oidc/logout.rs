@@ -417,6 +417,9 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
     Ok(())
 }
 
+/// Sends a backchannel logout to the given client. Successful deliveries delete any pending
+/// failure record for this (client_id, sub, sid); failed ones upsert / increment it. Callers
+/// must join their `JoinSet` before assuming all attempts have finished.
 pub async fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
@@ -444,26 +447,31 @@ pub async fn send_backchannel_logout(
             .send()
             .await;
 
-        let err = match res {
+        match res {
             Ok(resp) => {
                 let status = resp.status();
                 if status.is_success() {
+                    // Delivered: drop the pending failure record, if any. This is a no-op for
+                    // first-time logouts and clears stale retries otherwise.
+                    FailedBackchannelLogout::delete_by(client_id, sub, sid).await?;
                     return Ok(());
                 }
                 let text = resp.text().await.unwrap_or_default();
-                format!(
+                let err = format!(
                     "Error during Backchannel Logout for client '{client_id}': HTTP {} - {text}",
                     status.as_u16()
-                )
+                );
+                FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
+                Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
             }
             Err(err) => {
-                format!("Error during Backchannel Logout for client '{client_id}': {err}")
+                let err = format!(
+                    "Error during Backchannel Logout for client '{client_id}': {err}"
+                );
+                FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
+                Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
             }
-        };
-
-        FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
-
-        Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
+        }
     });
 
     Ok(())
