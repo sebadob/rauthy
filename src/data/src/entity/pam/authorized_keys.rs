@@ -3,6 +3,7 @@ use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::pam::PamSshAuthKeyResponse;
+use rauthy_common::regex::RE_BASE64_NO_PAD;
 use rauthy_common::utils::base64_encode;
 use rauthy_common::{is_hiqlite, sha256};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -241,11 +242,13 @@ impl AuthorizedKey {
             .pam
             .authorized_keys
             .include_comments;
-        let now = Some(Utc::now().timestamp());
+        let now = Utc::now().timestamp();
         let mut f = String::with_capacity(keys.len() * 80);
 
         for slf in keys {
-            if slf.expires < now {
+            if let Some(exp) = slf.expires
+                && exp < now
+            {
                 continue;
             }
             if include_comments && !slf.comment.is_empty() {
@@ -260,8 +263,18 @@ impl AuthorizedKey {
 
     /// Parses a raw SSH public key into `(typ, key, comment)`
     fn parse_raw_key(data: &str) -> Result<(&str, &str, &str), ErrorResponse> {
-        let (typ, rest) = data.split_once(" ").unwrap_or_default();
-        if !typ.starts_with("ssh-") || typ.len() > 24 {
+        let trimmed = data.trim();
+        if trimmed.lines().count() > 1 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid SSH key format - must not contain line breaks",
+            ));
+        }
+
+        let (typ, rest) = trimmed.split_once(" ").unwrap_or_default();
+        if !(typ.starts_with("ssh-") || typ.starts_with("ecdsa-") || typ.starts_with("sk-"))
+            || typ.len() > 40
+        {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid SSH key format (key type)",
@@ -269,7 +282,7 @@ impl AuthorizedKey {
         }
 
         let (data, comment) = rest.split_once(" ").unwrap_or((rest, ""));
-        if data.len() < 48 {
+        if data.len() < 48 || !RE_BASE64_NO_PAD.is_match(data) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid SSH key format (key data)",

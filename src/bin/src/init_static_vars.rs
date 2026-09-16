@@ -138,6 +138,7 @@ pub fn trigger() {
     let _ = *RE_ATTR;
     let _ = *RE_ATTR_DESC;
     let _ = *RE_BASE64;
+    let _ = *RE_BASE64_NO_PAD;
     let _ = *RE_CODE_CHALLENGE_METHOD;
     let _ = *RE_CITY;
     if vars.ephemeral_clients.enable {

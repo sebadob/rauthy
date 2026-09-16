@@ -80,16 +80,29 @@ pub struct PamLoginRequest {
 // TODO we could require machine id + secret here as well
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct PamMfaStartRequest {
-    //// Validation: `^[a-z][a-z0-9_-]{1,63}$`
+    /// Validation: `^[a-zA-Z0-9]{24}$`
+    #[validate(
+        length(min = 24, max = 24),
+        regex(path = "*RE_ALNUM", code = "^[a-zA-Z0-9]{24}$")
+    )]
+    pub host_id: String,
+    #[validate(length(min = 64, max = 64))]
+    pub host_secret: String,
+    /// Validation: `^[a-z][a-z0-9_-]{1,63}$`
     #[validate(regex(path = "*RE_LINUX_USERNAME", code = "^[a-z][a-z0-9_-]{1,61}$"))]
     pub username: String,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct PamMfaFinishRequest {
-    // TODO can be removed with >= 0.37.0
-    #[validate(length(max = 32))]
-    pub user_id: String,
+    /// Validation: `^[a-zA-Z0-9]{24}$`
+    #[validate(
+        length(min = 24, max = 24),
+        regex(path = "*RE_ALNUM", code = "^[a-zA-Z0-9]{24}$")
+    )]
+    pub host_id: String,
+    #[validate(length(min = 64, max = 64))]
+    pub host_secret: String,
     #[validate(nested)]
     pub data: WebauthnAuthFinishRequest,
 }
