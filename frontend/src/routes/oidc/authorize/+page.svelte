@@ -698,6 +698,7 @@
                                         type="submit"
                                         ariaLabel={t.authorize.login}
                                         onclick={() => onSubmit()}
+                                        isDisabled={email.length === 0}
                                         {isLoading}
                                     >
                                         {t.authorize.login}

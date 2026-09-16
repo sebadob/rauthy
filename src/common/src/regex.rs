@@ -49,6 +49,8 @@ pub static RE_ROLES_SCOPES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*.]{2,64}$").unwrap());
 pub static RE_GROUPS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*\s]{2,64}$").unwrap());
+pub static RE_KV_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~]{2,64}$").unwrap());
 pub static RE_LOWERCASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap());
 pub static RE_LOWERCASE_SPACE: LazyLock<Regex> =

@@ -152,6 +152,7 @@ pub fn trigger() {
     let _ = *RE_CSS_VALUE_LOOSE;
     let _ = *RE_DATE_STR;
     let _ = *RE_GROUPS;
+    let _ = *RE_KV_KEY;
     let _ = *RE_ROLES_SCOPES;
     let _ = *RE_LOWERCASE;
     let _ = *RE_LOWERCASE_SPACE;

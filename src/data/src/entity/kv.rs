@@ -9,6 +9,7 @@ use rauthy_api_types::kv::{
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use tracing::error;
 
 #[derive(Debug, FromRow, FromPgRow)]
 pub struct KVNamespace {
@@ -341,11 +342,11 @@ impl KVValue {
                 // The serialized string will have parenthesis. This makes sense as a JSON value,
                 // but is not very usable in this context, so we want to get rid of them.
                 Ok(HttpResponse::Ok()
-                    .content_type("text/html; charset=utf-8")
+                    .content_type("text/plain; charset=utf-8")
                     .body(s))
             }
             other => Ok(HttpResponse::Ok()
-                .content_type("text/html; charset=utf-8")
+                .content_type("text/plain; charset=utf-8")
                 .body(other.to_string())),
         }
     }
@@ -478,6 +479,14 @@ impl KVAccess {
 
     /// Finds the KV Access Key from the given `Bearer` and validates it.
     pub async fn find_validated(bearer: &str) -> Result<Self, ErrorResponse> {
+        Self::parse_find_validated(bearer).await.map_err(|err| {
+            error!("API Key find_validate error: {err:?}");
+            ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid API Key")
+        })
+    }
+
+    #[inline(always)]
+    async fn parse_find_validated(bearer: &str) -> Result<Self, ErrorResponse> {
         let Some((id, secret)) = bearer.split_once('$') else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
