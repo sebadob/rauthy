@@ -18,14 +18,20 @@ export async function webauthnAuth(
     purpose: MfaPurpose,
     errorI18nInvalidKey: string,
     errorI18nTimeout: string,
+    resetUserId?: string,
 ): Promise<WebauthnAuthResult> {
+    let startUri = '/auth/v1/users/webauthn_start';
+    if (purpose === 'PasswordReset') {
+        if (!resetUserId) {
+            return { error: 'Missing user context for password reset' };
+        }
+        startUri = `/auth/v1/users/${encodeURIComponent(resetUserId)}/webauthn/auth/start`;
+    }
+
     let payloadStart: WebauthnAuthStartRequest = {
         purpose,
     };
-    let res = await fetchPost<WebauthnAuthStartResponse>(
-        `/auth/v1/users/webauthn_start`,
-        payloadStart,
-    );
+    let res = await fetchPost<WebauthnAuthStartResponse>(startUri, payloadStart);
     if (res.error) {
         console.error(res.error);
         return {

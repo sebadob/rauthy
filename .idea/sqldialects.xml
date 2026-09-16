@@ -2,5 +2,6 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/migrations/postgres/V17__email_jobs.sql" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/migrations/postgres/V29__pwd_exp_emails.sql" dialect="SQLite" />
   </component>
 </project>

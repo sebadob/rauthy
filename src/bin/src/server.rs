@@ -11,6 +11,8 @@ use rauthy_common::{is_hiqlite, password_hasher};
 use rauthy_data::ListenScheme;
 use rauthy_data::database::{Cache, DB};
 use rauthy_data::email::mailer;
+use rauthy_data::email::mailer::EMail;
+use rauthy_data::email::mailer_callback::EMailCallback;
 use rauthy_data::entity;
 use rauthy_data::entity::pictures::UserPicture;
 use rauthy_data::events::health_watch::watch_health;
@@ -35,7 +37,6 @@ use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
 use tokio::sync::mpsc;
-
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
@@ -44,7 +45,7 @@ pub async fn run(
     secrets_file: String,
     test_mode: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let (tx_email, rx_email) = mpsc::channel::<mailer::EMail>(16);
+    let (tx_email, rx_email) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
 

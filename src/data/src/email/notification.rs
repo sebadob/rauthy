@@ -1,4 +1,5 @@
 use crate::email::mailer::{EMail, EmailType};
+use crate::email::mailer_callback::EMailCallback;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -29,7 +30,7 @@ pub struct EMailEventTxt<'a> {
 pub async fn send_email_notification(
     recipient_name: String,
     address: String,
-    tx_email: &mpsc::Sender<EMail>,
+    tx_email: &mpsc::Sender<(EMail, EMailCallback)>,
     notification: &Notification,
 ) {
     let text = EMailEventTxt {
@@ -58,7 +59,9 @@ pub async fn send_email_notification(
         html: Some(html.render().expect("Template rendering: EMailEventHtml")),
     };
 
-    let res = tx_email.send_timeout(req, Duration::from_secs(10)).await;
+    let res = tx_email
+        .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
+        .await;
     match res {
         Ok(_) => {}
         Err(ref err) => {

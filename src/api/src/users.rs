@@ -2465,7 +2465,7 @@ async fn handle_put_user_by_id(
     preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let (user, user_values, is_new_admin) =
-        User::update(user_id, payload, None, preferred_username).await?;
+        User::update(user_id, payload, None, preferred_username, false).await?;
 
     if is_new_admin {
         RauthyConfig::get()

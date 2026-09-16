@@ -2,6 +2,51 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### SMTP Setup Rework
+
+Setting up SMTP connections was found to be a bit misleading or hard to debug. By default, implicit
+TLS will always be chosen, and the `smtp_port` will always be selected automatically (if not
+overwritten via `smtp_port`) depending on the TLS mode.
+
+**Removed:**
+
+- `email.starttls_only`
+- `email.danger_insecure`
+
+**Added:**
+
+- `email.smtp_tls_mode`
+
+The values `email.starttls_only` (misleading naming) and `email.danger_insecure` were removed. New
+is now `email.smtp_tls_mode` with the goal to reduce any misleading naming or unexpected behavior.
+There is no automatic fallback from TLS to STARTTLS (since quite a few versions), even though the
+docs about it were outdated. You configure the exact mode you want to use for the connection, so you
+cannot get confused. The default implicit TLS will be the correct mode for almost all SMTP servers.
+
+```toml
+[email]
+# Configure the TLS mode for SMTP connections.
+#
+# The default is implicit TLS. Depending on the mode the
+# proper default port will be used automatically if you
+# don't overwrite via `smtp_port`.
+#
+# NOTE: `danger-insecure` will allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on e.g.
+# your localhost or for development purposes. When set,
+# `smtp_username` and `smtp_password` will be ignored
+# and `smtp_port` will default to 1025.
+#
+# possible values: tls, starttls, danger-insecure
+# default: tls
+# overwritten by: SMTP_TLS_MODE
+smtp_tls_mode = 'tls'
+```
+
+[#1721](https://github.com/sebadob/rauthy/pull/1721)
+
 ### Changes
 
 #### Discoverable Credentials
@@ -138,10 +183,36 @@ theme's timestamp, which is what busts the long-lived client-side cache for the 
 
 [#1706](https://github.com/sebadob/rauthy/pull/1706)
 
+#### More resilient Password Expiry E-Mails
+
+The E-Mail reminders about an expiring password could get lost when the SMTP server was not working
+properly and all retries were exceeded. Sent reminders are not remembered and saved into the DB, and
+the scheduler will run more often. It will be able to pick up failed attempts and retry. This should
+make these mails a lot more resilient.
+
+In addition, you can now configure the time when users will be reminded of an expiring password:
+
+```toml
+[email.jobs]
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
+#
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: 10
+# overwritten by: EMAIL_PWD_EXP_DAYS
+password_exp_days = 10
+```
+
+[#1721](https://github.com/sebadob/rauthy/pull/1721)
+
 #### API Key Passkey Deletion
 
 API Keys with `Users` + `Delete` can now call
 `DELETE /auth/v1/users/{id}/webauthn/delete/{name}`.
+
+[#1713](https://github.com/sebadob/rauthy/pull/1713)
 
 ### Bugfix
 

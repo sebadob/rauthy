@@ -277,6 +277,7 @@
         {#if mfaPurpose && tplData}
             <WebauthnRequest
                 purpose={mfaPurpose}
+                resetUserId={tplData.user_id}
                 onSuccess={onWebauthnSuccess}
                 onError={onWebauthnError}
             />

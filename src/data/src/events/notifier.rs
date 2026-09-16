@@ -1,3 +1,4 @@
+use crate::email::mailer_callback::EMailCallback;
 use crate::email::{mailer, notification};
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::rauthy_config::RauthyConfig;
@@ -58,7 +59,7 @@ impl EventNotifier {
     }
 
     pub async fn init_notifiers(
-        tx_email: mpsc::Sender<mailer::EMail>,
+        tx_email: mpsc::Sender<(mailer::EMail, EMailCallback)>,
     ) -> Result<(), ErrorResponse> {
         let vars = &RauthyConfig::get().vars.events;
 
@@ -142,7 +143,7 @@ impl EventNotifier {
 struct NotifierEmail {
     notification_recipient_name: String,
     notification_email: String,
-    tx_email: mpsc::Sender<mailer::EMail>,
+    tx_email: mpsc::Sender<(mailer::EMail, EMailCallback)>,
 }
 
 #[async_trait]

@@ -8,10 +8,12 @@
 
     let {
         purpose,
+        resetUserId,
         onError,
         onSuccess,
     }: {
         purpose: MfaPurpose;
+        resetUserId?: string;
         onError: (error: string) => void;
         onSuccess: (res?: WebauthnAdditionalData) => void;
     } = $props();
@@ -25,6 +27,7 @@
             purpose,
             t.authorize.invalidKeyUsed,
             t.authorize.requestExpired,
+            resetUserId,
         );
     });
 

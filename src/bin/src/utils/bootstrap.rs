@@ -3,7 +3,8 @@ use crate::cli_args::{
     BootstrapOutputFormat,
 };
 use crate::utils::StdError;
-use rauthy_data::email::mailer;
+use rauthy_data::email::mailer::EMail;
+use rauthy_data::email::mailer_callback::EMailCallback;
 use rauthy_data::migration::bootstrap::generated_secrets::{
     GeneratedSecretEntry, GeneratedSecrets, read_container,
 };
@@ -23,7 +24,7 @@ pub async fn run(args: ArgsBootstrap) -> Result<(), StdError> {
 /// container can be decrypted) and resolves the configured container path,
 /// exactly like the server does — no keys or file path are passed to the CLI.
 async fn load_config(config_file: String) -> Result<&'static RauthyConfig, StdError> {
-    let (tx_email, _) = mpsc::channel::<mailer::EMail>(16);
+    let (tx_email, _) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, _) = flume::unbounded();
     let (tx_events_router, _) = flume::unbounded();
     let (config, _node) = RauthyConfig::build(

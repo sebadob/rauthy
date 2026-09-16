@@ -1159,11 +1159,6 @@ rauthy_admin_email = 'admin@localhost'
 # overwritten by: EMAIL_SUB_PREFIX
 sub_prefix = 'Rauthy IAM'
 
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
 # overwritten by: SMTP_URL
 smtp_url = 'localhost'
 # optional, default will be used depending on TLS / STARTTLS
@@ -1177,6 +1172,23 @@ smtp_url = 'localhost'
 # default: "Rauthy <rauthy@localhost>"
 # overwritten by: SMTP_FROM
 #smtp_from = 'Rauthy <rauthy@localhost>'
+
+# Configure the TLS mode for SMTP connections.
+#
+# The default is implicit TLS. Depending on the mode the
+# proper default port will be used automatically if you
+# don't overwrite via `smtp_port`.
+#
+# NOTE: 'danger-insecure' will allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on e.g.
+# your localhost or for development purposes. When set,
+# `smtp_username` and `smtp_password` will be ignored
+# and smtp_port will default to 1025.
+#
+# possible values: tls, starttls, danger-insecure
+# default: tls
+# overwritten by: SMTP_TLS_MODE
+#smtp_tls_mode = 'tls'
 
 # You usually do not need to change this value. The 'default'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
@@ -1236,15 +1248,15 @@ smtp_url = 'localhost'
 #-----END CERTIFICATE-----
 #"""
 
-# You can set this to `true` to allow an unencrypted and
-# unauthenticated SMTP connection to an SMTP relay on your localhost
-# or for development purposes.
-# When set to `true`, `SMTP_USERNAME` and `SMTP_PASSWORD` will be
-# ignored and SMTP_PORT will default to 1025.
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
 #
-# default: false
-# overwritten by: SMTP_DANGER_INSECURE
-#danger_insecure = false
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: 10
+# overwritten by: EMAIL_PWD_EXP_DAYS
+#password_exp_days = 10
 
 [email.jobs]
 

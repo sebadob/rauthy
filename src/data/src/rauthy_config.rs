@@ -1,5 +1,6 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
+use crate::email::mailer_callback::EMailCallback;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::migration::bootstrap::generated_secrets;
@@ -16,6 +17,7 @@ use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{env, mem};
@@ -42,7 +44,7 @@ pub struct RauthyConfig {
     pub provider_callback_uri: String,
     pub provider_callback_uri_encoded: String,
     pub pub_url_with_scheme: String,
-    pub tx_email: mpsc::Sender<EMail>,
+    pub tx_email: mpsc::Sender<(EMail, EMailCallback)>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub webauthn: Webauthn,
@@ -53,7 +55,7 @@ impl RauthyConfig {
     pub async fn build(
         path_config: String,
         path_secrets: String,
-        tx_email: mpsc::Sender<EMail>,
+        tx_email: mpsc::Sender<(EMail, EMailCallback)>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
@@ -413,6 +415,7 @@ impl Default for Vars {
                 smtp_username: None,
                 smtp_password: None,
                 smtp_from: "Rauthy <rauthy@localhost>".into(),
+                smtp_tls_mode: EmailTlsMode::Tls,
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
                     orphaned_seconds: 300,
@@ -427,8 +430,6 @@ impl Default for Vars {
                 xoauth_scope: None,
                 microsoft_graph_uri: None,
                 root_ca: None,
-                starttls_only: false,
-                danger_insecure: false,
                 tz_fmt: VarsEmailTzFmt {
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
@@ -441,6 +442,7 @@ impl Default for Vars {
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
+                password_exp_days: 10,
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -2028,20 +2030,31 @@ impl Vars {
             "SMTP_MICROSOFT_GRAPH_URI",
         );
 
-        if let Some(v) = t_bool(&mut table, "email", "starttls_only", "SMTP_STARTTLS_ONLY") {
-            self.email.starttls_only = v;
-        }
-        if let Some(v) = t_bool(
-            &mut table,
-            "email",
-            "danger_insecure",
-            "SMTP_DANGER_INSECURE",
-        ) {
-            self.email.danger_insecure = v;
+        if let Some(mode) = t_str(&mut table, "email", "smtp_tls_mode", "SMTP_TLS_MODE") {
+            self.email.smtp_tls_mode = if mode.eq_ignore_ascii_case("tls") {
+                EmailTlsMode::Tls
+            } else if mode.eq_ignore_ascii_case("starttls") {
+                EmailTlsMode::StartTls
+            } else if mode.eq_ignore_ascii_case("danger-insecure") {
+                EmailTlsMode::DangerInsecure
+            } else {
+                panic!(
+                    "Unknown variant for 'email.smtp_tls_mode'. Expected one of: tls, starttls, danger-insecure"
+                )
+            };
         }
 
         // [email.jobs]
         let mut jobs = t_table(&mut table, "jobs");
+
+        if let Some(v) = t_u8(
+            &mut jobs,
+            "email.jobs",
+            "password_exp_days",
+            "EMAIL_PWD_EXP_DAYS",
+        ) {
+            self.email.password_exp_days = v;
+        }
 
         if let Some(v) = t_u32(
             &mut jobs,
@@ -3953,6 +3966,7 @@ pub struct VarsEmail {
     pub smtp_username: Option<String>,
     pub smtp_password: Option<String>,
     pub smtp_from: Cow<'static, str>,
+    pub smtp_tls_mode: EmailTlsMode,
     pub connect_retries: u16,
     pub jobs: VarsEmailJobs,
     pub smtp_conn_mode: SmtpConnMode,
@@ -3962,9 +3976,25 @@ pub struct VarsEmail {
     pub xoauth_scope: Option<String>,
     pub microsoft_graph_uri: Option<String>,
     pub root_ca: Option<String>,
-    pub starttls_only: bool,
-    pub danger_insecure: bool,
     pub tz_fmt: VarsEmailTzFmt,
+    pub password_exp_days: u8,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum EmailTlsMode {
+    Tls,
+    StartTls,
+    DangerInsecure,
+}
+
+impl Display for EmailTlsMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EmailTlsMode::Tls => f.write_str("TLS"),
+            EmailTlsMode::StartTls => f.write_str("STARTTLS"),
+            EmailTlsMode::DangerInsecure => f.write_str("DANGER-INSECURE (Unencrypted)"),
+        }
+    }
 }
 
 #[derive(Debug)]

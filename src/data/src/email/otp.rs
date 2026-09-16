@@ -1,3 +1,4 @@
+use crate::email::mailer_callback::EMailCallback;
 use crate::{
     email::{
         i18n::otp::I18nEmailOtp,
@@ -70,7 +71,7 @@ pub async fn send_email_otp(code: &str, user: &User) {
 
     let res = RauthyConfig::get()
         .tx_email
-        .send_timeout(req, Duration::from_secs(10))
+        .send_timeout((req, EMailCallback::None), Duration::from_secs(60))
         .await;
     match res {
         Ok(_) => {}

@@ -481,6 +481,7 @@
             nonce: nonce,
             code_challenge: challenge,
             code_challenge_method: challengeMethod,
+            resource: resource || undefined,
             provider_id: id,
             pkce_challenge: '',
             pow: '',

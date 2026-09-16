@@ -10,6 +10,7 @@ use crate::entity::pam::users::PamUser;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
+use crate::entity::pwd_exp_mails::PasswordExpMail;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
@@ -1227,6 +1228,7 @@ LIMIT $2"#;
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
         preferred_username: Option<String>,
+        is_self_update: bool,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(id).await?,
@@ -1261,7 +1263,7 @@ LIMIT $2"#;
 
         user.save(old_email.clone()).await?;
 
-        if upd_user.password.is_some() {
+        if upd_user.password.is_some() && !is_self_update {
             RauthyConfig::get()
                 .tx_events
                 .send_async(Event::user_password_reset(
@@ -1305,6 +1307,11 @@ LIMIT $2"#;
             UserValues::delete(user.id.clone()).await?;
             None
         };
+
+        // make sure to clean up exp email reminders after a password update
+        if upd_user.password.is_some() {
+            PasswordExpMail::delete(user.id.clone()).await?;
+        }
 
         Ok((user, user_values, is_new_admin))
     }
@@ -1406,7 +1413,7 @@ LIMIT $2"#;
 
         // a user cannot become a new admin from a self-req
         let (user, user_values, _is_new_admin) =
-            User::update(id, req, Some(user), preferred_username).await?;
+            User::update(id, req, Some(user), preferred_username, true).await?;
 
         Ok((user, user_values, email_updated))
     }

@@ -44,6 +44,7 @@ pub mod password;
 pub mod pictures;
 pub mod pow;
 pub mod principal;
+pub mod pwd_exp_mails;
 pub mod refresh_tokens;
 pub mod refresh_tokens_devices;
 pub mod roles;
