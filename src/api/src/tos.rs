@@ -225,14 +225,14 @@ async fn handle_tos_accept_deny(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
 
-    let Some(code_await) = AuthCodeToSAwait::find(&payload.accept_code).await? else {
+    let Some(code_await) = AuthCodeToSAwait::find_remove(&payload.accept_code).await? else {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
             "Invalid ToS accept code",
         ));
     };
 
-    let Some(mut auth_code) = AuthCode::find(code_await.auth_code.clone()).await? else {
+    let Some(mut auth_code) = AuthCode::find_remove(code_await.auth_code.clone()).await? else {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
             "AuthCode does not exist anymore",
@@ -263,8 +263,9 @@ async fn handle_tos_accept_deny(
         ));
     }
 
-    auth_code.reset_exp(code_await.auth_code_lifetime).await?;
-    code_await.delete().await?;
+    auth_code
+        .danger_save_reset_exp(code_await.auth_code_lifetime)
+        .await?;
 
     let mut builder = if code_await.needs_user_update {
         HttpResponse::ResetContent()

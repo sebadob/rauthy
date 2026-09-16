@@ -28,6 +28,7 @@ atrium-api = { workspace = true }
 atrium-common = { workspace = true }
 atrium-identity = { workspace = true }
 atrium-oauth = { workspace = true }
+bincode = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 constant_time_eq = { workspace = true }

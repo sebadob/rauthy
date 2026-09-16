@@ -229,12 +229,13 @@ pub async fn get_forward_auth_client_callback(
     let client = get_client_validated(client_id, &origin).await?;
     client.validate_enabled()?;
 
-    let Some(auth_code) = AuthCode::find(params.code).await? else {
+    let Some(auth_code) = AuthCode::find_remove(params.code).await? else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Invalid auth code or code expired",
         ));
     };
+    // TODO is it safe in this context without verifying the redirect_uri like in a normal flow?
     if auth_code.client_id != client.id {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,

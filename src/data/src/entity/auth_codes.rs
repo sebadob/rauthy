@@ -1,19 +1,37 @@
 use crate::database::{Cache, DB};
+use crate::entity::clients::Client;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
+use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::get_rand;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use utoipa::ToSchema;
 
+#[derive(Deserialize)]
+struct AuthCodeOld {
+    id: String,
+    exp: i64,
+    client_id: String,
+    user_id: String,
+    session_id: Option<String>,
+    challenge: Option<String>,
+    challenge_method: Option<String>,
+    nonce: Option<String>,
+    scopes: Vec<String>,
+    resource: Option<String>,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct AuthCode {
     pub id: String,
     pub exp: i64,
     pub client_id: String,
+    /// The exact URI used during authorization
+    pub redirect_uri: String,
     pub user_id: String,
     pub session_id: Option<String>,
     pub challenge: Option<String>,
@@ -50,8 +68,53 @@ impl AuthCode {
     }
 
     // Claims an Authorization code from the cache
-    pub async fn find(id: String) -> Result<Option<Self>, ErrorResponse> {
-        Ok(DB::hql().get_remove(Cache::AuthCode, id).await?)
+    pub async fn find_remove(id: String) -> Result<Option<Self>, ErrorResponse> {
+        #[cfg(debug_assertions)]
+        if !RAUTHY_VERSION.starts_with("0.37.") {
+            todo!("Cleanup AuthCode::find_remove() and remove AuthCodeOld");
+        }
+
+        // TODO this versioning is only necessary during the 0.37 release.
+        //  Remove it afterwards.
+        let Some(bytes) = DB::hql().get_remove_bytes(Cache::AuthCode, id).await? else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "`auth_code` not found",
+            ));
+        };
+
+        match bincode::serde::decode_from_slice::<Self, _>(&bytes, bincode::config::legacy()) {
+            Ok((slf, _)) => Ok(Some(slf)),
+            Err(_) => {
+                // This might be an old auth code during a migration.
+                let Ok((code_old, _)) = bincode::serde::decode_from_slice::<AuthCodeOld, _>(
+                    &bytes,
+                    bincode::config::legacy(),
+                ) else {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::NotFound,
+                        "auth_code not found",
+                    ));
+                };
+
+                Ok(Some(Self {
+                    id: code_old.id,
+                    exp: code_old.exp,
+                    client_id: code_old.client_id,
+                    // This is not an Option on purpose to prevent another migration being necessary
+                    redirect_uri: String::default(),
+                    user_id: code_old.user_id,
+                    session_id: code_old.session_id,
+                    challenge: code_old.challenge,
+                    challenge_method: code_old.challenge_method,
+                    nonce: code_old.nonce,
+                    scopes: code_old.scopes,
+                    resource: code_old.resource,
+                }))
+            }
+        }
+
+        // Ok(DB::hql().get_remove(Cache::AuthCode, id).await?)
     }
 
     // Saves an Authorization Code
@@ -65,13 +128,13 @@ impl AuthCode {
 
 impl AuthCode {
     #[inline]
-    pub fn build_location_header(
-        &self,
-        redirect_uri: &str,
-        state: Option<&str>,
-    ) -> Result<String, ErrorResponse> {
-        let append_char = if redirect_uri.contains('?') { '&' } else { '?' };
-        let mut loc = format!("{}{}code={}", redirect_uri, append_char, self.id);
+    pub fn build_location_header(&self, state: Option<&str>) -> Result<String, ErrorResponse> {
+        let append_char = if self.redirect_uri.contains('?') {
+            '&'
+        } else {
+            '?'
+        };
+        let mut loc = format!("{}{}code={}", self.redirect_uri, append_char, self.id);
         if let Some(state) = state {
             write!(loc, "&state={state}")?;
         };
@@ -82,6 +145,7 @@ impl AuthCode {
     pub fn new(
         user_id: String,
         client_id: String,
+        redirect_uri: String,
         session_id: Option<String>,
         challenge: Option<String>,
         challenge_method: Option<String>,
@@ -90,14 +154,19 @@ impl AuthCode {
         resource: Option<String>,
         lifetime_secs: i32,
     ) -> Self {
+        debug_assert!(!redirect_uri.is_empty());
+        debug_assert!(lifetime_secs > 0);
+
         let id = get_rand(64);
         let exp = Utc::now()
             .add(chrono::Duration::seconds(lifetime_secs as i64))
             .timestamp();
+
         Self {
             id,
             exp,
             client_id,
+            redirect_uri,
             user_id,
             session_id,
             challenge,
@@ -109,12 +178,38 @@ impl AuthCode {
     }
 
     /// CAUTION: DO NOT use this reset in any other case than after accepting updated ToS!
-    pub async fn reset_exp(&mut self, auth_code_lifetime: i32) -> Result<(), ErrorResponse> {
+    pub async fn danger_save_reset_exp(
+        &mut self,
+        auth_code_lifetime: i32,
+    ) -> Result<(), ErrorResponse> {
         self.exp = Utc::now()
             .add(chrono::Duration::seconds(auth_code_lifetime as i64))
             .timestamp();
 
         self.save(auth_code_lifetime).await
+    }
+
+    #[inline(always)]
+    pub fn validate_redirect_uri_exact(
+        &self,
+        client: &Client,
+        redirect_uri: &str,
+    ) -> Result<(), ErrorResponse> {
+        // The `client.validate_redirect_uri()` already prevents an empty URI, this makes it obvious.
+        debug_assert!(!self.redirect_uri.is_empty());
+
+        // Technically, this additional validation is not necessary, but it does not hurt either,
+        // and it just an additional defense. It's a very inexpensive operation.
+        client.validate_redirect_uri(redirect_uri)?;
+
+        if self.redirect_uri == redirect_uri {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Invalid `redirect_uri`",
+            ))
+        }
     }
 }
 
@@ -130,16 +225,9 @@ pub struct AuthCodeToSAwait {
 
 // CRUD
 impl AuthCodeToSAwait {
-    pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::AuthCode, Self::cache_idx(&self.await_code))
-            .await?;
-        Ok(())
-    }
-
-    pub async fn find(code: &str) -> Result<Option<Self>, ErrorResponse> {
+    pub async fn find_remove(code: &str) -> Result<Option<Self>, ErrorResponse> {
         Ok(DB::hql()
-            .get(Cache::AuthCode, Self::cache_idx(code))
+            .get_remove(Cache::AuthCode, Self::cache_idx(code))
             .await?)
     }
 

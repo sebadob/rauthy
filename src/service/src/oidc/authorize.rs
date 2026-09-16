@@ -341,6 +341,7 @@ pub(crate) async fn finish_authorize(
     let code = AuthCode::new(
         user.id.clone(),
         client.id,
+        data.redirect_uri.clone(),
         Some(session.id.clone()),
         data.code_challenge,
         data.code_challenge_method,
@@ -354,7 +355,7 @@ pub(crate) async fn finish_authorize(
     // We don't need another location check - we can only get here with an already authenticated
     // session and no auth-check is being performed.
 
-    let header_loc = code.build_location_header(&data.redirect_uri, data.state.as_deref())?;
+    let header_loc = code.build_location_header(data.state.as_deref())?;
 
     // check if we need to validate the 2nd factor
     // if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
