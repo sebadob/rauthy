@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.36.2"
+version = "0.37.0-20260819"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
@@ -57,9 +57,9 @@ lto = false
 strip = false
 
 [patch.crates-io]
-#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-#hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
-#hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
+hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
 
 [workspace.dependencies]
 accept-language = "3"
@@ -185,7 +185,7 @@ validator = { version = "0.20.0", features = ["derive"] }
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.55"
 webauthn-rs = { version = "0.5", features = [
-    "danger-allow-state-serialisation", "danger-credential-internals"
+    "danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"

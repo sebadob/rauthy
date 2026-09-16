@@ -1159,11 +1159,6 @@ rauthy_admin_email = 'admin@localhost'
 # overwritten by: EMAIL_SUB_PREFIX
 sub_prefix = 'Rauthy IAM'
 
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
 # overwritten by: SMTP_URL
 smtp_url = 'localhost'
 # optional, default will be used depending on TLS / STARTTLS
@@ -1177,6 +1172,23 @@ smtp_url = 'localhost'
 # default: "Rauthy <rauthy@localhost>"
 # overwritten by: SMTP_FROM
 #smtp_from = 'Rauthy <rauthy@localhost>'
+
+# Configure the TLS mode for SMTP connections.
+#
+# The default is implicit TLS. Depending on the mode the
+# proper default port will be used automatically if you
+# don't overwrite via `smtp_port`.
+#
+# NOTE: 'danger-insecure' will allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on e.g.
+# your localhost or for development purposes. When set,
+# `smtp_username` and `smtp_password` will be ignored
+# and smtp_port will default to 1025.
+#
+# possible values: tls, starttls, danger-insecure
+# default: tls
+# overwritten by: SMTP_TLS_MODE
+#smtp_tls_mode = 'tls'
 
 # You usually do not need to change this value. The 'default'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
@@ -1236,15 +1248,15 @@ smtp_url = 'localhost'
 #-----END CERTIFICATE-----
 #"""
 
-# You can set this to `true` to allow an unencrypted and
-# unauthenticated SMTP connection to an SMTP relay on your localhost
-# or for development purposes.
-# When set to `true`, `SMTP_USERNAME` and `SMTP_PASSWORD` will be
-# ignored and SMTP_PORT will default to 1025.
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
 #
-# default: false
-# overwritten by: SMTP_DANGER_INSECURE
-#danger_insecure = false
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: 10
+# overwritten by: EMAIL_PWD_EXP_DAYS
+#password_exp_days = 10
 
 [email.jobs]
 
@@ -2117,6 +2129,64 @@ level_access = 'modifying'
 # default: true
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = true
+
+[otp]
+# Enable E-Mail or HMAC-based One Time Passwords as 2FA.
+#
+# CAUTION: Passkeys are much safer than OTP. Only enable
+# OTP if you really need / want to.
+#
+# default: 'false'
+# overwritten by: OTP_ENABLE
+enable = false
+
+# The length of the generated one-time passwords.
+# Must be 6 - 8 digits.
+#
+# default: 6
+# overwritten by: OTP_LENGTH
+#length = 6
+
+# The lifetime in minutes for OTP requests. Within
+# this time, an OTP request must have been validated.
+#
+# default: 5
+# overwritten by: OTP_EXP_MINS
+#exp_mins = 5
+
+# Default digest algorithm's length, HMAC using SHA-X.
+# SHA-1 is forbidden.
+#
+# NOTE: This value currently has no effect. It's a 
+# preparation for future support for TOTP. At the time
+# of writing, only E-Mail-based OTP is implemented.
+#
+# Possible values: 256, 384, 512
+# default: 512
+# overwritten by: OTP_DIGEST_LEN_DEFAULT
+#digest_len_default = 512
+
+# The expiration in hours when an MFA cookie set via OTP
+# must be revalidated.
+#
+# While such a cookie exists and is valid, a user may not
+# need to provide a password on a new login on this known
+# device, only a new OTP.
+#
+# You can disable this feature by setting the value to 0.
+#
+# The value is in hours
+# default: 2160
+# overwritten by: OTP_RENEW_EXP
+renew_exp = 2160
+
+[otp.email]
+# Wether to enable or disable OTPs via E-Mail.
+# This value is ignored if `otp.enable` is set to `false`.
+#
+# default: 'true'
+# overwritten by: OTP_EMAIL_ENABLE
+enable = true
 
 [pam]
 # The length of newly generated PAM remote passwords via the

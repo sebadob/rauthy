@@ -2801,8 +2801,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8711815c093414290a5fcbc0bf74e1e70e3d6ef37e21735000178d25cee6fcf0"
+source = "git+https://github.com/sebadob/hiqlite.git#1a4e345beb6c934e87a9f6d3255332fb30f5f2c4"
 dependencies = [
  "argon2",
  "axum",
@@ -2861,8 +2860,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-derive"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "262ec752546b183ecab006d9a34e2a0811a7141ad0b575cc68c7ac61f30de53e"
+source = "git+https://github.com/sebadob/hiqlite.git#1a4e345beb6c934e87a9f6d3255332fb30f5f2c4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2872,8 +2870,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "247fc29e082f38fdf25270f6a5d7148284c9710384c3bce21636608dc104fddf"
+source = "git+https://github.com/sebadob/hiqlite.git#1a4e345beb6c934e87a9f6d3255332fb30f5f2c4"
 dependencies = [
  "bincode",
  "byteorder",
@@ -4952,7 +4949,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4986,6 +4983,7 @@ dependencies = [
  "rpassword",
  "rustls",
  "s3-simple",
+ "semver",
  "serde",
  "serde_json",
  "spow",
@@ -5002,7 +5000,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -5022,7 +5020,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -5053,7 +5051,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5139,7 +5137,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5148,7 +5146,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5185,7 +5183,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5222,9 +5220,10 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "chrono",
+ "ed25519-compact",
  "openssl",
  "openssl-sys",
  "rauthy-api-types",
@@ -5239,7 +5238,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5255,7 +5254,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5271,7 +5270,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5290,7 +5289,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5298,6 +5297,7 @@ dependencies = [
  "atrium-oauth",
  "chrono",
  "chrono-tz",
+ "constant_time_eq",
  "cryptr",
  "openssl",
  "openssl-sys",
@@ -5318,7 +5318,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.36.2"
+version = "0.37.0-20260819"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",

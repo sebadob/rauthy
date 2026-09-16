@@ -129,8 +129,7 @@ pub async fn get_forward_auth_client(
     // we don't have the middleware auto-updater for last_seen at this point
     let now = Utc::now().timestamp();
     if session.last_seen < now - 10 {
-        session.last_seen = now;
-        session.upsert().await?;
+        session.touch_last_seen().await?;
     }
 
     debug!("Checking user and client validity");
@@ -145,7 +144,7 @@ pub async fn get_forward_auth_client(
     user.check_enabled()?;
     user.check_expired()?;
     client.validate_user_groups(&user)?;
-    client.validate_mfa(&user, None)?;
+    client.validate_mfa(&user, None).await?;
 
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
@@ -236,7 +235,6 @@ pub async fn get_forward_auth_client_callback(
             "Invalid auth code or code expired",
         ));
     };
-    auth_code.delete().await?;
     if auth_code.client_id != client.id {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
@@ -261,7 +259,7 @@ pub async fn get_forward_auth_client_callback(
     user.check_enabled()?;
     user.check_expired()?;
     client.validate_user_groups(&user)?;
-    client.validate_mfa(&user, None)?;
+    client.validate_mfa(&user, None).await?;
 
     // all good
 

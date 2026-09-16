@@ -15,7 +15,7 @@ use rauthy_api_types::oidc::{
     SessionInfoResponse, TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
-use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
+use rauthy_api_types::users::{OtpLoginResponse, Userinfo, WebauthnLoginResponse};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
@@ -34,11 +34,11 @@ use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair, JwkKeyPairType};
 use rauthy_data::entity::logos::LogoRes;
 use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
-use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_data::entity::well_known::WellKnown;
 use rauthy_data::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
@@ -127,17 +127,16 @@ pub async fn get_authorize(
         false
     };
 
-    // check if the user needs to do the Webauthn login each time
+    // check if the user needs to do a MFA login each time
     let mut action = FrontendAction::None;
-    if !force_new_session
-        && let Ok(mfa_cookie) =
-            WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
-        && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
-    {
+    if !force_new_session {
         // we need to check this because a user could deactivate MFA in another browser or
         // be deleted while still having existing mfa cookies somewhere else
-        if user.has_webauthn_enabled() {
-            action = FrontendAction::MfaLogin(mfa_cookie.email);
+        if let Ok(mfa_cooke) = MfaCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+            && let Ok(user) = User::find_by_email(mfa_cooke.email.clone()).await
+            && (user.has_webauthn_enabled() || user.has_otp_enabled().await)
+        {
+            action = FrontendAction::MfaLogin(mfa_cooke.email);
         }
     }
 
@@ -309,7 +308,10 @@ fn build_authorize_resp(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login (Webauthn or OTP)", content(
+            (WebauthnLoginResponse = "application/webauthn+json"),
+            (OtpLoginResponse = "application/otp+json"),
+        )),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
         (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
@@ -463,17 +465,17 @@ pub async fn get_callback_html(
 pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, ErrorResponse> {
     let mut jwks = JWKS::find_pk().await?;
 
-    if params.skip_okp == Some(true) {
+    if params.skip_okp.unwrap_or(false) {
         jwks.keys.retain(|k| k.kty != JwkKeyPairType::OKP);
     }
 
-    let res = JWKSCerts::from(jwks);
+    let certs = jwks.into_certs(params.rfc_9864.unwrap_or(false));
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(res))
+        .json(certs))
 }
 
 /// Single JWK by kid
@@ -486,15 +488,19 @@ pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, Error
     responses((status = 200, description = "Ok", body = JWKSPublicKeyCerts)),
 )]
 #[get("/oidc/certs/{kid}")]
-pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_cert_by_kid(
+    kid: web::Path<String>,
+    params: Query<CertsParams>,
+) -> Result<HttpResponse, ErrorResponse> {
     let kp = JwkKeyPair::find(kid.into_inner()).await?;
     let pub_key = JWKSPublicKey::from_key_pair(&kp)?;
+
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(JWKSPublicKeyCerts::from(pub_key)))
+        .json(pub_key.into_pub_cert(params.rfc_9864.unwrap_or(false))))
 }
 
 /// POST for starting an OAuth 2 Device Authorization Grant flow
@@ -666,7 +672,7 @@ pub async fn post_device_verify(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    let mut device_code = DeviceAuthCode::find(payload.user_code)
+    let mut device_code = DeviceAuthCode::find_pending(payload.user_code)
         .await?
         .ok_or_else(|| {
             ErrorResponse::new(
@@ -1008,8 +1014,16 @@ pub async fn post_token(
             if !has_password_been_hashed {
                 return Err(err);
             }
-            // TODO return always the same error here as well, just like during authorize?
-            Err(err)
+            match &err.error {
+                ErrorResponseType::Disabled
+                | ErrorResponseType::NotFound
+                | ErrorResponseType::PasswordExpired
+                | ErrorResponseType::Unauthorized => Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Invalid user credentials",
+                )),
+                _ => Err(err),
+            }
         }
     };
 

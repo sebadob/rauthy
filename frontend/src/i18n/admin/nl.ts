@@ -128,7 +128,7 @@ export let I18nAdminNl: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `De token-levensduur is van toepassing op Access- en ID-tokens en wordt opgegeven in seconden.`,
-            p2: `Als de client EdDSA / ed25519-algoritmen ondersteunt, moet dit altijd de voorkeurskeuze
+            p2: `Als de client EdDSA / Ed25519-algoritmen ondersteunt, moet dit altijd de voorkeurskeuze
                 zijn. RSA-algoritmen bestaan alleen voor compatibiliteit.`,
             p3: `Het algoritme voor vernieuwingstokens kan niet worden gewijzigd, omdat deze alleen door Rauthy
                 worden gebruikt.`,
@@ -530,10 +530,22 @@ export let I18nAdminNl: I18nAdmin = {
         manualInitDesc: `De gebruiker kan ook hier worden geïnitialiseerd. In dit geval moet u het wachtwoord
             echter direct communiceren.`,
         manualInit: 'Handmatig initialiseren',
-        mfaDelete1: 'U kunt Passkeys voor deze gebruikers verwijderen.',
-        mfaDelete2: `Let op! Het verwijderen van een Passkey <b>kan niet ongedaan worden gemaakt</b> zonder dat
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'U kunt Passkeys voor deze gebruikers verwijderen.',
+                mfaDelete2: `Let op! Het verwijderen van een Passkey <b>kan niet ongedaan worden gemaakt</b> zonder dat
             de gebruiker een volledig nieuwe registratie uitvoert.`,
-        noMfaKeys: 'Deze gebruiker heeft geen geregistreerde Passkeys.',
+                noMfaKeys: 'Deze gebruiker heeft geen geregistreerde Passkeys.',
+            },
+        },
         pkOnly1: 'Dit is een passkey-only account.',
         pkOnly2:
             'Dit betekent dat deze gebruiker de wachtwoordloze login gebruikt en helemaal geen wachtwoord heeft ingesteld.',

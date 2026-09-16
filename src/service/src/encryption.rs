@@ -5,8 +5,11 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::jwk::JWKS;
 use rauthy_data::entity::kv::{KVAccess, KVValue};
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::{error, info};
+
+/// Maximum retries for a concurrent per-row migration update.
+const MIGRATION_ATTEMPTS: u8 = 5;
 
 /// Migrates encrypted data in the backend to a new key.
 /// JWKS's are just rotated and a new set will be created.
@@ -32,14 +35,39 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
             continue;
         }
 
-        let dec = EncValue::try_from(client.secret.unwrap())?.decrypt()?;
-        let enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
-            .into_bytes()
-            .to_vec();
+        let mut migrated = false;
+        for _ in 0..MIGRATION_ATTEMPTS {
+            let dec = EncValue::try_from(client.secret.clone().unwrap())?.decrypt()?;
+            let enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+                .into_bytes()
+                .to_vec();
 
-        client.secret = Some(enc);
-        client.secret_kid = Some(new_kid.to_string());
-        client.save().await?;
+            let old_kid = client.secret_kid.clone().unwrap_or_default();
+            client.secret = Some(enc);
+            client.secret_kid = Some(new_kid.to_string());
+            if client
+                .update_secret_migrated(
+                    client.secret.clone().unwrap(),
+                    new_kid.to_string(),
+                    &old_kid,
+                )
+                .await?
+            {
+                migrated = true;
+                break;
+            }
+            client = Client::find(client.id.clone()).await?;
+        }
+        if !migrated {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!(
+                    "Secret migration failed for client '{}': the secret changed \
+                     concurrently on every attempt. Please re-run the migration.",
+                    client.id
+                ),
+            ));
+        }
         modified += 1;
     }
     info!("Finished clients secrets migration to key id: {new_kid}");
@@ -56,21 +84,38 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
         .filter(|k| k.enc_key_id != new_kid)
         .collect::<Vec<ApiKeyEntity>>();
     for mut api_key in api_keys {
-        // secret
-        let dec = EncValue::try_from(api_key.secret)?.decrypt()?;
-        api_key.secret = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
-            .into_bytes()
-            .to_vec();
+        let mut migrated = false;
+        for _ in 0..MIGRATION_ATTEMPTS {
+            let dec = EncValue::try_from(api_key.secret.clone())?.decrypt()?;
+            let secret_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+                .into_bytes()
+                .to_vec();
 
-        // access rights
-        let dec = EncValue::try_from(api_key.access)?.decrypt()?;
-        api_key.access = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
-            .into_bytes()
-            .to_vec();
+            let dec = EncValue::try_from(api_key.access.clone())?.decrypt()?;
+            let access_enc = EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+                .into_bytes()
+                .to_vec();
 
-        api_key.enc_key_id = new_kid.to_string();
-
-        api_key.save().await?;
+            let old_kid = api_key.enc_key_id.clone();
+            if api_key
+                .save_migrated(secret_enc, access_enc, new_kid.to_string(), &old_kid)
+                .await?
+            {
+                migrated = true;
+                break;
+            }
+            api_key = ApiKeyEntity::find(&api_key.name).await?;
+        }
+        if !migrated {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                format!(
+                    "Secret migration failed for API key '{}': the key changed \
+                     concurrently on every attempt. Please re-run the migration.",
+                    api_key.name
+                ),
+            ));
+        }
         modified += 1;
     }
     info!("Finished ApiKeys migration to key id: {new_kid}");

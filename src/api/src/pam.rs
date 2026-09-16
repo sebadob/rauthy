@@ -28,7 +28,8 @@ use rauthy_data::entity::pam::tokens::PamToken;
 use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::{WebauthnAdditionalData, WebauthnServiceReq};
+use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
+use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::cmp::max;
@@ -732,7 +733,8 @@ pub async fn post_mfa_start(
     let pam_user = PamUser::find_by_name(payload.username).await?;
     let user = User::find_by_email(pam_user.email).await?;
 
-    let resp = webauthn::auth_start(Some(user.id), MfaPurpose::PamLogin).await?;
+    // No need for resident key support here - user must provide username anyway
+    let resp = webauthn::authenticate::auth_start(Some(user.id), MfaPurpose::PamLogin).await?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -757,7 +759,8 @@ pub async fn post_mfa_finish(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let resp = webauthn::auth_finish(&req, BrowserId::default(), None, payload.data).await?;
+    let resp =
+        webauthn::authenticate::auth_finish(&req, BrowserId::default(), None, payload.data).await?;
     Ok(resp.into_response())
 }
 

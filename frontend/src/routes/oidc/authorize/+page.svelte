@@ -25,12 +25,14 @@
     import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
     import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
     import InputPassword from '$lib5/form/InputPassword.svelte';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
     import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
     import type {
+        ActiveOtp,
         CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
+        OtpLoginResponse,
         RequestResetRequest,
         WebauthnLoginResponse,
     } from '$api/types/authorize.ts';
@@ -47,6 +49,10 @@
     import { execProviderLogin } from '$utils/login';
     import Modal from '$lib/Modal.svelte';
     import Loading from '$lib/Loading.svelte';
+    import OtpRequest from '$lib5/OtpRequest.svelte';
+    import type { MfaPurpose } from '$api/types/mfa';
+    import type { OtpAdditionalData } from '$mfa/otp/types';
+    import IconKey from '$icons/IconKey.svelte';
 
     const inputWidth = '18rem';
 
@@ -79,6 +85,8 @@
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let activeOtps: undefined | ActiveOtp[] = $state();
 
     let isLoading = $state(false);
     let isAutoRefreshing = $state(false);
@@ -252,14 +260,23 @@
             payload.resource = resource;
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse>(
+        let res = await fetchPost<undefined | WebauthnLoginResponse | OtpLoginResponse>(
             '/auth/v1/oidc/authorize/refresh',
             payload,
         );
         await handleAuthRes(res);
     }
 
-    async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+    function onPasskeyDiscover() {
+        mfaKind = 'webauthn';
+        mfaPurpose = 'Discover';
+    }
+
+    async function onSubmit(
+        form?: HTMLFormElement,
+        params?: URLSearchParams,
+        residentKeyToken?: string,
+    ) {
         if (isAtproto) {
             return providerLogin(atprotoId);
         }
@@ -280,13 +297,14 @@
         let pow = (await fetchSolvePow()) || '';
 
         const payload: LoginRequest = {
-            email,
+            email: email || undefined,
             pow,
             client_id: clientId,
             redirect_uri: redirectUri,
             state: stateEncoded,
             nonce: nonce,
             scopes,
+            resident_key_token: residentKeyToken,
         };
         if (
             challenge &&
@@ -319,17 +337,16 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(
-            url,
-            payload,
-            'json',
-            'noRedirect',
-        );
+        let res = await fetchPost<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >(url, payload, 'json', 'noRedirect');
         await handleAuthRes(res);
     }
 
     async function handleAuthRes(
-        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+        res?: IResponse<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >,
     ) {
         isLoading = false;
         isAutoRefreshing = false;
@@ -348,13 +365,21 @@
             }
             window.location.replace(loc);
         } else if (res.status === 200) {
-            // -> all good, but needs additional passkey validation
+            // -> all good, but needs additional MFA validation
             err = '';
             let body = res.body;
             if (body && 'code' in body) {
                 mfaPurpose = { Login: body.code as string };
+                if ('active_otps' in body) {
+                    activeOtps = body.active_otps;
+                    mfaKind = 'otp';
+                } else {
+                    mfaKind = 'webauthn';
+                }
             } else {
-                console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
+                console.error(
+                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                );
             }
         } else if (res.status === 205) {
             // -> all good, password only account, user needs to update some values
@@ -473,29 +498,36 @@
         tosAcceptCode = '';
         tos = undefined;
         isLoading = false;
+        mfaKind = undefined;
         mfaPurpose = undefined;
     }
 
-    function onWebauthnError(error: string) {
+    function onMfaError(error: string) {
         // If there is any error with the key, the user should start a new login process
         mfaPurpose = undefined;
+        mfaKind = undefined;
         err = error;
     }
 
-    function onWebauthnSuccess(data?: WebauthnAdditionalData) {
+    function onMfaSuccess(data?: WebauthnAdditionalData | OtpAdditionalData) {
         if (!data) {
             // will be empty if the user needs to update values
             mfaPurpose = undefined;
+            mfaKind = undefined;
             showModalUpdate = true;
             return;
         }
 
         if ('loc' in data) {
             window.location.replace(data.loc as string);
+        } else if ('resident_key_token' in data) {
+            mfaPurpose = undefined;
+            onSubmit(undefined, undefined, data.resident_key_token as string);
         } else if ('tos_await_code' in data) {
             // login successful, but the user needs to accept updated ToS
             tosAcceptCode = data.tos_await_code as string;
             mfaPurpose = undefined;
+            mfaKind = undefined;
             fetchTos();
         }
     }
@@ -572,11 +604,20 @@
                     to output proper logs in case of misconfiguration.
                     Another approach would be to check this in the backend and emit warning logs.
                     -->
-                    <WebauthnRequest
-                        purpose={mfaPurpose}
-                        onSuccess={onWebauthnSuccess}
-                        onError={onWebauthnError}
-                    />
+                    {#if mfaKind == 'webauthn'}
+                        <WebauthnRequest
+                            purpose={mfaPurpose}
+                            onSuccess={onMfaSuccess}
+                            onError={onMfaError}
+                        />
+                    {:else if mfaKind == 'otp' && activeOtps}
+                        <OtpRequest
+                            {activeOtps}
+                            purpose={mfaPurpose}
+                            onSuccess={onMfaSuccess}
+                            onError={onMfaError}
+                        />
+                    {/if}
                 {/if}
 
                 {#if !clientMfaForce}
@@ -660,6 +701,19 @@
                                         {isLoading}
                                     >
                                         {t.authorize.login}
+                                    </Button>
+                                </div>
+                                <div class="btn flex-col">
+                                    <Button
+                                        level={2}
+                                        ariaLabel={t.authorize.login}
+                                        onclick={onPasskeyDiscover}
+                                        {isLoading}
+                                    >
+                                        <div class="flex gap-05">
+                                            <IconKey width="1.2rem" />
+                                            Passkey
+                                        </div>
                                     </Button>
                                 </div>
                                 {#if isAtproto}
@@ -784,7 +838,7 @@
         justify-content: center;
         max-width: 21rem;
         padding: 20px;
-        border-radius: 5px;
+        border-radius: var(--border-radius);
         border: 1px solid hsl(var(--bg-high));
         background: hsl(var(--bg));
     }

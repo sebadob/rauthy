@@ -55,8 +55,8 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     println!("Extracted pwd_reset_cookie: {:?}", cookie);
     let mut correct_headers = HeaderMap::new();
     let mut cookie_only_headers = HeaderMap::new();
-    correct_headers.append(header::COOKIE, HeaderValue::from_str(&cookie)?);
-    cookie_only_headers.append(header::COOKIE, HeaderValue::from_str(&cookie)?);
+    correct_headers.append(header::COOKIE, HeaderValue::from_str(cookie)?);
+    cookie_only_headers.append(header::COOKIE, HeaderValue::from_str(cookie)?);
     println!("Headers with cookie: {:?}", correct_headers);
 
     // check that we got the html document

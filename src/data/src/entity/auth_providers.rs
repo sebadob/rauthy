@@ -816,8 +816,7 @@ impl AuthProviderCallback {
 
         if let Some(access_token) = ts.access_token {
             // the id_token only exists, if we actually have an OIDC provider.
-            // If we only get an access token, we need to do another request to the
-            // userinfo endpoint
+            // If we only get an access token, we need to do another request to the userinfo endpoint
             let res = http_client()
                 .get(&provider.userinfo_endpoint)
                 .header(AUTHORIZATION, format!("Bearer {access_token}"))
@@ -874,7 +873,7 @@ impl AuthProviderCallback {
             ));
         };
 
-        if app_state != self.callback_id {
+        if !constant_time_eq::constant_time_eq(app_state.as_bytes(), self.callback_id.as_bytes()) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "callback state mismatch for ATProto",
@@ -1488,7 +1487,7 @@ mod tests {
 
         let path = JsonPath::parse("$.foo.bar[*]").unwrap();
         let nodes = path.query(&value).all();
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("baz"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("baz"));
         assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
         assert_eq!(
             nodes.get(2).unwrap().as_number(),
@@ -1508,7 +1507,7 @@ mod tests {
         let path = JsonPath::parse("$.foo.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
 
         // we cannot query for single values with the wildcard in the end
         // -> add 2 possible cases in the checking code for best UX
@@ -1520,7 +1519,7 @@ mod tests {
         let path = JsonPath::parse("$.*.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
     }
 
     #[test]

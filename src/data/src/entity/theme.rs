@@ -412,36 +412,39 @@ impl From<&[u8]> for ThemeCss {
 }
 
 impl ThemeCss {
+    /// Saturation and lightness must be written with an explicit `%`. Unitless values
+    /// are CSS Color 4 only, and browsers without it drop the whole declaration,
+    /// leaving elements styled with `hsl(var(--action))` without a background.
     pub fn append_css(&self, s: &mut String) -> Result<(), ErrorResponse> {
         write!(
             s,
-            "--text:{} {} {};",
+            "--text:{} {}% {}%;",
             self.text[0], self.text[1], self.text[2]
         )?;
         write!(
             s,
-            "--text-high:{} {} {};",
+            "--text-high:{} {}% {}%;",
             self.text_high[0], self.text_high[1], self.text_high[2]
         )?;
-        write!(s, "--bg:{} {} {};", self.bg[0], self.bg[1], self.bg[2])?;
+        write!(s, "--bg:{} {}% {}%;", self.bg[0], self.bg[1], self.bg[2])?;
         write!(
             s,
-            "--bg-high:{} {} {};",
+            "--bg-high:{} {}% {}%;",
             self.bg_high[0], self.bg_high[1], self.bg_high[2]
         )?;
         write!(
             s,
-            "--action:{} {} {};",
+            "--action:{} {}% {}%;",
             self.action[0], self.action[1], self.action[2]
         )?;
         write!(
             s,
-            "--accent:{} {} {};",
+            "--accent:{} {}% {}%;",
             self.accent[0], self.accent[1], self.accent[2]
         )?;
         write!(
             s,
-            "--error:{} {} {};",
+            "--error:{} {}% {}%;",
             self.error[0], self.error[1], self.error[2]
         )?;
 

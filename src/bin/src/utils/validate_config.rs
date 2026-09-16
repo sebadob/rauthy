@@ -1,11 +1,12 @@
 use crate::cli_args::ArgsValidateConfig;
-use rauthy_data::email::mailer;
+use rauthy_data::email::mailer::EMail;
+use rauthy_data::email::mailer_callback::EMailCallback;
 use rauthy_data::rauthy_config::RauthyConfig;
 use std::error::Error;
 use tokio::sync::mpsc;
 
 pub async fn validate(args: ArgsValidateConfig) -> Result<(), Box<dyn Error>> {
-    let (tx_email, _) = mpsc::channel::<mailer::EMail>(16);
+    let (tx_email, _) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, _) = flume::unbounded();
     let (tx_events_router, _) = flume::unbounded();
 

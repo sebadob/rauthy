@@ -228,13 +228,22 @@ impl DeviceAuthCode {
     pub async fn find_by_device_code(device_code: &str) -> Result<Option<Self>, ErrorResponse> {
         let len = RauthyConfig::get().vars.device_grant.user_code_length as usize;
         match device_code.get(..len) {
-            Some(key) => Self::find(key.to_string()).await,
+            Some(key) => Self::find_pending(key.to_string()).await,
             None => Ok(None),
         }
     }
 
     pub async fn find(user_code: String) -> Result<Option<Self>, ErrorResponse> {
+        let slf: Option<Self> = DB::hql().get_remove(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
+    }
+
+    pub async fn find_pending(user_code: String) -> Result<Option<Self>, ErrorResponse> {
         let slf: Option<Self> = DB::hql().get(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
+    }
+
+    async fn validate_expiry(slf: Option<Self>) -> Result<Option<Self>, ErrorResponse> {
         match slf {
             Some(slf) => {
                 if slf.exp < Utc::now() {

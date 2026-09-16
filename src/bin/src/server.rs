@@ -11,6 +11,8 @@ use rauthy_common::{is_hiqlite, password_hasher};
 use rauthy_data::ListenScheme;
 use rauthy_data::database::{Cache, DB};
 use rauthy_data::email::mailer;
+use rauthy_data::email::mailer::EMail;
+use rauthy_data::email::mailer_callback::EMailCallback;
 use rauthy_data::entity;
 use rauthy_data::entity::pictures::UserPicture;
 use rauthy_data::events::health_watch::watch_health;
@@ -35,7 +37,6 @@ use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
 use tokio::sync::mpsc;
-
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
@@ -44,7 +45,7 @@ pub async fn run(
     secrets_file: String,
     test_mode: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let (tx_email, rx_email) = mpsc::channel::<mailer::EMail>(16);
+    let (tx_email, rx_email) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
 
@@ -95,6 +96,13 @@ pub async fn run(
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
 
+    let cache_data_dir = node_config.data_dir.to_string();
+    let cache_storage_disk = node_config.cache_storage_disk;
+    // TODO remove this cache-WAL compatibility cleanup in the next minor version.
+    rauthy_data::temp_migrations::prepare_cache_wal(&cache_data_dir, cache_storage_disk)
+        .await
+        .map_err(|err| std::io::Error::other(err.to_string()))?;
+
     DB::init(node_config)
         .await
         .expect("Error starting the database / cache layer");
@@ -107,7 +115,7 @@ pub async fn run(
     tokio::spawn(password_hasher::run());
 
     debug!("Applying database migrations");
-    DB::migrate().await.expect("Database migration error");
+    let previous_db_version = DB::migrate().await.expect("Database migration error");
 
     debug!("Starting Events handler");
     EventNotifier::init_notifiers(tx_email).await.unwrap();
@@ -121,10 +129,16 @@ pub async fn run(
     tokio::spawn(watch_health());
 
     // Loop, because you could get into a race condition when recovery a HA Leader after lost volume
-    while let Err(err) = version_migration::manual_version_migrations().await {
+    while let Err(err) =
+        version_migration::manual_version_migrations(previous_db_version.clone()).await
+    {
         error!("Error during version migration: {err:?}");
         time::sleep(Duration::from_secs(1)).await;
     }
+
+    rauthy_data::temp_migrations::mark_cache_wal_current(&cache_data_dir, cache_storage_disk)
+        .await
+        .map_err(|err| std::io::Error::other(err.to_string()))?;
 
     UserPicture::test_config().await.unwrap();
 
@@ -702,7 +716,14 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_ready)
                 .service(swagger_ui::get_openapi_doc)
                 .service(swagger_ui::get_swagger_ui)
-                .service(html::get_static_assets),
+                .service(users::get_user_otps)
+                .service(users::post_user_otp)
+                .service(users::put_user_otp)
+                .service(users::delete_user_otp)
+                .service(users::post_otp_auth_start_login)
+                .service(users::post_otp_auth_resend)
+                .service(users::post_otp_auth_finish_login)
+                .service(html::get_static_assets), // catch-all GET routes
         )
 }
 

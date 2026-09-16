@@ -109,6 +109,13 @@ export const I18nZh: I18n = {
             username: '用户名',
             validFor: '密码有效期 {{ secs }} 秒',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: '确认密码',
         passwordCurr: '当前密码',
         passwordCurrReq: '当前密码必填。',
@@ -141,6 +148,8 @@ export const I18nZh: I18n = {
         userEnabled: '启用',
         userExpiry: '过期',
         userVerifiedTooltip: '指纹或PIN保护',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `您可以选择哪些字段能够通过WebID发布。\n
             WebID被一些网络用于去中心化登陆。如果您不知道这是什么，您通常不需要选择。`,
         webIdDescData: '您可以以FOAF词汇格式向您的 WebID 添加自定义数据字段',
@@ -156,6 +165,7 @@ export const I18nZh: I18n = {
         emailRequired: '电子邮件地址必填。',
         emailSentMsg: '如果您的电子邮件存在，我们已发送请求邮件。',
         expectingPasskey: '请使用MFA设备登陆',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: '过多无效输入，已锁定至：',
         invalidCredentials: '无效凭证',
         invalidKeyUsed: '无效密钥',
@@ -213,20 +223,39 @@ export const I18nZh: I18n = {
         cancel: '取消',
     },
     mfa: {
-        p1: `如果您计划在多个系统上使用您的MFA密钥，例如Windows和Android，您应该在Android上进行注册。`,
-        p2: `Android是支持无密码登录技术特性最少的平台。您在Android上注册的密钥在其他地方也能使用。
-            但是，反之则不行。`,
-        p3: '欲了解更多信息，请参见',
-        docLinkText: '关于通行密钥的文档',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `如果您计划在多个系统上使用您的MFA密钥，例如Windows和Android，您应该在Android上进行注册。`,
+            p2: `Android是支持无密码登录技术特性最少的平台。您在Android上注册的密钥在其他地方也能使用。
+                但是，反之则不行。`,
+            p3: '欲了解更多信息，请参见',
+            registerNew: '注册新密钥',
+            docLinkText: '关于通行密钥的文档',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One Time Password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: '开始注册过程时出现错误。',
         lastUsed: '最后使用',
         noKey: '此插槽没有已注册的安全密钥',
         reAuthenticatePasskey: '在您可以修改通行密钥之前，您需要使用已注册的通行密钥进行认证：',
         reAuthenticatePwd: '在您可以修改通行密钥之前，您需要使用密码重新认证。',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '注册',
-        registerNew: '注册新密钥',
         registerd: '已注册',
         registerdKeys: '已注册的密钥',
+        registerdOtps: 'Registered OTPs',
         passkeyName: '通行密钥名称',
         passkeyNameErr: '2-32个非特殊字符',
         passwordInvalid: '密码无效',

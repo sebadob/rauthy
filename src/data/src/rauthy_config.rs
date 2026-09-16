@@ -1,10 +1,12 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
+use crate::email::mailer_callback::EMailCallback;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::migration::bootstrap::generated_secrets;
 use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
+use chrono::TimeDelta;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
@@ -15,6 +17,7 @@ use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{env, mem};
@@ -41,7 +44,7 @@ pub struct RauthyConfig {
     pub provider_callback_uri: String,
     pub provider_callback_uri_encoded: String,
     pub pub_url_with_scheme: String,
-    pub tx_email: mpsc::Sender<EMail>,
+    pub tx_email: mpsc::Sender<(EMail, EMailCallback)>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub webauthn: Webauthn,
@@ -52,7 +55,7 @@ impl RauthyConfig {
     pub async fn build(
         path_config: String,
         path_secrets: String,
-        tx_email: mpsc::Sender<EMail>,
+        tx_email: mpsc::Sender<(EMail, EMailCallback)>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
@@ -275,6 +278,7 @@ pub struct Vars {
     pub logging: VarsLogging,
     pub matrix: VarsMatrix,
     pub mfa: VarsMfa,
+    pub otp: VarsOtp,
     pub pam: VarsPam,
     pub pow: VarsPow,
     pub scim: VarsScim,
@@ -411,6 +415,7 @@ impl Default for Vars {
                 smtp_username: None,
                 smtp_password: None,
                 smtp_from: "Rauthy <rauthy@localhost>".into(),
+                smtp_tls_mode: EmailTlsMode::Tls,
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
                     orphaned_seconds: 300,
@@ -425,8 +430,6 @@ impl Default for Vars {
                 xoauth_scope: None,
                 microsoft_graph_uri: None,
                 root_ca: None,
-                starttls_only: false,
-                danger_insecure: false,
                 tz_fmt: VarsEmailTzFmt {
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
@@ -439,6 +442,7 @@ impl Default for Vars {
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
+                password_exp_days: 10,
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -576,6 +580,16 @@ impl Default for Vars {
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
+            },
+            otp: VarsOtp {
+                enable: false,
+                length: 6,
+                exp_mins: TimeDelta::minutes(5),
+                renew_exp: 2160,
+                digest_len_default: 512,
+                email: VarsOtpEmail {
+                    enable: true,
+                }
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -1025,6 +1039,107 @@ Your account has not been compromised and no data was leaked."#.into()),
                         button_text_request_new: Some("Request password reset Link".into()),
                     },
                 },
+                email_otp: VarsTemplatesLanguages {
+                    de: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    en: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    fr: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ko: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    nb: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    nl: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ru: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    uk: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    zhhans: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                },
             },
             tls: VarsTls {
                 cert_path: None,
@@ -1152,6 +1267,7 @@ impl Vars {
         slf.parse_fedcm(&mut table);
         slf.parse_geo(&mut table, &mut secrets);
         slf.parse_hashing(&mut table);
+        slf.parse_otp(&mut table);
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
@@ -1914,20 +2030,31 @@ impl Vars {
             "SMTP_MICROSOFT_GRAPH_URI",
         );
 
-        if let Some(v) = t_bool(&mut table, "email", "starttls_only", "SMTP_STARTTLS_ONLY") {
-            self.email.starttls_only = v;
-        }
-        if let Some(v) = t_bool(
-            &mut table,
-            "email",
-            "danger_insecure",
-            "SMTP_DANGER_INSECURE",
-        ) {
-            self.email.danger_insecure = v;
+        if let Some(mode) = t_str(&mut table, "email", "smtp_tls_mode", "SMTP_TLS_MODE") {
+            self.email.smtp_tls_mode = if mode.eq_ignore_ascii_case("tls") {
+                EmailTlsMode::Tls
+            } else if mode.eq_ignore_ascii_case("starttls") {
+                EmailTlsMode::StartTls
+            } else if mode.eq_ignore_ascii_case("danger-insecure") {
+                EmailTlsMode::DangerInsecure
+            } else {
+                panic!(
+                    "Unknown variant for 'email.smtp_tls_mode'. Expected one of: tls, starttls, danger-insecure"
+                )
+            };
         }
 
         // [email.jobs]
         let mut jobs = t_table(&mut table, "jobs");
+
+        if let Some(v) = t_u8(
+            &mut jobs,
+            "email.jobs",
+            "password_exp_days",
+            "EMAIL_PWD_EXP_DAYS",
+        ) {
+            self.email.password_exp_days = v;
+        }
 
         if let Some(v) = t_u32(
             &mut jobs,
@@ -2686,6 +2813,45 @@ impl Vars {
                 panic!("Error parsing `[cluster]` section: {err:?}");
             }
         }
+    }
+
+    fn parse_otp(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "otp");
+        if let Some(v) = t_bool(&mut table, "otp", "enable", "OTP_ENABLE") {
+            self.otp.enable = v;
+        }
+        if let Some(v) = t_u8(&mut table, "otp", "length", "OTP_LENGTH") {
+            if !(6..9).contains(&v) {
+                panic!("otp.length must be between 6 and 8");
+            }
+            self.otp.length = v;
+        }
+        if let Some(v) = t_i64(&mut table, "otp", "exp_mins", "OTP_EXP_MINS") {
+            self.otp.exp_mins = TimeDelta::minutes(v);
+        }
+        if let Some(v) = t_u16(&mut table, "otp", "renew_exp", "OTP_RENEW_EXP") {
+            self.otp.renew_exp = v;
+        }
+        if let Some(v) = t_u16(
+            &mut table,
+            "otp",
+            "digest_len_default",
+            "OTP_DIGEST_LEN_DEFAULT",
+        ) {
+            self.otp.digest_len_default = if v == 256 || v == 384 || v == 512 {
+                v
+            } else {
+                512
+            };
+        }
+
+        let mut table_email = t_table(&mut table, "email");
+        if let Some(v) = t_bool(&mut table_email, "otp.email", "enable", "OTP_EMAIL_ENABLE") {
+            self.otp.email.enable = v;
+        }
+
+        check_table_empty(table, "otp");
+        check_table_empty(table_email, "otp.email");
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
@@ -3800,6 +3966,7 @@ pub struct VarsEmail {
     pub smtp_username: Option<String>,
     pub smtp_password: Option<String>,
     pub smtp_from: Cow<'static, str>,
+    pub smtp_tls_mode: EmailTlsMode,
     pub connect_retries: u16,
     pub jobs: VarsEmailJobs,
     pub smtp_conn_mode: SmtpConnMode,
@@ -3809,9 +3976,25 @@ pub struct VarsEmail {
     pub xoauth_scope: Option<String>,
     pub microsoft_graph_uri: Option<String>,
     pub root_ca: Option<String>,
-    pub starttls_only: bool,
-    pub danger_insecure: bool,
     pub tz_fmt: VarsEmailTzFmt,
+    pub password_exp_days: u8,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum EmailTlsMode {
+    Tls,
+    StartTls,
+    DangerInsecure,
+}
+
+impl Display for EmailTlsMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EmailTlsMode::Tls => f.write_str("TLS"),
+            EmailTlsMode::StartTls => f.write_str("STARTTLS"),
+            EmailTlsMode::DangerInsecure => f.write_str("DANGER-INSECURE (Unencrypted)"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -4002,6 +4185,21 @@ pub struct VarsMfa {
 }
 
 #[derive(Debug)]
+pub struct VarsOtp {
+    pub enable: bool,
+    pub length: u8,
+    pub exp_mins: TimeDelta,
+    pub renew_exp: u16,
+    pub digest_len_default: u16,
+    pub email: VarsOtpEmail,
+}
+
+#[derive(Debug)]
+pub struct VarsOtpEmail {
+    pub enable: bool,
+}
+
+#[derive(Debug)]
 pub struct VarsPam {
     pub remote_password_len: u8,
     pub remote_password_ttl: u16,
@@ -4062,6 +4260,7 @@ pub struct VarsTemplates {
     pub password_new: VarsTemplatesLanguages,
     pub password_reset: VarsTemplatesLanguages,
     pub email_registered_already: VarsTemplatesLanguages,
+    pub email_otp: VarsTemplatesLanguages,
 }
 
 #[derive(Debug)]

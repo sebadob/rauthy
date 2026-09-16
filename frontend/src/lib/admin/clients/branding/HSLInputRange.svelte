@@ -17,7 +17,7 @@
     const id = genKey();
     const widthRange = '15rem';
 
-    let hsl = $derived(`hsl(${h} ${s} ${l})`);
+    let hsl = $derived(`hsl(${h} ${s}% ${l}%)`);
 </script>
 
 <div class="outer">

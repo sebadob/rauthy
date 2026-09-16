@@ -2,6 +2,7 @@ use crate::email::email_ts_prettify;
 use crate::email::i18n::password_new::I18nEmailPasswordNew;
 use crate::email::i18n::reset::I18nEmailReset;
 use crate::email::mailer::{EMail, EmailType};
+use crate::email::mailer_callback::EMailCallback;
 use crate::entity::magic_links::MagicLink;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
@@ -148,7 +149,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
 
     let res = RauthyConfig::get()
         .tx_email
-        .send_timeout(req, Duration::from_secs(10))
+        .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
         Ok(_) => {}

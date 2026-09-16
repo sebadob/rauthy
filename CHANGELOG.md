@@ -1,5 +1,227 @@
 # Changelog
 
+## UNRELEASED
+
+### Breaking
+
+#### SMTP Setup Rework
+
+Setting up SMTP connections was found to be a bit misleading or hard to debug. By default, implicit
+TLS will always be chosen, and the `smtp_port` will always be selected automatically (if not
+overwritten via `smtp_port`) depending on the TLS mode.
+
+**Removed:**
+
+- `email.starttls_only`
+- `email.danger_insecure`
+
+**Added:**
+
+- `email.smtp_tls_mode`
+
+The values `email.starttls_only` (misleading naming) and `email.danger_insecure` were removed. New
+is now `email.smtp_tls_mode` with the goal to reduce any misleading naming or unexpected behavior.
+There is no automatic fallback from TLS to STARTTLS (since quite a few versions), even though the
+docs about it were outdated. You configure the exact mode you want to use for the connection, so you
+cannot get confused. The default implicit TLS will be the correct mode for almost all SMTP servers.
+
+```toml
+[email]
+# Configure the TLS mode for SMTP connections.
+#
+# The default is implicit TLS. Depending on the mode the
+# proper default port will be used automatically if you
+# don't overwrite via `smtp_port`.
+#
+# NOTE: `danger-insecure` will allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on e.g.
+# your localhost or for development purposes. When set,
+# `smtp_username` and `smtp_password` will be ignored
+# and `smtp_port` will default to 1025.
+#
+# possible values: tls, starttls, danger-insecure
+# default: tls
+# overwritten by: SMTP_TLS_MODE
+smtp_tls_mode = 'tls'
+```
+
+[#1721](https://github.com/sebadob/rauthy/pull/1721)
+
+### Changes
+
+#### Discoverable Credentials
+
+Even though it was strongly discouraged up until now, Rauthy now supports Webauthn Discoverable
+Credentials (Resident Keys). The reason it was discouraged (and still is by default) is that it had
+the possibility in the past to brick some hardware devices when the available storage slots were
+exceeded and not handled properly.
+
+There are a few reasons why I decided to implement it now:
+
+- The default is still "the old way": Passkey yes, but not creating a resident key, and therefore
+  not consuming a storage slot on the device.
+- The user now has the choice. The default option is a "normal" Passkey. When a Resident Key is
+  selected, the user will see a warning about the storage on the device, and that it's the users
+  responsibility to manage it. This can be ignored for all software keys, but is important for
+  "real" passkeys like Yubikeys.
+- Some software implementations (e.g. Apple) do not work with discouraged Resident Keys (which is
+  pretty stupid, but that's how it works). Having compatibility in these cases was another reason.
+
+If a user has a Resident Key, it can be used as a normal Passkey just like it behaves now, but it
+can also be used during logins via the new "Passkey" button. When pressed, you don't even need to
+provide your E-Mail anymore. All data is looked up via the Resident Keys `cred_id` and the
+Rauthy-provided `user_handle`.
+
+The Passkeys list now also shows a small indicator if a Passkey is also a Resident Key. This does
+NOT automatically work for already registered keys. If you want to change your current Passkey to a
+Resident Key (if your device actually supports it), you need to re-register it with the Resident Key
+option selected.
+
+There are no config values. Everything is the users choice to provide as much compatibility as
+possible.
+
+[#1715](https://github.com/sebadob/rauthy/pull/1715)
+
+#### OTP
+
+Rauthy now supports One Time Passwords (OTP) via E-Mail. Since the security of them if a lot lower
+than Passkeys, this feature is opt-in and disabled by default.
+
+If a user has both Passkeys and OTP registered, Passkeys will always be preferred. In these
+situations, the user can currently not choose which factor to use. It will automatically request a
+Passkey, and the OTP will be kind of a fallback, e.g. when an Admin deletes a lost Passkey. Making
+it possible to choose freely might be a future addon.
+
+```toml
+[otp]
+# Enable E-Mail or HMAC-based One Time Passwords as 2FA.
+#
+# CAUTION: Passkeys are much safer than OTP. Only enable
+# OTP if you really need / want to.
+#
+# default: 'false'
+# overwritten by: OTP_ENABLE
+enable = false
+
+# The length of the generated one-time passwords.
+# Must be 6 - 8 digits.
+#
+# default: 6
+# overwritten by: OTP_LENGTH
+length = 6
+
+# The lifetime in minutes for OTP requests. Within
+# this time, an OTP request must have been validated.
+#
+# default: 5
+# overwritten by: OTP_EXP_MINS
+exp_mins = 5
+
+# Default digest algorithm's length, HMAC using SHA-X.
+# SHA-1 is forbidden.
+#
+# NOTE: This value currently has no effect. It's a 
+# preparation for future support for TOTP. At the time
+# of writing, only E-Mail-based OTP is implemented.
+#
+# Possible values: 256, 384, 512
+# default: 512
+# overwritten by: OTP_DIGEST_LEN_DEFAULT
+digest_len_default = 512
+
+# The expiration in hours when an MFA cookie set via OTP
+# must be revalidated.
+#
+# While such a cookie exists and is valid, a user may not
+# need to provide a password on a new login on this known
+# device, only a new OTP.
+#
+# You can disable this feature by setting the value to 0.
+#
+# The value is in hours
+# default: 2160
+# overwritten by: OTP_RENEW_EXP
+renew_exp = 2160
+
+[otp.email]
+# Wether to enable or disable OTPs via E-Mail.
+# This value is ignored if `otp.enable` is set to `false`.
+#
+# default: 'true'
+# overwritten by: OTP_EMAIL_ENABLE
+enable = true
+```
+
+[#1620](https://github.com/sebadob/rauthy/pull/1620)
+[#1705](https://github.com/sebadob/rauthy/pull/1705)
+
+#### Updated Validation Regexes
+
+Validation Regexes for both user given and family name, and also for client names were updated once
+again. Instead of even trying to define all possible ranges in all languages, we are now relying on
+automatic resolution. All control characters, possibly dangerous and nonsense chars like emojis are
+still forbidden, but apart from that, it's a lot more loose. The new definition is the following:
+
+```
+RE_USER_NAME:   ^[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}$
+RE_CLIENT_NAME: ^[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}$
+```
+
+[#1708](https://github.com/sebadob/rauthy/pull/1708)
+
+#### Theme CSS uses explicit percent units
+
+The generated theme CSS now writes saturation and lightness with an explicit `%`, so a color is
+emitted as `--action: 34 100% 40%` rather than `--action: 34 100 40`. Unitless values inside `hsl()`
+are a CSS Color 4 addition supported from Safari 18, Chrome 121 and Firefox 122. Browsers below that
+drop the whole declaration, which left buttons with no background while `--btn-text` still applied,
+rendering them invisible. It affects every iOS below 18, where no alternative browser engine is
+available.
+
+If you use a custom theme, save it once after upgrading even if you change nothing. That updates the
+theme's timestamp, which is what busts the long-lived client-side cache for the generated CSS.
+
+[#1706](https://github.com/sebadob/rauthy/pull/1706)
+
+#### More resilient Password Expiry E-Mails
+
+The E-Mail reminders about an expiring password could get lost when the SMTP server was not working
+properly and all retries were exceeded. Sent reminders are not remembered and saved into the DB, and
+the scheduler will run more often. It will be able to pick up failed attempts and retry. This should
+make these mails a lot more resilient.
+
+In addition, you can now configure the time when users will be reminded of an expiring password:
+
+```toml
+[email.jobs]
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
+#
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: 10
+# overwritten by: EMAIL_PWD_EXP_DAYS
+password_exp_days = 10
+```
+
+[#1721](https://github.com/sebadob/rauthy/pull/1721)
+
+#### API Key Passkey Deletion
+
+API Keys with `Users` + `Delete` can now call
+`DELETE /auth/v1/users/{id}/webauthn/delete/{name}`.
+
+[#1713](https://github.com/sebadob/rauthy/pull/1713)
+
+### Bugfix
+
+- The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`
+  instead of `360`, so the gradient ended on red instead of spanning the full spectrum.
+  [#1706](https://github.com/sebadob/rauthy/pull/1706)
+- Theme validation checked `accent` twice and never validated `action`.
+  [#1706](https://github.com/sebadob/rauthy/pull/1706)
+
 ## v0.36.2
 
 ### Security
@@ -25,6 +247,23 @@ dynamic clients, but that is out of Rauthys control. The main thread comes from 
 public client with allowed token refresh, and a stolen or leaked refresh token.
 
 An advisory and CVE / PoC will be made public at a later point.
+
+### Breaking
+
+#### RFC 9068 `at+jwt` Token Type
+
+Access Tokens are issued with a JWT header `typ` of `at+jwt` now, as specified in
+[RFC 9068](https://www.rfc-editor.org/rfc/rfc9068.html). Rauthy's Access Tokens have been RFC
+9068-shaped for a long time already, but the header still used the generic `JWT`, which made it
+impossible for a resource server to tell an Access Token apart from an ID Token by the header alone.
+ID, Refresh and Logout Tokens are unchanged and keep using `JWT`.
+
+This is only breaking for downstream resource servers that check the header `typ` for exactly `JWT`.
+Rauthy itself accepts both values, so Access Tokens issued before an update stay valid until they
+expire. `rauthy-client` accepts `at+jwt` starting with `v0.14.3`; update the client before updating
+Rauthy to avoid an interruption in service.
+
+[#1651](https://github.com/sebadob/rauthy/pull/1651)
 
 ### Changes
 

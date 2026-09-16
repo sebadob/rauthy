@@ -13,11 +13,16 @@ use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::login_locations::LoginLocation;
+use rauthy_data::entity::mfa_cookie::MfaCookie;
+use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
-use rauthy_data::entity::webauthn::{WebauthnCookie, WebauthnLoginReq, WebauthnToSAwaitData};
+use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
+use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_data::{AuthStep, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept};
+use rauthy_data::{
+    AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
+};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::trace;
 use zeroize::Zeroize;
@@ -33,7 +38,19 @@ pub async fn post_authorize(
 ) -> Result<AuthStep, ErrorResponse> {
     *add_login_delay = true;
 
-    let mut user = match User::find_by_email(req_data.email.clone()).await {
+    let (user_res, is_rk_authenticated) = if let Some(code) = req_data.resident_key_token {
+        let user_id = ResidentKeyToken::get_validated_user_id(&code, &session, &browser_id).await?;
+        (User::find(user_id).await, true)
+    } else if let Some(email) = req_data.email.clone() {
+        (User::find_by_email(email).await, false)
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "One of `resident_key_token` or `email` must be provided",
+        ));
+    };
+
+    let mut user = match user_res {
         Ok(u) => u,
         Err(err) => {
             // The UI does not show the password input form when there is no user yet.
@@ -45,7 +62,12 @@ pub async fn post_authorize(
             }
 
             let ip = real_ip_from_req(req)?;
-            CredStuffDetect::trigger(ip, &req_data.email, req_data.password.as_deref()).await;
+            CredStuffDetect::trigger(
+                ip,
+                req_data.email.as_deref().unwrap_or_default(),
+                req_data.password.as_deref(),
+            )
+            .await;
 
             if let Some(mut pwd) = req_data.password {
                 pwd.zeroize();
@@ -55,24 +77,23 @@ pub async fn post_authorize(
         }
     };
 
-    let mfa_cookie =
-        if let Ok(c) = WebauthnCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA)) {
-            if c.email == user.email && user.has_webauthn_enabled() {
-                Some(c)
-            } else {
-                // If a possibly existing mfa cookie does not match the given email, or the user
-                // has webauthn disabled in the meantime, ignore it
-                None
-            }
-        } else {
-            None
-        };
+    // If a possibly existing mfa cookie does not match the given email, or the user
+    // has webauthn or otp disabled in the meantime, ignore it
+    let has_mfa_cookie = if (user.has_webauthn_enabled() || user.has_otp_enabled().await)
+        && let Ok(c) = MfaCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
+    {
+        c.email == user.email
+    } else {
+        false
+    };
 
     let account_type = user.account_type();
 
     // Only allow an empty password, if the user has a passkey only account or a valid MFA cookie.
-    let user_must_provide_password =
-        req_data.password.is_none() && account_type != AccountType::Passkey && mfa_cookie.is_none();
+    let user_must_provide_password = !is_rk_authenticated
+        && req_data.password.is_none()
+        && account_type != AccountType::Passkey
+        && !has_mfa_cookie;
     if user_must_provide_password {
         // if we get here, the UI did the first step from the login form
         // -> username only without password
@@ -128,8 +149,13 @@ pub async fn post_authorize(
     let client = Client::find_maybe_ephemeral(req_data.client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;
 
-    let require_webauthn = user.has_webauthn_enabled();
-    if require_webauthn {
+    // Webauthn overrides otp.
+    // If we had a Resident Key authentication already, there is no need for another Webauthn
+    // request.
+    let require_webauthn = !is_rk_authenticated && user.has_webauthn_enabled();
+    let require_otp = !require_webauthn && user.has_otp_enabled().await;
+    if require_webauthn || require_otp {
+        *user_needs_mfa = true;
         session.set_mfa(true).await?;
     }
 
@@ -147,6 +173,7 @@ pub async fn post_authorize(
             resource: req_data.resource,
             header_origin,
             require_webauthn,
+            require_otp,
         },
         Some(user_needs_mfa),
         None,
@@ -170,8 +197,12 @@ pub async fn post_authorize_refresh(
     user.check_enabled()?;
     user.check_expired()?;
 
+    // Webauthn overrides otp
     let require_webauthn =
         user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
+    let require_otp = !require_webauthn
+        && RauthyConfig::get().vars.lifetimes.session_renew_mfa
+        && user.has_otp_enabled().await;
 
     finish_authorize(
         user,
@@ -189,6 +220,7 @@ pub async fn post_authorize_refresh(
             resource: req_data.resource,
             header_origin,
             require_webauthn,
+            require_otp,
         },
         None,
         None,
@@ -206,6 +238,7 @@ pub(crate) struct AuthorizeData {
     pub resource: Option<String>,
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub require_webauthn: bool,
+    pub require_otp: bool,
 }
 
 /// Expects the user checks already been done, but does all the necessary client validations.
@@ -222,9 +255,10 @@ pub(crate) async fn finish_authorize(
     client.validate_enabled()?;
     client
         .validate_mfa(&user, provider_mfa_login)
+        .await
         .inspect_err(|_| {
             // in this case, we do not want to add a login delay
-            // the user password was correct, we only need a passkey being added to the account
+            // the user password was correct, we only need an mfa being added to the account
             if let Some(needs_mfa) = user_needs_mfa {
                 *needs_mfa = true;
             }
@@ -243,6 +277,9 @@ pub(crate) async fn finish_authorize(
     let mut code_lifetime = client.auth_code_lifetime;
     if data.require_webauthn {
         code_lifetime += config.vars.webauthn.req_exp as i32
+    }
+    if data.require_otp {
+        code_lifetime += config.vars.otp.exp_mins.num_seconds() as i32
     }
     let need_tos_accept = user.needs_tos_update().await?;
     if need_tos_accept {
@@ -300,6 +337,34 @@ pub(crate) async fn finish_authorize(
         .await?;
 
         Ok(AuthStep::AwaitWebauthn(step))
+    } else if data.require_otp {
+        // OneTimePassword enabled account
+        let step = AuthStepAwaitOtp {
+            code: get_rand(48),
+            header_csrf: Session::get_csrf_header(&session.csrf_token),
+            header_origin: data.header_origin,
+            email: user.email.clone(),
+            active_otps: user.get_otp_kind().await?,
+        };
+
+        OtpLoginReq {
+            code: step.code.clone(),
+            user_id: user.id,
+            header_loc,
+            header_origin: step
+                .header_origin
+                .as_ref()
+                .map(|h| h.1.to_str().unwrap().to_string()),
+            tos_await_data: need_tos_accept.then_some(OtpToSAwaitData {
+                auth_code: code.id,
+                auth_code_lifetime: client.auth_code_lifetime,
+            }),
+            needs_user_update,
+        }
+        .save()
+        .await?;
+
+        Ok(AuthStep::AwaitOtpCode(step))
     } else {
         // password only account
         session.set_authenticated(&user).await?;

@@ -1,13 +1,13 @@
 import { arrBufToBase64UrlSafe, promiseTimeout } from '$utils/helpers';
 import { fetchPost } from '$api/fetch';
 import type {
-    MfaPurpose,
     WebauthnAdditionalData,
     WebauthnAuthFinishRequest,
     WebauthnAuthStartRequest,
     WebauthnAuthStartResponse,
-} from './types.ts';
+} from '$mfa/webauthn/types.ts';
 import { base64UrlSafeToArrBuf } from './utils';
+import type { MfaPurpose } from '$api/types/mfa.js';
 
 export interface WebauthnAuthResult {
     error?: string;
@@ -18,14 +18,20 @@ export async function webauthnAuth(
     purpose: MfaPurpose,
     errorI18nInvalidKey: string,
     errorI18nTimeout: string,
+    resetUserId?: string,
 ): Promise<WebauthnAuthResult> {
+    let startUri = '/auth/v1/users/webauthn_start';
+    if (purpose === 'PasswordReset') {
+        if (!resetUserId) {
+            return { error: 'Missing user context for password reset' };
+        }
+        startUri = `/auth/v1/users/${encodeURIComponent(resetUserId)}/webauthn/auth/start`;
+    }
+
     let payloadStart: WebauthnAuthStartRequest = {
         purpose,
     };
-    let res = await fetchPost<WebauthnAuthStartResponse>(
-        `/auth/v1/users/webauthn_start`,
-        payloadStart,
-    );
+    let res = await fetchPost<WebauthnAuthStartResponse>(startUri, payloadStart);
     if (res.error) {
         console.error(res.error);
         return {
@@ -94,6 +100,11 @@ export async function webauthnAuth(
                 clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
                 // @ts-ignore the `response.signature` actually exists
                 signature: arrBufToBase64UrlSafe(credential.response.signature),
+                // @ts-ignore the `response.userHandle` actually exists
+                userHandle: credential.response.userHandle
+                    ? // @ts-ignore the `response.userHandle` actually exists
+                      arrBufToBase64UrlSafe(credential.response.userHandle)
+                    : undefined,
             },
             // @ts-ignore the `response.getClientExtensionResults()` actually exists
             extensions: credential.getClientExtensionResults(),
@@ -109,12 +120,17 @@ export async function webauthnAuth(
     // 202 -> normal success
     // 205 -> Webauthn success during login, but needs user values updates
     // 206 -> Webauthn success during login, but needs additional ToS update accept
+    // 404 -> Usually only happens for direct Resident Key logins when the key is unknown
     if (resFinish.status === 202 || resFinish.status === 206) {
         return {
             data: resFinish.body,
         };
     } else if (resFinish.status === 205) {
         return {};
+    } else if (resFinish.status === 404) {
+        return {
+            error: errorI18nInvalidKey,
+        };
     } else {
         console.error(resFinish);
         return {

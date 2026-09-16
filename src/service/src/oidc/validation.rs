@@ -7,15 +7,17 @@ use chrono::Utc;
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
+use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
+use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Validates request parameters for the authorization and refresh endpoints
 pub async fn validate_auth_req_param(
@@ -46,8 +48,8 @@ pub async fn validate_auth_req_param(
                 "'code_challenge' is missing",
             ));
         } else {
-            // 'plain' is the default method to be assumed by the OAuth specification when it is
-            // not further specified.
+            // 'plain' is the default method to be assumed by the OAuth specification when it is not
+            // further specified.
             let method = if let Some(m) = code_challenge_method {
                 m.to_owned()
             } else {
@@ -58,6 +60,21 @@ pub async fn validate_auth_req_param(
     }
 
     Ok((client, header))
+}
+
+/// Revokes all refresh tokens, issued tokens, and sessions for a user.
+async fn revoke_refresh_family(user_id: &str) -> Result<(), ErrorResponse> {
+    RefreshToken::invalidate_for_user(user_id).await?;
+    if RauthyConfig::get().vars.access.token_revoke_device_tokens {
+        RefreshTokenDevice::invalidate_for_user(user_id).await?;
+    }
+    IssuedToken::revoke_for_user(
+        user_id,
+        RauthyConfig::get().vars.access.token_revoke_device_tokens,
+    )
+    .await?;
+    Session::invalidate_for_user(user_id).await?;
+    Ok(())
 }
 
 pub async fn validate_and_refresh_token(
@@ -128,11 +145,11 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
-    // validate that it exists in the db and invalidate it afterward
+    // Claim the token atomically before issuing a replacement.
     let now = Utc::now().timestamp();
-    let exp_at_secs = now + RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
+    let grace = RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
     let rt_scope = if let Some(device_id) = &claims.common.did {
-        let mut rt = RefreshTokenDevice::find(validation_str).await?;
+        let rt = RefreshTokenDevice::find(validation_str).await?;
 
         if &rt.device_id != device_id {
             return Err(ErrorResponse::new(
@@ -147,16 +164,38 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
-        if rt.exp > exp_at_secs + 1 {
-            rt.exp = exp_at_secs;
-            rt.save().await?;
+        match RefreshTokenDevice::claim(validation_str, now, grace).await {
+            Ok(()) => {}
+            Err(err) if err.error == ErrorResponseType::Forbidden => {
+                warn!(
+                    "Detected device refresh token reuse for user '{}' - revoking token family",
+                    user.id
+                );
+                revoke_refresh_family(&user.id).await?;
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "Refresh token has already been used - all sessions for this user have been revoked",
+                ));
+            }
+            Err(err) => return Err(err),
         }
         rt.scope
     } else {
-        let mut rt = RefreshToken::find(validation_str).await?;
-        if rt.exp > exp_at_secs + 1 {
-            rt.exp = exp_at_secs;
-            rt.save().await?;
+        let rt = RefreshToken::find(validation_str).await?;
+        match RefreshToken::claim(validation_str, now, grace).await {
+            Ok(()) => {}
+            Err(err) if err.error == ErrorResponseType::Forbidden => {
+                warn!(
+                    "Detected refresh token reuse for user '{}' - revoking token family",
+                    user.id
+                );
+                revoke_refresh_family(&user.id).await?;
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "Refresh token has already been used - all sessions for this user have been revoked",
+                ));
+            }
+            Err(err) => return Err(err),
         }
         rt.scope
     };

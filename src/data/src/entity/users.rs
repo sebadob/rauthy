@@ -5,10 +5,12 @@ use crate::email::password_reset::send_pwd_reset;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
+use crate::entity::one_time_password::OneTimePassword;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
+use crate::entity::pwd_exp_mails::PasswordExpMail;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
@@ -16,7 +18,8 @@ use crate::entity::theme::ThemeCssFull;
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::users_values::UserValues;
-use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
+use crate::entity::webauthn::auth_req::WebauthnServiceReq;
+use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
@@ -30,9 +33,9 @@ use hiqlite::macros::params;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
-    NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
-    UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesRequest,
-    UserValuesResponse,
+    ActiveOtp, NewUserRegistrationRequest, NewUserRequest, OtpKind, UpdateUserRequest,
+    UpdateUserSelfRequest, UserAccountTypeResponse, UserResponse, UserResponseSimple,
+    UserValuesRequest, UserValuesResponse,
 };
 use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
@@ -1225,6 +1228,7 @@ LIMIT $2"#;
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
         preferred_username: Option<String>,
+        is_self_update: bool,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(id).await?,
@@ -1259,7 +1263,7 @@ LIMIT $2"#;
 
         user.save(old_email.clone()).await?;
 
-        if upd_user.password.is_some() {
+        if upd_user.password.is_some() && !is_self_update {
             RauthyConfig::get()
                 .tx_events
                 .send_async(Event::user_password_reset(
@@ -1303,6 +1307,11 @@ LIMIT $2"#;
             UserValues::delete(user.id.clone()).await?;
             None
         };
+
+        // make sure to clean up exp email reminders after a password update
+        if upd_user.password.is_some() {
+            PasswordExpMail::delete(user.id.clone()).await?;
+        }
 
         Ok((user, user_values, is_new_admin))
     }
@@ -1404,7 +1413,7 @@ LIMIT $2"#;
 
         // a user cannot become a new admin from a self-req
         let (user, user_values, _is_new_admin) =
-            User::update(id, req, Some(user), preferred_username).await?;
+            User::update(id, req, Some(user), preferred_username, true).await?;
 
         Ok((user, user_values, email_updated))
     }
@@ -1803,6 +1812,30 @@ impl User {
         self.roles.as_str().split(',')
     }
 
+    pub async fn get_otp_kind(&self) -> Result<Vec<ActiveOtp>, ErrorResponse> {
+        Ok(OneTimePassword::find_for_user(&self.id)
+            .await?
+            .into_iter()
+            .map(|f| ActiveOtp {
+                otp_id: f.id,
+                otp_kind: f.kind,
+            })
+            .collect())
+    }
+
+    pub async fn has_otp_of_kind_enabled(&self, kind: &OtpKind) -> bool {
+        OneTimePassword::find_active_kind_for_user(kind, &self.id)
+            .await
+            .is_ok()
+    }
+
+    #[inline(always)]
+    pub async fn has_otp_enabled(&self) -> bool {
+        OneTimePassword::find_active_for_user(&self.id)
+            .await
+            .is_ok_and(|f| !f.is_empty())
+    }
+
     #[inline(always)]
     pub fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
@@ -2128,7 +2161,7 @@ mod tests {
         // new sessions should always be in state 1 -> initializing
         assert_eq!(session.state, SessionState::Init);
 
-        assert!(session.csrf_token.len() > 0);
+        assert!(!session.csrf_token.is_empty());
 
         assert_eq!(session.groups_as_vec(), Ok(vec!["admin", "user"]));
         assert_eq!(
@@ -2138,13 +2171,13 @@ mod tests {
     }
 
     fn check_password_expired(user: &User) -> Result<(), ErrorResponse> {
-        if let Some(exp) = user.password_expires {
-            if exp < OffsetDateTime::now_utc().unix_timestamp() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::PasswordExpired,
-                    String::from("The password has expired"),
-                ));
-            }
+        if let Some(exp) = user.password_expires
+            && exp < Utc::now().timestamp()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::PasswordExpired,
+                "The password has expired",
+            ));
         }
         Ok(())
     }

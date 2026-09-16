@@ -9,6 +9,8 @@
         "check": "./node_modules/svelte-check/bin/svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test": "playwright test",
+        "test:webauthn": "svelte-kit sync && node --test tests/webauthn-auth.node.mjs",
+        "test:password-reset": "npm run build && node --test tests/password-reset.node.mjs",
         "lint": "prettier --check . && eslint .",
         "format": "./node_modules/prettier/bin/prettier.cjs --write .",
         "format-check": "./node_modules/prettier/bin/prettier.cjs -c ."

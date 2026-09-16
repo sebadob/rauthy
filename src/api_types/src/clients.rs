@@ -18,8 +18,11 @@ pub struct DynamicClientRequest {
     /// Validation: cannot be empty
     #[validate(length(min = 1))]
     pub grant_types: Vec<GrantType>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
@@ -27,7 +30,6 @@ pub struct DynamicClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/-]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
     /// Validation: `^(client_secret_post|client_secret_basic|none)$`
     #[validate(regex(
@@ -35,7 +37,6 @@ pub struct DynamicClientRequest {
         code = "client_secret_post|client_secret_basic|none"
     ))]
     pub token_endpoint_auth_method: Option<String>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub token_endpoint_auth_signing_alg: Option<JwkKeyPairAlg>,
     // Rauthy will only accept the following defaults
     // `response_type=code`
@@ -83,8 +84,11 @@ pub struct EphemeralClientRequest {
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub client_name: Option<String>,
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
@@ -115,9 +119,7 @@ pub struct EphemeralClientRequest {
     pub scope: Option<String>,
     pub require_auth_time: Option<bool>,
 
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_signed_response_alg: Option<JwkKeyPairAlg>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
     /// RFC 8707 resource indicators this ephemeral client may request. When present, a
     /// requested `resource` is validated against this list; when absent, `resource` is
@@ -137,8 +139,11 @@ pub struct NewClientRequest {
     /// Validation: None - will not be deserialized
     #[serde(skip_deserializing)]
     pub secret: Option<Vec<u8>>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub name: Option<String>,
     /// Validation: bool
     pub confidential: bool,
@@ -153,8 +158,11 @@ pub struct NewClientRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateClientRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub name: Option<String>,
     pub confidential: bool,
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
@@ -170,9 +178,7 @@ pub struct UpdateClientRequest {
     /// Validation: cannot be empty
     #[validate(length(min = 1))]
     pub flows_enabled: Vec<GrantType>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_alg: JwkKeyPairAlg,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_alg: JwkKeyPairAlg,
     /// Validation: `10 <= auth_code_lifetime <= 300`
     #[validate(range(min = 10, max = 300))]

@@ -66,7 +66,7 @@ export const I18nNb: I18n = {
         accessRenew: 'Tilgang kan fornyes til',
         accessRenewDelete: 'Fjern mulighet for fornyelse',
         birthdate: 'Fødselsdato',
-        canModifyFor: 'Passkeys kan endres for:',
+        canModifyFor: 'MFA kan endres for:',
         city: 'By',
         changePassword: 'Bytt passord',
         convertAccount: 'Endre konto',
@@ -116,6 +116,13 @@ export const I18nNb: I18n = {
             username: 'Brukernavn',
             validFor: 'Passord gyldig i {{ secs }} sekunder',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: 'Bekreft passord',
         passwordCurr: 'Nåværende passord',
         passwordCurrReq: 'Nåværende passord er påkrevd',
@@ -151,6 +158,8 @@ export const I18nNb: I18n = {
         userEnabled: 'Bruker aktivert',
         userExpiry: 'Bruker utløper',
         userVerifiedTooltip: 'Sikret med fingeravtrykk eller PIN',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `Her kan du angi feltene som skal publiseres via din WebID. Dette er en 
             funksjon som brukes av enkelte nettverk for desentraliserte pålogginger. Hvis du ikke 
             vet hva WebID er, trenger du sannsynligvis ikke å bruke det.`,
@@ -167,6 +176,7 @@ export const I18nNb: I18n = {
         emailRequired: 'E-post er påkrevd',
         emailSentMsg: 'Hvis adressen din er registrert, er det sendt en melding',
         expectingPasskey: 'Forventer autentisering med passkey',
+        expectingOtp: 'Forventer autentisering med engangspassord',
         http429: 'For mange ugyldige forsøk. Sperret til:',
         invalidCredentials: 'Ugyldige påloggingsopplysninger',
         invalidKeyUsed: 'Ugyldig sikkerhetsnøkkel',
@@ -223,13 +233,30 @@ export const I18nNb: I18n = {
         cancel: 'Avbryt',
     },
     mfa: {
-        p1: `Hvis du ønsker å bruke flere systemer parallelt, som f.eks. Windows og Android, bør du 
-            registrere deg med Android først.`,
-        p2: `Android er plattformen som for øyeblikket støtter færrest funksjoner av den 
-            passordløse teknologien. Nøkler som registreres der, fungerer på andre enheter på samme 
-            måte. Dette gjelder imidlertid ikke omvendt.`,
-        p3: 'For more information, see',
-        docLinkText: 'the documentation about passkeys',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Hvis du ønsker å bruke flere systemer parallelt, som f.eks. Windows og Android, bør du 
+                registrere deg med Android først.`,
+            p2: `Android er plattformen som for øyeblikket støtter færrest funksjoner av den 
+                passordløse teknologien. Nøkler som registreres der, fungerer på andre enheter på samme 
+                måte. Dette gjelder imidlertid ikke omvendt.`,
+            p3: 'For more information, see',
+            registerNew: 'Registrer ny nøkkel',
+            docLinkText: 'the documentation about passkeys',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One Time Password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Feil ved oppstart av registrering',
         lastUsed: 'Sist brukt',
         noKey: 'Det er ikke registrert noen sikkerhetsnøkkel i denne lagringen ennå',
@@ -237,10 +264,12 @@ export const I18nNb: I18n = {
             'Før passkeys kan redigeres, må en av de eksisterende først verifiseres:',
         reAuthenticatePwd:
             'Før passkeys kan redigeres, er det nødvendig med en ny bekreftelse av passordet.',
+        reAuthenticateOtp:
+            'Før engangspassord kan redigeres, må en av de eksisterende først verifiseres:',
         register: 'Registrer',
-        registerNew: 'Registrer ny nøkkel',
         registerd: 'Registrert',
         registerdKeys: 'Registrerte nøkler',
+        registerdOtps: 'Registrerte engangspassord',
         passkeyName: 'Passkey-navn',
         passkeyNameErr: '2 - 32 bokstaver, ingen spesialtegn',
         passwordInvalid: 'Ugyldig passord',

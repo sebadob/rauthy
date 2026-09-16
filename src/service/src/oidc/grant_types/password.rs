@@ -80,8 +80,6 @@ pub async fn grant_type_password(
         ));
     }
 
-    // This Error must be the same if user does not exist AND passwords do not match to prevent
-    // username enumeration
     let mut user = User::find_by_email(String::from(email)).await?;
     user.check_enabled()?;
     user.check_expired()?;
@@ -147,7 +145,6 @@ pub async fn grant_type_password(
 
             user.save(None).await?;
 
-            // TODO add expo increasing sleeps after failed login attempts here?
             Err(err)
         }
     }
