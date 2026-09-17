@@ -173,7 +173,7 @@ pub struct I18nConfigResponse {
 #[derive(Serialize, ToSchema)]
 pub struct LoginTimeResponse {
     pub argon2_params: Argon2ParamsResponse,
-    pub login_time: u32,
+    pub login_time: i64,
     pub num_cpus: usize,
 }
 

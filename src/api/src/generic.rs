@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
 use actix_web::http::header;
-use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
+use actix_web::http::header::{AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
 use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
 use chrono::Utc;
@@ -224,7 +224,7 @@ pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
 pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
-    let login_time: u32 = DB::hql()
+    let login_time: i64 = DB::hql()
         .get(Cache::App, IDX_LOGIN_TIME)
         .await?
         .unwrap_or(2000);
@@ -376,13 +376,20 @@ pub async fn get_search(
     Query(params): Query<SearchParams>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
     params.validate()?;
+    if principal.validate_admin_session().is_err() {
+        principal.validate_group_admin_session()?;
+    }
 
     let limit = params.limit.unwrap_or(100) as i64;
     match params.ty {
         SearchParamsType::Session => {
-            let res = Session::search(&params.idx, &params.q, limit).await?;
+            let res = Session::search(&params.idx, &params.q, limit)
+                .await?
+                .into_iter()
+                // make sure to never leak CSRF tokens
+                .map(|mut s| s.csrf_token = String::default())
+                .collect::<Vec<_>>();
             Ok(HttpResponse::Ok().json(res))
         }
         SearchParamsType::User => {
@@ -507,7 +514,10 @@ pub async fn get_ready() -> impl Responder {
 /// Catch all - redirects from root to the "real root" /auth/v1/
 /// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
 /// request path against common bot / hacker scan targets and blacklist preemptively.
-#[get("/{_:.*}")]
+///
+/// This handler is registered for every standard HTTP method (see server.rs), so that
+/// non-GET scan requests (POST/PUT/...) are also caught by the pre-blacklisting instead of
+/// just receiving a 405 Method Not Allowed.
 pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
     let ip = real_ip_from_req(&req)?;
@@ -623,7 +633,14 @@ pub async fn get_whoami(req: HttpRequest) -> String {
 
         for (k, v) in req.headers() {
             let key = k.as_str();
-            let value = if key == "cookie" || key == CSRF_HEADER || key == PWD_CSRF_HEADER {
+            let value = if [
+                AUTHORIZATION.as_str(),
+                "cookie",
+                CSRF_HEADER,
+                PWD_CSRF_HEADER,
+            ]
+            .contains(&key)
+            {
                 "<hidden>"
             } else {
                 v.to_str().unwrap_or_default()
