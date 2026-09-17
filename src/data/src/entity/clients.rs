@@ -1525,7 +1525,7 @@ impl Client {
         if !self.confidential {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
+                ErrorResponseType::Unauthorized,
                 "Cannot validate 'client_secret' for public client",
             ));
         }

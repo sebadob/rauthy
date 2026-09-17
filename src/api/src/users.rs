@@ -2338,6 +2338,11 @@ pub async fn get_user_by_email(
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
 
     let user = User::find_by_email(path.into_inner()).await?;
+    // same per-target view gate as get_user_by_id: a group admin only gets the full details of
+    // a user it manages, otherwise this endpoint would leak any user's profile by email.
+    if principal.is_session_group_admin() && principal.user_id() != Ok(user.id.as_str()) {
+        principal.validate_group_admin_can_view(user.roles_iter(), user.groups_iter())?;
+    }
     let values = UserValues::find(&user.id).await?;
 
     Ok(HttpResponse::Ok().json(user.into_response(values)))

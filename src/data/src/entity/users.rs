@@ -51,6 +51,7 @@ use std::default::Default;
 use std::fmt::{Debug, Formatter};
 use std::mem;
 use std::ops::Add;
+use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
 
@@ -230,6 +231,17 @@ impl User {
     }
 
     pub async fn create_from_new(mut new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
+        // The UserValuesValidator is intentionally not used on this path (see post_users), but a
+        // broken tz would otherwise be stored as-is, so validate the format here.
+        if let Some(tz) = &new_user_req.tz
+            && chrono_tz::Tz::from_str(tz).is_err()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'tz' cannot be parsed",
+            ));
+        }
+
         // pre-uniqueness check for better UX and error handling; the DB unique index on
         // `users_values.preferred_username` is the authoritative guard (see UserValues::insert).
         if let Some(preferred_username) = &new_user_req.preferred_username {
@@ -543,12 +555,15 @@ LIMIT $3"#;
         let size_hint = page_size as usize;
 
         let res = if let Some(token) = continuation_token {
+            // Keyset pagination over the composite key (created_at, id): `created_at` alone is
+            // not unique, so without the `id` tie-breaker, rows with an equal `created_at`
+            // would be duplicated or skipped across pages.
             if backwards {
                 let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE created_at <= $1 AND id != $2
-ORDER BY created_at DESC
+WHERE (created_at, id) < ($1, $2)
+ORDER BY created_at DESC, id DESC
 LIMIT $3
 OFFSET $4"#;
 
@@ -566,8 +581,8 @@ OFFSET $4"#;
                 let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE created_at >= $1 AND id != $2
-ORDER BY created_at ASC
+WHERE (created_at, id) > ($1, $2)
+ORDER BY created_at ASC, id ASC
 LIMIT $3
 OFFSET $4"#;
 
@@ -586,7 +601,7 @@ OFFSET $4"#;
             let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $1
 OFFSET $2"#;
 
@@ -601,7 +616,7 @@ OFFSET $2"#;
             let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at ASC
+ORDER BY created_at ASC, id ASC
 LIMIT $1
 OFFSET $2"#;
 
@@ -1454,6 +1469,10 @@ LIMIT $2"#;
 
     pub async fn validate_email_free(email: String) -> Result<(), ErrorResponse> {
         let sql = "SELECT 1 FROM users WHERE email = $1";
+
+        // emails are stored lowercased (see from_new_user_req / create_from_reg), so the
+        // pre-check must compare against the normalized form as well
+        let email = email.to_lowercase();
 
         let is_free = if is_hiqlite() {
             DB::hql().query_raw_one(sql, params!(email)).await.is_err()
