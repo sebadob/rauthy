@@ -269,7 +269,7 @@ token_revoke_on_logout = true
 # on remote servers, and logging these back in can be a lot more
 # work than the default logins via browser.
 #
-# This value will only be respected, if `token_revoke_on_logout` is
+# This value will only be respected if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
 # via the dedicated `revocation_endpoint` or forced logout from an
 # admin.

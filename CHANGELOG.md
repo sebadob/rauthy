@@ -47,9 +47,27 @@ smtp_tls_mode = 'tls'
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
 
+#### KV Store Validation
+
+The regex for KV store keys was made quite a bit more strict. This was necessary since the key is
+used as a path segment in API calls. This is only important when you used the KV store API manually.
+
+The validation is now the following:
+
+```
+r"^[a-zA-Z0-9-._~]{2,64}$"
+```
+
+#### Forward Auth `redirect_state`
+
+The `redirect_state` query param used in Forward Auth is now limited to codes of 300 - 599. By
+default, a success will always return a 200 anyway, so there is no need to overwrite it. The reason
+is to prevent dynamic proxy configs from potentially forwarding this value from a client, which
+tries to spoof a value that usually only the reverse proxy should ever set.
+
 ### Changes
 
-#### Security Hardening and Stability
+#### Security Hardening and General Stability
 
 First, this is not a security release in the sense that there were any real issues, but the security
 and usability was improved in lots of places with small changes:
@@ -141,6 +159,11 @@ and usability was improved in lots of places with small changes:
 - Backchannel logouts + retries have been made more robust for certain edge cases.
 - SSE Events dropped the per-IP keys, so they don't evict each other all the time, and has improved
   logging now with better information and insight both for debugging and / or auditing.
+- Public KV store GETs for a key, that are not a JSON value, now return `text/plain` instead of
+  `text/html`. This removed the possibility for an Admin to theoretically store a self-XSS on
+  Rauthys own origin, and it basically a protection from a malicious admin.
+- In general, lots of tiny fixes that either convert a `panic` (mostly unreachable anyway) into an
+  `Err(_)`, or things about normalizing error responses, and so on.
 
 #### Discoverable Credentials
 

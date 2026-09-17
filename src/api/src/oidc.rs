@@ -53,6 +53,7 @@ use spow::pow::Pow;
 use std::borrow::Cow;
 use std::fmt::Write;
 use std::ops::Add;
+use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{error, info, warn};
 use validator::Validate;
@@ -1222,6 +1223,24 @@ pub async fn post_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorRespon
     }
 }
 
+#[inline]
+fn auth_header(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
+    let name = HeaderName::from_str(name).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Invalid header name '{name}'"),
+        )
+    })?;
+    let value = HeaderValue::from_str(value).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Invalid value for header '{name}'"),
+        )
+    })?;
+
+    Ok((name, value))
+}
+
 /// GET forward authentication
 ///
 /// This endpoint is very similar to the `/userinfo`, but instead of returning information about
@@ -1252,32 +1271,29 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
         let mut builder = HttpResponse::Ok();
-        builder
-            .insert_header((headers.user.as_ref(), info.id))
-            .insert_header((headers.roles.as_ref(), info.roles.join(",")))
-            .insert_header((
-                headers.groups.as_ref(),
-                info.groups.map(|g| g.join(",")).unwrap_or_default(),
-            ))
-            .insert_header((headers.email.as_ref(), info.email.unwrap_or_default()))
-            .insert_header((
-                headers.email_verified.as_ref(),
-                info.email_verified.unwrap_or(false).to_string(),
-            ))
-            .insert_header((
-                headers.family_name.as_ref(),
-                info.family_name.unwrap_or_default(),
-            ))
-            .insert_header((
-                headers.given_name.as_ref(),
-                info.given_name.unwrap_or_default(),
-            ))
-            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()));
+        for (name, value) in [
+            auth_header(&headers.user, &info.id)?,
+            auth_header(&headers.roles, &info.roles.join(","))?,
+            auth_header(
+                &headers.groups,
+                &info.groups.map(|g| g.join(",")).unwrap_or_default(),
+            )?,
+            auth_header(&headers.email, &info.email.unwrap_or_default())?,
+            auth_header(
+                &headers.email_verified,
+                &info.email_verified.unwrap_or(false).to_string(),
+            )?,
+            auth_header(&headers.family_name, &info.family_name.unwrap_or_default())?,
+            auth_header(&headers.given_name, &info.given_name.unwrap_or_default())?,
+            auth_header(&headers.mfa, &info.mfa_enabled.to_string())?,
+        ] {
+            builder.insert_header((name, value));
+        }
 
         if headers.enable_pref_username
             && let Some(username) = info.preferred_username
         {
-            builder.insert_header((headers.preferred_username.as_ref(), username));
+            builder.insert_header(auth_header(&headers.preferred_username, &username)?);
         }
 
         Ok(builder.finish())

@@ -431,7 +431,7 @@ pub async fn put_provider_img(
 
     // we only accept a single field from the Multipart upload -> no looping here
     let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
-    let mut content_type = None;
+    let content_type: Option<mime_guess::Mime>;
     match payload.next().await {
         Some(part) => {
             let mut field = part?;

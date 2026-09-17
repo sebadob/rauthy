@@ -98,13 +98,18 @@ pub fn trigger() {
             _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
         };
 
+        #[cfg(debug_assertions)]
+        let https_only = !(vars.http_client.danger_unencrypted || vars.dev.dev_mode);
+        #[cfg(not(debug_assertions))]
+        let https_only = !vars.http_client.danger_unencrypted;
+
         let mut builder = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(vars.http_client.connect_timeout as u64))
             .timeout(Duration::from_secs(vars.http_client.request_timeout as u64))
             .pool_idle_timeout(Duration::from_secs(vars.http_client.idle_timeout as u64))
             .min_tls_version(tls_version)
             .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
-            .https_only(!(vars.http_client.danger_unencrypted || vars.dev.dev_mode))
+            .https_only(https_only)
             .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode)
             .use_rustls_tls();
 

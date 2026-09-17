@@ -547,8 +547,8 @@ pub async fn delete_client_favicon(
 
 /// Generates a new client secret
 ///
-/// Generates a new secret for the given client id and sets the client to `confidential` too, if it was
-/// not the case yet.
+/// Generates a new secret for the given client id and sets the client to `confidential` too, if it
+/// was not the case yet.
 ///
 /// **Permissions**
 /// - rauthy_admin

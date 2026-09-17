@@ -43,6 +43,15 @@ pub struct AuthCode {
     /// No `serde` skip/default attributes here: auth codes are cached with bincode (a
     /// positional, non-self-describing format), so the field must always be present.
     pub resource: Option<String>,
+    /// The opaque `state` from the authorization request, bound to this code so that consumers
+    /// can verify a presented `state` belongs to exactly this code. No `serde` skip/default
+    /// attributes here: auth codes are cached with bincode (a positional, non-self-describing
+    /// format), so the field must always be present.
+    ///
+    /// Note: This is only used for Forward Auth, because in this case, we are also our own client.
+    /// We will not save the state during normal logins, because it does not make any sense. We will
+    /// not get anything from the client we could compare it to.
+    pub state: Option<String>,
 }
 
 impl Debug for AuthCode {
@@ -110,6 +119,7 @@ impl AuthCode {
                     nonce: code_old.nonce,
                     scopes: code_old.scopes,
                     resource: code_old.resource,
+                    state: None,
                 }))
             }
         }
@@ -159,6 +169,7 @@ impl AuthCode {
         nonce: Option<String>,
         scopes: Vec<String>,
         resource: Option<String>,
+        state: Option<String>,
         lifetime_secs: i32,
     ) -> Self {
         debug_assert!(!redirect_uri.is_empty());
@@ -181,6 +192,7 @@ impl AuthCode {
             nonce,
             scopes,
             resource,
+            state,
         }
     }
 

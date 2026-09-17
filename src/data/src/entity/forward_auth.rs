@@ -21,7 +21,10 @@ pub struct ForwardAuthSession {
 
 impl ForwardAuthSession {
     #[inline]
-    pub fn build_cookies(&self, danger_insecure: bool) -> (Cookie<'_>, Cookie<'_>) {
+    pub fn build_cookies(
+        &self,
+        danger_insecure: bool,
+    ) -> Result<(Cookie<'_>, Cookie<'_>), ErrorResponse> {
         let max_age = self.inner.exp - Utc::now().timestamp();
 
         let cookie_session = build_cookie(
@@ -30,16 +33,16 @@ impl ForwardAuthSession {
             max_age,
             SameSite::Lax,
             danger_insecure,
-        );
+        )?;
         let cookie_csrf = build_cookie(
             Self::cookie_name_csrf(danger_insecure),
             self.inner.csrf_token.as_bytes(),
             max_age,
             SameSite::Strict,
             danger_insecure,
-        );
+        )?;
 
-        (cookie_session, cookie_csrf)
+        Ok((cookie_session, cookie_csrf))
     }
 
     #[inline]
@@ -175,21 +178,21 @@ fn build_cookie<'a>(
     max_age: i64,
     same_site: SameSite,
     danger_insecure: bool,
-) -> Cookie<'a> {
+) -> Result<Cookie<'a>, ErrorResponse> {
     let max_age = if max_age < 1 {
         cookie::time::Duration::ZERO
     } else {
         cookie::time::Duration::seconds(max_age)
     };
 
-    let enc = EncValue::encrypt(value).unwrap();
+    let enc = EncValue::encrypt(value)?;
     let value_b64 = base64_encode(enc.into_bytes().as_ref());
 
-    Cookie::build(name, value_b64)
+    Ok(Cookie::build(name, value_b64)
         .secure(!danger_insecure)
         .http_only(true)
         .same_site(same_site)
         .max_age(max_age)
         .path("/")
-        .finish()
+        .finish())
 }

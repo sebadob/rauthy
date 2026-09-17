@@ -351,6 +351,9 @@ pub async fn ping() -> impl Responder {
 pub async fn post_pow() -> Result<HttpResponse, ErrorResponse> {
     // TODO can we limit the creation of new pows in a way that makes sense?
     //  By IP could be problematic if lots of users have the same public IP.
+    //  If it were just Rauthy, we could key by browser ID, but this endpoint is used by external
+    //  aps as well, which is another reason to vote against an IP. If an external backend creates
+    //  lots of them and forwards to the UI, we will see the same IP all the time.
     let pow = PowEntity::create().await?;
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)

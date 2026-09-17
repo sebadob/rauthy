@@ -348,6 +348,10 @@ pub(crate) async fn finish_authorize(
         data.nonce,
         scopes,
         data.resource,
+        // We do NOT save the state here on purpose. It exists on `AuthCode` only to harden
+        // forward auth logins, where we manage the state, because we are also our own client.
+        // The `state` is for hardening on the client side, which this function does not belong to.
+        None,
         code_lifetime,
     );
     code.save(code_lifetime).await?;
