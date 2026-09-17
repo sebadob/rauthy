@@ -340,7 +340,7 @@ VALUES
         if is_hiqlite() {
             DB::hql().execute(sql, params!(id)).await?;
         } else {
-            DB::pg_execute(sql, &[]).await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
         Self::invalidate_cache_all().await?;
@@ -449,6 +449,13 @@ impl AuthProvider {
     }
 
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
+        if req.issuer == PROVIDER_ATPROTO {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Must not contain a reserved name",
+            ));
+        }
+
         let scope = Self::cleanup_scope(&req.scope);
         let secret = Self::secret_encrypted(&req.client_secret)?;
 
@@ -883,7 +890,11 @@ impl AuthProviderCallback {
         let agent = atrium_api::agent::Agent::new(session_manager);
 
         let Some(did) = agent.did().await else {
-            panic!("missing DID for ATProto session");
+            error!("missing DID for ATProto session");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "missing DID for ATProto session",
+            ));
         };
 
         let Some(session) = DB.get(&did).await.map_err(|error| {
@@ -1099,6 +1110,11 @@ impl AuthProviderIdClaims<'_> {
             return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
         }
 
+        // All local lookups and storage are lowercase-based (`User::find_by_email`,
+        // local registration), so normalize the upstream claim once here.
+        // Otherwise, mixed-case addresses could break email lookups or create duplicate accounts.
+        let email = self.email.as_ref().unwrap().to_lowercase();
+
         let claims_user_id_json = if let Some(sub) = &self.sub {
             sub
         } else if let Some(id) = &self.id {
@@ -1139,9 +1155,7 @@ impl AuthProviderIdClaims<'_> {
             }
             Err(_) => {
                 debug!("did not find already existing user by federation lookup");
-                if let Ok(mut user) =
-                    User::find_by_email(self.email.as_ref().unwrap().to_string()).await
-                {
+                if let Ok(mut user) = User::find_by_email(email.clone()).await {
                     if let Some(link) = link_cookie {
                         if link.provider_id != provider.id {
                             return Err(ErrorResponse::new(
@@ -1295,13 +1309,13 @@ impl AuthProviderIdClaims<'_> {
             // we must reject any upstream login, if a non-federated local user with the same email
             // exists, as it could lead to an account takeover
             if user.federation_uid.is_none()
-                || user.federation_uid.as_deref() != Some(&claims_user_id)
+                || user.federation_uid.as_deref() != Some(claims_user_id.as_str())
             {
                 forbidden_error = Some("non-federated user or ID mismatch");
             }
 
             // validate auth_provider_id
-            if user.auth_provider_id.as_deref() != Some(&provider.id) {
+            if user.auth_provider_id.as_deref() != Some(provider.id.as_str()) {
                 forbidden_error = Some("invalid login from wrong auth provider");
             }
 
@@ -1318,9 +1332,9 @@ impl AuthProviderIdClaims<'_> {
             }
 
             // check / update email
-            if Some(user.email.as_str()) != self.email.as_deref() {
+            if user.email != email {
                 old_email = Some(user.email);
-                user.email = self.email.as_ref().unwrap().to_string();
+                user.email = email.clone();
             }
 
             // check other existing values and possibly update them
@@ -1369,7 +1383,7 @@ impl AuthProviderIdClaims<'_> {
         } else {
             // Create a new federated user
             let new_user = User {
-                email: self.email.as_ref().unwrap().to_string(),
+                email: email.clone(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().map(String::from),
                 roles: should_be_rauthy_admin

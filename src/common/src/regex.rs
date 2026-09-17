@@ -79,8 +79,11 @@ pub static RE_TOKEN_68: LazyLock<Regex> =
 pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap());
 
+// The leading `@` of the handle form is optional. It is accepted for convenience (users often
+// type handles like `@alice.bsky.social`) and stripped again before being passed to the atrium
+// crates, whose `Handle` parser only accepts the bare domain form.
 pub static RE_ATPROTO_HANDLE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
+    Regex::new(r"^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|@?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
 });
 
 #[cfg(test)]
@@ -111,5 +114,19 @@ mod tests {
         assert!(!RE_USER_NAME.is_match("\n"));
         assert!(!RE_USER_NAME.is_match("<script>"));
         assert!(!RE_USER_NAME.is_match("😉"));
+    }
+
+    #[test]
+    fn test_re_atproto_handle() {
+        assert!(RE_ATPROTO_HANDLE.is_match("example.com"));
+        assert!(RE_ATPROTO_HANDLE.is_match("@example.com"));
+        assert!(RE_ATPROTO_HANDLE.is_match("did:plc:abc123"));
+        assert!(RE_ATPROTO_HANDLE.is_match("did:web:example.com"));
+
+        assert!(!RE_ATPROTO_HANDLE.is_match("alice@example.com"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("@@example.com"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("@did:plc:abc123"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("example..com"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("@example."));
     }
 }

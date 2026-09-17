@@ -79,6 +79,10 @@ pub async fn login_start<'a>(
         // Reject literal internal hosts before server-side atproto resolution.
         validate_atproto_identifier(&input)?;
 
+        // The atrium crates' `Handle` parser only accepts the bare domain form, so drop a
+        // leading `@` (which `RE_ATPROTO_HANDLE` allows) before passing it along.
+        let input = input.strip_prefix('@').unwrap_or(&input);
+
         let atproto = atproto::Client::get();
 
         let options = AuthorizeOptions {
@@ -97,8 +101,11 @@ pub async fn login_start<'a>(
             .await
             .map_err(|error| {
                 error!(%error, "failed to start authorization for ATProto");
-            })
-            .unwrap();
+                ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "failed to start authorization for ATProto",
+                )
+            })?;
     }
 
     let cookie = ApiCookie::build(
@@ -193,11 +200,13 @@ mod tests {
     #[test]
     fn test_validate_atproto_identifier() {
         assert!(validate_atproto_identifier("alice@example.com").is_ok());
+        assert!(validate_atproto_identifier("@alice@example.com").is_ok());
         assert!(validate_atproto_identifier("did:web:example.com").is_ok());
         assert!(validate_atproto_identifier("did:web:example.com:user:path").is_ok());
         assert!(validate_atproto_identifier("did:plc:abc123").is_ok());
         assert!(validate_atproto_identifier("did:key:z6Mk...").is_ok());
         assert!(validate_atproto_identifier("alice@localhost").is_err());
+        assert!(validate_atproto_identifier("@alice@localhost").is_err());
         assert!(validate_atproto_identifier("alice@localhost:8080").is_err());
         assert!(validate_atproto_identifier("alice@127.0.0.1").is_err());
         assert!(validate_atproto_identifier("alice@127.0.0.1:8080").is_err());
