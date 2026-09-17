@@ -178,7 +178,7 @@ pub async fn post_clients_dyn(
 
     if let Some(token) = &RauthyConfig::get().vars.dynamic_clients.reg_token {
         let bearer = helpers::get_bearer_token_from_header(req.headers())?;
-        if token != &bearer {
+        if !constant_time_eq::constant_time_eq(token.as_bytes(), bearer.as_bytes()) {
             return Ok(HttpResponse::Unauthorized()
                 .insert_header((
                     WWW_AUTHENTICATE,
