@@ -25,6 +25,7 @@ mime_guess = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
+percent-encoding = { workspace = true }
 rust-embed = { workspace = true }
 semver = { workspace = true }
 spow = { workspace = true }

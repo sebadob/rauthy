@@ -136,7 +136,14 @@ impl AuthCode {
         };
         let mut loc = format!("{}{}code={}", self.redirect_uri, append_char, self.id);
         if let Some(state) = state {
-            write!(loc, "&state={state}")?;
+            write!(
+                loc,
+                "&state={}",
+                percent_encoding::percent_encode(
+                    state.as_bytes(),
+                    percent_encoding::NON_ALPHANUMERIC
+                )
+            )?;
         };
         Ok(loc)
     }

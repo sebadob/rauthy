@@ -51,6 +51,7 @@ use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
+use std::fmt::Write;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{error, info, warn};
@@ -168,8 +169,14 @@ pub async fn get_authorize(
         loc.push_str("error=login_required");
 
         if let Some(state) = params.state {
-            loc.push_str("&state=");
-            loc.push_str(&state);
+            write!(
+                loc,
+                "&state={}",
+                percent_encoding::percent_encode(
+                    state.as_bytes(),
+                    percent_encoding::NON_ALPHANUMERIC,
+                )
+            )?;
         }
 
         return Ok(HttpResponse::Found()

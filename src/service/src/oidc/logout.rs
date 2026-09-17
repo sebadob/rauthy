@@ -23,6 +23,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use std::borrow::Cow;
+use std::fmt::Write;
 use std::str::FromStr;
 use std::string::ToString;
 use tokio::task::JoinSet;
@@ -173,14 +174,24 @@ pub async fn post_logout_handle(
     if is_backchannel {
         Ok(HttpResponse::build(StatusCode::OK).finish())
     } else {
-        let uri = post_logout_redirect_uri
-            .as_ref()
-            .unwrap_or(&RauthyConfig::get().issuer);
-        let state = params
-            .state
-            .map(|st| format!("?state={st}"))
-            .unwrap_or_default();
-        let loc = format!("{uri}{state}");
+        let mut loc =
+            post_logout_redirect_uri.unwrap_or_else(|| RauthyConfig::get().issuer.clone());
+
+        if let Some(state) = params.state {
+            if loc.contains('?') {
+                loc.push('&');
+            } else {
+                loc.push('?');
+            }
+            write!(
+                loc,
+                "state={}",
+                percent_encoding::percent_encode(
+                    state.as_bytes(),
+                    percent_encoding::NON_ALPHANUMERIC,
+                )
+            )?;
+        }
 
         let mut resp = HttpResponse::build(StatusCode::from_u16(302).unwrap())
             .append_header((header::LOCATION, loc))
@@ -465,9 +476,8 @@ pub async fn send_backchannel_logout(
                 Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
             }
             Err(err) => {
-                let err = format!(
-                    "Error during Backchannel Logout for client '{client_id}': {err}"
-                );
+                let err =
+                    format!("Error during Backchannel Logout for client '{client_id}': {err}");
                 FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
                 Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
             }

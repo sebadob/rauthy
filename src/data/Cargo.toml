@@ -52,6 +52,7 @@ mime = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
+percent-encoding = { workspace = true }
 # 0.8 is necessary to provide a proper `thread_rng` for `rsa`
 rand_08 = { package = "rand", version = "0.8" }
 rand_core = { workspace = true }
