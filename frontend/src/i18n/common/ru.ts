@@ -271,9 +271,9 @@ export const I18nRu: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Зарегистрировать',
-        registerd: 'Зарегистрирован',
-        registerdKeys: 'Зарегистрированные ключи',
-        registerdOtps: 'Registered OTPs',
+        registered: 'Зарегистрирован',
+        registeredKeys: 'Зарегистрированные ключи',
+        registeredOtps: 'Registered OTPs',
         passkeyName: 'Название ключа доступа',
         passkeyNameErr: '2 - 32 обычных символа',
         passwordInvalid: 'Неверный пароль',

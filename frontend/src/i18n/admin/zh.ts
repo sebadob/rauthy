@@ -216,7 +216,7 @@ export let I18nAdminZh: I18nAdmin = {
             time: '时间',
             targetTime: '目标时间',
             tune: '重要：这些值需要在最终架构上进行调整！',
-            pDetials: `如果您想要详细了解Argon2ID，在线有很多资源。本指南仅简要介绍这些值。
+            pDetails: `如果您想要详细了解Argon2ID，在线有很多资源。本指南仅简要介绍这些值。
             需要配置三个值：`,
             pTune: `它们根据系统能力而变化。系统越强大，这些值就越安全。`,
             pUtility: `此工具帮助您找到适合平台的最佳Argon2ID设置。

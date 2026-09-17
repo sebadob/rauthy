@@ -275,9 +275,9 @@ export const I18nUk: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Зареєструвати',
-        registerd: 'Зареєстровано',
-        registerdKeys: 'Зареєстровані ключі',
-        registerdOtps: 'Registered OTPs',
+        registered: 'Зареєстровано',
+        registeredKeys: 'Зареєстровані ключі',
+        registeredOtps: 'Registered OTPs',
         passkeyName: 'Назва ключа доступу',
         passkeyNameErr: '2 - 32 символи, без спецсимволів',
         passwordInvalid: 'Неправильний пароль',

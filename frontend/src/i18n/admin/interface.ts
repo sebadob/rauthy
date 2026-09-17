@@ -186,7 +186,7 @@ export interface I18nAdmin {
             time: string;
             targetTime: string;
             tune: string;
-            pDetials: string;
+            pDetails: string;
             pTune: string;
             pUtility: string;
         };

@@ -236,7 +236,7 @@ export let I18nAdminNl: I18nAdmin = {
             time: 'Tijd',
             targetTime: 'Doeltijd',
             tune: 'Belangrijk: Deze waarden moeten worden afgestemd op de uiteindelijke architectuur!',
-            pDetials: `Voor een gedetailleerde inleiding tot Argon2ID zijn er veel bronnen online beschikbaar.
+            pDetails: `Voor een gedetailleerde inleiding tot Argon2ID zijn er veel bronnen online beschikbaar.
             Deze handleiding geeft slechts een zeer kort overzicht van de waarden. Drie ervan moeten worden
             geconfigureerd:`,
             pTune: `Ze veranderen afhankelijk van de mogelijkheden van het systeem. Hoe krachtiger het systeem,

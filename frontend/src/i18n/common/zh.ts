@@ -253,9 +253,9 @@ export const I18nZh: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '注册',
-        registerd: '已注册',
-        registerdKeys: '已注册的密钥',
-        registerdOtps: 'Registered OTPs',
+        registered: '已注册',
+        registeredKeys: '已注册的密钥',
+        registeredOtps: 'Registered OTPs',
         passkeyName: '通行密钥名称',
         passkeyNameErr: '2-32个非特殊字符',
         passwordInvalid: '密码无效',

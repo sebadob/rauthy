@@ -105,12 +105,12 @@ admin_email = '{}'"#,
                 r#"
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-pasword_argon2id = '{}'"#,
+password_argon2id = '{}'"#,
                 hash
             )?;
         }

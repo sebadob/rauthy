@@ -244,7 +244,7 @@ export let I18nAdminDe: I18nAdmin = {
             time: 'Zeit',
             targetTime: 'Ziel-Zeit',
             tune: 'Wichtig: Diese Werten müssen auf der finalen Architektur eingestellt werden!',
-            pDetials: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
+            pDetails: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
             Verfügung. Hier werden nur ganz kurz die Werte erklärt. Die folgenden drei Werte müssen konfiguriert werden:`,
             pTune: `Die Werte können stark variieren in Abhängigkeit vom System und der generellen Systemlast. Je 
             stärker das System, desto sicherere Werte können gewählt werden.`,

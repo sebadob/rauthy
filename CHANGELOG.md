@@ -4,6 +4,19 @@
 
 ### Breaking
 
+#### Config Values Renamed
+
+There were config values that had typos. They were not fixed earlier, because that would have been a
+breaking change for each single one of them. Because this version comes with improved lifetime or
+duration configuration, we needed to rename quite a few of them anyway, so it made sense to do all
+of these in one batch. Make sure to update your config, if you used any of these. Values in all
+capital letters and snake_case are env vars.
+
+| Old Name         | New Name          | 
+|------------------|-------------------|
+| GEO_BLOCK_UNKONW | GEO_BLOCK_UNKNOWN |
+| pasword_argon2id | password_argon2id |
+
 #### SMTP Setup Rework
 
 Setting up SMTP connections was found to be a bit misleading or hard to debug. By default, implicit
@@ -2886,7 +2899,7 @@ country and depending on the chosen DB type also the city will be added to the E
 # set this to `true`.
 #
 # default: false
-# overwritten by: GEO_BLOCK_UNKONW
+# overwritten by: GEO_BLOCK_UNKNOWN
 block_unknown = false
 
 # If you have a WAF or CDN which injects a geoloaction header

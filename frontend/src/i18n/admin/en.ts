@@ -225,7 +225,7 @@ export let I18nAdminEn: I18nAdmin = {
             time: 'Time',
             targetTime: 'Target Time',
             tune: 'Important: These values need to be tuned on the final architecture!',
-            pDetials: `If you want a detailed introduction to Argon2ID, many sources exist online. This guide just 
+            pDetails: `If you want a detailed introduction to Argon2ID, many sources exist online. This guide just 
             gives very short overview about the values. Three of them need to be configured:`,
             pTune: `They change depending on the capabilities of the system. The more powerful the system, the more safe 
             these values can be.`,

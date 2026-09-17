@@ -263,9 +263,9 @@ export const I18nKo: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '등록',
-        registerd: '등록일',
-        registerdKeys: '등록된 키',
-        registerdOtps: 'Registered OTPs',
+        registered: '등록일',
+        registeredKeys: '등록된 키',
+        registeredOtps: 'Registered OTPs',
         passkeyName: '패스키 이름',
         passkeyNameErr: '특수문자를 제외한 2자에서 32자이어야 합니다.',
         passwordInvalid: 'Password Invalid',

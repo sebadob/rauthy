@@ -4,41 +4,12 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.37.0-20260819"
+version = "0.37.0-20260917"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 description = "Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2, and PAM"
-
-[workspace.metadata.typos.files]
-extend-exclude = [
-    "CHANGELOG.md",
-    "docs/**",
-    "frontend/src/i18n/**",
-    "migrations/**",
-    "rauthy-client/LICENSE",
-    "src/data/src/email/i18n/**",
-    "src/data/src/entity/jwk.rs",
-    "src/data/src/migration/db_migrate_dev.rs",
-    "src/data/src/rauthy_config.rs",
-    "src/service/src/token_set.rs",
-]
-
-[workspace.metadata.typos.default]
-extend-ignore-re = [
-    "(?s)root_ca_bundle = '''.*?'''",
-]
-
-[workspace.metadata.typos.default.extend-identifiers]
-GEO_BLOCK_UNKONW = "GEO_BLOCK_UNKONW"
-pasword_argon2id = "pasword_argon2id"
-pDetials = "pDetials"
-registerd = "registerd"
-registerdKeys = "registerdKeys"
-
-[workspace.metadata.typos.default.extend-words]
-SHS = "SHS"
 
 [profile.dev]
 panic = "abort"
@@ -66,7 +37,7 @@ accept-language = "3"
 actix = "0.13"
 actix-multipart = "0.8"
 actix-web = { version = "4", features = ["rustls-0_23"] }
-actix-web-lab = "0.26"
+actix-web-lab = "0.27"
 actix-web-prom = "0.10"
 ammonia = "4.1"
 arc-swap = "1.7"
@@ -77,9 +48,10 @@ atrium-api = "0.25.3"
 atrium-common = "0.1.2"
 atrium-identity = "0.1.4"
 atrium-oauth = "0.1.2"
-base64 = "0.22.0"
+base64 = "0.23"
 bincode = { version = "2", features = ["serde"] }
-brotli = "8"
+# TODO check the simd feature, see if it makes sense
+brotli = "9"
 bytes = "1.11.1"
 # update blocked by cryptr
 chacha20poly1305 = { version = "0.10", features = ["std"] }
@@ -90,7 +62,7 @@ chrono-tz = "0.10.4"
 cidr = "0.3.0"
 clap = { version = "4.6", features = ["derive", "env"] }
 colored = "3"
-constant_time_eq = "0.5"
+constant_time_eq = "0.6"
 cron = "0.17"
 cryptr = { version = "0.10", features = ["s3", "streaming"] }
 css-color = "0.2"
@@ -119,7 +91,7 @@ lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
 libflate = "2.1.0"
-maxminddb = "0.30"
+maxminddb = "0.32"
 mime = "0.3.17"
 mime_guess = "2"
 num_cpus = "1"
@@ -143,7 +115,7 @@ rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rpassword = "7.5"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
-ruma-client = { version = "0.19", features = [
+ruma-client = { version = "0.20", features = [
     "client-api", "reqwest-rustls-no-provider"
 ] }
 rusqlite = "0.40.1"
@@ -152,14 +124,14 @@ rustls = { version = "0.23.37", default-features = false, features = [
     "logging", "std", "tls12", "ring"
 ] }
 rustls-pki-types = "1.4.1"
-s3-simple = "0.8.0"
+s3-simple = "0.9"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_json_path = "0.7.1"
 serde_rusqlite = "0.43"
 serde_urlencoded = "0.7.1"
-spow = { version = "0.6", features = ["server"] }
+spow = { version = "0.7", features = ["server"] }
 strum = { version = "0.28", features = ["derive"] }
 svg-hush = "0.9.4"
 tar = "0.4.45"
@@ -182,7 +154,7 @@ utoipa = { version = "5", features = [
     "actix_extras", "chrono", "openapi_extensions"
 ] }
 utoipa-swagger-ui = { version = "9.0.0", features = ["actix-web", "vendored"] }
-validator = { version = "0.20.0", features = ["derive"] }
+validator = { version = "0.21", features = ["derive"] }
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.55"
 webauthn-rs = { version = "0.5", features = [

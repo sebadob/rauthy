@@ -243,7 +243,7 @@ export let I18nAdminFr: I18nAdmin = {
             time: 'Heure',
             targetTime: 'Heure cible',
             tune: `Important : Ces valeurs doivent être optimisées sur l'architecture finale !`,
-            pDetials: `Pour une introduction détaillée à Argon2ID, de nombreuses ressources sont disponibles en ligne.
+            pDetails: `Pour une introduction détaillée à Argon2ID, de nombreuses ressources sont disponibles en ligne.
                 Ce guide ne donne qu'un bref aperçu des valeurs. Trois d'entre elles doivent être configurées :`,
             pTune: `Elles varient en fonction des capacités du système. Plus le système est puissant,
                 plus ces valeurs peuvent être sécurisées.`,

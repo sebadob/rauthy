@@ -29,7 +29,7 @@
     <b>{ta.docs.hashing.tune}</b><br />
     {ta.docs.hashing.pTune}
 </p>
-<p>{ta.docs.hashing.pDetials}</p>
+<p>{ta.docs.hashing.pDetails}</p>
 <ul>
     <li>
         <b>m_cost</b>

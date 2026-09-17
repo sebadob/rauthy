@@ -270,9 +270,9 @@ export const I18nEn: I18n = {
         reAuthenticateOtp:
             'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Register',
-        registerd: 'Registered',
-        registerdKeys: 'Registered Keys',
-        registerdOtps: 'Registered OTPs',
+        registered: 'Registered',
+        registeredKeys: 'Registered Keys',
+        registeredOtps: 'Registered OTPs',
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 non-special characters',
         passwordInvalid: 'Password Invalid',

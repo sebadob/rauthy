@@ -46,7 +46,7 @@
     </div>
     <div class="row">
         <span class="label">
-            {t.mfa.registerd}
+            {t.mfa.registered}
         </span>
         <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
     </div>

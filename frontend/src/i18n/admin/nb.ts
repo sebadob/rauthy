@@ -233,7 +233,7 @@ export let I18nAdminNb: I18nAdmin = {
             time: 'Tid',
             targetTime: 'Mål-Tid',
             tune: 'Viktig: Disse verdiene må settes på den endelige arkitekturen!',
-            pDetials: `For en mer detaljert innføring i Argon2ID-algoritmen finnes det mange kilder på nettet.
+            pDetails: `For en mer detaljert innføring i Argon2ID-algoritmen finnes det mange kilder på nettet.
                 Her forklares bare verdiene veldig kort. De følgende tre verdiene må konfigureres:`,
             pTune: `Verdiene kan variere sterkt avhengig av systemet og den generelle systembelastningen. Jo
                 kraftigere systemet er, desto sikrere verdier kan velges.`,
