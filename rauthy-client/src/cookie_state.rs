@@ -5,6 +5,7 @@ use chacha20poly1305::{AeadCore, ChaCha20Poly1305, Key, KeyInit, Nonce};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::ops::Sub;
 use tracing::error;
 
 /// The name of the encrypted OIDC state cookie during the login flow
@@ -38,7 +39,12 @@ impl OidcCookieState {
     ) -> Result<Self, RauthyError> {
         let enc = b64_decode(state_cookie_value)?;
         let dec = Self::decrypt(&enc, enc_key)?;
-        let (slf, _) = bincode::serde::decode_from_slice(&dec, bincode::config::standard())?;
+        let (slf, _) =
+            bincode::serde::decode_from_slice::<Self, _>(&dec, bincode::config::standard())?;
+
+        if slf.timestamp < Utc::now().sub(chrono::Duration::minutes(5)) {
+            return Err(RauthyError::Request("OIDC state cookie has expired".into()));
+        }
         Ok(slf)
     }
 

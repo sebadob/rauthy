@@ -1,6 +1,5 @@
 use crate::oidc_config::{ClaimMapping, RauthyConfig};
 use crate::rauthy_error::RauthyError;
-use crate::tokens::jwks::JwksMsg;
 use crate::{DangerAcceptInvalidCerts, RauthyHttpsOnly, VERSION};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -32,7 +31,7 @@ impl OidcProviderConfig {
     async fn build_from_values(
         redirect_uri: String,
         iss: String,
-        scope: String,
+        scope: &[u8],
         client_id: String,
         allowed_audiences: HashSet<String>,
         email_verified: bool,
@@ -47,13 +46,20 @@ impl OidcProviderConfig {
         };
         let oidc_config_url = format!("{iss}{append}");
         let provider = OidcProvider::fetch(&oidc_config_url).await?;
-        // update JWKS handler
-        JwksMsg::NewJwksUri(provider.jwks_uri.clone()).send()?;
 
         let auth_endpoint = &provider.authorization_endpoint;
-        let redirect_uri_encoded = redirect_uri.replace(':', "%3A").replace('/', "%2F");
+        let client_id_encoded = percent_encoding::percent_encode(
+            client_id.as_bytes(),
+            percent_encoding::NON_ALPHANUMERIC,
+        );
+        let redirect_uri_encoded = percent_encoding::percent_encode(
+            redirect_uri.as_bytes(),
+            percent_encoding::NON_ALPHANUMERIC,
+        );
+        let scope = percent_encoding::percent_encode(scope, percent_encoding::NON_ALPHANUMERIC);
+
         let auth_url_base = format!(
-            "{auth_endpoint}?client_id={client_id}&redirect_uri={redirect_uri_encoded}&\
+            "{auth_endpoint}?client_id={client_id_encoded}&redirect_uri={redirect_uri_encoded}&\
             response_type=code&code_challenge_method=S256&scope={scope}"
         );
 
@@ -144,11 +150,11 @@ impl OidcProvider {
             issuer.push('/');
         }
 
-        let scope = config.scope.join("+");
+        let scope = config.scope.join(" ");
         let config = OidcProviderConfig::build_from_values(
             redirect_uri,
             issuer,
-            scope,
+            scope.as_bytes(),
             config.client_id,
             config.allowed_audiences,
             config.email_verified,
@@ -202,6 +208,7 @@ pub enum Algorithm {
     RS384,
     RS512,
     EdDSA,
+    Ed25519,
 }
 
 /// Rauthy-supported PKCE challenges
