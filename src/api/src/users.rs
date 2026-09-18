@@ -521,11 +521,6 @@ pub async fn post_users_register_handle(
 /// Validates a registration or password-reset redirect URI against configured clients.
 #[inline]
 async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
-    // Rauthys own relative links are always safe
-    if redirect_uri.starts_with("/") {
-        return Ok(());
-    }
-
     for uri in Client::find_all_client_uris().await? {
         let matches = match redirect_uri.strip_prefix(&uri) {
             None => false,
@@ -1255,6 +1250,7 @@ pub async fn put_user_password_reset(
     password_reset::handle_put_user_password_reset(req, path.into_inner(), payload)
         .await
         .map(|(cookie, location)| {
+            debug!("user reset redirect uri loc: {location:?}");
             if let Some(loc) = location {
                 HttpResponse::Ok()
                     .insert_header((LOCATION, loc))
@@ -2303,6 +2299,7 @@ pub async fn post_user_password_request_reset(
     {
         validate_reg_redirect_uri(redirect_uri).await?;
     }
+    debug!("Reset requested with uri: {:?}", payload.redirect_uri);
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user

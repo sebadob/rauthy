@@ -65,7 +65,7 @@
     // we can't use undefined to avoid a JSON error in the Template component
     let clientFaviconUpdated = $state(-1);
     let clientLogoUpdated = $state(-1);
-    let clientUri = $state(IS_DEV ? '/auth/v1' : '');
+    let clientUri = $state('');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
     let idpHint = useParam('idp_hint').get();
@@ -537,7 +537,10 @@
         let pow = (await fetchSolvePow()) || '';
 
         let payload: RequestResetRequest = { email, pow };
-        if (clientUri) {
+        // We don't want a redirect for Rauthy directly. Instead, leave it blank,
+        // so that the UI after a successful reset will use a relative redirect to
+        // the Account dashboard instead.
+        if (clientUri && clientId !== 'rauthy') {
             payload.redirect_uri = encodeURI(clientUri);
         }
 
