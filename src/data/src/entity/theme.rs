@@ -281,7 +281,7 @@ impl ThemeCssFull {
         }
 
         let plain = Self::plain(client_id.to_string()).await?;
-        let compressed = compress_br(plain.as_bytes())?;
+        let compressed = compress_br(plain.as_bytes()).await?;
         DB::hql()
             .put_bytes(
                 Cache::Html,
@@ -303,7 +303,7 @@ impl ThemeCssFull {
         }
 
         let plain = Self::plain(client_id.to_string()).await?;
-        let compressed = compress_gzip(plain.as_bytes())?;
+        let compressed = compress_gzip(plain.as_bytes()).await?;
         DB::hql()
             .put_bytes(
                 Cache::Html,

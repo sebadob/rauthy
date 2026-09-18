@@ -1,8 +1,9 @@
 use crate::{ReqPrincipal, map_auth_step};
+use actix_web::body::BoxBody;
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
-    CONTENT_TYPE, HeaderName, HeaderValue,
+    CONTENT_TYPE, HeaderName, HeaderValue, VARY,
 };
 use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
@@ -16,7 +17,7 @@ use rauthy_api_types::oidc::{
 };
 use rauthy_api_types::sessions::SessionState;
 use rauthy_api_types::users::{OtpLoginResponse, Userinfo, WebauthnLoginResponse};
-use rauthy_common::compression::{compress_br_dyn, compress_gzip};
+use rauthy_common::compression::{compress_br_dyn, compress_gzip_dyn};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
 };
@@ -266,18 +267,20 @@ fn build_authorize_resp(
     origin_header: Option<(HeaderName, HeaderValue)>,
     browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (body_bytes, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
-        (compress_br_dyn(body.as_bytes())?, "br")
-    } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-        (compress_gzip(body.as_bytes())?, "gzip")
+    let (body, encoding) = if accept_encoding.contains(&"gzip".parse().unwrap()) {
+        // for dynamic, fast compression, gzip wins over brotli
+        (compress_gzip_dyn(body), "gzip")
+    } else if accept_encoding.contains(&"br".parse().unwrap()) {
+        (compress_br_dyn(body), "br")
     } else {
-        (body.as_bytes().to_vec(), "none")
+        (BoxBody::new(body), "none")
     };
 
     let mut builder = HttpResponse::Ok();
     builder
         .insert_header(HEADER_HTML)
-        .insert_header(("content-encoding", encoding));
+        .insert_header(("content-encoding", encoding))
+        .insert_header((VARY, "content-encoding"));
 
     if browser_id.needs_set_new() == BrowserIdSetNew::Yes {
         builder.cookie(BrowserId::new_cookie());
@@ -301,7 +304,7 @@ fn build_authorize_resp(
             ));
     }
 
-    Ok(builder.body(body_bytes))
+    Ok(builder.body(body))
 }
 
 /// POST login credentials to proceed with the authorization_code flow

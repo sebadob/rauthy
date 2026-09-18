@@ -11,9 +11,10 @@ use crate::html::templates::{
 };
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
-use actix_web::http::header::ACCEPT_ENCODING;
+use actix_web::body::BoxBody;
+use actix_web::http::header::{ACCEPT_ENCODING, VARY};
 use actix_web::{HttpRequest, HttpResponse};
-use rauthy_common::compression::{compress_br_9, compress_br_dyn, compress_gzip};
+use rauthy_common::compression::{compress_br, compress_br_dyn, compress_gzip, compress_gzip_dyn};
 use rauthy_common::constants::HEADER_HTML;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
@@ -104,6 +105,7 @@ impl HtmlCached {
         theme_ts: i64,
         with_cache: bool,
     ) -> Result<HttpResponse, ErrorResponse> {
+        // TODO refactor the `AcceptEncoding` from `api` into `common` and re-use it here.
         let encoding = if let Some(enc) = req.headers().get(ACCEPT_ENCODING) {
             let accept = enc.to_str().unwrap_or("none");
             if accept.contains("br") {
@@ -126,6 +128,7 @@ impl HtmlCached {
             {
                 return Ok(HttpResponse::Ok()
                     .insert_header(("content-encoding", encoding))
+                    .insert_header((VARY, "content-encoding"))
                     .insert_header(HEADER_HTML)
                     .body(bytes));
             }
@@ -134,7 +137,7 @@ impl HtmlCached {
             String::default()
         };
 
-        let body = match self {
+        let html = match self {
             Self::Account => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
                 AccountHtml::build(
@@ -182,31 +185,36 @@ impl HtmlCached {
                 UserRegisterHtml::build(&lang, theme_ts, HtmlTemplate::AuthProviders(providers))
             }
         };
-        let body_bytes = match encoding {
-            "br" => {
-                if with_cache {
-                    // it's only worth the extra compute if we actually cache this response
-                    debug!("compress_br_9");
-                    compress_br_9(body.as_bytes())?
-                } else {
-                    debug!("compress_br_dyn");
-                    compress_br_dyn(body.as_bytes())?
-                }
-            }
-            // TODO lower quality gzip for dynamic content?
-            "gzip" => compress_gzip(body.as_bytes())?,
-            _ => body.as_bytes().to_vec(),
-        };
 
         if with_cache {
-            DB::hql()
-                .put_bytes(Cache::Html, cache_key, body_bytes.clone(), None)
-                .await?;
-        }
+            let bytes = match encoding {
+                "br" => compress_br(html.as_bytes()).await?,
+                "gzip" => compress_gzip(html.as_bytes()).await?,
+                _ => html.as_bytes().to_vec(),
+            };
 
-        Ok(HttpResponse::Ok()
-            .insert_header(("content-encoding", encoding))
-            .insert_header(HEADER_HTML)
-            .body(body_bytes))
+            DB::hql()
+                .put_bytes(Cache::Html, cache_key, bytes.clone(), None)
+                .await?;
+
+            Ok(HttpResponse::Ok()
+                .insert_header(("content-encoding", encoding))
+                .insert_header((VARY, "content-encoding"))
+                .insert_header(HEADER_HTML)
+                .body(bytes))
+        } else {
+            let body = match encoding {
+                // gzip wins over brotli for dynamic, fast compression
+                "gzip" => compress_gzip_dyn(html),
+                "br" => compress_br_dyn(html),
+                _ => BoxBody::new(html),
+            };
+
+            Ok(HttpResponse::Ok()
+                .insert_header(("content-encoding", encoding))
+                .insert_header((VARY, "content-encoding"))
+                .insert_header(HEADER_HTML)
+                .body(body))
+        }
     }
 }

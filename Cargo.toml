@@ -44,14 +44,13 @@ arc-swap = "1.7"
 argon2 = { version = "0.5", features = ["std", "zeroize"] }
 askama = "0.16"
 async-trait = "0.1.74"
+async-compression = { version = "0.4.41", features = ["brotli", "gzip", "tokio"] }
 atrium-api = "0.25.3"
 atrium-common = "0.1.2"
 atrium-identity = "0.1.4"
 atrium-oauth = "0.1.2"
 base64 = "0.23"
 bincode = { version = "2", features = ["serde"] }
-# TODO check the simd feature, see if it makes sense
-brotli = "9"
 bytes = "1.11.1"
 # update blocked by cryptr
 chacha20poly1305 = { version = "0.10", features = ["std"] }
@@ -90,7 +89,6 @@ itertools = "0.15"
 lettre = { version = "0.11", default-features = false, features = [
     "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
 ] }
-libflate = "2.1.0"
 maxminddb = "0.32"
 mime = "0.3.17"
 mime_guess = "2"
@@ -150,6 +148,7 @@ tracing-subscriber = { version = "0.3", features = [
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7.10", features = ["with-chrono-0_4"] }
 tokio-postgres-rustls = { version = "0.14", features = [] }
+tokio-util = { version = "0.7.18", features = ["rt"] }
 utoipa = { version = "5", features = [
     "actix_extras", "chrono", "openapi_extensions"
 ] }

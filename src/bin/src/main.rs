@@ -6,9 +6,10 @@ use std::env;
 use std::error::Error;
 
 #[cfg(all(
+    not(feature = "profiling"),
     feature = "jemalloc",
     not(target_env = "msvc"),
-    not(target_os = "openbsd")
+    not(target_os = "openbsd"),
 ))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -41,9 +42,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 )
                 .await?
             } else {
-                #[cfg(debug_assertions)]
+                #[cfg(any(debug_assertions, feature = "profiling"))]
                 let test_mode = args.test;
-                #[cfg(not(debug_assertions))]
+                #[cfg(not(any(debug_assertions, feature = "profiling")))]
                 let test_mode = false;
                 server::run(args.config_file, args.secrets_file, test_mode).await?
             }

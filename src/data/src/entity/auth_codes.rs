@@ -2,7 +2,6 @@ use crate::database::{Cache, DB};
 use crate::entity::clients::Client;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
-use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -79,7 +78,7 @@ impl AuthCode {
     // Claims an Authorization code from the cache
     pub async fn find_remove(id: String) -> Result<Option<Self>, ErrorResponse> {
         #[cfg(debug_assertions)]
-        if !RAUTHY_VERSION.starts_with("0.37.") {
+        if !rauthy_common::constants::RAUTHY_VERSION.starts_with("0.37.") {
             todo!("Cleanup AuthCode::find_remove() and remove AuthCodeOld");
         }
 

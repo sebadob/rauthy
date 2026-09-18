@@ -59,7 +59,7 @@ pub async fn run(
     )
     .await?;
     rauthy_config.init_static();
-    init_static_vars::trigger();
+    init_static_vars::trigger().await;
 
     if !logging::is_log_fmt_json() {
         println!(

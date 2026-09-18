@@ -1,6 +1,6 @@
 use crate::ReqPrincipal;
 use actix_web::http::header;
-use actix_web::http::header::{AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
+use actix_web::http::header::{AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, HeaderValue, VARY};
 use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
 use chrono::Utc;
@@ -10,7 +10,6 @@ use rauthy_api_types::generic::{
     HealthResponse, I18nConfigResponse, LoginTimeResponse, PasswordHashTimesRequest,
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
-use rauthy_common::compression::compress_br;
 use rauthy_common::constants::{
     APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
     PWD_CSRF_HEADER, RAUTHY_VERSION,
@@ -35,7 +34,7 @@ use semver::Version;
 use std::fmt::Write;
 use std::ops::Sub;
 use std::str::FromStr;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
 use tracing::{error, info, warn};
 use validator::Validate;
 
@@ -68,15 +67,16 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     serde_json::to_string(&I18nConfigResponse { common, admin }).unwrap()
 });
 
-pub static TIMEZONES_BR: LazyLock<Vec<u8>> = LazyLock::new(|| {
-    let zones = chrono_tz::TZ_VARIANTS
-        .iter()
-        .map(|tz| tz.name())
-        .collect::<Vec<_>>();
-
-    let json = serde_json::to_string(&zones).unwrap();
-    compress_br(json.as_bytes()).unwrap()
-});
+pub static TIMEZONES_BR: OnceLock<Vec<u8>> = OnceLock::new();
+// pub static TIMEZONES_BR: LazyLock<Vec<u8>> = LazyLock::new(|| {
+//     let zones = chrono_tz::TZ_VARIANTS
+//         .iter()
+//         .map(|tz| tz.name())
+//         .collect::<Vec<_>>();
+//
+//     let json = serde_json::to_string(&zones).unwrap();
+//     compress_br(json.as_bytes()).await.unwrap()
+// });
 
 /// Check if the current session is valid
 #[utoipa::path(
@@ -419,8 +419,9 @@ pub async fn get_timezones(accept_encoding: web::Header<header::AcceptEncoding>)
             // caches for 30 days - Timezones are almost never updated
             .insert_header(("cache-control", "max-age=2592000; public"))
             .insert_header(("content-encoding", "br"))
+            .insert_header((VARY, "content-encoding"))
             .content_type(APPLICATION_JSON)
-            .body(TIMEZONES_BR.as_slice())
+            .body(TIMEZONES_BR.get().unwrap().as_slice())
     } else {
         let zones = chrono_tz::TZ_VARIANTS
             .iter()

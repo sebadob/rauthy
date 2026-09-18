@@ -21,7 +21,7 @@ use tracing::{debug, warn};
 /// initialized.
 ///
 /// Excludes some values that are probably not used in most standard scenarios.
-pub fn trigger() {
+pub async fn trigger() {
     let vars = &RauthyConfig::get().vars;
     // special handling for some to avoid circular dependencies
     {
@@ -172,10 +172,18 @@ pub fn trigger() {
     let _ = *RE_TOKEN_ENDPOINT_AUTH_METHOD;
 
     // lazy values in other places
-    let _ = *BROTLI_PARAMS;
-    let _ = *BROTLI_PARAMS_9;
-    let _ = *BROTLI_PARAMS_DYN;
+    // let _ = *BROTLI_PARAMS;
+    // let _ = *BROTLI_PARAMS_9;
+    // let _ = *BROTLI_PARAMS_DYN;
 
     let _ = *I18N_CONFIG;
-    let _ = *TIMEZONES_BR;
+
+    let zones = chrono_tz::TZ_VARIANTS
+        .iter()
+        .map(|tz| tz.name())
+        .collect::<Vec<_>>();
+
+    let json = serde_json::to_string(&zones).unwrap();
+    let data = compress_br(json.as_bytes()).await.unwrap();
+    TIMEZONES_BR.set(data.clone()).unwrap();
 }
