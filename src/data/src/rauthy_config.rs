@@ -4400,37 +4400,37 @@ pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
     }
 }
 
-/// Parses the given input into a type-safe `Duration`. The input can have the following suffxies:
-/// - s -> seconds
-/// - m -> minutes
-/// - h -> hours
-/// - d -> days
-/// - w -> weeks
-/// - y -> years
-fn parse_duration(input: &str) -> Option<Duration> {
-    if input.is_empty() {
-        return None;
-    }
-    let (value, unit) = input.split_at(input.len() - 1);
-
-    let mul = match unit {
-        "s" | "S" => 1,
-        "m" | "M" => 60,
-        "h" | "H" => 60 * 60,
-        "d" | "D" => 60 * 60 * 24,
-        "w" | "W" => 60 * 60 * 24 * 7,
-        "y" | "Y" => 60 * 60 * 24 * 365,
-        // We will parse an integer given a string as seconds. If it's any thing else than a
-        // digit, the value parsing in the next step will fail anyway.
-        _ => 1,
-    };
-
-    value
-        .trim()
-        .parse::<u64>()
-        .ok()
-        .map(|v| Duration::from_secs(v.saturating_mul(mul)))
-}
+// /// Parses the given input into a type-safe `Duration`. The input can have the following suffxies:
+// /// - s -> seconds
+// /// - m -> minutes
+// /// - h -> hours
+// /// - d -> days
+// /// - w -> weeks
+// /// - y -> years
+// fn parse_duration(input: &str) -> Option<Duration> {
+//     if input.is_empty() {
+//         return None;
+//     }
+//     let (value, unit) = input.split_at(input.len() - 1);
+//
+//     let mul = match unit {
+//         "s" | "S" => 1,
+//         "m" | "M" => 60,
+//         "h" | "H" => 60 * 60,
+//         "d" | "D" => 60 * 60 * 24,
+//         "w" | "W" => 60 * 60 * 24 * 7,
+//         "y" | "Y" => 60 * 60 * 24 * 365,
+//         // We will parse an integer given a string as seconds. If it's any thing else than a
+//         // digit, the value parsing in the next step will fail anyway.
+//         _ => 1,
+//     };
+//
+//     value
+//         .trim()
+//         .parse::<u64>()
+//         .ok()
+//         .map(|v| Duration::from_secs(v.saturating_mul(mul)))
+// }
 
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
     let value = map.remove(key);
@@ -4454,57 +4454,57 @@ fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Opti
     Some(b)
 }
 
-fn t_duration(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<Duration> {
-    let value = map.remove(key);
-
-    if !env_var.is_empty()
-        && let Ok(v) = env::var(env_var)
-    {
-        match parse_duration(&v) {
-            None => {
-                panic!(
-                    "{}",
-                    err_env(
-                        env_var,
-                        "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
-                    )
-                );
-            }
-            Some(d) => return Some(d),
-        }
-    }
-
-    match value? {
-        Value::String(s) => match parse_duration(&s) {
-            None => {
-                panic!(
-                    "{}",
-                    err_t(
-                        env_var,
-                        parent,
-                        "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
-                    )
-                )
-            }
-            Some(d) => Some(d),
-        },
-        Value::Integer(i) => {
-            if i < 0 {
-                None
-            } else {
-                Some(Duration::from_secs(i as u64))
-            }
-        }
-        _ => panic!(
-            "{}",
-            err_t(
-                env_var,
-                parent,
-                "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
-            )
-        ),
-    }
-}
+// fn t_duration(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<Duration> {
+//     let value = map.remove(key);
+//
+//     if !env_var.is_empty()
+//         && let Ok(v) = env::var(env_var)
+//     {
+//         match parse_duration(&v) {
+//             None => {
+//                 panic!(
+//                     "{}",
+//                     err_env(
+//                         env_var,
+//                         "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
+//                     )
+//                 );
+//             }
+//             Some(d) => return Some(d),
+//         }
+//     }
+//
+//     match value? {
+//         Value::String(s) => match parse_duration(&s) {
+//             None => {
+//                 panic!(
+//                     "{}",
+//                     err_t(
+//                         env_var,
+//                         parent,
+//                         "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
+//                     )
+//                 )
+//             }
+//             Some(d) => Some(d),
+//         },
+//         Value::Integer(i) => {
+//             if i < 0 {
+//                 None
+//             } else {
+//                 Some(Duration::from_secs(i as u64))
+//             }
+//         }
+//         _ => panic!(
+//             "{}",
+//             err_t(
+//                 env_var,
+//                 parent,
+//                 "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
+//             )
+//         ),
+//     }
+// }
 
 fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<i64> {
     let value = map.remove(key);
@@ -4634,46 +4634,46 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     format!("Expected type `{typ}` for {parent}{sep}{key}")
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_duration() {
-        assert_eq!(parse_duration("1s").unwrap(), Duration::from_secs(1));
-        assert_eq!(parse_duration("2s").unwrap(), Duration::from_secs(2));
-        assert_eq!(parse_duration("1m").unwrap(), Duration::from_secs(60));
-        assert_eq!(parse_duration("2m").unwrap(), Duration::from_secs(120));
-        assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
-        assert_eq!(parse_duration("2h").unwrap(), Duration::from_secs(2 * 3600));
-        assert_eq!(
-            parse_duration("1d").unwrap(),
-            Duration::from_secs(24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2d").unwrap(),
-            Duration::from_secs(2 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("1w").unwrap(),
-            Duration::from_secs(7 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2w").unwrap(),
-            Duration::from_secs(14 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("1y").unwrap(),
-            Duration::from_secs(365 * 24 * 3600)
-        );
-        assert_eq!(
-            parse_duration("2y").unwrap(),
-            Duration::from_secs(2 * 365 * 24 * 3600)
-        );
-
-        // no value will be read as seconds
-        assert_eq!(parse_duration("3").unwrap(), Duration::from_secs(3));
-        // invalid value is non
-        assert_eq!(parse_duration("3x"), None);
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[test]
+//     fn test_parse_duration() {
+//         assert_eq!(parse_duration("1s").unwrap(), Duration::from_secs(1));
+//         assert_eq!(parse_duration("2s").unwrap(), Duration::from_secs(2));
+//         assert_eq!(parse_duration("1m").unwrap(), Duration::from_secs(60));
+//         assert_eq!(parse_duration("2m").unwrap(), Duration::from_secs(120));
+//         assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
+//         assert_eq!(parse_duration("2h").unwrap(), Duration::from_secs(2 * 3600));
+//         assert_eq!(
+//             parse_duration("1d").unwrap(),
+//             Duration::from_secs(24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("2d").unwrap(),
+//             Duration::from_secs(2 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("1w").unwrap(),
+//             Duration::from_secs(7 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("2w").unwrap(),
+//             Duration::from_secs(14 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("1y").unwrap(),
+//             Duration::from_secs(365 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("2y").unwrap(),
+//             Duration::from_secs(2 * 365 * 24 * 3600)
+//         );
+//
+//         // no value will be read as seconds
+//         assert_eq!(parse_duration("3").unwrap(), Duration::from_secs(3));
+//         // invalid value is non
+//         assert_eq!(parse_duration("3x"), None);
+//     }
+// }
