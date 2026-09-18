@@ -449,13 +449,6 @@ impl AuthProvider {
     }
 
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
-        if req.issuer == PROVIDER_ATPROTO {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Must not contain a reserved name",
-            ));
-        }
-
         let scope = Self::cleanup_scope(&req.scope);
         let secret = Self::secret_encrypted(&req.client_secret)?;
 

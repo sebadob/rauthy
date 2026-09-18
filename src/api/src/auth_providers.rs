@@ -10,7 +10,7 @@ use rauthy_api_types::auth_providers::{
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::generic::LogoParams;
 use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
-use rauthy_common::constants::HEADER_JSON;
+use rauthy_common::constants::{HEADER_JSON, PROVIDER_ATPROTO};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderLinkCookie, AuthProviderTemplate,
@@ -75,6 +75,13 @@ pub async fn post_provider(
     principal
         .validate_api_key_or_admin_session(AccessGroup::AuthProviders, AccessRights::Create)?;
     payload.validate()?;
+
+    if payload.issuer == PROVIDER_ATPROTO {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must not contain a reserved name",
+        ));
+    }
 
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
@@ -289,6 +296,13 @@ pub async fn put_provider(
     principal
         .validate_api_key_or_admin_session(AccessGroup::AuthProviders, AccessRights::Update)?;
     payload.validate()?;
+
+    if payload.issuer == PROVIDER_ATPROTO {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must not contain a reserved name",
+        ));
+    }
 
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(

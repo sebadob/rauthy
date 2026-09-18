@@ -71,7 +71,6 @@
     let idpHint = useParam('idp_hint').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
 
-    let refEmail: undefined | HTMLInputElement = $state();
     let refPassword: undefined | HTMLInputElement = $state();
 
     let stateParam = useParam('state').get();
@@ -118,12 +117,6 @@
 
     let hasAutoLoggedIn = false;
     let showModalUpdate = $state(false);
-
-    onMount(() => {
-        if (!needsPassword) {
-            refEmail?.focus();
-        }
-    });
 
     $effect(() => {
         if (
@@ -639,7 +632,6 @@
                                 />
                             {:else}
                                 <Input
-                                    bind:ref={refEmail}
                                     typ="email"
                                     name="email"
                                     bind:value={email}
@@ -707,19 +699,6 @@
                                         {t.authorize.login}
                                     </Button>
                                 </div>
-                                <div class="btn flex-col">
-                                    <Button
-                                        level={2}
-                                        ariaLabel={t.authorize.login}
-                                        onclick={onPasskeyDiscover}
-                                        {isLoading}
-                                    >
-                                        <div class="flex gap-05">
-                                            <IconKey width="1.2rem" />
-                                            Passkey
-                                        </div>
-                                    </Button>
-                                </div>
                                 {#if isAtproto}
                                     <div class="btn flex-col">
                                         <Button
@@ -779,7 +758,7 @@
                     <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
-                {#if !clientMfaForce && providers.length > 0 && !isAtproto}
+                {#if !clientMfaForce && !isAtproto}
                     <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -789,6 +768,21 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="btn flex-col">
+                            <Button
+                                level={2}
+                                ariaLabel={t.authorize.login}
+                                onclick={onPasskeyDiscover}
+                                {isLoading}
+                            >
+                                <div class="flex gap-05">
+                                    <IconKey width="1.2rem" />
+                                    Passkey
+                                </div>
+                            </Button>
+                        </div>
+
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider
                                 ariaLabel={`Login: ${provider.name}`}
@@ -895,8 +889,7 @@
     }
 
     .providersSeparator {
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
+        margin: 1rem 0 -0.5rem 0;
     }
 
     .separator {
