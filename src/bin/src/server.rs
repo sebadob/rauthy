@@ -59,7 +59,7 @@ pub async fn run(
     )
     .await?;
     rauthy_config.init_static();
-    init_static_vars::trigger();
+    init_static_vars::trigger().await;
 
     if !logging::is_log_fmt_json() {
         println!(
@@ -274,7 +274,20 @@ async fn server_with_metrics() -> std::io::Result<()> {
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services())
-            .service(generic::catch_all);
+            // Register the catch-all for every standard HTTP method, so that non-GET scan
+            // requests (POST/PUT/...) are also caught by the pre-blacklisting in `catch_all`
+            // instead of just receiving a 405 Method Not Allowed.
+            .service(
+                web::resource("/{_:.*}")
+                    .route(web::get().to(generic::catch_all))
+                    .route(web::post().to(generic::catch_all))
+                    .route(web::put().to(generic::catch_all))
+                    .route(web::delete().to(generic::catch_all))
+                    .route(web::head().to(generic::catch_all))
+                    // no `web::options()` helper exists in actix-web, use the generic method route
+                    .route(web::method(actix_web::http::Method::OPTIONS).to(generic::catch_all))
+                    .route(web::patch().to(generic::catch_all)),
+            );
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
@@ -361,7 +374,20 @@ async fn server_without_metrics() -> std::io::Result<()> {
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services())
-            .service(generic::catch_all);
+            // Register the catch-all for every standard HTTP method, so that non-GET scan
+            // requests (POST/PUT/...) are also caught by the pre-blacklisting in `catch_all`
+            // instead of just receiving a 405 Method Not Allowed.
+            .service(
+                web::resource("/{_:.*}")
+                    .route(web::get().to(generic::catch_all))
+                    .route(web::post().to(generic::catch_all))
+                    .route(web::put().to(generic::catch_all))
+                    .route(web::delete().to(generic::catch_all))
+                    .route(web::head().to(generic::catch_all))
+                    // no `web::options()` helper exists in actix-web, use the generic method route
+                    .route(web::method(actix_web::http::Method::OPTIONS).to(generic::catch_all))
+                    .route(web::patch().to(generic::catch_all)),
+            );
 
         #[cfg(not(target_os = "windows"))]
         if matches!(

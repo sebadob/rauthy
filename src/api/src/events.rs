@@ -4,7 +4,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder, get, post};
 use actix_web_lab::sse;
 use chrono::Utc;
 use rauthy_api_types::events::{EventResponse, EventsListenParams, EventsRequest};
-use rauthy_common::utils::real_ip_from_req;
+use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::events::event::Event;
 use rauthy_data::events::listener::EventRouterMsg;
@@ -75,6 +75,12 @@ pub async fn sse_events(
     params.validate()?;
 
     let ip = real_ip_from_req(&req)?.to_string();
+    // each SSE connection gets a random id as its routing key, since multiple connections can
+    // share the same remote IP (e.g. multiple browser tabs) and must not replace each other
+    let client_id = get_rand(16);
+    // who is listening: the session user or the API key name, for router logging
+    let user_id = principal.session.as_ref().and_then(|s| s.user_id.clone());
+    let api_key_name = principal.api_key.as_ref().map(|k| k.name.clone());
     let params = params.into_inner();
     let (tx, rx) = mpsc::channel(10);
 
@@ -82,7 +88,10 @@ pub async fn sse_events(
     if let Err(err) = RauthyConfig::get()
         .tx_events_router
         .send_async(EventRouterMsg::ClientReg {
+            client_id,
             ip,
+            user_id,
+            api_key_name,
             tx,
             latest: params.latest,
             level,

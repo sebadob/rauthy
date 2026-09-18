@@ -66,6 +66,27 @@ WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
         Ok(())
     }
 
+    pub async fn delete_by(
+        client_id: String,
+        sub: Option<String>,
+        sid: Option<String>,
+    ) -> Result<(), ErrorResponse> {
+        let sub = sub.unwrap_or_default();
+        let sid = sid.unwrap_or_default();
+
+        let sql = r#"
+DELETE FROM failed_backchannel_logouts
+WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
+
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(client_id, sub, sid)).await?;
+        } else {
+            DB::pg_execute(sql, &[&client_id, &sub, &sid]).await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn delete_all_by_client(client_id: String) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM failed_backchannel_logouts WHERE client_id = $1";
         if is_hiqlite() {

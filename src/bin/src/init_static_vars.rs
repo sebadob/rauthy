@@ -21,7 +21,7 @@ use tracing::{debug, warn};
 /// initialized.
 ///
 /// Excludes some values that are probably not used in most standard scenarios.
-pub fn trigger() {
+pub async fn trigger() {
     let vars = &RauthyConfig::get().vars;
     // special handling for some to avoid circular dependencies
     {
@@ -98,13 +98,18 @@ pub fn trigger() {
             _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
         };
 
+        #[cfg(debug_assertions)]
+        let https_only = !(vars.http_client.danger_unencrypted || vars.dev.dev_mode);
+        #[cfg(not(debug_assertions))]
+        let https_only = !vars.http_client.danger_unencrypted;
+
         let mut builder = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(vars.http_client.connect_timeout as u64))
             .timeout(Duration::from_secs(vars.http_client.request_timeout as u64))
             .pool_idle_timeout(Duration::from_secs(vars.http_client.idle_timeout as u64))
             .min_tls_version(tls_version)
             .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
-            .https_only(!vars.http_client.danger_unencrypted || !vars.dev.dev_mode)
+            .https_only(https_only)
             .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode)
             .use_rustls_tls();
 
@@ -138,6 +143,7 @@ pub fn trigger() {
     let _ = *RE_ATTR;
     let _ = *RE_ATTR_DESC;
     let _ = *RE_BASE64;
+    let _ = *RE_BASE64_NO_PAD;
     let _ = *RE_CODE_CHALLENGE_METHOD;
     let _ = *RE_CITY;
     if vars.ephemeral_clients.enable {
@@ -151,6 +157,7 @@ pub fn trigger() {
     let _ = *RE_CSS_VALUE_LOOSE;
     let _ = *RE_DATE_STR;
     let _ = *RE_GROUPS;
+    let _ = *RE_KV_KEY;
     let _ = *RE_ROLES_SCOPES;
     let _ = *RE_LOWERCASE;
     let _ = *RE_LOWERCASE_SPACE;
@@ -165,10 +172,18 @@ pub fn trigger() {
     let _ = *RE_TOKEN_ENDPOINT_AUTH_METHOD;
 
     // lazy values in other places
-    let _ = *BROTLI_PARAMS;
-    let _ = *BROTLI_PARAMS_9;
-    let _ = *BROTLI_PARAMS_DYN;
+    // let _ = *BROTLI_PARAMS;
+    // let _ = *BROTLI_PARAMS_9;
+    // let _ = *BROTLI_PARAMS_DYN;
 
     let _ = *I18N_CONFIG;
-    let _ = *TIMEZONES_BR;
+
+    let zones = chrono_tz::TZ_VARIANTS
+        .iter()
+        .map(|tz| tz.name())
+        .collect::<Vec<_>>();
+
+    let json = serde_json::to_string(&zones).unwrap();
+    let data = compress_br(json.as_bytes()).await.unwrap();
+    TIMEZONES_BR.set(data.clone()).unwrap();
 }

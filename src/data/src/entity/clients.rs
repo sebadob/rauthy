@@ -1525,7 +1525,7 @@ impl Client {
         if !self.confidential {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
+                ErrorResponseType::Unauthorized,
                 "Cannot validate 'client_secret' for public client",
             ));
         }
@@ -1996,6 +1996,12 @@ impl Client {
             validate_dyn_redirect_uri(uri)?;
             redirect_uris.push(uri.clone());
         }
+        if redirect_uris.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'redirect_uris' must not be empty",
+            ));
+        }
 
         let post_logout_redirect_uri = req.post_logout_redirect_uri.filter(|uri| !uri.is_empty());
         if let Some(uri) = &post_logout_redirect_uri {
@@ -2041,7 +2047,7 @@ impl Client {
 
         let redirect_uris = self.get_redirect_uris();
         let grant_types = self.get_flows();
-        let post_logout_redirect_uri = self.get_redirect_uris().first().cloned();
+        let post_logout_redirect_uri = self.get_post_logout_uris().map(|mut u| u.swap_remove(0));
 
         let client_secret = self.get_secret_cleartext()?;
         let (registration_access_token, registration_client_uri) = if map_registration_client_uri {

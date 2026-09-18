@@ -10,6 +10,8 @@ description.workspace = true
 default = ["jemalloc"]
 jemalloc = ["dep:tikv-jemallocator"]
 
+profiling = []
+
 [dependencies]
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
@@ -24,6 +26,7 @@ actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
 argon2 = { workspace = true }
 chrono = { workspace = true }
+chrono-tz = { workspace = true }
 cidr = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }

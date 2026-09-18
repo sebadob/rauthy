@@ -4,6 +4,19 @@
 
 ### Breaking
 
+#### Config Values Renamed
+
+There were config values that had typos. They were not fixed earlier, because that would have been a
+breaking change for each single one of them. Because this version comes with improved lifetime or
+duration configuration, we needed to rename quite a few of them anyway, so it made sense to do all
+of these in one batch. Make sure to update your config, if you used any of these. Values in all
+capital letters and snake_case are env vars.
+
+| Old Name         | New Name          | 
+|------------------|-------------------|
+| GEO_BLOCK_UNKONW | GEO_BLOCK_UNKNOWN |
+| pasword_argon2id | password_argon2id |
+
 #### SMTP Setup Rework
 
 Setting up SMTP connections was found to be a bit misleading or hard to debug. By default, implicit
@@ -47,7 +60,123 @@ smtp_tls_mode = 'tls'
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
 
+#### KV Store Validation
+
+The regex for KV store keys was made quite a bit more strict. This was necessary since the key is
+used as a path segment in API calls. This is only important when you used the KV store API manually.
+
+The validation is now the following:
+
+```
+r"^[a-zA-Z0-9-._~]{2,64}$"
+```
+
+#### Forward Auth `redirect_state`
+
+The `redirect_state` query param used in Forward Auth is now limited to codes of 300 - 599. By
+default, a success will always return a 200 anyway, so there is no need to overwrite it. The reason
+is to prevent dynamic proxy configs from potentially forwarding this value from a client, which
+tries to spoof a value that usually only the reverse proxy should ever set.
+
 ### Changes
+
+#### Security Hardening and General Stability
+
+First, this is not a security release in the sense that there were any real issues, but the security
+and usability was improved in lots of places with small changes:
+
+- The login delay handler that delays login responses on failed authentication, and takes care of IP
+  blacklisting, now combines the already existing per-IP-counter with the
+  `user.failed_login_attempts`. It will use which ever values is higher. With this attempt, you
+  won't see a change in behavior when a single IP is doing multiple failed logins for a single user,
+  because their counters will always match, but Rauthy will be able to catch a distributed
+  brute-force for a single user more quickly. For instance, when you use a botnet trying to break in
+  to a user account, and each bot only checks a hand ful of passwords, the per-IP approach is not
+  sufficient. This new one catches each single one of them after the first try, and will blacklist
+  them immediately.
+- The 2-step `authorization_code` flow made sure that a user is enabled and has not expired during
+  the first step, before any auth code would be sent out. The token exachange usually comes directly
+  afterwards, but the client also had a small window to exchange this code (configured via
+  `client.auth_code_lifetime`). If a user is disabled or expires between between these 2 steps, the
+  auth code is being rejected now. Technically, the code itself is valid, but an additional check
+  makes the process more strict.
+- The rejections during login when a user has either expired or was disabled were moved after the
+  password check. The error types of both are being forwarded to the UI for best UX, so the user
+  knows the credentials were okay, but their account was just disabled. Technically, this could have
+  been abused for username enumeration, but only for disabled accounts, which are no attack target.
+  This message is now only shown to actually authenticated users.
+- The `redirect_uri` comparison during `POST /token` is now an exact match against the one that was
+  used during `/authroize`. This makes us match exactly the RFC. This is not really a security issue
+  (at least not on Rauthys side), but an additional defense in depht for vulnerable clients that
+  have issues on their side. There is usually nothing Rauthy can do about it when your client is
+  vulnerable, but in this case it may help in a very niche situation. There will be a security
+  advisory about it in the upcoming weeks.
+- The Credential Stuffing Detection feature exists since some versions now, but it only worked for
+  the `authorization_code` flow (which is used in almost all cases). If you however need the
+  `password` flow for a client for some reason (you typically don't), the same mechanism will be
+  triggered now as well. This means you get the detection across the boundaries of different auth
+  flows.
+- The internal `Session::set_authenticated()` has an additional check to prevent reviving logged-out
+  sessions during a race condition, e.g. when the user does a concurrent login on a different
+  device.
+- The login UI has a fast-path for when a user provided the email, but still needs to add the
+  password. This behavior exists to properly prevent login CSRF. However, there was a tiny time diff
+  between "user does not exist" and "user needs to provide a password" returns. In the real world,
+  you will most probably not be able to measure any timing differences, but the window is measured
+  now with each login, and a artificial delay is applied to the "user does not exist" fast-path to
+  make it impossible.
+- Validating and refreshing tokens was improved in a way that the initial token fetch from the DB
+  was made atomic in combination with a direct deletion. Never seen in the real world, but if you
+  did 2 concurrent refresh requests within a couple hundred microseconds, you might have been able
+  to refresh twice. To make something like this happen, you would need to trigger a refresh from the
+  exact same device and even process, and you would not get any elevated access, but it was still
+  theoretically possible.
+  This immediate deletion also makes the whole process more strict if anything about the request was
+  malformed or unexpected.
+- When a client does not respect the rate-limiting during polls for a pending device code, the code
+  is now deleted after 3 violations.
+- The `access.token_revoke_device_tokens` config setting is now being respected during *Delete All
+  Sessions Everywhere* triggered via the Admin UI, and when doing a force-logout for a user. If set,
+  it will in addition to the normal ones invalidate all possibly existing **Device** Refresh Tokens.
+  Keep in mind that you usually don't want this when you have IoT devices with limited capabilities,
+  that are cumbersome to log in because of limited capabilities. You could still log them out
+  manually if necessary.
+  A force-logout for all user sessions did also revoke all device tokens before, which made it
+  impossible to remove device tokens from this endpoint with the config variable.
+  `access.token_revoke_device_tokens` also got lost when a user does a dedicated logout via the
+  account dashboard. This was a bug, and it was added back in.
+- Even though very unlikely, it was possible to get into a race condition during `device_code`
+  authentication. It was never seen in the real world. However, it was theoretically possible that a
+  stale cache update overwrote a user-approval for a device login when it exactly overlaps with a
+  concurrent device poll that waits for exactly that approval.
+- When a client has 'Force MFA' and the `password` auth flow enabled at the same time, the UI will
+  now show a warning to make it very clear that the `password` flow cannot validate or even enforce
+  MFA. This is nothing new and it's due to the way it works. In fact, Rauthy even MUST NOT request
+  any MFA here to be compliant with the OIDC RFC. This is documented, but the UI highlights this
+  in addition.
+- Even though it's impossible to measure any differences in Rauthy (especially over the network),
+  more constant-time comparisons were added in mutliple places. In the real world, all of these
+  don't make any (!) mesaurable difference, and a timing attack would not be possible. Rust already
+  uses SIMD and other heavy optimizations for comparisons, that even when we were doing a simple
+  `==` comparison, it was impossible to measure a difference even when running inside the exact same
+  process. However, I received a few AI reports about it, and even though not a single one of them
+  was able to explopit it (of course not), I changed these comparisons because of best practice, and
+  to not get annoyed any more.
+- Webauthn Auth start and finish via PAM now requires a valid host + secret. This prevents resource
+  exhaustiong attacks, because every auth start will consume memory in the form of cached data.
+- The parsing function for SSH keys was hardened as well. This was no security issue, because a user
+  would only be able to trigger a self-lockout from hosts with a specifically crafted SSH key, but
+  it's at least a UX improvement. At the same time, more modern types of SSH keys are now allowed as
+  well.
+- SCIM operartions have been made more robust and fault-tolerant in general.
+- Backchannel logouts + retries have been made more robust for certain edge cases.
+- SSE Events dropped the per-IP keys, so they don't evict each other all the time, and has improved
+  logging now with better information and insight both for debugging and / or auditing.
+- Public KV store GETs for a key, that are not a JSON value, now return `text/plain` instead of
+  `text/html`. This removed the possibility for an Admin to theoretically store a self-XSS on
+  Rauthys own origin, and it basically a protection from a malicious admin.
+- In general, lots of tiny fixes that either convert a `panic` (mostly unreachable anyway) into an
+  `Err(_)`, or things about normalizing error responses, and so on.
 
 #### Discoverable Credentials
 
@@ -207,10 +336,18 @@ password_exp_days = 10
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
 
+#### `resource` is carried through Auth Provider logins
+
+RFC 8707: `resource` is now carried through upstream-provider logins. This fixes e.g. Claude's MCP
+connector in combination with Upstream Auth Providers.
+
+[#1703](https://github.com/sebadob/rauthy/pull/1703)
+
 #### API Key Passkey Deletion
 
-API Keys with `Users` + `Delete` can now call
-`DELETE /auth/v1/users/{id}/webauthn/delete/{name}`.
+API Keys with `Users` + `Delete` can now call `DELETE /auth/v1/users/{id}/webauthn/delete/{name}`.
+
+[#1713](https://github.com/sebadob/rauthy/pull/1713)
 
 [#1713](https://github.com/sebadob/rauthy/pull/1713)
 
@@ -221,6 +358,9 @@ API Keys with `Users` + `Delete` can now call
   [#1706](https://github.com/sebadob/rauthy/pull/1706)
 - Theme validation checked `accent` twice and never validated `action`.
   [#1706](https://github.com/sebadob/rauthy/pull/1706)
+- The SSE event listeners were keyed by IP internally. This was a left-over from the very old days.
+  The issue with this was that it was not possible to listen from multiple sources that share the
+  same IP without them evicting each other all the time.
 
 ## v0.36.2
 
@@ -2759,7 +2899,7 @@ country and depending on the chosen DB type also the city will be added to the E
 # set this to `true`.
 #
 # default: false
-# overwritten by: GEO_BLOCK_UNKONW
+# overwritten by: GEO_BLOCK_UNKNOWN
 block_unknown = false
 
 # If you have a WAF or CDN which injects a geoloaction header

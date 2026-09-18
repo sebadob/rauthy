@@ -81,7 +81,10 @@
                 tos_ts: tos.ts,
             };
             let res = await fetchPost<undefined>('/auth/v1/tos/accept', payload);
-            // TODO handle accept code expiration
+            if (res.error) {
+                onCancel();
+                return;
+            }
             await onToSAccept(res);
         } else {
             await onToSAccept();
@@ -105,11 +108,11 @@
             tos_ts: tos.ts,
         };
         let res = await fetchPost<undefined>('/auth/v1/tos/deny', payload);
-        // TODO handle accept code expiration
 
         if (res.error) {
             // this should never happen because of our pre-checks
             tos.opt_until = undefined;
+            onCancel();
         } else {
             closeModal?.();
             await onToSAccept(res);

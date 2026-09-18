@@ -58,13 +58,7 @@ impl JwtToken {
         if header.typ != "JWT" && header.typ != "at+jwt" {
             return Err(RauthyError::InvalidJwt("Invalid JWT Header `typ`"));
         }
-        let jwk = JwkPublicKey::get_for_token(token).await?;
-        if jwk.alg != header.alg {
-            return Err(RauthyError::JWK(
-                "Invalid JWT Header `alg` does not match `kid`".into(),
-            ));
-        }
-        jwk.validate_token_signature(token, buf)?;
+        JwkPublicKey::validate_token(header.alg, header.kid.to_string(), token, buf).await?;
 
         buf.clear();
         base64_url_no_pad_decode_buf(claims, buf)?;
@@ -118,7 +112,7 @@ impl ValidationClaims<'_> {
             return Err(RauthyError::InvalidJwt("Token is not valid yet"));
         }
         if let Some(typ) = expected_type
-            && self.typ != typ
+                && self.typ != typ
         {
             return Err(RauthyError::InvalidJwt("Invalid `typ`"));
         }
@@ -181,7 +175,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0))?;
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0))?;
 
         ValidationClaims {
             iat: now,
@@ -191,7 +185,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0))?;
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0))?;
 
         ValidationClaims {
             iat: now + 2,
@@ -201,7 +195,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(2))?;
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(2))?;
 
         let res = ValidationClaims {
             iat: now,
@@ -211,7 +205,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
         assert_eq!(res, Err(RauthyError::InvalidJwt("Token is not valid yet")));
 
         let res = ValidationClaims {
@@ -222,7 +216,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
         assert_eq!(
             res,
             Err(RauthyError::InvalidJwt("Token was issued in the future"))
@@ -236,7 +230,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
         assert_eq!(res, Err(RauthyError::InvalidJwt("Token has expired")));
 
         let res = ValidationClaims {
@@ -247,7 +241,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(5));
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(5));
         assert_eq!(res, Ok(()));
 
         let res = ValidationClaims {
@@ -258,7 +252,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Id), Some(0));
+                .validate(&iss_set, &aud_set, Some(TokenType::Id), Some(0));
         assert_eq!(res, Err(RauthyError::InvalidJwt("Invalid `typ`")));
 
         let res = ValidationClaims {
@@ -269,7 +263,7 @@ mod tests {
             iss: "http://localhost:9090/something/else",
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
         assert_eq!(res, Err(RauthyError::InvalidJwt("Invalid `iss`")));
 
         let res = ValidationClaims {
@@ -280,7 +274,7 @@ mod tests {
             iss,
             typ: TokenType::Bearer,
         }
-        .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
+                .validate(&iss_set, &aud_set, Some(TokenType::Bearer), Some(0));
         assert_eq!(res, Err(RauthyError::InvalidJwt("Invalid `aud`")));
 
         Ok(())

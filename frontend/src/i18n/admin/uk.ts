@@ -89,6 +89,10 @@ export let I18nAdminUk: I18nAdmin = {
         forceMfa: 'Вимагати MFA',
         groupLoginPrefix: 'Префікс групи для входу',
         name: 'Назва клієнта',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `Базовий URI для SCIM — це той, з якого можна коректно вивести під-маршрути,
                 наприклад <code>{base_uri}/Users/{id}</base_uri></code>.`,
@@ -228,7 +232,7 @@ export let I18nAdminUk: I18nAdmin = {
             time: 'Час',
             targetTime: 'Цільовий час',
             tune: 'Важливо: Ці значення потрібно налаштовувати на кінцевій архітектурі!',
-            pDetials: `Якщо ви хочете детально ознайомитися з Argon2ID, в інтернеті є багато джерел. Ця
+            pDetails: `Якщо ви хочете детально ознайомитися з Argon2ID, в інтернеті є багато джерел. Ця
             інструкція дає лише дуже короткий огляд параметрів. Три з них потребують налаштування:`,
             pTune: `Вони змінюються залежно від можливостей системи. Чим потужніша система, тим
             надійнішими можуть бути ці значення.`,

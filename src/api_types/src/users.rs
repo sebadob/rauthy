@@ -401,8 +401,7 @@ pub struct MfaModTokenResponse {
     pub ip: String,
 }
 
-#[derive(Clone, PartialEq, Eq, Deserialize, ToSchema, Default)]
-#[cfg_attr(debug_assertions, derive(Serialize))]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum OtpKind {
     #[default]

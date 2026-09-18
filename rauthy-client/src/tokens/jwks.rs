@@ -1,30 +1,35 @@
-use crate::provider::HTTP_CLIENT;
+use crate::provider::{HTTP_CLIENT, OidcProvider};
 use crate::rauthy_error::RauthyError;
 use crate::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
-use cached::Cached;
+use arc_swap::ArcSwap;
+use chrono::Utc;
 use serde::Deserialize;
 use std::borrow::Cow;
-use std::sync::OnceLock;
+use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::{mpsc, oneshot};
+use tokio::task;
 use tracing::{debug, error, info, warn};
 
+static JWKS: OnceLock<ArcSwap<BTreeMap<String, JwkPublicKey>>> = OnceLock::new();
+static JWKS_LAST_SYNC: AtomicI64 = AtomicI64::new(0);
 static JWKS_TX: OnceLock<mpsc::UnboundedSender<JwksMsg>> = OnceLock::new();
 
 #[derive(Debug)]
-pub(crate) enum JwksMsg {
-    Get((String, oneshot::Sender<Result<JwkPublicKey, RauthyError>>)),
-    Update,
-    NewJwksUri(String),
+enum JwksMsg {
+    Update(oneshot::Sender<()>),
 }
 
 impl JwksMsg {
     pub(crate) fn send(self) -> Result<(), RauthyError> {
         JWKS_TX
-            .get()
-            .ok_or(RauthyError::Init("JWKS_TX has not been initialized"))?
-            .send(self)
-            .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
+                .get()
+                .ok_or(RauthyError::Init("JWKS_TX has not been initialized"))?
+                .send(self)
+                .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
         Ok(())
     }
 }
@@ -66,33 +71,44 @@ pub(crate) struct JwkPublicKey {
 }
 
 impl JwkPublicKey {
+    /// Validates the given raw token into the provided `buf`.
     #[inline]
-    pub(crate) async fn get_for_token(token: &str) -> Result<Self, RauthyError> {
-        let Some((metadata, _)) = token.split_once(".") else {
-            return Err(RauthyError::InvalidJwt(
-                "JWT token does not contain any metadata",
-            ));
-        };
-        let json = base64_url_no_pad_decode(metadata)?;
-        let serde_json::Value::Object(meta) = serde_json::from_slice::<serde_json::Value>(&json)?
-        else {
-            return Err(RauthyError::InvalidClaims(
-                "JWT token metadata is no JSON object",
-            ));
-        };
-        let Some(kid) = meta.get("kid") else {
-            return Err(RauthyError::InvalidClaims("No 'kid' in JWT token header"));
-        };
+    pub(crate) async fn validate_token(
+        alg: JwkKeyPairAlg,
+        kid: String,
+        token: &str,
+        buf: &mut Vec<u8>,
+    ) -> Result<(), RauthyError> {
+        if let Some(jwks) = JWKS.get()
+                && let Some(jwk) = jwks.load().get(&kid)
+        {
+            jwk.validate_token_alg(alg)?;
+            jwk.validate_token_signature(token, buf)?;
+        } else {
+            if JWKS_LAST_SYNC.load(Ordering::Relaxed) >= Utc::now().timestamp() - 1 {
+                return Err(RauthyError::JWK(
+                    format!("Cannot find JWK with kid {kid}").into(),
+                ));
+            }
 
-        Self::get_for_kid(kid.as_str().unwrap_or_default()).await
-    }
+            let (tx, rx) = oneshot::channel();
+            JwksMsg::Update(tx).send()?;
+            rx.await
+                    .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
 
-    #[inline]
-    pub(crate) async fn get_for_kid(kid: &str) -> Result<Self, RauthyError> {
-        let (tx, rx) = oneshot::channel();
-        JwksMsg::Get((kid.to_string(), tx)).send()?;
-        rx.await
-            .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?
+            if let Some(jwks) = JWKS.get()
+                    && let Some(jwk) = jwks.load().get(&kid)
+            {
+                jwk.validate_token_alg(alg)?;
+                jwk.validate_token_signature(token, buf)?;
+            } else {
+                return Err(RauthyError::JWK(
+                    format!("Cannot find JWK with kid {kid}").into(),
+                ));
+            }
+        }
+
+        Ok(())
     }
 
     #[cfg(feature = "rsa")]
@@ -122,14 +138,23 @@ impl JwkPublicKey {
     }
 
     #[inline(always)]
+    fn validate_token_alg(&self, alg: JwkKeyPairAlg) -> Result<(), RauthyError> {
+        if self.alg == alg {
+            Ok(())
+        } else {
+            Err(RauthyError::JWK(format!("Mismatch in 'alg' for JWK with kid {}", self.kid).into()))
+        }
+    }
+
+    #[inline(always)]
     pub fn validate_token_signature(
         &self,
         token: &str,
         buf: &mut Vec<u8>,
     ) -> Result<(), RauthyError> {
         let (message, sig) = token
-            .rsplit_once('.')
-            .ok_or(RauthyError::MalformedJwt("Malformed token"))?;
+                .rsplit_once('.')
+                .ok_or(RauthyError::MalformedJwt("Malformed token"))?;
 
         buf.clear();
         base64_url_no_pad_decode_buf(sig, buf)?;
@@ -141,12 +166,12 @@ impl JwkPublicKey {
                     let hash = hmac_sha256::Hash::hash(message.as_bytes());
                     let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
                     if rsa_pk
-                        .verify(
-                            rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
-                            hash.as_slice(),
-                            buf,
-                        )
-                        .is_ok()
+                            .verify(
+                                rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                                hash.as_slice(),
+                                buf,
+                            )
+                            .is_ok()
                     {
                         return Ok(());
                     }
@@ -161,12 +186,12 @@ impl JwkPublicKey {
                     let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
                     let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
                     if rsa_pk
-                        .verify(
-                            rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
-                            hash.as_slice(),
-                            buf,
-                        )
-                        .is_ok()
+                            .verify(
+                                rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                                hash.as_slice(),
+                                buf,
+                            )
+                            .is_ok()
                     {
                         return Ok(());
                     }
@@ -181,12 +206,12 @@ impl JwkPublicKey {
                     let hash = hmac_sha512::Hash::hash(message.as_bytes());
                     let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
                     if rsa_pk
-                        .verify(
-                            rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
-                            hash.as_slice(),
-                            buf,
-                        )
-                        .is_ok()
+                            .verify(
+                                rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                                hash.as_slice(),
+                                buf,
+                            )
+                            .is_ok()
                     {
                         return Ok(());
                     }
@@ -214,160 +239,130 @@ pub(crate) struct JwksCerts {
     pub keys: Vec<JwkPublicKey>,
 }
 
-pub(crate) async fn jwks_handler() {
-    // initialize channels
-    let (tx, mut rx) = mpsc::unbounded_channel();
-    if JWKS_TX.set(tx).is_err() {
-        error!("Error initializing JWKS_TX");
+impl JwksCerts {
+    pub(crate) fn spawn_update_task() {
+        let (tx, rx) = mpsc::unbounded_channel();
+        if JWKS_TX.set(tx).is_err() {
+            error!("Error initializing JWKS_TX");
+        }
+        task::spawn(async move { Self::update_task(rx).await });
     }
 
-    // this task will periodically send update requests
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(3600));
+    async fn update_task(mut rx: UnboundedReceiver<JwksMsg>) {
+        let mut jwks_uri: Option<String> = None;
+
         loop {
-            if let Err(err) = JwksMsg::Update.send() {
-                error!("Error Updating JWKS - this should never happen: {:?}", err);
-            }
-            interval.tick().await;
-        }
-    });
+            let sleep_secs = if JWKS.get().is_some() { 1800 } else { 1 };
+            let msg = tokio::select! {
+                _ = tokio::time::sleep(Duration::from_secs(sleep_secs)) => {
+                    debug!("Updating JWKS after timeout");
+                    None
+                },
+                msg = rx.recv() => {
+                    let Some(msg) = msg else {
+                        debug!("Received None in JwksCerts::update_task() - exiting");
+                        break;
+                    };
+                    Some(msg)
+                }
+            };
 
-    tokio::spawn(async move {
-        let mut jwks_uri = None;
-
-        let mut recently_looked_up = cached::TimedCache::with_lifespan(Duration::from_secs(300));
-        // for small collections, Vec will always be faster and more efficient than a HashMap
-        let mut jwks: Vec<JwkPublicKey> = Vec::with_capacity(4);
-
-        let update = |jwks_uri: Option<String>, curr_jwks: Vec<JwkPublicKey>| async {
-            let uri = if let Some(uri) = jwks_uri {
-                uri
-            } else {
-                debug!("Cannot update JWKS with no configured OIDC provider");
-                return curr_jwks;
+            let uri = match &jwks_uri {
+                None => {
+                    let Ok(cfg) = OidcProvider::config() else {
+                        debug!("OIDC Provider information missing - waiting for JWKS URI");
+                        continue;
+                    };
+                    info!("Rauthy JWKS URI: {}", cfg.provider.jwks_uri);
+                    jwks_uri = Some(cfg.provider.jwks_uri.clone());
+                    jwks_uri.as_ref().unwrap()
+                }
+                Some(uri) => uri,
             };
 
             info!("Updating JWKS from Rauthy");
 
             let client = HTTP_CLIENT.get().expect("HTTP_CLIENT to be initialized");
-            match client.get(&uri).send().await {
+            match client.get(uri).send().await {
                 Ok(res) => {
                     if !res.status().is_success() {
                         error!("Error fetching JWKS from {}", uri);
-                        return curr_jwks;
+                        continue;
                     }
 
                     let certs = match res.json::<JwksCerts>().await {
                         Ok(jwks) => jwks,
                         Err(err) => {
                             error!("Error deserializing JWKS from {}: {:?}", uri, err);
-                            return curr_jwks;
+                            continue;
                         }
                     };
 
-                    certs
-                        .keys
-                        .into_iter()
-                        .filter_map(|mut key| {
-                            if key.alg == JwkKeyPairAlg::EdDSA {
-                                // we want to pre-decode the byte string here
-                                if let Some(x) = &key.x {
-                                    match base64_url_no_pad_decode(x) {
-                                        Ok(bytes) => {
-                                            key.x_bytes = Some(bytes)
-                                        }
-                                        Err(err) => {
-                                            error!("Error pre-decoding given EdDSA 'x' pub key bytes: {}", err);
-                                            return None;
-                                        }
-                                    }
-                                }
-                            } else {
-                                if let Some(e) = &key.e {
-                                    match base64_url_no_pad_decode(e) {
-                                        Ok(bytes) => {
-                                            key.e_bytes = Some(bytes)
-                                        }
-                                        Err(err) => {
-                                            error!("Error pre-decoding given RSA 'e' pub key bytes: {}", err);
-                                            return None;
-                                        }
-                                    }
-                                }
-                                if let Some(n) = &key.n {
-                                    match base64_url_no_pad_decode(n) {
-                                        Ok(bytes) => {
-                                            key.n_bytes = Some(bytes)
-                                        }
-                                        Err(err) => {
-                                            error!("Error pre-decoding given RSA 'e' pub key bytes: {}", err);
-                                            return None;
-                                        }
+                    let mut keys = BTreeMap::new();
+
+                    for mut key in certs.keys {
+                        if key.alg == JwkKeyPairAlg::EdDSA || key.alg == JwkKeyPairAlg::Ed25519 {
+                            // we want to pre-decode the byte string here
+                            if let Some(x) = &key.x {
+                                match base64_url_no_pad_decode(x) {
+                                    Ok(bytes) => key.x_bytes = Some(bytes),
+                                    Err(err) => {
+                                        error!(
+                                            "Error pre-decoding given EdDSA 'x' pub key bytes: {}",
+                                            err
+                                        );
+                                        continue;
                                     }
                                 }
                             }
-                            Some(key)
-                        })
-                        .collect()
+                        } else {
+                            if let Some(e) = &key.e {
+                                match base64_url_no_pad_decode(e) {
+                                    Ok(bytes) => key.e_bytes = Some(bytes),
+                                    Err(err) => {
+                                        error!(
+                                            "Error pre-decoding given RSA 'e' pub key bytes: {}",
+                                            err
+                                        );
+                                        continue;
+                                    }
+                                }
+                            }
+                            if let Some(n) = &key.n {
+                                match base64_url_no_pad_decode(n) {
+                                    Ok(bytes) => key.n_bytes = Some(bytes),
+                                    Err(err) => {
+                                        error!(
+                                            "Error pre-decoding given RSA 'e' pub key bytes: {}",
+                                            err
+                                        );
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        keys.insert(key.kid.clone(), key);
+                    }
+
+                    if !keys.is_empty() {
+                        if let Some(jwks) = JWKS.get() {
+                            jwks.store(Arc::new(keys));
+                        } else {
+                            JWKS.set(ArcSwap::from_pointee(keys)).unwrap();
+                        }
+                    }
+                    if let Some(JwksMsg::Update(ack)) = msg {
+                        // just a notification that the global store was updated
+                        let _ = ack.send(());
+                    }
+                    JWKS_LAST_SYNC.store(Utc::now().timestamp(), Ordering::Relaxed);
+
+                    info!("Rauthy JWKS update successful");
                 }
                 Err(err) => {
                     error!("Error fetching JWKS from Rauthy {}: {:?}", uri, err);
-                    // if we got an error, just return the current JWKs unchanged
-                    curr_jwks
-                }
-            }
-        };
-
-        'main: while let Some(msg) = rx.recv().await {
-            match msg {
-                JwksMsg::Get((kid, tx_ack)) => {
-                    for jwk in &jwks {
-                        if jwk.kid == kid {
-                            tx_ack.send(Ok(jwk.clone())).unwrap();
-                            continue 'main;
-                        }
-                    }
-
-                    // if we get here, the kid was not present
-                    // we want to cache recently looked up and failed KIDs to prevent some kind
-                    // of DoS possibility with invalid tokens all over
-                    if recently_looked_up.cache_get(&kid).is_some() {
-                        tx_ack
-                            .send(Err(RauthyError::InvalidClaims(
-                                "'kid' not found and it has been recently looked up",
-                            )))
-                            .unwrap();
-                        continue;
-                    }
-
-                    // try to do an update for the given kid
-                    jwks = update(jwks_uri.clone(), jwks).await;
-                    recently_looked_up.cache_set(kid.clone(), ());
-
-                    // check again
-                    for jwk in &jwks {
-                        if jwk.kid == kid {
-                            tx_ack.send(Ok(jwk.clone())).unwrap();
-                            continue 'main;
-                        }
-                    }
-                    tx_ack
-                        .send(Err(RauthyError::InvalidClaims(
-                            "'kid' not found after updating JWKs",
-                        )))
-                        .unwrap();
-                }
-
-                JwksMsg::Update => {
-                    jwks = update(jwks_uri.clone(), jwks).await;
-                }
-
-                JwksMsg::NewJwksUri(uri) => {
-                    info!("Received a new JWKS URI: {}", uri);
-                    jwks_uri = Some(uri);
-                    JwksMsg::Update.send().unwrap();
                 }
             }
         }
-    });
+    }
 }

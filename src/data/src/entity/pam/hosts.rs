@@ -554,18 +554,27 @@ WHERE pu.gid = $1 AND pu.wheel = $2
         // make sure this function is updated if the secret length ever changes
         debug_assert_eq!(SECRET_LEN_CLIENTS, 64);
 
-        let dec = EncValue::try_from_bytes(self.secret.clone())?.decrypt()?;
-        let a = <&[u8; 64]>::try_from(dec.as_ref()).unwrap();
+        if secret.len() != 64 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Invalid secret",
+            ));
+        }
+
+        let decrypted = EncValue::try_from_bytes(self.secret.clone())?.decrypt()?;
+        let a = <&[u8; 64]>::try_from(decrypted.as_ref()).unwrap();
         let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
-        if constant_time_eq::constant_time_eq_64(a, b) {
-            secret.zeroize();
+        let res = if constant_time_eq::constant_time_eq_64(a, b) {
             Ok(())
         } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "Invalid secret",
             ))
-        }
+        };
+        secret.zeroize();
+
+        res
     }
 }
 

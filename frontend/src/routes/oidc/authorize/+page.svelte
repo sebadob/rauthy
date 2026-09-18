@@ -65,13 +65,12 @@
     // we can't use undefined to avoid a JSON error in the Template component
     let clientFaviconUpdated = $state(-1);
     let clientLogoUpdated = $state(-1);
-    let clientUri = $state(IS_DEV ? '/auth/v1' : '');
+    let clientUri = $state('');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
     let idpHint = useParam('idp_hint').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
 
-    let refEmail: undefined | HTMLInputElement = $state();
     let refPassword: undefined | HTMLInputElement = $state();
 
     let stateParam = useParam('state').get();
@@ -118,12 +117,6 @@
 
     let hasAutoLoggedIn = false;
     let showModalUpdate = $state(false);
-
-    onMount(() => {
-        if (!needsPassword) {
-            refEmail?.focus();
-        }
-    });
 
     $effect(() => {
         if (
@@ -537,7 +530,10 @@
         let pow = (await fetchSolvePow()) || '';
 
         let payload: RequestResetRequest = { email, pow };
-        if (clientUri) {
+        // We don't want a redirect for Rauthy directly. Instead, leave it blank,
+        // so that the UI after a successful reset will use a relative redirect to
+        // the Account dashboard instead.
+        if (clientUri && clientId !== 'rauthy') {
             payload.redirect_uri = encodeURI(clientUri);
         }
 
@@ -636,7 +632,6 @@
                                 />
                             {:else}
                                 <Input
-                                    bind:ref={refEmail}
                                     typ="email"
                                     name="email"
                                     bind:value={email}
@@ -698,22 +693,10 @@
                                         type="submit"
                                         ariaLabel={t.authorize.login}
                                         onclick={() => onSubmit()}
+                                        isDisabled={email.length === 0}
                                         {isLoading}
                                     >
                                         {t.authorize.login}
-                                    </Button>
-                                </div>
-                                <div class="btn flex-col">
-                                    <Button
-                                        level={2}
-                                        ariaLabel={t.authorize.login}
-                                        onclick={onPasskeyDiscover}
-                                        {isLoading}
-                                    >
-                                        <div class="flex gap-05">
-                                            <IconKey width="1.2rem" />
-                                            Passkey
-                                        </div>
                                     </Button>
                                 </div>
                                 {#if isAtproto}
@@ -775,7 +758,7 @@
                     <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
-                {#if !clientMfaForce && providers.length > 0 && !isAtproto}
+                {#if !clientMfaForce && !isAtproto}
                     <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -785,6 +768,21 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="btn flex-col">
+                            <Button
+                                level={2}
+                                ariaLabel={t.authorize.login}
+                                onclick={onPasskeyDiscover}
+                                {isLoading}
+                            >
+                                <div class="flex gap-05">
+                                    <IconKey width="1.2rem" />
+                                    Passkey
+                                </div>
+                            </Button>
+                        </div>
+
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider
                                 ariaLabel={`Login: ${provider.name}`}
@@ -891,8 +889,7 @@
     }
 
     .providersSeparator {
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
+        margin: 1rem 0 -0.5rem 0;
     }
 
     .separator {

@@ -1,3 +1,4 @@
+use crate::rauthy_error::RauthyError;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -218,24 +219,31 @@ impl Default for ScimListQuery {
 }
 
 impl ScimListQuery {
-    pub fn filter_by(&self) -> ScimFilterBy<'_> {
-        if self.filter.is_none() {
+    pub fn filter_by(&self) -> Result<ScimFilterBy<'_>, RauthyError> {
+        let filter = if self.filter.is_none() {
             ScimFilterBy::None
         } else {
             let filter = self.filter.as_deref().unwrap_or_default();
 
-            if let Some(v) = filter.strip_prefix("externalId eq \"") {
+            if let Some(v) = filter.strip_prefix("externalId eq \"")
+                    && !v.is_empty()
+            {
                 ScimFilterBy::ExternalId(&v[..v.len() - 1])
-            } else if let Some(v) = filter.strip_prefix("userName eq \"") {
+            } else if let Some(v) = filter.strip_prefix("userName eq \"")
+                    && !v.is_empty() {
                 let stripped = &v[..v.len() - 1];
                 ScimFilterBy::UserName(stripped)
-            } else if let Some(v) = filter.strip_prefix("displayName eq \"") {
+            } else if let Some(v) = filter.strip_prefix("displayName eq \"")
+                    && !v.is_empty() {
                 let stripped = &v[..v.len() - 1];
                 ScimFilterBy::DisplayName(stripped)
             } else {
-                panic!("invalid filter type: {filter}");
+                return Err(RauthyError::Request(
+                    format!("invalid filter type: {filter}").into(),
+                ));
             }
-        }
+        };
+        Ok(filter)
     }
 }
 
@@ -452,20 +460,20 @@ mod tests {
             start_index: None,
             count: None,
         };
-        assert_eq!(q.filter_by(), ScimFilterBy::ExternalId("id123"));
+        assert_eq!(q.filter_by().unwrap(), ScimFilterBy::ExternalId("id123"));
 
         let q = ScimListQuery {
             filter: Some("userName eq \"Batman\"".to_string()),
             start_index: None,
             count: None,
         };
-        assert_eq!(q.filter_by(), ScimFilterBy::UserName("Batman"));
+        assert_eq!(q.filter_by().unwrap(), ScimFilterBy::UserName("Batman"));
 
         let q = ScimListQuery {
             filter: Some("displayName eq \"Alfred\"".to_string()),
             start_index: None,
             count: None,
         };
-        assert_eq!(q.filter_by(), ScimFilterBy::DisplayName("Alfred"));
+        assert_eq!(q.filter_by().unwrap(), ScimFilterBy::DisplayName("Alfred"));
     }
 }

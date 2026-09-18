@@ -521,11 +521,6 @@ pub async fn post_users_register_handle(
 /// Validates a registration or password-reset redirect URI against configured clients.
 #[inline]
 async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
-    // Rauthys own relative links are always safe
-    if redirect_uri.starts_with("/") {
-        return Ok(());
-    }
-
     for uri in Client::find_all_client_uris().await? {
         let matches = match redirect_uri.strip_prefix(&uri) {
             None => false,
@@ -1105,7 +1100,7 @@ pub async fn delete_user_device(
         ));
     }
 
-    DeviceEntity::revoke_refresh_tokens(&payload.device_id).await?;
+    DeviceEntity::delete_refresh_tokens(&payload.device_id).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -1255,6 +1250,7 @@ pub async fn put_user_password_reset(
     password_reset::handle_put_user_password_reset(req, path.into_inner(), payload)
         .await
         .map(|(cookie, location)| {
+            debug!("user reset redirect uri loc: {location:?}");
             if let Some(loc) = location {
                 HttpResponse::Ok()
                     .insert_header((LOCATION, loc))
@@ -1426,9 +1422,9 @@ pub async fn post_user_otp(
     let ip = real_ip_from_req(&req)?;
     token.validate(principal.user_id()?, ip)?;
 
-    // this prevent users from having multiple OTPs of the same kind, except for time-base OTPs
+    // Prevents users from having multiple OTPs of the same kind, except for time-base OTPs.
     let mut otp = if payload.otp_kind.ne(&OtpKind::Time)
-        && let Ok(otp) = OneTimePassword::find_kind_for_user(&payload.otp_kind, &user_id).await
+        && let Ok(mut otp) = OneTimePassword::find_kind_for_user(&payload.otp_kind, &user_id).await
     {
         if otp.is_active {
             return Err(ErrorResponse::new(
@@ -1436,6 +1432,8 @@ pub async fn post_user_otp(
                 "otp already exist",
             ));
         }
+        // reuse the existing inactive row, but keep the name requested in this call
+        otp.name = payload.otp_name;
         otp
     } else {
         OneTimePassword::create(user_id, payload.otp_name, payload.otp_kind).await?
@@ -1759,12 +1757,13 @@ pub async fn post_webauthn_auth_start(
     payload.validate()?;
 
     let id = match payload.purpose {
-        // only for a Login purpose, this can be accessed without authentication (yet)
         MfaPurpose::Login(_) => {
-            // TODO this can be rejected in versions >= 0.37
-            // During Login, the session is allowed to be in init only state
-            principal.validate_session_auth_or_init()?;
-            id.into_inner()
+            // A Login should never be done via this endpoint to never possibly leak a `user_id`.
+            // Logins must use the user id agnostic endpoint.
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid endpoint for Webauthn auth ceremony",
+            ));
         }
 
         MfaPurpose::PasswordReset => {
@@ -1895,14 +1894,18 @@ pub async fn post_webauthn_auth_start_login(
     };
 
     if is_discover {
-        webauthn::authenticate_rk::auth_start_discover()
-            .await
-            .map(|res| HttpResponse::Ok().json(res))
+        webauthn::authenticate_rk::auth_start_discover().await
     } else {
-        webauthn::authenticate::auth_start(id, payload.purpose)
-            .await
-            .map(|res| HttpResponse::Ok().json(res))
+        webauthn::authenticate::auth_start(id, payload.purpose).await
     }
+    .map_err(|err| {
+        error!("Webauthn Auth Start error: {err:?}");
+        ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Error during Webauthn auth start ceremony",
+        )
+    })
+    .map(|res| HttpResponse::Ok().json(res))
 }
 
 /// Finishes the authentication process for a WebAuthn Device for this user
@@ -1935,8 +1938,15 @@ pub async fn post_webauthn_auth_finish_login(
     // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
-    let res =
-        webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload).await?;
+    let res = webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload)
+        .await
+        .map_err(|err| {
+            error!("Webauthn Auth Finish error: {err:?}");
+            ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Error during Webauthn auth finish ceremony",
+            )
+        })?;
     Ok(res.into_response())
 }
 
@@ -2289,6 +2299,7 @@ pub async fn post_user_password_request_reset(
     {
         validate_reg_redirect_uri(redirect_uri).await?;
     }
+    debug!("Reset requested with uri: {:?}", payload.redirect_uri);
 
     match User::find_by_email(payload.email).await {
         Ok(user) => user
@@ -2324,6 +2335,11 @@ pub async fn get_user_by_email(
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
 
     let user = User::find_by_email(path.into_inner()).await?;
+    // same per-target view gate as get_user_by_id: a group admin only gets the full details of
+    // a user it manages, otherwise this endpoint would leak any user's profile by email.
+    if principal.is_session_group_admin() && principal.user_id() != Ok(user.id.as_str()) {
+        principal.validate_group_admin_can_view(user.roles_iter(), user.groups_iter())?;
+    }
     let values = UserValues::find(&user.id).await?;
 
     Ok(HttpResponse::Ok().json(user.into_response(values)))
@@ -2362,7 +2378,6 @@ pub async fn put_user_by_id(
     }
     .validate()?;
 
-    // cheap auth gate before any DB lookup
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
 
     let id = id.into_inner();
@@ -2407,7 +2422,6 @@ pub async fn patch_user(
     principal: ReqPrincipal,
     Json(payload): Json<PatchOp>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // cheap auth gate before any DB lookup
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
 
     let user_id = id.into_inner();

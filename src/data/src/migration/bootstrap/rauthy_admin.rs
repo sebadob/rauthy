@@ -14,7 +14,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let issuer = &RauthyConfig::get().issuer;
     let bootstrap = &RauthyConfig::get().vars.bootstrap;
     let email = &bootstrap.admin_email;
-    let hash = match bootstrap.pasword_argon2id.clone() {
+    let hash = match bootstrap.password_argon2id.clone() {
         Some(hash) => {
             info!(
                 r#"

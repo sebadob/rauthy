@@ -5,7 +5,6 @@
     import { useI18n } from '$state/i18n.svelte';
     import Input from '$lib/form/Input.svelte';
     import type {
-        PamGroupResponse,
         PamUnlinkedEmailsResponse,
         PamUserCreateRequest,
         PamUserResponse,

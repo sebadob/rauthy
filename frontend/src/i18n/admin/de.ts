@@ -95,6 +95,11 @@ export let I18nAdminDe: I18nAdmin = {
         forceMfa: 'MFA Erzwingen',
         groupLoginPrefix: 'Login Gruppen Prefix',
         name: 'Client Name',
+        passwordFlowMfaWarn: `ACHTUNG: Es sind gleichzeitig 'MFA Erzwingen' und der 'password' Flow 
+            aktiviert. MFA kann NICHT erzwungen werden bei diesem Authentication Flow, weil es gegen 
+            das OIDC RFC verstoßen würde. Das bedeutet, dass bei genutztem 'password' Flow und 
+            notwendigem MFA auf der Client Seite überprüft werden muss. Hierzu eignet sich das 'amr' 
+            claim.`,
         scim: {
             baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie 
                 <code>{base_uri}/Users/{id}</base_uri></code> korrekt abgeleitet werden können.`,
@@ -239,7 +244,7 @@ export let I18nAdminDe: I18nAdmin = {
             time: 'Zeit',
             targetTime: 'Ziel-Zeit',
             tune: 'Wichtig: Diese Werten müssen auf der finalen Architektur eingestellt werden!',
-            pDetials: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
+            pDetails: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
             Verfügung. Hier werden nur ganz kurz die Werte erklärt. Die folgenden drei Werte müssen konfiguriert werden:`,
             pTune: `Die Werte können stark variieren in Abhängigkeit vom System und der generellen Systemlast. Je 
             stärker das System, desto sicherere Werte können gewählt werden.`,

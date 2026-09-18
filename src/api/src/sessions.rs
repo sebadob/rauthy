@@ -8,6 +8,7 @@ use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::continuation_token::ContinuationToken;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
@@ -126,6 +127,9 @@ pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, Er
 
     Session::invalidate_all().await?;
     RefreshToken::invalidate_all().await?;
+    if RauthyConfig::get().vars.access.token_revoke_device_tokens {
+        RefreshTokenDevice::invalidate_all().await?;
+    }
     IssuedToken::revoke_all().await?;
 
     // This task should run async in the background, as it could take quite a long time to finish.
@@ -164,7 +168,6 @@ pub async fn delete_sessions_for_user(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // cheap auth gate before any DB lookup
     principal.validate_api_key_or_group_admin(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
@@ -174,7 +177,14 @@ pub async fn delete_sessions_for_user(
 
     Session::invalidate_for_user(&user.id).await?;
     RefreshToken::invalidate_for_user(&user.id).await?;
-    IssuedToken::revoke_for_user(&user.id, true).await?;
+    if RauthyConfig::get().vars.access.token_revoke_device_tokens {
+        RefreshTokenDevice::invalidate_all_for_user(&user.id).await?;
+    }
+    IssuedToken::revoke_for_user(
+        &user.id,
+        RauthyConfig::get().vars.access.token_revoke_device_tokens,
+    )
+    .await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Event::force_logout(user.email).send().await?;

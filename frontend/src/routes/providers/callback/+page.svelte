@@ -124,7 +124,7 @@
         } else if (res.status === 404) {
             error = 'User not found';
             setTimeout(() => {
-                window.location.replace('/auth/v1');
+                window.location.replace('/auth/v1/');
             }, 5000);
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
@@ -148,7 +148,7 @@
 
     function onToSCancel() {
         setTimeout(() => {
-            window.location.replace('/auth/v1');
+            window.location.replace('/auth/v1/');
         }, 1000);
     }
 

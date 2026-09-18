@@ -589,6 +589,10 @@ pub async fn post_host_whoami(
 
 /// Login via a PAM host
 ///
+/// CAUTION: If you create a custom integration, you MUST request a preflight (`/pam/preflight`)
+/// beforehand. Otherwise, things like `force_mfa` could be bypassed. You MUST adhere to the
+/// response from the preflight check to make everything work properly.
+///
 /// **Permissions**
 /// - any authenticated PAM host
 #[utoipa::path(
@@ -650,6 +654,12 @@ pub async fn post_login(
     }
 
     if let Some(password) = payload.password {
+        // Note: Theoretically, we could have a TOCTOU here if an admin decides to switch this
+        // host to `force_mfa` between a preflight check and the actual login from the PAM module.
+        // However, we specifically do not return an error in that case to not screw up the whole
+        // login, which could end up in a weird locked state then. If the preflight returns
+        // a not-forced MFA requirement, we stick with it here. The PAM module has internal timeouts
+        // anyway. The PAM module will not send a local `password` if MFA is forced.
         if !host.local_password_only && user.has_webauthn_enabled() {
             pwd_login_fail(
                 &mut user,
@@ -730,6 +740,9 @@ pub async fn post_mfa_start(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
+    let host = PamHost::find_simple(payload.host_id).await?;
+    host.validate_secret(payload.host_secret)?;
+
     let pam_user = PamUser::find_by_name(payload.username).await?;
     let user = User::find_by_email(pam_user.email).await?;
 
@@ -758,6 +771,9 @@ pub async fn post_mfa_finish(
     Json(payload): Json<PamMfaFinishRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
+
+    let host = PamHost::find_simple(payload.host_id).await?;
+    host.validate_secret(payload.host_secret)?;
 
     let resp =
         webauthn::authenticate::auth_finish(&req, BrowserId::default(), None, payload.data).await?;
@@ -1224,7 +1240,12 @@ pub async fn get_validate_user(
             "User ID mismatch",
         ));
     }
-    // TODO maybe additional token validation or rely on cache ttl?
+    if token.exp < Utc::now().timestamp() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Token has expired",
+        ));
+    }
 
     let user = User::find(user_id).await?;
     user.check_enabled()?;

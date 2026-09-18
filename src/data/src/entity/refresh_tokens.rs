@@ -1,13 +1,13 @@
 use crate::database::DB;
 use chrono::Utc;
-use hiqlite::macros::params;
+use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
 
-#[derive(Deserialize, FromPgRow)]
+#[derive(Deserialize, FromRow, FromPgRow)]
 pub struct RefreshToken {
     pub id: String,
     pub user_id: String,
@@ -45,9 +45,9 @@ impl RefreshToken {
         nbf: i64,
         exp: i64,
         scope: Option<String>,
-        //  TODO should we even save mfa for refresh tokens?
+        // TODO should we even save mfa for refresh tokens?
         //  even if the original token has been issued with mfa, the refresh
-        // token not really is, because it can be given without user interaction.
+        //  token not really is, because it can be given without user interaction.
         is_mfa: bool,
         session_id: Option<String>,
         access_token_jti: Option<String>,
@@ -77,6 +77,26 @@ impl RefreshToken {
         Ok(())
     }
 
+    /// Return an error when no rows have been affected.
+    pub async fn delete_checked(&self) -> Result<(), ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE id = $1";
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(self.id.clone())).await?
+        } else {
+            DB::pg_execute(sql, &[&self.id]).await?
+        };
+
+        if rows_affected > 0 {
+            Ok(())
+        } else {
+            // This check is important to prevent concurrent token usage
+            Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "Invalid Refresh Token",
+            ))
+        }
+    }
+
     pub async fn delete_by_sid(session_id: String) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM refresh_tokens WHERE session_id = $1";
         if is_hiqlite() {
@@ -90,7 +110,7 @@ impl RefreshToken {
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let sql = "SELECT * FROM refresh_tokens";
         let res = if is_hiqlite() {
-            DB::hql().query_as(sql, params!()).await?
+            DB::hql().query_map(sql, params!()).await?
         } else {
             DB::pg_query(sql, &[], 0).await?
         };
@@ -105,7 +125,7 @@ impl RefreshToken {
 
         let slf = if is_hiqlite() {
             DB::hql()
-                .query_as_optional(sql, params!(user_id, access_token_jti))
+                .query_map_optional(sql, params!(user_id, access_token_jti))
                 .await?
         } else {
             DB::pg_query_opt(sql, &[&user_id, &access_token_jti]).await?
@@ -116,7 +136,7 @@ impl RefreshToken {
 
     pub async fn invalidate_all() -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE exp > $1";
+        let sql = "DELETE FROM refresh_tokens";
         if is_hiqlite() {
             DB::hql().execute(sql, params!(now)).await?;
         } else {
@@ -136,21 +156,15 @@ impl RefreshToken {
         Ok(())
     }
 
-    pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
-        let now = Utc::now().timestamp();
-        let sql = "SELECT * FROM refresh_tokens WHERE id = $1 AND exp > $2";
+    pub async fn find_delete(id: &str) -> Result<Self, ErrorResponse> {
+        let sql = "DELETE FROM refresh_tokens WHERE id = $1 RETURNING *";
 
-        let slf: Self = if is_hiqlite() {
+        let slf = if is_hiqlite() {
             DB::hql()
-                .query_as_one(sql, params!(id, now))
-                .await
-                .map_err(|_| {
-                    ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
-                })?
+                .execute_returning_map_one(sql, params!(id))
+                .await?
         } else {
-            DB::pg_query_one(sql, &[&id, &now]).await.map_err(|_| {
-                ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token does not exist")
-            })?
+            DB::pg_query_one(sql, &[&id]).await?
         };
 
         Ok(slf)
@@ -160,33 +174,12 @@ impl RefreshToken {
         let sql = "SELECT * FROM refresh_tokens WHERE id = $1";
 
         let slf = if is_hiqlite() {
-            DB::hql().query_as_optional(sql, params!(id)).await?
+            DB::hql().query_map_optional(sql, params!(id)).await?
         } else {
             DB::pg_query_opt(sql, &[&id]).await?
         };
 
         Ok(slf)
-    }
-
-    /// Claims the token while it is still usable and advances its expiry by `grace`.
-    pub async fn claim(id: &str, now: i64, grace: i64) -> Result<(), ErrorResponse> {
-        let exp_at = now + grace;
-        let sql = "UPDATE refresh_tokens SET exp = $1 WHERE id = $2 AND exp > $3";
-
-        let rows_affected = if is_hiqlite() {
-            DB::hql().execute(sql, params!(exp_at, id, now)).await?
-        } else {
-            DB::pg_execute(sql, &[&exp_at, &id, &now]).await?
-        };
-
-        if rows_affected == 1 {
-            Ok(())
-        } else {
-            Err(ErrorResponse::new(
-                ErrorResponseType::Forbidden,
-                "Refresh token has already been used",
-            ))
-        }
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {

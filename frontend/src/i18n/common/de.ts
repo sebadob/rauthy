@@ -277,9 +277,9 @@ export const I18nDe: I18n = {
         reAuthenticateOtp: `Bevor Einmalpasswort bearbeitet werden können, muss zuerst einer der 
             bestehenden überprüft werden:`,
         register: 'Registrieren',
-        registerd: 'Registriert',
-        registerdKeys: 'Registrierte Passkeys',
-        registerdOtps: 'Registrierte Einmalpasswörter',
+        registered: 'Registriert',
+        registeredKeys: 'Registrierte Passkeys',
+        registeredOtps: 'Registrierte Einmalpasswörter',
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 Buchstaben, keine Sonderzeichen',
         passwordInvalid: 'Ungültiges Password',

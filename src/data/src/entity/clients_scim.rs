@@ -191,7 +191,7 @@ impl ClientScim {
     fn url_groups(&self, start_index: usize, count: usize) -> String {
         format!(
             "{}/Groups?startIndex={start_index}&count={count}",
-            self.base_uri
+            self.base_uri.trim_end_matches("/")
         )
     }
 
@@ -392,7 +392,8 @@ impl ClientScim {
     ) -> Result<Option<ScimGroup>, ErrorResponse> {
         let url = format!(
             "{}/Groups?filter=externalId%20eq%20%22{}%22",
-            self.base_uri, group.id
+            self.base_uri.trim_end_matches("/"),
+            group.id
         );
         match self.get_group_with(group, url).await? {
             None => {
@@ -401,7 +402,8 @@ impl ClientScim {
                 }
                 let url = format!(
                     "{}/Groups?filter=displayName%20eq%20%22{}%22",
-                    self.base_uri, group.name
+                    self.base_uri.trim_end_matches("/"),
+                    group.name
                 );
                 self.get_group_with(group, url).await
             }
@@ -513,7 +515,7 @@ impl ClientScim {
         };
         debug!(?payload, "Creating SCIM group on remote");
         let json = serde_json::to_string(&payload)?;
-        let url = format!("{}/Groups", self.base_uri);
+        let url = format!("{}/Groups", self.base_uri.trim_end_matches("/"));
         let res = http_client()
             .post(url)
             .header(AUTHORIZATION, self.auth_header())
@@ -566,52 +568,14 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{remote_id}", self.base_uri);
+        let url = format!("{}/Groups/{remote_id}", self.base_uri.trim_end_matches("/"));
 
-        // let mut value_replace = HashMap::with_capacity(2);
-        // if remove_ext_id_link {
-        //     value_replace.insert("externalId".into(), serde_json::Value::Null);
-        // } else {
-        //     value_replace.insert(
-        //         "externalId".into(),
-        //         serde_json::Value::String(group_local.id),
-        //     );
-        // }
-        // value_replace.insert(
-        //     "displayName".into(),
-        //     serde_json::Value::String(group_local.name),
-        // );
-        // let payload = ScimPatchOp {
-        //     operations: vec![ScimPatchOperations {
-        //         op: ScimOp::Replace,
-        //         value: value_replace,
-        //     }],
-        //     ..Default::default()
-        // };
-        //
-        // let json = serde_json::to_string(&payload)?;
-        // debug!(
-        //     "Serialized payload for ScimPatchOp with replace:\n{}\n",
-        //     json
-        // );
-
-        // This manual json building is pretty ugly, but we can avoid quite a few unnecessary
-        // memory allocation if we use the typed builder above.
-        // We are always using the exact same json, so a static upfront string is much more efficient.
-        let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"replace\",\"value\":{\"displayName\":\"";
-        let json_2 = "\",\"externalId\":\"";
-        let json_3 = "\"}}]}";
-        let json_ext_id_null = "\",\"externalId\":null}}]}";
-
-        let json = if remove_ext_id_link {
-            format!("{json_1}{}{json_ext_id_null}", group_local.name)
+        let external_id = if remove_ext_id_link {
+            None
         } else {
-            format!(
-                "{json_1}{}{json_2}{}{json_3}",
-                group_local.name,
-                group_local.id.as_str()
-            )
+            Some(group_local.id.as_str())
         };
+        let json = json_patch_replace_group_name(&group_local.name, external_id);
 
         let res = http_client()
             .patch(url)
@@ -679,7 +643,7 @@ impl ClientScim {
                 "Remote SCIM group without an ID",
             ));
         };
-        let url = format!("{}/Groups/{remote_id}", self.base_uri);
+        let url = format!("{}/Groups/{remote_id}", self.base_uri.trim_end_matches("/"));
 
         let res = http_client()
             .delete(url)
@@ -710,15 +674,17 @@ impl ClientScim {
         old_email: Option<&str>,
     ) -> Result<Option<ScimUser>, ErrorResponse> {
         let url = format!(
-            "{}/Users?filter=externalId%20eq%20%22{user_id}%22",
-            self.base_uri
+            "{}/Users?filter=externalId%20eq%20%22{}%22",
+            self.base_uri.trim_end_matches("/"),
+            user_id
         );
         match self.get_user_with(user_id, user_email, url).await? {
             None => {
                 let email = old_email.unwrap_or(user_email);
                 let url = format!(
-                    "{}/Users?filter=userName%20eq%20%22{email}%22",
-                    self.base_uri
+                    "{}/Users?filter=userName%20eq%20%22{}%22",
+                    self.base_uri.trim_end_matches("/"),
+                    email
                 );
                 self.get_user_with(user_id, user_email, url).await
             }
@@ -858,6 +824,11 @@ impl ClientScim {
                             self.client_id,
                             ?err.message, "Error during sync users for SCIM client",
                         );
+                        FailedScimTask::upsert(
+                            &ScimAction::UsersSync(*last_created_ts),
+                            &self.client_id,
+                        )
+                        .await?;
                         return Err(err);
                     }
                 }
@@ -881,17 +852,12 @@ impl ClientScim {
         let groups_local = Group::find_all().await?;
         let mut groups_remote = HashMap::with_capacity(groups_local.len());
 
-        let uv = UserValues {
-            id: user.id.clone(),
-            birthdate: None,
-            phone: None,
-            street: None,
-            zip: None,
-            city: None,
-            country: None,
-            preferred_username: None,
-            tz: None,
-        };
+        let uv = UserValues::find(&user.id)
+            .await?
+            .unwrap_or_else(|| UserValues {
+                id: user.id.clone(),
+                ..Default::default()
+            });
 
         for client_scim in clients_scim {
             let is_prefix_match = client_scim.is_user_group_sync_prefix_match(&user);
@@ -1042,10 +1008,11 @@ impl ClientScim {
         update_payload.id = Some(remote_id.to_owned());
 
         let json = serde_json::to_string(&update_payload)?;
+        let base = self.base_uri.trim_end_matches("/");
         let res = http_client()
             .put(format!(
                 "{}/Users/{}",
-                self.base_uri,
+                base,
                 user_remote.id.unwrap_or_default()
             ))
             .header(AUTHORIZATION, self.auth_header())
@@ -1112,7 +1079,11 @@ impl ClientScim {
                 "Remote SCIM user without an ID",
             ));
         };
-        let url = format!("{}/Users/{remote_id}", self.base_uri);
+        let url = format!(
+            "{}/Users/{}",
+            self.base_uri.trim_end_matches("/"),
+            remote_id
+        );
 
         let res = http_client()
             .delete(url)
@@ -1148,14 +1119,14 @@ impl ClientScim {
         if let Some(prefix) = &self.group_sync_prefix {
             user_groups_local.retain(|g| g.starts_with(prefix));
         }
-        let user_id_remote = match user_remote.id.clone() {
+        let user_id_remote = match &user_remote.id {
+            Some(id) => id,
             None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Scim,
                     format!("empty remote user id for SCIM user {user_remote:?}"),
                 ));
             }
-            Some(id) => id,
         };
         let mut user_groups_remote = user_remote.groups.unwrap_or_default();
         debug!(?user_groups_local);
@@ -1183,7 +1154,7 @@ impl ClientScim {
                             "Remote group {expected_name} does not exist yet or has no `externalId` \
                             mapping"
                         );
-                        // Will happen, if the ScimGroup is needed for the first time, since the map
+                        // Will happen if the ScimGroup is needed for the first time, since the map
                         // will be empty at first. We need to fetch or create it and make sure it exists
                         // afterward.
                         let group_local = groups_local.iter().find(|g| g.name == expected_name);
@@ -1224,15 +1195,13 @@ impl ClientScim {
                     );
                     continue;
                 }
-                let url = format!("{}/Groups/{remote_group_id}", self.base_uri);
+                let url = format!(
+                    "{}/Groups/{}",
+                    self.base_uri.trim_end_matches("/"),
+                    remote_group_id
+                );
 
-                // Same situation as for group patching. This "ugly" way of json creation is a pretty
-                // big efficiency gain, and we avoid many unnecessary allocations, since we have a
-                // static json that is the same each time and we know in advance.
-                let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"add\",\"path\":\"members\",\"value\":[{\"value\":\"";
-                let json_2 = "\",\"display\":\"";
-                let json_3 = "\"}]}]}";
-                let json = format!("{json_1}{user_id_remote}{json_2}{user_email}{json_3}");
+                let json = json_patch_add_member(user_id_remote, &user_email);
                 debug!("Sending PatchOp for Group {url}:\n{json}");
 
                 let res = http_client()
@@ -1244,13 +1213,20 @@ impl ClientScim {
                     .send()
                     .await?;
                 if !res.status().is_success() {
-                    debug!(?res, "SCIM PatchOp Error");
                     let err = ScimError::extract_from_res(res).await;
                     error!(
                         self.client_id,
                         ?err,
                         "Error adding Group assignment for SCIM client",
                     );
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Scim,
+                        format!(
+                            "SCIM client {} failed to add member {user_id_remote} to group \
+                             '{expected_name}': {err:?}",
+                            self.client_id
+                        ),
+                    ));
                 }
             }
         }
@@ -1260,11 +1236,13 @@ impl ClientScim {
         // it and remove the mappings.
         debug!("Left-Over user_groups_remote: {:?}", user_groups_remote);
         for group_remote in user_groups_remote {
-            let json_1 = "{\"schemas\":[\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\"Operations\":[{\"op\":\"remove\",\"path\":\"members\",\"value\":[{\"value\":\"";
-            let json_2 = "\"}]}]}";
-            let json = format!("{json_1}{user_id_remote}{json_2}");
+            let json = json_patch_remove_member(user_id_remote);
 
-            let url = format!("{}/Groups/{}", self.base_uri, group_remote.value);
+            let url = format!(
+                "{}/Groups/{}",
+                self.base_uri.trim_end_matches("/"),
+                group_remote.value
+            );
             let res = http_client()
                 .patch(url)
                 .header(AUTHORIZATION, self.auth_header())
@@ -1276,9 +1254,146 @@ impl ClientScim {
             if !res.status().is_success() {
                 let err = ScimError::extract_from_res(res).await;
                 error!(self.client_id, ?err, "Error removing SCIM Group assignment",);
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Scim,
+                    format!(
+                        "SCIM client {} failed to remove member {user_id_remote} from group \
+                         '{}': {err:?}",
+                        self.client_id, group_remote.value
+                    ),
+                ));
             }
         }
 
         Ok(())
+    }
+}
+
+/// Build the SCIM PatchOp body that adds a member to a group. The raw (unescaped) values are
+/// encoded by serde, so any input produces a valid JSON document.
+fn json_patch_add_member(user_id_remote: &str, user_email: &str) -> String {
+    serde_json::json!({
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "add",
+                "path": "members",
+                "value": [
+                    { "value": user_id_remote, "display": user_email }
+                ]
+            }
+        ]
+    })
+    .to_string()
+}
+
+/// Build the SCIM PatchOp body that removes a member from a group. The raw (unescaped) value is
+/// encoded by serde, so any input produces a valid JSON document.
+fn json_patch_remove_member(user_id_remote: &str) -> String {
+    serde_json::json!({
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "remove",
+                "path": "members",
+                "value": [{ "value": user_id_remote }]
+            }
+        ]
+    })
+    .to_string()
+}
+
+/// Build the SCIM PatchOp body that replaces a group's `displayName` and `externalId`. Pass
+/// `None` for `external_id` to unlink the remote group from Rauthy. The raw (unescaped) values
+/// are encoded by serde, so any input produces a valid JSON document.
+fn json_patch_replace_group_name(group_name: &str, external_id: Option<&str>) -> String {
+    let value = match external_id {
+        Some(id) => serde_json::json!({ "displayName": group_name, "externalId": id }),
+        None => serde_json::json!({ "displayName": group_name, "externalId": null }),
+    };
+    serde_json::json!({
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "replace", "value": value }]
+    })
+    .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{json_patch_add_member, json_patch_remove_member, json_patch_replace_group_name};
+    use serde_json::Value;
+
+    const PATCH_OP_SCHEMA: &str = "urn:ietf:params:scim:api:messages:2.0:PatchOp";
+
+    /// Assert that `body` parses as JSON and is a well-formed member PatchOp for `member_value`.
+    fn assert_valid_member_patch(body: &str, op: &str, member_value: &str) {
+        let v: Value = serde_json::from_str(body).expect("patch body must parse as JSON");
+        assert_eq!(v["schemas"][0], Value::from(PATCH_OP_SCHEMA));
+        let operation = &v["Operations"][0];
+        assert_eq!(operation["op"], Value::from(op));
+        assert_eq!(operation["path"], Value::from("members"));
+        assert_eq!(operation["value"][0]["value"], Value::from(member_value));
+    }
+
+    const USER_IDS: [&str; 5] = [
+        "6b8c9d2e-1f3a-4b5c-8d7e-9f0a1b2c3d4e", // plain UUID / alnum id
+        "",                                     // empty string
+        "a\"b\\c/d:e?f#f",                      // quote, backslash, url-ish chars
+        "üöä 中文 \u{0}NUL",                    // unicode incl. NUL byte
+        "user id with spaces & <tags> {braces}", // specials that break naive templates
+    ];
+
+    #[test]
+    fn add_member_patch_is_valid_json_for_any_input() {
+        for user_id in USER_IDS {
+            let body = json_patch_add_member(user_id, "john.doe@example.com");
+            assert_valid_member_patch(&body, "add", user_id);
+        }
+    }
+
+    #[test]
+    fn add_member_patch_escapes_the_email() {
+        let email = "a\"b\\c@ex.ample";
+        let body = json_patch_add_member("id-123", email);
+        let v: Value = serde_json::from_str(&body).expect("patch body must parse as JSON");
+        assert_eq!(
+            v["Operations"][0]["value"][0]["display"],
+            Value::from(email)
+        );
+    }
+
+    #[test]
+    fn remove_member_patch_is_valid_json_for_any_input() {
+        for user_id in USER_IDS {
+            let body = json_patch_remove_member(user_id);
+            assert_valid_member_patch(&body, "remove", user_id);
+        }
+    }
+
+    /// Assert that `body` parses as JSON and is a well-formed group-name replace PatchOp.
+    fn assert_valid_replace_group_name_patch(body: &str, name: &str, external_id: Option<&str>) {
+        let v: Value = serde_json::from_str(body).expect("patch body must parse as JSON");
+        assert_eq!(v["schemas"][0], Value::from(PATCH_OP_SCHEMA));
+        let operation = &v["Operations"][0];
+        assert_eq!(operation["op"], Value::from("replace"));
+        assert_eq!(operation["value"]["displayName"], Value::from(name));
+        match external_id {
+            Some(id) => assert_eq!(operation["value"]["externalId"], Value::from(id)),
+            None => assert!(operation["value"]["externalId"].is_null()),
+        }
+    }
+
+    #[test]
+    fn replace_group_name_patch_is_valid_json_for_any_input() {
+        for name in USER_IDS {
+            let body = json_patch_replace_group_name(name, Some("6b8c9d2e-1f3a-4b5c-8d7e"));
+            assert_valid_replace_group_name_patch(&body, name, Some("6b8c9d2e-1f3a-4b5c-8d7e"));
+        }
+    }
+
+    #[test]
+    fn replace_group_name_patch_nulls_external_id_when_unlinking() {
+        let body = json_patch_replace_group_name("some group", None);
+        assert_valid_replace_group_name_patch(&body, "some group", None);
     }
 }

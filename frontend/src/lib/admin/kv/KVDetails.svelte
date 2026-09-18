@@ -9,7 +9,7 @@
     import Form from '$lib/form/Form.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import InputArea from '$lib/form/InputArea.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
+    import { PATTERN_KV_KEY } from '$utils/patterns';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import { slide } from 'svelte/transition';
     import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
@@ -234,7 +234,7 @@
                         name="key"
                         label={ta.kv.key}
                         placeholder={ta.kv.key}
-                        pattern={PATTERN_GROUP}
+                        pattern={PATTERN_KV_KEY}
                         required
                     />
                     <InputArea

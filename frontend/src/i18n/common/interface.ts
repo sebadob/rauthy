@@ -227,9 +227,9 @@ export interface I18n {
         reAuthenticatePwd: string;
         reAuthenticateOtp: string;
         register: string;
-        registerd: string;
-        registerdKeys: string;
-        registerdOtps: string;
+        registered: string;
+        registeredKeys: string;
+        registeredOtps: string;
         passkeyName: string;
         passkeyNameErr: string;
         passwordInvalid: string;

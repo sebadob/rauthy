@@ -20,7 +20,7 @@ use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::users::User;
 use rauthy_data::ipgeo::get_location;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use tracing::warn;
+use validator::Validate;
 
 /// Returns all ToS
 ///
@@ -68,6 +68,7 @@ pub async fn post_tos(
     principal: ReqPrincipal,
     payload: Json<ToSRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
     principal.validate_admin_session()?;
 
     let payload = payload.into_inner();
@@ -96,8 +97,6 @@ pub async fn post_tos(
     responses(
         (status = 200, description = "Ok", body = ToSLatestResponse),
         (status = 204, description = "NoContent"),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
 #[get("/tos/latest")]
@@ -105,7 +104,6 @@ pub async fn get_tos_latest(
     accept: web::Header<header::Accept>,
 ) -> Result<HttpResponse, ErrorResponse> {
     if let Some(tos) = ToS::find_latest().await? {
-        warn!("Accept: {:?}", accept);
         let wants_html = accept
             .into_inner()
             .iter()
@@ -148,7 +146,6 @@ pub async fn get_tos_latest(
     tag = "tos",
     responses(
         (status = 200, description = "Ok", body = [ToSUserAcceptResponse]),
-        (status = 204, description = "NoContent"),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
@@ -223,21 +220,29 @@ async fn handle_tos_accept_deny(
     payload: ToSAcceptRequest,
     is_accept: bool,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
     principal.validate_session_auth_or_init()?;
+    let session = principal.get_session()?;
 
-    let Some(code_await) = AuthCodeToSAwait::find(&payload.accept_code).await? else {
+    let Some(code_await) = AuthCodeToSAwait::find_remove(&payload.accept_code).await? else {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
             "Invalid ToS accept code",
         ));
     };
 
-    let Some(mut auth_code) = AuthCode::find(code_await.auth_code.clone()).await? else {
+    let Some(mut auth_code) = AuthCode::find_remove(code_await.auth_code.clone()).await? else {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
             "AuthCode does not exist anymore",
         ));
     };
+    if auth_code.session_id.as_deref() != Some(session.id.as_str()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Invalid session binding",
+        ));
+    }
 
     let user = User::find(auth_code.user_id.clone()).await?;
     user.check_enabled()?;
@@ -263,8 +268,9 @@ async fn handle_tos_accept_deny(
         ));
     }
 
-    auth_code.reset_exp(code_await.auth_code_lifetime).await?;
-    code_await.delete().await?;
+    auth_code
+        .danger_save_reset_exp(code_await.auth_code_lifetime)
+        .await?;
 
     let mut builder = if code_await.needs_user_update {
         HttpResponse::ResetContent()

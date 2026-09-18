@@ -363,6 +363,11 @@
             client_credentials
         </InputCheckbox>
         <InputCheckbox ariaLabel="password" bind:checked={flows.password}>password</InputCheckbox>
+        {#if forceMfa && flows.password}
+            <div transition:slide={{ duration: 150 }} class="passwordMfaWarn">
+                {ta.clients.passwordFlowMfaWarn}
+            </div>
+        {/if}
         <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
             refresh_token
         </InputCheckbox>
@@ -643,6 +648,11 @@
 
     .claims {
         max-width: 40rem;
+    }
+
+    .passwordMfaWarn {
+        color: hsl(var(--error));
+        margin-left: 1.5rem;
     }
 
     .warn {

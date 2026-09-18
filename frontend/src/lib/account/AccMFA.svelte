@@ -506,7 +506,7 @@
 
     {#if passkeys.length > 0}
         <div class="keysHeader">
-            {t.mfa.registerdKeys}
+            {t.mfa.registeredKeys}
         </div>
     {/if}
     <div class="keysContainer">
@@ -571,7 +571,7 @@
 
             {#if hasOtp}
                 <div class="keysHeader">
-                    {t.mfa.registerdOtps}
+                    {t.mfa.registeredOtps}
                 </div>
             {/if}
             <div class="keysContainer">

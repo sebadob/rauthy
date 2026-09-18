@@ -267,9 +267,9 @@ export const I18nNb: I18n = {
         reAuthenticateOtp:
             'Før engangspassord kan redigeres, må en av de eksisterende først verifiseres:',
         register: 'Registrer',
-        registerd: 'Registrert',
-        registerdKeys: 'Registrerte nøkler',
-        registerdOtps: 'Registrerte engangspassord',
+        registered: 'Registrert',
+        registeredKeys: 'Registrerte nøkler',
+        registeredOtps: 'Registrerte engangspassord',
         passkeyName: 'Passkey-navn',
         passkeyNameErr: '2 - 32 bokstaver, ingen spesialtegn',
         passwordInvalid: 'Ugyldig passord',

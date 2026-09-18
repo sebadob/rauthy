@@ -305,11 +305,18 @@ impl TokenSet {
     ) -> Result<String, ErrorResponse> {
         let config = RauthyConfig::get();
 
-        let amr = if user.has_webauthn_enabled() && auth_code_flow == AuthCodeFlow::Yes {
-            JwtAmrValue::Mfa.as_str()
+        let amr = if auth_code_flow == AuthCodeFlow::Yes {
+            if user.has_webauthn_enabled() {
+                JwtAmrValue::Mfa.as_str()
+            } else if user.has_otp_enabled().await {
+                JwtAmrValue::Otp.as_str()
+            } else {
+                JwtAmrValue::Pwd.as_str()
+            }
         } else {
             JwtAmrValue::Pwd.as_str()
         };
+
         // Solid-OIDC ephemeral clients additionally carry the `solid` audience.
         let aud = if client.is_ephemeral() && config.vars.ephemeral_clients.enable_solid_aud {
             Audience::Multiple(vec![

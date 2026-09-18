@@ -178,7 +178,7 @@ pub async fn post_clients_dyn(
 
     if let Some(token) = &RauthyConfig::get().vars.dynamic_clients.reg_token {
         let bearer = helpers::get_bearer_token_from_header(req.headers())?;
-        if token != &bearer {
+        if !constant_time_eq::constant_time_eq(token.as_bytes(), bearer.as_bytes()) {
             return Ok(HttpResponse::Unauthorized()
                 .insert_header((
                     WWW_AUTHENTICATE,
@@ -547,8 +547,8 @@ pub async fn delete_client_favicon(
 
 /// Generates a new client secret
 ///
-/// Generates a new secret for the given client id and sets the client to `confidential` too, if it was
-/// not the case yet.
+/// Generates a new secret for the given client id and sets the client to `confidential` too, if it
+/// was not the case yet.
 ///
 /// **Permissions**
 /// - rauthy_admin

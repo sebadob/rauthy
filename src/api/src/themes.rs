@@ -1,7 +1,7 @@
 use crate::{AcceptEncoding, ReqPrincipal};
 use actix_web::body::BoxBody;
 use actix_web::http::StatusCode;
-use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE};
+use actix_web::http::header::{CACHE_CONTROL, CONTENT_ENCODING, CONTENT_TYPE, VARY};
 use actix_web::web::Json;
 use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::themes::ThemeRequestResponse;
@@ -49,6 +49,7 @@ pub async fn get_theme(
     Ok(HttpResponse::build(StatusCode::OK)
         .insert_header((CONTENT_TYPE, "text/css"))
         .insert_header((CONTENT_ENCODING, enc.value()))
+        .insert_header((VARY, "content-encoding"))
         .insert_header((CACHE_CONTROL, "max-age=31104000, public"))
         // .insert_header((ETAG, etag))
         .body(body))

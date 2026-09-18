@@ -71,7 +71,7 @@
         if (success) {
             setTimeout(() => {
                 if (redirectUri) {
-                    window.location.replace(redirectUri);
+                    window.location.replace(redirectUri || '/auth/v1/account');
                 } else {
                     navigateToAccount();
                 }

@@ -422,7 +422,10 @@ impl OidcTokenSet {
             }
             debug!("Refreshing token now");
 
-            let token_url = format!("{}/oidc/token", refresh_claims.common.iss);
+            let token_url = format!(
+                "{}/oidc/token",
+                refresh_claims.common.iss.trim_end_matches("/")
+            );
             let payload = TokenRequest {
                 grant_type: "refresh_token",
                 client_id: &client_id,
@@ -476,6 +479,8 @@ impl OidcTokenSet {
                                         "Error deserializing TokenSet: {:?}\nexiting refresh handler",
                                         err
                                     );
+                                    // If the IdP serializes badly, this is non-recoverable
+                                    // -> no need to retry.
                                     break 'main;
                                 }
                             }
@@ -485,11 +490,13 @@ impl OidcTokenSet {
                                 "Error during token refresh: {}: {}\nexiting refresh handler",
                                 status, body
                             );
+                            // If the IdP denied the refresh, the token will be invalidated anyway.
+                            // -> no need to retry.
                             break 'main;
                         }
                     }
                     Err(err) => {
-                        // we might get here, if the network is currently down -> retry
+                        // we might get here if the network is currently down -> retry
                         error!("Error refreshing token: {:?}", err);
                         retries += 1;
                         if retries > 10 {

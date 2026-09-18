@@ -269,7 +269,7 @@ token_revoke_on_logout = true
 # on remote servers, and logging these back in can be a lot more
 # work than the default logins via browser.
 #
-# This value will only be respected, if `token_revoke_on_logout` is
+# This value will only be respected if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
 # via the dedicated `revocation_endpoint` or forced logout from an
 # admin.
@@ -432,12 +432,12 @@ password_plain = '123SuperSafe'
 
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+password_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
 # You can provide a single API Key during the initial prod database
 # bootstrap. This legacy config value must match the format and pass validation.
@@ -1841,7 +1841,7 @@ disable_app_version_check = false
 # set this to `true`.
 #
 # default: false
-# overwritten by: GEO_BLOCK_UNKONW
+# overwritten by: GEO_BLOCK_UNKNOWN
 block_unknown = false
 
 # If you have a WAF or CDN which injects a geoloaction header
