@@ -96,16 +96,13 @@ pub async fn login_start<'a>(
             ..Default::default()
         };
 
-        location = atproto
-            .authorize(input, options)
-            .await
-            .map_err(|error| {
-                error!(%error, "failed to start authorization for ATProto");
-                ErrorResponse::new(
-                    ErrorResponseType::Internal,
-                    "failed to start authorization for ATProto",
-                )
-            })?;
+        location = atproto.authorize(input, options).await.map_err(|error| {
+            error!(%error, "failed to start authorization for ATProto");
+            ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "failed to start authorization for ATProto",
+            )
+        })?;
     }
 
     let cookie = ApiCookie::build(
