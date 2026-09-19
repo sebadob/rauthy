@@ -35,7 +35,7 @@ impl ThemeCss {
         Self::validate_hsl(self.text_high)?;
         Self::validate_hsl(self.bg)?;
         Self::validate_hsl(self.bg_high)?;
-        Self::validate_hsl(self.accent)?;
+        Self::validate_hsl(self.action)?;
         Self::validate_hsl(self.accent)?;
         Self::validate_hsl(self.error)?;
 

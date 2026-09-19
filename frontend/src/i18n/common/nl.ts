@@ -66,7 +66,7 @@ export const I18nNl: I18n = {
         accessRenew: 'Toegang verlengbaar tot',
         accessRenewDelete: 'Mogelijkheid tot verlengen verwijderen',
         birthdate: 'Geboortedatum',
-        canModifyFor: 'Passkeys kunnen worden gewijzigd voor:',
+        canModifyFor: 'MFA kunnen worden gewijzigd voor:',
         city: 'Stad',
         changePassword: 'Wachtwoord wijzigen',
         convertAccount: 'Account omzetten',
@@ -117,6 +117,13 @@ export const I18nNl: I18n = {
             username: 'Gebruikersnaam',
             validFor: 'Wachtwoord geldig voor {{ secs }} seconden',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: 'Wachtwoord bevestigen',
         passwordCurr: 'Huidig wachtwoord',
         passwordCurrReq: 'Huidig wachtwoord is vereist',
@@ -153,6 +160,8 @@ export const I18nNl: I18n = {
         userEnabled: 'Gebruiker ingeschakeld',
         userExpiry: 'Gebruiker vervalt',
         userVerifiedTooltip: 'Beveiligd met vingerafdruk of PIN',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `U kunt de velden instellen die zichtbaar zijn via uw WebID.\nDit is een functie
             die door sommige netwerken wordt gebruikt voor gedecentraliseerde logins. Als u niet
             \nweet wat het is, heeft u het waarschijnlijk niet nodig.`,
@@ -170,6 +179,7 @@ export const I18nNl: I18n = {
         emailRequired: 'E-Mail is verplicht',
         emailSentMsg: 'Als uw e-mailadres bestaat, is er een verzoek verstuurd',
         expectingPasskey: 'Passkey-authenticatie verwacht',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: 'Te veel ongeldige invoeren. Vergrendeld tot:',
         invalidCredentials: 'Ongeldige inloggegevens',
         invalidKeyUsed: 'Ongeldige sleutel',
@@ -228,24 +238,43 @@ export const I18nNl: I18n = {
         cancel: 'Annuleren',
     },
     mfa: {
-        p1: `Als u van plan bent uw MFA-sleutel te gebruiken met meerdere systemen zoals Windows en
-            Android, doe dan de registratie met Android.`,
-        p2: `Android is het platform met de minste ondersteunde functies voor de wachtwoordloze
-            technologie. Sleutels die u registreert met Android werken ook elders. Dit geldt echter
-            niet andersom.`,
-        p3: 'Voor meer informatie, zie',
-        docLinkText: 'de documentatie over passkeys',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Als u van plan bent uw MFA-sleutel te gebruiken met meerdere systemen zoals Windows en
+                Android, doe dan de registratie met Android.`,
+            p2: `Android is het platform met de minste ondersteunde functies voor de wachtwoordloze
+                technologie. Sleutels die u registreert met Android werken ook elders. Dit geldt echter
+                niet andersom.`,
+            p3: 'Voor meer informatie, zie',
+            registerNew: 'Nieuwe sleutel registreren',
+            docLinkText: 'de documentatie over passkeys',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One Time Password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Fout bij het starten van het registratieproces',
         lastUsed: 'Laatst gebruikt',
         noKey: 'Geen beveiligingssleutel geregistreerd op deze plek',
-        reAuthenticatePasskey: `Voordat u Passkeys kunt wijzigen, moet u authenticeren met een
+        reAuthenticatePasskey: `Voordat u MFA kunt wijzigen, moet u authenticeren met een
             reeds geregistreerde:`,
         reAuthenticatePwd:
-            'Voordat u Passkeys kunt wijzigen, moet u opnieuw authenticeren met uw wachtwoord.',
+            'Voordat u MFA kunt wijzigen, moet u opnieuw authenticeren met uw wachtwoord.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Registreren',
-        registerNew: 'Nieuwe sleutel registreren',
-        registerd: 'Geregistreerd',
-        registerdKeys: 'Geregistreerde sleutels',
+        registered: 'Geregistreerd',
+        registeredKeys: 'Geregistreerde sleutels',
+        registeredOtps: 'Registered OTPs',
         passkeyName: 'Passkey naam',
         passkeyNameErr: '2 - 32 tekens zonder speciale tekens',
         passwordInvalid: 'Ongeldig wachtwoord',

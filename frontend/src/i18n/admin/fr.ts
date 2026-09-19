@@ -94,6 +94,10 @@ export let I18nAdminFr: I18nAdmin = {
         forceMfa: 'Forcer l’authentification multifacteur',
         groupLoginPrefix: 'Préfixe du groupe de connexion',
         name: 'Nom du client',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `L'URI de base SCIM est celle à partir de laquelle les sous-routes comme
                 <code>{base_uri}/Users/{id}</base_uri></code> peuvent être correctement dérivées.`,
@@ -239,7 +243,7 @@ export let I18nAdminFr: I18nAdmin = {
             time: 'Heure',
             targetTime: 'Heure cible',
             tune: `Important : Ces valeurs doivent être optimisées sur l'architecture finale !`,
-            pDetials: `Pour une introduction détaillée à Argon2ID, de nombreuses ressources sont disponibles en ligne.
+            pDetails: `Pour une introduction détaillée à Argon2ID, de nombreuses ressources sont disponibles en ligne.
                 Ce guide ne donne qu'un bref aperçu des valeurs. Trois d'entre elles doivent être configurées :`,
             pTune: `Elles varient en fonction des capacités du système. Plus le système est puissant,
                 plus ces valeurs peuvent être sécurisées.`,
@@ -549,10 +553,23 @@ export let I18nAdminFr: I18nAdmin = {
         manualInitDesc: `L’utilisateur peut également être initialisé ici. Dans ce cas, vous devez communiquer le
             mot de passe directement.`,
         manualInit: 'Initialisation manuelle',
-        mfaDelete1: 'Vous pouvez supprimer les clés d’accès de cet utilisateur.',
-        mfaDelete2: `Attention ! La suppression d’une clé d’accès est irréversible ; l’utilisateur doit procéder à une
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1:
+                    'Vous pouvez supprimer les mots de passe à usage unique de cet utilisateur.',
+                mfaDelete2: `Attention ! La suppression d’un mot de passe à usage unique est irréversible ; l’utilisateur doit procéder à une
             nouvelle inscription complète.`,
-        noMfaKeys: 'Cet utilisateur n’a aucune clé d’accès enregistrée.',
+                noMfaOtps: 'Cet utilisateur n’a pas de mot de passe à usage unique',
+            },
+            webauthn: {
+                title: 'Clés d’accès',
+                mfaDelete1: 'Vous pouvez supprimer les clés d’accès de cet utilisateur.',
+                mfaDelete2: `Attention ! La suppression d’une clé d’accès est irréversible ; l’utilisateur doit procéder à une
+            nouvelle inscription complète.`,
+                noMfaKeys: 'Cet utilisateur n’a aucune clé d’accès enregistrée.',
+            },
+        },
         pkOnly1: 'Il s’agit d’un compte utilisant uniquement une clé d’accès.',
         pkOnly2: `Cet utilisateur utilise la connexion sans mot de passe et n'a défini aucun mot de passe.`,
         pkOnly3: `Si cet utilisateur a perdu tous ses identifiants, son compte peut être entièrement réinitialisé et un

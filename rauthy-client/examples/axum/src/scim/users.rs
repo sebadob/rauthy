@@ -71,7 +71,7 @@ pub async fn delete_user(Path(id): Path<String>, _: ScimToken) -> Result<(), Sci
 
 async fn find_users(start_index: u32, query: &ScimListQuery) -> Vec<ScimResource> {
     // If any filter is given by Rauthy, usually a single result is expected
-    match query.filter_by() {
+    match query.filter_by().unwrap() {
         ScimFilterBy::ExternalId(id) => USERS
             .read()
             .await

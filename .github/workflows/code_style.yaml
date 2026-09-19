@@ -39,3 +39,9 @@ jobs:
       - name: Code Style UI
         working-directory: ./frontend
         run: npm run check
+      - name: Frontend Contract Tests
+        working-directory: ./frontend
+        run: npm run test:webauthn
+        # The Chromium reset-page test (npm run test:password-reset) is not
+        # wired here: it needs a browser binary plus the already-built
+        # frontend. Run it locally after `just build-ui`.

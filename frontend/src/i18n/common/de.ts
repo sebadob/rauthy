@@ -66,7 +66,7 @@ export const I18nDe: I18n = {
         accessRenew: 'Zugang erneuerbar bis',
         accessRenewDelete: 'Möglichkeit zur Erneuerung löschen',
         birthdate: 'Geburtsdatum',
-        canModifyFor: 'Passkeys können modifiziert werden für:',
+        canModifyFor: 'MFA können modifiziert werden für:',
         city: 'Stadt',
         changePassword: 'Passwort wechseln',
         convertAccount: 'Account Umwandeln',
@@ -119,6 +119,14 @@ export const I18nDe: I18n = {
             username: 'Benutzername',
             validFor: 'Passwort gültig für {{ secs }} Sekunden',
         },
+        passkeys: {
+            type: 'Passkey Typ',
+            types: ['Normal', 'Verknüpft'],
+            rkWarning: `ACHTUNG: Ein verknüpfter Passkey (Resident Key) kann zwar zum direkten Login 
+                ohne die Eingabe der E-Mail Addresse genutzt werden, aber es wird auch ein 
+                zusätzlicher Speicherplatz für jede Anwendung gebraucht. Es muss dafür gesorgt 
+                werden, dass genug Speicher vorhanden ist.`,
+        },
         passwordConfirm: 'Passwort bestätigen',
         passwordCurr: 'Derzeitiges Passwort',
         passwordCurrReq: 'Derzeitiges Passwort ist notwendig',
@@ -155,6 +163,8 @@ export const I18nDe: I18n = {
         userEnabled: 'Benutzer Aktiviert',
         userExpiry: 'Benutzer Ablauf',
         userVerifiedTooltip: 'Abgesichert durch Fingerabdruck oder PIN',
+        residentKeyTooltip: `Dies ist ein Resident Key. Er kann für direkten Login ohne Eingabe der E-Mail verwendet 
+            werden.`,
         webIdDesc: `Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\n
             werden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt 
             wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie 
@@ -174,6 +184,7 @@ export const I18nDe: I18n = {
         emailRequired: 'E-Mail ist notwendig',
         emailSentMsg: 'Sollte Ihre Adresse registriert sein, wurde eine Nachricht versandt',
         expectingPasskey: 'Erwarte Authentifizierung per Passkey',
+        expectingOtp: 'Erwarte Authentifizierung per Einmalpasswort',
         http429: 'Zu viele ungültige Versuche. Gesperrt bis:',
         invalidCredentials: 'Ungültige Zugangsdaten',
         invalidKeyUsed: 'Ungültiger Sicherheitsschlüssel',
@@ -233,12 +244,29 @@ export const I18nDe: I18n = {
         cancel: 'Abbrechen',
     },
     mfa: {
-        p1: `Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, 
-            sollten Sie die Registrierung mit Android durchführen.`,
-        p2: `Android ist diejenige Plattform, die derzeit die wenigsten Features der passwortlosen 
-            Technologie unterstützt. Schlüssel, die dort registriert werden, funktionieren auf 
-            anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.`,
-        p3: 'Für weitere Informationen, siehe',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Wenn Sie mehrere Systeme parallel nutzen möchten, wie z.B. Windows und Android, 
+                sollten Sie die Registrierung mit Android durchführen.`,
+            p2: `Android ist diejenige Plattform, die derzeit die wenigsten Features der passwortlosen 
+                Technologie unterstützt. Schlüssel, die dort registriert werden, funktionieren auf 
+                anderen Geräten gleichermaßen. Dies gilt jedoch nicht andersherum.`,
+            p3: 'Für weitere Informationen, siehe',
+            registerNew: 'Neuen Passkey Registrieren',
+            docLinkText: 'die Dokumentation zu Passkeys',
+            unsupportedText: 'Dieser Browser ist zu alt und unterstützt kein Webauthn.',
+        },
+        otp: {
+            title: 'Einmalpasswort',
+            titleEmail: 'Email-basierte Einmalpasswörter',
+            activationCode: 'Bitte gib das per E-Mail gesendete Einmalpasswort ein.',
+            code: 'Einmalpasswort',
+            registerNew: 'Neuen OTP Registrieren',
+            resendOtp: 'Neues Einmalpasswort Senden',
+            sessionExpiresIn: 'Einmalpasswort läuft ab in:',
+            sessionExpired: 'Einmalpasswort abgelaufen',
+        },
+        requestCanceled: 'Anfrage abgebrochen',
         errorReg: 'Fehler beim Starten der Registrierung',
         lastUsed: 'Zuletzt genutzt',
         noKey: 'Es wurde in diesem Speicher noch kein Sicherheitsschlüssel registriert',
@@ -246,17 +274,18 @@ export const I18nDe: I18n = {
             bestehenden überprüft werden:`,
         reAuthenticatePwd: `Bevor Passkeys bearbeitet werden können, ist eine erneute Bestätigung 
             des Passworts notwendig.`,
+        reAuthenticateOtp: `Bevor Einmalpasswort bearbeitet werden können, muss zuerst einer der 
+            bestehenden überprüft werden:`,
         register: 'Registrieren',
-        registerNew: 'Neuen Key Registrieren',
-        registerd: 'Registriert',
-        registerdKeys: 'Registrierte Keys',
+        registered: 'Registriert',
+        registeredKeys: 'Registrierte Passkeys',
+        registeredOtps: 'Registrierte Einmalpasswörter',
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 Buchstaben, keine Sonderzeichen',
         passwordInvalid: 'Ungültiges Password',
         test: 'Test',
         testError: 'Fehler beim Starten des Tests',
         testSuccess: 'Test erfolgreich',
-        docLinkText: 'die Dokumentation zu Passkeys',
     },
     pagination: {
         entries: 'Einträge',

@@ -90,6 +90,10 @@ export let I18nAdminNb: I18nAdmin = {
         forceMfa: 'Tving MFA',
         groupLoginPrefix: 'Gruppepåloggingsprefiks',
         name: 'Klientnavn',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `SCIM Base URI'en må være den som underordnede ruter som
                 <code>{base_uri}/Users/{id}</code> kan avledes korrekt fra.`,
@@ -229,7 +233,7 @@ export let I18nAdminNb: I18nAdmin = {
             time: 'Tid',
             targetTime: 'Mål-Tid',
             tune: 'Viktig: Disse verdiene må settes på den endelige arkitekturen!',
-            pDetials: `For en mer detaljert innføring i Argon2ID-algoritmen finnes det mange kilder på nettet.
+            pDetails: `For en mer detaljert innføring i Argon2ID-algoritmen finnes det mange kilder på nettet.
                 Her forklares bare verdiene veldig kort. De følgende tre verdiene må konfigureres:`,
             pTune: `Verdiene kan variere sterkt avhengig av systemet og den generelle systembelastningen. Jo
                 kraftigere systemet er, desto sikrere verdier kan velges.`,
@@ -493,9 +497,21 @@ export let I18nAdminNb: I18nAdmin = {
         lastLogin: 'Siste innlogging',
         manualInitDesc: `Brukeren kan også initialiseres her. I så fall må passordet kommuniseres direkte.`,
         manualInit: 'Manuell initialisering',
-        mfaDelete1: 'Passnøkler for denne brukeren kan slettes.',
-        mfaDelete2: `Advarsel! Sletting av en passnøkkel <b>kan ikke angres</b> uten at brukeren registrerer seg på nytt.`,
-        noMfaKeys: 'Denne brukeren har ingen registrerte passnøkler.',
+        mfa: {
+            otp: {
+                title: 'Engangspassord',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passnøkler',
+                mfaDelete1: 'Passnøkler for denne brukeren kan slettes.',
+                mfaDelete2: `Advarsel! Sletting av en passnøkkel <b>kan ikke angres</b> uten at brukeren registrerer seg på nytt.`,
+                noMfaKeys: 'Denne brukeren har ingen registrerte passnøkler.',
+            },
+        },
         pkOnly1: 'Dette er en passkey-only-konto.',
         pkOnly2:
             'Det betyr at denne brukeren bruker passordløs innlogging og ikke har noe passord satt.',

@@ -5,10 +5,12 @@ use crate::email::password_reset::send_pwd_reset;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
+use crate::entity::one_time_password::OneTimePassword;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
+use crate::entity::pwd_exp_mails::PasswordExpMail;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
@@ -16,7 +18,8 @@ use crate::entity::theme::ThemeCssFull;
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::users_values::UserValues;
-use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
+use crate::entity::webauthn::auth_req::WebauthnServiceReq;
+use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
@@ -30,9 +33,9 @@ use hiqlite::macros::params;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
-    NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
-    UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesRequest,
-    UserValuesResponse,
+    ActiveOtp, NewUserRegistrationRequest, NewUserRequest, OtpKind, UpdateUserRequest,
+    UpdateUserSelfRequest, UserAccountTypeResponse, UserResponse, UserResponseSimple,
+    UserValuesRequest, UserValuesResponse,
 };
 use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
@@ -48,6 +51,7 @@ use std::default::Default;
 use std::fmt::{Debug, Formatter};
 use std::mem;
 use std::ops::Add;
+use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
 
@@ -227,6 +231,17 @@ impl User {
     }
 
     pub async fn create_from_new(mut new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
+        // The UserValuesValidator is intentionally not used on this path (see post_users), but a
+        // broken tz would otherwise be stored as-is, so validate the format here.
+        if let Some(tz) = &new_user_req.tz
+            && chrono_tz::Tz::from_str(tz).is_err()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'tz' cannot be parsed",
+            ));
+        }
+
         // pre-uniqueness check for better UX and error handling; the DB unique index on
         // `users_values.preferred_username` is the authoritative guard (see UserValues::insert).
         if let Some(preferred_username) = &new_user_req.preferred_username {
@@ -540,12 +555,15 @@ LIMIT $3"#;
         let size_hint = page_size as usize;
 
         let res = if let Some(token) = continuation_token {
+            // Keyset pagination over the composite key (created_at, id): `created_at` alone is
+            // not unique, so without the `id` tie-breaker, rows with an equal `created_at`
+            // would be duplicated or skipped across pages.
             if backwards {
                 let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE created_at <= $1 AND id != $2
-ORDER BY created_at DESC
+WHERE (created_at, id) < ($1, $2)
+ORDER BY created_at DESC, id DESC
 LIMIT $3
 OFFSET $4"#;
 
@@ -563,8 +581,8 @@ OFFSET $4"#;
                 let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE created_at >= $1 AND id != $2
-ORDER BY created_at ASC
+WHERE (created_at, id) > ($1, $2)
+ORDER BY created_at ASC, id ASC
 LIMIT $3
 OFFSET $4"#;
 
@@ -583,7 +601,7 @@ OFFSET $4"#;
             let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $1
 OFFSET $2"#;
 
@@ -598,7 +616,7 @@ OFFSET $2"#;
             let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at ASC
+ORDER BY created_at ASC, id ASC
 LIMIT $1
 OFFSET $2"#;
 
@@ -1225,6 +1243,7 @@ LIMIT $2"#;
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
         preferred_username: Option<String>,
+        is_self_update: bool,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(id).await?,
@@ -1259,7 +1278,7 @@ LIMIT $2"#;
 
         user.save(old_email.clone()).await?;
 
-        if upd_user.password.is_some() {
+        if upd_user.password.is_some() && !is_self_update {
             RauthyConfig::get()
                 .tx_events
                 .send_async(Event::user_password_reset(
@@ -1303,6 +1322,11 @@ LIMIT $2"#;
             UserValues::delete(user.id.clone()).await?;
             None
         };
+
+        // make sure to clean up exp email reminders after a password update
+        if upd_user.password.is_some() {
+            PasswordExpMail::delete(user.id.clone()).await?;
+        }
 
         Ok((user, user_values, is_new_admin))
     }
@@ -1404,7 +1428,7 @@ LIMIT $2"#;
 
         // a user cannot become a new admin from a self-req
         let (user, user_values, _is_new_admin) =
-            User::update(id, req, Some(user), preferred_username).await?;
+            User::update(id, req, Some(user), preferred_username, true).await?;
 
         Ok((user, user_values, email_updated))
     }
@@ -1445,6 +1469,10 @@ LIMIT $2"#;
 
     pub async fn validate_email_free(email: String) -> Result<(), ErrorResponse> {
         let sql = "SELECT 1 FROM users WHERE email = $1";
+
+        // emails are stored lowercased (see from_new_user_req / create_from_reg), so the
+        // pre-check must compare against the normalized form as well
+        let email = email.to_lowercase();
 
         let is_free = if is_hiqlite() {
             DB::hql().query_raw_one(sql, params!(email)).await.is_err()
@@ -1803,6 +1831,30 @@ impl User {
         self.roles.as_str().split(',')
     }
 
+    pub async fn get_otp_kind(&self) -> Result<Vec<ActiveOtp>, ErrorResponse> {
+        Ok(OneTimePassword::find_for_user(&self.id)
+            .await?
+            .into_iter()
+            .map(|f| ActiveOtp {
+                otp_id: f.id,
+                otp_kind: f.kind,
+            })
+            .collect())
+    }
+
+    pub async fn has_otp_of_kind_enabled(&self, kind: &OtpKind) -> bool {
+        OneTimePassword::find_active_kind_for_user(kind, &self.id)
+            .await
+            .is_ok()
+    }
+
+    #[inline(always)]
+    pub async fn has_otp_enabled(&self) -> bool {
+        OneTimePassword::find_active_for_user(&self.id)
+            .await
+            .is_ok_and(|f| !f.is_empty())
+    }
+
     #[inline(always)]
     pub fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
@@ -1997,8 +2049,12 @@ impl User {
                 ));
             }
 
-            // if the given password does match, send out a reset link to set a new one
+            // If the given password does match, send out a reset link to set a new one.
             return if self.match_passwords(plain_password.clone()).await? {
+                // Sending a new magic link without rate-limiting may seem bad at first, but the
+                // user has to be in a specific state AND the currently set password must be known.
+                // This means there is no real way for an attacker that knows a users' email that
+                // also has an expired password to trigger email spam.
                 let magic_link = MagicLink::create(
                     self.id.clone(),
                     RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
@@ -2128,7 +2184,7 @@ mod tests {
         // new sessions should always be in state 1 -> initializing
         assert_eq!(session.state, SessionState::Init);
 
-        assert!(session.csrf_token.len() > 0);
+        assert!(!session.csrf_token.is_empty());
 
         assert_eq!(session.groups_as_vec(), Ok(vec!["admin", "user"]));
         assert_eq!(
@@ -2138,13 +2194,13 @@ mod tests {
     }
 
     fn check_password_expired(user: &User) -> Result<(), ErrorResponse> {
-        if let Some(exp) = user.password_expires {
-            if exp < OffsetDateTime::now_utc().unix_timestamp() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::PasswordExpired,
-                    String::from("The password has expired"),
-                ));
-            }
+        if let Some(exp) = user.password_expires
+            && exp < Utc::now().timestamp()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::PasswordExpired,
+                "The password has expired",
+            ));
         }
         Ok(())
     }

@@ -267,6 +267,32 @@ WHERE name = $5"#;
 
         Ok(())
     }
+
+    /// Migrates encrypted fields only when the row still uses `old_kid`.
+    pub async fn save_migrated(
+        &self,
+        secret: Vec<u8>,
+        access: Vec<u8>,
+        new_kid: String,
+        old_kid: &str,
+    ) -> Result<bool, ErrorResponse> {
+        let name = self.name.clone();
+
+        let sql = "UPDATE api_keys SET secret = $1, access = $2, enc_key_id = $3 \
+WHERE name = $4 AND enc_key_id = $5";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(secret, access, new_kid, name.clone(), old_kid))
+                .await?
+        } else {
+            DB::pg_execute(sql, &[&secret, &access, &new_kid, &name, &old_kid]).await?
+        };
+
+        Self::cache_invalidate(&name).await?;
+
+        Ok(rows_affected == 1)
+    }
 }
 
 impl ApiKeyEntity {
@@ -415,7 +441,7 @@ impl ApiKey {
             ));
         }
 
-        if self.secret.as_slice() == sha256!(secret.as_bytes()) {
+        if constant_time_eq::constant_time_eq(self.secret.as_slice(), sha256!(secret.as_bytes())) {
             Ok(())
         } else {
             Err(ErrorResponse::new(

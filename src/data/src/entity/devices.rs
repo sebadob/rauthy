@@ -1,5 +1,4 @@
 use crate::database::{Cache, DB};
-use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use chrono::{DateTime, Utc};
 use hiqlite::macros::params;
 use rauthy_api_types::users::DeviceResponse;
@@ -121,14 +120,25 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
         Ok(())
     }
 
-    pub async fn revoke_refresh_tokens(device_id: &str) -> Result<(), ErrorResponse> {
-        RefreshTokenDevice::invalidate_all_for_device(device_id).await?;
+    pub async fn delete_refresh_tokens(device_id: &str) -> Result<(), ErrorResponse> {
+        let sql_tokens = "DELETE FROM refresh_tokens_devices WHERE device_id = $1";
+        let sql_upd = "UPDATE devices SET refresh_exp = null WHERE id = $1";
 
-        let sql = "UPDATE devices SET refresh_exp = null WHERE id = $1";
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(device_id)).await?;
+            let mut txn = Vec::with_capacity(2);
+            txn.push((sql_tokens, params!(device_id)));
+            txn.push((sql_upd, params!(device_id)));
+
+            for res in DB::hql().txn(txn).await? {
+                res?;
+            }
         } else {
-            DB::pg_execute(sql, &[&device_id]).await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
+
+            DB::pg_txn_append(&txn, sql_tokens, &[&device_id]).await?;
+            DB::pg_txn_append(&txn, sql_upd, &[&device_id]).await?;
+            txn.commit().await?;
         }
 
         Ok(())
@@ -181,10 +191,15 @@ pub struct DeviceAuthCode {
     pub last_poll: DateTime<Utc>,
     pub scopes: Option<String>,
     pub nonce: Option<String>,
-    // TODO we should probably save it hashed, even though it is only very shortly lived
-    // saved additionally here to have fewer cache requests during client polling
+    // TODO we should probably save it hashed, even though it is only very short-lived
+    //  saved additionally here to have fewer cache requests during client polling
+    // TODO 2 we should not store the secret at all, and instead favor the additional cache lookups.
+    //  The reason is simply client secret rotation. We should only save the information if the
+    //  linked client is confidential. If so, we lookup its secret and on mismatch, even try the
+    //  fallback secret which is saved after a rotation. Only this way we can make graceful secret
+    //  rotation possible even with lots of devices.
     pub client_secret: Option<String>,
-    // The warnings counter will increase, if a client does not stick to
+    // The warning counter will increase if a client does not stick to
     // the given interval and gets 'slow_down' from us. If this happens
     // too many times, the IP will be blacklisted.1
     pub warnings: u8,
@@ -228,13 +243,22 @@ impl DeviceAuthCode {
     pub async fn find_by_device_code(device_code: &str) -> Result<Option<Self>, ErrorResponse> {
         let len = RauthyConfig::get().vars.device_grant.user_code_length as usize;
         match device_code.get(..len) {
-            Some(key) => Self::find(key.to_string()).await,
+            Some(key) => Self::find_pending(key.to_string()).await,
             None => Ok(None),
         }
     }
 
     pub async fn find(user_code: String) -> Result<Option<Self>, ErrorResponse> {
+        let slf: Option<Self> = DB::hql().get_remove(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
+    }
+
+    pub async fn find_pending(user_code: String) -> Result<Option<Self>, ErrorResponse> {
         let slf: Option<Self> = DB::hql().get(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
+    }
+
+    async fn validate_expiry(slf: Option<Self>) -> Result<Option<Self>, ErrorResponse> {
         match slf {
             Some(slf) => {
                 if slf.exp < Utc::now() {

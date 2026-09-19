@@ -21,9 +21,9 @@ enable = true
 This will open the registration endpoint and make it accessible without upfront authentication.  
 You will now see a new button at the page root which directs you to the registration form.
 
-After successful registration, the user will receive an E-Mail with an activation link.
-Clicking on this link will direct the user on a page, where a new password or passkey can be set.
-At the same time, the account will be activated and the E-Mail will be validated as well of course.
+After successful registration, the user will receive an E-Mail with an activation link. Clicking on
+this link will direct the user on a page, where a new password or passkey can be set. At the same
+time, the account will be activated and the E-Mail will be validated as well of course.
 
 ```admonish caution
 You must have configured your E-Mail sending beforehand. Otherwise the registration process will not work.
@@ -208,11 +208,11 @@ calculation.
 struct NewUserRegistrationRequest {
   #[validate(email)]
   email: String,
-  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
   family_name: String,
-  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
   given_name: String,
   /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
   #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]

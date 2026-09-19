@@ -1,10 +1,12 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
+use crate::email::mailer_callback::EMailCallback;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::migration::bootstrap::generated_secrets;
 use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
+use chrono::TimeDelta;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
@@ -15,6 +17,7 @@ use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::OnceLock;
 use std::{env, mem};
@@ -41,7 +44,7 @@ pub struct RauthyConfig {
     pub provider_callback_uri: String,
     pub provider_callback_uri_encoded: String,
     pub pub_url_with_scheme: String,
-    pub tx_email: mpsc::Sender<EMail>,
+    pub tx_email: mpsc::Sender<(EMail, EMailCallback)>,
     pub tx_events: flume::Sender<Event>,
     pub tx_events_router: flume::Sender<EventRouterMsg>,
     pub webauthn: Webauthn,
@@ -52,7 +55,7 @@ impl RauthyConfig {
     pub async fn build(
         path_config: String,
         path_secrets: String,
-        tx_email: mpsc::Sender<EMail>,
+        tx_email: mpsc::Sender<(EMail, EMailCallback)>,
         tx_events: flume::Sender<Event>,
         tx_events_router: flume::Sender<EventRouterMsg>,
     ) -> Result<(Self, hiqlite::NodeConfig), Box<dyn Error>> {
@@ -275,6 +278,7 @@ pub struct Vars {
     pub logging: VarsLogging,
     pub matrix: VarsMatrix,
     pub mfa: VarsMfa,
+    pub otp: VarsOtp,
     pub pam: VarsPam,
     pub pow: VarsPow,
     pub scim: VarsScim,
@@ -342,7 +346,7 @@ impl Default for Vars {
             bootstrap: VarsBootstrap {
                 admin_email: "admin@localhost".to_string(),
                 password_plain: None,
-                pasword_argon2id: None,
+                password_argon2id: None,
                 api_key: None,
                 api_key_secret: None,
                 bootstrap_dir: "bootstrap".into(),
@@ -401,6 +405,7 @@ impl Default for Vars {
                 cleanup_minutes: 60,
                 cleanup_inactive_days: 0,
                 rate_limit_sec: 60,
+                allowed_resources: Vec::default(),
             },
             email: VarsEmail {
                 rauthy_admin_email: None,
@@ -410,6 +415,7 @@ impl Default for Vars {
                 smtp_username: None,
                 smtp_password: None,
                 smtp_from: "Rauthy <rauthy@localhost>".into(),
+                smtp_tls_mode: EmailTlsMode::Tls,
                 connect_retries: 3,
                 jobs: VarsEmailJobs {
                     orphaned_seconds: 300,
@@ -424,8 +430,6 @@ impl Default for Vars {
                 xoauth_scope: None,
                 microsoft_graph_uri: None,
                 root_ca: None,
-                starttls_only: false,
-                danger_insecure: false,
                 tz_fmt: VarsEmailTzFmt {
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
@@ -438,6 +442,7 @@ impl Default for Vars {
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
                     tz_fallback: "UTC".into(),
                 },
+                password_exp_days: 10,
             },
             encryption: VarsEncryption {
                 key_active: String::default(),
@@ -458,6 +463,7 @@ impl Default for Vars {
                 cache_lifetime: 3600,
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
+                allowed_resources: Vec::default(),
             },
             events: VarsEvents {
                 email: None,
@@ -574,6 +580,16 @@ impl Default for Vars {
             },
             mfa: VarsMfa {
                 admin_force_mfa: true,
+            },
+            otp: VarsOtp {
+                enable: false,
+                length: 6,
+                exp_mins: TimeDelta::minutes(5),
+                renew_exp: 2160,
+                digest_len_default: 512,
+                email: VarsOtpEmail {
+                    enable: true,
+                }
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -1023,6 +1039,107 @@ Your account has not been compromised and no data was leaked."#.into()),
                         button_text_request_new: Some("Request password reset Link".into()),
                     },
                 },
+                email_otp: VarsTemplatesLanguages {
+                    de: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    en: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    fr: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ko: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    nb: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    nl: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ru: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    uk: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    zhhans: VarsTemplate {
+                        subject: "One Time Password".into(),
+                        header: "One Time Password for".into(),
+                        text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                },
             },
             tls: VarsTls {
                 cert_path: None,
@@ -1150,6 +1267,7 @@ impl Vars {
         slf.parse_fedcm(&mut table);
         slf.parse_geo(&mut table, &mut secrets);
         slf.parse_hashing(&mut table);
+        slf.parse_otp(&mut table);
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
@@ -1476,10 +1594,10 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "bootstrap",
-            "pasword_argon2id",
+            "password_argon2id",
             "BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID",
         ) {
-            self.bootstrap.pasword_argon2id = Some(v);
+            self.bootstrap.password_argon2id = Some(v);
         }
         if let Some(v) = t_str(&mut table, "bootstrap", "api_key", "BOOTSTRAP_API_KEY") {
             self.bootstrap.api_key = Some(v);
@@ -1817,6 +1935,14 @@ impl Vars {
         ) {
             self.dynamic_clients.rate_limit_sec = v;
         }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "dynamic_clients",
+            "allowed_resources",
+            "DYN_CLIENT_ALLOWED_RESOURCES",
+        ) {
+            self.dynamic_clients.allowed_resources = v;
+        }
 
         check_table_empty(table, "dynamic_clients");
     }
@@ -1904,20 +2030,31 @@ impl Vars {
             "SMTP_MICROSOFT_GRAPH_URI",
         );
 
-        if let Some(v) = t_bool(&mut table, "email", "starttls_only", "SMTP_STARTTLS_ONLY") {
-            self.email.starttls_only = v;
-        }
-        if let Some(v) = t_bool(
-            &mut table,
-            "email",
-            "danger_insecure",
-            "SMTP_DANGER_INSECURE",
-        ) {
-            self.email.danger_insecure = v;
+        if let Some(mode) = t_str(&mut table, "email", "smtp_tls_mode", "SMTP_TLS_MODE") {
+            self.email.smtp_tls_mode = if mode.eq_ignore_ascii_case("tls") {
+                EmailTlsMode::Tls
+            } else if mode.eq_ignore_ascii_case("starttls") {
+                EmailTlsMode::StartTls
+            } else if mode.eq_ignore_ascii_case("danger-insecure") {
+                EmailTlsMode::DangerInsecure
+            } else {
+                panic!(
+                    "Unknown variant for 'email.smtp_tls_mode'. Expected one of: tls, starttls, danger-insecure"
+                )
+            };
         }
 
         // [email.jobs]
         let mut jobs = t_table(&mut table, "jobs");
+
+        if let Some(v) = t_u8(
+            &mut jobs,
+            "email.jobs",
+            "password_exp_days",
+            "EMAIL_PWD_EXP_DAYS",
+        ) {
+            self.email.password_exp_days = v;
+        }
 
         if let Some(v) = t_u32(
             &mut jobs,
@@ -2095,6 +2232,15 @@ impl Vars {
             "EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS",
         ) {
             self.ephemeral_clients.ignore_unknown_auth_flows = v;
+        }
+
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "ephemeral_clients",
+            "allowed_resources",
+            "EPHEMERAL_CLIENTS_ALLOWED_RESOURCES",
+        ) {
+            self.ephemeral_clients.allowed_resources = v;
         }
 
         check_table_empty(table, "ephemeral_clients");
@@ -2524,7 +2670,7 @@ impl Vars {
             &mut table,
             "geolocation",
             "block_unknown",
-            "GEO_BLOCK_UNKONW",
+            "GEO_BLOCK_UNKNOWN",
         ) {
             self.geo.block_unknown = v;
         }
@@ -2667,6 +2813,45 @@ impl Vars {
                 panic!("Error parsing `[cluster]` section: {err:?}");
             }
         }
+    }
+
+    fn parse_otp(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "otp");
+        if let Some(v) = t_bool(&mut table, "otp", "enable", "OTP_ENABLE") {
+            self.otp.enable = v;
+        }
+        if let Some(v) = t_u8(&mut table, "otp", "length", "OTP_LENGTH") {
+            if !(6..9).contains(&v) {
+                panic!("otp.length must be between 6 and 8");
+            }
+            self.otp.length = v;
+        }
+        if let Some(v) = t_i64(&mut table, "otp", "exp_mins", "OTP_EXP_MINS") {
+            self.otp.exp_mins = TimeDelta::minutes(v);
+        }
+        if let Some(v) = t_u16(&mut table, "otp", "renew_exp", "OTP_RENEW_EXP") {
+            self.otp.renew_exp = v;
+        }
+        if let Some(v) = t_u16(
+            &mut table,
+            "otp",
+            "digest_len_default",
+            "OTP_DIGEST_LEN_DEFAULT",
+        ) {
+            self.otp.digest_len_default = if v == 256 || v == 384 || v == 512 {
+                v
+            } else {
+                512
+            };
+        }
+
+        let mut table_email = t_table(&mut table, "email");
+        if let Some(v) = t_bool(&mut table_email, "otp.email", "enable", "OTP_EMAIL_ENABLE") {
+            self.otp.email.enable = v;
+        }
+
+        check_table_empty(table, "otp");
+        check_table_empty(table_email, "otp.email");
     }
 
     fn parse_http_client(&mut self, table: &mut toml::Table) {
@@ -3699,7 +3884,7 @@ pub struct VarsBackchannelLogout {
 pub struct VarsBootstrap {
     pub admin_email: String,
     pub password_plain: Option<String>,
-    pub pasword_argon2id: Option<String>,
+    pub password_argon2id: Option<String>,
     pub api_key: Option<String>,
     pub api_key_secret: Option<String>,
     pub bootstrap_dir: Cow<'static, str>,
@@ -3766,6 +3951,10 @@ pub struct VarsDynamicClients {
     pub cleanup_minutes: u32,
     pub cleanup_inactive_days: u32,
     pub rate_limit_sec: u32,
+    /// RFC 8707 allow-list for dynamic clients, which cannot declare `allowed_resources`
+    /// themselves. Resolved from the live config on every request, never stored with the
+    /// client. Empty by default, which keeps deny-by-default.
+    pub allowed_resources: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -3777,6 +3966,7 @@ pub struct VarsEmail {
     pub smtp_username: Option<String>,
     pub smtp_password: Option<String>,
     pub smtp_from: Cow<'static, str>,
+    pub smtp_tls_mode: EmailTlsMode,
     pub connect_retries: u16,
     pub jobs: VarsEmailJobs,
     pub smtp_conn_mode: SmtpConnMode,
@@ -3786,9 +3976,25 @@ pub struct VarsEmail {
     pub xoauth_scope: Option<String>,
     pub microsoft_graph_uri: Option<String>,
     pub root_ca: Option<String>,
-    pub starttls_only: bool,
-    pub danger_insecure: bool,
     pub tz_fmt: VarsEmailTzFmt,
+    pub password_exp_days: u8,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum EmailTlsMode {
+    Tls,
+    StartTls,
+    DangerInsecure,
+}
+
+impl Display for EmailTlsMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EmailTlsMode::Tls => f.write_str("TLS"),
+            EmailTlsMode::StartTls => f.write_str("STARTTLS"),
+            EmailTlsMode::DangerInsecure => f.write_str("DANGER-INSECURE (Unencrypted)"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -3843,6 +4049,10 @@ pub struct VarsEphemeralClients {
     /// clients; dynamic client registration (DCR) and admin-managed clients keep rejecting
     /// unknown grant types. Default reject.
     pub ignore_unknown_auth_flows: bool,
+    /// RFC 8707 allow-list applied when an ephemeral client document declares no
+    /// `allowed_resources` of its own. Keeps deny-by-default while letting an operator
+    /// permit specific resources without `danger_allow_unvalidated_resource`.
+    pub allowed_resources: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -3975,6 +4185,21 @@ pub struct VarsMfa {
 }
 
 #[derive(Debug)]
+pub struct VarsOtp {
+    pub enable: bool,
+    pub length: u8,
+    pub exp_mins: TimeDelta,
+    pub renew_exp: u16,
+    pub digest_len_default: u16,
+    pub email: VarsOtpEmail,
+}
+
+#[derive(Debug)]
+pub struct VarsOtpEmail {
+    pub enable: bool,
+}
+
+#[derive(Debug)]
 pub struct VarsPam {
     pub remote_password_len: u8,
     pub remote_password_ttl: u16,
@@ -4035,6 +4260,7 @@ pub struct VarsTemplates {
     pub password_new: VarsTemplatesLanguages,
     pub password_reset: VarsTemplatesLanguages,
     pub email_registered_already: VarsTemplatesLanguages,
+    pub email_otp: VarsTemplatesLanguages,
 }
 
 #[derive(Debug)]
@@ -4173,6 +4399,38 @@ pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
     }
 }
 
+// /// Parses the given input into a type-safe `Duration`. The input can have the following suffxies:
+// /// - s -> seconds
+// /// - m -> minutes
+// /// - h -> hours
+// /// - d -> days
+// /// - w -> weeks
+// /// - y -> years
+// fn parse_duration(input: &str) -> Option<Duration> {
+//     if input.is_empty() {
+//         return None;
+//     }
+//     let (value, unit) = input.split_at(input.len() - 1);
+//
+//     let mul = match unit {
+//         "s" | "S" => 1,
+//         "m" | "M" => 60,
+//         "h" | "H" => 60 * 60,
+//         "d" | "D" => 60 * 60 * 24,
+//         "w" | "W" => 60 * 60 * 24 * 7,
+//         "y" | "Y" => 60 * 60 * 24 * 365,
+//         // We will parse an integer given a string as seconds. If it's any thing else than a
+//         // digit, the value parsing in the next step will fail anyway.
+//         _ => 1,
+//     };
+//
+//     value
+//         .trim()
+//         .parse::<u64>()
+//         .ok()
+//         .map(|v| Duration::from_secs(v.saturating_mul(mul)))
+// }
+
 fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<bool> {
     let value = map.remove(key);
 
@@ -4194,6 +4452,58 @@ fn t_bool(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Opti
     };
     Some(b)
 }
+
+// fn t_duration(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<Duration> {
+//     let value = map.remove(key);
+//
+//     if !env_var.is_empty()
+//         && let Ok(v) = env::var(env_var)
+//     {
+//         match parse_duration(&v) {
+//             None => {
+//                 panic!(
+//                     "{}",
+//                     err_env(
+//                         env_var,
+//                         "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
+//                     )
+//                 );
+//             }
+//             Some(d) => return Some(d),
+//         }
+//     }
+//
+//     match value? {
+//         Value::String(s) => match parse_duration(&s) {
+//             None => {
+//                 panic!(
+//                     "{}",
+//                     err_t(
+//                         env_var,
+//                         parent,
+//                         "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
+//                     )
+//                 )
+//             }
+//             Some(d) => Some(d),
+//         },
+//         Value::Integer(i) => {
+//             if i < 0 {
+//                 None
+//             } else {
+//                 Some(Duration::from_secs(i as u64))
+//             }
+//         }
+//         _ => panic!(
+//             "{}",
+//             err_t(
+//                 env_var,
+//                 parent,
+//                 "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
+//             )
+//         ),
+//     }
+// }
 
 fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<i64> {
     let value = map.remove(key);
@@ -4322,3 +4632,47 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
     format!("Expected type `{typ}` for {parent}{sep}{key}")
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[test]
+//     fn test_parse_duration() {
+//         assert_eq!(parse_duration("1s").unwrap(), Duration::from_secs(1));
+//         assert_eq!(parse_duration("2s").unwrap(), Duration::from_secs(2));
+//         assert_eq!(parse_duration("1m").unwrap(), Duration::from_secs(60));
+//         assert_eq!(parse_duration("2m").unwrap(), Duration::from_secs(120));
+//         assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
+//         assert_eq!(parse_duration("2h").unwrap(), Duration::from_secs(2 * 3600));
+//         assert_eq!(
+//             parse_duration("1d").unwrap(),
+//             Duration::from_secs(24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("2d").unwrap(),
+//             Duration::from_secs(2 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("1w").unwrap(),
+//             Duration::from_secs(7 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("2w").unwrap(),
+//             Duration::from_secs(14 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("1y").unwrap(),
+//             Duration::from_secs(365 * 24 * 3600)
+//         );
+//         assert_eq!(
+//             parse_duration("2y").unwrap(),
+//             Duration::from_secs(2 * 365 * 24 * 3600)
+//         );
+//
+//         // no value will be read as seconds
+//         assert_eq!(parse_duration("3").unwrap(), Duration::from_secs(3));
+//         // invalid value is non
+//         assert_eq!(parse_duration("3x"), None);
+//     }
+// }

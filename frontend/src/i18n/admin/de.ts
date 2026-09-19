@@ -95,6 +95,11 @@ export let I18nAdminDe: I18nAdmin = {
         forceMfa: 'MFA Erzwingen',
         groupLoginPrefix: 'Login Gruppen Prefix',
         name: 'Client Name',
+        passwordFlowMfaWarn: `ACHTUNG: Es sind gleichzeitig 'MFA Erzwingen' und der 'password' Flow 
+            aktiviert. MFA kann NICHT erzwungen werden bei diesem Authentication Flow, weil es gegen 
+            das OIDC RFC verstoßen würde. Das bedeutet, dass bei genutztem 'password' Flow und 
+            notwendigem MFA auf der Client Seite überprüft werden muss. Hierzu eignet sich das 'amr' 
+            claim.`,
         scim: {
             baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie 
                 <code>{base_uri}/Users/{id}</base_uri></code> korrekt abgeleitet werden können.`,
@@ -133,7 +138,7 @@ export let I18nAdminDe: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `Die Token Lifetime wird auf Access und ID Tokens angewandt und wird in Sekunden angegeben.`,
-            p2: `Sollte der Client EdDSA / ed25519 Algorithmen unterstützen, sollte dies die bevorzugte Wahl
+            p2: `Sollte der Client EdDSA / Ed25519 Algorithmen unterstützen, sollte dies die bevorzugte Wahl
                 sein. RSA Algorithmen existieren lediglich aus Kompatibilitätsgründen.`,
             p3: `Der Algorithmus für Refresh Tokens kann nicht geändert werden, da diese nur von Rauthy
                 genutzt werden sollten.`,
@@ -239,7 +244,7 @@ export let I18nAdminDe: I18nAdmin = {
             time: 'Zeit',
             targetTime: 'Ziel-Zeit',
             tune: 'Wichtig: Diese Werten müssen auf der finalen Architektur eingestellt werden!',
-            pDetials: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
+            pDetails: `Für eine detailiertere Einführung in den Argon2ID Alrogithmus stehen vielen Quellen online zur
             Verfügung. Hier werden nur ganz kurz die Werte erklärt. Die folgenden drei Werte müssen konfiguriert werden:`,
             pTune: `Die Werte können stark variieren in Abhängigkeit vom System und der generellen Systemlast. Je 
             stärker das System, desto sicherere Werte können gewählt werden.`,
@@ -538,10 +543,22 @@ export let I18nAdminDe: I18nAdmin = {
         manualInitDesc: `Der Benutzer kann jedoch ebenfalls hier initialisiert werden. In diesem Fall muss das
             Passwort allerdings direkt kommuniziert werden.`,
         manualInit: 'Manuell Initialisieren',
-        mfaDelete1: 'Die Passkeys dieses Nutzers können gelöscht werden.',
-        mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
+        mfa: {
+            otp: {
+                title: 'Einmalpasswort',
+                mfaDelete1: 'Die Einmalpasswort dieses Nutzers können gelöscht werden.',
+                mfaDelete2: `Vorsicht! Das Löschen eines Einmalpasswort <b>kann nicht rückgängig gemacht werden</b>, ohne
             dass der Benutzer die Registrierung erneut durchführt.`,
-        noMfaKeys: 'Dieser Benutzer hat keine registrierten Passkeys.',
+                noMfaOtps: 'Dieser Benutzer hat keine registrierten Einmalpasswort.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'Die Passkeys dieses Nutzers können gelöscht werden.',
+                mfaDelete2: `Vorsicht! Das Löschen eines Keys <b>kann nicht rückgängig gemacht werden</b>, ohne
+            dass der Benutzer die Registrierung erneut durchführt.`,
+                noMfaKeys: 'Dieser Benutzer hat keine registrierten Passkeys.',
+            },
+        },
         pkOnly1: 'Dies ist ein Passkey-Only Account.',
         pkOnly2:
             'Das bedeutet, dass dieser Benutzer den passwortlosen Login nutzt und kein Passwort gesetzt hat.',

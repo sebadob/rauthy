@@ -9,6 +9,7 @@ use rauthy_common::regex::{
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
 use utoipa::ToSchema;
@@ -25,8 +26,11 @@ pub struct DeviceRequest {
     /// Validation: `[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"))]
     pub device_id: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub name: Option<String>,
 }
 
@@ -44,6 +48,7 @@ pub struct MfaAwaitRequest {
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub enum MfaPurpose {
     Login(String),
+    Discover,
     MfaModToken,
     PamLogin,
     PasswordNew,
@@ -60,11 +65,11 @@ pub struct NewUserRequest {
     /// Validation: `[user_values.preferred_username] -> regex_rust`
     #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub given_name: Option<String>,
     pub language: Language,
     /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
@@ -91,11 +96,11 @@ pub struct NewUserRegistrationRequest {
     /// Validation: `[user_values.preferred_username] -> regex_rust`
     #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub given_name: Option<String>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,
@@ -110,8 +115,8 @@ pub struct NewUserRegistrationRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasskeyRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub name: String,
 }
 
@@ -159,11 +164,11 @@ pub struct UpdateUserRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub given_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
     /// Validation: Applies password policy - max 256 characters
@@ -192,11 +197,11 @@ pub struct UpdateUserSelfRequest {
     /// Validation: `email`
     #[validate(email)]
     pub email: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub given_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
     #[validate(length(max = 256))]
@@ -338,21 +343,22 @@ pub struct WebauthnDeleteRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnRegStartRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub passkey_name: String,
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,
     #[validate(length(min = 32, max = 32))]
     pub mfa_mod_token_id: Option<String>,
+    pub allow_rk: Option<bool>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct WebauthnRegFinishRequest {
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub passkey_name: String,
     /// Note: `ToSchema` does currently not exist for `webauthn_rs::prelude::PublicKeyCredential`
     #[schema(value_type = str)]
@@ -395,6 +401,128 @@ pub struct MfaModTokenResponse {
     pub ip: String,
 }
 
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum OtpKind {
+    #[default]
+    Email,
+    Phone,
+    Time,
+}
+
+impl OtpKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            OtpKind::Email => "email",
+            OtpKind::Phone => "phone",
+            OtpKind::Time => "time",
+        }
+    }
+}
+
+impl Display for OtpKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl FromStr for OtpKind {
+    type Err = ErrorResponse;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "email" => Ok(Self::Email),
+            "phone" => Ok(Self::Phone),
+            "time" => Ok(Self::Time),
+            _ => Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Cannot parse OtpKind",
+            )),
+        }
+    }
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct OtpGetResponse {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub last_used: i64,
+    pub kind: OtpKind,
+    pub is_active: bool,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpCreateRequest {
+    pub otp_name: Option<String>,
+    pub otp_kind: OtpKind,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpActivateRequest {
+    pub otp_id: String,
+    pub otp_code: String,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpDeleteRequest {
+    pub otp_id: String,
+    #[validate(length(min = 32, max = 32))]
+    pub mfa_mod_token_id: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct ActiveOtp {
+    pub otp_id: String,
+    pub otp_kind: OtpKind,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpLoginResponse {
+    pub code: String,
+    pub active_otps: Vec<ActiveOtp>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthStartRequest {
+    pub otp_id: String,
+    pub purpose: MfaPurpose,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpAuthStartResponse {
+    pub code: String,
+    pub exp: i64,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthResendRequest {
+    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    pub code: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
+pub struct OtpAuthFinishRequest {
+    #[validate(regex(path = "*RE_ALNUM_48", code = "[a-zA-Z0-9]{48}"))]
+    pub code: String,
+    pub otp_code: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct OtpLoginFinishResponse {
+    pub loc: String,
+}
+
 #[derive(Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct PasskeyResponse {
@@ -405,6 +533,14 @@ pub struct PasskeyResponse {
     pub last_used: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_verified: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resident_key: Option<bool>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct ResidentKeyToken {
+    pub resident_key_token: String,
 }
 
 #[derive(Serialize, ToSchema)]

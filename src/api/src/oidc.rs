@@ -1,8 +1,9 @@
 use crate::{ReqPrincipal, map_auth_step};
+use actix_web::body::BoxBody;
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
-    CONTENT_TYPE, HeaderName, HeaderValue,
+    CONTENT_TYPE, HeaderName, HeaderValue, VARY,
 };
 use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
@@ -15,8 +16,8 @@ use rauthy_api_types::oidc::{
     SessionInfoResponse, TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
-use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
-use rauthy_common::compression::{compress_br_dyn, compress_gzip};
+use rauthy_api_types::users::{OtpLoginResponse, Userinfo, WebauthnLoginResponse};
+use rauthy_common::compression::{compress_br_dyn, compress_gzip_dyn};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
 };
@@ -34,11 +35,11 @@ use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair, JwkKeyPairType};
 use rauthy_data::entity::logos::LogoRes;
 use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
-use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_data::entity::well_known::WellKnown;
 use rauthy_data::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
@@ -51,8 +52,10 @@ use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
+use std::fmt::Write;
 use std::ops::Add;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::str::FromStr;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{error, info, warn};
 use validator::Validate;
 
@@ -124,20 +127,25 @@ pub async fn get_authorize(
             true
         }
     } else {
+        // TODO we should add a new DB table that tracks to which clients a user has logged-in
+        //  in the past. When we have that information and we find a `consent` prompt, we would
+        //  never trigger the automatic refresh frontend action. This would mean the user has to
+        //  click the login button which works as a consent.
+        //  We can keep ignoring `select_account|create` options as they have no meaning with
+        //  Rauthy.
         false
     };
 
-    // check if the user needs to do the Webauthn login each time
+    // check if the user needs to do a MFA login each time
     let mut action = FrontendAction::None;
-    if !force_new_session
-        && let Ok(mfa_cookie) =
-            WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
-        && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
-    {
+    if !force_new_session {
         // we need to check this because a user could deactivate MFA in another browser or
         // be deleted while still having existing mfa cookies somewhere else
-        if user.has_webauthn_enabled() {
-            action = FrontendAction::MfaLogin(mfa_cookie.email);
+        if let Ok(mfa_cooke) = MfaCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+            && let Ok(user) = User::find_by_email(mfa_cooke.email.clone()).await
+            && (user.has_webauthn_enabled() || user.has_otp_enabled().await)
+        {
+            action = FrontendAction::MfaLogin(mfa_cooke.email);
         }
     }
 
@@ -163,8 +171,14 @@ pub async fn get_authorize(
         loc.push_str("error=login_required");
 
         if let Some(state) = params.state {
-            loc.push_str("&state=");
-            loc.push_str(&state);
+            write!(
+                loc,
+                "&state={}",
+                percent_encoding::percent_encode(
+                    state.as_bytes(),
+                    percent_encoding::NON_ALPHANUMERIC,
+                )
+            )?;
         }
 
         return Ok(HttpResponse::Found()
@@ -253,18 +267,20 @@ fn build_authorize_resp(
     origin_header: Option<(HeaderName, HeaderValue)>,
     browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (body_bytes, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
-        (compress_br_dyn(body.as_bytes())?, "br")
-    } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-        (compress_gzip(body.as_bytes())?, "gzip")
+    let (body, encoding) = if accept_encoding.contains(&"gzip".parse().unwrap()) {
+        // for dynamic, fast compression, gzip wins over brotli
+        (compress_gzip_dyn(body), "gzip")
+    } else if accept_encoding.contains(&"br".parse().unwrap()) {
+        (compress_br_dyn(body), "br")
     } else {
-        (body.as_bytes().to_vec(), "none")
+        (BoxBody::new(body), "none")
     };
 
     let mut builder = HttpResponse::Ok();
     builder
         .insert_header(HEADER_HTML)
-        .insert_header(("content-encoding", encoding));
+        .insert_header(("content-encoding", encoding))
+        .insert_header((VARY, "content-encoding"));
 
     if browser_id.needs_set_new() == BrowserIdSetNew::Yes {
         builder.cookie(BrowserId::new_cookie());
@@ -288,7 +304,7 @@ fn build_authorize_resp(
             ));
     }
 
-    Ok(builder.body(body_bytes))
+    Ok(builder.body(body))
 }
 
 /// POST login credentials to proceed with the authorization_code flow
@@ -309,7 +325,10 @@ fn build_authorize_resp(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login (Webauthn or OTP)", content(
+            (WebauthnLoginResponse = "application/webauthn+json"),
+            (OtpLoginResponse = "application/otp+json"),
+        )),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
         (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
@@ -346,6 +365,7 @@ pub async fn post_authorize_handle(
     let mut has_password_been_hashed = false;
     let mut add_login_delay = true;
     let mut user_needs_mfa = false;
+    let mut user_failed_logins = None;
 
     let res = match authorize::post_authorize(
         &req,
@@ -354,6 +374,7 @@ pub async fn post_authorize_handle(
         &mut has_password_been_hashed,
         &mut add_login_delay,
         &mut user_needs_mfa,
+        &mut user_failed_logins,
         browser_id,
     )
     .await
@@ -394,7 +415,8 @@ pub async fn post_authorize_handle(
     };
 
     let ip = real_ip_from_req(&req)?;
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed, user_failed_logins)
+        .await
 }
 
 /// Immediate login refresh with valid session
@@ -463,17 +485,17 @@ pub async fn get_callback_html(
 pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, ErrorResponse> {
     let mut jwks = JWKS::find_pk().await?;
 
-    if params.skip_okp == Some(true) {
+    if params.skip_okp.unwrap_or(false) {
         jwks.keys.retain(|k| k.kty != JwkKeyPairType::OKP);
     }
 
-    let res = JWKSCerts::from(jwks);
+    let certs = jwks.into_certs(params.rfc_9864.unwrap_or(false));
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(res))
+        .json(certs))
 }
 
 /// Single JWK by kid
@@ -486,15 +508,19 @@ pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, Error
     responses((status = 200, description = "Ok", body = JWKSPublicKeyCerts)),
 )]
 #[get("/oidc/certs/{kid}")]
-pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_cert_by_kid(
+    kid: web::Path<String>,
+    params: Query<CertsParams>,
+) -> Result<HttpResponse, ErrorResponse> {
     let kp = JwkKeyPair::find(kid.into_inner()).await?;
     let pub_key = JWKSPublicKey::from_key_pair(&kp)?;
+
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(JWKSPublicKeyCerts::from(pub_key)))
+        .json(pub_key.into_pub_cert(params.rfc_9864.unwrap_or(false))))
 }
 
 /// POST for starting an OAuth 2 Device Authorization Grant flow
@@ -666,7 +692,7 @@ pub async fn post_device_verify(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    let mut device_code = DeviceAuthCode::find(payload.user_code)
+    let mut device_code = DeviceAuthCode::find_pending(payload.user_code.clone())
         .await?
         .ok_or_else(|| {
             ErrorResponse::new(
@@ -679,6 +705,25 @@ pub async fn post_device_verify(
         DeviceAcceptedRequest::Accept => {
             device_code.verified_by = Some(principal.user_id()?.to_string());
             device_code.save().await?;
+
+            // If very unlucky, we might get a race-condition here because of no distributed
+            // lock and the consistent, concurrent polling from the device waiting for approval.
+            // The polling device will update the cached code with the last poll timestamp. When
+            // this happens, there is a tiny window between fetching and validation, where a client
+            // might update a just approved code with a stale device code that reverts the approval.
+            // To counter this, we have this very short wait and refetch here to make sure our
+            // approval got through.
+            // 50ms is very conservative. The full poll check request will usually take less than
+            // 1ms, and we also only need to do it once, since devices will usually wait at least
+            // 5s between polls and are rate-limited.
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if let Some(mut device_code) = DeviceAuthCode::find_pending(payload.user_code).await?
+                && device_code.verified_by.is_none()
+            {
+                device_code.verified_by = Some(principal.user_id()?.to_string());
+                device_code.save().await?;
+            }
+
             Ok(HttpResponse::Accepted().finish())
         }
         DeviceAcceptedRequest::Decline => {
@@ -993,8 +1038,9 @@ pub async fn post_token(
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let has_password_been_hashed = payload.grant_type == GrantType::Password;
+    let mut user_failed_logins = None;
 
-    let res = match oidc::get_token_set(payload, browser_id, req).await {
+    let res = match oidc::get_token_set(payload, browser_id, req, &mut user_failed_logins).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {
@@ -1008,12 +1054,21 @@ pub async fn post_token(
             if !has_password_been_hashed {
                 return Err(err);
             }
-            // TODO return always the same error here as well, just like during authorize?
-            Err(err)
+            match &err.error {
+                ErrorResponseType::Disabled
+                | ErrorResponseType::NotFound
+                | ErrorResponseType::PasswordExpired
+                | ErrorResponseType::Unauthorized => Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Invalid user credentials",
+                )),
+                _ => Err(err),
+            }
         }
     };
 
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed, user_failed_logins)
+        .await
 }
 
 #[utoipa::path(
@@ -1171,6 +1226,24 @@ pub async fn post_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorRespon
     }
 }
 
+#[inline]
+fn auth_header(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
+    let name = HeaderName::from_str(name).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Invalid header name '{name}'"),
+        )
+    })?;
+    let value = HeaderValue::from_str(value).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Invalid value for header '{name}'"),
+        )
+    })?;
+
+    Ok((name, value))
+}
+
 /// GET forward authentication
 ///
 /// This endpoint is very similar to the `/userinfo`, but instead of returning information about
@@ -1201,32 +1274,29 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
         let mut builder = HttpResponse::Ok();
-        builder
-            .insert_header((headers.user.as_ref(), info.id))
-            .insert_header((headers.roles.as_ref(), info.roles.join(",")))
-            .insert_header((
-                headers.groups.as_ref(),
-                info.groups.map(|g| g.join(",")).unwrap_or_default(),
-            ))
-            .insert_header((headers.email.as_ref(), info.email.unwrap_or_default()))
-            .insert_header((
-                headers.email_verified.as_ref(),
-                info.email_verified.unwrap_or(false).to_string(),
-            ))
-            .insert_header((
-                headers.family_name.as_ref(),
-                info.family_name.unwrap_or_default(),
-            ))
-            .insert_header((
-                headers.given_name.as_ref(),
-                info.given_name.unwrap_or_default(),
-            ))
-            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()));
+        for (name, value) in [
+            auth_header(&headers.user, &info.id)?,
+            auth_header(&headers.roles, &info.roles.join(","))?,
+            auth_header(
+                &headers.groups,
+                &info.groups.map(|g| g.join(",")).unwrap_or_default(),
+            )?,
+            auth_header(&headers.email, &info.email.unwrap_or_default())?,
+            auth_header(
+                &headers.email_verified,
+                &info.email_verified.unwrap_or(false).to_string(),
+            )?,
+            auth_header(&headers.family_name, &info.family_name.unwrap_or_default())?,
+            auth_header(&headers.given_name, &info.given_name.unwrap_or_default())?,
+            auth_header(&headers.mfa, &info.mfa_enabled.to_string())?,
+        ] {
+            builder.insert_header((name, value));
+        }
 
         if headers.enable_pref_username
             && let Some(username) = info.preferred_username
         {
-            builder.insert_header((headers.preferred_username.as_ref(), username));
+            builder.insert_header(auth_header(&headers.preferred_username, &username)?);
         }
 
         Ok(builder.finish())

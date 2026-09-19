@@ -28,11 +28,14 @@ pub async fn get_token_set(
     req_data: TokenRequest,
     browser_id: BrowserId,
     req: HttpRequest,
+    user_failed_logins: &mut Option<i64>,
 ) -> Result<(TokenSet, Vec<(HeaderName, HeaderValue)>), ErrorResponse> {
     match req_data.grant_type {
         GrantType::AuthorizationCode => grant_type_authorization_code(req, req_data).await,
         GrantType::ClientCredentials => grant_type_credentials(req, req_data).await,
-        GrantType::Password => grant_type_password(req, browser_id, req_data).await,
+        GrantType::Password => {
+            grant_type_password(req, browser_id, req_data, user_failed_logins).await
+        }
         GrantType::RefreshToken => grant_type_refresh(req, req_data).await,
         GrantType::TokenExchange => grant_type_token_exchange(req, req_data).await,
         // the device code grant is intercepted earlier, before the request even gets here

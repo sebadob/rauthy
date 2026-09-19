@@ -15,6 +15,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use std::ops::Add;
 use tracing::debug;
 
 /// Validates request parameters for the authorization and refresh endpoints
@@ -46,8 +47,8 @@ pub async fn validate_auth_req_param(
                 "'code_challenge' is missing",
             ));
         } else {
-            // 'plain' is the default method to be assumed by the OAuth specification when it is
-            // not further specified.
+            // 'plain' is the default method to be assumed by the OAuth specification when it is not
+            // further specified.
             let method = if let Some(m) = code_challenge_method {
                 m.to_owned()
             } else {
@@ -65,8 +66,15 @@ pub async fn validate_and_refresh_token(
     refresh_token: &str,
     req: &HttpRequest,
 ) -> Result<(TokenSet, Option<String>), ErrorResponse> {
+    let clock_skew_secs = RauthyConfig::get().vars.lifetimes.refresh_token_grace_time;
     let mut buf = Vec::with_capacity(256);
-    JwtToken::validate_claims_into(refresh_token, Some(JwtTokenType::Refresh), 0, &mut buf).await?;
+    JwtToken::validate_claims_into(
+        refresh_token,
+        Some(JwtTokenType::Refresh),
+        clock_skew_secs,
+        &mut buf,
+    )
+    .await?;
     let claims: JwtRefreshClaims = serde_json::from_slice(&buf)?;
 
     // An underflow is impossible because the token is already validated at this point.
@@ -85,10 +93,10 @@ pub async fn validate_and_refresh_token(
         // If this is a non-matching client.id, this is most probably a malicious request.
         // -> invalidate the refresh token immediately
         if claims.common.did.is_some()
-            && let Ok(rt) = RefreshTokenDevice::find(validation_str).await
+            && let Ok(Some(rt)) = RefreshTokenDevice::find_opt(validation_str).await
         {
             rt.delete().await?;
-        } else if let Ok(rt) = RefreshToken::find(validation_str).await {
+        } else if let Ok(Some(rt)) = RefreshToken::find_opt(validation_str).await {
             rt.delete().await?;
         };
 
@@ -128,12 +136,18 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
-    // validate that it exists in the db and invalidate it afterward
-    let now = Utc::now().timestamp();
-    let exp_at_secs = now + RauthyConfig::get().vars.lifetimes.refresh_token_grace_time as i64;
+    let now_plus_skew = Utc::now()
+        .add(chrono::Duration::seconds(clock_skew_secs as i64))
+        .timestamp();
     let rt_scope = if let Some(device_id) = &claims.common.did {
-        let mut rt = RefreshTokenDevice::find(validation_str).await?;
+        let rt = RefreshTokenDevice::find_delete(validation_str).await?;
 
+        if rt.exp < now_plus_skew {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Device Refresh Token has expired",
+            ));
+        }
         if &rt.device_id != device_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -147,17 +161,23 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
-        if rt.exp > exp_at_secs + 1 {
-            rt.exp = exp_at_secs;
-            rt.save().await?;
-        }
         rt.scope
     } else {
-        let mut rt = RefreshToken::find(validation_str).await?;
-        if rt.exp > exp_at_secs + 1 {
-            rt.exp = exp_at_secs;
-            rt.save().await?;
+        let rt = RefreshToken::find_delete(validation_str).await?;
+
+        if rt.exp < now_plus_skew {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Refresh Token has expired",
+            ));
         }
+        if rt.user_id != user.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "'user_id' does not match",
+            ));
+        }
+
         rt.scope
     };
 
@@ -172,8 +192,8 @@ pub async fn validate_and_refresh_token(
         AuthTime::given(ts)
     } else {
         // This is not 100% correct but will make the migration from older to new refresh
-        // tokens smooth. In a future release, the `auth_time` can be set to required in the claims.
-        // Optional for now to still accept older tokens.
+        // tokens smooth. In a future release, the `auth_time` can be set to 'required' in the
+        // claims. Optional for now to still accept older tokens.
         // As soon as no old refresh tokens exist anymore, this branch will never be used anyway.
         AuthTime::now()
     };
@@ -190,6 +210,7 @@ pub async fn validate_and_refresh_token(
         // audience binding; a refresh can never widen it
         claims.resource.map(String::from),
         AuthCodeFlow::No,
+        // TODO I guess we need to provide the ID if this is a refresh from a device flow?
         DeviceCodeFlow::No,
     )
     .await?;

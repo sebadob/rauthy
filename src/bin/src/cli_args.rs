@@ -88,7 +88,7 @@ pub struct ArgsServer {
     pub secrets_file: String,
 
     /// Integration Test Mode
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, feature = "profiling"))]
     #[clap(short, long, default_value_t = false)]
     pub test: bool,
 }

@@ -31,6 +31,7 @@ use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
+use std::net::IpAddr;
 use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
@@ -705,6 +706,32 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
+    /// Atomically migrates the encrypted secret to a new key, but only while the row still
+    /// uses `old_kid`. Returns `true` when the update applied, `false` when the secret was
+    /// changed concurrently (then the migration must not clobber it). Used by the encryption
+    /// key migration (`service::encryption::migrate_encryption_alg`).
+    pub async fn update_secret_migrated(
+        &self,
+        secret: Vec<u8>,
+        new_kid: String,
+        old_kid: &str,
+    ) -> Result<bool, ErrorResponse> {
+        let sql = r#"
+UPDATE clients
+SET secret = $1, secret_kid = $2
+WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(secret, new_kid, self.id.clone(), old_kid))
+                .await?
+        } else {
+            DB::pg_execute(sql, &[&secret, &new_kid, &self.id, &old_kid]).await?
+        };
+
+        Ok(rows_affected == 1)
+    }
+
     pub async fn update_dynamic(
         client_req: DynamicClientRequest,
         mut client_dyn: ClientDyn,
@@ -960,8 +987,11 @@ impl Client {
 
     /// Validates an RFC 8707 `resource` request value against this client's policy: it
     /// must match one of the client's configured `allowed_resources`. The entries are
-    /// matched verbatim, so an operator decides what a valid value looks like. Ephemeral
-    /// clients without their own allow-list are only permitted when
+    /// matched verbatim, so an operator decides what a valid value looks like. Dynamic
+    /// clients, and ephemeral clients whose document declares no allow-list of its own,
+    /// are matched against `dynamic_clients.allowed_resources` /
+    /// `ephemeral_clients.allowed_resources` instead, resolved from the live config and
+    /// never stored with the client; ephemeral clients are otherwise only permitted when
     /// `ephemeral_clients.danger_allow_unvalidated_resource` is enabled. On any failure
     /// an `invalid_target` error (RFC 8707 §2) is returned.
     pub fn validate_resource_request(&self, resource: &str) -> Result<(), ErrorResponse> {
@@ -972,14 +1002,26 @@ impl Client {
             ));
         }
 
-        // A dynamic client is never allowed to set `allowed_resources` in the first place, so it
-        // can never have a match below. Rejecting it explicitly is cheap and keeps this robust if
-        // anything about the dynamic registration rules changes in the future.
+        // A dynamic client is never allowed to set `allowed_resources` in the first place, so
+        // it can never have a match below. The operator may allow-list specific resources for
+        // dynamic clients via `dynamic_clients.allowed_resources`, which is resolved from the
+        // live config on every request and never stored with the client. The list is empty by
+        // default, which keeps rejecting these requests like before.
         if self.is_dynamic() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::InvalidTarget,
-                "dynamic clients must not request a `resource`",
-            ));
+            let allowed = &RauthyConfig::get().vars.dynamic_clients.allowed_resources;
+            return if allowed.is_empty() {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "dynamic clients must not request a `resource`",
+                ))
+            } else if allowed.iter().any(|r| r == resource) {
+                Ok(())
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "the requested `resource` is not allowed for this client",
+                ))
+            };
         }
 
         let mut allowed = self.allowed_resources_iter().peekable();
@@ -993,10 +1035,20 @@ impl Client {
                 ))
             }
         } else if self.is_ephemeral()
-            && RauthyConfig::get()
+            // An ephemeral client document that declares its own `allowed_resources` has
+            // matched above; for one that declares none the operator's
+            // `ephemeral_clients.allowed_resources` is resolved from the live config the
+            // same way, without the blunt `danger_allow_unvalidated_resource`.
+            && (RauthyConfig::get()
                 .vars
                 .ephemeral_clients
-                .danger_allow_unvalidated_resource
+                .allowed_resources
+                .iter()
+                .any(|r| r == resource)
+                || RauthyConfig::get()
+                    .vars
+                    .ephemeral_clients
+                    .danger_allow_unvalidated_resource)
         {
             Ok(())
         } else {
@@ -1217,14 +1269,15 @@ impl Client {
     /// possible without MFA. The force MFA for the Rauthy admin UI is done in
     /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
     #[inline]
-    pub fn validate_mfa(
+    pub async fn validate_mfa(
         &self,
         user: &User,
         provider_mfa_login: Option<ProviderMfaLogin>,
     ) -> Result<(), ErrorResponse> {
         let force_mfa = self.id != "rauthy" && self.force_mfa;
-        let has_mfa =
-            user.has_webauthn_enabled() || provider_mfa_login == Some(ProviderMfaLogin::Yes);
+        let has_mfa = user.has_webauthn_enabled()
+            || provider_mfa_login == Some(ProviderMfaLogin::Yes)
+            || user.has_otp_enabled().await;
 
         if force_mfa && !has_mfa {
             trace!("MFA required for this client but the user has none");
@@ -1316,7 +1369,7 @@ impl Client {
         let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
             && (self.is_dynamic() || self.is_ephemeral());
         let has_any = self.get_redirect_uris().iter().any(|uri| {
-            (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+            wildcard_prefix_match(uri, redirect_uri)
                 || uri.as_str().eq(redirect_uri)
                 || (loopback && loopback_redirect_match(uri, redirect_uri))
         });
@@ -1345,8 +1398,7 @@ impl Client {
             .unwrap_or_default()
             .iter()
             .any(|uri| {
-                (uri.ends_with('*')
-                    && post_logout_redirect_uri.starts_with(uri.split_once('*').unwrap().0))
+                wildcard_prefix_match(uri, post_logout_redirect_uri)
                     || uri.as_str().eq(post_logout_redirect_uri)
             });
 
@@ -1394,6 +1446,20 @@ impl Client {
                 ))
             }
         } else if code_challenge.is_some() || code_challenge_method.is_some() {
+            // A dynamic client cannot say at registration time whether it is going to use
+            // PKCE, which is why confidential dynamic clients have no `challenge` configured.
+            // When such a client decides to send one anyway, it is accepted as an optional
+            // addon instead of being rejected: the challenge is saved with the auth code and
+            // the `code_verifier` is validated during the token exchange as usual. It is
+            // still not required - a confidential dynamic client without a challenge keeps
+            // working like before.
+            if self.is_dynamic()
+                && code_challenge.is_some()
+                && code_challenge_method.as_deref() == Some("S256")
+            {
+                return Ok(());
+            }
+
             trace!("'code_challenge' not enabled for this client");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -1459,7 +1525,7 @@ impl Client {
         if !self.confidential {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
+                ErrorResponseType::Unauthorized,
                 "Cannot validate 'client_secret' for public client",
             ));
         }
@@ -1518,6 +1584,69 @@ impl Client {
             }
         } else {
             Ok(())
+        }
+    }
+}
+
+/// Validates a dynamic-client redirect URI.
+/// Rejects backchannel callbacks for dynamic clients.
+fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
+    if opt.is_some() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`backchannel_logout_uri` is not supported for dynamic clients",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
+    if uri.contains('*') {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "wildcard `redirect_uris` are not allowed for dynamic clients",
+        ));
+    }
+    let url = Url::parse(uri).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("invalid `redirect_uri`: '{uri}'"),
+        )
+    })?;
+    let loopback = url
+        .host_str()
+        .map(|h| {
+            h.eq_ignore_ascii_case("localhost")
+                || h.parse::<IpAddr>()
+                    .map(|ip| ip.is_loopback())
+                    .unwrap_or(false)
+        })
+        .unwrap_or(false);
+    if url.scheme() != "https" && !(url.scheme() == "http" && loopback) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`redirect_uris` must be https (http loopback allowed)",
+        ));
+    }
+    Ok(())
+}
+
+/// Matches wildcard redirect URIs without crossing a host/path boundary.
+#[inline]
+pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
+    let Some(prefix) = registered.strip_suffix('*') else {
+        return false;
+    };
+    match requested.strip_prefix(prefix) {
+        None => false,
+        Some(rest) => {
+            rest.is_empty()
+                || rest.starts_with('/')
+                || rest.starts_with('?')
+                || rest.starts_with('#')
+                || prefix.ends_with('/')
+                || prefix.ends_with('?')
+                || prefix.ends_with('#')
         }
     }
 }
@@ -1859,6 +1988,26 @@ impl Client {
             .default_scopes
             .join(",");
 
+        // Dynamic registration accepts only validated redirect URIs and no backchannel callback.
+        validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
+
+        let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
+        for uri in &req.redirect_uris {
+            validate_dyn_redirect_uri(uri)?;
+            redirect_uris.push(uri.clone());
+        }
+        if redirect_uris.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'redirect_uris' must not be empty",
+            ));
+        }
+
+        let post_logout_redirect_uri = req.post_logout_redirect_uri.filter(|uri| !uri.is_empty());
+        if let Some(uri) = &post_logout_redirect_uri {
+            validate_dyn_redirect_uri(uri)?;
+        }
+
         Ok(Self {
             id,
             name: req.client_name,
@@ -1866,8 +2015,8 @@ impl Client {
             confidential,
             secret,
             secret_kid,
-            redirect_uris: req.redirect_uris.join(","),
-            post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
+            redirect_uris: redirect_uris.join(","),
+            post_logout_redirect_uris: post_logout_redirect_uri,
             allowed_origins,
             flows_enabled: GrantType::csv(&req.grant_types),
             access_token_alg,
@@ -1885,7 +2034,6 @@ impl Client {
             force_mfa: false,
             client_uri: req.client_uri,
             contacts: req.contacts.map(|c| c.join(",")).filter(|c| !c.is_empty()),
-            backchannel_logout_uri: req.backchannel_logout_uri,
             ..Default::default()
         })
     }
@@ -1899,7 +2047,7 @@ impl Client {
 
         let redirect_uris = self.get_redirect_uris();
         let grant_types = self.get_flows();
-        let post_logout_redirect_uri = self.get_redirect_uris().first().cloned();
+        let post_logout_redirect_uri = self.get_post_logout_uris().map(|mut u| u.swap_remove(0));
 
         let client_secret = self.get_secret_cleartext()?;
         let (registration_access_token, registration_client_uri) = if map_registration_client_uri {
@@ -1981,6 +2129,42 @@ mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
+
+    #[test]
+    fn test_validate_no_backchannel_logout_uri() {
+        // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)
+        assert!(validate_no_backchannel_logout_uri(&None).is_ok());
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("https://app.example.com/logout".to_string()))
+                .is_err()
+        );
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("https://169.254.169.254/".to_string()))
+                .is_err()
+        );
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("http://127.0.0.1:8080/".to_string()))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_validate_dyn_redirect_uri() {
+        // https allowed
+        assert!(validate_dyn_redirect_uri("https://app.example.com/cb").is_ok());
+        // http loopback allowed (RFC 8252 native apps)
+        assert!(validate_dyn_redirect_uri("http://127.0.0.1:52345/cb").is_ok());
+        assert!(validate_dyn_redirect_uri("http://localhost:8080/cb").is_ok());
+        // wildcards rejected
+        assert!(validate_dyn_redirect_uri("https://*").is_err());
+        assert!(validate_dyn_redirect_uri("https://app.example.com/*").is_err());
+        // non-https and non-loopback http rejected
+        assert!(validate_dyn_redirect_uri("http://app.example.com/cb").is_err());
+        assert!(validate_dyn_redirect_uri("ftp://app.example.com/cb").is_err());
+        // not a URI at all
+        assert!(validate_dyn_redirect_uri("not a uri").is_err());
+        assert!(validate_dyn_redirect_uri("").is_err());
+    }
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -2010,6 +2194,127 @@ mod tests {
         let mut only_unknown = vec!["urn:ietf:params:oauth:grant-type:jwt-bearer".to_string()];
         retain_supported_grant_types(&mut only_unknown);
         assert!(only_unknown.is_empty());
+    }
+
+    #[test]
+    fn validate_code_challenge_optional_for_dynamic_clients() {
+        // A confidential dynamic client registers without a `challenge`, but one it sends
+        // on its own is accepted as an optional addon (S256 only) instead of being
+        // rejected with "'code_challenge' not enabled for this client".
+        let client = Client {
+            id: "dyn$WdCH3aeUpM5NDF8fDBHTLTqLLLZ8gwWl".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+
+        let challenge = Some("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM".to_string());
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_ok()
+        );
+        // still not required
+        assert!(client.validate_code_challenge(&None, &None).is_ok());
+        // `plain` adds nothing for a confidential client and stays rejected, as does
+        // a challenge without a method (which implies `plain`)
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("plain".to_string()))
+                .is_err()
+        );
+        assert!(client.validate_code_challenge(&challenge, &None).is_err());
+
+        // any other client without a configured challenge keeps the strict behaviour
+        let client = Client {
+            id: "not_dynamic".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_wildcard_prefix_match() {
+        // path-suffixed wildcards keep working
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback?state=x"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback/deep"
+        ));
+        // bare-host wildcard must not match a different host
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com.evil.com"
+        ));
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com.evil.com/cb"
+        ));
+        // but path continuation on the same host is fine
+        assert!(wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com/cb"
+        ));
+        // a wildcard must only ever appear at the very end
+        assert!(!wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com/a/cb"
+        ));
+        assert!(!wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com/cb"
+        ));
+        assert!(!wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com//cb"
+        ));
+        // a prefix that already ends at a boundary matches any continuation
+        assert!(wildcard_prefix_match(
+            "https://example.com/*",
+            "https://example.com/app"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://example.com/*",
+            "https://example.com/"
+        ));
+        // a registered base with a trailing slash matches continuations after it
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app/foo"
+        ));
+        assert!(wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app/"
+        ));
+        // but the bare base without the trailing slash is still not under `base/`
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app"
+        ));
+        // non-boundary continuation is still rejected
+        assert!(!wildcard_prefix_match(
+            "https://example.com/cb*",
+            "https://example.com/cbX"
+        ));
+        // non-wildcard registered URIs never match via the helper
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com/cb",
+            "https://app.example.com/cb"
+        ));
+        assert!(!wildcard_prefix_match("no-star", "no-star"));
     }
 
     #[test]
@@ -2270,9 +2575,11 @@ mod tests {
 
     #[test]
     fn test_delete_client_custom_scope() {
-        let mut client = Client::default();
-        client.scopes = "email,openid,profile,groups".to_string();
-        client.default_scopes = "email,openid,cust_scope".to_string();
+        let mut client = Client {
+            scopes: "email,openid,profile,groups".to_string(),
+            default_scopes: "email,openid,cust_scope".to_string(),
+            ..Default::default()
+        };
 
         client.delete_scope("profile");
         assert_eq!(&client.scopes, "email,openid,groups");

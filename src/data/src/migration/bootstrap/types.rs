@@ -191,9 +191,7 @@ pub struct Client {
     /// Validation: cannot be empty
     #[validate(length(min = 1))]
     pub flows_enabled: Vec<GrantType>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_alg: JwkKeyPairAlg,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_alg: JwkKeyPairAlg,
     /// Validation: `10 <= auth_code_lifetime <= 300`
     #[validate(range(min = 10, max = 300))]
@@ -281,11 +279,11 @@ pub struct User {
     /// Validation: `[user_values.preferred_username] -> regex_rust`
     #[validate(regex(path = "RE_PREFERRED_USERNAME"))]
     pub preferred_username: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub given_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-    #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+    #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
     pub family_name: Option<String>,
     pub language: Option<Language>,
     pub password: UserPassword,

@@ -25,12 +25,14 @@
     import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
     import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
     import InputPassword from '$lib5/form/InputPassword.svelte';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
     import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
     import type {
+        ActiveOtp,
         CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
+        OtpLoginResponse,
         RequestResetRequest,
         WebauthnLoginResponse,
     } from '$api/types/authorize.ts';
@@ -47,6 +49,10 @@
     import { execProviderLogin } from '$utils/login';
     import Modal from '$lib/Modal.svelte';
     import Loading from '$lib/Loading.svelte';
+    import OtpRequest from '$lib5/OtpRequest.svelte';
+    import type { MfaPurpose } from '$api/types/mfa';
+    import type { OtpAdditionalData } from '$mfa/otp/types';
+    import IconKey from '$icons/IconKey.svelte';
 
     const inputWidth = '18rem';
 
@@ -59,13 +65,12 @@
     // we can't use undefined to avoid a JSON error in the Template component
     let clientFaviconUpdated = $state(-1);
     let clientLogoUpdated = $state(-1);
-    let clientUri = $state(IS_DEV ? '/auth/v1' : '');
+    let clientUri = $state('');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
     let idpHint = useParam('idp_hint').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
 
-    let refEmail: undefined | HTMLInputElement = $state();
     let refPassword: undefined | HTMLInputElement = $state();
 
     let stateParam = useParam('state').get();
@@ -79,6 +84,8 @@
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let activeOtps: undefined | ActiveOtp[] = $state();
 
     let isLoading = $state(false);
     let isAutoRefreshing = $state(false);
@@ -110,12 +117,6 @@
 
     let hasAutoLoggedIn = false;
     let showModalUpdate = $state(false);
-
-    onMount(() => {
-        if (!needsPassword) {
-            refEmail?.focus();
-        }
-    });
 
     $effect(() => {
         if (
@@ -252,14 +253,23 @@
             payload.resource = resource;
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse>(
+        let res = await fetchPost<undefined | WebauthnLoginResponse | OtpLoginResponse>(
             '/auth/v1/oidc/authorize/refresh',
             payload,
         );
         await handleAuthRes(res);
     }
 
-    async function onSubmit(form?: HTMLFormElement, params?: URLSearchParams) {
+    function onPasskeyDiscover() {
+        mfaKind = 'webauthn';
+        mfaPurpose = 'Discover';
+    }
+
+    async function onSubmit(
+        form?: HTMLFormElement,
+        params?: URLSearchParams,
+        residentKeyToken?: string,
+    ) {
         if (isAtproto) {
             return providerLogin(atprotoId);
         }
@@ -280,13 +290,14 @@
         let pow = (await fetchSolvePow()) || '';
 
         const payload: LoginRequest = {
-            email,
+            email: email || undefined,
             pow,
             client_id: clientId,
             redirect_uri: redirectUri,
             state: stateEncoded,
             nonce: nonce,
             scopes,
+            resident_key_token: residentKeyToken,
         };
         if (
             challenge &&
@@ -319,17 +330,16 @@
             url = '/auth/v1/dev/authorize';
         }
 
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(
-            url,
-            payload,
-            'json',
-            'noRedirect',
-        );
+        let res = await fetchPost<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >(url, payload, 'json', 'noRedirect');
         await handleAuthRes(res);
     }
 
     async function handleAuthRes(
-        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+        res?: IResponse<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >,
     ) {
         isLoading = false;
         isAutoRefreshing = false;
@@ -348,13 +358,21 @@
             }
             window.location.replace(loc);
         } else if (res.status === 200) {
-            // -> all good, but needs additional passkey validation
+            // -> all good, but needs additional MFA validation
             err = '';
             let body = res.body;
             if (body && 'code' in body) {
                 mfaPurpose = { Login: body.code as string };
+                if ('active_otps' in body) {
+                    activeOtps = body.active_otps;
+                    mfaKind = 'otp';
+                } else {
+                    mfaKind = 'webauthn';
+                }
             } else {
-                console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
+                console.error(
+                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                );
             }
         } else if (res.status === 205) {
             // -> all good, password only account, user needs to update some values
@@ -456,6 +474,7 @@
             nonce: nonce,
             code_challenge: challenge,
             code_challenge_method: challengeMethod,
+            resource: resource || undefined,
             provider_id: id,
             pkce_challenge: '',
             pow: '',
@@ -472,29 +491,36 @@
         tosAcceptCode = '';
         tos = undefined;
         isLoading = false;
+        mfaKind = undefined;
         mfaPurpose = undefined;
     }
 
-    function onWebauthnError(error: string) {
+    function onMfaError(error: string) {
         // If there is any error with the key, the user should start a new login process
         mfaPurpose = undefined;
+        mfaKind = undefined;
         err = error;
     }
 
-    function onWebauthnSuccess(data?: WebauthnAdditionalData) {
+    function onMfaSuccess(data?: WebauthnAdditionalData | OtpAdditionalData) {
         if (!data) {
             // will be empty if the user needs to update values
             mfaPurpose = undefined;
+            mfaKind = undefined;
             showModalUpdate = true;
             return;
         }
 
         if ('loc' in data) {
             window.location.replace(data.loc as string);
+        } else if ('resident_key_token' in data) {
+            mfaPurpose = undefined;
+            onSubmit(undefined, undefined, data.resident_key_token as string);
         } else if ('tos_await_code' in data) {
             // login successful, but the user needs to accept updated ToS
             tosAcceptCode = data.tos_await_code as string;
             mfaPurpose = undefined;
+            mfaKind = undefined;
             fetchTos();
         }
     }
@@ -504,7 +530,10 @@
         let pow = (await fetchSolvePow()) || '';
 
         let payload: RequestResetRequest = { email, pow };
-        if (clientUri) {
+        // We don't want a redirect for Rauthy directly. Instead, leave it blank,
+        // so that the UI after a successful reset will use a relative redirect to
+        // the Account dashboard instead.
+        if (clientUri && clientId !== 'rauthy') {
             payload.redirect_uri = encodeURI(clientUri);
         }
 
@@ -571,11 +600,20 @@
                     to output proper logs in case of misconfiguration.
                     Another approach would be to check this in the backend and emit warning logs.
                     -->
-                    <WebauthnRequest
-                        purpose={mfaPurpose}
-                        onSuccess={onWebauthnSuccess}
-                        onError={onWebauthnError}
-                    />
+                    {#if mfaKind == 'webauthn'}
+                        <WebauthnRequest
+                            purpose={mfaPurpose}
+                            onSuccess={onMfaSuccess}
+                            onError={onMfaError}
+                        />
+                    {:else if mfaKind == 'otp' && activeOtps}
+                        <OtpRequest
+                            {activeOtps}
+                            purpose={mfaPurpose}
+                            onSuccess={onMfaSuccess}
+                            onError={onMfaError}
+                        />
+                    {/if}
                 {/if}
 
                 {#if !clientMfaForce}
@@ -594,7 +632,6 @@
                                 />
                             {:else}
                                 <Input
-                                    bind:ref={refEmail}
                                     typ="email"
                                     name="email"
                                     bind:value={email}
@@ -656,6 +693,7 @@
                                         type="submit"
                                         ariaLabel={t.authorize.login}
                                         onclick={() => onSubmit()}
+                                        isDisabled={email.length === 0}
                                         {isLoading}
                                     >
                                         {t.authorize.login}
@@ -720,7 +758,7 @@
                     <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
-                {#if !clientMfaForce && providers.length > 0 && !isAtproto}
+                {#if !clientMfaForce && !isAtproto}
                     <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -730,6 +768,21 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="btn flex-col">
+                            <Button
+                                level={2}
+                                ariaLabel={t.authorize.login}
+                                onclick={onPasskeyDiscover}
+                                {isLoading}
+                            >
+                                <div class="flex gap-05">
+                                    <IconKey width="1.2rem" />
+                                    Passkey
+                                </div>
+                            </Button>
+                        </div>
+
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider
                                 ariaLabel={`Login: ${provider.name}`}
@@ -783,7 +836,7 @@
         justify-content: center;
         max-width: 21rem;
         padding: 20px;
-        border-radius: 5px;
+        border-radius: var(--border-radius);
         border: 1px solid hsl(var(--bg-high));
         background: hsl(var(--bg));
     }
@@ -836,8 +889,7 @@
     }
 
     .providersSeparator {
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
+        margin: 1rem 0 -0.5rem 0;
     }
 
     .separator {

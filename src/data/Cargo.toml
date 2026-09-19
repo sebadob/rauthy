@@ -29,11 +29,11 @@ bincode = { workspace = true }
 atrium-common = { workspace = true }
 atrium-identity = { workspace = true }
 atrium-oauth = { workspace = true }
+bincode = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 constant_time_eq = { workspace = true }
 cryptr = { workspace = true }
-dotenvy = { workspace = true }
 ed25519-compact = { workspace = true }
 flate2 = { workspace = true }
 flume = { workspace = true }
@@ -52,6 +52,7 @@ mime = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
+percent-encoding = { workspace = true }
 # 0.8 is necessary to provide a proper `thread_rng` for `rsa`
 rand_08 = { package = "rand", version = "0.8" }
 rand_core = { workspace = true }

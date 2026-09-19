@@ -86,6 +86,10 @@ export let I18nAdminZh: I18nAdmin = {
         forceMfa: '强制MFA',
         groupLoginPrefix: '登录组前缀',
         name: '客户端名称',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `SCIM基础URI是从中可以正确派生子路由的URI，
                 如<code>{base_uri}/Users/{id}</base_uri></code>。`,
@@ -120,7 +124,7 @@ export let I18nAdminZh: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `令牌生命周期适用于访问令牌和ID令牌，以秒为单位。`,
-            p2: `如果客户端支持EdDSA / ed25519算法，这应该是首选。
+            p2: `如果客户端支持EdDSA / Ed25519算法，这应该是首选。
                 RSA算法仅出于兼容性考虑而存在。`,
             p3: `刷新令牌的算法无法更改，因为这些令牌仅供Rauthy使用。`,
         },
@@ -212,7 +216,7 @@ export let I18nAdminZh: I18nAdmin = {
             time: '时间',
             targetTime: '目标时间',
             tune: '重要：这些值需要在最终架构上进行调整！',
-            pDetials: `如果您想要详细了解Argon2ID，在线有很多资源。本指南仅简要介绍这些值。
+            pDetails: `如果您想要详细了解Argon2ID，在线有很多资源。本指南仅简要介绍这些值。
             需要配置三个值：`,
             pTune: `它们根据系统能力而变化。系统越强大，这些值就越安全。`,
             pUtility: `此工具帮助您找到适合平台的最佳Argon2ID设置。
@@ -494,10 +498,22 @@ export let I18nAdminZh: I18nAdmin = {
         lastLogin: '最后登录',
         manualInitDesc: `也可以在此处初始化用户。在这种情况下，您需要直接传达密码。`,
         manualInit: '手动初始化',
-        mfaDelete1: '您可以删除此用户的通行密钥。',
-        mfaDelete2: `注意！通行密钥的删除<b>无法撤销</b>，除非用户
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: '您可以删除此用户的通行密钥。',
+                mfaDelete2: `注意！通行密钥的删除<b>无法撤销</b>，除非用户
             进行全新的注册。`,
-        noMfaKeys: '此用户没有注册的通行密钥。',
+                noMfaKeys: '此用户没有注册的通行密钥。',
+            },
+        },
         pkOnly1: '这是一个仅通行密钥账户。',
         pkOnly2: '这意味着该用户使用无密码登录，根本没有设置密码。',
         pkOnly3: `如果此用户丢失了所有通行密钥，可以完全重置账户并发送新的密码重置邮件。

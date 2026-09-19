@@ -8,6 +8,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_error::ErrorResponseType;
 use rauthy_jwt::claims::{JwtCommonClaims, JwtLogoutClaims, JwtTokenType};
+use rauthy_jwt::token::{JwtHeaderType, JwtToken};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -36,8 +37,8 @@ pub struct LogoutToken<'a> {
     pub sub: Option<&'a str>,
     pub sid: Option<&'a str>,
 
-    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
-    // `.is_none()` validation.
+    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for
+    // easy `.is_none()` validation.
     nonce: Option<&'a str>,
 }
 
@@ -98,7 +99,7 @@ impl LogoutToken<'_> {
             sid: self.sid,
             nonce: None,
         };
-        rauthy_jwt::token::JwtToken::build(kp, &claims)
+        JwtToken::build(kp, &claims, JwtHeaderType::Jwt)
     }
 
     /// Parse and validate the token as specified in
@@ -143,7 +144,9 @@ impl LogoutToken<'_> {
         // validates signature
         let jwk =
             JWKSPublicKey::fetch_remote(provider.jwks_endpoint.as_ref().unwrap(), kid).await?;
-        if jwk.alg != Some(alg) {
+        // EdDSA (RFC 8812) and Ed25519 (RFC 9864) name the same OKP key family, so both
+        // spellings must validate against JWKs of that family.
+        if !jwk.alg.as_ref().is_some_and(|a| a.is_compatible_with(&alg)) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "`alg` mismatch between token header and fetched JWK",

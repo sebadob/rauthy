@@ -7,6 +7,7 @@
   - [Kubernetes](./getting_started/k8s.md)
   - [First Start](./getting_started/first_start.md)
   - [Shutdown](./getting_started/shutdown.md)
+  - [Vault](./getting_started/vault.md)
 
 - [Production Config](config/production_config.md)
   - [Rauthy CLI](config/cli.md)

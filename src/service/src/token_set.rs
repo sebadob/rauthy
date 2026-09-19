@@ -19,7 +19,7 @@ use rauthy_jwt::claims::{
     ActClaim, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
     validate_no_reserved_collision,
 };
-use rauthy_jwt::token::JwtToken;
+use rauthy_jwt::token::{JwtHeaderType, JwtToken};
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -43,7 +43,7 @@ impl TryFrom<&str> for AtHashAlg {
             "RS256" => Self::Sha256,
             "RS384" => Self::Sha384,
             "RS512" => Self::Sha512,
-            "EdDSA" => Self::Sha512,
+            "EdDSA" | "Ed25519" => Self::Sha512,
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
@@ -283,7 +283,7 @@ impl TokenSet {
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.access_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        let token = JwtToken::build(&kp, &claims_new_impl)?;
+        let token = JwtToken::build(&kp, &claims_new_impl, JwtHeaderType::AtJwt)?;
 
         Ok((AccessTokenJti(issued_token.jti), token))
     }
@@ -305,11 +305,18 @@ impl TokenSet {
     ) -> Result<String, ErrorResponse> {
         let config = RauthyConfig::get();
 
-        let amr = if user.has_webauthn_enabled() && auth_code_flow == AuthCodeFlow::Yes {
-            JwtAmrValue::Mfa.as_str()
+        let amr = if auth_code_flow == AuthCodeFlow::Yes {
+            if user.has_webauthn_enabled() {
+                JwtAmrValue::Mfa.as_str()
+            } else if user.has_otp_enabled().await {
+                JwtAmrValue::Otp.as_str()
+            } else {
+                JwtAmrValue::Pwd.as_str()
+            }
         } else {
             JwtAmrValue::Pwd.as_str()
         };
+
         // Solid-OIDC ephemeral clients additionally carry the `solid` audience.
         let aud = if client.is_ephemeral() && config.vars.ephemeral_clients.enable_solid_aud {
             Audience::Multiple(vec![
@@ -448,7 +455,7 @@ impl TokenSet {
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
         let kp = JwkKeyPair::find_latest(key_pair_alg).await?;
-        JwtToken::build(&kp, &claims)
+        JwtToken::build(&kp, &claims, JwtHeaderType::Jwt)
     }
 
     /// Builds the refresh token for a user after all validation has been successful
@@ -515,7 +522,7 @@ impl TokenSet {
             };
 
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
-            JwtToken::build(&kp, &claims)?
+            JwtToken::build(&kp, &claims, JwtHeaderType::Jwt)?
         };
 
         // only save the last 50 characters for validation

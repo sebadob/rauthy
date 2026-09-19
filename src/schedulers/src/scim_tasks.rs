@@ -6,7 +6,7 @@ use rauthy_data::entity::scim_types::ScimGroup;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time;
@@ -58,19 +58,36 @@ async fn execute(
         {
             clients_scim.get(pos).unwrap()
         } else {
-            let client = ClientScim::find(failure.client_id.clone()).await?;
+            let client = match ClientScim::find(failure.client_id.clone()).await {
+                Ok(c) => c,
+                Err(err) => {
+                    if matches!(err.error, ErrorResponseType::NotFound) {
+                        // May happen if failed tasks exist and the whole SCIM config was removed
+                        // was this client. In this case, clean up all failed tasks.
+                        failure.delete().await?;
+                        continue;
+                    }
+                    return Err(err);
+                }
+            };
             clients_scim.push(client);
             clients_scim.last().unwrap()
         };
 
         let res = match failure.action.clone() {
             ScimAction::UserCreateUpdate(user_id) => {
-                let user = User::find(user_id).await?;
-                ClientScim::create_update_user(user).await
+                if let Some(user) = find_or_delete_user(user_id, &failure).await? {
+                    ClientScim::create_update_user(user).await
+                } else {
+                    Ok(())
+                }
             }
             ScimAction::UserDelete(user_id) => {
-                let user = User::find(user_id).await?;
-                client_scim.delete_user(&user).await
+                if let Some(user) = find_or_delete_user(user_id, &failure).await? {
+                    client_scim.delete_user(&user).await
+                } else {
+                    Ok(())
+                }
             }
             ScimAction::UsersSync(last_created_ts) => {
                 client_scim
@@ -78,12 +95,18 @@ async fn execute(
                     .await
             }
             ScimAction::GroupCreateUpdate(group_id) => {
-                let group = Group::find(group_id).await?;
-                client_scim.create_update_group(group).await
+                if let Some(group) = find_or_delete_group(group_id, &failure).await? {
+                    client_scim.create_update_group(group).await
+                } else {
+                    Ok(())
+                }
             }
             ScimAction::GroupDelete(group_id) => {
-                let group = Group::find(group_id).await?;
-                client_scim.delete_group(group, None).await
+                if let Some(group) = find_or_delete_group(group_id, &failure).await? {
+                    client_scim.delete_group(group, None).await
+                } else {
+                    Ok(())
+                }
             }
             ScimAction::GroupsSync => client_scim.sync_groups().await,
             ScimAction::Unknown => {
@@ -91,6 +114,7 @@ async fn execute(
                     "FailedScimTask with unknown action for scim client {}: {:?}",
                     failure.client_id, failure.action
                 );
+                failure.delete().await?;
                 continue;
             }
         };
@@ -110,4 +134,38 @@ async fn execute(
     }
 
     Ok(())
+}
+
+async fn find_or_delete_group(
+    group_id: String,
+    failed_scim_task: &FailedScimTask,
+) -> Result<Option<Group>, ErrorResponse> {
+    match Group::find(group_id).await {
+        Ok(g) => Ok(Some(g)),
+        Err(err) => {
+            if matches!(err.error, ErrorResponseType::NotFound) {
+                failed_scim_task.delete().await?;
+                Ok(None)
+            } else {
+                Err(err)
+            }
+        }
+    }
+}
+
+async fn find_or_delete_user(
+    user_id: String,
+    failed_scim_task: &FailedScimTask,
+) -> Result<Option<User>, ErrorResponse> {
+    match User::find(user_id).await {
+        Ok(u) => Ok(Some(u)),
+        Err(err) => {
+            if matches!(err.error, ErrorResponseType::NotFound) {
+                failed_scim_task.delete().await?;
+                Ok(None)
+            } else {
+                Err(err)
+            }
+        }
+    }
 }

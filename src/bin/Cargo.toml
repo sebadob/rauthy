@@ -5,12 +5,13 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description.workspace = true
-# keeps `cargo run` on the server binary now that a second bin target exists
 default-run = "rauthy"
 
 [features]
 default = ["jemalloc"]
 jemalloc = ["dep:tikv-jemallocator"]
+
+profiling = []
 
 # Offline tool that regenerates the shipped FIDO MDS dataset. Not built into the server image.
 [[bin]]
@@ -31,6 +32,7 @@ actix-web = { workspace = true }
 actix-web-prom = { workspace = true }
 argon2 = { workspace = true }
 chrono = { workspace = true }
+chrono-tz = { workspace = true }
 cidr = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }
@@ -46,6 +48,7 @@ reqwest = { workspace = true }
 rpassword = { workspace = true }
 rustls = { workspace = true }
 s3-simple = { workspace = true }
+semver = { workspace = true }
 serde_json = { workspace = true }
 spow = { workspace = true }
 time = { workspace = true }

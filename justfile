@@ -226,14 +226,17 @@ test-backend-heaptrack: test-backend-stop delete-hiqlite
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    echo "Building a release build with the 'profiling' profile - this will take some time ..."
-    RUSTFLAGS=-g cargo build --profile profiling
+    #RUSTFLAGS=-g cargo build --profile profiling --features profiling
+    RUSTFLAGS="--cfg tokio_unstable -C force-frame-pointers=yes" cargo build --profile profiling --features profiling
     #echo "Temporarily removing kernel hardening and elevating ptrace rights until reboot"
     #echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
     #echo 'grant temporary access to performance events until reboot'
     #echo '1' | sudo tee /proc/sys/kernel/perf_event_paranoid
+    # samply currently needs: echo '-1' | sudo tee /proc/sys/kernel/perf_event_paranoid
     #echo 'if you get an mmap error, try: sudo sysctl kernel.perf_event_mlock_kb=2048'
     {{ test_env_vars }} heaptrack ./target/profiling/rauthy serve -c config-test.toml --test
+    #{{ test_env_vars }} samply record ./target/profiling/dorn -w 4
+
 
 # stops a possibly running test backend that may have spawned in the background for integration tests
 test-backend-stop:

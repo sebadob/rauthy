@@ -166,11 +166,11 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.allowed_origins, None);
     // authorization_code should be the only default flow since it is secure
     assert_eq!(
-        client.flows_enabled.get(0).unwrap(),
+        client.flows_enabled.first().unwrap(),
         &GrantType::AuthorizationCode
     );
     // S256 code challenge by default for better security
-    assert_eq!(client.challenges.as_ref().unwrap().get(0).unwrap(), "S256");
+    assert_eq!(client.challenges.as_ref().unwrap().first().unwrap(), "S256");
 
     // a URL-shaped id must be rejected for manually managed (non-ephemeral) clients:
     // these are restricted to `RE_CLIENT_ID_STRICT`, only ephemeral clients may use a URI id.

@@ -133,7 +133,7 @@
     async function onSubmitDelete() {
         let res = await fetchDelete(`/auth/v1/users/${user.id}/self/delete`);
         if (res.status === 204) {
-            window.location.href = '/auth/v1';
+            window.location.href = '/auth/v1/';
         }
     }
 </script>

@@ -1,5 +1,6 @@
 use crate::Assets;
 use actix_web::http::header;
+use actix_web::http::header::VARY;
 use actix_web::{HttpRequest, HttpResponse, get, web};
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::html::HtmlCached;
@@ -31,6 +32,7 @@ pub async fn get_static_assets(
         Some(content) => HttpResponse::Ok()
             .insert_header(("cache-control", "max-age=15552000; public"))
             .insert_header(("content-encoding", encoding))
+            .insert_header((VARY, "content-encoding"))
             .content_type(mime.first_or_octet_stream().as_ref())
             .body(content.data.into_owned()),
         None => {

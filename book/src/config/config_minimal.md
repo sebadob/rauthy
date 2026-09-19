@@ -1,9 +1,10 @@
 # Minimal Production Config
 
-This section gives you a template for probably the most minimal config you could do when going into production.
+This section gives you a template for probably the most minimal config you could do when going into
+production.
 
-You can either copy & paste this (with adjustments of course) and expand it when necessary, or take a look at the
-complete [Reference Config](config.md) and check each existing value.
+You can either copy & paste this (with adjustments of course) and expand it when necessary, or take
+a look at the complete [Reference Config](config.md) and check each existing value.
 
 ```toml
 [bootstrap]
@@ -40,9 +41,9 @@ node_id = 1
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+  "1 localhost:8100 localhost:8200",
+  #    "2 localhost:8101 localhost:8201",
+  #    "3 localhost:8102 localhost:8202",
 ]
 
 # Secrets for Raft internal authentication as well as for the API.
@@ -57,11 +58,6 @@ secret_raft = "SuperSecureSecret1337"
 secret_api = "SuperSecureSecret1337"
 
 [email]
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
 # overwritten by: SMTP_URL
 smtp_url = "localhost"
 # optional, default will be used depending on TLS / STARTTLS

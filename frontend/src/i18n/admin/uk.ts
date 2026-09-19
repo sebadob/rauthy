@@ -89,6 +89,10 @@ export let I18nAdminUk: I18nAdmin = {
         forceMfa: 'Вимагати MFA',
         groupLoginPrefix: 'Префікс групи для входу',
         name: 'Назва клієнта',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `Базовий URI для SCIM — це той, з якого можна коректно вивести під-маршрути,
                 наприклад <code>{base_uri}/Users/{id}</base_uri></code>.`,
@@ -125,7 +129,7 @@ export let I18nAdminUk: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `Час життя токена застосовується до токенів доступу (Access) та ID-токенів і вказується в секундах.`,
-            p2: `Якщо клієнт підтримує алгоритми EdDSA / ed25519, їм завжди слід віддавати перевагу.
+            p2: `Якщо клієнт підтримує алгоритми EdDSA / Ed25519, їм завжди слід віддавати перевагу.
                 Алгоритми RSA існують лише для сумісності.`,
             p3: `Алгоритм для refresh-токенів не може бути змінений, оскільки вони використовуються лише Rauthy.`,
         },
@@ -228,7 +232,7 @@ export let I18nAdminUk: I18nAdmin = {
             time: 'Час',
             targetTime: 'Цільовий час',
             tune: 'Важливо: Ці значення потрібно налаштовувати на кінцевій архітектурі!',
-            pDetials: `Якщо ви хочете детально ознайомитися з Argon2ID, в інтернеті є багато джерел. Ця
+            pDetails: `Якщо ви хочете детально ознайомитися з Argon2ID, в інтернеті є багато джерел. Ця
             інструкція дає лише дуже короткий огляд параметрів. Три з них потребують налаштування:`,
             pTune: `Вони змінюються залежно від можливостей системи. Чим потужніша система, тим
             надійнішими можуть бути ці значення.`,
@@ -522,10 +526,22 @@ export let I18nAdminUk: I18nAdmin = {
         manualInitDesc: `Користувача також можна ініціалізувати тут, але в цьому випадку вам потрібно
             передати пароль особисто.`,
         manualInit: 'Ручна ініціалізація',
-        mfaDelete1: 'Ви можете видалити ключі доступу (Passkeys) для цього користувача.',
-        mfaDelete2: `Увага! Видалення ключа доступу <b>неможливо скасувати</b> без того, щоб
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'Ви можете видалити ключі доступу (Passkeys) для цього користувача.',
+                mfaDelete2: `Увага! Видалення ключа доступу <b>неможливо скасувати</b> без того, щоб
             користувач пройшов повну нову реєстрацію.`,
-        noMfaKeys: 'У цього користувача немає зареєстрованих ключів доступу (Passkeys).',
+                noMfaKeys: 'У цього користувача немає зареєстрованих ключів доступу (Passkeys).',
+            },
+        },
         pkOnly1: 'Це акаунт, що використовує лише ключ доступу.',
         pkOnly2:
             'Це означає, що цей користувач використовує безпарольний вхід і взагалі не має встановленого пароля.',

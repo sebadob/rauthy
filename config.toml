@@ -269,7 +269,7 @@ token_revoke_on_logout = true
 # on remote servers, and logging these back in can be a lot more
 # work than the default logins via browser.
 #
-# This value will only be respected, if `token_revoke_on_logout` is
+# This value will only be respected if `token_revoke_on_logout` is
 # set to `true` as well. Otherwise, tokens will only be revoked
 # via the dedicated `revocation_endpoint` or forced logout from an
 # admin.
@@ -432,12 +432,12 @@ password_plain = '123SuperSafe'
 
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+password_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
 # You can provide a single API Key during the initial prod database
 # bootstrap. This legacy config value must match the format and pass validation.
@@ -1112,6 +1112,17 @@ enable = true
 # overwritten by: DYN_CLIENT_ALLOWED_SCOPES - single String, \n separated values
 allowed_scopes = ['openid', 'profile', 'email', 'groups']
 
+# RFC 8707 resource indicators a dynamically registered client may request. A
+# dynamic client cannot declare `allowed_resources` itself, so without this it can
+# never request a `resource`; an MCP client, which must send one, would otherwise
+# get `invalid_target`. Resolved from the live config on every request and never
+# stored with the client. Entries are matched verbatim. An empty list keeps the
+# default deny.
+#
+# default: []
+# overwritten by: DYN_CLIENT_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
+
 # The default scopes separated by ' ' for dynamic clients.
 #
 # default: ['openid']
@@ -1213,11 +1224,6 @@ rauthy_admin_email = 'admin@localhost'
 # overwritten by: EMAIL_SUB_PREFIX
 sub_prefix = 'Rauthy IAM'
 
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
 # overwritten by: SMTP_URL
 smtp_url = 'localhost'
 # optional, default will be used depending on TLS / STARTTLS
@@ -1231,6 +1237,23 @@ smtp_url = 'localhost'
 # default: "Rauthy <rauthy@localhost>"
 # overwritten by: SMTP_FROM
 smtp_from = 'Rauthy <rauthy@localhost>'
+
+# Configure the TLS mode for SMTP connections.
+#
+# The default is implicit TLS. Depending on the mode the
+# proper default port will be used automatically if you
+# don't overwrite via `smtp_port`.
+#
+# NOTE: 'danger-insecure' will allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on e.g.
+# your localhost or for development purposes. When set,
+# `smtp_username` and `smtp_password` will be ignored
+# and smtp_port will default to 1025.
+#
+# possible values: tls, starttls, danger-insecure
+# default: tls
+# overwritten by: SMTP_TLS_MODE
+smtp_tls_mode = 'danger-insecure'
 
 # You usually do not need to change this value. The 'default'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
@@ -1290,23 +1313,6 @@ connect_retries = 3
 #-----END CERTIFICATE-----
 #"""
 
-# Can be set to `true` to skip trying a real TLS connection
-# via SMTP and use STARTTLS directly.
-#
-# default: false
-# overwritten by: SMTP_STARTTLS_ONLY
-#starttls_only = true
-
-# You can set this to `true` to allow an unencrypted and
-# unauthenticated SMTP connection to an SMTP relay on your localhost
-# or for development purposes.
-# When set to `true`, `SMTP_USERNAME` and `SMTP_PASSWORD` will be
-# ignored and SMTP_PORT will default to 1025.
-#
-# default: false
-# overwritten by: SMTP_DANGER_INSECURE
-danger_insecure = true
-
 [email.jobs]
 
 # This section cares about email sending to users, which can
@@ -1362,6 +1368,16 @@ batch_size = 3
 # default: 2000
 # overwritten by: EMAIL_JOBS_BATCH_DELAY_MS
 batch_delay_ms = 2000
+
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
+#
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: 10
+# overwritten by: EMAIL_PWD_EXP_DAYS
+password_exp_days = 10
 
 [email.tz_fmt]
 
@@ -1494,6 +1510,16 @@ cache_lifetime = 3600
 # default: false
 # overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
 #danger_allow_unvalidated_resource = false
+
+# RFC 8707 resource indicators allowed when an ephemeral client document declares
+# none of its own (a CIMD document you do not control cannot declare them). Keeps
+# the default deny without the blunt `danger_allow_unvalidated_resource`. A document
+# that declares its own resources still wins. Resolved from the live config on every
+# request. Entries are matched verbatim.
+#
+# default: []
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
 
 # A dynamic client registration is always rejected when it advertises a grant
 # type Rauthy does not support. Some spec-valid CIMD clients (e.g. claude.ai)
@@ -1815,7 +1841,7 @@ disable_app_version_check = false
 # set this to `true`.
 #
 # default: false
-# overwritten by: GEO_BLOCK_UNKONW
+# overwritten by: GEO_BLOCK_UNKNOWN
 block_unknown = false
 
 # If you have a WAF or CDN which injects a geoloaction header
@@ -2193,6 +2219,64 @@ msc3861_enable = false
 # default: true
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = false
+
+[otp]
+# Enable E-Mail or HMAC-based One Time Passwords as 2FA.
+#
+# CAUTION: Passkeys are much safer than OTP. Only enable
+# OTP if you really need / want to.
+#
+# default: 'false'
+# overwritten by: OTP_ENABLE
+enable = true
+
+# The length of the generated one-time passwords.
+# Must be 6 - 8 digits.
+#
+# default: 6
+# overwritten by: OTP_LENGTH
+length = 6
+
+# The lifetime in minutes for OTP requests. Within
+# this time, an OTP request must have been validated.
+#
+# default: 5
+# overwritten by: OTP_EXP_MINS
+exp_mins = 5
+
+# Default digest algorithm's length, HMAC using SHA-X.
+# SHA-1 is forbidden.
+#
+# NOTE: This value currently has no effect. It's a
+# preparation for future support for TOTP. At the time
+# of writing, only E-Mail-based OTP is implemented.
+#
+# Possible values: 256, 384, 512
+# default: 512
+# overwritten by: OTP_DIGEST_LEN_DEFAULT
+digest_len_default = 512
+
+# The expiration in hours when an MFA cookie set via OTP
+# must be revalidated.
+#
+# While such a cookie exists and is valid, a user may not
+# need to provide a password on a new login on this known
+# device, only a new OTP.
+#
+# You can disable this feature by setting the value to 0.
+#
+# The value is in hours
+# default: 2160
+# overwritten by: OTP_RENEW_EXP
+renew_exp = 2160
+
+[otp.email]
+# Wether to enable or disable OTPs via E-Mail.
+# This value is ignored if `otp.enable` is set to `false`.
+#
+# default: 'true'
+# overwritten by: OTP_EMAIL_ENABLE
+enable = true
 
 [pam]
 # The length of newly generated PAM remote passwords via the

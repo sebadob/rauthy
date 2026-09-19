@@ -66,7 +66,7 @@ export const I18nFr: I18n = {
         accessRenew: 'Accès renouvelable jusqu’au',
         accessRenewDelete: 'Supprimer la possibilité de renouvellement',
         birthdate: 'Date de naissance',
-        canModifyFor: 'Les mots de passe peuvent être modifiés pour :',
+        canModifyFor: 'Les authentifications multifactorielle peuvent être modifiés pour :',
         city: 'Ville',
         changePassword: 'Changer le mot de passe',
         convertAccount: 'Convertir le compte',
@@ -120,6 +120,13 @@ export const I18nFr: I18n = {
             username: `Nom d'utilisateur`,
             validFor: 'Mot de passe valide pendant {{ secs }} secondes',
         },
+        passkeys: {
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.`,
+        },
         passwordConfirm: 'Confirmer le mot de passe',
         passwordCurr: 'Mot de passe actuel',
         passwordCurrReq: 'Le mot de passe actuel est requis',
@@ -154,6 +161,8 @@ export const I18nFr: I18n = {
         userEnabled: 'Utilisateur activé',
         userExpiry: `Expiration de l'utilisateur`,
         userVerifiedTooltip: 'Sécurisé par empreinte digitale ou code PIN',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
         webIdDesc: `Vous pouvez configurer les champs à exposer avec votre WebID.\n
             Cette fonctionnalité est utilisée par certains réseaux pour les connexions décentralisées.\n
             Si vous ne savez pas de quoi il s'agit, vous n'en avez probablement pas besoin.`,
@@ -170,6 +179,7 @@ export const I18nFr: I18n = {
         emailBadFormat: `Mauvais format d'e-mail`,
         emailRequired: `L'e-mail est requis`,
         emailSentMsg: 'Si votre e-mail existe, une demande a été envoyée',
+        expectingOtp: `En attente de l'authentification par OTP`,
         expectingPasskey: `En attente de l'authentification par clé d'accès`,
         http429: `Trop de tentatives invalides. Verrouillé jusqu'à :`,
         invalidCredentials: 'Identifiants invalides',
@@ -230,24 +240,43 @@ export const I18nFr: I18n = {
         cancel: 'Annuler',
     },
     mfa: {
-        p1: `Si vous prévoyez d’utiliser votre clé MFA avec plusieurs systèmes comme Windows et Android,
-            vous devriez l’enregistrer auprès d’Android.`,
-        p2: `Android est la plateforme qui prend le moins en charge les fonctionnalités de l’authentification sans mot
-            de passe. Les clés enregistrées auprès d’Android fonctionnent également ailleurs.
-            Cependant, cela ne s'applique pas dans l'autre sens.`,
-        p3: `Pour plus d'informations, consultez`,
-        docLinkText: `la documentation sur les clés d'accès`,
+        webauthn: {
+            title: 'Clé d’accès',
+            p1: `Si vous prévoyez d’utiliser votre clé MFA avec plusieurs systèmes comme Windows et Android,
+                vous devriez l’enregistrer auprès d’Android.`,
+            p2: `Android est la plateforme qui prend le moins en charge les fonctionnalités de l’authentification sans mot
+                de passe. Les clés enregistrées auprès d’Android fonctionnent également ailleurs.
+                Cependant, cela ne s'applique pas dans l'autre sens.`,
+            p3: `Pour plus d'informations, consultez`,
+            registerNew: 'Enregistrer une nouvelle clé',
+            docLinkText: `la documentation sur les clés d'accès`,
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'Code à usage unique (OTP)',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Entrez le code à usage unique qui vous a été envoyé par e-mail',
+            code: 'Code à usage unique',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: `Erreur lors du démarrage du processus d'enregistrement`,
         lastUsed: 'Dernière utilisation',
         noKey: 'Aucune clé de sécurité enregistrée pour cet emplacement',
-        reAuthenticatePasskey: `Avant de pouvoir modifier les clés d'accès,
+        reAuthenticatePasskey: `Avant de pouvoir modifier les authentifications multifactorielle,
             vous devez vous authentifier avec une clé déjà enregistrée :`,
-        reAuthenticatePwd: `Avant de pouvoir modifier les clés d'accès,
+        reAuthenticatePwd: `Avant de pouvoir modifier les authentifications multifactorielle,
             vous devez vous réauthentifier avec votre mot de passe.`,
+        reAuthenticateOtp: `Avant de pouvoir modifier les authentifications multifactorielle,
+            vous devez vous réauthentifier avec un code à usage unique :`,
         register: 'Enregistrer',
-        registerNew: 'Enregistrer une nouvelle clé',
-        registerd: 'Enregistré',
-        registerdKeys: 'Clés enregistrées',
+        registered: 'Enregistré',
+        registeredKeys: 'Clés enregistrées',
+        registeredOtps: 'Code à usage unique enregistrés',
         passkeyName: `Nom de la clé d'accès`,
         passkeyNameErr: '2 à 32 caractères non spéciaux',
         passwordInvalid: 'Mot de passe invalide',

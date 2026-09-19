@@ -9,11 +9,12 @@ use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::magic_links::{MagicLink, MagicLinkUsage};
 use rauthy_data::entity::password::PasswordPolicy;
+use rauthy_data::entity::pwd_exp_mails::PasswordExpMail;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::WebauthnServiceReq;
+use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::events::event::Event;
 use rauthy_data::html::templates::{PwdResetHtml, TplPasswordReset};
 use rauthy_data::language::Language;
@@ -86,7 +87,7 @@ pub async fn handle_put_user_passkey_start(
         }
     }
 
-    webauthn::reg_start(user.id, req_data)
+    webauthn::register::reg_start(user.id, req_data)
         .await
         .map(|ccr| HttpResponse::Ok().json(ccr))
 }
@@ -104,7 +105,11 @@ pub async fn handle_put_user_passkey_finish(
 
     // finish webauthn request -> always force UV for passkey only accounts
     debug!("ml is valid - finishing webauthn request");
-    webauthn::reg_finish(user_id.clone(), req_data).await?;
+    let is_new_user = matches!(
+        MagicLinkUsage::try_from(&ml.usage),
+        Ok(MagicLinkUsage::NewUser(_))
+    );
+    webauthn::register::reg_finish(user_id.clone(), req_data, is_new_user).await?;
 
     // validate csrf token
     match req.headers().get(PWD_CSRF_HEADER) {
@@ -115,7 +120,10 @@ pub async fn handle_put_user_passkey_finish(
             ));
         }
         Some(token) => {
-            if ml.csrf_token != token.to_str().unwrap_or("") {
+            if !constant_time_eq::constant_time_eq(
+                ml.csrf_token.as_bytes(),
+                token.to_str().unwrap_or("").as_bytes(),
+            ) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     "Invalid CSRF Token",
@@ -195,6 +203,9 @@ pub async fn handle_put_user_password_reset<'a>(
 
     // delete all existing user sessions to have a clean flow
     Session::invalidate_for_user(&user.id).await?;
+
+    // reset password exp reminder emails
+    PasswordExpMail::delete(user.id).await?;
 
     // check if we got a custom `redirect_uri` during registration
     let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {

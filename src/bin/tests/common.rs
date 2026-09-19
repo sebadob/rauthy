@@ -52,7 +52,7 @@ pub fn get_backend_url() -> String {
 
 #[allow(dead_code)]
 pub fn get_issuer() -> String {
-    format!("{}", get_backend_url())
+    get_backend_url()
 }
 
 pub async fn get_token_set() -> TokenSet {
@@ -110,7 +110,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
     let req_login = LoginRequest {
-        email: USERNAME.to_string(),
+        email: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
@@ -121,6 +121,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
+        resident_key_token: None,
     };
 
     let res = client
@@ -179,7 +180,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
     let req_login = LoginRequest {
-        email: email.to_string(),
+        email: Some(email.to_string()),
         password: Some(password.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
@@ -190,6 +191,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
+        resident_key_token: None,
     };
 
     let res = client
@@ -220,7 +222,7 @@ pub async fn cookie_csrf_headers_from_res_direct(
     let (session_cookie, _) = cookie.to_str()?.split_once(';').unwrap();
 
     let mut headers = HeaderMap::new();
-    headers.append(header::COOKIE, HeaderValue::from_str(&session_cookie)?);
+    headers.append(header::COOKIE, HeaderValue::from_str(session_cookie)?);
 
     let session_info = res.json::<SessionInfoResponse>().await.unwrap();
     headers.append(
@@ -238,7 +240,7 @@ pub async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Bo
         if cookie.starts_with("__Host-RauthySession=") {
             println!("Extracted session cookie: {:?}", cookie);
             let mut headers = HeaderMap::new();
-            headers.append(header::COOKIE, HeaderValue::from_str(&cookie)?);
+            headers.append(header::COOKIE, HeaderValue::from_str(cookie)?);
 
             let content = res.text().await?;
             let (_, content_split) = content

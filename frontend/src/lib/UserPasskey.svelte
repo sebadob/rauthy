@@ -5,6 +5,7 @@
     import Tooltip from '$lib5/Tooltip.svelte';
     import Button from '$lib5/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
+    import IconKey from '$icons/IconKey.svelte';
 
     let {
         passkey,
@@ -34,11 +35,18 @@
                     </div>
                 </Tooltip>
             {/if}
+            {#if passkey.resident_key}
+                <Tooltip text={t.account.residentKeyTooltip}>
+                    <div style:margin-bottom="-.25rem">
+                        <IconKey width="1rem" color="hsl(var(--accent))" />
+                    </div>
+                </Tooltip>
+            {/if}
         </div>
     </div>
     <div class="row">
         <span class="label">
-            {t.mfa.registerd}
+            {t.mfa.registered}
         </span>
         <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
     </div>

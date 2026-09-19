@@ -91,6 +91,10 @@ export let I18nAdminRu: I18nAdmin = {
         forceMfa: 'Принудительная MFA',
         groupLoginPrefix: 'Префикс группы для входа',
         name: 'Имя клиента',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `Базовый URI SCIM — это URI, от которого могут быть правильно получены подмаршруты, такие как
                 <code>{base_uri}/Users/{id}</base_uri></code>.`,
@@ -127,7 +131,7 @@ export let I18nAdminRu: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `Время жизни токена применяется к токенам доступа и ID-токенам и указывается в секундах.`,
-            p2: `Если клиент поддерживает алгоритмы EdDSA / ed25519, они всегда должны быть предпочтительным
+            p2: `Если клиент поддерживает алгоритмы EdDSA / Ed25519, они всегда должны быть предпочтительным
                 выбором. Алгоритмы RSA существуют только для совместимости.`,
             p3: `Алгоритм для токенов обновления нельзя изменить, так как они используются только Rauthy.`,
         },
@@ -226,7 +230,7 @@ export let I18nAdminRu: I18nAdmin = {
             time: 'Время',
             targetTime: 'Целевое время',
             tune: 'Важно: Эти значения необходимо настраивать на конечной архитектуре!',
-            pDetials: `Если вам нужно подробное введение в Argon2ID, в интернете доступно множество источников. Это руководство даёт
+            pDetails: `Если вам нужно подробное введение в Argon2ID, в интернете доступно множество источников. Это руководство даёт
             лишь очень краткий обзор значений. Необходимо настроить три из них:`,
             pTune: `Они изменяются в зависимости от возможностей системы. Чем мощнее система, тем более безопасные
             значения можно установить.`,
@@ -521,10 +525,22 @@ export let I18nAdminRu: I18nAdmin = {
         manualInitDesc: `Пользователь также может быть инициализирован здесь. В этом случае, однако, вам нужно сообщить пароль
             напрямую.`,
         manualInit: 'Ручная инициализация',
-        mfaDelete1: 'Вы можете удалить ключи доступа для этого пользователя.',
-        mfaDelete2: `Внимание! Удаление ключа доступа <b>нельзя отменить</b> без полной повторной
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'Вы можете удалить ключи доступа для этого пользователя.',
+                mfaDelete2: `Внимание! Удаление ключа доступа <b>нельзя отменить</b> без полной повторной
             регистрации пользователем.`,
-        noMfaKeys: 'У этого пользователя нет зарегистрированных ключей доступа.',
+                noMfaKeys: 'У этого пользователя нет зарегистрированных ключей доступа.',
+            },
+        },
         pkOnly1: 'Это аккаунт только с ключом доступа.',
         pkOnly2:
             'Это означает, что этот пользователь использует вход без пароля и не имеет установленного пароля.',

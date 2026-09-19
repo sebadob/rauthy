@@ -297,6 +297,13 @@ pub async fn put_provider(
         .validate_api_key_or_admin_session(AccessGroup::AuthProviders, AccessRights::Update)?;
     payload.validate()?;
 
+    if payload.issuer == PROVIDER_ATPROTO {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must not contain a reserved name",
+        ));
+    }
+
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -438,26 +445,34 @@ pub async fn put_provider_img(
 
     // we only accept a single field from the Multipart upload -> no looping here
     let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
-    let mut content_type = None;
-    if let Some(part) = payload.next().await {
-        let mut field = part?;
+    let content_type: Option<mime_guess::Mime>;
+    match payload.next().await {
+        Some(part) => {
+            let mut field = part?;
 
-        match field.content_type() {
-            Some(mime) => {
-                debug!("content_type: {:?}", mime);
-                content_type = Some(mime.clone());
+            match field.content_type() {
+                Some(mime) => {
+                    debug!("content_type: {:?}", mime);
+                    content_type = Some(mime.clone());
+                }
+                None => {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "content_type is missing",
+                    ));
+                }
             }
-            None => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "content_type is missing",
-                ));
+
+            while let Some(chunk) = field.next().await {
+                let bytes = chunk?;
+                buf.extend(bytes);
             }
         }
-
-        while let Some(chunk) = field.next().await {
-            let bytes = chunk?;
-            buf.extend(bytes);
+        None => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing upload part",
+            ));
         }
     }
 

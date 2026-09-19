@@ -67,7 +67,6 @@ pub async fn grant_type_authorization_code(
         client.validate_secret(secret, &req).await?;
     }
     client.validate_flow(GrantType::AuthorizationCode)?;
-    client.validate_redirect_uri(req_data.redirect_uri.as_deref().unwrap_or_default())?;
 
     // check for DPoP header
     let mut headers = Vec::new();
@@ -95,9 +94,8 @@ pub async fn grant_type_authorization_code(
         ));
     }
 
-    // get the oidc code from the cache
     let idx = req_data.code.as_ref().unwrap().to_owned();
-    let code = match AuthCode::find(idx).await? {
+    let code = match AuthCode::find_remove(idx).await? {
         None => {
             warn!(
                 "'auth_code' could not be found inside the cache - Host: {}",
@@ -111,6 +109,10 @@ pub async fn grant_type_authorization_code(
         Some(code) => code,
     };
     // validate the oidc code
+    code.validate_redirect_uri_exact(
+        &client,
+        req_data.redirect_uri.as_deref().unwrap_or_default(),
+    )?;
     if code.client_id != client_id {
         let err = format!("Wrong 'code' for client_id '{client_id}'");
         warn!(err);
@@ -169,6 +171,9 @@ pub async fn grant_type_authorization_code(
     };
 
     let user = User::find(code.user_id.clone()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+
     let token_set = TokenSet::from_user(
         &user,
         &client,
@@ -182,8 +187,6 @@ pub async fn grant_type_authorization_code(
         DeviceCodeFlow::No,
     )
     .await?;
-
-    code.delete().await?;
 
     // update session metadata
     if let Some(sid) = code.session_id.clone() {

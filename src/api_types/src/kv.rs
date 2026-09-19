@@ -1,4 +1,4 @@
-use rauthy_common::regex::RE_GROUPS;
+use rauthy_common::regex::{RE_GROUPS, RE_KV_KEY};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -32,8 +32,8 @@ pub struct KVAccessRequest {
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct KVValueRequest {
-    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[a-zA-Z0-9-._~]{2,64}$`
+    #[validate(regex(path = "*RE_KV_KEY", code = "^[a-zA-Z0-9-._~]{2,64}$"))]
     pub key: String,
     /// If set to `true`, the backend will encrypt the value on the application layer.
     /// The database will only contain encrypted data. Requires more resources, but is

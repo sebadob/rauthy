@@ -439,7 +439,10 @@ impl EmailJob {
                     .await
                     {
                         Ok(_) => {
-                            trace!("E-Mail sent successfully to {}", user.email);
+                            trace!(
+                                "E-Mail to {} sent to Mailer-Task (internally) successfully",
+                                user.email
+                            );
                             self.set_last_user_ts(&user.email, user.created_at);
                             break;
                         }

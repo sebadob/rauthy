@@ -89,7 +89,7 @@
         tokenExchange: client.flows_enabled.includes(AuthFlowTokenExchange),
     });
 
-    const optionsAlgs: JwkKeyPairAlg[] = ['RS256', 'RS384', 'RS512', 'EdDSA'];
+    const optionsAlgs: JwkKeyPairAlg[] = ['RS256', 'RS384', 'RS512', 'EdDSA', 'Ed25519'];
     let accessTokenAlg: JwkKeyPairAlg = $state(client.access_token_alg);
     let idTokenAlg: JwkKeyPairAlg = $state(client.id_token_alg);
     let tokenLifetime: string = $state(client.access_token_lifetime.toString());
@@ -363,6 +363,11 @@
             client_credentials
         </InputCheckbox>
         <InputCheckbox ariaLabel="password" bind:checked={flows.password}>password</InputCheckbox>
+        {#if forceMfa && flows.password}
+            <div transition:slide={{ duration: 150 }} class="passwordMfaWarn">
+                {ta.clients.passwordFlowMfaWarn}
+            </div>
+        {/if}
         <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
             refresh_token
         </InputCheckbox>
@@ -643,6 +648,11 @@
 
     .claims {
         max-width: 40rem;
+    }
+
+    .passwordMfaWarn {
+        color: hsl(var(--error));
+        margin-left: 1.5rem;
     }
 
     .warn {

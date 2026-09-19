@@ -1,5 +1,4 @@
-export type MfaPurpose =
-    { Login: string } | 'MfaModToken' | 'PasswordNew' | 'PasswordReset' | 'Test';
+import type { MfaPurpose } from '$api/types/mfa';
 
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
@@ -35,6 +34,7 @@ export interface WebauthnRegStartRequest {
     magic_link_id?: string;
     /// Validation: length === 32
     mfa_mod_token_id?: string;
+    allow_rk?: boolean;
 }
 
 export interface WebauthnRegFinishRequest {
