@@ -1,9 +1,9 @@
 CREATE TABLE fido_mds_certs
 (
-    hash BLOB NOT NULL
+    hash     BLOB NOT NULL
         CONSTRAINT fido_mds_certs_pk
             PRIMARY KEY,
-    der  BLOB NOT NULL
+    cert_der BLOB NOT NULL
 ) STRICT;
 
 CREATE TABLE fido_mds_entries

@@ -121,10 +121,11 @@ fn fixture() -> String {
 
 #[test]
 fn transform_keeps_only_valid_aaguid_entries() {
-    let ds = PreparedDataset::from_jwt(&fixture()).unwrap();
+    let ds: MdsDataset = fixture().parse().unwrap();
 
     assert_eq!(ds.blob_no, 271);
-    assert_eq!(ds.next_update, "2026-08-01");
+    // 2026-08-01T00:00:00Z
+    assert_eq!(ds.next_update_ts, 1785542400);
 
     // kept: entries 1, 2, 6, 7. dropped: 3 (revoked), 4 (no cert), 5 (no aaguid), 8 (compromised)
     assert_eq!(ds.entries.len(), 4);
@@ -137,29 +138,50 @@ fn transform_keeps_only_valid_aaguid_entries() {
 
 #[test]
 fn transform_derives_cert_level_as_the_max_across_reports() {
-    let ds = PreparedDataset::from_jwt(&fixture()).unwrap();
+    let ds: MdsDataset = fixture().parse().unwrap();
     // entries are sorted by aaguid, so the order is 001, 002, 006, 007
-    assert_eq!(ds.entries[0].cert_level, CertLevel::L1);
-    assert_eq!(ds.entries[1].cert_level, CertLevel::L2);
-    assert_eq!(ds.entries[2].cert_level, CertLevel::L3Plus);
-    assert_eq!(ds.entries[3].cert_level, CertLevel::NotCertified);
+    assert_eq!(ds.entries[0].cert_level, MdsCertLevel::L1);
+    assert_eq!(ds.entries[1].cert_level, MdsCertLevel::L2);
+    assert_eq!(ds.entries[2].cert_level, MdsCertLevel::L3Plus);
+    assert_eq!(ds.entries[3].cert_level, MdsCertLevel::NotCertified);
+}
+
+#[test]
+fn cert_level_ordering_is_wire_stable() {
+    // the ordering is what the operator's "at least L2" filter will compare against, and the
+    // numbers are persisted, so neither may be reshuffled
+    assert!(MdsCertLevel::NotCertified < MdsCertLevel::Certified);
+    assert!(MdsCertLevel::Certified < MdsCertLevel::L1);
+    assert!(MdsCertLevel::L1 < MdsCertLevel::L2);
+    assert!(MdsCertLevel::L2 < MdsCertLevel::L3Plus);
+    assert_eq!(MdsCertLevel::NotCertified.as_u8(), 0);
+    assert_eq!(MdsCertLevel::L3Plus.as_u8(), 7);
 }
 
 #[test]
 fn transform_folds_unrecognized_values_into_the_unknown_bit() {
-    let ds = PreparedDataset::from_jwt(&fixture()).unwrap();
+    let ds: MdsDataset = fixture().parse().unwrap();
     let e = &ds.entries[3];
+    assert!(e.key_protection.contains(KeyProtection::Hardware));
+    assert!(e.key_protection.contains(KeyProtection::Unknown));
+    assert!(!e.key_protection.contains(KeyProtection::Software));
     assert_eq!(
-        e.key_protection,
+        e.key_protection.bits(),
         KeyProtection::Hardware as u32 | KeyProtection::Unknown as u32
     );
-    // the low bit is the stable Unknown marker
+}
+
+#[test]
+fn unknown_is_pinned_to_the_low_bit_of_every_mask() {
+    // persisted bit positions: `Unknown` must stay at bit 0 so the columns can widen past 32 bits
     assert_eq!(KeyProtection::Unknown as u32, 1);
+    assert_eq!(AttachmentHint::Unknown as u32, 1);
+    assert_eq!(AttestationType::Unknown as u32, 1);
 }
 
 #[test]
 fn transform_deduplicates_shared_root_certificates() {
-    let ds = PreparedDataset::from_jwt(&fixture()).unwrap();
+    let ds: MdsDataset = fixture().parse().unwrap();
     // CERTA, CERTB, CERTG across the four kept entries; CERTA is shared by 001 and 006
     assert_eq!(ds.certs.len(), 3);
 
@@ -173,20 +195,20 @@ fn transform_deduplicates_shared_root_certificates() {
 
 #[test]
 fn transform_is_deterministic_and_round_trips() {
-    let a = PreparedDataset::from_jwt(&fixture()).unwrap();
-    let b = PreparedDataset::from_jwt(&fixture()).unwrap();
+    let a: MdsDataset = fixture().parse().unwrap();
+    let b: MdsDataset = fixture().parse().unwrap();
     assert_eq!(a, b);
 
     let bytes = a.serialize().unwrap();
-    let back = PreparedDataset::deserialize(&bytes).unwrap();
+    let back = MdsDataset::deserialize(&bytes).unwrap();
     assert_eq!(a, back);
 }
 
 #[test]
-fn aaguid_is_parsed_to_16_bytes() {
-    let ds = PreparedDataset::from_jwt(&fixture()).unwrap();
+fn aaguid_is_parsed_into_the_16_bytes_the_db_stores() {
+    let ds: MdsDataset = fixture().parse().unwrap();
     assert_eq!(
-        ds.entries[0].aaguid,
-        [0xaa, 0xaa, 0xaa, 0xaa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        ds.entries[0].aaguid.as_bytes(),
+        &[0xaa, 0xaa, 0xaa, 0xaa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
     );
 }

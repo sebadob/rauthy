@@ -43,6 +43,9 @@ setup:
     echo "Building WASM modules"
     just build-wasm
 
+    echo "Fetching the FIDO MDS dataset"
+    just fido-mds-prep
+
 # start the backend containers for local dev
 @dev-env-start:
     just mailcrab-start
@@ -156,12 +159,12 @@ clippy:
     clear
     cargo clippy
 
-# regenerate the shipped FIDO MDS dataset from the live metadata service
-fido-mds-prep out="assets/fido_mds/dataset.bin":
+# fetch the FIDO MDS dataset from the live metadata service into the embedded asset
+fido-mds-prep source="https://mds.fidoalliance.org/" out="assets/fido_mds/dataset.bin":
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    cargo run --bin fido-mds-prep -- --out {{ out }}
+    cargo run --bin fido-mds-prep -- --source {{ source }} --out {{ out }}
 
 # delete the local hiqlite database
 delete-hiqlite:
@@ -385,7 +388,7 @@ build-wasm:
     wasm-pack build -d ../../frontend/src/wasm/md --no-pack --out-name md --features md
 
 # Build the final container image.
-build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
+build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui fido-mds-prep
     #!/usr/bin/env bash
     set -euxo pipefail
 

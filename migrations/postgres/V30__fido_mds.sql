@@ -1,9 +1,9 @@
 create table fido_mds_certs
 (
-    hash bytea not null
+    hash     bytea not null
         constraint fido_mds_certs_pk
             primary key,
-    der  bytea not null
+    cert_der bytea not null
 );
 
 create table fido_mds_entries
