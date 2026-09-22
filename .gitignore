@@ -24,3 +24,4 @@ heaptrack.*
 static
 templates/html
 gen-config.toml
+/assets/fido_mds/dataset.bin
