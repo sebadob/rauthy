@@ -2,10 +2,11 @@ use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::sessions::Session;
-use crate::entity::users::{AccountType, User};
+use crate::entity::users::User;
 use crate::entity::webauthn::auth_data::{WebauthnAdditionalData, WebauthnData};
 use crate::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnServiceReq};
 use crate::entity::webauthn::authenticate_rk::auth_finish_discover;
+use crate::entity::webauthn::ceremony::{AuthenticationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
@@ -17,7 +18,6 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::Passkey;
-use webauthn_rs_proto::UserVerificationPolicy;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct WebauthnLoginToSAwaitCode {
@@ -59,8 +59,10 @@ pub async fn auth_start(
     };
 
     let user = User::find(user_id).await?;
-    let force_uv =
-        user.account_type() == AccountType::Passkey || RauthyConfig::get().vars.webauthn.force_uv;
+    let force_uv = requires_uv(
+        user.account_type(),
+        RauthyConfig::get().vars.webauthn.force_uv,
+    );
     let pks = if force_uv {
         // in this case, filter out all presence only keys
         PasskeyEntity::find_for_user_with_uv(&user.id)
@@ -84,17 +86,11 @@ pub async fn auth_start(
         ));
     }
 
-    match RauthyConfig::get()
-        .webauthn
-        .start_passkey_authentication(pks.as_slice())
-    {
+    match AuthenticationState::start(&RauthyConfig::get().webauthn, pks, force_uv) {
         Ok((mut rcr, auth_state)) => {
             let req_exp = RauthyConfig::get().vars.webauthn.req_exp;
             // timeout expected in ms
             rcr.public_key.timeout = Some(req_exp as u32 * 1000);
-            if force_uv {
-                rcr.public_key.user_verification = UserVerificationPolicy::Required;
-            }
 
             // cannot be serialized with bincode -> no deserialize from any
             let auth_state_json = serde_json::to_string(&auth_state)?;
@@ -142,16 +138,15 @@ pub async fn auth_finish(
     };
 
     let mut user = User::find(user_id.clone()).await?;
-    let force_uv =
-        user.account_type() == AccountType::Passkey || RauthyConfig::get().vars.webauthn.force_uv;
+    let force_uv = requires_uv(
+        user.account_type(),
+        RauthyConfig::get().vars.webauthn.force_uv,
+    );
 
     let pks = PasskeyEntity::find_for_user(&user.id).await?;
-    let auth_state = serde_json::from_str(&auth_data.auth_state_json)?;
+    let auth_state = serde_json::from_str::<AuthenticationState>(&auth_data.auth_state_json)?;
 
-    match RauthyConfig::get()
-        .webauthn
-        .finish_passkey_authentication(&payload.data, &auth_state)
-    {
+    match auth_state.finish(&RauthyConfig::get().webauthn, &payload.data) {
         Ok(auth_result) => {
             if force_uv && !auth_result.user_verified() {
                 warn!(

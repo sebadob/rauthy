@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
-use crate::entity::users::{AccountType, User};
+use crate::entity::users::User;
+use crate::entity::webauthn::ceremony::{RegistrationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_api_types::users::{WebauthnRegFinishRequest, WebauthnRegStartRequest};
@@ -7,11 +8,8 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tracing::{error, info, warn};
-use webauthn_rs::prelude::{Credential, PasskeyRegistration, Uuid};
-use webauthn_rs_proto::{
-    AuthenticatorSelectionCriteria, CreationChallengeResponse, ExtnState, ResidentKeyRequirement,
-    UserVerificationPolicy,
-};
+use webauthn_rs::prelude::{Credential, Uuid};
+use webauthn_rs_proto::{CreationChallengeResponse, ExtnState};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WebauthnReg {
@@ -35,45 +33,21 @@ pub async fn reg_start(
         if !pks.is_empty() { Some(pks) } else { None }
     };
 
-    match RauthyConfig::get().webauthn.start_passkey_registration(
+    let cfg = &RauthyConfig::get().vars.webauthn;
+    // New-user magic links may remove an initialized password at finish.
+    let require_uv =
+        requires_uv(user.account_type(), cfg.force_uv) || payload.magic_link_id.is_some();
+    match RegistrationState::start(
+        &RauthyConfig::get().webauthn,
         passkey_user_id,
         &user.email,
-        &user.email,
         exclude_creds,
+        require_uv,
+        payload.allow_rk.unwrap_or(false),
     ) {
         Ok((mut ccr, reg_state)) => {
             // timeout expected in ms
-            let cfg = &RauthyConfig::get().vars.webauthn;
             ccr.public_key.timeout = Some(cfg.req_exp as u32 * 1000);
-
-            // Any values we overwrite manually here may differ in the `reg_state`. They are hidden
-            // from us, any we may double-check and enforce ourselves in the finish step if
-            // necessary.
-            // However, we cannot use the `ResidentKeyRequirement` in combination with
-            // `start_attested_resident_key_registration()`, because it enforces attestation as
-            // well, which we don't want right now.
-
-            // The cross-platform is only a hint, not enforced, but it may break some browsers.
-            // TODO check on devices providing an internal option if they still
-            //  show the internal choice if there is no cross platform attached.
-            // let authenticator_attachment = Some(AuthenticatorAttachment::CrossPlatform);
-            let authenticator_attachment = None;
-            let resident_key = if payload.allow_rk.unwrap_or(false) {
-                Some(ResidentKeyRequirement::Preferred)
-            } else {
-                Some(ResidentKeyRequirement::Discouraged)
-            };
-            let user_verification = if cfg.force_uv || user.account_type() == AccountType::Passkey {
-                UserVerificationPolicy::Required
-            } else {
-                UserVerificationPolicy::Preferred
-            };
-            ccr.public_key.authenticator_selection = Some(AuthenticatorSelectionCriteria {
-                authenticator_attachment,
-                resident_key,
-                require_resident_key: false,
-                user_verification,
-            });
 
             let cache_idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
             let reg_data = WebauthnReg {
@@ -125,17 +99,15 @@ pub async fn reg_finish(
         Some(data) => data,
     };
 
-    let reg_state = serde_json::from_str::<PasskeyRegistration>(&reg_data.reg_state)?;
-    match RauthyConfig::get()
-        .webauthn
-        .finish_passkey_registration(&payload.data, &reg_state)
-    {
+    let reg_state = serde_json::from_str::<RegistrationState>(&reg_data.reg_state)?;
+    match reg_state.finish(&RauthyConfig::get().webauthn, &payload.data) {
         Ok(pk) => {
             // force UV check
             let cfg = &RauthyConfig::get().vars.webauthn;
             let cred = Credential::from(pk.clone());
 
-            if (user.account_type() != AccountType::Password || cfg.force_uv) && !cred.user_verified
+            if (requires_uv(user.account_type(), cfg.force_uv) || is_new_user)
+                && !cred.user_verified
             {
                 warn!(
                     user.id,
