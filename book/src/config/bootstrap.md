@@ -260,20 +260,30 @@ the first-boot bootstrap gate and no new generated secret is written.
 
 ```toml
 [bootstrap]
-# Path to the encrypted generated-secret container. If unset, Rauthy stores it
-# below Hiqlite's configured data directory as:
+# Generated bootstrap secrets are written to this encrypted
+# local container before their matching database rows are
+# inserted. Later bootstrap phases use it for generated
+# client secrets, user passwords, and API-key secrets that
+# cannot be reconstructed from the database after insertion.
 #
-# `${cluster.data_dir}/bootstrap.secrets.enc`
+# The file is a single AEAD-encrypted JSON payload. The expiry
+# deadline lives inside that encrypted payload, so expiry
+# checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
 #
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
 #generated_secrets_file = 'data/bootstrap.secrets.enc'
 
-# Time in seconds before generated bootstrap secrets expire. A value of `0`
-# disables expiry and runtime auto-purge.
+# Duration before generated bootstrap secrets are purged.
+# The default keeps first-start credentials available briefly
+# for local extraction. Set to `0` to disable expiry and runtime
+# auto-purge.
 #
-# default: 600
+# type: duration
+# default: '10m'
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
-generated_secrets_ttl = 600
+#generated_secrets_ttl = '10m'
 ```
 
 Use the local CLI to retrieve or purge the encrypted container after first start. The command does

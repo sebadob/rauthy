@@ -96,10 +96,10 @@ provide them either as a integer, and they will be interpretet as seconds, or wi
 | cluster              | health_check_delay_secs             | health_check_delay                    |              |
 |                      | HQL_HEALTH_CHECK_DELAY_SECS         | HQL_HEALTH_CHECK_DELAY                |              |
 | cluster              | backup_keep_days                    | backup_keep_for                       | Days         |
-|                      | HQL_BACKUP_KEEP_DAYS                | backup_keep_for                       | Days         |
+|                      | HQL_BACKUP_KEEP_DAYS                | HQL_BACKUP_KEEP_FOR                   | Days         |
 | cluster              | backup_keep_days_local              | backup_keep_for_local                 | Days         |
 |                      | HQL_BACKUP_KEEP_DAYS_LOCAL          | HQL_BACKUP_KEEP_FOR_LOCAL             | Days         |
-| database             | health_check_delay_secs             | HQL_BACKUP_KEEP_FOR                   |              |
+| database             | health_check_delay_secs             | health_check_delay                    |              |
 |                      | HEALTH_CHECK_DELAY_SECS             | HEALTH_CHECK_DELAY                    |              |
 | database             | sched_user_exp_mins                 | sched_user_exp                        | Minutes      |
 |                      | SCHED_USER_EXP_MINS                 | SCHED_USER_EXP                        | Minutes      |
