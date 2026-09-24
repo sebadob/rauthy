@@ -13,6 +13,7 @@ use rauthy_common::utils::{base64_decode, get_rand, serialize};
 use rauthy_common::{is_hiqlite, sha256};
 use rauthy_error::ErrorResponse;
 use std::path::Path;
+use std::time::Duration;
 use tracing::{debug, info};
 use validator::Validate;
 use zeroize::Zeroize;
@@ -136,13 +137,13 @@ async fn api_key_exists(name: &str) -> bool {
 
 async fn upsert_generated_api_key_token(
     path: impl AsRef<Path>,
-    ttl_seconds: u32,
+    ttl: Duration,
     key_name: &str,
     token: &str,
 ) -> Result<(), ErrorResponse> {
     crate::migration::bootstrap::generated_secrets::upsert_secret(
         path,
-        ttl_seconds,
+        ttl,
         GeneratedSecretEntry::new(GeneratedSecretKey::new("api-key", key_name, "token"), token),
     )
     .await
@@ -236,9 +237,14 @@ mod tests {
         let path = test_path("roundtrip");
         let _ = tokio::fs::remove_file(&path).await;
 
-        upsert_generated_api_key_token(&path, 0, "provision", "provision$secret")
-            .await
-            .unwrap();
+        upsert_generated_api_key_token(
+            &path,
+            Duration::from_secs(0),
+            "provision",
+            "provision$secret",
+        )
+        .await
+        .unwrap();
 
         let container = read_container(&path).await.unwrap();
         assert_eq!(container.entries.len(), 1);
@@ -259,9 +265,14 @@ mod tests {
         tokio::fs::write(&path, b"not a directory").await.unwrap();
         let nested = path.join("bootstrap.secrets.enc");
 
-        let err = upsert_generated_api_key_token(&nested, 0, "provision", "provision$secret")
-            .await
-            .unwrap_err();
+        let err = upsert_generated_api_key_token(
+            &nested,
+            Duration::from_secs(0),
+            "provision",
+            "provision$secret",
+        )
+        .await
+        .unwrap_err();
         assert!(!err.message.is_empty());
 
         let _ = tokio::fs::remove_file(&path).await;

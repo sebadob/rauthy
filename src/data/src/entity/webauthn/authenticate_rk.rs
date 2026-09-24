@@ -12,6 +12,7 @@ use rauthy_api_types::users::WebauthnAuthStartResponse;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::cmp::min;
 use std::str::FromStr;
 use tracing::{error, info};
 use webauthn_rs::prelude::{Credential, Uuid};
@@ -26,7 +27,7 @@ pub async fn auth_start_discover() -> Result<WebauthnAuthStartResponse, ErrorRes
         Ok((mut rcr, auth_state)) => {
             let req_exp = RauthyConfig::get().vars.webauthn.req_exp;
             // timeout expected in ms
-            rcr.public_key.timeout = Some(req_exp as u32 * 1000);
+            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u32::MAX as u128) as u32);
             rcr.public_key.user_verification = UserVerificationPolicy::Required;
 
             // cannot be serialized with bincode -> no deserialize from any
@@ -41,7 +42,7 @@ pub async fn auth_start_discover() -> Result<WebauthnAuthStartResponse, ErrorRes
             Ok(WebauthnAuthStartResponse {
                 code: auth_data.code,
                 rcr,
-                exp: req_exp as u64,
+                exp: req_exp.as_secs(),
             })
         }
 

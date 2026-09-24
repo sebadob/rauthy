@@ -79,10 +79,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
     // We allow it to be 500ms shorter than specified to not get into
     // possible problems with slightly inaccurate client implementations.
     let now = Utc::now();
-    let interval = RauthyConfig::get().vars.device_grant.poll_interval as i64;
-    let poll_thres = now
-        .sub(chrono::Duration::seconds(interval))
-        .add(chrono::Duration::milliseconds(500));
+    let interval = RauthyConfig::get().vars.device_grant.poll_interval;
+    let poll_thres = now.sub(interval).add(chrono::Duration::milliseconds(100));
     if poll_thres < code.last_poll {
         warn!("device does not respect the poll interval");
         code.warnings += 1;
@@ -139,9 +137,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         let refresh_exp = if client.allow_refresh_token() {
             Some(
                 access_exp
-                    .add(chrono::Duration::hours(
-                        RauthyConfig::get().vars.device_grant.refresh_token_lifetime as i64,
-                    ))
+                    .add(RauthyConfig::get().vars.device_grant.refresh_token_lifetime)
                     .timestamp(),
             )
         } else {

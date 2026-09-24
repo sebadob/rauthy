@@ -45,7 +45,11 @@ impl ClientDyn {
             DB::pg_query_one(sql, &[&id]).await?
         };
 
-        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
+        let ttl = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .rate_limit_reg
+            .as_secs() as i64;
         client
             .put(
                 Cache::ClientDynamic,
@@ -82,8 +86,13 @@ impl ClientDyn {
     pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
+        let ttl = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .rate_limit_reg
+            .as_secs() as i64;
         let ts: Option<i64> = client.get(Cache::IpRateLimit, ip.to_string()).await?;
+
         match ts {
             Some(ts) => {
                 let retry_at = ts + ttl;

@@ -269,7 +269,7 @@ async fn handle_tos_accept_deny(
     }
 
     auth_code
-        .danger_save_reset_exp(code_await.auth_code_lifetime)
+        .danger_save_reset_exp(code_await.auth_code_lifetime as i64)
         .await?;
 
     let mut builder = if code_await.needs_user_update {

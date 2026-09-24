@@ -151,12 +151,13 @@ change after the initial setup.
 
 ```toml
 [ephemeral_clients]
-# The lifetime in seconds ephemeral clients will be kept inside
+# The lifetime duration ephemeral clients will be kept inside
 # the cache.
 #
-# default: 3600
+# type: duration
+# default: '1h'
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
-cache_lifetime = 3600
+cache_lifetime = '1h'
 ```
 
 ```admonish hint

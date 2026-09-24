@@ -32,9 +32,8 @@ pub async fn sessions_cleanup() {
 
         let now = Utc::now();
         let exp = now.sub(chrono::Duration::minutes(1)).timestamp();
-        let timeout_secs = RauthyConfig::get().vars.lifetimes.session_timeout as i64;
         let timeout = now
-            .sub(chrono::Duration::seconds(timeout_secs))
+            .sub(RauthyConfig::get().vars.lifetimes.session_timeout)
             .sub(chrono::Duration::minutes(1))
             .timestamp();
 

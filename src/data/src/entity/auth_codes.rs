@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
+use std::time::Duration;
 use utoipa::ToSchema;
 
 #[derive(Deserialize)]
@@ -127,9 +128,9 @@ impl AuthCode {
     }
 
     // Saves an Authorization Code
-    pub async fn save(&self, ttl: i32) -> Result<(), ErrorResponse> {
+    pub async fn save(&self, ttl: i64) -> Result<(), ErrorResponse> {
         DB::hql()
-            .put(Cache::AuthCode, self.id.clone(), self, Some(ttl as i64))
+            .put(Cache::AuthCode, self.id.clone(), self, Some(ttl))
             .await?;
         Ok(())
     }
@@ -169,15 +170,13 @@ impl AuthCode {
         scopes: Vec<String>,
         resource: Option<String>,
         state: Option<String>,
-        lifetime_secs: i32,
+        lifetime: Duration,
     ) -> Self {
         debug_assert!(!redirect_uri.is_empty());
-        debug_assert!(lifetime_secs > 0);
+        debug_assert!(lifetime.as_secs() > 0);
 
         let id = get_rand(64);
-        let exp = Utc::now()
-            .add(chrono::Duration::seconds(lifetime_secs as i64))
-            .timestamp();
+        let exp = Utc::now().add(lifetime).timestamp();
 
         Self {
             id,
@@ -198,10 +197,10 @@ impl AuthCode {
     /// CAUTION: DO NOT use this reset in any other case than after accepting updated ToS!
     pub async fn danger_save_reset_exp(
         &mut self,
-        auth_code_lifetime: i32,
+        auth_code_lifetime: i64,
     ) -> Result<(), ErrorResponse> {
         self.exp = Utc::now()
-            .add(chrono::Duration::seconds(auth_code_lifetime as i64))
+            .add(chrono::Duration::seconds(auth_code_lifetime))
             .timestamp();
 
         self.save(auth_code_lifetime).await
@@ -255,7 +254,7 @@ impl AuthCodeToSAwait {
                 Cache::AuthCode,
                 Self::cache_idx(&self.await_code),
                 &self,
-                Some(RauthyConfig::get().vars.tos.accept_timeout as i64),
+                Some(RauthyConfig::get().vars.tos.accept_timeout.as_secs() as i64),
             )
             .await?;
 

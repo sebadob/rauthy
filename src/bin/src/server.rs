@@ -34,8 +34,8 @@ use std::cmp::max;
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
-use std::thread;
 use std::time::Duration;
+use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info, warn};
@@ -45,6 +45,14 @@ pub async fn run(
     secrets_file: String,
     test_mode: bool,
 ) -> Result<(), Box<dyn Error>> {
+    #[cfg(debug_assertions)]
+    if !RAUTHY_VERSION.starts_with("0.37.") {
+        todo!("Remove the env set var for temporary hiqlite migrations");
+    }
+    // We will set this var automatically. Rauthy does not depend on the cache being persistent.
+    // Only for other people using Hiqlite, this must be an opt-in step, just in case.
+    unsafe { env::set_var("HQL_CACHE_WAL_AUTO_MIGRATE", "true") };
+
     let (tx_email, rx_email) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
@@ -96,13 +104,6 @@ pub async fn run(
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
 
-    let cache_data_dir = node_config.data_dir.to_string();
-    let cache_storage_disk = node_config.cache_storage_disk;
-    // TODO remove this cache-WAL compatibility cleanup in the next minor version.
-    rauthy_data::temp_migrations::prepare_cache_wal(&cache_data_dir, cache_storage_disk)
-        .await
-        .map_err(|err| std::io::Error::other(err.to_string()))?;
-
     DB::init(node_config)
         .await
         .expect("Error starting the database / cache layer");
@@ -135,10 +136,6 @@ pub async fn run(
         error!("Error during version migration: {err:?}");
         time::sleep(Duration::from_secs(1)).await;
     }
-
-    rauthy_data::temp_migrations::mark_cache_wal_current(&cache_data_dir, cache_storage_disk)
-        .await
-        .map_err(|err| std::io::Error::other(err.to_string()))?;
 
     UserPicture::test_config().await.unwrap();
 

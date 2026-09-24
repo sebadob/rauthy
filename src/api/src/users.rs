@@ -65,6 +65,7 @@ use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::time::Duration;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -942,7 +943,7 @@ async fn validate_user_picture_access(
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
         let mut buf = Vec::with_capacity(512);
-        if JwtToken::validate_claims_into(&bearer, None, 0, &mut buf)
+        if JwtToken::validate_claims_into(&bearer, None, Duration::from_secs(0), &mut buf)
             .await
             .is_ok()
         {

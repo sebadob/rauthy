@@ -6,6 +6,7 @@ use crate::rauthy_config::RauthyConfig;
 use rauthy_api_types::users::{WebauthnRegFinishRequest, WebauthnRegStartRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::cmp::min;
 use std::str::FromStr;
 use tracing::{error, info, warn};
 use webauthn_rs::prelude::{Credential, Uuid};
@@ -47,7 +48,7 @@ pub async fn reg_start(
     ) {
         Ok((mut ccr, reg_state)) => {
             // timeout expected in ms
-            ccr.public_key.timeout = Some(cfg.req_exp as u32 * 1000);
+            ccr.public_key.timeout = Some(min(cfg.req_exp.as_millis(), u32::MAX as u128) as u32);
 
             let cache_idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
             let reg_data = WebauthnReg {
@@ -61,7 +62,7 @@ pub async fn reg_start(
                     Cache::Webauthn,
                     cache_idx,
                     &reg_data,
-                    Some(cfg.req_exp as i64),
+                    Some(cfg.req_exp.as_secs() as i64),
                 )
                 .await?;
 

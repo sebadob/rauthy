@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
-use tokio::time::sleep;
 use tracing::{error, info, warn};
 use zeroize::Zeroize;
 
@@ -131,17 +130,17 @@ fn is_expired(deadline: i64, now: i64) -> bool {
     deadline > 0 && now >= deadline
 }
 
-pub fn deadline_from_ttl(ttl_seconds: u32, now: i64) -> i64 {
-    if ttl_seconds == 0 {
+pub fn deadline_from_ttl(ttl: Duration, now: i64) -> i64 {
+    if ttl.is_zero() {
         0
     } else {
-        now.saturating_add(i64::from(ttl_seconds))
+        now.saturating_add(ttl.as_secs() as i64)
     }
 }
 
 pub async fn upsert_secret(
     path: impl AsRef<Path>,
-    ttl_seconds: u32,
+    ttl: Duration,
     entry: GeneratedSecretEntry,
 ) -> Result<(), ErrorResponse> {
     let path = path.as_ref();
@@ -160,9 +159,9 @@ pub async fn upsert_secret(
         GeneratedSecrets::default()
     };
     container.upsert(entry);
-    let deadline = deadline_from_ttl(ttl_seconds, now_utc());
+    let deadline = deadline_from_ttl(ttl, now_utc());
     write_container(path, deadline, &container).await?;
-    schedule_purge(path.to_path_buf(), ttl_seconds);
+    schedule_purge(path.to_path_buf(), ttl);
     Ok(())
 }
 
@@ -256,13 +255,13 @@ pub async fn purge_if_expired(path: impl AsRef<Path>) -> Result<bool, ErrorRespo
     }
 }
 
-pub fn schedule_purge(path: PathBuf, ttl_seconds: u32) {
-    if ttl_seconds == 0 {
+pub fn schedule_purge(path: PathBuf, ttl: Duration) {
+    if ttl.is_zero() {
         return;
     }
 
     tokio::spawn(async move {
-        sleep(Duration::from_secs(u64::from(ttl_seconds))).await;
+        tokio::time::sleep(ttl).await;
         if let Err(err) = purge_if_expired(&path).await {
             error!(
                 "Could not purge bootstrap generated-secret container '{}': {err}",
@@ -377,7 +376,7 @@ mod tests {
 
         upsert_secret(
             &path,
-            0,
+            Duration::from_secs(0),
             GeneratedSecretEntry::new(
                 GeneratedSecretKey::new("client", "demo-app", "secret"),
                 "generated-secret",
@@ -435,7 +434,7 @@ mod tests {
 
         upsert_secret(
             &path,
-            0,
+            Duration::from_secs(0),
             GeneratedSecretEntry::new(
                 GeneratedSecretKey::new("client", "demo-app", "secret"),
                 "generated-secret",
@@ -524,7 +523,7 @@ mod tests {
 
         upsert_secret(
             &path,
-            0,
+            Duration::from_secs(0),
             GeneratedSecretEntry::new(GeneratedSecretKey::new("user", "can", "password"), "pw"),
         )
         .await

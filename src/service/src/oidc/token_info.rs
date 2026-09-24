@@ -8,6 +8,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtAccessClaims, JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use std::time::Duration;
 use tracing::error;
 use zeroize::Zeroize;
 
@@ -16,9 +17,14 @@ pub async fn get_token_info(
     token: &str,
 ) -> Result<(String, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     let mut buf = Vec::with_capacity(512);
-    if JwtToken::validate_claims_into(token, Some(JwtTokenType::Bearer), 0, &mut buf)
-        .await
-        .is_err()
+    if JwtToken::validate_claims_into(
+        token,
+        Some(JwtTokenType::Bearer),
+        Duration::from_secs(0),
+        &mut buf,
+    )
+    .await
+    .is_err()
     {
         return Ok((
             serde_json::to_string(&TokenInfo {
@@ -107,7 +113,13 @@ async fn check_client_auth(
     let header = header_value.to_str().unwrap_or_default();
 
     if let Some(token) = header.strip_prefix("Bearer ") {
-        JwtToken::validate_claims_into(token, Some(JwtTokenType::Bearer), 0, buf).await?;
+        JwtToken::validate_claims_into(
+            token,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            buf,
+        )
+        .await?;
         let claims = serde_json::from_slice::<JwtAccessClaims>(buf)?;
 
         // If a different client was used for authentication, make sure it exists and is enabled.

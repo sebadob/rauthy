@@ -214,8 +214,8 @@ impl DeviceAuthCode {
         nonce: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now();
-        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime as i64;
-        let exp = now.add(chrono::Duration::seconds(ttl));
+        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime;
+        let exp = now.add(ttl);
         let slf = Self {
             client_id,
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
@@ -233,7 +233,7 @@ impl DeviceAuthCode {
                 Cache::DeviceCode,
                 slf.user_code().to_string(),
                 &slf,
-                Some(ttl),
+                Some(ttl.as_secs() as i64),
             )
             .await?;
 
@@ -280,7 +280,11 @@ impl DeviceAuthCode {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime as i64;
+        let ttl = RauthyConfig::get()
+            .vars
+            .device_grant
+            .code_lifetime
+            .as_secs() as i64;
         DB::hql()
             .put(
                 Cache::DeviceCode,

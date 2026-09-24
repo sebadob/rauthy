@@ -161,13 +161,14 @@ strict. You can adjust them with the following config variables:
 
 ```toml
 [lifetimes]
-# Session lifetime in seconds - the session can not be extended
+# Session lifetime duration - the session cannot be extended
 # beyond this time and a new login will be forced. This is the
 # session for the authorization code flow.
 #
-# default: 14400
+# type: duration
+# default: '10h'
 # overwritten by: SESSION_LIFETIME
-session_lifetime = 14400
+session_lifetime = '10h'
 
 # If 'true', a 2FA / MFA check will be done with each automatic
 # token generation, even with an active session, which kind of
@@ -179,16 +180,17 @@ session_lifetime = 14400
 # overwritten by: SESSION_RENEW_MFA
 session_renew_mfa = false
 
-# Session timeout in seconds. When a new token / login is requested
+# Session timeout duration. When a new token / login is requested
 # before this timeout hits the limit, the user will be authenticated
 # without prompting for the credentials again.
 #
-# This is the value which can extend the session, until it hits its
-# maximum lifetime set with session_lifetime.
+# This is the duration that can extend an expiring session until
+# it hits its maximum lifetime set with session_lifetime.
 #
-# default: 5400
+# type: duration
+# default: '90m'
 # overwritten by: SESSION_TIMEOUT
-session_timeout = 5400
+session_timeout = '90m'
 ```
 
 ## Security

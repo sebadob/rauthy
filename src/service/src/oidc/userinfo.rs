@@ -12,6 +12,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{AddressClaim, JwtCommonClaims, JwtTokenType};
 use std::borrow::Cow;
+use std::time::Duration;
 
 pub async fn get_userinfo(
     req: HttpRequest,
@@ -22,7 +23,7 @@ pub async fn get_userinfo(
     rauthy_jwt::token::JwtToken::validate_claims_into(
         &bearer,
         Some(JwtTokenType::Bearer),
-        0,
+        Duration::from_secs(0),
         buf.as_mut(),
     )
     .await?;

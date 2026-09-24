@@ -63,7 +63,7 @@ clap = { version = "4.6", features = ["derive", "env"] }
 colored = "3"
 constant_time_eq = "0.6"
 cron = "0.17"
-cryptr = { version = "0.10", features = ["s3", "streaming"] }
+cryptr = { version = "0.12", features = ["s3", "streaming"] }
 css-color = "0.2"
 # upgrade blocked by deadpool-postgres
 deadpool = { version = "0.12.3", features = ["rt_tokio_1", "serde"] }
@@ -77,8 +77,8 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.26.1"
-hiqlite = { version = "0.14.0", features = [
-    "cache", "cast_ints", "counters", "dashboard", "listen_notify_local", "macros"
+hiqlite = { version = "0.15.0-20260920", features = [
+    "cache", "cast_ints", "counters", "dashboard", "listen_notify", "macros"
 ] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
@@ -122,7 +122,7 @@ rustls = { version = "0.23.37", default-features = false, features = [
     "logging", "std", "tls12", "ring"
 ] }
 rustls-pki-types = "1.4.1"
-s3-simple = "0.9"
+s3-simple = "0.9.1"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -10,6 +10,7 @@ use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use std::time::Duration;
 
 #[inline(always)]
 pub async fn handle_token_revocation(
@@ -55,13 +56,18 @@ pub async fn handle_token_revocation(
 
     let mut buf: Vec<u8> = Vec::with_capacity(256);
     if is_refresh_token {
-        JwtToken::validate_claims_into(&payload.token, Some(JwtTokenType::Refresh), 10, &mut buf)
-            .await?;
+        JwtToken::validate_claims_into(
+            &payload.token,
+            Some(JwtTokenType::Refresh),
+            Duration::from_secs(10),
+            &mut buf,
+        )
+        .await?;
     } else {
         JwtToken::validate_claims_into(
             &payload.token,
             Some(JwtTokenType::Bearer),
-            10,
+            Duration::from_secs(10),
             buf.as_mut(),
         )
         .await?;

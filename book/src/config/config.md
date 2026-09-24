@@ -341,26 +341,24 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BACKCHANNEL_LOGOUT_RETRY_COUNT
 #retry_count = 100
 
-# The lifetime / validity for Logout Tokens issued by Rauthy in
-# seconds. These Logout Tokens are being generated during OIDC
+# The lifetime / validity for Logout Tokens issued by Rauthy.
+# These Logout Tokens are being generated during OIDC
 # Backchannel Logout requests to configured clients. The token
 # lifetime should be as short as possible and at most 120 seconds.
 #
-# default: 30
+# type: duration
+# default: '30s'
 # overwritten by: LOGOUT_TOKEN_LIFETIME
-#token_lifetime = 30
+#token_lifetime = '30s'
 
 # You can allow a clock skew during the validation of Logout Tokens,
 # when Rauthy is being used as a client for an upstream auth
 # provider that uses backchannel logout.
 #
-# The allowed skew will be in seconds and a value of e.g. 5 would
-# mean, that 5 seconds are added to the `iat` and `exp` claim
-# validations and expand the range.
-#
-# default: 5
+# type: duration
+# default: '5s'
 # overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
-#allow_clock_skew = 5
+#allow_clock_skew = '5s'
 
 # The maximum allowed lifetime for Logout Tokens. This value is
 # a security check for upstream auth providers. If Rauthy
@@ -371,9 +369,10 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # poor implementations. The RFC states that tokens should be
 # valid for at most 120 seconds.
 #
-# default: 120
+# type: duration
+# default: '120s'
 # overwritten by: LOGOUT_TOKEN_ALLOWED_LIFETIME
-#allowed_token_lifetime = 120
+#allowed_token_lifetime = '120s'
 
 [bootstrap]
 # If set, the email of the default admin will be changed during
@@ -458,6 +457,31 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 #api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
+
+# Generated bootstrap secrets are written to this encrypted
+# local container before their matching database rows are
+# inserted. Later bootstrap phases use it for generated
+# client secrets, user passwords, and API-key secrets that
+# cannot be reconstructed from the database after insertion.
+#
+# The file is a single AEAD-encrypted JSON payload. The expiry
+# deadline lives inside that encrypted payload, so expiry
+# checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Duration before generated bootstrap secrets are purged.
+# The default keeps first-start credentials available briefly
+# for local extraction. Set to `0` to disable expiry and runtime
+# auto-purge.
+#
+# type: duration
+# default: '10m'
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+#generated_secrets_ttl = '10m'
 
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with
@@ -684,8 +708,10 @@ secret_api = "SuperSecureSecret1337"
 # and-egg problem when you want to cold-start a cluster while
 # relying on `readinessProbe` checks.
 #
-# default: 30
-#health_check_delay_secs = 30
+# type: duration
+# default: '30s'
+# overwritten by: HQL_HEALTH_CHECK_DELAY
+#health_check_delay = '30s'
 
 # When the auto-backup task should run.
 # Accepts cron syntax:
@@ -698,16 +724,18 @@ secret_api = "SuperSecureSecret1337"
 # Backups older than the configured days will be cleaned up on S3
 # after the backup cron job `backup_cron`.
 #
-# default: 30
-# overwritten by: HQL_BACKUP_KEEP_DAYS
-#backup_keep_days = 30
+# type: duration
+# default: '30d'
+# overwritten by: HQL_BACKUP_KEEP_FOR
+backup_keep_for = '30d'
 
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
 #
-# default: 3
-# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-#backup_keep_days_local = 3
+# type: duration
+# default: '3d'
+# overwritten by: HQL_BACKUP_KEEP_FOR_LOCAL
+backup_keep_for_local = '3d'
 
 # If you ever need to restore from a backup, the process is simple.
 # 1. Have the cluster shut down. This is probably the case anyway, if
@@ -824,13 +852,13 @@ secret_api = "SuperSecureSecret1337"
 ## detection algorithm. In most cases the defaults should be
 ## fine.
 
-# The duration in seconds for how long an IP will be
-# blacklisted after it was considered harmful, doing
-# credential stuffing.
+# The duration for how long an IP will be blacklisted after
+# it was considered harmful, doing credential stuffing.
 #
-# default: 86400
+# type: duration
+# default: '24h'
 # overwritten by: CRED_STUFF_BLACKLIST_DUR
-#blacklist_duration = 86400
+#blacklist_duration = '24h'
 
 # The threshold for username / password combinations. When
 # this is reached within the `scan_window` the IP will be
@@ -840,7 +868,7 @@ secret_api = "SuperSecureSecret1337"
 # overwritten by: CRED_STUFF_BLACKLIST_THRES
 #blacklist_threshold = 15
 
-# The time in seconds within the detector should operate.
+# The duration within the detector should operate.
 # Whenever either a non-existing email or a email with a
 # wrong password is sent, the combination of both will be
 # hashed and stored (in-memory) for the duration of this
@@ -855,9 +883,10 @@ secret_api = "SuperSecureSecret1337"
 # to blacklist an IP again, after it was removed from the
 # blacklist.
 #
-# default: 10800
+# type: duration
+# default: '3h'
 # overwritten by: CRED_STUFF_SCAN_WINDOW
-#scan_window = 10800
+#scan_window = '3h'
 
 [database]
 # Hiqlite is the default database for Rauthy.
@@ -869,7 +898,7 @@ secret_api = "SuperSecureSecret1337"
 # overwritten by: HIQLITE
 hiqlite = true
 
-# Defines the time in seconds after which the `/health` endpoint
+# Defines the duration after which the `/health` endpoint
 # includes HA quorum checks. The initial delay solves problems
 # like Kubernetes StatefulSet starts that include the health
 # endpoint in the scheduling routine. In these cases, the scheduler
@@ -878,9 +907,10 @@ hiqlite = true
 # This is a chicken-and-egg problem which the delay solves.
 # There is usually no need to adjust this value.
 #
-# default: 30
-# overwritten by: HEALTH_CHECK_DELAY_SECS
-#health_check_delay_secs = 30
+# type: duration
+# default: '30s'
+# overwritten by: HEALTH_CHECK_DELAY
+#health_check_delay = '30s'
 
 # If you set `hiqlite = false` and want to use Postgres as your
 # database, you need to set the following variables.
@@ -964,30 +994,33 @@ pg_password = '123SuperSafe'
 # overwritten by: MIGRATE_PG_DB_NAME
 #migrate_pg_db_name = 'rauthy'
 
-# The interval in minutes in which the scheduler for expired
+# The interval duration in which the scheduler for expired
 # users should run. If this finds expired users, it invalidates
 # all existing sessions and refresh tokens for this user.
 #
-# default: 60
-# overwritten by: SCHED_USER_EXP_MINS
-#sched_user_exp_mins = 60
+# type: duration
+# default: '1h'
+# overwritten by: SCHED_USER_EXP
+#sched_user_exp = '1h'
 
-# The threshold in minutes after which time the user expiry
+# The threshold duration after which time the user expiry
 # scheduler should automatically clean up expired users. If not
 # set at all, expired users will never be cleaned up automatically.
 #
+# type: duration
 # default: disabled / not set
-# overwritten by: SCHED_USER_EXP_DELETE_MINS
-#sched_user_exp_delete_mins = 7200
+# overwritten by: SCHED_USER_EXP_DELETE
+#sched_user_exp_delete = '5d'
 
 [device_grant]
-# The lifetime in seconds of auth codes for the Device Authorization
+# The lifetime duration of auth codes for the Device Authorization
 # Grant flow. You may increase the default of 300 seconds, if you have
 # "slow users" and they are simply not fast enough with the verification.
 #
-# default: 300
+# type: duration
+# default: '5m'
 # overwritten by: DEVICE_GRANT_CODE_LIFETIME
-#code_lifetime = 300
+#code_lifetime = '5m'
 
 # The length of the `user_code` the user has to enter manually for
 # auth request validation. This must be < 64 characters.
@@ -996,7 +1029,7 @@ pg_password = '123SuperSafe'
 # overwritten by: DEVICE_GRANT_USER_CODE_LENGTH
 #user_code_length = 8
 
-# Specifies the rate-limit in seconds per IP for starting new Device
+# Specifies the rate-limit duration per IP for starting new Device
 # Authorization Grant flows. This is especially important for public
 # clients, because a code request for this flow will actually create
 # cached data. If this happened on an unrestricted, open endpoint,
@@ -1004,25 +1037,28 @@ pg_password = '123SuperSafe'
 # If you use the `device_code` grant with confidential clients only,
 # you can leave this unset, which will not rate-limit the endpoint.
 #
+# type: duration
 # default: not set
 # overwritten by: DEVICE_GRANT_RATE_LIMIT
-#rate_limit = 1
+#rate_limit = '10m'
 
-# The interval in seconds which devices are told to use when they
+# The interval duration which devices are told to use when they
 # poll the token endpoint during Device Authorization Grant flow.
 #
-# default: 5
+# type: duration
+# default: '5s'
 # overwritten by: DEVICE_GRANT_POLL_INTERVAL
-#poll_interval = 5
+#poll_interval = '5s'
 
-# You can define a global lifetime in hours for refresh tokens issued
+# You can define a global lifetime duration for refresh tokens issued
 # from a Device Authorization Grant flow. You might want to have a
 # higher lifetime than normal refresh tokens, because they might be
 # used in IoT devices which may be offline for longer periods of time.
 #
-# default: 72
-# overwritten by: DEVICE_GRANT_REFRESH_TOKEN_LIFETIME
-#refresh_token_lifetime = 72
+# type: duration
+# default: '3d'
+#' overwritten by: DEVICE_GRANT_REFRESH_TOKEN_LIFETIME
+#refresh_token_lifetime = '3d'
 
 [dpop]
 # May be set to 'false' to disable forcing the usage of DPoP nonce's.
@@ -1031,13 +1067,14 @@ pg_password = '123SuperSafe'
 # overwritten by: DPOP_FORCE_NONCE
 #force_nonce = true
 
-# Lifetime in seconds for DPoP nonces. These are used to limit the
+# Lifetime duration for DPoP nonces. These are used to limit the
 # lifetime of a client's DPoP proof. Do not set lower than 30 seconds
 # to avoid too many failed client token requests.
 #
-# default: 900
+# type: duration
+# default: '15m'
 # overwritten by: DPOP_NONCE_EXP
-#nonce_exp = 900
+#nonce_exp = '15m'
 
 [dynamic_clients]
 # If set to `true`, dynamic client registration will be enabled.
@@ -1073,14 +1110,15 @@ pg_password = '123SuperSafe'
 # overwritten by: DYN_CLIENT_REG_TOKEN
 #reg_token = '123SuperSafeToken'
 
-# The default token lifetime in seconds for a dynamic client,
+# The default token lifetime duration for a dynamic client
 # that will be set during the registration.
 # This value can be modified manually after registration via
 # the Admin UI like for any other client.
 #
-# default: 1800
+# type: duration
+# default: '30m'
 # overwritten by: DYN_CLIENT_DEFAULT_TOKEN_LIFETIME
-#default_token_lifetime = 1800
+#default_token_lifetime = '30m'
 
 # If set to 'true', client secret and registration token will be
 # automatically rotated each time a dynamic client updates itself
@@ -1098,51 +1136,53 @@ pg_password = '123SuperSafe'
 # overwritten by: DYN_CLIENT_SECRET_AUTO_ROTATE
 #secret_auto_rotate = true
 
-# This scheduler will be running in the background, if
+# This scheduler will be running in the background if
 # `ENABLE_DYN_CLIENT_REG=true`. It will auto-delete dynamic clients,
 # that have been registered and not been used in the following
 # `DYN_CLIENT_CLEANUP_THRES` hours.
 # Since a dynamic client should be used right away, this should never
 # be a problem with "real" clients, that are not bots or spammers.
 #
-# The interval is specified in minutes.
-# default: 60
+# type: duration
+# default: '1h'
 # overwritten by: DYN_CLIENT_CLEANUP_INTERVAL
-#cleanup_interval = 60
+#cleanup_interval = '1h'
 
 # The threshold for newly registered dynamic clients cleanup, if
 # not being used within this timeframe. This is a helper to keep
-# the database clean, if you are not using any `DYN_CLIENT_REG_TOKEN`.
-# The threshold should be specified in minutes. Any client, that has
+# the database clean if you are not using any `DYN_CLIENT_REG_TOKEN`.
+# The threshold should be specified in minutes. Any client that has
 # not been used within this time after the registration will be
 # automatically deleted.
 #
-# Note: This scheduler will only run, if you have not set any
+# Note: This scheduler will only run if you have not set any
 # `DYN_CLIENT_REG_TOKEN`.
 #
-# default: 60
-# overwritten by: DYN_CLIENT_CLEANUP_MINUTES
-#cleanup_minutes = 60
+# type: duration
+# default: '1h'
+# overwritten by: DYN_CLIENT_CLEANUP
+#cleanup_threshold = '1h'
 
-# Defines the number of days after which an inactive dynamic client will be
+# Defines the duration after which an inactive dynamic client will be
 # cleaned up. This applies to clients that have been used at least once but
-# have not been active since the configured amount of days.
+# have not been active since then.
 #
 # WARNING: This will permanently delete client registrations.
 #
-# default: 0 (disabled)
-# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_DAYS
-#cleanup_inactive_days = 0
+# type: duration
+# default: not set (disabled)
+# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_THRESHOLD
+#cleanup_inactive_threshold = '1h'
 
 # The rate-limiter timeout for dynamic client registration.
-# This is the timeout in seconds which will prevent an IP from
-# registering another dynamic client, if no `DYN_CLIENT_REG_TOKEN`
-# is set. With a `DYN_CLIENT_REG_TOKEN`, the rate-limiter will not
-# be applied.
+# This is the timeout duration preventing an IP from registering
+# another dynamic client if no `DYN_CLIENT_REG_TOKEN` is set.
+# With a `DYN_CLIENT_REG_TOKEN`, the rate-limiter will not be applied.
 #
-# default: 60
-# overwritten by: DYN_CLIENT_RATE_LIMIT_SEC
-#rate_limit_sec = 60
+# type: duration
+# default: '1h'
+# overwritten by: DYN_CLIENT_RATE_LIMIT_REG
+#rate_limit_reg = '1h'
 
 [email]
 # This contact information will be added to the `rauthy`client
@@ -1254,9 +1294,9 @@ smtp_url = 'localhost'
 # NOTE: When you change this value for an already running
 # instance, users might receive duplicate emails.
 #
-# default: 10
-# overwritten by: EMAIL_PWD_EXP_DAYS
-#password_exp_days = 10
+# default: '10d'
+# overwritten by: EMAIL_PWD_EXP
+#password_exp = '10d'
 
 [email.jobs]
 
@@ -1266,22 +1306,24 @@ smtp_url = 'localhost'
 # a new user registration will be sent immediately.
 
 # If an open email job has not been updated for more than
-# `orphaned_seconds` seconds, it will be considered as orphaned.
+# `orphaned_pickup`, it will be considered as orphaned.
 # In this case, the current cluster leader can pick up this
 # job and start after the last successful email sent.
 #
-# default: 300
-# overwritten by: EMAIL_JOBS_ORPHANED_SECONDS
-#orphaned_seconds = 300
+# type: duration
+# default: '5m'
+# overwritten by: EMAIL_JOBS_ORPHANED_PICKUP
+#orphaned_pickup = '5m'
 
-# The interval in seconds at which the scheduler for orphaned
+# The interval durationat that the scheduler for orphaned
 # or scheduled jobs should run and check. Smaller values
 # increase precision for scheduled jobs with sacrificing a bit
 # higher resource usage.
 #
-# default: 300
-# overwritten by: EMAIL_JOBS_SCHED_SECONDS
-#scheduler_interval_seconds = 300
+# type: duration
+# default: '5m'
+# overwritten by: EMAIL_JOBS_SCHED
+#scheduler_interval = '5m'
 
 # Configures the batch size and delay between batches of users
 # for sending custom emails. The batch size configures the
@@ -1298,21 +1340,25 @@ smtp_url = 'localhost'
 # take a higher load, be careful with sending too quickly to not
 # trigger spam filters. Only increase throughput if needed.
 #
-# Note: If any error comes up during a batch, some users from this
-# very batch may get duplicate emails when it is retried after
-# being marked as orphaned.
+# Delay between email batches. If you set this to 0, Rauthy will
+# send out emails as fast as possible. This should be avoided,
+# especially for high user counts.
 #
-# default: 3
-# overwritten by: EMAIL_JOBS_BATCH_SIZE
-#batch_size = 3
+# type: duration
+# default: '2s'
+# overwritten by: EMAIL_JOBS_BATCH_DELAY
+#batch_delay = '2s'
+
+# Configure the time left when to send a reminder E-Mail
+# before a password expiration for a user password.
 #
-# Delay in ms between email batches. If you set this to 0,
-# Rauthy will send out emails as fast as possible. This
-# should be avoided, especially for high user counts.
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
 #
-# default: 2000
-# overwritten by: EMAIL_JOBS_BATCH_DELAY_MS
-#batch_delay_ms = 2000
+# type: duration
+# default: '10d'
+# overwritten by: EMAIL_PWD_EXP
+#password_exp = '10d'
 
 [email.tz_fmt]
 
@@ -1433,12 +1479,13 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # overwritten by: EPHEMERAL_CLIENTS_ALLOWED_SCOPES - single String, \n separated values
 #allowed_scopes = ['openid', 'profile', 'email', 'webid']
 
-# The lifetime in seconds ephemeral clients will be kept inside
+# The lifetime duration ephemeral clients will be kept inside
 # the cache.
 #
-# default: 3600
+# type: duration
+# default: '1h'
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
-#cache_lifetime = 3600
+#cache_lifetime = '1h'
 
 # RFC 8707: when an ephemeral client document declares no `allowed_resources`,
 # a requested `resource` is rejected by default. Setting this to `true` lets such
@@ -1567,12 +1614,13 @@ notify_level_slack = 'notice'
 # overwritten by: EVENT_PERSIST_LEVEL
 #persist_level = 'info'
 
-# Define the number of days when events should be cleaned
+# Define the duration when events should be cleaned
 # up from the database.
 #
-# default: 30
-# overwritten by: EVENT_CLEANUP_DAYS
-#cleanup_days = 30
+# type: duration
+# default: '60d'
+# overwritten by: EVENT_CLEANUP_THRESHOLD
+#cleanup_threshold = '60d'
 
 # Can be set to `false` to disable events being generated
 # when a new token was issued. These events improve your
@@ -1875,25 +1923,28 @@ argon2_t_cost = 4
 # overwritten by: ARGON2_P_COST
 argon2_p_cost = 8
 
-# Limits the maximum amount of parallel password hashes at the exact same time
-# to never exceed system memory while still allowing a good amount of memory
-# for the Argon2ID algorithm
+# Limits the maximum amount of parallel password hashes at 
+# the exact same time to never exceed system memory while 
+# still allowing a good amount of memory for the Argon2ID 
+# algorithm
 #
 # CAUTION: You must make sure, that you have at least
-# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory of your deployment available.
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory 
+# of your deployment available.
 #
 # default: 2
 # overwritten by: MAX_HASH_THREADS
 max_hash_threads = 2
 
-# The time in ms when to log a warning, if a request waited longer than this time.
-# This is an indicator, that you have more concurrent logins than allowed and may
-# need config adjustments,
+# The duration when to log a warning if a request waited longer
+# than this time. This is an indicator, that you have more
+# concurrent logins than allowed and may need config adjustments
 # if this happens more often.
 #
-# default: 500
+# type: duration
+# default: '1s'
 # overwritten by: HASH_AWAIT_WARN_TIME
-#hash_await_warn_time = 500
+#hash_await_warn_time = '1s'
 
 [http_client]
 ## In this section, you can configure the HTTP Client
@@ -1911,18 +1962,19 @@ max_hash_threads = 2
 ## with connection pooling to reduce the amount of TLS
 ## handshakes necessary, especially during high traffic.
 
-# The connect timeout in seconds for new connections.
+# The connect timeout for new connections.
 #
-# default: 10
+# type: duration
+# default: '10s'
 # overwritten by: HTTP_CONNECT_TIMEOUT
-#connect_timeout = 10
+#connect_timeout = '10s'
 
-# The total request timeout in seconds for all outgoing
-# requests.
+# The total request timeout for all outgoing requests.
 #
-# default: 10
+# type: duration
+# default: '10s'
 # overwritten by: HTTP_REQUEST_TIMEOUT
-#request_timeout = 10
+#request_timeout = '10s'
 
 # Set the min TLS version for all outgoing connections.
 # Allowed values: '1.3', '1.2', '1.1', '1.0'
@@ -1936,9 +1988,10 @@ max_hash_threads = 2
 # this value at the cost of needing more TLS handshakes
 # and re-connecting more often.
 #
-# default: 900
+# type: duration
+# default: '15m'
 # overwritten by: HTTP_IDLE_TIMEOUT
-#idle_timeout = 900
+#idle_timeout = '15m'
 
 # By default, the HTTP Client will enforce HTTPS and
 # simply fail if an unencrypted HTTP URL is given
@@ -1990,35 +2043,34 @@ filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
-# Set the grace time in seconds for how long in seconds the refresh
+# Set the grace time duration for how long in seconds the refresh
 # token should still be valid after usage. Keep this value small,
 # but do not set it to 0 with an HA deployment to not get issues with
 # small HA cache latencies.
 #
-# If you have an external client, which does concurrent requests, from
-# which the request interceptor wants to refresh the token, you may
-# have multiple hits on the endpoint and all of them should be valid.
-#
 # Caching is done on the endpoint itself, but grace time of 0 will only
-# be good for a single instance of rauthy.
+# be acceptable for a single instance of rauthy.
 #
-# default: 5
+# type: duration
+# default: '5s'
 # overwritten by: REFRESH_TOKEN_GRACE_TIME
-#refresh_token_grace_time = 5
+#refresh_token_grace_time = '5s'
 
-# Global default lifetime in hours for refresh tokens.
+# Global default lifetime for refresh tokens.
 #
-# default: 48
+# type: duration
+# default: '2d'
 # overwritten by: REFRESH_TOKEN_LIFETIME
-#refresh_token_lifetime = 48
+#refresh_token_lifetime = '2d'
 
-# Session lifetime in seconds - the session can not be extended
+# Session lifetime duration - the session cannot be extended
 # beyond this time and a new login will be forced. This is the
 # session for the authorization code flow.
 #
-# default: 14400
+# type: duration
+# default: '10h'
 # overwritten by: SESSION_LIFETIME
-#session_lifetime = 14400
+#session_lifetime = '10h'
 
 # If 'true', a 2FA / MFA check will be done with each automatic
 # token generation, even with an active session, which kind of
@@ -2030,29 +2082,32 @@ filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # overwritten by: SESSION_RENEW_MFA
 #session_renew_mfa = false
 
-# Session timeout in seconds. When a new token / login is requested
+# Session timeout duration. When a new token / login is requested
 # before this timeout hits the limit, the user will be authenticated
 # without prompting for the credentials again.
 #
-# This is the value which can extend the session, until it hits its
-# maximum lifetime set with session_lifetime.
+# This is the duration that can extend an expiring session until
+# it hits its maximum lifetime set with session_lifetime.
 #
-# default: 5400
+# type: duration
+# default: '90m'
 # overwritten by: SESSION_TIMEOUT
-#session_timeout = 5400
+#session_timeout = '90m'
 
-# Lifetime in minutes for password reset magic links.
+# Lifetime for password reset magic links.
 #
-# default: 30
+# type: duration
+# default: '30m'
 # overwritten by: ML_LT_PWD_RESET
-#magic_link_pwd_reset = 30
+#magic_link_pwd_reset = '30m'
 
-# Lifetime in minutes for the first password magic link,
-# for setting the initial password.
+# Lifetime for the first password magic link for setting the
+# initial password.
 #
-# default: 4320
+# type: duration
+# default: '3d'
 # overwritten by: ML_LT_PWD_FIRST
-#magic_link_pwd_first = 4320
+#magic_link_pwd_first = '3d'
 
 # JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
 # 1. day of the month. If you need smaller intervals, you may adjust this
@@ -2147,12 +2202,12 @@ enable = false
 # overwritten by: OTP_LENGTH
 #length = 6
 
-# The lifetime in minutes for OTP requests. Within
-# this time, an OTP request must have been validated.
+# The lifetime for OTP requests. Within this time, an OTP 
+# request must have been validated.
 #
-# default: 5
-# overwritten by: OTP_EXP_MINS
-#exp_mins = 5
+# default: '5m'
+# overwritten by: OTP_EXP
+#exp = '5m'
 
 # Default digest algorithm's length, HMAC using SHA-X.
 # SHA-1 is forbidden.
@@ -2166,7 +2221,7 @@ enable = false
 # overwritten by: OTP_DIGEST_LEN_DEFAULT
 #digest_len_default = 512
 
-# The expiration in hours when an MFA cookie set via OTP
+# The expiration duration when an MFA cookie set via OTP
 # must be revalidated.
 #
 # While such a cookie exists and is valid, a user may not
@@ -2175,10 +2230,10 @@ enable = false
 #
 # You can disable this feature by setting the value to 0.
 #
-# The value is in hours
-# default: 2160
+# type: duration
+# default: '30d'
 # overwritten by: OTP_RENEW_EXP
-renew_exp = 2160
+renew_exp = '30d'
 
 [otp.email]
 # Wether to enable or disable OTPs via E-Mail.
@@ -2199,14 +2254,15 @@ enable = true
 # overwritten by: PAM_REMOTE_PASSWORD_LEN
 #remote_password_len = 24
 
-# The TTL for newly generated PAM remote passwords in seconds.
+# The TTL for newly generated PAM remote passwords.
 # The default gives you plenty of time to open a few sessions in
 # some terminals and maybe switch to `root` on some remote machines,
 # while still expiring quick enough to be secure.
 #
-# default: 120
+# type: duration
+# default: '2m'
 # overwritten by: PAM_REMOTE_PASSWORD_TTL
-#remote_password_ttl = 120
+#remote_password_ttl = '2m'
 
 [pam.authorized_keys]
 
@@ -2235,7 +2291,7 @@ enable = true
 #auth_required = true
 
 # By default, SSH keys that have expired because of
-# `forced_key_expiry_days` below will be added to an internal
+# `forced_key_expiry` below will be added to an internal
 # blacklist. This blacklist will be checked upon key add to
 # make sure keys were actually rotated and that not an old key
 # is added again.
@@ -2247,9 +2303,10 @@ enable = true
 # Configure the days after which blacklisted SSH keys will be
 # cleaned up.
 #
-# default: 730
-# overwritten by: PAM_SSH_BLACKLIST_CLEANUP_DAYS
-#blacklist_cleanup_days = 730
+# type: duration
+# default: '2y'
+# overwritten by: PAM_SSH_BLACKLIST_CLEANUP_THRESHOLD
+#blacklist_cleanup_threshold = '2y'
 
 # You can include comments in the public response for the
 # `authorized_keys` for each user. This can be helpful for
@@ -2260,14 +2317,15 @@ enable = true
 # overwritten by: PAM_SSH_INCLUDE_COMMENTS
 #include_comments = true
 
-# You can enforce an SSH key expiry in days. After this time,
-# users must generate new keys. This enforces a key rotation
-# with is usually overlooked especially for SSH keys.
-# Set to `0` to disable the forced expiry.
+# You can enforce an SSH key expiry. After this time, users
+# must generate new keys. This enforces a key rotation with
+# is usually overlooked especially for SSH keys. Set to `0`
+# to disable the forced expiry.
 #
-# default: 365
-# overwritten by: PAM_SSH_KEY_EXP_DAYS
-#forced_key_expiry_days = 365
+# type: duration
+# default: '1y'
+# overwritten by: PAM_SSH_KEY_EXP
+#forced_key_expiry = '1y'
 
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
@@ -2279,11 +2337,12 @@ enable = true
 # overwritten by: POW_DIFFICULTY
 #difficulty = 19
 
-# The expiration duration in seconds for a PoW
+# The expiration duration for a PoW.
 #
-# default: 30
+# type: duration
+# default: '30s'
 # overwritten by: POW_EXP
-#exp = 30
+#exp = '30s'
 
 [scim]
 # If set to `true`, already possibly synced groups / users on a
@@ -2438,14 +2497,14 @@ swagger_ui_enable = false
 # overwritten by: SWAGGER_UI_PUBLIC
 #swagger_ui_public = false
 
-# The interval in seconds in which keep-alives should be
-# sent to SSE clients. Depending on your network setup,
-# proxy timeouts, ..., you may adjust this value to fit
-# your needs.
+# The interval in which keep-alives should be sent to SSE
+# clients. Depending on your network setup, proxy timeouts,
+# ..., you may adjust this value to fit your needs.
 #
-# default: 30
+# type: duration
+# default: '30s'
 # overwritten by: SSE_KEEP_ALIVE
-#see_keep_alive = 30
+#see_keep_alive = '30s'
 
 # Dynamic server side pagination threshold
 # If the total users count exceeds this value, Rauthy will dynamically
@@ -2463,9 +2522,10 @@ swagger_ui_enable = false
 # IP will be blacklisted preemptively for the set time in minutes.
 # You can disable it by setting it to `0`.
 #
-# default: 1440
+# type: duration
+# default: '1d'
 # overwritten by: SUSPICIOUS_REQUESTS_BLACKLIST
-#blacklist = 1440
+#blacklist = '1d'
 
 # Will emit a log with level of warning if a request to `/` has
 # been made that has not been caught by any of the usual routes
@@ -2563,9 +2623,10 @@ key_path = 'tls/key.pem'
 # too long to read and accept update ToS, the user may run into an auth
 # error and do the login again.
 #
-# default: 900
+# type: duration
+# default: '15m'
 # overwritten by: TOS_ACCEPT_TIMEOUT
-#accept_timeout = 900
+#accept_timeout = '15m'
 
 [user_delete]
 # You can enable user self-deletion via the Account Dashboard.
@@ -2837,17 +2898,19 @@ rp_origin = 'http://localhost:8080'
 # The Cache lifetime in seconds for Webauthn requests. Within
 # this time, a webauthn request must have been validated.
 #
-# default: 60
+# type: duration
+# default: '60s'
 # overwritten by: WEBAUTHN_REQ_EXP
-#req_exp = 60
+#req_exp = '60s'
 
 # The Cache lifetime for additional Webauthn Data like auth
 # codes and so on. Should not be lower than WEBAUTHN_REQ_EXP.
 # The value is in seconds
 #
-# default: 90
+# type: duration
+# default: '90s'
 # overwritten by: WEBAUTHN_DATA_EXP
-#data_exp = 90
+#data_exp = '90s'
 
 # With Webauthn enabled for a user, he needs to enter username
 # / password on a new system. If these credentials are verified,
@@ -2863,10 +2926,11 @@ rp_origin = 'http://localhost:8080'
 # again. That is why we should ask for the original password in
 # addition once in a while to set the cookie.
 #
+# type: duration
 # The value is in hours
-# default: 2160
+# default: '90d'
 # overwritten by: WEBAUTHN_RENEW_EXP
-#renew_exp = 2160
+#renew_exp = '90d'
 
 # This feature can be set to 'true' to force User verification
 # during the Webauthn ceremony. UV will be true, if the user

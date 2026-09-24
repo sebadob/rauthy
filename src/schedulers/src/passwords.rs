@@ -37,10 +37,13 @@ pub async fn password_expiry_checker() {
 
 async fn execute() -> Result<(), ErrorResponse> {
     let now = Utc::now();
-    let days = RauthyConfig::get().vars.email.password_exp_days;
 
-    let past = now.sub(chrono::Duration::days(days as i64)).timestamp();
-    let fut = now.add(chrono::Duration::days(days as i64)).timestamp();
+    let past = now
+        .sub(RauthyConfig::get().vars.email.password_exp)
+        .timestamp();
+    let fut = now
+        .add(RauthyConfig::get().vars.email.password_exp)
+        .timestamp();
 
     // This query also needs to look into the past just in case we missed
     // a cleanup for `pwd_exp_mails` somewhere.

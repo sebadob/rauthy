@@ -6,6 +6,7 @@ use rauthy_api_types::blacklist::{BlacklistResponse, BlacklistedIp, IpBlacklistR
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::ip_blacklist::IpBlacklist;
 use rauthy_error::ErrorResponse;
+use std::time::Duration;
 use validator::Validate;
 
 /// Returns all blacklisted IP's
@@ -64,12 +65,12 @@ pub async fn post_blacklist(
     payload.validate()?;
 
     let now = Utc::now().timestamp();
-    if payload.exp <= now {
+    if payload.exp < now {
         return Ok(HttpResponse::Ok().finish());
     }
 
     let ttl = payload.exp - now;
-    IpBlacklist::put(payload.ip.to_string(), ttl).await?;
+    IpBlacklist::put(payload.ip.to_string(), Duration::from_secs(ttl as u64)).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

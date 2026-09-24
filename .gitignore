@@ -11,6 +11,7 @@ rauthy-client/examples/*/.idea
 .env
 .test_pid
 /data
+/data_old
 frontend/.next
 frontend/node_modules
 frontend/out

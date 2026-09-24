@@ -2,6 +2,55 @@
 
 ## UNRELEASED
 
+### BREAKING - VERY IMPORTANT (if you run a HA cluster)
+
+**IF YOU DO NOT FOLLOW THE STEPS BELOW, YOU MIGHT END UP WITH INCONSISTENT DATA!**
+
+**CREATE A BACKUP BEFORE YOU UPGRADE!**
+
+If you run a single instance, you can ignore this block. However, if you run a HA deployment, you
+**MUST** do a full shutdown of the cluster! It is absolutely crucial that you **MUST NOT** do a
+**ROLLING RELEASE**! If you do it anyway, you will most probably end up with inconsistent cache
+data, or even a crashing application.
+
+The reason for this is a major internal rework of Hiqlite with lots of optimizations and
+improvements. This may be annoying right now, but makes everything a lot more maintanable
+future-proof, and more robust. We also gained a bit more efficiency and speed for the Raft network.
+
+You cache data will be cleaned up on restart, when you start this new version for the first time.
+Rauthy does as much as possible automatically. You only **MUST GUARANTEE** that you do a full
+cluster shutdown with the old version, before you then start this new one!
+
+There are as many safeguards and checks as possible in place. It "should" not be possible to screw
+this up, theoretically. If Rauthy detects that it is a HA cluster, it tries to fetch the version
+from other nodes before doing the programmatic migration, and it tries to catch all possible cases,
+but it's not guaranteed that I thought of all of them. But this is NOT foolproof! You can definitely
+construct situations where even these checks will fail. This should not happen during normal
+operation, but it is possible.
+
+Once again: **CREATE A BACKUP BEFORE YOU UPGRADE!**
+
+#### Howto (HA cluster)
+
+As mentioned already, you only need to do this for an HA deployment. Rauthy also sets the
+auto-migration helper ENV var automatically. This is `HQL_CACHE_WAL_AUTO_MIGRATE=true`. If set,
+Hiqlite will attempt to do an auto-cleanup of the cache data (if necessary). As long as everything
+goes to plan, you don't need to do anything else than not doing a rolling release.
+
+**HOWEVER**, if anything goes wrong, and you end up in some floating state, you also have a 2nd
+option: `HQL_CACHE_WAL_FORCE_MIGRATE=true`. If you set this ENV var, Hiqlite will **ALWAYS** do the
+cleanup, even if it detects that the data structure is already on the new version.
+
+> You can also do the migration manually. To do so, take a look at
+> the [Hiqlite Changelog](https://github.com/sebadob/hiqlite/blob/main/CHANGELOG.md).
+
+### Security
+
+Apart from the general security hardening (see below), there was one actual security issue. It was
+possible to get an open redirect during password resets, when you craft a manual API request. This
+had no direct security impact, but it could have been abused in a phishing campaign. A security
+advistory will be released in the upcoming weeks.
+
 ### Breaking
 
 #### Config Values Renamed
@@ -16,6 +65,122 @@ capital letters and snake_case are env vars.
 |------------------|-------------------|
 | GEO_BLOCK_UNKONW | GEO_BLOCK_UNKNOWN |
 | pasword_argon2id | password_argon2id |
+
+All the next values have been reworked. Some of them have been renamed, but all of them have their
+value type changed. This was done to make any duration-specifying value self-documenting. You can
+provide them either as a integer, and they will be interpretet as seconds, or with a unit like
+`'120s'`, `'3h'`, and so on. When given as a String, Rauthy parses the given input into a type-safe
+`Duration`. The input can have the following suffixes:
+
+- `s` -> seconds
+- `m` -> minutes
+- `h` -> hours
+- `d` -> days
+- `w` -> weeks
+- `y` -> years
+
+| Table                | Old Name                            | New Name                              | Old Unit     |
+|----------------------|-------------------------------------|---------------------------------------|--------------|
+| backchannel_logout   | token_lifetime                      |                                       |              |
+|                      | LOGOUT_TOKEN_LIFETIME               |                                       |              |
+| backchannel_logout   | allow_clock_skew                    |                                       |              |
+|                      | LOGOUT_TOKEN_ALLOW_CLOCK_SKEW       |                                       |              |
+| backchannel_logout   | allowed_token_lifetime              |                                       |              | 
+|                      | LOGOUT_TOKEN_ALLOWED_LIFETIME       |                                       |              |
+| bootstrap            | generated_secrets_ttl               |                                       |              |
+|                      | BOOTSTRAP_GENERATED_SECRETS_TTL     |                                       |              |
+| cred_stuff_detection | blacklist_duration                  |                                       |              |
+|                      | CRED_STUFF_BLACKLIST_DUR            |                                       |              |
+| cred_stuff_detection | scan_window                         |                                       |              |
+|                      | CRED_STUFF_SCAN_WINDOW              |                                       |              |
+| cluster              | health_check_delay_secs             | health_check_delay                    |              |
+|                      | HQL_HEALTH_CHECK_DELAY_SECS         | HQL_HEALTH_CHECK_DELAY                |              |
+| cluster              | backup_keep_days                    | backup_keep_for                       | Days         |
+|                      | HQL_BACKUP_KEEP_DAYS                | HQL_BACKUP_KEEP_FOR                   | Days         |
+| cluster              | backup_keep_days_local              | backup_keep_for_local                 | Days         |
+|                      | HQL_BACKUP_KEEP_DAYS_LOCAL          | HQL_BACKUP_KEEP_FOR_LOCAL             | Days         |
+| database             | health_check_delay_secs             | health_check_delay                    |              |
+|                      | HEALTH_CHECK_DELAY_SECS             | HEALTH_CHECK_DELAY                    |              |
+| database             | sched_user_exp_mins                 | sched_user_exp                        | Minutes      |
+|                      | SCHED_USER_EXP_MINS                 | SCHED_USER_EXP                        | Minutes      |
+| database             | sched_user_exp_delete_mins          | sched_user_exp_delete                 | Minutes      |
+|                      | SCHED_USER_EXP_DELETE_MINS          | SCHED_USER_EXP_DELETE                 | Minutes      |
+| device_grant         | code_lifetime                       |                                       |              |
+|                      | DEVICE_GRANT_CODE_LIFETIME          |                                       |              |
+| device_grant         | rate_limit                          |                                       |              |
+|                      | DEVICE_GRANT_RATE_LIMIT             |                                       |              |
+| device_grant         | poll_interval                       |                                       |              |
+|                      | DEVICE_GRANT_POLL_INTERVAL          |                                       |              |
+| device_grant         | refresh_token_lifetime              |                                       | Hours        |
+|                      | DEVICE_GRANT_REFRESH_TOKEN_LIFETIME |                                       | Hours        |
+| dpop                 | nonce_exp                           |                                       |              |
+|                      | DPOP_NONCE_EXP                      |                                       |              |
+| dynamic_clients      | default_token_lifetime              |                                       |              |
+|                      | DYN_CLIENT_DEFAULT_TOKEN_LIFETIME   |                                       |              |
+| dynamic_clients      | cleanup_interval                    |                                       | Minutes      |
+|                      | DYN_CLIENT_CLEANUP_INTERVAL         |                                       | Minutes      |
+| dynamic_clients      | cleanup_minutes                     | cleanup_threshold                     | Minutes      | 
+|                      | DYN_CLIENT_CLEANUP_MINUTES          | DYN_CLIENT_CLEANUP_THRESHOLD          | Minutes      | 
+| dynamic_clients      | cleanup_inactive_days               | cleanup_inactive_threshold            | Days         |
+|                      | DYN_CLIENT_CLEANUP_INACTIVE_DAYS    | DYN_CLIENT_CLEANUP_INACTIVE_THRESHOLD | Days         |
+| dynamic_clients      | rate_limit_sec                      | rate_limit_reg                        |              |
+|                      | DYN_CLIENT_RATE_LIMIT_SEC           | DYN_CLIENT_RATE_LIMIT_REG             |              |
+| email.jobs           | orphaned_seconds                    | orphaned_pickup                       |              |
+|                      | EMAIL_JOBS_ORPHANED_SECONDS         | EMAIL_JOBS_ORPHANED_PICKUP            |              |
+| email.jobs           | scheduler_interval_seconds          | scheduler_interval                    |              |
+|                      | EMAIL_JOBS_SCHED_SECONDS            | EMAIL_JOBS_SCHED                      |              |
+| email.jobs           | batch_delay_ms                      | batch_delay                           | Milliseconds |
+|                      | EMAIL_JOBS_BATCH_DELAY_MS           | EMAIL_JOBS_BATCH_DELAY                | Milliseconds |
+| email.jobs           | password_exp_days                   | password_exp                          | Days         |
+|                      | EMAIL_PWD_EXP_DAYS                  | EMAIL_PWD_EXP                         | Days         |
+| ephemeral_clients    | cache_lifetime                      |                                       |              |
+|                      | EPHEMERAL_CLIENTS_CACHE_LIFETIME    |                                       |              |
+| events               | cleanup_days                        | cleanup_threshold                     | Days         |
+|                      | EVENT_CLEANUP_DAYS                  | EVENT_CLEANUP_THRESHOLD               | Days         |
+| hashing              | hash_await_warn_time                |                                       | Milliseconds |
+|                      | HASH_AWAIT_WARN_TIME                |                                       | Milliseconds |
+| http_client          | connect_timeout                     |                                       |              |
+|                      | HTTP_CONNECT_TIMEOUT                |                                       |              |
+| http_client          | request_timeout                     |                                       |              |
+|                      | HTTP_REQUEST_TIMEOUT                |                                       |              |
+| http_client          | idle_timeout                        |                                       |              |
+|                      | HTTP_IDLE_TIMEOUT                   |                                       |              |
+| lifetimes            | refresh_token_grace_time            |                                       |              |
+|                      | REFRESH_TOKEN_GRACE_TIME            |                                       |              |
+| lifetimes            | refresh_token_lifetime              |                                       | Hours        |
+|                      | REFRESH_TOKEN_LIFETIME              |                                       | Hours        |
+| lifetimes            | session_lifetime                    |                                       |              |
+|                      | SESSION_LIFETIME                    |                                       |              |
+| lifetimes            | session_timeout                     |                                       |              |
+|                      | SESSION_TIMEOUT                     |                                       |              |
+| lifetimes            | magic_link_pwd_reset                |                                       | Minutes      |
+|                      | ML_LT_PWD_RESET                     |                                       | Minutes      |
+| lifetimes            | magic_link_pwd_first                |                                       | Minutes      |
+|                      | ML_LT_PWD_FIRST                     |                                       | Minutes      |
+| pam                  | remote_password_ttl                 |                                       |              |
+|                      | PAM_REMOTE_PASSWORD_TTL             |                                       |              |
+| pam.authorized_keys  | blacklist_cleanup_days              | blacklist_cleanup_threshold           | Days         |
+|                      | PAM_SSH_BLACKLIST_CLEANUP_DAYS      | PAM_SSH_BLACKLIST_CLEANUP_THRESHOLD   | Days         |
+| pam.authorized_keys  | forced_key_expiry                   | forced_key_expiry                     | Days         |
+|                      | PAM_SSH_KEY_EXP_DAYS                | PAM_SSH_KEY_EXP                       | Days         |
+| pow                  | exp                                 |                                       |              |
+|                      | POW_EXP                             |                                       |              |
+| server               | see_keep_alive                      |                                       |              |
+|                      | SSE_KEEP_ALIVE                      |                                       |              |
+| suspicious_requests  | blacklist                           |                                       |              |
+|                      | SUSPICIOUS_REQUESTS_BLACKLIST       |                                       |              |
+| tos                  | accept_timeout                      |                                       |              |
+|                      | TOS_ACCEPT_TIMEOUT                  |                                       |              |
+| webauthn             | req_exp                             |                                       |              |
+|                      | WEBAUTHN_REQ_EXP                    |                                       |              |
+| webauthn             | data_exp                            |                                       |              |
+|                      | WEBAUTHN_DATA_EXP                   |                                       |              |
+| webauthn             | renew_exp                           |                                       | Hours        |
+|                      | WEBAUTHN_RENEW_EXP                  |                                       | Hours        |
+
+> Values without a Table are ENV vars. If a value does not have a new name, it's only an indicator
+> that the value type was changed. When they have data in `Old Unit`, it highlights that it was NOT
+> in seconds before and it needs an update even without a name change.
 
 #### SMTP Setup Rework
 
@@ -82,9 +247,10 @@ tries to spoof a value that usually only the reverse proxy should ever set.
 
 #### Security Hardening and General Stability
 
-First, this is not a security release in the sense that there were any real issues, but the security
-and usability was improved in lots of places with small changes:
+The security and usability was improved in lots of places with small changes:
 
+- Fixed a possible open redirect during password resets. No direct security impact, but could have
+  been used as part of a phishing campaign. This was the only "real" security issue.
 - The login delay handler that delays login responses on failed authentication, and takes care of IP
   blacklisting, now combines the already existing per-IP-counter with the
   `user.failed_login_attempts`. It will use which ever values is higher. With this attempt, you
@@ -239,12 +405,13 @@ enable = false
 # overwritten by: OTP_LENGTH
 length = 6
 
-# The lifetime in minutes for OTP requests. Within
-# this time, an OTP request must have been validated.
+# The lifetime for OTP requests. Within this time, an
+# OTP request must have been validated.
 #
-# default: 5
+# type: duration
+# default: '5m'
 # overwritten by: OTP_EXP_MINS
-exp_mins = 5
+exp = '5m'
 
 # Default digest algorithm's length, HMAC using SHA-X.
 # SHA-1 is forbidden.
@@ -258,7 +425,7 @@ exp_mins = 5
 # overwritten by: OTP_DIGEST_LEN_DEFAULT
 digest_len_default = 512
 
-# The expiration in hours when an MFA cookie set via OTP
+# The expiration duration when an MFA cookie set via OTP
 # must be revalidated.
 #
 # While such a cookie exists and is valid, a user may not
@@ -267,10 +434,10 @@ digest_len_default = 512
 #
 # You can disable this feature by setting the value to 0.
 #
-# The value is in hours
-# default: 2160
+# type: duration
+# default: '30d'
 # overwritten by: OTP_RENEW_EXP
-renew_exp = 2160
+renew_exp = '30d'
 
 [otp.email]
 # Wether to enable or disable OTPs via E-Mail.

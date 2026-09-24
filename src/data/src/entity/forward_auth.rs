@@ -82,7 +82,7 @@ impl ForwardAuthSession {
         } else {
             None
         };
-        let session_timeout = RauthyConfig::get().vars.lifetimes.session_timeout;
+        let session_timeout = RauthyConfig::get().vars.lifetimes.session_timeout.as_secs() as i64;
 
         if !self
             .inner

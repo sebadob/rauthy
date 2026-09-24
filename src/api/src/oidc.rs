@@ -120,8 +120,12 @@ pub async fn get_authorize(
         true
     } else if let Some(max_age) = params.max_age {
         if let Some(session) = &principal.session {
-            let session_created =
-                session.exp - RauthyConfig::get().vars.lifetimes.session_lifetime as i64;
+            let session_created = session.exp
+                - RauthyConfig::get()
+                    .vars
+                    .lifetimes
+                    .session_lifetime
+                    .as_secs() as i64;
             Utc::now().timestamp() > session_created + max_age
         } else {
             true
@@ -662,8 +666,18 @@ pub async fn post_device_auth(
         user_code,
         verification_uri,
         verification_uri_complete,
-        expires_in: RauthyConfig::get().vars.device_grant.code_lifetime,
-        interval: Some(RauthyConfig::get().vars.device_grant.poll_interval),
+        expires_in: RauthyConfig::get()
+            .vars
+            .device_grant
+            .code_lifetime
+            .as_secs(),
+        interval: Some(
+            RauthyConfig::get()
+                .vars
+                .device_grant
+                .poll_interval
+                .as_secs(),
+        ),
     };
 
     HttpResponse::Ok().json(resp)
@@ -873,9 +887,7 @@ pub async fn post_session(
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(
-            RauthyConfig::get().vars.lifetimes.session_lifetime as i64,
-        ));
+        .add(RauthyConfig::get().vars.lifetimes.session_lifetime);
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -933,9 +945,7 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(
-            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
-        ));
+        .add(RauthyConfig::get().vars.lifetimes.session_timeout);
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
@@ -984,9 +994,7 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(
-            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
-        ));
+        .add(RauthyConfig::get().vars.lifetimes.session_timeout);
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),

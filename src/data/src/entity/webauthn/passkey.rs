@@ -289,7 +289,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             DB::pg_query_one(sql, &[&user_id, &name]).await?
         };
 
-        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp.as_secs() as i64);
         client.put(Cache::Webauthn, idx, &slf, ttl).await?;
 
         Ok(slf)
@@ -339,7 +339,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                 .collect::<Vec<_>>()
         };
 
-        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp.as_secs() as i64);
         client.put(Cache::Webauthn, idx, &creds, ttl).await?;
 
         Ok(creds.into_iter().map(CredentialID::from).collect())
@@ -360,7 +360,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             DB::pg_query(sql, &[&user_id], 2).await?
         };
 
-        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp.as_secs() as i64);
         client.put(Cache::Webauthn, idx, &pks, ttl).await?;
 
         Ok(pks)
@@ -381,7 +381,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             DB::pg_query(sql, &[&user_id], 2).await?
         };
 
-        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp.as_secs() as i64);
         client.put(Cache::Webauthn, idx, &pks, ttl).await?;
 
         Ok(pks)
@@ -410,7 +410,7 @@ WHERE user_id = $3 AND name = $4"#;
             .await?;
         }
 
-        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp as i64);
+        let ttl = Some(RauthyConfig::get().vars.webauthn.req_exp.as_secs() as i64);
         client
             .put(
                 Cache::Webauthn,

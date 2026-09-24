@@ -435,7 +435,7 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
             };
 
             if session.is_valid(
-                RauthyConfig::get().vars.fedcm.session_timeout,
+                RauthyConfig::get().vars.fedcm.session_timeout as i64,
                 real_ip_from_req(req).ok(),
                 req.path(),
             ) {

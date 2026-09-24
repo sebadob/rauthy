@@ -487,7 +487,13 @@ VALUES ($1, $2, $3, $4)"#;
                 Cache::ClientEphemeral,
                 id,
                 &slf,
-                Some(RauthyConfig::get().vars.ephemeral_clients.cache_lifetime as i64),
+                Some(
+                    RauthyConfig::get()
+                        .vars
+                        .ephemeral_clients
+                        .cache_lifetime
+                        .as_secs() as i64,
+                ),
             )
             .await?;
 
@@ -806,7 +812,11 @@ WHERE id = $4"#;
         }
 
         new_client.save_cache().await?;
-        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
+        let ttl = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .rate_limit_reg
+            .as_secs() as i64;
         DB::hql()
             .put(
                 Cache::ClientDynamic,
@@ -2025,8 +2035,9 @@ impl Client {
                 RauthyConfig::get()
                     .vars
                     .dynamic_clients
-                    .default_token_lifetime,
-                i32::MAX as u32,
+                    .default_token_lifetime
+                    .as_secs(),
+                i32::MAX as u64,
             ) as i32,
             scopes,
             default_scopes,
