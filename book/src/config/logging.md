@@ -377,9 +377,9 @@ persist_level = 'info'
 # Define the number of days when events should be cleaned
 # up from the database.
 #
-# default: 30
+# default: '60d'
 # overwritten by: EVENT_CLEANUP_THRESHOLD
-cleanup_threshold = 30
+cleanup_threshold = '60d'
 ```
 
 ### `level_*` Values

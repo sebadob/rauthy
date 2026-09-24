@@ -40,9 +40,9 @@ this for whatever reason. You can modify this behavior with the following config
 # IP will be blacklisted preemptively for the set time in minutes.
 # You can disable it by setting it to `0`.
 #
-# default: 1440
+# default: '1d'
 # overwritten by: SUSPICIOUS_REQUESTS_BLACKLIST
-blacklist = 1440
+blacklist = '1d'
 
 # Will emit a log with level of warning if a request to `/` has
 # been made that has not been caught by any of the usual routes

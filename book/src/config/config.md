@@ -1294,9 +1294,9 @@ smtp_url = 'localhost'
 # NOTE: When you change this value for an already running
 # instance, users might receive duplicate emails.
 #
-# default: 10
+# default: '10d'
 # overwritten by: EMAIL_PWD_EXP
-#password_exp = 10
+#password_exp = '10d'
 
 [email.jobs]
 
@@ -2202,12 +2202,12 @@ enable = false
 # overwritten by: OTP_LENGTH
 #length = 6
 
-# The lifetime in minutes for OTP requests. Within
-# this time, an OTP request must have been validated.
+# The lifetime for OTP requests. Within this time, an OTP 
+# request must have been validated.
 #
-# default: 5
+# default: '5m'
 # overwritten by: OTP_EXP
-#exp = 5
+#exp = '5m'
 
 # Default digest algorithm's length, HMAC using SHA-X.
 # SHA-1 is forbidden.
