@@ -294,14 +294,9 @@ impl OneTimePassword {
     pub async fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
         match self.kind {
             OtpKind::Email => {
-                let Some(timeout) = TimeDelta::try_seconds(self.last_used - Utc::now().timestamp())
-                else {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::BadRequest,
-                        "couldn't parse otp's timeout",
-                    ));
-                };
-                if timeout.num_seconds() >= RauthyConfig::get().vars.otp.exp.as_secs() as i64 {
+                if Utc::now().timestamp() - self.last_used
+                    >= RauthyConfig::get().vars.otp.exp.as_secs() as i64
+                {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "otp code expired",
