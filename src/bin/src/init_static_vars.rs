@@ -8,7 +8,6 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::generic::{I18N_CONFIG, TIMEZONES_BR};
 use regex::Regex;
 use reqwest::tls;
-use std::time::Duration;
 use tracing::{debug, warn};
 
 /// The only job of this function is to trigger the `LazyLock` init for some values that will be
@@ -69,8 +68,8 @@ pub async fn trigger() {
     HASH_CHANNELS
         .set(flume::bounded(vars.hashing.max_hash_threads as usize))
         .unwrap();
-    HASH_AWAIT_WARN_TIME
-        .set(vars.hashing.hash_await_warn_time)
+    HASH_AWAIT_WARN_SECS
+        .set(vars.hashing.hash_await_warn_time.as_secs())
         .unwrap();
 
     let http_client = {
@@ -104,9 +103,9 @@ pub async fn trigger() {
         let https_only = !vars.http_client.danger_unencrypted;
 
         let mut builder = reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(vars.http_client.connect_timeout as u64))
-            .timeout(Duration::from_secs(vars.http_client.request_timeout as u64))
-            .pool_idle_timeout(Duration::from_secs(vars.http_client.idle_timeout as u64))
+            .connect_timeout(vars.http_client.connect_timeout)
+            .timeout(vars.http_client.request_timeout)
+            .pool_idle_timeout(vars.http_client.idle_timeout)
             .min_tls_version(tls_version)
             .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
             .https_only(https_only)

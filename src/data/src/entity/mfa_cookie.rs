@@ -21,14 +21,12 @@ pub struct MfaCookie {
 
 impl MfaCookie {
     pub fn new_webauthn(email: String) -> Self {
-        let renew = RauthyConfig::get().vars.webauthn.renew_exp as i64;
-        let exp = OffsetDateTime::now_utc().add(::time::Duration::hours(renew));
+        let exp = OffsetDateTime::now_utc().add(RauthyConfig::get().vars.webauthn.renew_exp);
         Self { email, exp }
     }
 
     pub fn new_otp(email: String) -> Self {
-        let renew = RauthyConfig::get().vars.otp.renew_exp as i64;
-        let exp = OffsetDateTime::now_utc().add(::time::Duration::hours(renew));
+        let exp = OffsetDateTime::now_utc().add(RauthyConfig::get().vars.otp.renew_exp);
         Self { email, exp }
     }
 

@@ -52,6 +52,7 @@ use std::fmt::{Debug, Formatter};
 use std::mem;
 use std::ops::Add;
 use std::str::FromStr;
+use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
 
@@ -217,7 +218,7 @@ impl User {
 
         let magic_link = MagicLink::create(
             slf.id.clone(),
-            RauthyConfig::get().vars.lifetimes.magic_link_pwd_first as i64,
+            RauthyConfig::get().vars.lifetimes.magic_link_pwd_first,
             MagicLinkUsage::NewUser(post_reset_redirect_uri),
         )
         .await?;
@@ -1383,7 +1384,7 @@ LIMIT $2"#;
 
                 let ml = MagicLink::create(
                     user.id.clone(),
-                    60,
+                    Duration::from_secs(3600),
                     MagicLinkUsage::EmailChange(email.clone()),
                 )
                 .await?;
@@ -2018,7 +2019,7 @@ impl User {
         };
         let new_ml = MagicLink::create(
             self.id.clone(),
-            RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+            RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset,
             usage,
         )
         .await?;
@@ -2057,7 +2058,7 @@ impl User {
                 // also has an expired password to trigger email spam.
                 let magic_link = MagicLink::create(
                     self.id.clone(),
-                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset,
                     MagicLinkUsage::PasswordReset(None),
                 )
                 .await?;

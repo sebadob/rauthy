@@ -267,7 +267,13 @@ SELECT * FROM email_jobs
 WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
 
         let now = Utc::now().timestamp();
-        let threshold = now - RauthyConfig::get().vars.email.jobs.orphaned_seconds as i64;
+        let threshold = now
+            - RauthyConfig::get()
+                .vars
+                .email
+                .jobs
+                .orphaned_pickup
+                .as_secs() as i64;
 
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(now, threshold)).await?
@@ -351,10 +357,7 @@ impl EmailJob {
     async fn task_execute(mut self) -> Result<(), ErrorResponse> {
         let (batch_size, delay) = {
             let vars = &RauthyConfig::get().vars.email.jobs;
-            (
-                vars.batch_size,
-                Duration::from_millis(vars.batch_delay_ms as u64),
-            )
+            (vars.batch_size, vars.batch_delay)
         };
         let mut delay_inner_ms = 10;
 

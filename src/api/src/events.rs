@@ -104,9 +104,7 @@ pub async fn sse_events(
         ))
     } else {
         Ok(sse::Sse::from_infallible_receiver(rx)
-            .with_keep_alive(Duration::from_secs(
-                RauthyConfig::get().vars.server.see_keep_alive as u64,
-            ))
+            .with_keep_alive(RauthyConfig::get().vars.server.see_keep_alive)
             .with_retry_duration(Duration::from_secs(10)))
     }
 }

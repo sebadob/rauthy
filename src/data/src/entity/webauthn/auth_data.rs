@@ -40,7 +40,7 @@ impl WebauthnData {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.webauthn.data_exp as i64);
+        let ttl = Some(RauthyConfig::get().vars.webauthn.data_exp.as_secs() as i64);
         DB::hql()
             .put(Cache::Webauthn, self.code.clone(), &self, ttl)
             .await?;

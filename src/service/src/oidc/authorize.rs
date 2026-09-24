@@ -24,6 +24,7 @@ use rauthy_data::{
     AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::ops::Add;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::time;
@@ -325,16 +326,16 @@ pub(crate) async fn finish_authorize(
     let scopes = client.sanitize_login_scopes(&data.scopes)?;
 
     let config = RauthyConfig::get();
-    let mut code_lifetime = client.auth_code_lifetime;
+    let mut code_lifetime = Duration::from_secs(client.auth_code_lifetime as u64);
     if data.require_webauthn {
-        code_lifetime += config.vars.webauthn.req_exp as i32
+        code_lifetime = code_lifetime.add(config.vars.webauthn.req_exp);
     }
     if data.require_otp {
-        code_lifetime += config.vars.otp.exp_mins.num_seconds() as i32
+        code_lifetime = code_lifetime.add(config.vars.otp.exp);
     }
     let need_tos_accept = user.needs_tos_update().await?;
     if need_tos_accept {
-        code_lifetime += config.vars.tos.accept_timeout as i32;
+        code_lifetime = code_lifetime.add(config.vars.tos.accept_timeout);
     }
     let needs_user_update = UserValuesValidator::does_user_need_update(&user, &client.id).await?;
 
@@ -354,7 +355,8 @@ pub(crate) async fn finish_authorize(
         None,
         code_lifetime,
     );
-    code.save(code_lifetime).await?;
+    // safe downcase - originated from u32 and then only added tiny amounts
+    code.save(code_lifetime.as_secs() as i64).await?;
 
     // We don't need another location check - we can only get here with an already authenticated
     // session and no auth-check is being performed.
@@ -371,7 +373,7 @@ pub(crate) async fn finish_authorize(
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin: data.header_origin,
             email: user.email,
-            exp: config.vars.webauthn.req_exp as u64,
+            exp: config.vars.webauthn.req_exp.as_secs(),
             session: session.clone(),
         };
 

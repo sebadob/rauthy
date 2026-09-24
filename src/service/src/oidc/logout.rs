@@ -26,11 +26,12 @@ use std::borrow::Cow;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::string::ToString;
+use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::{debug, error, info};
 
 // Allow a small clock-skew margin for logout token validation.
-static LOGOUT_TOKEN_CLOCK_SKEW: u16 = 600;
+const LOGOUT_TOKEN_CLOCK_SKEW: Duration = Duration::from_secs(600);
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(
@@ -446,7 +447,11 @@ pub async fn send_backchannel_logout(
         &client_id,
         sub.as_deref(),
         sid.as_deref(),
-        RauthyConfig::get().vars.backchannel_logout.token_lifetime,
+        RauthyConfig::get()
+            .vars
+            .backchannel_logout
+            .token_lifetime
+            .as_secs() as i64,
     )
     .into_token_with_kp(kp)?;
 

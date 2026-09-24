@@ -14,13 +14,12 @@ use tokio::time;
 use tracing::{debug, error, info};
 
 pub async fn user_expiry_checker() {
-    let secs = RauthyConfig::get().vars.database.sched_user_exp_mins as u64;
-    let mut interval = tokio::time::interval(Duration::from_secs(secs * 60));
+    let mut interval = tokio::time::interval(RauthyConfig::get().vars.database.sched_user_exp);
     let cleanup_after_secs = RauthyConfig::get()
         .vars
         .database
-        .sched_user_exp_delete_mins
-        .map(|s| s as u64 * 60);
+        .sched_user_exp_delete
+        .map(|s| s.as_secs());
     if cleanup_after_secs.is_none() {
         info!("Auto cleanup for expired users disabled");
     }

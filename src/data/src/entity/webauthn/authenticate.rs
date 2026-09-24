@@ -15,6 +15,7 @@ use rauthy_api_types::users::{MfaPurpose, WebauthnAuthFinishRequest, WebauthnAut
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::cmp::min;
 use tracing::{error, info, warn};
 use utoipa::ToSchema;
 use webauthn_rs::prelude::Passkey;
@@ -90,7 +91,7 @@ pub async fn auth_start(
         Ok((mut rcr, auth_state)) => {
             let req_exp = RauthyConfig::get().vars.webauthn.req_exp;
             // timeout expected in ms
-            rcr.public_key.timeout = Some(req_exp as u32 * 1000);
+            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u32::MAX as u128) as u32);
 
             // cannot be serialized with bincode -> no deserialize from any
             let auth_state_json = serde_json::to_string(&auth_state)?;
@@ -104,7 +105,7 @@ pub async fn auth_start(
             Ok(WebauthnAuthStartResponse {
                 code: auth_data.code,
                 rcr,
-                exp: req_exp as u64,
+                exp: req_exp.as_secs(),
             })
         }
 

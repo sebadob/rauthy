@@ -112,9 +112,10 @@ pub async fn handle_login_delay(
 
 async fn build_send_event(
     peer_ip: &IpAddr,
-    nbf_seconds: u32,
+    nbf_seconds: u64,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let not_before = Utc::now().add(chrono::Duration::seconds(nbf_seconds as i64));
+    let nbf = Duration::from_secs(nbf_seconds);
+    let not_before = Utc::now().add(nbf);
     let ts = not_before.timestamp();
     let html = TooManyRequestsHtml::build(peer_ip.to_string(), ts);
 
@@ -123,7 +124,7 @@ async fn build_send_event(
         .send_async(Event::ip_blacklisted(not_before, peer_ip.to_string()))
         .await
         .unwrap();
-    IpBlacklist::put(peer_ip.to_string(), nbf_seconds as i64).await?;
+    IpBlacklist::put(peer_ip.to_string(), nbf).await?;
 
     Err(ErrorResponse::new(
         ErrorResponseType::TooManyRequests(ts),

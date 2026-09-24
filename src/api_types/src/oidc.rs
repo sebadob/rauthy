@@ -525,9 +525,9 @@ pub struct DeviceCodeResponse<'a> {
     pub verification_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_uri_complete: Option<String>,
-    pub expires_in: u32,
+    pub expires_in: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub interval: Option<u32>,
+    pub interval: Option<u64>,
 }
 
 #[derive(Serialize, ToSchema)]

@@ -2,6 +2,7 @@ use crate::database::{Cache, DB};
 use crate::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use spow::pow::Pow;
+use std::cmp::min;
 
 pub struct PowEntity;
 
@@ -14,14 +15,17 @@ impl PowEntity {
             cfg.pow.difficulty
         };
 
-        let pow = Pow::with_difficulty(difficulty, cfg.pow.exp as u32)?;
+        let pow = Pow::with_difficulty(
+            difficulty,
+            min(cfg.pow.exp.as_secs(), u32::MAX as u64) as u32,
+        )?;
 
         DB::hql()
             .put(
                 Cache::PoW,
                 pow.challenge.clone(),
                 &pow,
-                Some(cfg.pow.exp as i64),
+                Some(cfg.pow.exp.as_secs() as i64),
             )
             .await?;
 

@@ -378,8 +378,8 @@ persist_level = 'info'
 # up from the database.
 #
 # default: 30
-# overwritten by: EVENT_CLEANUP_DAYS
-cleanup_days = 30
+# overwritten by: EVENT_CLEANUP_THRESHOLD
+cleanup_threshold = 30
 ```
 
 ### `level_*` Values

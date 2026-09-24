@@ -131,7 +131,7 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
             };
 
             if session.is_valid(
-                RauthyConfig::get().vars.lifetimes.session_timeout,
+                RauthyConfig::get().vars.lifetimes.session_timeout.as_secs() as i64,
                 remote_ip,
                 req.path(),
             ) {

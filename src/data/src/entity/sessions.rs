@@ -23,6 +23,7 @@ use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
+use std::time::Duration;
 use tracing::{debug, trace, warn};
 
 #[derive(Clone, Serialize, Deserialize, FromRow, FromPgRow)]
@@ -523,7 +524,7 @@ WHERE sessions.exp > $11"#;
 
 impl Session {
     /// exp_in will be the time in seconds when the session will expire
-    pub fn new(exp_in: u32, remote_ip: Option<IpAddr>) -> Self {
+    pub fn new(exp_in: Duration, remote_ip: Option<IpAddr>) -> Self {
         let id = get_rand(32);
         let csrf_token = get_rand(32);
         let now = Utc::now();
@@ -536,9 +537,7 @@ impl Session {
             groups: None,
             is_mfa: false, // cannot be known during creation
             state: SessionState::Init,
-            exp: now
-                .add(chrono::Duration::seconds(exp_in as i64))
-                .timestamp(),
+            exp: now.add(exp_in).timestamp(),
             last_seen: now.timestamp(),
             remote_ip: remote_ip.map(|ip| ip.to_string()),
         }
@@ -661,7 +660,7 @@ impl Session {
     /// Checks expiry, timeout, state, and the optional remote IP.
     pub fn is_valid(
         &self,
-        session_timeout: u32,
+        session_timeout: i64,
         remote_ip: Option<IpAddr>,
         req_path: &str,
     ) -> bool {
@@ -669,7 +668,7 @@ impl Session {
         if self.exp < now {
             return false;
         }
-        if self.last_seen < now - session_timeout as i64 {
+        if self.last_seen < now - session_timeout {
             return false;
         }
 
@@ -839,10 +838,11 @@ mod tests {
     use rauthy_error::ErrorResponse;
     use std::net::IpAddr;
     use std::str::FromStr;
+    use std::time::Duration;
 
     #[test]
     fn test_validate_csrf() {
-        let s = Session::new(3600, None);
+        let s = Session::new(Duration::from_secs(3600), None);
 
         let ok = TestRequest::default()
             .insert_header((CSRF_HEADER, s.csrf_token.clone()))
@@ -860,7 +860,7 @@ mod tests {
 
     #[test]
     fn test_session_validation() -> Result<(), ErrorResponse> {
-        let mut s = Session::new(3600, None);
+        let mut s = Session::new(Duration::from_secs(3600), None);
 
         let path_exep_1 = "/auth/v1/oidc/authorize";
         let path_exep_2 = "/auth/v1/oidc/token";
@@ -883,21 +883,21 @@ mod tests {
 
     #[test]
     fn test_init_session_needs_exception_path_without_ip_validation() {
-        let s = Session::new(3600, None);
+        let s = Session::new(Duration::from_secs(3600), None);
         assert!(!s.is_valid(600, None, "/"));
         assert!(!s.is_valid(600, None, "/auth/v1/users"));
 
         assert!(s.is_valid(600, None, "/auth/v1/oidc/authorize"));
         assert!(s.is_valid(600, None, "/auth/v1/oidc/token"));
 
-        let mut a = Session::new(3600, None);
+        let mut a = Session::new(Duration::from_secs(3600), None);
         a.state = SessionState::Auth;
         assert!(a.is_valid(600, None, "/"));
 
-        let mut l = Session::new(3600, None);
+        let mut l = Session::new(Duration::from_secs(3600), None);
         l.state = SessionState::LoggedOut;
         assert!(!l.is_valid(600, None, "/"));
-        let mut u = Session::new(3600, None);
+        let mut u = Session::new(Duration::from_secs(3600), None);
         u.state = SessionState::Unknown;
         assert!(!u.is_valid(600, None, "/"));
     }

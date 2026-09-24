@@ -301,7 +301,7 @@ impl OneTimePassword {
                         "couldn't parse otp's timeout",
                     ));
                 };
-                if timeout >= RauthyConfig::get().vars.otp.exp_mins {
+                if timeout.num_seconds() >= RauthyConfig::get().vars.otp.exp.as_secs() as i64 {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
                         "otp code expired",
@@ -427,7 +427,7 @@ impl OtpData {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.otp.exp_mins.num_seconds());
+        let ttl = Some(RauthyConfig::get().vars.otp.exp.as_secs() as i64);
         DB::hql()
             .put(Cache::OneTimePassword, self.code.clone(), &self, ttl)
             .await?;
@@ -551,7 +551,7 @@ impl OtpLoginReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.otp.exp_mins.num_seconds());
+        let ttl = Some(RauthyConfig::get().vars.otp.exp.as_secs() as i64);
         DB::hql()
             .put(Cache::OneTimePassword, self.code.clone(), self, ttl)
             .await?;
@@ -593,7 +593,7 @@ impl OtpServiceReq {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.otp.exp_mins.num_seconds());
+        let ttl = Some(RauthyConfig::get().vars.otp.exp.as_secs() as i64);
         DB::hql()
             .put(Cache::OneTimePassword, self.code.clone(), self, ttl)
             .await?;
@@ -653,9 +653,7 @@ pub async fn auth_start(
 
     Ok(OtpAuthStartResponse {
         code: auth_data.code,
-        exp: Utc::now()
-            .add(RauthyConfig::get().vars.otp.exp_mins)
-            .timestamp(),
+        exp: Utc::now().add(RauthyConfig::get().vars.otp.exp).timestamp(),
     })
 }
 

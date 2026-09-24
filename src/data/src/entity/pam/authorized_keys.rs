@@ -64,12 +64,8 @@ impl AuthorizedKey {
             }
         }
 
-        let expires = if config.forced_key_expiry_days > 0 {
-            Some(
-                Utc::now()
-                    .add(chrono::Duration::days(config.forced_key_expiry_days as i64))
-                    .timestamp(),
-            )
+        let expires = if config.forced_key_expiry.as_secs() > 0 {
+            Some(Utc::now().add(config.forced_key_expiry).timestamp())
         } else {
             None
         };
@@ -199,12 +195,15 @@ ON CONFLICT (used_key_hash) DO NOTHING
     pub async fn cleanup_blacklist() -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM ssh_auth_keys_used WHERE ts_added < $1";
 
-        let days = RauthyConfig::get()
-            .vars
-            .pam
-            .authorized_keys
-            .blacklist_cleanup_days as i64;
-        let threshold = Utc::now().sub(chrono::Duration::days(days)).timestamp();
+        let threshold = Utc::now()
+            .sub(
+                RauthyConfig::get()
+                    .vars
+                    .pam
+                    .authorized_keys
+                    .blacklist_cleanup_threshold,
+            )
+            .timestamp();
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(threshold)).await?;

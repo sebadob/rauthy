@@ -48,10 +48,10 @@ impl LogoutToken<'_> {
         aud: &'a str,
         sub: Option<&'a str>,
         sid: Option<&'a str>,
-        token_lifetime: u32,
+        token_lifetime_secs: i64,
     ) -> LogoutToken<'a> {
         let iat = Utc::now().timestamp();
-        let exp = iat + token_lifetime as i64;
+        let exp = iat + token_lifetime_secs;
 
         let events = serde_json::Value::Object(serde_json::Map::from_iter([(
             EVENT.to_string(),
@@ -202,8 +202,16 @@ impl LogoutToken<'_> {
         &self,
         header: serde_json::Value,
     ) -> Result<(String, JwkKeyPairAlg), ErrorResponse> {
-        let lifetime = RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64;
-        let skew = RauthyConfig::get().vars.backchannel_logout.allow_clock_skew as i64;
+        let lifetime = RauthyConfig::get()
+            .vars
+            .backchannel_logout
+            .allowed_token_lifetime
+            .as_secs() as i64;
+        let skew = RauthyConfig::get()
+            .vars
+            .backchannel_logout
+            .allow_clock_skew
+            .as_secs() as i64;
         self.validate_claims_with(header, lifetime, skew)
     }
 

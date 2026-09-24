@@ -4,6 +4,7 @@ use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ops::Add;
+use std::time::Duration;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IpBlacklist {
@@ -12,8 +13,8 @@ pub struct IpBlacklist {
 }
 
 impl IpBlacklist {
-    pub async fn put(ip: String, ttl_seconds: i64) -> Result<(), ErrorResponse> {
-        let exp = Utc::now().add(chrono::Duration::seconds(ttl_seconds));
+    pub async fn put(ip: String, ttl: Duration) -> Result<(), ErrorResponse> {
+        let exp = Utc::now().add(ttl);
         let slf = Self {
             ip: ip.clone(),
             exp,
@@ -22,7 +23,7 @@ impl IpBlacklist {
         // make sure to reset TTL properly
         DB::hql().delete(Cache::IpBlacklist, ip.clone()).await?;
         DB::hql()
-            .put(Cache::IpBlacklist, ip, &slf, Some(ttl_seconds))
+            .put(Cache::IpBlacklist, ip, &slf, Some(ttl.as_secs() as i64))
             .await?;
 
         Ok(())

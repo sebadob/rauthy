@@ -11,6 +11,8 @@ use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::Add;
+use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::warn;
 
@@ -119,11 +121,11 @@ impl Debug for MagicLink {
 impl MagicLink {
     pub async fn create(
         user_id: String,
-        lifetime_minutes: i64,
+        lifetime: Duration,
         usage: MagicLinkUsage,
     ) -> Result<Self, ErrorResponse> {
         let id = get_rand(64);
-        let exp = OffsetDateTime::now_utc().unix_timestamp() + lifetime_minutes * 60;
+        let exp = OffsetDateTime::now_utc().add(lifetime).unix_timestamp();
         let link = MagicLink {
             id,
             user_id,

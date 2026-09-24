@@ -24,7 +24,9 @@ use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::ops::{Add, Sub};
 use std::str::FromStr;
+use std::time::Duration;
 use utoipa::ToSchema;
 
 pub struct AccessTokenJti(String);
@@ -465,7 +467,7 @@ impl TokenSet {
         dpop_fingerprint: Option<DpopFingerprint>,
         client: &Client,
         auth_time: AuthTime,
-        access_token_lifetime: i64,
+        access_token_lifetime: Duration,
         scope: Option<TokenScopes>,
         is_mfa: bool,
         device_code_flow: DeviceCodeFlow,
@@ -479,28 +481,30 @@ impl TokenSet {
             None
         };
 
-        let now = Utc::now().timestamp();
-        let nbf = if RauthyConfig::get().vars.access.disable_refresh_token_nbf {
+        let config = RauthyConfig::get();
+        let now = Utc::now();
+        let nbf = if config.vars.access.disable_refresh_token_nbf {
             now
         } else {
             // allow 60 second early usage
-            now + access_token_lifetime - 60
+            now.add(access_token_lifetime).sub(Duration::from_secs(60))
         };
         let exp = if did.is_some() {
-            nbf + 3600 * RauthyConfig::get().vars.device_grant.refresh_token_lifetime as i64
+            nbf.add(config.vars.device_grant.refresh_token_lifetime)
         } else {
-            nbf + 3600 * RauthyConfig::get().vars.lifetimes.refresh_token_lifetime as i64
-        };
+            nbf.add(config.vars.lifetimes.refresh_token_lifetime)
+        }
+        .timestamp();
 
         let token = {
             let jti = secure_random_alnum(8);
 
             let claims = rauthy_jwt::claims::JwtRefreshClaims {
                 common: JwtCommonClaims {
-                    iat: now,
-                    nbf,
+                    iat: now.timestamp(),
+                    nbf: nbf.timestamp(),
                     exp,
-                    iss: &RauthyConfig::get().issuer,
+                    iss: &config.issuer,
                     // jti is not really used for any validation, it just exists
                     // to bring a bit more randomness into the claims
                     jti: Some(&jti),
@@ -534,7 +538,7 @@ impl TokenSet {
                 validation_string,
                 device_id,
                 user.id.clone(),
-                nbf,
+                nbf.timestamp(),
                 exp,
                 scope.map(|s| s.0),
                 Some(jti.0),
@@ -544,7 +548,7 @@ impl TokenSet {
             RefreshToken::create(
                 validation_string,
                 user.id.clone(),
-                nbf,
+                nbf.timestamp(),
                 exp,
                 scope.map(|s| s.0),
                 is_mfa,
@@ -800,7 +804,7 @@ impl TokenSet {
                     dpop_fingerprint,
                     client,
                     auth_time,
-                    lifetime,
+                    Duration::from_secs(lifetime as u64),
                     scopes.map(TokenScopes),
                     user.has_webauthn_enabled(),
                     device_code_flow,

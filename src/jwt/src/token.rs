@@ -6,6 +6,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::time::Duration;
 use tracing::warn;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -69,7 +70,7 @@ impl JwtToken {
     pub async fn validate_claims_into(
         token: &str,
         expected_type: Option<JwtTokenType>,
-        allowed_clock_skew_seconds: u16,
+        allowed_clock_skew_seconds: Duration,
         buf: &mut Vec<u8>,
     ) -> Result<(), ErrorResponse> {
         debug_assert!(buf.is_empty());
@@ -167,10 +168,10 @@ impl ValidationClaims<'_> {
         &self,
         issuer: &str,
         expected_type: Option<JwtTokenType>,
-        allowed_clock_skew_seconds: u16,
+        allowed_clock_skew: Duration,
     ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-        let skew = allowed_clock_skew_seconds as i64;
+        let skew = allowed_clock_skew.as_secs() as i64;
 
         if self.iat - skew > now {
             return Err(ErrorResponse::new(
@@ -217,6 +218,7 @@ mod tests {
     use rauthy_common::utils::base64_url_no_pad_decode_buf;
     use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
     use rauthy_error::{ErrorResponse, ErrorResponseType};
+    use std::time::Duration;
 
     #[test]
     fn test_jwt_header_typ() {
@@ -292,7 +294,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0)?;
+        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0))?;
 
         ValidationClaims {
             iat: now + 2,
@@ -301,7 +303,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 2)?;
+        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(2))?;
 
         let res = ValidationClaims {
             iat: now,
@@ -310,7 +312,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -326,7 +328,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -342,7 +344,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -358,7 +360,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 5);
+        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(5));
         assert_eq!(res, Ok(()));
 
         let res = ValidationClaims {
@@ -368,7 +370,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Id), 0);
+        .validate(iss, Some(JwtTokenType::Id), Duration::from_secs(0));
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -384,7 +386,7 @@ mod tests {
             iss: "http://localhost:9090/something/else",
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
         assert_eq!(
             res,
             Err(ErrorResponse::new(

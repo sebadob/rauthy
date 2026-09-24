@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::ops::Add;
+use std::time::Duration;
 
 /// Caution: The `exp` on this struct does not define the timeout. It is only used
 /// to return information back to the limited client when it is allowed to poll again.
@@ -20,10 +21,15 @@ impl DeviceIpRateLimit {
             .vars
             .device_grant
             .rate_limit
-            .unwrap_or(1) as i64;
-        let limit = Utc::now().add(chrono::Duration::seconds(limit_secs));
+            .unwrap_or(Duration::from_secs(1));
+        let limit = Utc::now().add(limit_secs);
         DB::hql()
-            .put(Cache::IpRateLimit, ip, &limit, Some(limit_secs))
+            .put(
+                Cache::IpRateLimit,
+                ip,
+                &limit,
+                Some(limit_secs.as_secs() as i64),
+            )
             .await?;
 
         Ok(())

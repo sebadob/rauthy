@@ -8,7 +8,7 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error};
 
-/// Cleans up all Events that exceed the configured EVENT_CLEANUP_DAYS
+/// Cleans up all Events that exceed the configured EVENT_CLEANUP_THRESHOLD
 pub async fn events_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3600));
 
@@ -22,9 +22,8 @@ pub async fn events_cleanup() {
 
         debug!("Running events_cleanup scheduler");
 
-        let cleanup_days = RauthyConfig::get().vars.events.cleanup_days as i64;
         let threshold = Utc::now()
-            .sub(chrono::Duration::days(cleanup_days))
+            .sub(RauthyConfig::get().vars.events.cleanup_threshold)
             .timestamp_millis();
 
         let sql = "DELETE FROM events WHERE timestamp < $1";

@@ -68,15 +68,6 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
 });
 
 pub static TIMEZONES_BR: OnceLock<Vec<u8>> = OnceLock::new();
-// pub static TIMEZONES_BR: LazyLock<Vec<u8>> = LazyLock::new(|| {
-//     let zones = chrono_tz::TZ_VARIANTS
-//         .iter()
-//         .map(|tz| tz.name())
-//         .collect::<Vec<_>>();
-//
-//     let json = serde_json::to_string(&zones).unwrap();
-//     compress_br(json.as_bytes()).await.unwrap()
-// });
 
 /// Check if the current session is valid
 #[utoipa::path(
@@ -474,9 +465,13 @@ pub async fn post_update_language(
 #[get("/health")]
 pub async fn get_health() -> impl Responder {
     if Utc::now().sub(*APP_START).num_seconds()
-        < RauthyConfig::get().vars.database.health_check_delay_secs as i64
+        < RauthyConfig::get()
+            .vars
+            .database
+            .health_check_delay
+            .as_secs() as i64
     {
-        info!("Early health check within the HEALTH_CHECK_DELAY_SECS timeframe - returning true");
+        info!("Early health check within the HEALTH_CHECK_DELAY timeframe - returning true");
         HttpResponse::Ok().json(HealthResponse {
             db_healthy: true,
             cache_healthy: true,
@@ -529,7 +524,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
         warn!("Suspicious request path '{}' from {}", path, ip)
     }
 
-    if vars.blacklist > 0
+    if !vars.blacklist.is_zero()
         // `/` will be the path of length 1
         && path.len() > 1
         && suspicious_request_block::is_scan_target(path)
@@ -539,7 +534,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
             path, ip,
         );
 
-        if let Err(err) = IpBlacklist::put(ip.to_string(), vars.blacklist as i64).await {
+        if let Err(err) = IpBlacklist::put(ip.to_string(), vars.blacklist).await {
             error!(
                 "Error blacklisting suspicious request - please repot this bug: {:?}",
                 err

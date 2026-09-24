@@ -136,9 +136,7 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
-    let now_plus_skew = Utc::now()
-        .add(chrono::Duration::seconds(clock_skew_secs as i64))
-        .timestamp();
+    let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
     let rt_scope = if let Some(device_id) = &claims.common.did {
         let rt = RefreshTokenDevice::find_delete(validation_str).await?;
 

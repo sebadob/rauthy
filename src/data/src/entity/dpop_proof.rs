@@ -29,8 +29,8 @@ impl Debug for DPoPNonce {
 impl DPoPNonce {
     /// Creates a new DPoP nonce, inserts it into the cache and returns its value.
     pub async fn new_value() -> Result<String, ErrorResponse> {
-        let nonce_exp = RauthyConfig::get().vars.dpop.nonce_exp as i64;
-        let exp = Utc::now().add(chrono::Duration::seconds(nonce_exp));
+        let nonce_exp = RauthyConfig::get().vars.dpop.nonce_exp;
+        let exp = Utc::now().add(nonce_exp);
         let slf = Self {
             exp,
             value: get_rand(32),
@@ -38,13 +38,23 @@ impl DPoPNonce {
 
         let client = DB::hql();
         client
-            .put(Cache::DPoPNonce, "latest", &slf, Some(nonce_exp))
+            .put(
+                Cache::DPoPNonce,
+                "latest",
+                &slf,
+                Some(nonce_exp.as_secs() as i64),
+            )
             .await?;
 
         // we need by its own value additionally, because the "latest" may be overwritten
         // before its expiration
         client
-            .put(Cache::DPoPNonce, slf.value.clone(), &slf, Some(nonce_exp))
+            .put(
+                Cache::DPoPNonce,
+                slf.value.clone(),
+                &slf,
+                Some(nonce_exp.as_secs() as i64),
+            )
             .await?;
 
         Ok(slf.value)
