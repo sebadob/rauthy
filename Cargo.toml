@@ -28,9 +28,9 @@ lto = false
 strip = false
 
 [patch.crates-io]
-hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite", branch = "robustness-security-hardening" }
-hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive", branch = "robustness-security-hardening" }
-hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal", branch = "robustness-security-hardening" }
+hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
+hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
 
 [workspace.dependencies]
 accept-language = "3"

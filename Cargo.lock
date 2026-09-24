@@ -2853,7 +2853,7 @@ dependencies = [
 [[package]]
 name = "hiqlite"
 version = "0.15.0-20260920"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=robustness-security-hardening#61bb6f8cebbdd57bd577963aad52e89072db605c"
+source = "git+https://github.com/sebadob/hiqlite.git#9824bcfcf186a10c747bba5960678f8b1589e9f8"
 dependencies = [
  "argon2 0.6.0",
  "axum",
@@ -2910,7 +2910,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-derive"
 version = "0.15.0-20260920"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=robustness-security-hardening#61bb6f8cebbdd57bd577963aad52e89072db605c"
+source = "git+https://github.com/sebadob/hiqlite.git#9824bcfcf186a10c747bba5960678f8b1589e9f8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2920,7 +2920,7 @@ dependencies = [
 [[package]]
 name = "hiqlite-wal"
 version = "0.15.0-20260920"
-source = "git+https://github.com/sebadob/hiqlite.git?branch=robustness-security-hardening#61bb6f8cebbdd57bd577963aad52e89072db605c"
+source = "git+https://github.com/sebadob/hiqlite.git#9824bcfcf186a10c747bba5960678f8b1589e9f8"
 dependencies = [
  "bincode-next",
  "byteorder",

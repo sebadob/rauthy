@@ -11,7 +11,7 @@ use actix_web::http::header::{
     self, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderValue,
 };
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
-use chrono::{TimeDelta, Utc};
+use chrono::Utc;
 use hiqlite::macros::params;
 use image::EncodableLayout;
 use rauthy_api_types::tos::ToSAwaitLoginResponse;
