@@ -295,90 +295,92 @@
             </p>
         {:else if tplData}
             <div class="container">
-                {#if requestType.get()?.startsWith('new_user')}
-                    <h1>{t.passwordReset.newAccount}</h1>
-                    <p>{t.passwordReset.newAccDesc1}</p>
-                    <p>
-                        {t.passwordReset.newAccDesc2}
-                        <A href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</A>
-                    </p>
+                <div>
+                    {#if requestType.get()?.startsWith('new_user')}
+                        <h1>{t.passwordReset.newAccount}</h1>
+                        <p>{t.passwordReset.newAccDesc1}</p>
+                        <p>
+                            {t.passwordReset.newAccDesc2}
+                            <A href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</A>
+                        </p>
 
-                    <div class="typeChoice">
-                        <Button
-                            level={!accountTypeNew ? 1 : 3}
-                            onclick={() => (accountTypeNew = 'passkey')}
-                            {isLoading}
-                        >
-                            {t.passwordReset.passwordless}
-                        </Button>
-                        <Button
-                            level={!accountTypeNew ? 2 : 3}
-                            onclick={() => (accountTypeNew = 'password')}
-                            {isLoading}
-                        >
-                            {t.passwordReset.password}
-                        </Button>
-                    </div>
-
-                    {#if accountTypeNew === 'password'}
-                        <div transition:slide>
-                            {@render passwordInput()}
+                        <div class="typeChoice">
+                            <Button
+                                level={!accountTypeNew ? 1 : 3}
+                                onclick={() => (accountTypeNew = 'passkey')}
+                                {isLoading}
+                            >
+                                {t.passwordReset.passwordless}
+                            </Button>
+                            <Button
+                                level={!accountTypeNew ? 2 : 3}
+                                onclick={() => (accountTypeNew = 'password')}
+                                {isLoading}
+                            >
+                                {t.passwordReset.password}
+                            </Button>
                         </div>
-                    {:else if accountTypeNew === 'passkey'}
-                        <div transition:slide>
-                            <Form action="" onSubmit={handleRegister}>
-                                <LabeledValue label={t.account.passkeys.type}>
-                                    <Options
-                                        options={[
-                                            t.account.passkeys.types[0],
-                                            t.account.passkeys.types[1],
-                                        ]}
-                                        bind:value={passkeyType}
-                                        ariaLabel={t.account.passkeys.type}
-                                    />
-                                    {#if passkeyType === t.account.passkeys.types[1]}
-                                        <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
-                                    {/if}
-                                </LabeledValue>
-                                <Input
-                                    bind:ref={refPasskey}
-                                    bind:value={passkeyName}
-                                    autocomplete="off"
-                                    label={t.mfa.passkeyName}
-                                    placeholder={t.mfa.passkeyName}
-                                    width={inputWidth}
-                                    maxLength={32}
-                                    pattern={PATTERN_USER_NAME}
-                                    required
-                                />
-                                <div class="btnReg">
-                                    <Button type="submit" level={success ? 2 : 1}>
-                                        {t.mfa.register}
-                                    </Button>
-                                </div>
-                            </Form>
 
-                            {#if success}
-                                <div class="success">
-                                    <p>{t.passwordReset.successPasskey1}</p>
-                                    <p>{t.passwordReset.successPasskey2}</p>
-                                    <Button onclick={navigateToAccount}>
-                                        {t.passwordReset.accountLogin}
-                                    </Button>
-                                </div>
-                            {/if}
+                        {#if accountTypeNew === 'password'}
+                            <div transition:slide>
+                                {@render passwordInput()}
+                            </div>
+                        {:else if accountTypeNew === 'passkey'}
+                            <div transition:slide>
+                                <Form action="" onSubmit={handleRegister}>
+                                    <LabeledValue label={t.account.passkeys.type}>
+                                        <Options
+                                            options={[
+                                                t.account.passkeys.types[0],
+                                                t.account.passkeys.types[1],
+                                            ]}
+                                            bind:value={passkeyType}
+                                            ariaLabel={t.account.passkeys.type}
+                                        />
+                                        {#if passkeyType === t.account.passkeys.types[1]}
+                                            <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
+                                        {/if}
+                                    </LabeledValue>
+                                    <Input
+                                        bind:ref={refPasskey}
+                                        bind:value={passkeyName}
+                                        autocomplete="off"
+                                        label={t.mfa.passkeyName}
+                                        placeholder={t.mfa.passkeyName}
+                                        width={inputWidth}
+                                        maxLength={32}
+                                        pattern={PATTERN_USER_NAME}
+                                        required
+                                    />
+                                    <div class="btnReg">
+                                        <Button type="submit" level={success ? 2 : 1}>
+                                            {t.mfa.register}
+                                        </Button>
+                                    </div>
+                                </Form>
+
+                                {#if success}
+                                    <div class="success">
+                                        <p>{t.passwordReset.successPasskey1}</p>
+                                        <p>{t.passwordReset.successPasskey2}</p>
+                                        <Button onclick={navigateToAccount}>
+                                            {t.passwordReset.accountLogin}
+                                        </Button>
+                                    </div>
+                                {/if}
+                            </div>
+                        {/if}
+                    {:else if requestType.get()?.startsWith('password_reset')}
+                        <h1>Password Reset</h1>
+                        {@render passwordInput()}
+                    {/if}
+
+                    {#if err}
+                        <div class="err">
+                            {err}
                         </div>
                     {/if}
-                {:else if requestType.get()?.startsWith('password_reset')}
-                    <h1>Password Reset</h1>
-                    {@render passwordInput()}
-                {/if}
-
-                {#if err}
-                    <div class="err">
-                        {err}
-                    </div>
-                {/if}
+                </div>
             </div>
         {/if}
 
@@ -396,8 +398,12 @@
     .container {
         margin-top: -1.75rem;
         max-height: calc(100dvh - 2.5rem);
-        max-width: 100dvw;
+        width: 100dvw;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         overflow-y: auto;
+        border: 1px solid yellow;
     }
 
     .err {
