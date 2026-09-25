@@ -14,6 +14,7 @@ pub struct OidcTokenSet {
     pub expires_in: i32,
     pub refresh_token: Option<String>,
     /// The granted scopes, space-separated (RFC 6749 Section 5.1)
+    #[serde(default)]
     pub scope: Option<String>,
 }
 

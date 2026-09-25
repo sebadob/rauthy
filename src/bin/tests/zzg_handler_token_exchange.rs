@@ -1,10 +1,9 @@
-use crate::common::{PASSWORD, USERNAME, get_auth_headers, get_backend_url};
+use crate::common::{PASSWORD, USERNAME, decode_claims, get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest, TokenType};
-use rauthy_common::utils::base64_url_no_pad_decode;
 use rauthy_service::token_set::TokenSet;
 use std::error::Error;
 
@@ -13,16 +12,6 @@ mod common;
 const ID: &str = "exchange_test";
 const TARGET: &str = "https://rs-downstream.example.com/api";
 const TARGET_FORBIDDEN: &str = "https://rs-forbidden.example.com/api";
-
-/// Decodes the (unverified) JWT payload, so a test can assert on any claim.
-fn decode_claims(access_token: &str) -> serde_json::Value {
-    let payload_b64 = access_token
-        .split('.')
-        .nth(1)
-        .expect("a JWT payload segment");
-    let bytes = base64_url_no_pad_decode(payload_b64).expect("valid base64url payload");
-    serde_json::from_slice(&bytes).expect("valid JSON claims")
-}
 
 fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
     UpdateClientRequest {
@@ -191,6 +180,10 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let claims = decode_claims(&ts.access_token);
     let subject_claims = decode_claims(&subject_token);
     assert_eq!(claims["sub"], subject_claims["sub"]);
+    // without a requested `scope`, the exchanged token inherits the subject's scope,
+    // and the token response must return exactly the scope claim
+    assert_eq!(ts.scope.as_deref(), subject_claims["scope"].as_str());
+    assert_eq!(ts.scope.as_deref(), claims["scope"].as_str());
     assert!(
         claims.get("act").is_none(),
         "impersonation must not set `act`"
@@ -244,6 +237,8 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let actor_claims = decode_claims(&actor_ts.access_token);
     assert_eq!(claims["sub"], subject_claims["sub"]);
     assert_eq!(claims["act"]["sub"], actor_claims["sub"]);
+    assert_eq!(ts.scope.as_deref(), subject_claims["scope"].as_str());
+    assert_eq!(ts.scope.as_deref(), claims["scope"].as_str());
 
     // (5) an `actor_token` without its `actor_token_type` is rejected
     let res = client
@@ -351,6 +346,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let ts: TokenSet = res.json().await?;
     let claims = decode_claims(&ts.access_token);
     assert_eq!(claims["scope"], serde_json::json!(first_scope));
+    assert_eq!(ts.scope.as_deref(), Some(first_scope.as_str()));
 
     // cleanup
     let res = client

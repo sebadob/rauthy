@@ -2,7 +2,7 @@
 use rauthy_api_types::oidc::{GrantType, LoginRequest, SessionInfoResponse, TokenRequest};
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::sha256;
-use rauthy_common::utils::base64_url_encode;
+use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Response, header};
@@ -23,6 +23,17 @@ pub const CLIENT_ID: &str = "init_client";
 pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
 pub const USERNAME: &str = "init_admin@localhost";
 pub const PASSWORD: &str = "123SuperSafe";
+
+/// Decodes the (unverified) JWT payload, so a test can assert on any claim.
+#[allow(dead_code)]
+pub fn decode_claims(access_token: &str) -> serde_json::Value {
+    let payload_b64 = access_token
+        .split('.')
+        .nth(1)
+        .expect("a JWT payload segment");
+    let bytes = base64_url_no_pad_decode(payload_b64).expect("valid base64url payload");
+    serde_json::from_slice(&bytes).expect("valid JSON claims")
+}
 
 #[allow(dead_code)]
 pub async fn check_status(res: Response, code: u16) -> Result<Response, Box<dyn Error>> {
