@@ -13,6 +13,8 @@ pub struct OidcTokenSet {
     pub id_token: Option<String>,
     pub expires_in: i32,
     pub refresh_token: Option<String>,
+    /// The granted scopes, space-separated (RFC 6749 Section 5.1)
+    pub scope: Option<String>,
 }
 
 impl OidcTokenSet {

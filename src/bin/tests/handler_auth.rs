@@ -467,6 +467,9 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
     assert_eq!(ts.expires_in, 60);
+    // RFC 6749 Section 5.1: the granted scope is returned in the token response
+    let scope = ts.scope.as_deref().expect("scope in token response");
+    assert!(scope.split_whitespace().any(|s| s == "openid"));
 
     // verify 'nonce' existing in id token
     let id_token = ts.id_token.unwrap();

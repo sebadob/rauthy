@@ -122,6 +122,11 @@ pub struct TokenSet {
     pub expires_in: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
+    /// The granted scopes, space-separated. Always identical to the `scope` claim of the
+    /// `access_token`. RFC 6749 Section 5.1 requires this to be returned whenever the granted
+    /// scope differs from the requested one, which is routinely the case after sanitizing.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 
 impl TokenSet {
@@ -584,12 +589,15 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
+        // `build_access_token` falls back to the client's default scopes when none are given,
+        // so this is exactly what the `scope` claim of the token contains.
+        let scope = client.default_scopes.replace(',', " ");
         let (_jti, access_token) = Self::build_access_token(
             None,
             client,
             dpop_fingerprint,
             client.access_token_lifetime as i64,
-            None,
+            Some(TokenScopes(scope.clone())),
             None,
             None,
             resource,
@@ -604,6 +612,7 @@ impl TokenSet {
             id_token: None,
             expires_in: client.access_token_lifetime,
             refresh_token: None,
+            scope: Some(scope),
         })
     }
 
@@ -666,7 +675,7 @@ impl TokenSet {
             client,
             dpop_fingerprint,
             client.access_token_lifetime as i64,
-            Some(scope),
+            Some(TokenScopes(scope.0.clone())),
             customs_access,
             None,
             resource,
@@ -681,6 +690,7 @@ impl TokenSet {
             id_token: None,
             expires_in: client.access_token_lifetime,
             refresh_token: None,
+            scope: Some(scope.0),
         })
     }
 
@@ -837,6 +847,7 @@ impl TokenSet {
             id_token: Some(id_token),
             expires_in: client.access_token_lifetime,
             refresh_token,
+            scope: Some(scope),
         })
     }
 }
