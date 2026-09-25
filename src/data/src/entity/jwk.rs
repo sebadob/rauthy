@@ -420,7 +420,7 @@ impl JWKSPublicKey {
                             if let Some(key) = jwks
                                 .keys
                                 .into_iter()
-                                .find(|k| k.kid.as_deref() == Some(&kid))
+                                .find(|k| k.kid.as_deref() == Some(kid.as_str()))
                             {
                                 if let Err(err) = key.validate_self() {
                                     Err(err)

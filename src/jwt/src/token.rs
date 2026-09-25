@@ -72,6 +72,7 @@ impl JwtToken {
         expected_type: Option<JwtTokenType>,
         allowed_clock_skew_seconds: Duration,
         buf: &mut Vec<u8>,
+        ignore_nbf: bool,
     ) -> Result<(), ErrorResponse> {
         debug_assert!(buf.is_empty());
 
@@ -144,6 +145,7 @@ impl JwtToken {
             &RauthyConfig::get().issuer,
             expected_type,
             allowed_clock_skew_seconds,
+            ignore_nbf,
         )?;
 
         Ok(())
@@ -169,6 +171,7 @@ impl ValidationClaims<'_> {
         issuer: &str,
         expected_type: Option<JwtTokenType>,
         allowed_clock_skew: Duration,
+        ignore_nbf: bool,
     ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         let skew = allowed_clock_skew.as_secs() as i64;
@@ -185,7 +188,14 @@ impl ValidationClaims<'_> {
                 "Token has expired",
             ));
         }
-        if self.nbf - skew > now {
+        // Important for refresh tokens during revocation which will have their `nbf` set to
+        // `exp - 60` from the linked access token. There is no security issue when we are revoking
+        // anyway.
+        #[cfg(debug_assertions)]
+        if expected_type != Some(JwtTokenType::Refresh) {
+            debug_assert!(!ignore_nbf);
+        }
+        if !ignore_nbf && self.nbf - skew > now {
             return Err(ErrorResponse::new(
                 ErrorResponseType::JwtToken,
                 "Token is not valid yet",
@@ -294,7 +304,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0))?;
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        )?;
 
         ValidationClaims {
             iat: now + 2,
@@ -303,7 +318,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(2))?;
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(2),
+            false,
+        )?;
 
         let res = ValidationClaims {
             iat: now,
@@ -312,7 +332,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -328,7 +353,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -344,7 +374,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -360,7 +395,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(5));
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(5),
+            false,
+        );
         assert_eq!(res, Ok(()));
 
         let res = ValidationClaims {
@@ -370,7 +410,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Id), Duration::from_secs(0));
+        .validate(iss, Some(JwtTokenType::Id), Duration::from_secs(0), false);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -386,7 +426,12 @@ mod tests {
             iss: "http://localhost:9090/something/else",
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), Duration::from_secs(0));
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(

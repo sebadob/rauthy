@@ -54,6 +54,7 @@ pub async fn get_logout_html(
         Some(JwtTokenType::Id),
         LOGOUT_TOKEN_CLOCK_SKEW,
         &mut buf,
+        false,
     )
     .await?;
     let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
@@ -108,6 +109,7 @@ pub async fn post_logout_handle(
                 Some(JwtTokenType::Id),
                 LOGOUT_TOKEN_CLOCK_SKEW,
                 &mut buf,
+                false,
             )
             .await?;
             let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
