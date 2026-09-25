@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rauthy.headlessName" . }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  # Peers must resolve each other before they are Ready, so the Raft cluster
+  # can form on first boot and re-form after restarts.
+  publishNotReadyAddresses: true
+  sessionAffinity: None
+  selector:
+    {{- include "rauthy.selectorLabels" . | nindent 4 }}
+  # These ports are internal to the Raft cluster. Do NOT expose them publicly
+  # or via your ingress; only the HTTP service above should be reachable.
+  ports:
+    - name: hiqlite-raft
+      port: 8100
+      targetPort: hiqlite-raft
+      protocol: TCP
+    - name: hiqlite-api
+      port: 8200
+      targetPort: hiqlite-api
+      protocol: TCP
