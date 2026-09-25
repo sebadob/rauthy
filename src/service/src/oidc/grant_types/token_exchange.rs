@@ -252,6 +252,7 @@ async fn validate_exchange_token<'a>(
         Some(JwtTokenType::Bearer),
         Duration::from_secs(0),
         buf,
+        false,
     )
     .await
     .is_err()

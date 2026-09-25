@@ -22,6 +22,7 @@ pub async fn get_token_info(
         Some(JwtTokenType::Bearer),
         Duration::from_secs(0),
         &mut buf,
+        false,
     )
     .await
     .is_err()
@@ -118,6 +119,7 @@ async fn check_client_auth(
             Some(JwtTokenType::Bearer),
             Duration::from_secs(0),
             buf,
+            false,
         )
         .await?;
         let claims = serde_json::from_slice::<JwtAccessClaims>(buf)?;

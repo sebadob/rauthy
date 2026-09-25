@@ -61,6 +61,7 @@ pub async fn handle_token_revocation(
             Some(JwtTokenType::Refresh),
             Duration::from_secs(10),
             &mut buf,
+            true,
         )
         .await?;
     } else {
@@ -69,6 +70,7 @@ pub async fn handle_token_revocation(
             Some(JwtTokenType::Bearer),
             Duration::from_secs(10),
             buf.as_mut(),
+            false,
         )
         .await?;
     }
