@@ -506,27 +506,14 @@ dependencies = [
 
 [[package]]
 name = "argon2"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c3610892ee6e0cbce8ae2700349fcf8f98adb0dbfbee85aec3c9179d29cc072"
-dependencies = [
- "base64ct",
- "blake2 0.10.6",
- "cpufeatures 0.2.17",
- "password-hash 0.5.0",
- "zeroize",
-]
-
-[[package]]
-name = "argon2"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "134c52ddac6d63c576bef8168db10c83c49c26444ecbc68060fef078925a901c"
 dependencies = [
  "base64ct",
- "blake2 0.11.0",
+ "blake2",
  "cpufeatures 0.3.0",
- "password-hash 0.6.1",
+ "password-hash",
  "rayon",
  "zeroize",
 ]
@@ -1090,15 +1077,6 @@ dependencies = [
  "radium",
  "tap",
  "wyz",
-]
-
-[[package]]
-name = "blake2"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
-dependencies = [
- "digest 0.10.7",
 ]
 
 [[package]]
@@ -1761,7 +1739,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f00db5dfc3a345dc112d7031f8dabcf5d890121b7c539670de2699383faa30a"
 dependencies = [
  "aead-stream",
- "argon2 0.6.0",
+ "argon2",
  "async-stream",
  "async-trait",
  "base64 0.23.0",
@@ -2855,7 +2833,7 @@ name = "hiqlite"
 version = "0.15.0-20260920"
 source = "git+https://github.com/sebadob/hiqlite.git#9824bcfcf186a10c747bba5960678f8b1589e9f8"
 dependencies = [
- "argon2 0.6.0",
+ "argon2",
  "axum",
  "axum-extra",
  "axum-server",
@@ -4316,17 +4294,6 @@ dependencies = [
 
 [[package]]
 name = "password-hash"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "346f04948ba92c43e8469c1ee6736c7563d71012b17d40745260fe106aac2166"
-dependencies = [
- "base64ct",
- "rand_core 0.6.4",
- "subtle",
-]
-
-[[package]]
-name = "password-hash"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aab41826031698d6ffcd9cff78ef56ef998e39dc7e5067cdfebe373842d4723b"
@@ -5014,7 +4981,7 @@ version = "0.37.0-20260917"
 dependencies = [
  "actix-web",
  "actix-web-prom",
- "argon2 0.5.3",
+ "argon2",
  "chrono",
  "chrono-tz",
  "cidr",
@@ -5086,7 +5053,7 @@ version = "0.37.0-20260917"
 dependencies = [
  "actix-web",
  "ammonia",
- "argon2 0.5.3",
+ "argon2",
  "async-compression",
  "base64 0.23.0",
  "bincode",
@@ -5120,7 +5087,7 @@ dependencies = [
  "actix-web",
  "actix-web-lab",
  "arc-swap",
- "argon2 0.5.3",
+ "argon2",
  "askama",
  "async-trait",
  "atrium-api",
@@ -5213,7 +5180,7 @@ version = "0.37.0-20260917"
 dependencies = [
  "actix-multipart",
  "actix-web",
- "argon2 0.5.3",
+ "argon2",
  "chacha20poly1305 0.10.1",
  "chrono",
  "cryptr",
