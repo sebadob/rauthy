@@ -41,7 +41,7 @@ actix-web-lab = "0.27"
 actix-web-prom = "0.10"
 ammonia = "4.1"
 arc-swap = "1.7"
-argon2 = { version = "0.5", features = ["std", "zeroize"] }
+argon2 = { version = "0.6", features = ["parallel", "zeroize"] }
 askama = "0.16"
 async-trait = "0.1.74"
 async-compression = { version = "0.4.41", features = ["brotli", "gzip", "tokio"] }

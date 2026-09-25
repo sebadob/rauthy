@@ -1,5 +1,4 @@
 use actix_web::web;
-use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::sync::OnceLock;
@@ -119,10 +118,8 @@ fn hash_password(mut msg: HashPassword) {
         Version::V0x13,
         (*ARGON2_PARAMS.get().unwrap()).clone(),
     );
-    let salt = SaltString::generate(&mut OsRng);
-
     let hash = argon2
-        .hash_password(msg.plain_text.as_bytes(), &salt)
+        .hash_password(msg.plain_text.as_bytes())
         .expect("Error hashing the Password")
         .to_string();
 

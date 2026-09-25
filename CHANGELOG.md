@@ -372,6 +372,22 @@ possible.
 
 [#1715](https://github.com/sebadob/rauthy/pull/1715)
 
+#### Improved Password Hashing
+
+Rauthy is now using the latest release of `argon2`. That version finally brings the `parallel`
+feautre, which is activated now. This means that if you have multiple cores available for your
+hasing (set in combination with `hashing.max_hash_threads`), you will get a huge speed boost. The
+`p_cost` can now be fully utilized, as long as you have the cores available. This on its own does
+not bump the security, but it reduces the time taken for hashing, which on the other hand means you
+can bump the `m_cost` (if you have the memory) or the `t_cost` higher. This will keep the same UX
+during logins, but with increased password hash strength.
+
+> Just as a reference: on my test machine with `m_cost=131072` and `p_cost=8`, I needed a `t_cost`
+> of `24` to get to ~1 second of time taken for hashing. With the `parallel` feature enabled, I was
+> able to set `t_cost=138` for the same time, which is an improvement by 5.75x.
+
+[#1741](https://github.com/sebadob/rauthy/pull/1741)
+
 #### OTP
 
 Rauthy now supports One Time Passwords (OTP) via E-Mail. Since the security of them if a lot lower
