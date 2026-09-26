@@ -291,7 +291,9 @@
                 <br />
                 <br />
                 {t.passwordReset.success3}
-                <A href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}>Account</A>
+                <A href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}>
+                    Account
+                </A>
             </p>
         {:else if tplData}
             <div class="container">
