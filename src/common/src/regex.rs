@@ -68,6 +68,17 @@ pub static RE_STREET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-.\p{Zs}]{0,48}$").unwrap());
 pub static RE_URI: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
+// A URI with a non-empty host part: optional scheme, then a host (optionally with a port), and
+// only after that any `/`, `?` or `#` separator. Used for the client home URL (`client_uri`):
+// unlike `RE_URI`, degenerate values such as `https://`, `/` or `javascript:alert(1)` cannot be
+// stored, which would otherwise let arbitrary hosts pass the `redirect_uri` prefix validation
+// (open redirect).
+pub static RE_CLIENT_URI: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?#][a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]*)?$",
+    )
+    .unwrap()
+});
 // Like `RE_URI` but WITHOUT `#`, so a value cannot contain a fragment. Used for RFC 8707
 // `resource` indicators, which MUST be an absolute URI without a fragment (RFC 8707 §2).
 pub static RE_RESOURCE: LazyLock<Regex> =
@@ -83,7 +94,7 @@ pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
 // type handles like `@alice.bsky.social`) and stripped again before being passed to the atrium
 // crates, whose `Handle` parser only accepts the bare domain form.
 pub static RE_ATPROTO_HANDLE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|@?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
+    Regex::new(r"^(?:did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|@?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
 });
 
 #[cfg(test)]
@@ -114,6 +125,31 @@ mod tests {
         assert!(!RE_USER_NAME.is_match("\n"));
         assert!(!RE_USER_NAME.is_match("<script>"));
         assert!(!RE_USER_NAME.is_match("😉"));
+    }
+
+    #[test]
+    fn test_re_client_uri() {
+        assert!(RE_CLIENT_URI.is_match("https://app.example.com"));
+        assert!(RE_CLIENT_URI.is_match("https://app.example.com/"));
+        assert!(RE_CLIENT_URI.is_match("https://app.example.com/cb?x=1#f"));
+        assert!(RE_CLIENT_URI.is_match("HTTPS://APP.EXAMPLE.COM/x"));
+        assert!(RE_CLIENT_URI.is_match("app.example.com"));
+        assert!(RE_CLIENT_URI.is_match("localhost:8081/callback"));
+        assert!(RE_CLIENT_URI.is_match("127.0.0.1:8081"));
+        // Deep-link / custom-scheme URIs (e.g. Tauri desktop apps) must be accepted as client_uri.
+        assert!(RE_CLIENT_URI.is_match("tauri://my.app"));
+
+        // Degenerate values that would let arbitrary hosts pass the `redirect_uri` prefix
+        // validation (open redirect), or that could be executed as a URL scheme (XSS).
+        assert!(!RE_CLIENT_URI.is_match("https://"));
+        assert!(!RE_CLIENT_URI.is_match("http://"));
+        assert!(!RE_CLIENT_URI.is_match("/"));
+        assert!(!RE_CLIENT_URI.is_match("//"));
+        assert!(!RE_CLIENT_URI.is_match("?x=1"));
+        assert!(!RE_CLIENT_URI.is_match("#f"));
+        assert!(!RE_CLIENT_URI.is_match("javascript:alert(1)"));
+        assert!(!RE_CLIENT_URI.is_match("javascript:alert(1)/"));
+        assert!(!RE_CLIENT_URI.is_match("mailto:x@y"));
     }
 
     #[test]

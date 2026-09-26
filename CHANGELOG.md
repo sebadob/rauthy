@@ -474,10 +474,6 @@ RE_USER_NAME:   ^[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}$
 RE_CLIENT_NAME: ^[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}$
 ```
 
-[#1708](https://github.com/sebadob/rauthy/pull/1708)
-
-#### KV Store Validation
-
 The regex for KV store keys was made quite a bit more strict. This was necessary since the key is
 used as a path segment in API calls. This is only important when you used the KV store API manually.
 
@@ -487,7 +483,17 @@ The validation is now the following:
 r"^[a-zA-Z0-9-._~]{2,64}$"
 ```
 
+There is also a new one. A stricter version of `RE_URI`, that makes sure the given URI always has a
+host part. This is necessary for e.g. `redirect_uri`s in different places, and so on. Technically,
+it's a breaking change, but it should not be one if you provided proper URLs anyway.
+
+```
+RE_CLIENT_URI:  ^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?#][a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]*)?$
+```
+
+[#1708](https://github.com/sebadob/rauthy/pull/1708)
 [#1728](https://github.com/sebadob/rauthy/pull/1728)
+[#1743](https://github.com/sebadob/rauthy/pull/1743)
 
 #### Theme CSS uses explicit percent units
 
@@ -526,6 +532,15 @@ password_exp_days = 10
 ```
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
+
+#### Home / Back button on Account Dashboard
+
+You can now link to the account dashboard from your external application, and provide a
+`redirect_uri`. If it is a valid one that is registered for a client inside Rauthys DB, you will
+then see a Home / Back button in the top left corner. A user can click that to have a way back to
+your external app.
+
+[#1743](https://github.com/sebadob/rauthy/pull/1743)
 
 #### `resource` is carried through Auth Provider logins
 

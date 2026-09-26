@@ -1,8 +1,8 @@
 use crate::oidc::GrantType;
 use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
 use rauthy_common::regex::{
-    RE_ATTR, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GROUPS, RE_LINUX_HOSTNAME, RE_ORIGIN,
-    RE_RESOURCE, RE_ROLES_SCOPES, RE_URI,
+    RE_ATTR, RE_CLIENT_URI, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GROUPS, RE_LINUX_HOSTNAME,
+    RE_ORIGIN, RE_RESOURCE, RE_ROLES_SCOPES,
 };
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -97,8 +97,8 @@ pub fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
 #[inline]
 pub fn validate_vec_uri(value: &[String]) -> Result<(), ValidationError> {
     for v in value {
-        if !RE_URI.is_match(v) {
-            return Err(ValidationError::new("^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$"));
+        if !RE_CLIENT_URI.is_match(v) {
+            return Err(ValidationError::new("valid URI with a non-empty host part"));
         }
     }
     Ok(())
