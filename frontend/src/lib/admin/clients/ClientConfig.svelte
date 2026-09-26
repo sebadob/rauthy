@@ -9,6 +9,7 @@
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import {
         PATTERN_CLIENT_NAME,
+        PATTERN_CLIENT_URI,
         PATTERN_CONTACT,
         PATTERN_GROUP,
         PATTERN_ORIGIN,
@@ -322,7 +323,7 @@
             label="URI"
             placeholder="URI"
             width={inputWidth}
-            pattern={PATTERN_URI}
+            pattern={PATTERN_CLIENT_URI}
         />
         <InputTags bind:values={contacts} label={ta.common.contact} pattern={PATTERN_CONTACT} />
 
@@ -407,13 +408,13 @@
             label="Redirect URIs"
             errMsg={ta.validation.uri}
             required={flows.authorizationCode}
-            pattern={PATTERN_URI}
+            pattern={PATTERN_CLIENT_URI}
         />
         <InputTags
             bind:values={postLogoutRedirectURIs}
             label="Post Logout Redirect URIs"
             errMsg={ta.validation.uri}
-            pattern={PATTERN_URI}
+            pattern={PATTERN_CLIENT_URI}
         />
 
         <div style:height=".5rem"></div>
@@ -572,7 +573,7 @@
                     label="SCIM Base URI"
                     placeholder="SCIM Base URI"
                     width={inputWidth}
-                    pattern={PATTERN_URI}
+                    pattern={PATTERN_CLIENT_URI}
                     required={scimEnabled}
                 />
                 <InputPassword

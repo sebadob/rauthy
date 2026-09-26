@@ -150,6 +150,7 @@ pub async fn trigger() {
     }
     let _ = *RE_CLIENT_ID_STRICT;
     let _ = *RE_CLIENT_NAME;
+    let _ = *RE_CLIENT_URI;
     let _ = *RE_CODE_CHALLENGE;
     let _ = *RE_CODE_VERIFIER;
     let _ = *RE_CONTACT;
@@ -169,11 +170,6 @@ pub async fn trigger() {
     let _ = *RE_USER_NAME;
     let _ = *RE_TOKEN_68;
     let _ = *RE_TOKEN_ENDPOINT_AUTH_METHOD;
-
-    // lazy values in other places
-    // let _ = *BROTLI_PARAMS;
-    // let _ = *BROTLI_PARAMS_9;
-    // let _ = *BROTLI_PARAMS_DYN;
 
     let _ = *I18N_CONFIG;
 

@@ -18,16 +18,16 @@ export interface NewClientRequest {
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;
     confidential: boolean;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     redirect_uris: string[];
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     post_logout_redirect_uris?: string[];
 }
 
 export interface ScimClientRequestResponse {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     bearer_token: string;
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    /// Validation: Valid URI with a non-empty host part
     base_uri: string;
     sync_groups: boolean;
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
@@ -38,9 +38,9 @@ export interface UpdateClientRequest {
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;
     confidential: boolean;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     redirect_uris: string[];
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     post_logout_redirect_uris?: string[];
     /// Validation: PATTERN_ORIGIN
     allowed_origins?: string[];
@@ -59,7 +59,7 @@ export interface UpdateClientRequest {
     /// Validation: `Vec<^(plain|S256)$>`
     challenges?: CodeChallengeMethod[];
     force_mfa: boolean;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     client_uri?: string;
     /// Validation: PATTERN_CONTACT
     contacts?: string[];

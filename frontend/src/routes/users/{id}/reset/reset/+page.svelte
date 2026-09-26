@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { generatePassword } from '$utils/helpers';
+    import { generatePassword, normalizeClientUri } from '$utils/helpers';
     import Button from '$lib5/button/Button.svelte';
     import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
     import Input from '$lib5/form/Input.svelte';
@@ -71,7 +71,7 @@
         if (success) {
             setTimeout(() => {
                 if (redirectUri) {
-                    window.location.replace(redirectUri || '/auth/v1/account');
+                    window.location.replace(normalizeClientUri(redirectUri));
                 } else {
                     navigateToAccount();
                 }
@@ -291,7 +291,7 @@
                 <br />
                 <br />
                 {t.passwordReset.success3}
-                <A href={redirectUri || '/auth/v1/account'}>Account</A>
+                <A href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}>Account</A>
             </p>
         {:else if tplData}
             <div class="container">

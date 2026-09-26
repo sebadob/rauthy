@@ -36,6 +36,21 @@ export function isDefaultScope(name: string) {
     );
 }
 
+/**
+ * Normalizes a client home URI (a validated `client_uri` / `redirect_uri`) for navigation.
+ * Values that already start with an `http(s)://` scheme or with `/` are returned unchanged:
+ * the latter still resolves against the IdP origin, so they cannot escape it. Any other value
+ * gets an `https://` prefix, so values like `javascript:alert(1)` can never be executed when
+ * used as a link target.
+ */
+export function normalizeClientUri(uri: string): string {
+    const lower = uri.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://') || uri.startsWith('/')) {
+        return uri;
+    }
+    return `https://${uri}`;
+}
+
 export const redirectToLogin = (state?: string) => {
     generatePKCE().then(pkce => {
         if (pkce) {

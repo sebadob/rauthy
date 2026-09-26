@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { redirectToLogout } from '$utils/helpers';
+    import { normalizeClientUri, redirectToLogout } from '$utils/helpers';
     import AccInfo from '$lib5/account/AccInfo.svelte';
     import AccEdit from '$lib5/account/AccEdit.svelte';
     import AccMFA from './AccMFA.svelte';
@@ -26,8 +26,10 @@
     import AccOther from '$lib/account/AccOther.svelte';
     import AccPAM from '$lib/account/AccPAM.svelte';
     import type { PamUserResponse } from '$api/types/pam';
-    import { fetchGet } from '$api/fetch';
+    import { fetchGet, fetchPost } from '$api/fetch';
     import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    import IconHome from '$icons/IconHome.svelte';
+    import IconArrowLeft from '$icons/IconArrowLeft.svelte';
 
     let {
         user = $bindable(),
@@ -58,6 +60,9 @@
     let showAdminLink = $derived(session.isAnyAdmin());
 
     let pamUser: undefined | PamUserResponse = $state();
+
+    let redirectUri = useParam('redirect_uri');
+    let redirectUriValidated = $state('');
 
     let selected = $state(t.account.navInfo);
     let tabsWide = $derived.by(() => {
@@ -118,6 +123,24 @@
         }
     });
 
+    $effect(() => {
+        let uri = redirectUri.get();
+        if (uri) {
+            fetchRedirectClientInfo(uri);
+        }
+    });
+
+    async function fetchRedirectClientInfo(redirectUri: string) {
+        let res = await fetchPost('/auth/v1/clients/validate_uri', {
+            redirect_uri: redirectUri,
+        });
+        if (res.status === 200) {
+            redirectUriValidated = normalizeClientUri(redirectUri);
+        } else {
+            console.error('Invalid `redirect_uri`', redirectUri);
+        }
+    }
+
     async function fetchPamUser() {
         let res = await fetchGet<PamUserResponse>('/auth/v1/pam/users/self');
         if (res.body) {
@@ -148,6 +171,19 @@
     {/if}
 {/snippet}
 
+{#snippet redirectBtn(position: 'absolute' | 'relative')}
+    {#if redirectUriValidated}
+        <div class="redirectHome" data-absolute={position === 'absolute'}>
+            <Button onclick={() => (window.location.href = redirectUriValidated)} invisible>
+                <div class="flex gap-05">
+                    <IconArrowLeft />
+                    <IconHome />
+                </div>
+            </Button>
+        </div>
+    {/if}
+{/snippet}
+
 <!-- theme, language, the switch-to-Admin-UI link and the logout sit together in one
      row, matching the order and position of the same controls in the Admin UI nav so an
      admin switching back and forth does not see them jump around -->
@@ -166,6 +202,7 @@
 <div class="wrapper">
     {#if viewModePhone}
         <div class="headerPhone">
+            {@render redirectBtn('relative')}
             {@render header()}
         </div>
 
@@ -208,6 +245,8 @@
             {@render bottomControls()}
         </div>
     {:else}
+        {@render redirectBtn('absolute')}
+
         <div class="wide">
             {#if !viewModeWideCompact}
                 <div class="info">
@@ -258,6 +297,9 @@
 
     .headerPhone {
         margin-left: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
 
     .info {
@@ -312,6 +354,17 @@
     .adminLink {
         font-size: 0.9rem;
         color: hsla(var(--text) / 0.8);
+    }
+
+    .redirectHome[data-absolute='true'] {
+        position: absolute;
+        top: 0.55rem;
+        left: 0.5rem;
+    }
+
+    .redirectHome[data-absolute='false'] {
+        position: relative;
+        top: 0.15rem;
     }
 
     .wide {
