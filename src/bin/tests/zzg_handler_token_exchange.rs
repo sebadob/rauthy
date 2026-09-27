@@ -180,8 +180,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let claims = decode_claims(&ts.access_token);
     let subject_claims = decode_claims(&subject_token);
     assert_eq!(claims["sub"], subject_claims["sub"]);
-    // without a requested `scope`, the exchanged token inherits the subject's scope,
-    // and the token response must return exactly the scope claim
+    // no requested `scope`: the exchanged token inherits the subject's scope
     assert_eq!(ts.scope.as_deref(), subject_claims["scope"].as_str());
     assert_eq!(ts.scope.as_deref(), claims["scope"].as_str());
     assert!(

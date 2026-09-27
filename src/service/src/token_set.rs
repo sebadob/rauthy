@@ -122,9 +122,7 @@ pub struct TokenSet {
     pub expires_in: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
-    /// The granted scopes, space-separated. Always identical to the `scope` claim of the
-    /// `access_token`. RFC 6749 Section 5.1 requires this to be returned whenever the granted
-    /// scope differs from the requested one, which is routinely the case after sanitizing.
+    /// Granted scope, RFC 6749 §5.1; always equals the access token's `scope` claim.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
 }
@@ -589,8 +587,7 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
-        // `build_access_token` falls back to the client's default scopes when none are given,
-        // so this is exactly what the `scope` claim of the token contains.
+        // same fallback as `build_access_token`, so this matches the `scope` claim
         let scope = client.default_scopes.replace(',', " ");
         let (_jti, access_token) = Self::build_access_token(
             None,

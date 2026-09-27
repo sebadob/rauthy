@@ -467,10 +467,8 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
     assert_eq!(ts.expires_in, 60);
-    // RFC 6749 Section 5.1: the granted scope is returned in the token response
     let scope = ts.scope.as_deref().expect("scope in token response");
     assert!(scope.split_whitespace().any(|s| s == "openid"));
-    // the returned scope must be exactly the `scope` claim of the access token
     let access_claims = decode_claims(&ts.access_token);
     assert_eq!(ts.scope.as_deref(), access_claims["scope"].as_str());
 
@@ -700,8 +698,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_none());
     assert!(ts.refresh_token.is_none());
 
-    // client_credentials always grants the client's `default_scopes`, and the token
-    // response must return exactly what ended up in the access token's `scope` claim
+    // client_credentials always grants the client's `default_scopes`
     assert!(ts.scope.is_some());
     let res = client
         .get(format!("{}/clients/{}", backend_url, CLIENT_ID))
@@ -887,7 +884,6 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert!(new_ts.refresh_token.is_some());
     assert!(!new_ts.refresh_token.as_ref().unwrap().is_empty());
     assert_eq!(new_ts.expires_in, 60);
-    // the refreshed token response must return the scope claim of the refreshed access token
     let new_claims = decode_claims(&new_ts.access_token);
     assert!(new_ts.scope.is_some());
     assert_eq!(new_ts.scope.as_deref(), new_claims["scope"].as_str());
