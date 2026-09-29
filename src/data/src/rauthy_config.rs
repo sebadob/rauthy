@@ -544,19 +544,26 @@ impl Default for Vars {
             },
             i18n: VarsI18n {
                 filter_lang_common: vec![
-                    "en".into(),
                     "de".into(),
+                    "en".into(),
+                    "fr".into(),
                     "ko".into(),
                     "nb".into(),
+                    "nl".into(),
+                    "ru".into(),
                     "uk".into(),
                     "zhhans".into(),
                 ],
                 filter_lang_admin: vec![
-                    "en".into(),
                     "de".into(),
+                    "en".into(),
+                    "fr".into(),
                     "ko".into(),
                     "nb".into(),
+                    "nl".into(),
+                    "ru".into(),
                     "uk".into(),
+                    "zhhans".into(),
                 ],
             },
             lifetimes: VarsLifetimes {
