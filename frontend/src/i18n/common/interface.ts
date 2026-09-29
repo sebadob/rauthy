@@ -130,6 +130,7 @@ export interface I18n {
         userExpiry: string;
         userVerifiedTooltip: string;
         residentKeyTooltip: string;
+        aaguidTooltip: string;
         webIdDesc: string;
         webIdDescData: string;
         webIdExpertMode: string;

@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
+use crate::entity::webauthn::aaguid::extract_aaguid;
 use crate::entity::webauthn::ceremony::{RegistrationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::rauthy_config::RauthyConfig;
@@ -156,6 +157,11 @@ pub async fn reg_finish(
                 }
             };
 
+            // webauthn-rs does not expose the AAGUID for all attestation formats, so we
+            // extract it from the raw attestation object ourselves. It is `None` if the
+            // authenticator did not provide one (e.g. most security keys).
+            let aaguid = extract_aaguid(&payload.data.response.attestation_object);
+
             PasskeyEntity::create(
                 user_id.clone(),
                 create_user,
@@ -164,6 +170,7 @@ pub async fn reg_finish(
                 pk,
                 cred.user_verified,
                 is_rk,
+                aaguid.map(|a| a.to_vec()),
             )
             .await?;
 

@@ -165,6 +165,7 @@ export const I18nDe: I18n = {
         userVerifiedTooltip: 'Abgesichert durch Fingerabdruck oder PIN',
         residentKeyTooltip: `Dies ist ein Resident Key. Er kann für direkten Login ohne Eingabe der E-Mail verwendet 
             werden.`,
+        aaguidTooltip: 'Zertifizierter Passkey - kann validiert werden.',
         webIdDesc: `Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\n
             werden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt 
             wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie 

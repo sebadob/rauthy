@@ -162,6 +162,7 @@ export const I18nRu: I18n = {
         userVerifiedTooltip: 'Защищено отпечатком пальца или ПИН-кодом',
         residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
             providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey - can be validated',
         webIdDesc: `Вы можете настроить поля, которые будут доступны через ваш WebID.\nЭто
             функция, используемая некоторыми сетями для децентрализованного входа. Если вы не знаете, что это,
             \nвам, скорее всего, это не нужно.`,

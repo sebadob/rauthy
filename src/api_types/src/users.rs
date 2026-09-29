@@ -535,6 +535,10 @@ pub struct PasskeyResponse {
     pub user_verified: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resident_key: Option<bool>,
+    /// The AAGUID of the authenticator, if it was present in the attestation data.
+    /// Formatted as a UUID-style string (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aaguid: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]

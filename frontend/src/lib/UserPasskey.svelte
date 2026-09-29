@@ -6,6 +6,7 @@
     import Button from '$lib5/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import IconKey from '$icons/IconKey.svelte';
+    import IconCheckBadge from '$icons/IconCheckBadge.svelte';
 
     let {
         passkey,
@@ -39,6 +40,13 @@
                 <Tooltip text={t.account.residentKeyTooltip}>
                     <div style:margin-bottom="-.25rem">
                         <IconKey width="1rem" color="hsl(var(--accent))" />
+                    </div>
+                </Tooltip>
+            {/if}
+            {#if passkey.aaguid}
+                <Tooltip text={t.account.aaguidTooltip}>
+                    <div style:margin-bottom="-.25rem">
+                        <IconCheckBadge width="1rem" color="hsl(var(--accent))" />
                     </div>
                 </Tooltip>
             {/if}

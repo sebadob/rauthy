@@ -161,6 +161,7 @@ export const I18nEn: I18n = {
         userVerifiedTooltip: 'Secured with fingerprint or PIN',
         residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
             providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey - can be validated',
         webIdDesc: `You can configure the fields that should be exposed with your WebID.\nThis is a 
             feature used by some networks for decentralized logins. If you do not know what it is,
             \nyou most probably do not need it.`,

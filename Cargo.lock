@@ -5045,6 +5045,7 @@ dependencies = [
  "s3-simple",
  "semver",
  "serde",
+ "serde_cbor_2",
  "serde_json",
  "serde_json_path",
  "serde_rusqlite",

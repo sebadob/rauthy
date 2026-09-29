@@ -124,6 +124,7 @@ rustls-pki-types = "1.4.1"
 s3-simple = "0.9.1"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
+serde_cbor_2 = "0.13"
 serde_json = "1"
 serde_json_path = "0.7.1"
 serde_rusqlite = "0.43"

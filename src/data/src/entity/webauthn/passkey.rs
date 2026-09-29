@@ -25,15 +25,17 @@ pub struct PasskeyEntity {
     pub last_used: i64,
     pub user_verified: Option<bool>,
     pub resident_key: Option<bool>,
+    pub aaguid: Option<Vec<u8>>,
 }
 
 impl Debug for PasskeyEntity {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let aaguid = self.aaguid.as_deref().map(hex::encode).unwrap_or_default();
         write!(
             f,
             "PasskeyEntity {{ user_id: {}, name: {}, passkey_user_id: {}, passkey: <hidden>, \
         credential_id: <hidden>, registered: {}, last_used: {}, user_verified: {:?}, \
-        resident_key: {:?} }}",
+        resident_key: {:?}, aaguid: {} }}",
             self.user_id,
             self.name,
             self.passkey_user_id,
@@ -41,6 +43,7 @@ impl Debug for PasskeyEntity {
             self.last_used,
             self.user_verified,
             self.resident_key,
+            aaguid,
         )
     }
 }
@@ -48,6 +51,7 @@ impl Debug for PasskeyEntity {
 // CRUD
 impl PasskeyEntity {
     /// If the `User` is `Some(_)`, a `User::save()` will be included in the `txn`
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         user_id: String,
         user: Option<User>,
@@ -56,6 +60,7 @@ impl PasskeyEntity {
         pk: Passkey,
         user_verified: bool,
         resident_key: Option<bool>,
+        aaguid: Option<Vec<u8>>,
     ) -> Result<(), ErrorResponse> {
         // json, because bincode does not support deserialize from any, which would be the case here
         let passkey = serde_json::to_string(&pk)?;
@@ -71,6 +76,7 @@ impl PasskeyEntity {
             last_used: now,
             user_verified: Some(user_verified),
             resident_key,
+            aaguid,
         };
 
         let user_email = user.as_ref().map(|u| u.email.clone());
@@ -79,9 +85,9 @@ impl PasskeyEntity {
         let sql = r#"
 INSERT INTO passkeys (
     user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified,
-    resident_key
+    resident_key, aaguid
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
@@ -102,7 +108,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                     now,
                     now,
                     entity.user_verified,
-                    entity.resident_key
+                    entity.resident_key,
+                    entity.aaguid
                 ),
             ));
 
@@ -128,6 +135,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                     &now,
                     &entity.user_verified,
                     &entity.resident_key,
+                    &entity.aaguid,
                 ],
             )
             .await?;
@@ -463,9 +471,28 @@ impl PasskeyEntity {
     }
 }
 
+/// Formats a 16-byte AAGUID as a canonical lowercase UUID-style string
+/// (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`). Any other length is returned as plain hex.
+fn format_aaguid(aaguid: &[u8]) -> String {
+    let hex = hex::encode(aaguid);
+    if hex.len() == 32 {
+        format!(
+            "{}-{}-{}-{}-{}",
+            &hex[0..8],
+            &hex[8..12],
+            &hex[12..16],
+            &hex[16..20],
+            &hex[20..]
+        )
+    } else {
+        hex
+    }
+}
+
 impl From<PasskeyEntity> for PasskeyResponse {
     fn from(value: PasskeyEntity) -> Self {
         Self {
+            aaguid: value.aaguid.as_deref().map(format_aaguid),
             name: value.name,
             registered: value.registered,
             last_used: value.last_used,

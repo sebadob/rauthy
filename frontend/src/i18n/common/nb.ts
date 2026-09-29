@@ -160,6 +160,7 @@ export const I18nNb: I18n = {
         userVerifiedTooltip: 'Sikret med fingeravtrykk eller PIN',
         residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
             providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey - can be validated',
         webIdDesc: `Her kan du angi feltene som skal publiseres via din WebID. Dette er en 
             funksjon som brukes av enkelte nettverk for desentraliserte pålogginger. Hvis du ikke 
             vet hva WebID er, trenger du sannsynligvis ikke å bruke det.`,

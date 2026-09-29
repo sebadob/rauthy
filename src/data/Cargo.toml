@@ -67,6 +67,7 @@ rsa = { workspace = true }
 s3-simple = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
+serde_cbor_2 = { workspace = true }
 serde_json = { workspace = true }
 serde_json_path = { workspace = true }
 serde_rusqlite = { workspace = true }

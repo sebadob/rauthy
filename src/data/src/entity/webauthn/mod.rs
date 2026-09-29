@@ -1,3 +1,4 @@
+pub mod aaguid;
 pub mod auth_data;
 pub mod auth_req;
 pub mod authenticate;
