@@ -115,7 +115,6 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
-    let len_orig = clients.len();
     let client = clients.iter().find(|c| c.id == "rauthy").unwrap();
     println!("{:?}", client);
     assert_eq!(client.id, "rauthy");
@@ -295,7 +294,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
-    assert_eq!(clients.len(), len_orig);
+    assert!(!clients.iter().any(|c| c.id == client.id));
 
     Ok(())
 }

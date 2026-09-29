@@ -243,7 +243,7 @@ pub fn serialize<T>(value: &T) -> Result<Vec<u8>, ErrorResponse>
 where
     T: Debug + serde::Serialize,
 {
-    bincode::serde::encode_to_vec(value, bincode::config::legacy()).map_err(|err| {
+    bincode_next::serde::encode_to_vec(value, bincode_next::config::legacy()).map_err(|err| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Cannot serialize value: {err:?}"),
@@ -256,8 +256,8 @@ pub fn deserialize<T>(value: &[u8]) -> Result<T, ErrorResponse>
 where
     T: Debug + serde::de::DeserializeOwned,
 {
-    let (bytes, _) =
-        bincode::serde::decode_from_slice(value, bincode::config::legacy()).map_err(|err| {
+    let (bytes, _) = bincode_next::serde::decode_from_slice(value, bincode_next::config::legacy())
+        .map_err(|err| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
                 format!("Cannot deserialize value: {err:?}"),

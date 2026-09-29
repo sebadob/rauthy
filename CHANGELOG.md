@@ -14,10 +14,10 @@ If you run a single instance, you can ignore this block. However, if you run a H
 data, or even a crashing application.
 
 The reason for this is a major internal rework of Hiqlite with lots of optimizations and
-improvements. This may be annoying right now, but makes everything a lot more maintanable
+improvements. This may be annoying right now, but makes everything a lot more maintainable,
 future-proof, and more robust. We also gained a bit more efficiency and speed for the Raft network.
 
-You cache data will be cleaned up on restart, when you start this new version for the first time.
+Your cache data will be cleaned up on restart, when you start this new version for the first time.
 Rauthy does as much as possible automatically. You only **MUST GUARANTEE** that you do a full
 cluster shutdown with the old version, before you then start this new one!
 
