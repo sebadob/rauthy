@@ -9,6 +9,8 @@ Updating the client beforehand makes that switch possible without an interruptio
 The internal structure for fetching and validating Tokens has been reworked. This is now much more
 efficient and requires fewer memory allocations.
 
+MSRV has been bumped to v1.90.
+
 ## v0.14.2
 
 This release only exists to (hopefully) resolve docs.rs builds.

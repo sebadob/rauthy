@@ -92,13 +92,16 @@ impl AuthCode {
             ));
         };
 
-        match bincode::serde::decode_from_slice::<Self, _>(&bytes, bincode::config::legacy()) {
+        match bincode_next::serde::decode_from_slice::<Self, _>(
+            &bytes,
+            bincode_next::config::legacy(),
+        ) {
             Ok((slf, _)) => Ok(Some(slf)),
             Err(_) => {
                 // This might be an old auth code during a migration.
-                let Ok((code_old, _)) = bincode::serde::decode_from_slice::<AuthCodeOld, _>(
+                let Ok((code_old, _)) = bincode_next::serde::decode_from_slice::<AuthCodeOld, _>(
                     &bytes,
-                    bincode::config::legacy(),
+                    bincode_next::config::legacy(),
                 ) else {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::NotFound,
