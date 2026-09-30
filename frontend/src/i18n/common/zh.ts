@@ -110,6 +110,7 @@ export const I18nZh: I18n = {
             validFor: '密码有效期 {{ secs }} 秒',
         },
         passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
             rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
@@ -150,7 +151,7 @@ export const I18nZh: I18n = {
         userVerifiedTooltip: '指纹或PIN保护',
         residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
             providing an E-Mail.`,
-        aaguidTooltip: 'Certified Passkey - can be validated',
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `您可以选择哪些字段能够通过WebID发布。\n
             WebID被一些网络用于去中心化登陆。如果您不知道这是什么，您通常不需要选择。`,
         webIdDescData: '您可以以FOAF词汇格式向您的 WebID 添加自定义数据字段',

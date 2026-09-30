@@ -93,6 +93,7 @@ export interface I18n {
             validFor: string;
         };
         passkeys: {
+            missingAttestation: string;
             type: string;
             // [Default, Resident Key]
             types: string[];

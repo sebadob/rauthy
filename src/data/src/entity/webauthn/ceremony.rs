@@ -1,9 +1,9 @@
 use crate::entity::users::AccountType;
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::{
-    AttestationCaList, AttestedPasskeyRegistration, AuthenticationResult, AuthenticatorAttachment,
-    Credential, CredentialID, Passkey, PasskeyAuthentication, PasskeyRegistration, SecurityKey,
-    SecurityKeyAuthentication, SecurityKeyRegistration, Uuid, Webauthn, WebauthnResult,
+    AttestationCaList, AttestedPasskeyRegistration, AuthenticationResult, Credential, CredentialID,
+    Passkey, PasskeyAuthentication, PasskeyRegistration, SecurityKey, SecurityKeyAuthentication,
+    SecurityKeyRegistration, Uuid, Webauthn, WebauthnResult,
 };
 use webauthn_rs_proto::{
     CreationChallengeResponse, PublicKeyCredential, RegisterPublicKeyCredential,
@@ -19,11 +19,12 @@ pub(super) fn requires_uv(account_type: AccountType, force_uv: bool) -> bool {
 }
 
 // Keep the ceremony type in the server-side cache so finish uses the policy chosen at start.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(super) enum RegistrationState {
     Passkey(PasskeyRegistration),
     SecurityKey(SecurityKeyRegistration),
     AttestedPasskey(AttestedPasskeyRegistration),
+    AttestedSecurityKey(SecurityKeyRegistration),
 }
 
 impl RegistrationState {
@@ -47,7 +48,9 @@ impl RegistrationState {
                     email,
                     exclude_credentials,
                     ca_list,
-                    Some(AuthenticatorAttachment::Platform),
+                    // None provides the most amount of compat. We should probably depend on
+                    // `force_passkey_attachment` though.
+                    None,
                 )?;
                 (ccr, Self::AttestedPasskey(state))
             }
@@ -61,6 +64,8 @@ impl RegistrationState {
                 (ccr, Self::Passkey(state))
             }
             (false, ca_list) => {
+                let with_attestation = ca_list.is_some();
+
                 // Without UV, the security key API is used with or without a CA list. A non-empty
                 // list switches it to Direct conveyance and verifies the chain at finish time.
                 let (mut ccr, state) = webauthn.start_securitykey_registration(
@@ -69,6 +74,8 @@ impl RegistrationState {
                     email,
                     exclude_credentials,
                     ca_list,
+                    // None provides the most amount of compat. We should probably depend on
+                    // `force_passkey_attachment` though.
                     None,
                 )?;
                 // webauthn-rs 0.5.5 requests UV-required credProtect even with UV preferred.
@@ -80,7 +87,12 @@ impl RegistrationState {
                 }
                 // Allow platform and hybrid authenticators as well as hardware security keys.
                 ccr.public_key.hints = None;
-                (ccr, Self::SecurityKey(state))
+
+                if with_attestation {
+                    (ccr, Self::AttestedSecurityKey(state))
+                } else {
+                    (ccr, Self::SecurityKey(state))
+                }
             }
         };
 
@@ -103,12 +115,11 @@ impl RegistrationState {
     ) -> WebauthnResult<Passkey> {
         match self {
             Self::Passkey(state) => webauthn.finish_passkey_registration(credential, state),
-            Self::SecurityKey(state) => webauthn
+            Self::SecurityKey(state) | Self::AttestedSecurityKey(state) => webauthn
                 .finish_securitykey_registration(credential, state)
                 .map(|key| Passkey::from(Credential::from(key))),
             Self::AttestedPasskey(state) => webauthn
                 .finish_attested_passkey_registration(credential, state)
-                // TODO What is the key sent a duplicate credID? The RP SHOULD fail in that case.
                 .map(Passkey::from),
         }
     }

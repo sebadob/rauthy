@@ -13,17 +13,18 @@ use crate::fido_mds::masks::{
     AttachmentHintMask, AttestationTypeMask, KeyProtectionMask, MdsCertLevel,
 };
 use crate::fido_mds::mds_entry::MdsEntry;
-use crate::fido_mds::{MdsAuthenticator, MdsCert, raw};
+use crate::fido_mds::{MdsAuthenticator, MdsCert, build_ca_list, raw};
 use crate::rauthy_config::RauthyConfig;
 use hiqlite::macros::FromRow;
 use hiqlite::{Params, params};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, serialize};
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::str::FromStr;
 use tracing::{info, warn};
-use webauthn_rs::prelude::Uuid;
+use webauthn_rs::prelude::{AttestationCaList, AttestationCaListBuilder, Uuid};
 
 /// The dataset shipped with the image, produced by the `fido-mds-prep` tool.
 static MDS_DATASET: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/fido_mds_dataset.bin"));

@@ -1,4 +1,3 @@
-use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::fido_mds::masks::{AttachmentHintMask, KeyProtectionMask, MdsCertLevel};
 use crate::fido_mds::mds_entry::MdsEntrySimple;
 use crate::rauthy_config::RauthyConfig;
@@ -11,6 +10,7 @@ pub mod auth_req;
 pub mod authenticate;
 pub mod authenticate_rk;
 mod ceremony;
+mod mds_authenticator;
 pub mod passkey;
 pub mod register;
 pub mod rk_token;
@@ -24,7 +24,11 @@ fn force_attestation() -> bool {
         || config.force_passkey_attachment.is_some()
 }
 
-async fn verify_attestation(pk_entity: &PasskeyEntity) -> Result<(), ErrorResponse> {
+async fn verify_attestation(
+    aaguid: Option<&[u8]>,
+    user_id: &str,
+    pk_name: &str,
+) -> Result<(), ErrorResponse> {
     if !force_attestation() {
         return Ok(());
     }
@@ -32,10 +36,9 @@ async fn verify_attestation(pk_entity: &PasskeyEntity) -> Result<(), ErrorRespon
     // We handle the AAGUID in a way that whenever this exists, the device was verified during
     // registration. There can never be a situation where an entity has the AAGUID set without
     // being attested.
-    let Some(aaguid) = &pk_entity.aaguid else {
+    let Some(aaguid) = &aaguid else {
         debug!(
-            "FIDO attestation enforced but passkey has not been verified: {} / {}",
-            pk_entity.user_id, pk_entity.name
+            "FIDO attestation enforced but passkey has not been verified: {user_id} / {pk_name}",
         );
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
@@ -46,7 +49,7 @@ async fn verify_attestation(pk_entity: &PasskeyEntity) -> Result<(), ErrorRespon
     let config = &RauthyConfig::get().vars.webauthn;
 
     verify_mds_attestation(
-        mds,
+        &mds,
         &config.force_passkey_cert_level,
         &config.force_passkey_protection,
         &config.force_passkey_attachment,
@@ -54,12 +57,16 @@ async fn verify_attestation(pk_entity: &PasskeyEntity) -> Result<(), ErrorRespon
 }
 
 fn verify_mds_attestation(
-    mds: MdsEntrySimple,
+    mds: &MdsEntrySimple,
     force_passkey_cert_level: &Option<MdsCertLevel>,
     force_passkey_protection: &Option<KeyProtectionMask>,
     force_passkey_attachment: &Option<AttachmentHintMask>,
 ) -> Result<(), ErrorResponse> {
     debug!("Validating FIDO attestation for {mds}");
+
+    // Note: It's important that we return 406 instead of 403 here. The UI matches on 406 to show
+    // proper i18n for the issue. Also, do NOT update the error messages without also updating the
+    // ui. It does string matching after the 406 to select the correct message to show.
 
     if let Some(level) = force_passkey_cert_level
         && &mds.cert_level < level
@@ -69,7 +76,7 @@ fn verify_mds_attestation(
             level, mds.cert_level
         );
         return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
+            ErrorResponseType::NotAccepted,
             "FIDO Authenticator certification level too low",
         ));
     }
@@ -83,7 +90,7 @@ fn verify_mds_attestation(
             allowed, mds.key_protection
         );
         return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
+            ErrorResponseType::NotAccepted,
             "FIDO Authenticator key protection not allowed",
         ));
     }
@@ -96,7 +103,7 @@ fn verify_mds_attestation(
             allowed, mds.attachment_hint
         );
         return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
+            ErrorResponseType::NotAccepted,
             "FIDO Authenticator attachment hint not allowed",
         ));
     }
@@ -144,7 +151,7 @@ mod tests {
 
     fn assert_forbidden(res: Result<(), ErrorResponse>, message: &str) {
         let err = res.unwrap_err();
-        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert_eq!(err.error, ErrorResponseType::NotAccepted);
         assert_eq!(err.message, message);
     }
 
@@ -156,7 +163,7 @@ mod tests {
             att_mask(&[AttachmentHint::Internal]),
             MdsCertLevel::NotCertified,
         );
-        assert_eq!(verify_mds_attestation(mds, &None, &None, &None), Ok(()));
+        assert_eq!(verify_mds_attestation(&mds, &None, &None, &None), Ok(()));
     }
 
     #[test]
@@ -167,7 +174,7 @@ mod tests {
             MdsCertLevel::L1Plus,
         );
         assert_forbidden(
-            verify_mds_attestation(mds, &Some(MdsCertLevel::L2), &None, &None),
+            verify_mds_attestation(&mds, &Some(MdsCertLevel::L2), &None, &None),
             "FIDO Authenticator certification level too low",
         );
     }
@@ -181,7 +188,7 @@ mod tests {
                 level,
             );
             assert_eq!(
-                verify_mds_attestation(mds, &Some(MdsCertLevel::L2), &None, &None),
+                verify_mds_attestation(&mds, &Some(MdsCertLevel::L2), &None, &None),
                 Ok(())
             );
         }
@@ -201,7 +208,7 @@ mod tests {
             KeyProtection::SecureElement,
         ]);
         assert_eq!(
-            verify_mds_attestation(mds, &None, &Some(allowed), &None),
+            verify_mds_attestation(&mds, &None, &Some(allowed), &None),
             Ok(())
         );
     }
@@ -220,7 +227,7 @@ mod tests {
             KeyProtection::SecureElement,
         ]);
         assert_forbidden(
-            verify_mds_attestation(mds, &None, &Some(allowed), &None),
+            verify_mds_attestation(&mds, &None, &Some(allowed), &None),
             "FIDO Authenticator key protection not allowed",
         );
     }
@@ -235,7 +242,7 @@ mod tests {
         );
         assert_eq!(
             verify_mds_attestation(
-                mds,
+                &mds,
                 &None,
                 &Some(prot_mask(&[KeyProtection::Hardware])),
                 &None
@@ -255,7 +262,7 @@ mod tests {
         );
         assert_forbidden(
             verify_mds_attestation(
-                mds,
+                &mds,
                 &None,
                 &Some(prot_mask(&[KeyProtection::Hardware])),
                 &None,
@@ -273,7 +280,7 @@ mod tests {
         );
         let allowed = att_mask(&[AttachmentHint::External, AttachmentHint::Wired]);
         assert_eq!(
-            verify_mds_attestation(mds, &None, &None, &Some(allowed)),
+            verify_mds_attestation(&mds, &None, &None, &Some(allowed)),
             Ok(())
         );
     }
@@ -287,7 +294,7 @@ mod tests {
         );
         let allowed = att_mask(&[AttachmentHint::External]);
         assert_forbidden(
-            verify_mds_attestation(mds, &None, &None, &Some(allowed)),
+            verify_mds_attestation(&mds, &None, &None, &Some(allowed)),
             "FIDO Authenticator attachment hint not allowed",
         );
     }
@@ -302,7 +309,7 @@ mod tests {
         );
         assert_forbidden(
             verify_mds_attestation(
-                mds,
+                &mds,
                 &Some(MdsCertLevel::L2),
                 &Some(prot_mask(&[KeyProtection::Hardware])),
                 &None,

@@ -125,7 +125,12 @@ pub async fn auth_finish_discover(
         .finish_passkey_authentication(&pubkey_cred, &auth_state)
     {
         Ok(auth_result) => {
-            verify_attestation(&pk_entity).await?;
+            verify_attestation(
+                pk_entity.aaguid.as_deref(),
+                &pk_entity.user_id,
+                &pk_entity.name,
+            )
+            .await?;
 
             if RauthyConfig::get().vars.webauthn.force_uv && !auth_result.user_verified() {
                 return Err(ErrorResponse::new(

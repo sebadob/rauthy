@@ -372,6 +372,145 @@ possible.
 
 [#1715](https://github.com/sebadob/rauthy/pull/1715)
 
+#### FIDO Device Attestation
+
+In addition to the new discoverable credentials, we now also have FIDO device attestation. You
+usually only want to set this in environments you have under control, like business-internal, were
+you can dictate the Passkeys being used. However, you can also use it on a public instance if you
+really care about security. Setting any device attestion will rule out most authenticators "normal"
+users use, like browser extensions, and so on. There are currently only ~340 Authenticators in
+existence that actually provide certificates and can be verified. You usually only find this for
+proper hardware authenticators like Yubikeys.
+
+If you ever set this on a public instance, you should never bump up the requirements when you
+already have registered users, or you need to plan some migration and give them a deadline to
+upgrade. Enforcing attestation when users already have lower security ones registered, and no proper
+one, will lock them out of their account otherwise.
+
+If you, however, set the requirements directly from the beginning, the user will see proper error
+messages during registration if their device does not meet the minimum security requirements.
+
+You can now enforce different certification levels, key protection levels, and how authenticators
+are attached. For instance, you can enforce that users can only use dedicated, external
+authenticators that are separate from the machine they are logging-in from. USB keys count as such
+of course, since they are completely separate units. Be careful with the certification levels. Most
+currently existing ones are either L1 or L2, almost none L3 yet.
+
+You have some new config options. If you set any of these, attestation will be enforced.
+
+**CAUTION: Device attestion does only work during registration! We can validate the different
+levels and requirements during each authentication, and you can change them later, but only during
+the registration, we can verify that the authenticator actually signed the `authData` with the
+correct private key, that we then verify via the certificate chain from the FIDO MDS. This means if
+you want to enforce this for an already running application, you MUST plan a migration phase. If you
+just flick the switch, basically all users with registered keys will be locked out.**
+
+```toml
+[webauthn]
+######################################################################
+## The block below enforces passkey attestation. You can set different
+## combinations of
+##
+## - force_passkey_cert_level
+## - force_passkey_protection
+## - force_passkey_attachment
+##
+## If any of these values are set, authenticator attestation will
+## be enforced. This will immediately reject most of the software
+## passkeys like in browser extensions.
+##
+## Note: You probably never want these setting on any public-facing
+## instance, as it will allow only properly validarted Passkeys.
+## That basically excludes almost all software-based keys. If you
+## don't control what keys your users are using, like e.g. in an
+## enterprise, you probably don't want this feature.
+## Even if the examples for certification levels also mention
+## software implementations, most software passkeys are not
+## certified at all, and they don't send attestation data. Only
+## because a device meets the needs for a specific level does not
+## mean it's actually certified.
+##
+## For more information on the different security levels:
+## https://fidoalliance.org/certification/authenticator-certification-levels/
+## https://fidoalliance.org/security-certification-authenticator-security-levels/
+##
+## CAUTION: If you make the requirements more strict for an
+## already existing deployment, you can lock accounts! If a
+## user has registered keys that do not meet the new standards,
+## it will be impossible to log in, and this needs manual cleanup
+## from an Admin!
+
+# Enforces FIDO passkey attestation. If not set, attestation is
+# disabled. If you set a level, it is a minimum requirement. E.g.
+# L1 is a boundary for the minimum, and it means L1 and above.
+# The possible levels (case-sensitive) in ascending order:
+#
+# - FIDO_CERTIFIED
+# - FIDO_CERTIFIED_L1
+# - FIDO_CERTIFIED_L1plus
+# - FIDO_CERTIFIED_L2
+# - FIDO_CERTIFIED_L2plus
+# - FIDO_CERTIFIED_L3
+# - FIDO_CERTIFIED_L3plus
+#
+# default: not set
+# overwritten by: WEBAUTHN_PK_CERT_LEVEL
+force_passkey_cert_level = 'FIDO_CERTIFIED_L1'
+
+# Enforces the passkey protection to be included in the given
+# list. Authenticators will send an array of values, so this
+# is not a hard equality check. Instead, the values sent by the
+# authenticator mut be a subset of the configured value. E.g.
+# the authenticator sends `['hardware', 'tee']` then a
+# configured value of ['hardware', 'tee', 'secure_element']
+# would allow it. If, however, the authenticator sent
+# `['hardware', 'remote_handle']`, it would be rejected.
+#
+# Possible values:
+# - software
+# - hardware
+# - tee
+# - secure_element
+# - remote_handle
+#
+# default: not set
+# value type: [String]
+# overwritten by: WEBAUTHN_PK_PROT (`\n` separated values)
+force_passkey_protection = ['hardware', 'tee', 'secure_element']
+
+# This works in the same way as `force_passkey_protection`
+# above. The configured value must be a superset of the array
+# of values that an authenticator might send. For instance,
+# to allow only external, dedicated authenticators that must
+# not use any radio technology, specify: `['external', 'wired']`
+#
+# Possible values:
+# - internal
+# - external
+# - wired
+# - wireless
+# - nfc
+# - bluetooth
+# - network
+# - wifi_direct
+# - smart
+#
+# Note: `smart` stands for SmartCard. `internal` means "on
+# the same physical device", while `external` requires an
+# independent one.
+#
+# default: not set
+# value type: [String]
+# overwritten by: WEBAUTHN_PK_ATT (`\n` separated values)
+force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
+```
+
+> Confider this feature as beta for this release. I did lots of testing, but only with "real"
+> Passkeys like Yubieys. I never did any software-based stuff, which will probably not work anyway
+> because of the missing certifications.
+
+[]()
+
 #### Improved Password Hashing
 
 Rauthy is now using the latest release of `argon2`. That version finally brings the `parallel`

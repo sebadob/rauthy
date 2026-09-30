@@ -2,8 +2,8 @@ use crate::database::{Cache, DB};
 use crate::entity::users::User;
 use crate::entity::webauthn::aaguid::attested_aaguid;
 use crate::entity::webauthn::ceremony::{RegistrationState, requires_uv};
-use crate::entity::webauthn::force_attestation;
 use crate::entity::webauthn::passkey::PasskeyEntity;
+use crate::entity::webauthn::{force_attestation, verify_attestation};
 use crate::fido_mds::build_ca_list;
 use crate::fido_mds::dataset::MdsDataset;
 use crate::rauthy_config::RauthyConfig;
@@ -12,7 +12,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::str::FromStr;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use webauthn_rs::prelude::{Credential, Uuid};
 use webauthn_rs_proto::{CreationChallengeResponse, ExtnState};
 
@@ -45,7 +45,9 @@ pub async fn reg_start(
 
     // When attestation is forced, the allowed authenticators come from the FIDO MDS dataset.
     // An empty dataset means no chain can be verified, so fail closed.
+    // TODO can we somehow have optimistic attestation here without breaking anything?
     let attestation_ca_list = if force_attestation() {
+        // TODO we can do better here - don't over-fetch + cache CA list
         let authenticators = MdsDataset::find_all().await?;
         let ca_list = build_ca_list(&authenticators)?;
         if authenticators.is_empty() {
@@ -58,6 +60,10 @@ pub async fn reg_start(
     } else {
         None
     };
+    debug!(
+        "attestation_ca_list is some: {}",
+        attestation_ca_list.is_some()
+    );
 
     match RegistrationState::start(
         &RauthyConfig::get().webauthn,
@@ -123,9 +129,13 @@ pub async fn reg_finish(
     };
 
     let reg_state = serde_json::from_str::<RegistrationState>(&reg_data.reg_state)?;
+    let with_attestation = matches!(
+        reg_state,
+        RegistrationState::AttestedPasskey(_) | RegistrationState::AttestedSecurityKey(_)
+    );
+
     match reg_state.finish(&RauthyConfig::get().webauthn, &payload.data) {
         Ok(pk) => {
-            // force UV check
             let cfg = &RauthyConfig::get().vars.webauthn;
             let cred = Credential::from(pk.clone());
 
@@ -139,6 +149,47 @@ pub async fn reg_finish(
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     "User Presence only is not allowed - Verification is needed",
+                ));
+            }
+
+            // webauthn-rs does not expose the AAGUID for all attestation formats, so we read
+            // it from the raw attestation object ourselves. A stored AAGUID must always mean
+            // "attested device", so this is a deliberate safety net.
+            let aaguid = if with_attestation {
+                let aaguid = attested_aaguid(
+                    &cred.attestation.data,
+                    &payload.data.response.attestation_object,
+                )?;
+                // We should deny the registration when the currently set requirements for attestation
+                // are not met.
+                if let Some(aaguid) = aaguid {
+                    match verify_attestation(
+                        Some(aaguid.as_slice()),
+                        &user.id,
+                        &payload.passkey_name,
+                    )
+                    .await
+                    {
+                        Ok(_) => Some(aaguid),
+                        Err(err) => {
+                            warn!("Cannot verify FIDO device attestation: {}", err.message);
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            if aaguid.is_none() && force_attestation() {
+                // Do NOT update this error message. If you need to, also update the check
+                // in the acc dashboard -> frontend/src/lib/account/AccMFA.svelte
+                // It grabs the `Missing attestation` from it.
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotAccepted,
+                    "The authenticator does not meet the security standards. Missing attestation.",
                 ));
             }
 
@@ -177,19 +228,6 @@ pub async fn reg_finish(
                     ExtnState::Unsigned(props) => props.rk,
                 }
             };
-
-            // webauthn-rs does not expose the AAGUID for all attestation formats, so we read
-            // it from the raw attestation object ourselves. A stored AAGUID must always mean
-            // "attested device", so this is a deliberate safety net: `attested_aaguid` forces
-            // the result to `None` unless the attestation statement actually verified it —
-            // only `Basic`/`AttCa`/`AnonCa` have a cryptographically verified attStmt, and
-            // its signature covers the whole `authData` (and thus the AAGUID inside it). For
-            // anything else (e.g. `none` or self-attestation) the AAGUID is just an unverified
-            // device claim, so it gets dropped and the column stays `NULL`.
-            let aaguid = attested_aaguid(
-                &cred.attestation.data,
-                &payload.data.response.attestation_object,
-            );
 
             PasskeyEntity::create(
                 user_id.clone(),

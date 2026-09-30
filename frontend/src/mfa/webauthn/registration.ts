@@ -37,17 +37,17 @@ export async function webauthnReg(
         headers,
         body: JSON.stringify(payloadStart),
     });
-    let body = await resStart.json();
-    if ('error' in body) {
+    let bodyStart = await resStart.json();
+    if ('error' in bodyStart) {
         return {
-            error: body.error.message || 'did not receive any registration data',
+            error: bodyStart.error.message || 'did not receive any registration data',
         };
     }
 
     // We need to apply a small hack to make TS happy.
     // The browser expects ArrayBuffers in some places, but the backend sends them as base64 encoded data,
     // which we will decode properly in the following lines.
-    let options = body as unknown as CredentialCreationOptions;
+    let options = bodyStart as unknown as CredentialCreationOptions;
     if (!options.publicKey) {
         let error = 'no publicKey in options from the backend';
         console.error(error, options);
@@ -116,6 +116,11 @@ export async function webauthnReg(
     });
     if (resFinish.status === 201) {
         return {};
+    } else if (resFinish.status === 406) {
+        let body = await resFinish.json();
+        return {
+            error: body.error?.message || 'Missing Attestation',
+        };
     } else {
         let body = await resFinish.json();
         return {

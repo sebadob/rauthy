@@ -165,12 +165,22 @@ pub async fn auth_finish(
             // At this point, if the passkey entity has a stored aaguid, it was attested during
             // registration. We don't need to re-validate certificates each time. It will also be
             // set to NULL if the cert is being removed from the MDS dataset.
-            if let Some(pk_entity) = pks
-                .iter()
+            let Some(mut pk_entity) = pks
+                .into_iter()
                 .find(|e| e.credential_id.as_slice() == auth_result.cred_id().as_ref())
-            {
-                verify_attestation(pk_entity).await?;
-            }
+            else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Webauthn CredID not found in authentication result",
+                ));
+            };
+
+            verify_attestation(
+                pk_entity.aaguid.as_deref(),
+                &pk_entity.user_id,
+                &pk_entity.name,
+            )
+            .await?;
 
             if force_uv && !auth_result.user_verified() {
                 warn!(
@@ -214,13 +224,11 @@ pub async fn auth_finish(
 
             if auth_result.needs_update() {
                 let now = Utc::now().timestamp();
-                for mut pk_entity in pks {
-                    let mut pk = pk_entity.get_pk();
-                    if pk.update_credential(&auth_result) == Some(true) {
-                        pk_entity.passkey = serde_json::to_string(&pk)?;
-                        pk_entity.last_used = now;
-                        pk_entity.update_passkey().await?;
-                    }
+                let mut pk = pk_entity.get_pk();
+                if pk.update_credential(&auth_result) == Some(true) {
+                    pk_entity.passkey = serde_json::to_string(&pk)?;
+                    pk_entity.last_used = now;
+                    pk_entity.update_passkey().await?;
                 }
             }
 

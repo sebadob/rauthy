@@ -7,6 +7,7 @@
 //! [`attested_aaguid`] gates the extraction on the attestation level webauthn-rs determined:
 //! a non-`NULL` stored AAGUID means "attested device".
 
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;
 use webauthn_rs::prelude::ParsedAttestationData;
 
@@ -34,14 +35,20 @@ struct AttestationObject<'a> {
 /// `authData` is too short / does not have the `ATTESTED_DATA` flag set (in which case no
 /// AAGUID is present). An all-zero AAGUID means "unknown" per the WebAuthn spec and is also
 /// returned as `None`.
-pub fn extract_aaguid(attestation_object: &[u8]) -> Option<[u8; 16]> {
-    let att_obj = serde_cbor_2::from_slice::<AttestationObject<'_>>(attestation_object).ok()?;
+pub fn extract_aaguid(attestation_object: &[u8]) -> Result<Option<[u8; 16]>, ErrorResponse> {
+    let att_obj =
+        serde_cbor_2::from_slice::<AttestationObject<'_>>(attestation_object).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("Could not parse attestation object CBOR: {err:?}"),
+            )
+        })?;
 
     if att_obj.auth_data.len() < AAGUID_OFFSET + AAGUID_LEN {
-        return None;
+        return Ok(None);
     }
     if att_obj.auth_data[32] & FLAG_ATTESTED_DATA == 0 {
-        return None;
+        return Ok(None);
     }
 
     let aaguid: [u8; 16] = att_obj.auth_data[AAGUID_OFFSET..AAGUID_OFFSET + AAGUID_LEN]
@@ -49,10 +56,10 @@ pub fn extract_aaguid(attestation_object: &[u8]) -> Option<[u8; 16]> {
         .unwrap();
     // Per the WebAuthn spec, an all-zero AAGUID means "unknown", so treat it as absent.
     if aaguid == [0u8; 16] {
-        return None;
+        return Ok(None);
     }
 
-    Some(aaguid)
+    Ok(Some(aaguid))
 }
 
 /// Returns the AAGUID only if the attestation statement actually verified it.
@@ -65,12 +72,12 @@ pub fn extract_aaguid(attestation_object: &[u8]) -> Option<[u8; 16]> {
 pub fn attested_aaguid(
     attestation_data: &ParsedAttestationData,
     attestation_object: &[u8],
-) -> Option<[u8; 16]> {
+) -> Result<Option<[u8; 16]>, ErrorResponse> {
     match attestation_data {
         ParsedAttestationData::Basic(_)
         | ParsedAttestationData::AttCa(_)
         | ParsedAttestationData::AnonCa(_) => extract_aaguid(attestation_object),
-        _ => None,
+        _ => Ok(None),
     }
 }
 
@@ -115,28 +122,28 @@ mod tests {
     #[test]
     fn extract_with_attested_data_flag() {
         let obj = attestation_object(&auth_data(FLAG_ATTESTED_DATA, Some(&AAGUID)));
-        assert_eq!(extract_aaguid(&obj), Some(AAGUID));
+        assert_eq!(extract_aaguid(&obj).unwrap(), Some(AAGUID));
     }
 
     #[test]
     fn extract_without_attested_data_flag() {
         // without the flag bit, no AAGUID is present in the authData
         let obj = attestation_object(&auth_data(0x01, None));
-        assert_eq!(extract_aaguid(&obj), None);
+        assert_eq!(extract_aaguid(&obj).unwrap(), None);
     }
 
     #[test]
     fn extract_short_auth_data() {
         // rpIdHash + flags + signCount only: no room for an AAGUID
         let obj = attestation_object(&auth_data(FLAG_ATTESTED_DATA, None));
-        assert_eq!(extract_aaguid(&obj), None);
+        assert_eq!(extract_aaguid(&obj).unwrap(), None);
     }
 
     #[test]
     fn extract_all_zero_aaguid() {
         // per the WebAuthn spec, an all-zero AAGUID means "unknown"
         let obj = attestation_object(&auth_data(FLAG_ATTESTED_DATA, Some(&[0u8; 16])));
-        assert_eq!(extract_aaguid(&obj), None);
+        assert_eq!(extract_aaguid(&obj).unwrap(), None);
     }
 
     #[test]
@@ -148,7 +155,7 @@ mod tests {
             ParsedAttestationData::AttCa(Vec::new()),
             ParsedAttestationData::AnonCa(Vec::new()),
         ] {
-            assert_eq!(attested_aaguid(&data, &obj), Some(AAGUID));
+            assert_eq!(attested_aaguid(&data, &obj).unwrap(), Some(AAGUID));
         }
 
         for data in [
@@ -157,14 +164,14 @@ mod tests {
             ParsedAttestationData::ECDAA,
             ParsedAttestationData::Uncertain,
         ] {
-            assert_eq!(attested_aaguid(&data, &obj), None);
+            assert_eq!(attested_aaguid(&data, &obj).unwrap(), None);
         }
     }
 
     #[test]
     fn extract_malformed_cbor() {
-        assert_eq!(extract_aaguid(b"not cbor"), None);
-        assert_eq!(extract_aaguid(&[]), None);
+        assert!(extract_aaguid(b"not cbor").is_err());
+        assert!(extract_aaguid(&[]).is_err());
     }
 
     #[test]
@@ -178,6 +185,6 @@ mod tests {
         out.extend_from_slice(&[0x67]); // text(7): "attStmt"
         out.extend_from_slice(b"attStmt");
         out.push(0xA0); // map(0)
-        assert_eq!(extract_aaguid(&out), None);
+        assert_eq!(extract_aaguid(&out).unwrap(), None);
     }
 }

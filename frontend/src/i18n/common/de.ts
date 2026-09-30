@@ -120,6 +120,8 @@ export const I18nDe: I18n = {
             validFor: 'Passwort gültig für {{ secs }} Sekunden',
         },
         passkeys: {
+            missingAttestation:
+                'Der Passkey entspricht nicht den geforderten Sicherheitsstandards.',
             type: 'Passkey Typ',
             types: ['Normal', 'Verknüpft'],
             rkWarning: `ACHTUNG: Ein verknüpfter Passkey (Resident Key) kann zwar zum direkten Login 
@@ -165,7 +167,7 @@ export const I18nDe: I18n = {
         userVerifiedTooltip: 'Abgesichert durch Fingerabdruck oder PIN',
         residentKeyTooltip: `Dies ist ein Resident Key. Er kann für direkten Login ohne Eingabe der E-Mail verwendet 
             werden.`,
-        aaguidTooltip: 'Zertifizierter Passkey - kann validiert werden.',
+        aaguidTooltip: 'Zertifizierter Passkey',
         webIdDesc: `Hier können Sie die Felder festlegen, die über Ihre WebID veröffentlicht\n
             werden. Dies ist ein Feature, was von manchen Netzwerken für dezentrale Logins genutzt 
             wird.\nSollten Sie nicht wissen, was die WebID ist, brauchen Sie sie 

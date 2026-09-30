@@ -3062,8 +3062,14 @@ renew_exp = '90d'
 ## mean it's actually certified.
 ##
 ## For more information on the different security levels:
-## https://fidoalliance.org/security-certification-authenticator-security-levels/
 ## https://fidoalliance.org/certification/authenticator-certification-levels/
+## https://fidoalliance.org/security-certification-authenticator-security-levels/
+##
+## CAUTION: If you make the requirements more strict for an
+## already existing deployment, you can lock accounts! If a
+## user has registered keys that do not meet the new standards,
+## it will be impossible to log in, and this needs manual cleanup
+## from an Admin!
 
 # Enforces FIDO passkey attestation. If not set, attestation is
 # disabled. If you set a level, it is a minimum requirement. E.g.
@@ -3080,7 +3086,7 @@ renew_exp = '90d'
 #
 # default: not set
 # overwritten by: WEBAUTHN_PK_CERT_LEVEL
-force_passkey_cert_level = 'FIDO_CERTIFIED_L1'
+#force_passkey_cert_level = 'FIDO_CERTIFIED_L1'
 
 # Enforces the passkey protection to be included in the given
 # list. Authenticators will send an array of values, so this
@@ -3101,7 +3107,7 @@ force_passkey_cert_level = 'FIDO_CERTIFIED_L1'
 # default: not set
 # value type: [String]
 # overwritten by: WEBAUTHN_PK_PROT (`\n` separated values)
-force_passkey_protection = ['hardware', 'tee', 'secure_element']
+#force_passkey_protection = ['hardware', 'tee', 'secure_element']
 
 # This works in the same way as `force_passkey_protection`
 # above. The configured value must be a superset of the array
@@ -3127,4 +3133,4 @@ force_passkey_protection = ['hardware', 'tee', 'secure_element']
 # default: not set
 # value type: [String]
 # overwritten by: WEBAUTHN_PK_ATT (`\n` separated values)
-force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
+#force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
