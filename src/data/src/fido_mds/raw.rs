@@ -7,10 +7,11 @@
 //! `--source`. Verifying the blob's `x5c` chain against a pinned FIDO Alliance root would be that
 //! guarantee, and is deliberately out of scope for this dataset-only change.
 
-use crate::fido_mds::{
-    AttachmentHintMask, AttestationTypeMask, KeyProtectionMask, MdsCert, MdsCertLevel, MdsDataset,
-    MdsEntry,
+use crate::fido_mds::dataset::MdsDataset;
+use crate::fido_mds::masks::{
+    AttachmentHintMask, AttestationTypeMask, KeyProtectionMask, MdsCertLevel,
 };
+use crate::fido_mds::{MdsCert, MdsEntry};
 use rauthy_common::utils::{base64_decode, base64_url_no_pad_decode};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;

@@ -2,7 +2,8 @@
 
 # Rauthy
 
-Rauthy - Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2, and PAM
+Rauthy (spoken like "RAW-thy" (rôthē) from "Auth"entication) - Single Sign-On Identity & Access
+Management via OpenID Connect, OAuth 2, and PAM
 
 > [!NOTE]
 > This application received an independent security audit

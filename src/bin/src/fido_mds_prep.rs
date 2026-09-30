@@ -10,7 +10,7 @@
 //! trusted as far as whoever put the file there.
 
 use clap::Parser;
-use rauthy_data::fido_mds::MdsDataset;
+use rauthy_data::fido_mds::dataset::MdsDataset;
 use std::error::Error;
 use std::path::PathBuf;
 use std::str::FromStr;

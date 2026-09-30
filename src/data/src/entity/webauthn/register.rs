@@ -1,8 +1,11 @@
 use crate::database::{Cache, DB};
 use crate::entity::users::User;
-use crate::entity::webauthn::aaguid::extract_aaguid;
+use crate::entity::webauthn::aaguid::attested_aaguid;
 use crate::entity::webauthn::ceremony::{RegistrationState, requires_uv};
+use crate::entity::webauthn::force_attestation;
 use crate::entity::webauthn::passkey::PasskeyEntity;
+use crate::fido_mds::build_ca_list;
+use crate::fido_mds::dataset::MdsDataset;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_api_types::users::{WebauthnRegFinishRequest, WebauthnRegStartRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -39,6 +42,23 @@ pub async fn reg_start(
     // New-user magic links may remove an initialized password at finish.
     let require_uv =
         requires_uv(user.account_type(), cfg.force_uv) || payload.magic_link_id.is_some();
+
+    // When attestation is forced, the allowed authenticators come from the FIDO MDS dataset.
+    // An empty dataset means no chain can be verified, so fail closed.
+    let attestation_ca_list = if force_attestation() {
+        let authenticators = MdsDataset::find_all().await?;
+        let ca_list = build_ca_list(&authenticators)?;
+        if authenticators.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "FIDO MDS dataset is empty - no passkey attestation can be verified",
+            ));
+        }
+        Some(ca_list)
+    } else {
+        None
+    };
+
     match RegistrationState::start(
         &RauthyConfig::get().webauthn,
         passkey_user_id,
@@ -46,6 +66,7 @@ pub async fn reg_start(
         exclude_creds,
         require_uv,
         payload.allow_rk.unwrap_or(false),
+        attestation_ca_list,
     ) {
         Ok((mut ccr, reg_state)) => {
             // timeout expected in ms
@@ -157,10 +178,18 @@ pub async fn reg_finish(
                 }
             };
 
-            // webauthn-rs does not expose the AAGUID for all attestation formats, so we
-            // extract it from the raw attestation object ourselves. It is `None` if the
-            // authenticator did not provide one (e.g. most security keys).
-            let aaguid = extract_aaguid(&payload.data.response.attestation_object);
+            // webauthn-rs does not expose the AAGUID for all attestation formats, so we read
+            // it from the raw attestation object ourselves. A stored AAGUID must always mean
+            // "attested device", so this is a deliberate safety net: `attested_aaguid` forces
+            // the result to `None` unless the attestation statement actually verified it —
+            // only `Basic`/`AttCa`/`AnonCa` have a cryptographically verified attStmt, and
+            // its signature covers the whole `authData` (and thus the AAGUID inside it). For
+            // anything else (e.g. `none` or self-attestation) the AAGUID is just an unverified
+            // device claim, so it gets dropped and the column stays `NULL`.
+            let aaguid = attested_aaguid(
+                &cred.attestation.data,
+                &payload.data.response.attestation_object,
+            );
 
             PasskeyEntity::create(
                 user_id.clone(),

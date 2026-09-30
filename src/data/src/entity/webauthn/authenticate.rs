@@ -8,6 +8,7 @@ use crate::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnServiceReq};
 use crate::entity::webauthn::authenticate_rk::auth_finish_discover;
 use crate::entity::webauthn::ceremony::{AuthenticationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
+use crate::entity::webauthn::{force_attestation, verify_attestation};
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use chrono::Utc;
@@ -40,7 +41,11 @@ pub async fn auth_start(
             (WebauthnAdditionalData::Login(d), user_id)
         }
         MfaPurpose::Discover => {
-            todo!();
+            // Discoverable credentials never use this route.
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "A discoverable credential auth request must use a different endpoint",
+            ));
         }
         MfaPurpose::MfaModToken
         | MfaPurpose::PamLogin
@@ -60,31 +65,39 @@ pub async fn auth_start(
     };
 
     let user = User::find(user_id).await?;
-    let force_uv = requires_uv(
-        user.account_type(),
-        RauthyConfig::get().vars.webauthn.force_uv,
-    );
-    let pks = if force_uv {
-        // in this case, filter out all presence only keys
-        PasskeyEntity::find_for_user_with_uv(&user.id)
-            .await?
-            .iter()
-            .map(|pk_entity| pk_entity.get_pk())
-            .collect::<Vec<Passkey>>()
-    } else {
-        PasskeyEntity::find_for_user(&user.id)
-            .await?
-            .iter()
+    let config = &RauthyConfig::get().vars.webauthn;
+    let force_uv = requires_uv(user.account_type(), config.force_uv);
+    let force_attestation = force_attestation();
+
+    let pks = {
+        let entities = if force_uv {
+            // in this case, filter out all presence only keys
+            PasskeyEntity::find_for_user_with_uv(&user.id).await?
+        } else {
+            PasskeyEntity::find_for_user(&user.id).await?
+        };
+        // When attestation is forced, keys without a stored AAGUID cannot be verified against
+        // the FIDO MDS dataset, so they are excluded up front to fail fast instead of after
+        // the ceremony.
+        entities
+            .into_iter()
+            .filter(|pk_entity| !force_attestation || pk_entity.aaguid.is_some())
             .map(|pk_entity| pk_entity.get_pk())
             .collect::<Vec<Passkey>>()
     };
 
     if pks.is_empty() {
-        // may be the case if the user has presence only keys and the config has changed
-        return Err(ErrorResponse::new(
-            ErrorResponseType::NotFound,
-            "No Security Keys with active user verification found",
-        ));
+        // may be the case if the user has presence only keys, unattested keys and the config
+        // has changed since registration
+        let msg = match (force_uv, force_attestation) {
+            (true, true) => {
+                "No Security Keys with active user verification and a stored AAGUID found"
+            }
+            (true, false) => "No Security Keys with active user verification found",
+            (false, true) => "No Security Keys with a stored AAGUID found",
+            (false, false) => "No Security Keys found",
+        };
+        return Err(ErrorResponse::new(ErrorResponseType::NotFound, msg));
     }
 
     match AuthenticationState::start(&RauthyConfig::get().webauthn, pks, force_uv) {
@@ -149,6 +162,16 @@ pub async fn auth_finish(
 
     match auth_state.finish(&RauthyConfig::get().webauthn, &payload.data) {
         Ok(auth_result) => {
+            // At this point, if the passkey entity has a stored aaguid, it was attested during
+            // registration. We don't need to re-validate certificates each time. It will also be
+            // set to NULL if the cert is being removed from the MDS dataset.
+            if let Some(pk_entity) = pks
+                .iter()
+                .find(|e| e.credential_id.as_slice() == auth_result.cred_id().as_ref())
+            {
+                verify_attestation(pk_entity).await?;
+            }
+
             if force_uv && !auth_result.user_verified() {
                 warn!(
                     user.id,

@@ -3,6 +3,7 @@ use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::email::mailer_callback::EMailCallback;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
+use crate::fido_mds::masks::{AttachmentHintMask, KeyProtectionMask, MdsCertLevel};
 use crate::migration::bootstrap::generated_secrets;
 use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
@@ -1199,6 +1200,9 @@ Your account has not been compromised and no data was leaked."#.into()),
                 renew_exp: Duration::from_secs(90 * 24 * 3600),
                 force_uv: false,
                 no_password_exp: true,
+                force_passkey_cert_level: None,
+                force_passkey_protection: None,
+                force_passkey_attachment: None,
             },
             atproto: VarsAtproto { enable: false },
         }
@@ -3732,6 +3736,50 @@ impl Vars {
             self.webauthn.no_password_exp = v;
         }
 
+        if let Some(v) = t_str(
+            &mut table,
+            "webauthn",
+            "force_passkey_cert_level",
+            "WEBAUTHN_PK_CERT_LEVEL",
+        ) {
+            self.webauthn.force_passkey_cert_level = Some(
+                v.parse()
+                    .expect("Cannot parse webauthn.force_passkey_cert_level - expected one of: FIDO_CERTIFIED, FIDO_CERTIFIED_L1, FIDO_CERTIFIED_L1plus, FIDO_CERTIFIED_L2, FIDO_CERTIFIED_L2plus, FIDO_CERTIFIED_L3, FIDO_CERTIFIED_L3plus"),
+            );
+        }
+        if let Some(values) = t_str_vec(
+            &mut table,
+            "webauthn",
+            "force_passkey_protection",
+            "WEBAUTHN_PK_PROT",
+        ) && !values.is_empty()
+        {
+            let mut prot = KeyProtectionMask::default();
+            for v in values {
+                prot = prot.insert(
+                        v.parse()
+                            .expect("Cannot parse entry of webauthn.force_passkey_protection - expected one of: software, hardware, tee, secure_element, remote_handle"),
+                    );
+            }
+            self.webauthn.force_passkey_protection = Some(prot);
+        }
+        if let Some(values) = t_str_vec(
+            &mut table,
+            "webauthn",
+            "force_passkey_attachment",
+            "WEBAUTHN_PK_ATT",
+        ) && !values.is_empty()
+        {
+            let mut att = AttachmentHintMask::default();
+            for v in values {
+                att = att.insert(
+                        v.parse()
+                            .expect("Cannot parse entry of webauthn.force_passkey_attachment - expected one of: internal, external, wired, wireless, nfc, bluetooth, network, wifi_direct, smart"),
+                    );
+            }
+            self.webauthn.force_passkey_attachment = Some(att);
+        }
+
         check_table_empty(table, "webauthn");
     }
 
@@ -4379,6 +4427,9 @@ pub struct VarsWebauthn {
     pub renew_exp: Duration,
     pub force_uv: bool,
     pub no_password_exp: bool,
+    pub force_passkey_cert_level: Option<MdsCertLevel>,
+    pub force_passkey_protection: Option<KeyProtectionMask>,
+    pub force_passkey_attachment: Option<AttachmentHintMask>,
 }
 
 #[derive(Debug)]

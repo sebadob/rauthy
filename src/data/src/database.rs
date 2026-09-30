@@ -1,4 +1,5 @@
 use crate::entity::db_version::DbVersion;
+use crate::fido_mds::dataset::MdsDataset;
 use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
@@ -245,7 +246,7 @@ impl DB {
 
         // seed the embedded FIDO MDS dataset when its tables are still empty (fresh instance or
         // an existing one upgrading into this version)
-        crate::fido_mds::MdsDataset::seed_embedded().await?;
+        MdsDataset::seed_embedded().await?;
 
         // migrate dynamic DB data
         let config = RauthyConfig::get();

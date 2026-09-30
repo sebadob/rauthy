@@ -1,9 +1,9 @@
 use crate::entity::users::AccountType;
 use serde::{Deserialize, Serialize};
 use webauthn_rs::prelude::{
-    AuthenticationResult, Credential, CredentialID, Passkey, PasskeyAuthentication,
-    PasskeyRegistration, SecurityKey, SecurityKeyAuthentication, SecurityKeyRegistration, Uuid,
-    Webauthn, WebauthnResult,
+    AttestationCaList, AttestedPasskeyRegistration, AuthenticationResult, AuthenticatorAttachment,
+    Credential, CredentialID, Passkey, PasskeyAuthentication, PasskeyRegistration, SecurityKey,
+    SecurityKeyAuthentication, SecurityKeyRegistration, Uuid, Webauthn, WebauthnResult,
 };
 use webauthn_rs_proto::{
     CreationChallengeResponse, PublicKeyCredential, RegisterPublicKeyCredential,
@@ -23,6 +23,7 @@ pub(super) fn requires_uv(account_type: AccountType, force_uv: bool) -> bool {
 pub(super) enum RegistrationState {
     Passkey(PasskeyRegistration),
     SecurityKey(SecurityKeyRegistration),
+    AttestedPasskey(AttestedPasskeyRegistration),
 }
 
 impl RegistrationState {
@@ -33,30 +34,54 @@ impl RegistrationState {
         exclude_credentials: Option<Vec<CredentialID>>,
         require_uv: bool,
         allow_rk: bool,
+        attestation_ca_list: Option<AttestationCaList>,
     ) -> WebauthnResult<(CreationChallengeResponse, Self)> {
-        let (mut ccr, state) = if require_uv {
-            let (ccr, state) =
-                webauthn.start_passkey_registration(user_id, email, email, exclude_credentials)?;
-            (ccr, Self::Passkey(state))
-        } else {
-            let (mut ccr, state) = webauthn.start_securitykey_registration(
-                user_id,
-                email,
-                email,
-                exclude_credentials,
-                None,
-                None,
-            )?;
-            // webauthn-rs 0.5.5 requests UV-required credProtect even with UV preferred.
-            // Chromium rejects that combination. This optional extension is not enforced
-            // by the library; omit it for password-backed credentials.
-            // https://github.com/kanidm/webauthn-rs/issues/490
-            if let Some(extensions) = ccr.public_key.extensions.as_mut() {
-                extensions.cred_protect = None;
+        let (mut ccr, state) = match (require_uv, attestation_ca_list) {
+            // With a CA list and UV required, use the dedicated passkey API. It enforces Direct
+            // conveyance, a strict credProtect policy, and verifies the returned chain against
+            // the MDS roots at finish time.
+            (true, Some(ca_list)) => {
+                let (ccr, state) = webauthn.start_attested_passkey_registration(
+                    user_id,
+                    email,
+                    email,
+                    exclude_credentials,
+                    ca_list,
+                    Some(AuthenticatorAttachment::Platform),
+                )?;
+                (ccr, Self::AttestedPasskey(state))
             }
-            // Allow platform and hybrid authenticators as well as hardware security keys.
-            ccr.public_key.hints = None;
-            (ccr, Self::SecurityKey(state))
+            (true, None) => {
+                let (ccr, state) = webauthn.start_passkey_registration(
+                    user_id,
+                    email,
+                    email,
+                    exclude_credentials,
+                )?;
+                (ccr, Self::Passkey(state))
+            }
+            (false, ca_list) => {
+                // Without UV, the security key API is used with or without a CA list. A non-empty
+                // list switches it to Direct conveyance and verifies the chain at finish time.
+                let (mut ccr, state) = webauthn.start_securitykey_registration(
+                    user_id,
+                    email,
+                    email,
+                    exclude_credentials,
+                    ca_list,
+                    None,
+                )?;
+                // webauthn-rs 0.5.5 requests UV-required credProtect even with UV preferred.
+                // Chromium rejects that combination. This optional extension is not enforced
+                // by the library; omit it for password-backed credentials.
+                // https://github.com/kanidm/webauthn-rs/issues/490
+                if let Some(extensions) = ccr.public_key.extensions.as_mut() {
+                    extensions.cred_protect = None;
+                }
+                // Allow platform and hybrid authenticators as well as hardware security keys.
+                ccr.public_key.hints = None;
+                (ccr, Self::SecurityKey(state))
+            }
         };
 
         // Resident keys are optional in both APIs. Preserve their UV policy and only change
@@ -81,6 +106,10 @@ impl RegistrationState {
             Self::SecurityKey(state) => webauthn
                 .finish_securitykey_registration(credential, state)
                 .map(|key| Passkey::from(Credential::from(key))),
+            Self::AttestedPasskey(state) => webauthn
+                .finish_attested_passkey_registration(credential, state)
+                // TODO What is the key sent a duplicate credID? The RP SHOULD fail in that case.
+                .map(Passkey::from),
         }
     }
 }
@@ -176,6 +205,7 @@ mod tests {
             Some(excluded.clone()),
             require_uv,
             allow_rk,
+            None,
         )
         .unwrap();
         let pk = &ccr.public_key;
