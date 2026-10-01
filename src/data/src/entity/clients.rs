@@ -1807,7 +1807,14 @@ impl Client {
 
         body.validate()?;
 
-        let slf = Self::try_from(body)?;
+        let slf = Self::try_from(body).map_err(|err| {
+            let msg = format!(
+                "Invalid ephemeral client document from {value}: {}",
+                err.message
+            );
+            error!("{msg}");
+            ErrorResponse::new(err.error, msg)
+        })?;
         if slf.id != value {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -1886,7 +1893,12 @@ impl TryFrom<EphemeralClientRequest> for Client {
 
     fn try_from(value: EphemeralClientRequest) -> Result<Self, Self::Error> {
         for uri in &value.redirect_uris {
-            validate_redirect_uri_shape(uri)?;
+            validate_redirect_uri_shape(uri).map_err(|err| {
+                ErrorResponse::new(
+                    err.error,
+                    format!("Invalid redirect_uri '{uri}': {}", err.message),
+                )
+            })?;
         }
 
         let scopes = RauthyConfig::get()
@@ -2822,6 +2834,7 @@ mod tests {
             };
             let err = Client::try_from(req).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert!(err.message.contains(uri), "{uri}: {}", err.message);
         }
     }
 
