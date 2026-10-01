@@ -8,7 +8,7 @@ use crate::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnServiceReq};
 use crate::entity::webauthn::authenticate_rk::auth_finish_discover;
 use crate::entity::webauthn::ceremony::{AuthenticationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
-use crate::entity::webauthn::{force_attestation, verify_attestation};
+use crate::entity::webauthn::{force_mds_attestation, verify_attestation};
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use chrono::Utc;
@@ -67,7 +67,7 @@ pub async fn auth_start(
     let user = User::find(user_id).await?;
     let config = &RauthyConfig::get().vars.webauthn;
     let force_uv = requires_uv(user.account_type(), config.force_uv);
-    let force_attestation = force_attestation();
+    let force_attestation = force_mds_attestation();
 
     let pks = {
         let entities = if force_uv {

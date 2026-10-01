@@ -3,17 +3,16 @@ use crate::entity::users::User;
 use crate::entity::webauthn::aaguid::attested_aaguid;
 use crate::entity::webauthn::ceremony::{RegistrationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
-use crate::entity::webauthn::{force_attestation, verify_attestation};
-use crate::fido_mds::build_ca_list;
-use crate::fido_mds::dataset::MdsDataset;
+use crate::entity::webauthn::{force_mds_attestation, verify_attestation};
+use crate::fido_mds::mds_authenticator::MdsAuthenticator;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_api_types::users::{WebauthnRegFinishRequest, WebauthnRegStartRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::str::FromStr;
-use tracing::{debug, error, info, warn};
-use webauthn_rs::prelude::{Credential, Uuid};
+use tracing::{error, info, warn};
+use webauthn_rs::prelude::{Credential, Uuid, WebauthnError};
 use webauthn_rs_proto::{CreationChallengeResponse, ExtnState};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -43,27 +42,11 @@ pub async fn reg_start(
     let require_uv =
         requires_uv(user.account_type(), cfg.force_uv) || payload.magic_link_id.is_some();
 
-    // When attestation is forced, the allowed authenticators come from the FIDO MDS dataset.
-    // An empty dataset means no chain can be verified, so fail closed.
-    // TODO can we somehow have optimistic attestation here without breaking anything?
-    let attestation_ca_list = if force_attestation() {
-        // TODO we can do better here - don't over-fetch + cache CA list
-        let authenticators = MdsDataset::find_all().await?;
-        let ca_list = build_ca_list(&authenticators)?;
-        if authenticators.is_empty() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
-                "FIDO MDS dataset is empty - no passkey attestation can be verified",
-            ));
-        }
-        Some(ca_list)
+    let attestation_ca_list = if cfg.optimistic_attestation || force_mds_attestation() {
+        MdsAuthenticator::get_ca_list().await?
     } else {
         None
     };
-    debug!(
-        "attestation_ca_list is some: {}",
-        attestation_ca_list.is_some()
-    );
 
     match RegistrationState::start(
         &RauthyConfig::get().webauthn,
@@ -128,15 +111,35 @@ pub async fn reg_finish(
         Some(data) => data,
     };
 
+    let cfg = &RauthyConfig::get().vars.webauthn;
     let reg_state = serde_json::from_str::<RegistrationState>(&reg_data.reg_state)?;
-    let with_attestation = matches!(
+    let mut with_attestation = matches!(
         reg_state,
         RegistrationState::AttestedPasskey(_) | RegistrationState::AttestedSecurityKey(_)
     );
 
-    match reg_state.finish(&RauthyConfig::get().webauthn, &payload.data) {
+    let res = if cfg.optimistic_attestation && with_attestation {
+        match reg_state.finish(&RauthyConfig::get().webauthn, &payload.data) {
+            Ok(pk) => Ok(pk),
+            Err(err) => {
+                if is_attestation_error(&err) {
+                    warn!("Error during optimistic FIDO attestation: {err:?}");
+                    with_attestation = false;
+                    reg_state
+                        .into_plain_fallback()
+                        .finish(&RauthyConfig::get().webauthn, &payload.data)
+                } else {
+                    // in case of any non-attestation error, simply forward it
+                    Err(err)
+                }
+            }
+        }
+    } else {
+        reg_state.finish(&RauthyConfig::get().webauthn, &payload.data)
+    };
+
+    match res {
         Ok(pk) => {
-            let cfg = &RauthyConfig::get().vars.webauthn;
             let cred = Credential::from(pk.clone());
 
             if (requires_uv(user.account_type(), cfg.force_uv) || is_new_user)
@@ -183,7 +186,7 @@ pub async fn reg_finish(
                 None
             };
 
-            if aaguid.is_none() && force_attestation() {
+            if aaguid.is_none() && force_mds_attestation() {
                 // Do NOT update this error message. If you need to, also update the check
                 // in the acc dashboard -> frontend/src/lib/account/AccMFA.svelte
                 // It grabs the `Missing attestation` from it.
@@ -253,4 +256,47 @@ pub async fn reg_finish(
     };
 
     Ok(())
+}
+
+fn is_attestation_error(err: &WebauthnError) -> bool {
+    matches!(
+        err,
+        WebauthnError::MissingAttestationCredentialData
+            | WebauthnError::AttestationNotSupported
+            | WebauthnError::AttestationStatementMapInvalid
+            | WebauthnError::AttestationStatementResponseMissing
+            | WebauthnError::AttestationStatementResponseInvalid
+            | WebauthnError::AttestationStatementSigMissing
+            | WebauthnError::AttestationStatementSigInvalid
+            | WebauthnError::AttestationStatementVerMissing
+            | WebauthnError::AttestationStatementVerInvalid
+            | WebauthnError::AttestationStatementVerUnsupported
+            | WebauthnError::AttestationStatementX5CMissing
+            | WebauthnError::AttestationStatementX5CInvalid
+            | WebauthnError::AttestationStatementAlgMissing
+            | WebauthnError::AttestationStatementCertInfoMissing
+            | WebauthnError::AttestationStatementMissingExtension
+            | WebauthnError::AttestationStatementPubAreaMissing
+            | WebauthnError::AttestationStatementAlgMismatch
+            | WebauthnError::AttestationStatementAlgInvalid
+            | WebauthnError::AttestationTrustFailure
+            | WebauthnError::AttestationCertificateAAGUIDMismatch
+            | WebauthnError::AttestationCertificateNonceMismatch
+            | WebauthnError::AttestationTpmStInvalid
+            | WebauthnError::AttestationTpmPubAreaMismatch
+            | WebauthnError::AttestationTpmExtraDataInvalid
+            | WebauthnError::AttestationTpmExtraDataMismatch
+            | WebauthnError::AttestationTpmPubAreaHashUnknown
+            | WebauthnError::AttestationTpmPubAreaHashInvalid
+            | WebauthnError::AttestationTpmAttestCertifyInvalid
+            | WebauthnError::AttestationCertificateRequirementsNotMet
+            | WebauthnError::AttestationCertificateTrustStoreEmpty
+            | WebauthnError::AttestationLeafCertMissing
+            | WebauthnError::AttestationNotVerifiable
+            | WebauthnError::AttestationUntrustedAaguid
+            | WebauthnError::AttestationFormatMissingAaguid
+            | WebauthnError::AttestationChainNotTrusted(_)
+            | WebauthnError::AttestationCredentialSubjectKeyMismatch
+            | WebauthnError::MissingAttestationCaList
+    )
 }

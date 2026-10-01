@@ -407,6 +407,32 @@ just flick the switch, basically all users with registered keys will be locked o
 
 ```toml
 [webauthn]
+# When you want to migrate an existing deployment over to enforced
+# attestation, you usually have a chicken-and-egg problem: You
+# have users that already use Passkeys. Device attestation only
+# works during the registration ceremony. When devices are only
+# ever attested with enforcement, either all users need to remove
+# the passkeys, leaving all their accounts password-only, and then
+# re-registert, or they would be locked out as soon as attestation
+# would be enforced.
+#
+# To counter this, you can enable optimistic_attestation. This will
+# always try to attest devices during registration and use a plain
+# fallback on error. This is opt-in on purpose. It requires a bit
+# more resources and memory, and it does not make any sense to
+# enable it when you never plan to enforce attestation at some point.
+# Just the optimistic attestation on its own does not increase the
+# security. It helps you migrate users.
+#
+# Once enabled, you can give your users a grace-period in which
+# they need to re-register their passkeys. When that is done, and
+# they see the "Certified Passkey" badge in their account dashboard,
+# you can then switch to enforced attestation.
+#
+# default: false
+# overwritten by: WEBAUTHN_OPT_ATTESTATION
+optimistic_attestation = false
+
 ######################################################################
 ## The block below enforces passkey attestation. You can set different
 ## combinations of
@@ -505,7 +531,7 @@ force_passkey_protection = ['hardware', 'tee', 'secure_element']
 force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
 ```
 
-> Confider this feature as beta for this release. I did lots of testing, but only with "real"
+> Consider this feature as beta for this release. I did lots of testing, but only with "real"
 > Passkeys like Yubieys. I never did any software-based stuff, which will probably not work anyway
 > because of the missing certifications.
 

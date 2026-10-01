@@ -1200,6 +1200,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 renew_exp: Duration::from_secs(90 * 24 * 3600),
                 force_uv: false,
                 no_password_exp: true,
+                optimistic_attestation: false,
                 force_passkey_cert_level: None,
                 force_passkey_protection: None,
                 force_passkey_attachment: None,
@@ -3736,6 +3737,14 @@ impl Vars {
             self.webauthn.no_password_exp = v;
         }
 
+        if let Some(v) = t_bool(
+            &mut table,
+            "webauthn",
+            "optimistic_attestation",
+            "WEBAUTHN_OPT_ATTESTATION",
+        ) {
+            self.webauthn.optimistic_attestation = v;
+        }
         if let Some(v) = t_str(
             &mut table,
             "webauthn",
@@ -4427,6 +4436,7 @@ pub struct VarsWebauthn {
     pub renew_exp: Duration,
     pub force_uv: bool,
     pub no_password_exp: bool,
+    pub optimistic_attestation: bool,
     pub force_passkey_cert_level: Option<MdsCertLevel>,
     pub force_passkey_protection: Option<KeyProtectionMask>,
     pub force_passkey_attachment: Option<AttachmentHintMask>,

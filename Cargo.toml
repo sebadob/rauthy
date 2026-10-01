@@ -39,6 +39,7 @@ actix-multipart = "0.8"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.28"
 actix-web-prom = "0.10"
+ahash = "0.8.12"
 ammonia = "4.1"
 arc-swap = "1.7"
 argon2 = { version = "0.6", features = ["parallel", "zeroize"] }

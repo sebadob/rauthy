@@ -9,22 +9,16 @@
 //! no-op, so a fresh checkout still builds and the prep tool itself can be built to create it.
 
 use crate::database::DB;
-use crate::fido_mds::masks::{
-    AttachmentHintMask, AttestationTypeMask, KeyProtectionMask, MdsCertLevel,
-};
 use crate::fido_mds::mds_entry::MdsEntry;
-use crate::fido_mds::{MdsAuthenticator, MdsCert, build_ca_list, raw};
+use crate::fido_mds::raw;
 use crate::rauthy_config::RauthyConfig;
-use hiqlite::macros::FromRow;
 use hiqlite::{Params, params};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{deserialize, serialize};
-use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::str::FromStr;
 use tracing::{info, warn};
-use webauthn_rs::prelude::{AttestationCaList, AttestationCaListBuilder, Uuid};
 
 /// The dataset shipped with the image, produced by the `fido-mds-prep` tool.
 static MDS_DATASET: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/fido_mds_dataset.bin"));
@@ -38,6 +32,13 @@ pub struct MdsDataset {
     pub entries: Vec<MdsEntry>,
     /// Every distinct root certificate referenced by `entries`, deduplicated by hash.
     pub certs: Vec<MdsCert>,
+}
+
+/// A distinct root certificate, keyed by the SHA-256 of its DER encoding.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MdsCert {
+    pub hash: [u8; 32],
+    pub cert_der: Vec<u8>,
 }
 
 impl MdsDataset {
@@ -107,40 +108,6 @@ impl MdsDataset {
             DB::pg_query_rows(sql, &[], 1).await?.remove(0).get("count")
         };
         Ok(count)
-    }
-
-    /// Every authenticator in the dataset, each joined with its distinct root certificates.
-    pub async fn find_all() -> Result<Vec<MdsAuthenticator>, ErrorResponse> {
-        let entries = MdsEntryCertRow::find_all().await?;
-        let mut authenticators: Vec<MdsAuthenticator> = Vec::with_capacity(entries.len());
-
-        for entry in entries {
-            let cert = MdsCert {
-                hash: entry.cert_hash,
-                cert_der: entry.cert_der,
-            };
-            // TODO I don't like this -> HashMap instead?
-            match authenticators.last_mut() {
-                Some(last) if last.entry.aaguid == entry.aaguid => last.certs.push(cert),
-                _ => authenticators.push(MdsAuthenticator {
-                    entry: MdsEntry {
-                        aaguid: entry.aaguid,
-                        description: entry.description,
-                        key_protection: entry.key_protection,
-                        attachment_hint: entry.attachment_hint,
-                        attestation_types: entry.attestation_types,
-                        cert_level: entry.cert_level,
-                        cert_hashes: Vec::new(),
-                    },
-                    certs: vec![cert],
-                }),
-            }
-        }
-        for auth in &mut authenticators {
-            auth.entry.cert_hashes = auth.certs.iter().map(|c| c.hash).collect();
-        }
-
-        Ok(authenticators)
     }
 
     async fn insert(&self) -> Result<(), ErrorResponse> {
@@ -219,60 +186,5 @@ ON CONFLICT (aaguid, cert_hash) DO NOTHING
         }
 
         Ok(())
-    }
-}
-
-// TODO can we also join on the DB? --> Better? Or do in memory and cache anyway?
-#[derive(Debug, FromRow)]
-struct MdsEntryCertRow {
-    aaguid: Uuid,
-    description: String,
-    #[column(from_i64)]
-    key_protection: KeyProtectionMask,
-    #[column(from_i64)]
-    attachment_hint: AttachmentHintMask,
-    #[column(from_i64)]
-    attestation_types: AttestationTypeMask,
-    #[column(from_i64)]
-    cert_level: MdsCertLevel,
-    cert_hash: [u8; 32],
-    cert_der: Vec<u8>,
-}
-
-impl From<tokio_postgres::Row> for MdsEntryCertRow {
-    fn from(row: tokio_postgres::Row) -> Self {
-        Self {
-            aaguid: Uuid::from_slice(&row.get::<_, Vec<u8>>("aaguid")).unwrap_or_default(),
-            description: row.get("description"),
-            key_protection: row.get::<_, i64>("key_protection").into(),
-            attachment_hint: row.get::<_, i64>("attachment_hint").into(),
-            attestation_types: row.get::<_, i64>("attestation_types").into(),
-            cert_level: row.get::<_, i64>("cert_level").into(),
-            cert_hash: row
-                .get::<_, Vec<u8>>("cert_hash")
-                .try_into()
-                .expect("Invalid DB data for cert_hash"),
-            cert_der: row.get("cert_der"),
-        }
-    }
-}
-
-impl MdsEntryCertRow {
-    pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
-SELECT e.aaguid, e.description, e.key_protection, e.attachment_hint, e.attestation_types,
-       e.cert_level, c.hash AS cert_hash, c.cert_der
-FROM fido_mds_entries e
-JOIN fido_mds_entry_certs ec ON ec.aaguid = e.aaguid
-JOIN fido_mds_certs c ON c.hash = ec.cert_hash
-ORDER BY e.aaguid, c.hash"#;
-
-        let res = if is_hiqlite() {
-            DB::hql().query_map(sql, params!()).await?
-        } else {
-            // at the time of impl, we have ~340 entries in the MDS
-            DB::pg_query(sql, &[], 384).await?
-        };
-        Ok(res)
     }
 }

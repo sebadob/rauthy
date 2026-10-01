@@ -10,14 +10,13 @@ pub mod auth_req;
 pub mod authenticate;
 pub mod authenticate_rk;
 mod ceremony;
-mod mds_authenticator;
 pub mod passkey;
 pub mod register;
 pub mod rk_token;
 
 #[inline]
 #[must_use]
-fn force_attestation() -> bool {
+pub(crate) fn force_mds_attestation() -> bool {
     let config = &RauthyConfig::get().vars.webauthn;
     config.force_passkey_cert_level.is_some()
         || config.force_passkey_protection.is_some()
@@ -29,7 +28,7 @@ async fn verify_attestation(
     user_id: &str,
     pk_name: &str,
 ) -> Result<(), ErrorResponse> {
-    if !force_attestation() {
+    if !force_mds_attestation() {
         return Ok(());
     }
 
@@ -56,7 +55,7 @@ async fn verify_attestation(
     )
 }
 
-fn verify_mds_attestation(
+pub(crate) fn verify_mds_attestation(
     mds: &MdsEntrySimple,
     force_passkey_cert_level: &Option<MdsCertLevel>,
     force_passkey_protection: &Option<KeyProtectionMask>,

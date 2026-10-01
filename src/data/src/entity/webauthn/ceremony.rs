@@ -10,6 +10,7 @@ use webauthn_rs_proto::{
     RequestChallengeResponse, ResidentKeyRequirement,
 };
 
+#[inline]
 pub(super) fn requires_uv(account_type: AccountType, force_uv: bool) -> bool {
     force_uv
         || !matches!(
@@ -108,6 +109,34 @@ impl RegistrationState {
         Ok((ccr, state))
     }
 
+    /// A copy of this state that finishes without an attestation CA list, keeping the underlying
+    /// registration state and challenge unchanged. Attested ceremonies are re-wrapped as their
+    /// plain counterparts; plain ceremonies round-trip unchanged.
+    pub(super) fn into_plain_fallback(self) -> Self {
+        let json_self = match self {
+            // The plain passkey ceremony has no ca_list field at all.
+            Self::AttestedPasskey(reg) => {
+                let json = serde_json::to_value(reg).unwrap();
+                let rs = json
+                    .get("rs")
+                    .expect("`rs` to be in AttestedPasskeyRegistration");
+                serde_json::json!({ "Passkey": { "rs": rs } })
+            }
+            // The plain security-key ceremony carries a null ca_list.
+            Self::AttestedSecurityKey(reg) => {
+                let json = serde_json::to_value(reg).unwrap();
+                let rs = json
+                    .get("rs")
+                    .expect("`rs` to be in SecurityKeyRegistration");
+                serde_json::json!({
+                    "SecurityKey": { "rs": rs, "ca_list": serde_json::Value::Null }
+                })
+            }
+            _ => return self,
+        };
+        serde_json::from_value(json_self).expect("RegistrationState serialises")
+    }
+
     pub(super) fn finish(
         &self,
         webauthn: &Webauthn,
@@ -174,7 +203,8 @@ mod tests {
     use super::*;
     use rstest::rstest;
     use serde::de::DeserializeOwned;
-    use webauthn_rs::prelude::{Url, WebauthnBuilder};
+    use std::collections::BTreeMap;
+    use webauthn_rs::prelude::{AttestationCa, AttestationCaListBuilder, Url, WebauthnBuilder};
     use webauthn_rs_proto::{CredentialProtectionPolicy, UserVerificationPolicy};
 
     fn webauthn() -> Webauthn {
@@ -183,6 +213,53 @@ mod tests {
             .unwrap()
             .build()
             .unwrap()
+    }
+
+    // This test is important to catch any major changes inside webauthn-rs, since we need to do
+    // a json workaround to make optimistic attestation work.
+    #[test]
+    fn plain_fallback_workaround() {
+        let webauthn = webauthn();
+
+        let cert_hex = "308202DE3082023FA003020102020600EAB4000002300A06082A8648CE3D040304308191310B3009060355040613025553310B300906035504080C025641310F300D06035504070C06526573746F6E312D302B060355040A0C244944454D4941204964656E7469747920616E6420536563757269747920555341204C4C433135303306035504030C2C4944454D4941204964656E7469747920616E6420536563757269747920555341204C4C4320526F6F742043413020170D3234303931383232303030305A180F32303634303931393231353935395A308191310B3009060355040613025553310B300906035504080C025641310F300D06035504070C06526573746F6E312D302B060355040A0C244944454D4941204964656E7469747920616E6420536563757269747920555341204C4C433135303306035504030C2C4944454D4941204964656E7469747920616E6420536563757269747920555341204C4C4320526F6F7420434130819B301006072A8648CE3D020106052B8104002303818600040095C4D8B025762F1BB02BC4393CAFB4DFFC1200F4A941947A935D8FDA9A9F075A7B3372547D4C2F7A68ADA2128963611EA4F2DA7488B0CF68156AB3C1E8C15CFC7E01466BF9C9C518856C09C8F8917EA14942B7273ABD90986526EE7FC666140A573E6EAFC2FB34EA67A27BF172E85C7AE8DE7B5C47A4853E5ABC82A3686935F5E86222A33C303A301D0603551D0E041604143B56394BDDA8124D7BD5005C8A6F818811CA74C3300B0603551D0F0404030200FF300C0603551D13040530030101FF300A06082A8648CE3D04030403818C003081880242013E7DB6C915C5E21604196D9AF7C507545929E083584DAE41C51E1E50E911075C71176B2C7E2267F4D223E8369004E9CF660924D579606C18EA834B8077E91550A1024201B5F0303FA5D45FCBB314417B8FB4307870AF6D2FEA1926FACD8A39552BDA7F88033D9C82108294B3937575EF406978EB9DD75F7BF05FD569832452513D6D8627B1";
+        let cert = hex::decode(cert_hex).unwrap();
+
+        let mut builder = AttestationCaListBuilder::new();
+        builder
+            .insert_device_der(
+                &cert,
+                Uuid::new_v4(),
+                "some description".to_string(),
+                BTreeMap::new(),
+            )
+            .unwrap();
+        let ca_list = builder.build();
+
+        let (_ccr, state) = webauthn
+            .start_attested_passkey_registration(
+                Uuid::new_v4(),
+                "batman@batcave.gotham",
+                "Batman",
+                None,
+                ca_list.clone(),
+                None,
+            )
+            .unwrap();
+        // panics if it does not work
+        RegistrationState::AttestedPasskey(state).into_plain_fallback();
+
+        let (_ccr, state) = webauthn
+            .start_securitykey_registration(
+                Uuid::new_v4(),
+                "batman@batcave.gotham",
+                "Batman",
+                None,
+                Some(ca_list),
+                None,
+            )
+            .unwrap();
+        // panics if it does not work
+        RegistrationState::AttestedSecurityKey(state).into_plain_fallback();
     }
 
     fn roundtrip<T: Serialize + DeserializeOwned>(value: &T) -> T {
