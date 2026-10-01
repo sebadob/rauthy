@@ -757,6 +757,15 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             ));
         }
 
+        // RFC 7592 §2.2: a client without permission to update its record gets a 403.
+        // An admin disabled this client, so its registration must not be modified anymore.
+        if !current.enabled {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Client is disabled",
+            ));
+        }
+
         new_client.keep_admin_set_values(current);
 
         client_dyn.token_endpoint_auth_method = token_endpoint_auth_method;

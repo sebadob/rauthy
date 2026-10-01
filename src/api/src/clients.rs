@@ -257,6 +257,7 @@ pub async fn get_clients_dyn(
         (status = 200, description = "Ok", body = DynamicClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "NotFound"),
     ),
 )]
