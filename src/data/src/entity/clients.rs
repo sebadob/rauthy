@@ -1664,13 +1664,23 @@ pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
 }
 
 /// Query keys an authorization response sets itself (RFC 6749 §4.1.2 / §4.1.2.1, RFC 9207).
-pub const RESERVED_REDIRECT_QUERY_KEYS: [&str; 5] =
-    ["code", "state", "error", "error_description", "iss"];
+pub const RESERVED_REDIRECT_QUERY_KEYS: [&str; 6] = [
+    "code",
+    "state",
+    "error",
+    "error_description",
+    "error_uri",
+    "iss",
+];
 
 /// Rejects a `redirect_uri` with a fragment (RFC 6749 §3.1.2) or whose query already carries a
 /// reserved key - a wildcard registration would otherwise let `https://app/cb?iss=attacker` or
-/// `https://app/cb#?iss=attacker` pass the prefix match. Keys are split on both `&` and `;`,
-/// percent-decoded and trimmed of ASCII whitespace.
+/// `https://app/cb#?iss=attacker` pass the prefix match.
+///
+/// Query keys are split on both `&` and `;`, percent-decoded, trimmed and compared
+/// case-insensitively. Since common server-side parsers (PHP, Rack, `qs`) fold `code[]`, `iss[0]`
+/// or `error.description` into the plain key, a reserved key followed by `[` or `.` is rejected
+/// too, with `.` and ` ` compared as `_`. Keys with control characters are rejected as well.
 pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorResponse> {
     if redirect_uri.contains('#') {
         return Err(ErrorResponse::new(
@@ -1679,27 +1689,50 @@ pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorRespon
         ));
     }
 
-    let query = redirect_uri
-        .split_once('?')
-        .map(|(_, q)| q)
-        .unwrap_or_default();
-    let mut decoder = Url::parse("http://x/").expect("static URL to parse");
-    let found = query.split(['&', ';']).find_map(|pair| {
-        decoder.set_query(Some(pair));
-        decoder
-            .query_pairs()
-            .next()
-            .map(|(k, _)| k.trim_ascii().to_string())
-            .filter(|k| RESERVED_REDIRECT_QUERY_KEYS.contains(&k.as_str()))
-    });
+    let Some((_, query)) = redirect_uri.split_once('?') else {
+        return Ok(());
+    };
 
-    match found {
-        None => Ok(()),
-        Some(key) => Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("redirect_uri must not contain the query parameter '{key}'"),
-        )),
+    for pair in query.split(['&', ';']) {
+        let Some((key, _)) = form_urlencoded::parse(pair.as_bytes()).next() else {
+            continue;
+        };
+        if key.chars().any(char::is_control) {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "redirect_uri must not contain control characters in a query key",
+            ));
+        }
+        if let Some(reserved) = reserved_query_key(&key) {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("redirect_uri must not contain the query parameter '{reserved}'"),
+            ));
+        }
     }
+
+    Ok(())
+}
+
+/// Returns the reserved key a decoded query `key` would be folded into by common parsers.
+fn reserved_query_key(key: &str) -> Option<&'static str> {
+    let key = key.trim().to_ascii_lowercase();
+    // PHP turns `.` and ` ` into `_`, and `code[]` / `iss[0]` become arrays under the plain key
+    let normalized = key.replace(['.', ' '], "_");
+    let base = normalized
+        .split_once('[')
+        .map_or(normalized.as_str(), |(base, _)| base);
+
+    RESERVED_REDIRECT_QUERY_KEYS
+        .into_iter()
+        .find(|reserved| *reserved == base)
+        .or_else(|| {
+            // `qs` with `allowDots` nests `iss.x` under `iss`
+            RESERVED_REDIRECT_QUERY_KEYS.into_iter().find(|reserved| {
+                key.strip_prefix(reserved)
+                    .is_some_and(|rest| rest.starts_with(['[', '.']))
+            })
+        })
 }
 
 /// RFC 8252 section 7.3: for a loopback redirect URI, the authorization
@@ -2674,6 +2707,79 @@ mod tests {
         }
         assert!(validate_redirect_uri_shape("https://app.example.com/cb?x=1;issuer=y").is_ok());
         assert!(validate_redirect_uri_shape("https://app.example.com/cb?issx=1").is_ok());
+
+        // forms that common server-side parsers fold into a reserved key, and valueless keys
+        for (uri, reserved) in [
+            ("https://app.example.com/cb?iss", "iss"),
+            ("https://app.example.com/cb?x=1&code", "code"),
+            ("https://app.example.com/cb?x=1&code=", "code"),
+            ("https://app.example.com/cb?ISS=x", "iss"),
+            ("https://app.example.com/cb?State=x", "state"),
+            ("https://app.example.com/cb?code%5B%5D=x", "code"),
+            ("https://app.example.com/cb?iss%5B0%5D=x", "iss"),
+            ("https://app.example.com/cb?state%5Bx%5D=y", "state"),
+            ("https://app.example.com/*?code%5B%5D=x", "code"),
+            (
+                "https://app.example.com/cb?error.description=x",
+                "error_description",
+            ),
+            (
+                "https://app.example.com/cb?error+description=x",
+                "error_description",
+            ),
+            (
+                "https://app.example.com/cb?error%20description=x",
+                "error_description",
+            ),
+            (
+                "https://app.example.com/cb?error.description%5B%5D=x",
+                "error_description",
+            ),
+            ("https://app.example.com/cb?iss.x=y", "iss"),
+            (
+                "https://app.example.com/cb?error_uri=https://evil.example",
+                "error_uri",
+            ),
+            ("https://app.example.com/cb?error.uri=x", "error_uri"),
+            ("https://app.example.com/cb?%20iss%20=x", "iss"),
+        ] {
+            let err = validate_redirect_uri_shape(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_eq!(
+                err.message,
+                format!("redirect_uri must not contain the query parameter '{reserved}'"),
+                "{uri}"
+            );
+        }
+
+        // control characters in a decoded key
+        for uri in [
+            "https://app.example.com/cb?%09iss=x",
+            "https://app.example.com/cb?iss%00=x",
+            "https://app.example.com/cb?x%0Ay=1",
+            "https://app.example.com/cb?%7Fcode=x",
+        ] {
+            let err = validate_redirect_uri_shape(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert!(err.message.contains("control characters"), "{uri}");
+        }
+
+        // no false positives for keys that only look similar
+        for uri in [
+            "https://app.example.com/cb?issuer=x",
+            "https://app.example.com/cb?codes=x",
+            "https://app.example.com/cb?state_x=1",
+            "https://app.example.com/cb?state%20x=1",
+            "https://app.example.com/cb?errors%5B%5D=1",
+            "https://app.example.com/cb?error_uris=1",
+            "https://app.example.com/cb?x%5Biss%5D=1",
+            "https://app.example.com/cb?x.iss=1",
+            "https://app.example.com/cb?x=code%5B%5D",
+            "https://app.example.com/cb?",
+            "https://app.example.com/cb?&&;",
+        ] {
+            assert!(validate_redirect_uri_shape(uri).is_ok(), "{uri}");
+        }
 
         // fragments are rejected, wildcard registrations included
         for uri in [

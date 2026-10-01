@@ -37,6 +37,7 @@ cryptr = { workspace = true }
 ed25519-compact = { workspace = true }
 flate2 = { workspace = true }
 flume = { workspace = true }
+form_urlencoded = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
 hex = { workspace = true }

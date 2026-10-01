@@ -5007,6 +5007,7 @@ dependencies = [
  "ed25519-compact",
  "flate2",
  "flume",
+ "form_urlencoded",
  "futures",
  "futures-util",
  "hex",
