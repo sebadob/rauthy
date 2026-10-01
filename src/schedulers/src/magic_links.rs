@@ -33,7 +33,8 @@ pub async fn magic_link_cleanup() {
 
         // Check for expired and unused magic links that are bound to a user which has no password
         // at all. These users should be deleted since they never cared about the (very important)
-        // password E-Mail.
+        // password E-Mail. Federated users are excluded: they never get a password or passkey, and
+        // an existing user can get auto-linked to a provider before the magic link was used.
         if let Err(err) = cleanup(exp).await {
             error!(error = ?err, "magic_link_cleanup");
         }
@@ -51,7 +52,7 @@ WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
-AND password IS NULL AND webauthn_user_id IS NULL"#;
+AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL"#;
 
     let res = if is_hiqlite() {
         DB::hql().execute(sql, params!(exp)).await.map_err(|err| {
@@ -102,7 +103,7 @@ WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
-AND password IS NULL AND webauthn_user_id IS NULL"#;
+AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL"#;
 
             let users: Vec<User> = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(exp)).await?
