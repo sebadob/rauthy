@@ -535,7 +535,7 @@ force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
 > Passkeys like Yubieys. I never did any software-based stuff, which will probably not work anyway
 > because of the missing certifications.
 
-[]()
+[#1751](https://github.com/sebadob/rauthy/pull/1751)
 
 #### Improved Password Hashing
 
