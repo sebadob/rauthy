@@ -1,6 +1,8 @@
-use crate::common::get_backend_url;
+use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::{assert_eq, assert_ne};
-use rauthy_api_types::clients::{DynamicClientRequest, DynamicClientResponse};
+use rauthy_api_types::clients::{
+    ClientResponse, DynamicClientRequest, DynamicClientResponse, UpdateClientRequest,
+};
 use rauthy_api_types::oidc::GrantType;
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;
@@ -31,6 +33,61 @@ const BAD_POST_LOGOUT_REDIRECT_URIS: [&str; 3] = [
     "http://localhost:8080/bye?state=x",
     "http://localhost:8080/bye?foo=bar&State=x",
 ];
+
+async fn admin_get_client(id: &str) -> Result<ClientResponse, Box<dyn Error>> {
+    let res = reqwest::Client::new()
+        .get(format!("{}/clients/{}", get_backend_url(), id))
+        .headers(get_auth_headers().await?)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    Ok(res.json::<ClientResponse>().await?)
+}
+
+/// Updates the client via the admin API: GETs it, applies `modify` to the full
+/// `UpdateClientRequest` and PUTs it back.
+async fn admin_update_client(
+    id: &str,
+    modify: impl FnOnce(&mut UpdateClientRequest),
+) -> Result<(), Box<dyn Error>> {
+    let c = admin_get_client(id).await?;
+    let mut req = UpdateClientRequest {
+        name: c.name,
+        confidential: c.confidential,
+        redirect_uris: c.redirect_uris,
+        post_logout_redirect_uris: c.post_logout_redirect_uris,
+        allowed_origins: c.allowed_origins,
+        enabled: c.enabled,
+        flows_enabled: c.flows_enabled,
+        access_token_alg: c.access_token_alg,
+        id_token_alg: c.id_token_alg,
+        auth_code_lifetime: c.auth_code_lifetime,
+        access_token_lifetime: c.access_token_lifetime,
+        scopes: c.scopes,
+        default_scopes: c.default_scopes,
+        challenges: c.challenges,
+        force_mfa: c.force_mfa,
+        client_uri: c.client_uri,
+        contacts: c.contacts,
+        backchannel_logout_uri: c.backchannel_logout_uri,
+        restrict_group_prefix: c.restrict_group_prefix,
+        claims: c.claims,
+        claims_at_root: c.claims_at_root,
+        allowed_resources: c.allowed_resources,
+        default_aud: c.default_aud,
+        scim: c.scim,
+    };
+    modify(&mut req);
+
+    let res = reqwest::Client::new()
+        .put(format!("{}/clients/{}", get_backend_url(), id))
+        .headers(get_auth_headers().await?)
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
@@ -245,6 +302,67 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let resp = res.json::<DynamicClientResponse>().await?;
     assert_ne!(resp.registration_access_token, token_old);
     assert_ne!(resp.client_secret, secret_old);
+
+    // values only an admin can set must survive a self-update
+    let client_id = resp.client_id.clone();
+    admin_update_client(&client_id, |req| {
+        req.auth_code_lifetime = 17;
+        req.access_token_lifetime = 42;
+        req.force_mfa = true;
+        req.restrict_group_prefix = Some("dyn_test".to_string());
+        req.claims = Some(serde_json::json!({ "tenant": "dyn" }));
+        req.default_aud = Some(vec!["https://aud.dyn.rauthy.io".to_string()]);
+    })
+    .await?;
+    let before = admin_get_client(&client_id).await?;
+
+    let token = format!(
+        "Bearer {}",
+        resp.registration_access_token.as_ref().unwrap()
+    );
+    payload.client_name = Some("Dyn Test Client 1234567".to_string());
+    let res = client
+        .put(&url)
+        .header(AUTHORIZATION, &token)
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let resp = res.json::<DynamicClientResponse>().await?;
+    assert_eq!(resp.client_name, payload.client_name);
+
+    let after = admin_get_client(&client_id).await?;
+    assert_eq!(after.name, payload.client_name);
+    assert!(after.enabled);
+    assert_eq!(after.auth_code_lifetime, 17);
+    assert_eq!(after.access_token_lifetime, 42);
+    assert!(after.force_mfa);
+    assert_eq!(after.restrict_group_prefix.as_deref(), Some("dyn_test"));
+    assert_eq!(after.claims, before.claims);
+    assert!(after.claims.is_some());
+    assert_eq!(after.default_aud, before.default_aud);
+    assert_eq!(after.scopes, before.scopes);
+    assert_eq!(after.default_scopes, before.default_scopes);
+
+    // an admin-disabled client must not be able to modify (and re-enable) itself
+    admin_update_client(&client_id, |req| req.enabled = false).await?;
+    let token = format!(
+        "Bearer {}",
+        resp.registration_access_token.as_ref().unwrap()
+    );
+    payload.client_name = Some("Dyn Test Client re-enabled".to_string());
+    let res = client
+        .put(&url)
+        .header(AUTHORIZATION, &token)
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
+    let after = admin_get_client(&client_id).await?;
+    assert!(!after.enabled);
+    assert_eq!(after.name.as_deref(), Some("Dyn Test Client 1234567"));
+    assert_eq!(after.access_token_lifetime, 42);
 
     Ok(())
 }
