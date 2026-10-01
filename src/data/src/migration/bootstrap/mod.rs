@@ -83,6 +83,10 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
     info!("Initializing empty production database");
 
+    // Validate before the first write: once JWKs exist, this init never runs again, so a
+    // failure halfway through would leave a partially bootstrapped database behind.
+    validate_additional_data().await?;
+
     // For initializing a prod database, we need to:
     // - delete init_admin and client
     // - set new random password for admin and log to console with the first startup
@@ -103,7 +107,7 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
     rauthy_admin::bootstrap().await?;
     jwks::bootstrap().await?;
-    bootstrap_additional_data().await?;
+    bootstrap_additional_data_validated().await?;
 
     info!("Production database initialized successfully");
 
@@ -113,6 +117,17 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 // We want to be able to call this during DEV as well to always be sure that it works.
 #[cold]
 pub async fn bootstrap_additional_data() -> Result<(), ErrorResponse> {
+    validate_additional_data().await?;
+    bootstrap_additional_data_validated().await
+}
+
+/// Checks the bootstrap data that cannot be validated by `bootstrap_data!` alone, before
+/// anything is written.
+async fn validate_additional_data() -> Result<(), ErrorResponse> {
+    clients::validate().await
+}
+
+async fn bootstrap_additional_data_validated() -> Result<(), ErrorResponse> {
     debug!("Bootstrapping additional data");
 
     api_key::bootstrap().await?;
