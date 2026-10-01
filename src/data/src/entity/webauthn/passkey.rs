@@ -1,6 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::users::User;
+use crate::fido_mds::mds_entry::MdsEntrySimple;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use hiqlite::{Params, params};
@@ -395,6 +396,36 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
         Ok(pks)
     }
 
+    pub async fn find_for_user_with_details(
+        user_id: &str,
+    ) -> Result<Vec<PasskeyResponse>, ErrorResponse> {
+        let passkeys = Self::find_for_user(user_id).await?;
+        let mut res = Vec::with_capacity(passkeys.len());
+
+        for pk in passkeys {
+            let mut resp = PasskeyResponse {
+                name: pk.name,
+                registered: pk.registered,
+                last_used: pk.last_used,
+                user_verified: pk.user_verified,
+                resident_key: pk.resident_key,
+                aaguid: pk.aaguid.as_deref().map(format_aaguid),
+                description: None,
+            };
+
+            if let Some(aaguid) = &pk.aaguid {
+                // Doing these as single lookups instead of DB joins is fast. All the MDS entries
+                // are cached.
+                let mds = MdsEntrySimple::find(aaguid).await?;
+                resp.description = Some(mds.description);
+            }
+
+            res.push(resp);
+        }
+
+        Ok(res)
+    }
+
     pub async fn update_passkey(&self) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
@@ -486,18 +517,5 @@ fn format_aaguid(aaguid: &[u8]) -> String {
         )
     } else {
         hex
-    }
-}
-
-impl From<PasskeyEntity> for PasskeyResponse {
-    fn from(value: PasskeyEntity) -> Self {
-        Self {
-            aaguid: value.aaguid.as_deref().map(format_aaguid),
-            name: value.name,
-            registered: value.registered,
-            last_used: value.last_used,
-            user_verified: value.user_verified,
-            resident_key: value.resident_key,
-        }
     }
 }

@@ -539,6 +539,8 @@ pub struct PasskeyResponse {
     /// Formatted as a UUID-style string (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub aaguid: Option<String>,
+    /// Will be set for an attested device.
+    pub description: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]

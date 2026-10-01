@@ -1745,11 +1745,7 @@ pub async fn get_user_webauthn_passkeys(
         }
     }
 
-    let pks = PasskeyEntity::find_for_user(&id)
-        .await?
-        .into_iter()
-        .map(PasskeyResponse::from)
-        .collect::<Vec<PasskeyResponse>>();
+    let pks = PasskeyEntity::find_for_user_with_details(&id).await?;
 
     Ok(HttpResponse::Ok().json(pks))
 }

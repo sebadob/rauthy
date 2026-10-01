@@ -44,7 +44,7 @@
                 </Tooltip>
             {/if}
             {#if passkey.aaguid}
-                <Tooltip text={t.account.aaguidTooltip}>
+                <Tooltip text={`${t.account.aaguidTooltip}: ${passkey.description}`}>
                     <div style:margin-bottom="-.25rem">
                         <IconCheckBadge width="1rem" color="hsl(var(--accent))" />
                     </div>

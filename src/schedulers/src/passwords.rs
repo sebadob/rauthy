@@ -9,7 +9,7 @@ use rauthy_error::ErrorResponse;
 use std::ops::{Add, Sub};
 use std::time::Duration;
 use tokio::time;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 /// Checks soon expiring passwords and notifies the user accordingly.
 /// Runs once every night at 04:30.
@@ -27,7 +27,7 @@ pub async fn password_expiry_checker() {
             continue;
         }
 
-        tracing::warn!("Running password_expiry_checker scheduler");
+        debug!("Running password_expiry_checker scheduler");
 
         if let Err(err) = execute().await {
             error!("Error running password_expiry_checker scheduler: {:?}", err);
@@ -63,9 +63,11 @@ WHERE password_expires <= $1 AND NOT EXISTS (
 
     match expiring_users {
         Ok(users_to_notify) => {
-            warn!("Users about to expire: {:?}", users_to_notify);
-            for user in users_to_notify {
-                send_pwd_reset_info(user).await;
+            if !users_to_notify.is_empty() {
+                info!("Users about to expire: {:?}", users_to_notify);
+                for user in users_to_notify {
+                    send_pwd_reset_info(user).await;
+                }
             }
         }
 
