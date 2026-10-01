@@ -1374,12 +1374,22 @@ impl Client {
 
     #[inline]
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
+        self.validate_redirect_uri_with(redirect_uri, || {
+            RauthyConfig::get().vars.access.rfc_8252_enable
+        })
+    }
+
+    /// `rfc_8252_enable` is only evaluated after the shape check has passed.
+    fn validate_redirect_uri_with(
+        &self,
+        redirect_uri: &str,
+        rfc_8252_enable: impl FnOnce() -> bool,
+    ) -> Result<(), ErrorResponse> {
         validate_redirect_uri_shape(redirect_uri)?;
 
         // RFC 8252 loopback any-port matching — opt-in via access.rfc_8252_enable,
         // and only for dynamic and ephemeral clients (never static ones).
-        let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
-            && (self.is_dynamic() || self.is_ephemeral());
+        let loopback = (self.is_dynamic() || self.is_ephemeral()) && rfc_8252_enable();
         let has_any = self.get_redirect_uris().iter().any(|uri| {
             wildcard_prefix_match(uri, redirect_uri)
                 || uri.as_str().eq(redirect_uri)
@@ -2230,7 +2240,7 @@ pub(crate) fn retain_supported_grant_types(grant_types: &mut Vec<String>) {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
@@ -2836,6 +2846,109 @@ mod tests {
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert!(err.message.contains(uri), "{uri}: {}", err.message);
         }
+    }
+
+    pub(crate) fn redirect_test_client(id: &str, redirect_uris: &str) -> Client {
+        Client {
+            id: id.to_string(),
+            name: None,
+            enabled: true,
+            confidential: false,
+            secret: None,
+            secret_kid: None,
+            redirect_uris: redirect_uris.to_string(),
+            post_logout_redirect_uris: None,
+            allowed_origins: None,
+            flows_enabled: "authorization_code".to_string(),
+            access_token_alg: "EdDSA".to_string(),
+            id_token_alg: "EdDSA".to_string(),
+            auth_code_lifetime: 60,
+            access_token_lifetime: 300,
+            scopes: "openid".to_string(),
+            default_scopes: "openid".to_string(),
+            challenge: Some("S256".to_string()),
+            force_mfa: false,
+            client_uri: None,
+            contacts: None,
+            backchannel_logout_uri: None,
+            restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
+        }
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_wildcard() {
+        let client = redirect_test_client("wildcard", "https://app.example.com/*");
+
+        for uri in [
+            "https://app.example.com/cb",
+            "https://app.example.com/cb?foo=bar",
+            "https://app.example.com/cb?issuer=x",
+        ] {
+            assert!(
+                client.validate_redirect_uri_with(uri, || false).is_ok(),
+                "{uri}"
+            );
+        }
+
+        // these all pass the wildcard prefix match and must be rejected by the shape check
+        for uri in [
+            "https://app.example.com/cb?iss=https://attacker.example",
+            "https://app.example.com/cb?code=x",
+            "https://app.example.com/cb?state=x",
+            "https://app.example.com/cb?code%5B%5D=x",
+            "https://app.example.com/cb#/route",
+            "https://app.example.com/cb#?iss=https://attacker.example",
+        ] {
+            let err = client.validate_redirect_uri(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_ne!(err.message, "Invalid redirect uri", "{uri}");
+        }
+
+        let err = client
+            .validate_redirect_uri_with("https://other.example.com/cb", || false)
+            .unwrap_err();
+        assert_eq!(err.message, "Invalid redirect uri");
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_loopback() {
+        let client = redirect_test_client("dyn$loopback", "http://127.0.0.1/cb");
+
+        assert!(
+            client
+                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", || true)
+                .is_ok()
+        );
+        // any-port matching is opt-in
+        assert!(
+            client
+                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", || false)
+                .is_err()
+        );
+
+        // the loopback match ignores the query, so only the shape check stops these
+        for uri in [
+            "http://127.0.0.1:52345/cb?iss=x",
+            "http://127.0.0.1:52345/cb?code=x",
+            "http://127.0.0.1:52345/cb#x",
+            "http://127.0.0.1/cb#x",
+        ] {
+            let err = client.validate_redirect_uri_with(uri, || true).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_ne!(err.message, "Invalid redirect uri", "{uri}");
+        }
+
+        // static clients never get any-port matching
+        let client = redirect_test_client("static", "http://127.0.0.1/cb");
+        assert!(
+            client
+                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", || true)
+                .is_err()
+        );
     }
 
     #[test]

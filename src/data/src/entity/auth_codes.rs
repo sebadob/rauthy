@@ -368,6 +368,31 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_redirect_uri_exact_rejects_stored_fragment_uri() {
+        // a URI stored before fragments were rejected at registration time
+        let uri = "https://app.example.com/#/cb";
+        let client = crate::entity::clients::tests::redirect_test_client("legacy", uri);
+        let code = AuthCode {
+            id: "c0de".to_string(),
+            exp: 0,
+            client_id: client.id.clone(),
+            redirect_uri: uri.to_string(),
+            user_id: "user".to_string(),
+            session_id: None,
+            challenge: None,
+            challenge_method: None,
+            nonce: None,
+            scopes: vec!["openid".to_string()],
+            resource: None,
+            state: None,
+        };
+
+        let err = code.validate_redirect_uri_exact(&client, uri).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+        assert_eq!(err.message, "redirect_uri must not contain a fragment");
+    }
+
+    #[test]
     fn test_error_redirect() {
         let loc = authorization_redirect(CB, &[("error", "login_required")], Some("x"), ISSUER);
         assert_eq!(
