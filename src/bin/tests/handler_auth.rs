@@ -36,6 +36,9 @@ use tokio::time;
 
 mod common;
 
+/// `init_client` requires PKCE - without a challenge, `/authorize` would fail for another reason
+const CHALLENGE_PLAIN: &str = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+
 // This is a very long running test - run it manually as a single test
 // maybe moving it into its own module would work, so it does not block the others
 #[tokio::test]
@@ -69,6 +72,109 @@ async fn test_certs() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let new_certs = res.json::<JWKS>().await?;
     assert_eq!(new_certs.keys.len(), 8);
+
+    Ok(())
+}
+
+// `init_client` has the wildcard `http://localhost:8080/*`, so the prefix match alone would pass
+#[tokio::test]
+async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    let bad_redirect_uri = "http://localhost:8080/cb?iss=x";
+    let bad_redirect_uri_enc = "http%3A%2F%2Flocalhost%3A8080%2Fcb%3Fiss%3Dx";
+
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+
+    let url = format!(
+        "{backend_url}/oidc/authorize?client_id=init_client&redirect_uri={bad_redirect_uri_enc}&response_type=code&code_challenge={CHALLENGE_PLAIN}&state=X",
+    );
+    let res = client.get(&url).send().await?;
+    assert_eq!(res.status(), 400);
+    assert!(res.headers().get(reqwest::header::LOCATION).is_none());
+    let body = res.text().await?;
+    assert!(
+        body.contains("redirect_uri must not contain the query parameter"),
+        "{body}"
+    );
+
+    let url = format!(
+        "{backend_url}/oidc/authorize?client_id=init_client&redirect_uri={bad_redirect_uri_enc}&response_type=code&code_challenge={CHALLENGE_PLAIN}&prompt=none&state=X",
+    );
+    let res = client.get(&url).send().await?;
+    assert_eq!(res.status(), 400);
+    assert!(res.headers().get(reqwest::header::LOCATION).is_none());
+    let body = res.text().await?;
+    assert!(
+        body.contains("redirect_uri must not contain the query parameter"),
+        "{body}"
+    );
+
+    // POST must stay a uniform 401 for correct and wrong password - no enumeration oracle
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let url_auth = format!(
+        "{backend_url}/oidc/authorize?client_id=init_client&redirect_uri={redirect_uri}&response_type=code&code_challenge={CHALLENGE_PLAIN}",
+    );
+    let mut res = reqwest::get(&url_auth).await?;
+    res = check_status(res, 200).await?;
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    for password in [PASSWORD, "IAmSoWrong1337"] {
+        let req_login = LoginRequest {
+            email: Some(USERNAME.to_string()),
+            password: Some(password.to_string()),
+            pow: get_solved_pow().await,
+            client_id: CLIENT_ID.to_string(),
+            redirect_uri: bad_redirect_uri.to_string(),
+            scopes: None,
+            state: Some("X".to_string()),
+            nonce: None,
+            code_challenge: Some(CHALLENGE_PLAIN.to_string()),
+            code_challenge_method: Some("plain".to_string()),
+            resource: None,
+            resident_key_token: None,
+        };
+        let res = reqwest::Client::new()
+            .post(&url_auth)
+            .headers(headers.clone())
+            .json(&req_login)
+            .send()
+            .await?;
+        let status = res.status();
+        let body = res.text().await?;
+        assert_eq!(status, 401, "expected uniform 401 - body: {body}");
+        assert!(body.contains("Invalid user credentials"), "{body}");
+        assert!(!body.contains("iss"), "{body}");
+    }
+
+    Ok(())
+}
+
+// RFC 6749 §3.1.2 - a fragment would swallow `code` / `iss`, and the wildcard would let it through
+#[tokio::test]
+async fn test_authorize_rejects_fragment_in_redirect_uri() -> Result<(), Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    // http://localhost:8080/cb#/callback?iss=https%3A%2F%2Fattacker.example%2F
+    let bad_redirect_uri_enc = "http%3A%2F%2Flocalhost%3A8080%2Fcb%23%2Fcallback%3Fiss%3Dhttps%253A%252F%252Fattacker.example%252F";
+
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+
+    for prompt in ["", "&prompt=none"] {
+        let url = format!(
+            "{backend_url}/oidc/authorize?client_id=init_client&redirect_uri={bad_redirect_uri_enc}&response_type=code&code_challenge={CHALLENGE_PLAIN}&state=X{prompt}",
+        );
+        let res = client.get(&url).send().await?;
+        assert_eq!(res.status(), 400, "prompt: '{prompt}'");
+        assert!(res.headers().get(reqwest::header::LOCATION).is_none());
+        let body = res.text().await?;
+        assert!(
+            body.contains("redirect_uri must not contain a fragment"),
+            "{body}"
+        );
+    }
 
     Ok(())
 }

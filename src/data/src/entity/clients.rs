@@ -1374,6 +1374,8 @@ impl Client {
 
     #[inline]
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
+        validate_redirect_uri_shape(redirect_uri)?;
+
         // RFC 8252 loopback any-port matching — opt-in via access.rfc_8252_enable,
         // and only for dynamic and ephemeral clients (never static ones).
         let loopback = RauthyConfig::get().vars.access.rfc_8252_enable
@@ -1661,6 +1663,45 @@ pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
     }
 }
 
+/// Query keys an authorization response sets itself (RFC 6749 §4.1.2 / §4.1.2.1, RFC 9207).
+pub const RESERVED_REDIRECT_QUERY_KEYS: [&str; 5] =
+    ["code", "state", "error", "error_description", "iss"];
+
+/// Rejects a `redirect_uri` with a fragment (RFC 6749 §3.1.2) or whose query already carries a
+/// reserved key - a wildcard registration would otherwise let `https://app/cb?iss=attacker` or
+/// `https://app/cb#?iss=attacker` pass the prefix match. Keys are split on both `&` and `;`,
+/// percent-decoded and trimmed of ASCII whitespace.
+pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorResponse> {
+    if redirect_uri.contains('#') {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "redirect_uri must not contain a fragment",
+        ));
+    }
+
+    let query = redirect_uri
+        .split_once('?')
+        .map(|(_, q)| q)
+        .unwrap_or_default();
+    let mut decoder = Url::parse("http://x/").expect("static URL to parse");
+    let found = query.split(['&', ';']).find_map(|pair| {
+        decoder.set_query(Some(pair));
+        decoder
+            .query_pairs()
+            .next()
+            .map(|(k, _)| k.trim_ascii().to_string())
+            .filter(|k| RESERVED_REDIRECT_QUERY_KEYS.contains(&k.as_str()))
+    });
+
+    match found {
+        None => Ok(()),
+        Some(key) => Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("redirect_uri must not contain the query parameter '{key}'"),
+        )),
+    }
+}
+
 /// RFC 8252 section 7.3: for a loopback redirect URI, the authorization
 /// server MUST allow any port chosen by the client at request time. Native
 /// apps (and CLI OAuth clients) bind an ephemeral loopback port, so a
@@ -1733,7 +1774,7 @@ impl Client {
 
         body.validate()?;
 
-        let slf = Self::from(body);
+        let slf = Self::try_from(body)?;
         if slf.id != value {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -1807,15 +1848,21 @@ impl Client {
     }
 }
 
-impl From<EphemeralClientRequest> for Client {
-    fn from(value: EphemeralClientRequest) -> Self {
+impl TryFrom<EphemeralClientRequest> for Client {
+    type Error = ErrorResponse;
+
+    fn try_from(value: EphemeralClientRequest) -> Result<Self, Self::Error> {
+        for uri in &value.redirect_uris {
+            validate_redirect_uri_shape(uri)?;
+        }
+
         let scopes = RauthyConfig::get()
             .vars
             .ephemeral_clients
             .allowed_scopes
             .join(",");
 
-        Self {
+        Ok(Self {
             id: value.client_id,
             name: value.client_name,
             enabled: true,
@@ -1852,7 +1899,7 @@ impl From<EphemeralClientRequest> for Client {
             claims_at_root: false,
             allowed_resources: value.allowed_resources.map(|r| r.join(",")),
             default_aud: None,
-        }
+        })
     }
 }
 
@@ -1907,6 +1954,7 @@ impl TryFrom<NewClientRequest> for Client {
         for uri in client.redirect_uris {
             let trimmed = uri.trim();
             if !trimmed.is_empty() {
+                validate_redirect_uri_shape(trimmed)?;
                 write!(redirect_uris, "{trimmed},")?;
             }
         }
@@ -2004,6 +2052,7 @@ impl Client {
         let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
         for uri in &req.redirect_uris {
             validate_dyn_redirect_uri(uri)?;
+            validate_redirect_uri_shape(uri)?;
             redirect_uris.push(uri.clone());
         }
         if redirect_uris.is_empty() {
@@ -2583,6 +2632,92 @@ mod tests {
     //         })
     //     })
     // }
+
+    #[test]
+    fn test_validate_redirect_uri_shape() {
+        for uri in [
+            "https://app.example.com/cb",
+            "https://app.example.com/cb?foo=bar&x=y",
+            "https://app.example.com/*",
+            "http://localhost:*/cb?foo=bar",
+            // keys only, not values or substrings
+            "https://app.example.com/cb?foo=iss&issuer=x&code_x=1",
+        ] {
+            assert!(validate_redirect_uri_shape(uri).is_ok(), "{uri}");
+        }
+
+        for key in RESERVED_REDIRECT_QUERY_KEYS {
+            for uri in [
+                format!("https://app.example.com/cb?{key}=x"),
+                format!("https://app.example.com/cb?foo=bar&{key}=x"),
+                format!("https://app.example.com/*?{key}=x"),
+                format!("http://localhost:*/cb?{key}=x"),
+            ] {
+                let err = validate_redirect_uri_shape(&uri).unwrap_err();
+                assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+                assert!(err.message.contains(key), "{uri}: {}", err.message);
+            }
+        }
+
+        for uri in [
+            "https://app.example.com/cb?%69ss=x",
+            "https://app.example.com/cb?x=1;iss=https://evil.example",
+            "https://app.example.com/cb?x=1;%69ss=x",
+            "https://app.example.com/*?x=1;state=x",
+            "http://localhost:*/cb?%69ss=x",
+            "http://localhost:*/cb?x=1;iss=x",
+            "https://app.example.com/cb?+iss=x",
+            "https://app.example.com/cb?%20iss=x",
+        ] {
+            let err = validate_redirect_uri_shape(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+        }
+        assert!(validate_redirect_uri_shape("https://app.example.com/cb?x=1;issuer=y").is_ok());
+        assert!(validate_redirect_uri_shape("https://app.example.com/cb?issx=1").is_ok());
+
+        // fragments are rejected, wildcard registrations included
+        for uri in [
+            "https://app.example.com/#/callback",
+            "https://app.example.com/cb#",
+            "https://app.example.com/cb?foo=bar#/route",
+            "https://app.example.com/cb#/callback?iss=https%3A%2F%2Fattacker.example%2F",
+            "https://app.example.com/#/*",
+            "http://localhost:*/cb#x",
+        ] {
+            let err = validate_redirect_uri_shape(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_eq!(
+                err.message, "redirect_uri must not contain a fragment",
+                "{uri}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_ephemeral_client_redirect_uri_shape() {
+        for uri in [
+            "https://app.example.com/#/callback",
+            "https://app.example.com/cb?iss=https://attacker.example",
+        ] {
+            let req = EphemeralClientRequest {
+                client_id: "https://app.example.com/client".to_string(),
+                client_name: None,
+                client_uri: None,
+                contacts: None,
+                redirect_uris: vec![uri.to_string()],
+                post_logout_redirect_uris: None,
+                grant_types: None,
+                default_max_age: None,
+                scope: None,
+                require_auth_time: None,
+                access_token_signed_response_alg: None,
+                id_token_signed_response_alg: None,
+                allowed_resources: None,
+            };
+            let err = Client::try_from(req).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+        }
+    }
 
     #[test]
     fn test_delete_client_custom_scope() {

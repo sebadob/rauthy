@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::clients::validate_redirect_uri_shape;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
@@ -13,7 +14,7 @@ use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::SECRET_LEN_CLIENTS;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::info;
 use zeroize::Zeroize;
 
@@ -88,6 +89,17 @@ $18, $19, $20, $21, $22)"#;
             (None, None)
         };
 
+        for uri in &client.redirect_uris {
+            if let Err(err) = validate_redirect_uri_shape(uri) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "Bootstrap client '{}' has an invalid redirect_uri '{uri}': {}",
+                        client.id, err.message
+                    ),
+                ));
+            }
+        }
         let redirect_uris = opt_vec_to_csv(&Some(client.redirect_uris)).unwrap();
         let post_logout_redirect_uris = opt_vec_to_csv(&client.post_logout_redirect_uris);
         let allowed_origins = opt_vec_to_csv(&client.allowed_origins);
