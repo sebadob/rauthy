@@ -50,7 +50,10 @@ pub struct WellKnown {
     pub client_id_metadata_document_supported: bool,
 }
 
-static IDX: &str = ".well-known";
+// Versioned, because the cached document is shared across the cluster and its contents change
+// with releases. Each version serves the document it actually implements, even during a rolling
+// upgrade, and an upgrade never serves a stale document from before.
+static IDX: &str = concat!(".well-known-", env!("CARGO_PKG_VERSION"));
 
 impl WellKnown {
     pub async fn json() -> Result<String, ErrorResponse> {
