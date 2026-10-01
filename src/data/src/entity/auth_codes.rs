@@ -140,6 +140,7 @@ impl AuthCode {
 
 /// Appends `params`, `state` and the RFC 9207 `iss`, form-urlencoded, to `redirect_uri`.
 /// `redirect_uri` must already have passed `validate_redirect_uri_shape`.
+#[must_use]
 pub fn authorization_redirect(
     redirect_uri: &str,
     params: &[(&str, &str)],
@@ -147,29 +148,27 @@ pub fn authorization_redirect(
     issuer: &str,
 ) -> String {
     debug_assert!(!redirect_uri.contains('#'));
-    let mut url = reqwest::Url::parse("http://x/").expect("static URL to parse");
-    {
-        let mut query = url.query_pairs_mut();
-        for (key, value) in params {
-            query.append_pair(key, value);
-        }
-        if let Some(state) = state {
-            query.append_pair("state", state);
-        }
-        query.append_pair("iss", issuer);
-    }
-    let query = url.query().unwrap_or_default();
-
     let append_char = if redirect_uri.contains('?') { '&' } else { '?' };
-    let mut loc = String::with_capacity(redirect_uri.len() + 1 + query.len());
+
+    let mut loc = String::with_capacity(redirect_uri.len() + 128);
     loc.push_str(redirect_uri);
     loc.push(append_char);
-    loc.push_str(query);
-    loc
+
+    let start = loc.len();
+    let mut query = form_urlencoded::Serializer::for_suffix(loc, start);
+    for (key, value) in params {
+        query.append_pair(key, value);
+    }
+    if let Some(state) = state {
+        query.append_pair("state", state);
+    }
+    query.append_pair("iss", issuer);
+    query.finish()
 }
 
 impl AuthCode {
     #[inline]
+    #[must_use]
     pub fn build_location_header(&self, state: Option<&str>) -> String {
         authorization_redirect(
             &self.redirect_uri,
