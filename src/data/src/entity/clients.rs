@@ -757,12 +757,7 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             ));
         }
 
-        // we need to keep some old and possibly user-modified values
-        new_client.id = current.id;
-        new_client.force_mfa = current.force_mfa;
-        new_client.scopes = current.scopes;
-        new_client.default_scopes = current.default_scopes;
-        new_client.allowed_origins = current.allowed_origins;
+        new_client.keep_admin_set_values(current);
 
         client_dyn.token_endpoint_auth_method = token_endpoint_auth_method;
         client_dyn.last_used = Some(Utc::now().timestamp());
@@ -2023,6 +2018,68 @@ impl TryFrom<NewClientRequest> for Client {
 }
 
 impl Client {
+    /// Called on `self` freshly built by `try_from_dyn_reg` for an RFC 7592 self-update: copies
+    /// every value from `current` that the client must not change with its registration token.
+    /// That is everything `try_from_dyn_reg` does not map from the request metadata.
+    ///
+    /// `current` is destructured exhaustively, so a new `Client` field does not compile here
+    /// until it is classified as either client metadata or admin-set / internal.
+    fn keep_admin_set_values(&mut self, current: Client) {
+        let Client {
+            // client metadata from the request (RFC 7591 §2), or derived from it
+            name: _,
+            confidential,
+            // a confidential client gets a new secret with each update, as before
+            secret: _,
+            secret_kid: _,
+            redirect_uris: _,
+            post_logout_redirect_uris: _,
+            flows_enabled: _,
+            access_token_alg: _,
+            id_token_alg: _,
+            client_uri: _,
+            contacts: _,
+            backchannel_logout_uri: _,
+            challenge,
+            // admin-set or internal
+            id,
+            enabled,
+            allowed_origins,
+            auth_code_lifetime,
+            access_token_lifetime,
+            scopes,
+            default_scopes,
+            force_mfa,
+            restrict_group_prefix,
+            claims,
+            claims_at_root,
+            allowed_resources,
+            default_aud,
+        } = current;
+
+        self.id = id;
+        self.enabled = enabled;
+        self.allowed_origins = allowed_origins;
+        self.auth_code_lifetime = auth_code_lifetime;
+        self.access_token_lifetime = access_token_lifetime;
+        self.scopes = scopes;
+        self.default_scopes = default_scopes;
+        self.force_mfa = force_mfa;
+        self.restrict_group_prefix = restrict_group_prefix;
+        self.claims = claims;
+        self.claims_at_root = claims_at_root;
+        self.allowed_resources = allowed_resources;
+        self.default_aud = default_aud;
+
+        // `challenge` is derived from `token_endpoint_auth_method`, but an admin may have
+        // changed it. Keep the admin value unless the client switches between public and
+        // confidential, where the derived value (`S256` for public, none for confidential)
+        // applies.
+        if self.confidential == confidential {
+            self.challenge = challenge;
+        }
+    }
+
     fn try_from_dyn_reg(
         req: DynamicClientRequest,
         origin_header: Option<String>,
@@ -2936,5 +2993,139 @@ pub(crate) mod tests {
         client.delete_scope("groups");
         assert_eq!(&client.scopes, "openid");
         assert_eq!(&client.default_scopes, "openid");
+    }
+
+    /// The stored client as an admin left it: every admin-set / internal field differs from
+    /// what `try_from_dyn_reg` would produce.
+    fn dyn_client_admin_modified() -> Client {
+        Client {
+            id: "dyn$abc".to_string(),
+            name: Some("old name".to_string()),
+            enabled: false,
+            confidential: false,
+            secret: None,
+            secret_kid: None,
+            redirect_uris: "https://old.example.com/cb".to_string(),
+            post_logout_redirect_uris: None,
+            allowed_origins: Some("https://old.example.com".to_string()),
+            flows_enabled: "authorization_code".to_string(),
+            access_token_alg: "RS256".to_string(),
+            id_token_alg: "RS256".to_string(),
+            auth_code_lifetime: 17,
+            access_token_lifetime: 42,
+            scopes: "openid,custom".to_string(),
+            default_scopes: "openid,custom".to_string(),
+            challenge: Some("plain,S256".to_string()),
+            force_mfa: true,
+            client_uri: None,
+            contacts: None,
+            backchannel_logout_uri: None,
+            restrict_group_prefix: Some("team:".to_string()),
+            claims: Some(br#"{"tenant":"t1"}"#.to_vec()),
+            claims_at_root: true,
+            allowed_resources: Some("https://api.example.com".to_string()),
+            default_aud: Some("https://aud.example.com".to_string()),
+        }
+    }
+
+    /// What `try_from_dyn_reg` produces for a self-update request: request metadata plus
+    /// defaults for everything else.
+    fn dyn_client_from_request(confidential: bool) -> Client {
+        Client {
+            id: "dyn$new".to_string(),
+            name: Some("new name".to_string()),
+            enabled: true,
+            confidential,
+            secret: confidential.then(|| b"new secret".to_vec()),
+            secret_kid: confidential.then(|| "kid".to_string()),
+            redirect_uris: "https://new.example.com/cb".to_string(),
+            post_logout_redirect_uris: Some("https://new.example.com/logout".to_string()),
+            allowed_origins: None,
+            flows_enabled: "authorization_code,refresh_token".to_string(),
+            access_token_alg: "EdDSA".to_string(),
+            id_token_alg: "EdDSA".to_string(),
+            client_uri: Some("https://new.example.com".to_string()),
+            contacts: Some("admin@new.example.com".to_string()),
+            backchannel_logout_uri: Some("https://new.example.com/bcl".to_string()),
+            challenge: (!confidential).then(|| "S256".to_string()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn keep_admin_set_values_on_dyn_update() {
+        let current = dyn_client_admin_modified();
+        let mut new_client = dyn_client_from_request(false);
+        new_client.keep_admin_set_values(current.clone());
+
+        // admin-set / internal values are kept
+        assert_eq!(new_client.id, current.id);
+        assert_eq!(new_client.enabled, current.enabled);
+        assert_eq!(new_client.allowed_origins, current.allowed_origins);
+        assert_eq!(new_client.auth_code_lifetime, current.auth_code_lifetime);
+        assert_eq!(
+            new_client.access_token_lifetime,
+            current.access_token_lifetime
+        );
+        assert_eq!(new_client.scopes, current.scopes);
+        assert_eq!(new_client.default_scopes, current.default_scopes);
+        assert_eq!(new_client.force_mfa, current.force_mfa);
+        assert_eq!(
+            new_client.restrict_group_prefix,
+            current.restrict_group_prefix
+        );
+        assert_eq!(new_client.claims, current.claims);
+        assert_eq!(new_client.claims_at_root, current.claims_at_root);
+        assert_eq!(new_client.allowed_resources, current.allowed_resources);
+        assert_eq!(new_client.default_aud, current.default_aud);
+        // still public -> the admin's PKCE setting is kept
+        assert_eq!(new_client.challenge, current.challenge);
+
+        // the request metadata is applied
+        let req = dyn_client_from_request(false);
+        assert_eq!(new_client.name, req.name);
+        assert_eq!(new_client.confidential, req.confidential);
+        assert_eq!(new_client.secret, req.secret);
+        assert_eq!(new_client.secret_kid, req.secret_kid);
+        assert_eq!(new_client.redirect_uris, req.redirect_uris);
+        assert_eq!(
+            new_client.post_logout_redirect_uris,
+            req.post_logout_redirect_uris
+        );
+        assert_eq!(new_client.flows_enabled, req.flows_enabled);
+        assert_eq!(new_client.access_token_alg, req.access_token_alg);
+        assert_eq!(new_client.id_token_alg, req.id_token_alg);
+        assert_eq!(new_client.client_uri, req.client_uri);
+        assert_eq!(new_client.contacts, req.contacts);
+        assert_eq!(
+            new_client.backchannel_logout_uri,
+            req.backchannel_logout_uri
+        );
+    }
+
+    #[test]
+    fn keep_admin_set_values_on_dyn_update_auth_method_switch() {
+        // public -> confidential: the derived challenge (none) applies, the rest is kept
+        let current = dyn_client_admin_modified();
+        let mut new_client = dyn_client_from_request(true);
+        new_client.keep_admin_set_values(current.clone());
+        assert!(new_client.confidential);
+        assert_eq!(new_client.challenge, None);
+        assert!(!new_client.enabled);
+        assert_eq!(
+            new_client.access_token_lifetime,
+            current.access_token_lifetime
+        );
+
+        // confidential -> public: the derived challenge (S256) applies
+        let current = Client {
+            confidential: true,
+            challenge: None,
+            ..dyn_client_admin_modified()
+        };
+        let mut new_client = dyn_client_from_request(false);
+        new_client.keep_admin_set_values(current);
+        assert!(!new_client.confidential);
+        assert_eq!(new_client.challenge.as_deref(), Some("S256"));
     }
 }
