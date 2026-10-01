@@ -748,7 +748,6 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             .clone()
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
-        let mut new_client = Self::try_from_dyn_reg(client_req, None)?;
         let current = Self::find(client_dyn.id.clone()).await?;
         if !current.is_dynamic() {
             return Err(ErrorResponse::new(
@@ -759,6 +758,7 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
 
         // RFC 7592 §2.2: a client without permission to update its record gets a 403.
         // An admin disabled this client, so its registration must not be modified anymore.
+        // Checked before the request is validated, so a disabled client always gets the 403.
         if !current.enabled {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -766,6 +766,10 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             ));
         }
 
+        client_req.validate()?;
+        current.ensure_dyn_grant_types_allowed(&client_req.grant_types)?;
+
+        let mut new_client = Self::try_from_dyn_reg(client_req, None)?;
         new_client.keep_admin_set_values(current);
 
         client_dyn.token_endpoint_auth_method = token_endpoint_auth_method;
@@ -2089,6 +2093,30 @@ impl Client {
         }
     }
 
+    /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one
+    /// it does not have yet. The admin-set values (`default_aud`, `allowed_resources`, `claims`,
+    /// ...) are kept on a self-update, so adding e.g. `client_credentials` would let the client
+    /// mint tokens carrying them with a grant the admin never enabled for it.
+    fn ensure_dyn_grant_types_allowed(&self, requested: &[GrantType]) -> Result<(), ErrorResponse> {
+        let current = self.get_flows();
+        let added = requested
+            .iter()
+            .filter(|g| !current.contains(g))
+            .map(|g| g.as_str())
+            .collect::<Vec<_>>();
+        if added.is_empty() {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::InvalidClientMetadata,
+                format!(
+                    "`grant_types` must not add a grant type the client does not have: {}",
+                    added.join(", ")
+                ),
+            ))
+        }
+    }
+
     fn try_from_dyn_reg(
         req: DynamicClientRequest,
         origin_header: Option<String>,
@@ -3110,6 +3138,46 @@ pub(crate) mod tests {
             new_client.backchannel_logout_uri,
             req.backchannel_logout_uri
         );
+    }
+
+    #[test]
+    fn dyn_update_cannot_add_grant_types() {
+        use actix_web::ResponseError;
+
+        let current = Client {
+            flows_enabled: "authorization_code,refresh_token".to_string(),
+            ..dyn_client_admin_modified()
+        };
+
+        // unchanged and narrowed grant types are allowed
+        assert!(
+            current
+                .ensure_dyn_grant_types_allowed(&[
+                    GrantType::AuthorizationCode,
+                    GrantType::RefreshToken
+                ])
+                .is_ok()
+        );
+        assert!(
+            current
+                .ensure_dyn_grant_types_allowed(&[GrantType::AuthorizationCode])
+                .is_ok()
+        );
+
+        // adding a grant type is rejected, also next to the existing ones
+        for requested in [
+            vec![GrantType::ClientCredentials],
+            vec![GrantType::AuthorizationCode, GrantType::ClientCredentials],
+            vec![GrantType::TokenExchange],
+            vec![GrantType::DeviceCode],
+            vec![GrantType::Password],
+        ] {
+            let err = current
+                .ensure_dyn_grant_types_allowed(&requested)
+                .unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::InvalidClientMetadata);
+            assert_eq!(err.status_code(), actix_web::http::StatusCode::BAD_REQUEST);
+        }
     }
 
     #[test]
