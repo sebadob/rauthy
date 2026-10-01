@@ -31,19 +31,23 @@ pub async fn login_finish<'a>(
         )
     })?;
 
-    // validate state
-    if payload.iss_atproto.is_none() && callback_id != payload.state {
-        AuthProviderCallback::delete(callback_id).await?;
+    let slf = AuthProviderCallback::find(callback_id).await?;
+    let provider = AuthProvider::find(&slf.provider_id).await?;
 
-        error!("`state` does not match");
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "`state` does not match",
-        ));
+    // validate state and RFC 9207 iss
+    if let Err(err) = validate_callback_response(
+        &provider.issuer,
+        &slf.callback_id,
+        &payload.state,
+        payload.iss.as_deref(),
+    ) {
+        AuthProviderCallback::delete(slf.callback_id).await?;
+
+        error!("{}", err.message);
+        return Err(err);
     }
 
     // validate csrf token
-    let slf = AuthProviderCallback::find(callback_id).await?;
     if !constant_time_eq::constant_time_eq(slf.xsrf_token.as_bytes(), payload.xsrf_token.as_bytes())
     {
         AuthProviderCallback::delete(slf.callback_id).await?;
@@ -71,7 +75,6 @@ pub async fn login_finish<'a>(
     AuthProviderCallback::delete(slf.callback_id.clone()).await?;
 
     // request is valid -> fetch token for the user
-    let provider = AuthProvider::find(&slf.provider_id).await?;
 
     // extract a possibly existing provider link cookie for
     // linking an existing account to a provider
@@ -136,4 +139,97 @@ pub async fn login_finish<'a>(
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
 
     Ok((auth_step, cookie, is_new_user))
+}
+
+/// Validates `state` and the RFC 9207 `iss` of an upstream authorization response.
+///
+/// ATProto is skipped here: its `state` is generated and validated by the ATProto client
+/// itself, which also checks `iss` and binds its app state to `callback_id`.
+/// For all other providers, `state` must always match. If the provider sent an `iss`, it must
+/// match the provider's issuer (RFC 9207 section 2.4), ignoring only a trailing `/`.
+fn validate_callback_response(
+    provider_issuer: &str,
+    callback_id: &str,
+    state: &str,
+    iss: Option<&str>,
+) -> Result<(), ErrorResponse> {
+    if provider_issuer == PROVIDER_ATPROTO {
+        return Ok(());
+    }
+
+    if !constant_time_eq::constant_time_eq(callback_id.as_bytes(), state.as_bytes()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`state` does not match",
+        ));
+    }
+
+    if let Some(iss) = iss
+        && iss.trim_end_matches('/') != provider_issuer.trim_end_matches('/')
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`iss` does not match the provider issuer",
+        ));
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ISSUER: &str = "https://upstream.example.com/auth/v1/";
+
+    #[test]
+    fn test_validate_callback_response_state() {
+        assert!(validate_callback_response(ISSUER, "cb1", "cb1", None).is_ok());
+
+        let err = validate_callback_response(ISSUER, "cb1", "cb2", None).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+
+        // an `iss` must never disable the `state` check for a non-ATProto provider
+        assert!(validate_callback_response(ISSUER, "cb1", "cb2", Some(ISSUER)).is_err());
+        assert!(validate_callback_response(ISSUER, "cb1", "cb2", Some("atproto")).is_err());
+    }
+
+    #[test]
+    fn test_validate_callback_response_iss() {
+        assert!(validate_callback_response(ISSUER, "cb1", "cb1", Some(ISSUER)).is_ok());
+        assert!(
+            validate_callback_response(
+                ISSUER,
+                "cb1",
+                "cb1",
+                Some("https://upstream.example.com/auth/v1")
+            )
+            .is_ok()
+        );
+
+        for iss in [
+            "https://attacker.example.com/auth/v1/",
+            "https://upstream.example.com/",
+            "https://upstream.example.com/auth/v1/x",
+            "",
+        ] {
+            let err = validate_callback_response(ISSUER, "cb1", "cb1", Some(iss)).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{iss}");
+        }
+    }
+
+    #[test]
+    fn test_validate_callback_response_atproto() {
+        // state and iss are validated by the ATProto client itself
+        assert!(validate_callback_response(PROVIDER_ATPROTO, "cb1", "other", None).is_ok());
+        assert!(
+            validate_callback_response(
+                PROVIDER_ATPROTO,
+                "cb1",
+                "other",
+                Some("https://bsky.social")
+            )
+            .is_ok()
+        );
+    }
 }

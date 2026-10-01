@@ -854,7 +854,7 @@ impl AuthProviderCallback {
         let params = atrium_oauth::CallbackParams {
             code: payload.code.clone(),
             state: Some(payload.state.clone()),
-            iss: payload.iss_atproto.clone(),
+            iss: payload.iss.clone(),
         };
         // return early if we got any error
         let (session_manager, app_state) = atproto.callback(params).await.map_err(|error| {
