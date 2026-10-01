@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use rauthy_data::database::DB;
+use rauthy_data::fido_mds::authenticator::MdsAuthenticator;
 use rauthy_data::fido_mds::dataset::MdsDataset;
 use rauthy_data::fido_mds::metadata::MdsMetadata;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -106,6 +107,7 @@ async fn exec() -> Result<(), ErrorResponse> {
         if status.is_success() && !body.is_empty() {
             let dataset = body.parse::<MdsDataset>()?;
             dataset.upsert().await?;
+            MdsAuthenticator::clear_cache().await?;
             info!(
                 "Fido MDS dataset updated successfully. blob_no: {}, next_update: {}",
                 dataset.blob_no, dataset.next_update_ts

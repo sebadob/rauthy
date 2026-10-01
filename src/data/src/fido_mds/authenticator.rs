@@ -22,6 +22,13 @@ pub struct MdsAuthenticator {
 }
 
 impl MdsAuthenticator {
+    pub async fn clear_cache() -> Result<(), ErrorResponse> {
+        DB::hql()
+            .delete(Cache::App, IDX_WEBAUTHN_MDS_CA_LIST)
+            .await?;
+        Ok(())
+    }
+
     /// Every authenticator in the dataset, each joined with its distinct root certificates.
     async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
         let entries = MdsEntrySimple::find_all().await?;

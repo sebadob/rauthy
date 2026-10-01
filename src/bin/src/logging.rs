@@ -12,8 +12,7 @@ pub fn setup_logging() -> tracing::Level {
     let log_level_db = parse_level(&config.level_database);
 
     let filter = format!(
-        "{},cryptr=info,hyper=info,h2=info,hiqlite={},openraft={},webauthn_rs_core=info,webauthn_rs=info",
-        // "{},cryptr=info,hyper=info,h2=info,hiqlite={},openraft={}",
+        "{},cryptr=info,hyper=info,h2=info,hiqlite={},openraft={}",
         log_level.as_str(),
         log_level_db.as_str(),
         log_level_db.as_str(),
