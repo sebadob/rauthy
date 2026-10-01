@@ -94,7 +94,7 @@ refinery = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
 webpki-roots = { workspace = true }
-uuid = { version = "1.24.0", features = ["v4"] }
+uuid = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"
