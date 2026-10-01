@@ -1,290 +1,225 @@
-//! FIDO Metadata Service (MDS) dataset.
-//!
-//! The upstream MDS blob is a signed JWT holding a few hundred authenticator entries. It is
-//! transformed once, ahead of time, into the compact [`MdsDataset`] persisted here: AAGUIDs as
-//! `Uuid`s, the multi-valued metadata fields as bitmasks, the certification level as a single
-//! ordered value, and the root certificates deduplicated into their own set. The prepared form is
-//! shipped with the image and re-applied on startup; the same transform feeds the scheduled
-//! refresh later on.
-//!
-//! Nothing reads this data yet. Enforcement (rejecting a passkey whose authenticator is not in, or
-//! not certified strongly enough by, this dataset) is a separate, opt-in step.
-
-use rauthy_common::utils::{deserialize, serialize};
-use rauthy_error::{ErrorResponse, ErrorResponseType};
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use tracing::warn;
-use webauthn_rs::prelude::Uuid;
-
-mod db;
+pub mod authenticator;
+pub mod dataset;
+pub mod masks;
+pub mod mds_entry;
+pub mod metadata;
 mod raw;
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use crate::fido_mds::dataset::MdsDataset;
+    use crate::fido_mds::masks::{AttachmentHint, AttestationType, KeyProtection, MdsCertLevel};
+    use rauthy_common::utils::base64_url_encode;
 
-/// A fully transformed MDS dataset, ready to be written to the database as-is.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MdsDataset {
-    /// The monotonic MDS blob number (`no`). A higher value is newer.
-    pub blob_no: i64,
-    /// The `nextUpdate` the blob advertises, as a unix timestamp in seconds, for the scheduler.
-    pub next_update_ts: i64,
-    pub entries: Vec<MdsEntry>,
-    /// Every distinct root certificate referenced by `entries`, deduplicated by hash.
-    pub certs: Vec<MdsCert>,
-}
-
-impl MdsDataset {
-    #[inline]
-    pub fn serialize(&self) -> Result<Vec<u8>, ErrorResponse> {
-        serialize(self)
+    /// Wrap a JSON payload into a JWT shape the transform can read (`header.payload.signature`). The
+    /// header and signature are ignored, so they are just placeholders.
+    fn jwt(payload_json: &str) -> String {
+        format!("aaaa.{}.zzzz", base64_url_encode(payload_json.as_bytes()))
     }
 
-    #[inline]
-    pub fn deserialize(bytes: &[u8]) -> Result<Self, ErrorResponse> {
-        deserialize(bytes)
-    }
-}
-
-/// Parses a raw MDS blob (as downloaded, `header.payload.signature`) into a prepared dataset.
-///
-/// The JWT signature is not verified here, see [`raw`] for what that does and does not buy us.
-impl FromStr for MdsDataset {
-    type Err = ErrorResponse;
-
-    #[inline]
-    fn from_str(jwt: &str) -> Result<Self, Self::Err> {
-        raw::transform(jwt)
-    }
-}
-
-/// One authenticator, keyed by its AAGUID.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MdsEntry {
-    pub aaguid: Uuid,
-    pub description: String,
-    pub key_protection: KeyProtectionMask,
-    pub attachment_hint: AttachmentHintMask,
-    pub attestation_types: AttestationTypeMask,
-    pub cert_level: MdsCertLevel,
-    /// Hashes into [`MdsDataset::certs`]; never empty.
-    pub cert_hashes: Vec<[u8; 32]>,
-}
-
-/// A distinct root certificate, keyed by the SHA-256 of its DER encoding.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MdsCert {
-    pub hash: [u8; 32],
-    pub cert_der: Vec<u8>,
-}
-
-/// How strongly an authenticator is FIDO-certified, as a single ordered value.
-///
-/// The MDS reports the level and a bare `FIDO_CERTIFIED` as separate status reports on the same
-/// entry, and the reports are not stored in chronological order, so the level must be taken as the
-/// maximum seen across all reports rather than read off the latest one. FIDO only ever recertifies
-/// upward, so the maximum is the current level in practice.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[repr(u8)]
-pub enum MdsCertLevel {
-    NotCertified = 0,
-    /// Certified, but no level was ever reported (a single blob entry does this today).
-    Certified = 1,
-    L1 = 2,
-    L1Plus = 3,
-    L2 = 4,
-    L2Plus = 5,
-    L3 = 6,
-    L3Plus = 7,
-}
-
-impl MdsCertLevel {
-    #[inline]
-    pub fn as_u8(self) -> u8 {
-        self as u8
-    }
-}
-
-/// Parses the certification-carrying MDS status values. Any other status, `NOT_FIDO_CERTIFIED`
-/// and the revocation statuses included, is not a level and is rejected here.
-impl FromStr for MdsCertLevel {
-    type Err = ErrorResponse;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "FIDO_CERTIFIED" => Self::Certified,
-            "FIDO_CERTIFIED_L1" => Self::L1,
-            "FIDO_CERTIFIED_L1plus" => Self::L1Plus,
-            "FIDO_CERTIFIED_L2" => Self::L2,
-            "FIDO_CERTIFIED_L2plus" => Self::L2Plus,
-            "FIDO_CERTIFIED_L3" => Self::L3,
-            "FIDO_CERTIFIED_L3plus" => Self::L3Plus,
-            _ => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Not a FIDO MDS certification level: {s:?}"),
-                ));
-            }
-        })
-    }
-}
-
-/// Defines a bitmask newtype over an MDS flag enum, so the masks cannot be mixed up with each
-/// other or with a plain integer. `$field` is the MDS JSON field name, used in the log line when
-/// the spec has grown a value we do not know yet.
-macro_rules! mds_bitmask {
-    ($mask:ident, $flag:ident, $field:literal) => {
-        #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-        pub struct $mask(u32);
-
-        impl $mask {
-            #[inline]
-            pub fn contains(self, flag: $flag) -> bool {
-                self.0 & flag as u32 != 0
-            }
-
-            #[inline]
-            pub fn bits(self) -> u32 {
-                self.0
-            }
-
-            /// ORs the MDS string values together, folding anything unrecognized into `Unknown`
-            /// and logging it so a new spec value gets noticed and added in a later version.
-            pub(crate) fn from_mds(values: &[String], description: &str) -> Self {
-                let mut bits = 0u32;
-                for v in values {
-                    match v.parse::<$flag>() {
-                        Ok(flag) => bits |= flag as u32,
-                        Err(_) => {
-                            bits |= $flag::Unknown as u32;
-                            warn!(
-                                "Unknown FIDO MDS {} value {v:?} for {description:?}",
-                                $field
-                            );
-                        }
-                    }
-                }
-                Self(bits)
-            }
+    /// A fixture that exercises every branch of the transform. Certificate values are arbitrary but
+    /// valid base64; `CERTA` (`Q0VSVEE=`) is deliberately shared between two kept entries.
+    fn fixture() -> String {
+        let payload = r#"{
+      "no": 271,
+      "nextUpdate": "2026-08-01",
+      "entries": [
+        {
+          "aaguid": "aaaaaaaa-0000-0000-0000-000000000001",
+          "metadataStatement": {
+            "description": "Kept L1, reports out of order",
+            "keyProtection": ["hardware", "secure_element"],
+            "attachmentHint": ["internal"],
+            "attestationTypes": ["basic_full"],
+            "attestationRootCertificates": ["Q0VSVEE="]
+          },
+          "statusReports": [
+            { "status": "FIDO_CERTIFIED_L1" },
+            { "status": "FIDO_CERTIFIED" }
+          ]
+        },
+        {
+          "aaguid": "aaaaaaaa-0000-0000-0000-000000000002",
+          "metadataStatement": {
+            "description": "Recertified upward L1 then L2",
+            "keyProtection": ["hardware"],
+            "attachmentHint": ["external", "nfc"],
+            "attestationTypes": ["basic_full"],
+            "attestationRootCertificates": ["Q0VSVEI="]
+          },
+          "statusReports": [
+            { "status": "FIDO_CERTIFIED_L2" },
+            { "status": "FIDO_CERTIFIED_L1" },
+            { "status": "FIDO_CERTIFIED" }
+          ]
+        },
+        {
+          "aaguid": "aaaaaaaa-0000-0000-0000-000000000003",
+          "metadataStatement": {
+            "description": "Revoked, REVOKED reported before the older status",
+            "keyProtection": ["hardware"],
+            "attachmentHint": ["internal"],
+            "attestationTypes": ["basic_full"],
+            "attestationRootCertificates": ["Q0VSVEM="]
+          },
+          "statusReports": [
+            { "status": "REVOKED" },
+            { "status": "NOT_FIDO_CERTIFIED" }
+          ]
+        },
+        {
+          "aaguid": "aaaaaaaa-0000-0000-0000-000000000004",
+          "metadataStatement": {
+            "description": "No root certs",
+            "keyProtection": ["software"],
+            "attachmentHint": ["internal"],
+            "attestationTypes": ["basic_surrogate"],
+            "attestationRootCertificates": []
+          },
+          "statusReports": [{ "status": "FIDO_CERTIFIED" }]
+        },
+        {
+          "metadataStatement": {
+            "description": "No AAGUID (U2F)",
+            "keyProtection": ["hardware"],
+            "attachmentHint": ["external"],
+            "attestationTypes": ["basic_full"],
+            "attestationRootCertificates": ["Q0VSVEU="]
+          },
+          "statusReports": [{ "status": "FIDO_CERTIFIED_L1" }]
+        },
+        {
+          "aaguid": "aaaaaaaa-0000-0000-0000-000000000006",
+          "metadataStatement": {
+            "description": "Shares CERTA with entry 1",
+            "keyProtection": ["hardware"],
+            "attachmentHint": ["internal"],
+            "attestationTypes": ["basic_full"],
+            "attestationRootCertificates": ["Q0VSVEE="]
+          },
+          "statusReports": [{ "status": "FIDO_CERTIFIED_L3plus" }]
+        },
+        {
+          "aaguid": "aaaaaaaa-0000-0000-0000-000000000007",
+          "metadataStatement": {
+            "description": "Unknown key protection value, not certified",
+            "keyProtection": ["hardware", "brand_new_protection"],
+            "attachmentHint": ["internal"],
+            "attestationTypes": ["basic_full"],
+            "attestationRootCertificates": ["Q0VSVEc="]
+          },
+          "statusReports": [{ "status": "NOT_FIDO_CERTIFIED" }]
+        },
+        {
+          "aaguid": "aaaaaaaa-0000-0000-0000-000000000008",
+          "metadataStatement": {
+            "description": "Compromised, even though also L2 certified",
+            "keyProtection": ["hardware"],
+            "attachmentHint": ["internal"],
+            "attestationTypes": ["basic_full"],
+            "attestationRootCertificates": ["Q0VSVEg="]
+          },
+          "statusReports": [
+            { "status": "ATTESTATION_KEY_COMPROMISE" },
+            { "status": "FIDO_CERTIFIED_L2" }
+          ]
         }
-
-        impl From<u32> for $mask {
-            #[inline]
-            fn from(bits: u32) -> Self {
-                Self(bits)
-            }
-        }
-    };
-}
-
-/// Key protection type. Order is wire-stable: never reorder, only append. `Unknown` is pinned to
-/// bit 0 so the column can widen past 32 bits later without disturbing any existing value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub enum KeyProtection {
-    Unknown = 1 << 0,
-    Software = 1 << 1,
-    Hardware = 1 << 2,
-    Tee = 1 << 3,
-    SecureElement = 1 << 4,
-    RemoteHandle = 1 << 5,
-}
-
-mds_bitmask!(KeyProtectionMask, KeyProtection, "keyProtection");
-
-impl FromStr for KeyProtection {
-    type Err = ErrorResponse;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "software" => Self::Software,
-            "hardware" => Self::Hardware,
-            "tee" => Self::Tee,
-            "secure_element" => Self::SecureElement,
-            "remote_handle" => Self::RemoteHandle,
-            _ => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Unknown FIDO MDS keyProtection: {s:?}"),
-                ));
-            }
-        })
+      ]
+    }"#;
+        jwt(payload)
     }
-}
 
-/// Attachment hint. Order is wire-stable: never reorder, only append. `Unknown` is bit 0.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub enum AttachmentHint {
-    Unknown = 1 << 0,
-    Internal = 1 << 1,
-    External = 1 << 2,
-    Wired = 1 << 3,
-    Wireless = 1 << 4,
-    Nfc = 1 << 5,
-    Bluetooth = 1 << 6,
-    Network = 1 << 7,
-    WifiDirect = 1 << 8,
-    SmartCard = 1 << 9,
-}
+    #[test]
+    fn transform_keeps_only_valid_aaguid_entries() {
+        let ds: MdsDataset = fixture().parse().unwrap();
 
-mds_bitmask!(AttachmentHintMask, AttachmentHint, "attachmentHint");
+        assert_eq!(ds.blob_no, 271);
+        // 2026-08-01T00:00:00Z
+        assert_eq!(ds.next_update_ts, 1785542400);
 
-impl FromStr for AttachmentHint {
-    type Err = ErrorResponse;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "internal" => Self::Internal,
-            "external" => Self::External,
-            "wired" => Self::Wired,
-            "wireless" => Self::Wireless,
-            "nfc" => Self::Nfc,
-            "bluetooth" => Self::Bluetooth,
-            "network" => Self::Network,
-            "wifi_direct" => Self::WifiDirect,
-            "smart-card" => Self::SmartCard,
-            _ => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Unknown FIDO MDS attachmentHint: {s:?}"),
-                ));
-            }
-        })
+        // kept: entries 1, 2, 6, 7. dropped: 3 (revoked), 4 (no cert), 5 (no aaguid), 8 (compromised)
+        assert_eq!(ds.entries.len(), 4);
+        let descriptions: Vec<&str> = ds.entries.iter().map(|e| e.description.as_str()).collect();
+        assert!(!descriptions.iter().any(|d| d.contains("Revoked")));
+        assert!(!descriptions.iter().any(|d| d.contains("No root certs")));
+        assert!(!descriptions.iter().any(|d| d.contains("No AAGUID")));
+        assert!(!descriptions.iter().any(|d| d.contains("Compromised")));
     }
-}
 
-/// Attestation type. Order is wire-stable: never reorder, only append. `Unknown` is bit 0.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub enum AttestationType {
-    Unknown = 1 << 0,
-    BasicFull = 1 << 1,
-    BasicSurrogate = 1 << 2,
-    AttCa = 1 << 3,
-    AnonCa = 1 << 4,
-    Ecdaa = 1 << 5,
-}
+    #[test]
+    fn transform_derives_cert_level_as_the_max_across_reports() {
+        let ds: MdsDataset = fixture().parse().unwrap();
+        // entries are sorted by aaguid, so the order is 001, 002, 006, 007
+        assert_eq!(ds.entries[0].cert_level, MdsCertLevel::L1);
+        assert_eq!(ds.entries[1].cert_level, MdsCertLevel::L2);
+        assert_eq!(ds.entries[2].cert_level, MdsCertLevel::L3Plus);
+        assert_eq!(ds.entries[3].cert_level, MdsCertLevel::NotCertified);
+    }
 
-mds_bitmask!(AttestationTypeMask, AttestationType, "attestationTypes");
+    #[test]
+    fn cert_level_ordering_is_wire_stable() {
+        // the ordering is what the operator's "at least L2" filter will compare against, and the
+        // numbers are persisted, so neither may be reshuffled
+        assert!(MdsCertLevel::NotCertified < MdsCertLevel::Certified);
+        assert!(MdsCertLevel::Certified < MdsCertLevel::L1);
+        assert!(MdsCertLevel::L1 < MdsCertLevel::L2);
+        assert!(MdsCertLevel::L2 < MdsCertLevel::L3Plus);
+        assert_eq!(MdsCertLevel::NotCertified.as_u8(), 0);
+        assert_eq!(MdsCertLevel::L3Plus.as_u8(), 7);
+    }
 
-impl FromStr for AttestationType {
-    type Err = ErrorResponse;
+    #[test]
+    fn transform_folds_unrecognized_values_into_the_unknown_bit() {
+        let ds: MdsDataset = fixture().parse().unwrap();
+        let e = &ds.entries[3];
+        assert!(e.key_protection.contains(KeyProtection::Hardware));
+        assert!(e.key_protection.contains(KeyProtection::Unknown));
+        assert!(!e.key_protection.contains(KeyProtection::Software));
+        assert_eq!(
+            e.key_protection.bits(),
+            KeyProtection::Hardware as u32 | KeyProtection::Unknown as u32
+        );
+    }
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "basic_full" => Self::BasicFull,
-            "basic_surrogate" => Self::BasicSurrogate,
-            "attca" => Self::AttCa,
-            "anonca" => Self::AnonCa,
-            "ecdaa" => Self::Ecdaa,
-            _ => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Unknown FIDO MDS attestationTypes: {s:?}"),
-                ));
-            }
-        })
+    #[test]
+    fn unknown_is_pinned_to_the_low_bit_of_every_mask() {
+        // persisted bit positions: `Unknown` must stay at bit 0 so the columns can widen past 32 bits
+        assert_eq!(KeyProtection::Unknown as u32, 1);
+        assert_eq!(AttachmentHint::Unknown as u32, 1);
+        assert_eq!(AttestationType::Unknown as u32, 1);
+    }
+
+    #[test]
+    fn transform_deduplicates_shared_root_certificates() {
+        let ds: MdsDataset = fixture().parse().unwrap();
+        // CERTA, CERTB, CERTG across the four kept entries; CERTA is shared by 001 and 006
+        assert_eq!(ds.certs.len(), 3);
+
+        let e001 = &ds.entries[0];
+        let e006 = &ds.entries[2];
+        assert_eq!(e001.cert_hashes.len(), 1);
+        assert_eq!(e006.cert_hashes.len(), 1);
+        assert_eq!(e001.cert_hashes[0], e006.cert_hashes[0]);
+        assert!(ds.certs.iter().any(|c| c.hash == e001.cert_hashes[0]));
+    }
+
+    #[test]
+    fn transform_is_deterministic_and_round_trips() {
+        let a: MdsDataset = fixture().parse().unwrap();
+        let b: MdsDataset = fixture().parse().unwrap();
+        assert_eq!(a, b);
+
+        let bytes = a.serialize().unwrap();
+        let back = MdsDataset::deserialize(&bytes).unwrap();
+        assert_eq!(a, back);
+    }
+
+    #[test]
+    fn aaguid_is_parsed_into_the_16_bytes_the_db_stores() {
+        let ds: MdsDataset = fixture().parse().unwrap();
+        assert_eq!(
+            ds.entries[0].aaguid.as_bytes(),
+            &[0xaa, 0xaa, 0xaa, 0xaa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        );
     }
 }

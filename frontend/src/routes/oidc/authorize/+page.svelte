@@ -503,10 +503,20 @@
     }
 
     function onMfaError(error: string) {
+        let isAttErr =
+            error.includes('certification level') ||
+            error.includes('key protection') ||
+            error.includes('attachment hint');
+        if (isAttErr) {
+            console.error(error);
+            err = t.account.passkeys.missingAttestation;
+        } else {
+            err = error;
+        }
+
         // If there is any error with the key, the user should start a new login process
         mfaPurpose = undefined;
         mfaKind = undefined;
-        err = error;
     }
 
     function onMfaSuccess(data?: WebauthnAdditionalData | OtpAdditionalData) {

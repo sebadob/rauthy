@@ -121,7 +121,13 @@
             passkeyType === t.account.passkeys.types[1],
         );
         if (res.error) {
-            err = `${t.mfa.errorReg} - ${res.error}`;
+            console.log(res.error.toLowerCase());
+            // Either completely missing attestation or no matching requirements.
+            if (res.error.toLowerCase().includes('missing attestation')) {
+                err = t.account.passkeys.missingAttestation;
+            } else {
+                err = `${t.mfa.errorReg} - ${res.error}`;
+            }
         } else {
             resetValues();
             success = true;
@@ -183,7 +189,16 @@
     }
 
     function onWebauthnError(error: string) {
-        err = error;
+        let isAttErr =
+            error.includes('certification level') ||
+            error.includes('key protection') ||
+            error.includes('attachment hint');
+        if (isAttErr) {
+            console.error(error);
+            err = t.account.passkeys.missingAttestation;
+        } else {
+            err = error;
+        }
         mfaPurpose = undefined;
     }
 
@@ -405,7 +420,6 @@
         flex-direction: column;
         align-items: center;
         overflow-y: auto;
-        border: 1px solid yellow;
     }
 
     .err {

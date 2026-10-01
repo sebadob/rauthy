@@ -2957,4 +2957,127 @@ rp_origin = 'http://localhost:8080'
 # default: true
 # overwritten by: WEBAUTHN_NO_PASSWORD_EXPIRY
 #no_password_exp = true
+
+# When you want to migrate an existing deployment over to enforced
+# attestation, you usually have a chicken-and-egg problem: You
+# have users that already use Passkeys. Device attestation only
+# works during the registration ceremony. When devices are only
+# ever attested with enforcement, either all users need to remove
+# the passkeys, leaving all their accounts password-only, and then
+# re-registert, or they would be locked out as soon as attestation
+# would be enforced.
+#
+# To counter this, you can enable optimistic_attestation. This will
+# always try to attest devices during registration and use a plain
+# fallback on error. This is opt-in on purpose. It requires a bit
+# more resources and memory, and it does not make any sense to
+# enable it when you never plan to enforce attestation at some point.
+# Just the optimistic attestation on its own does not increase the
+# security. It helps you migrate users.
+#
+# Once enabled, you can give your users a grace-period in which
+# they need to re-register their passkeys. When that is done, and
+# they see the "Certified Passkey" badge in their account dashboard,
+# you can then switch to enforced attestation.
+#
+# default: false
+# overwritten by: WEBAUTHN_OPT_ATTESTATION
+#optimistic_attestation = false
+
+######################################################################
+## The block below enforces passkey attestation. You can set different
+## combinations of
+##
+## - force_passkey_cert_level
+## - force_passkey_protection
+## - force_passkey_attachment
+##
+## If any of these values are set, authenticator attestation will
+## be enforced. This will immediately reject most of the software
+## passkeys like in browser extensions.
+##
+## Note: You probably never want these setting on any public-facing
+## instance, as it will allow only properly validarted Passkeys.
+## That basically excludes almost all software-based keys. If you
+## don't control what keys your users are using, like e.g. in an
+## enterprise, you probably don't want this feature.
+## Even if the examples for certification levels also mention
+## software implementations, most software passkeys are not
+## certified at all, and they don't send attestation data. Only
+## because a device meets the needs for a specific level does not
+## mean it's actually certified.
+##
+## For more information on the different security levels:
+## https://fidoalliance.org/certification/authenticator-certification-levels/
+## https://fidoalliance.org/security-certification-authenticator-security-levels/
+##
+## CAUTION: If you make the requirements more strict for an
+## already existing deployment, you can lock accounts! If a
+## user has registered keys that do not meet the new standards,
+## it will be impossible to log in, and this needs manual cleanup
+## from an Admin!
+
+# Enforces FIDO passkey attestation. If not set, attestation is
+# disabled. If you set a level, it is a minimum requirement. E.g.
+# L1 is a boundary for the minimum, and it means L1 and above.
+# The possible levels (case-sensitive) in ascending order:
+#
+# - FIDO_CERTIFIED
+# - FIDO_CERTIFIED_L1
+# - FIDO_CERTIFIED_L1plus
+# - FIDO_CERTIFIED_L2
+# - FIDO_CERTIFIED_L2plus
+# - FIDO_CERTIFIED_L3
+# - FIDO_CERTIFIED_L3plus
+#
+# default: not set
+# overwritten by: WEBAUTHN_PK_CERT_LEVEL
+#force_passkey_cert_level = 'FIDO_CERTIFIED_L1'
+
+# Enforces the passkey protection to be included in the given
+# list. Authenticators will send an array of values, so this
+# is not a hard equality check. Instead, the values sent by the
+# authenticator mut be a subset of the configured value. E.g.
+# the authenticator sends `['hardware', 'tee']` then a
+# configured value of ['hardware', 'tee', 'secure_element']
+# would allow it. If, however, the authenticator sent
+# `['hardware', 'remote_handle']`, it would be rejected.
+#
+# Possible values:
+# - software
+# - hardware
+# - tee
+# - secure_element
+# - remote_handle
+#
+# default: not set
+# value type: [String]
+# overwritten by: WEBAUTHN_PK_PROT (`\n` separated values)
+#force_passkey_protection = ['hardware', 'tee', 'secure_element']
+
+# This works in the same way as `force_passkey_protection`
+# above. The configured value must be a superset of the array
+# of values that an authenticator might send. For instance,
+# to allow only external, dedicated authenticators that must
+# not use any radio technology, specify: `['external', 'wired']`
+#
+# Possible values:
+# - internal
+# - external
+# - wired
+# - wireless
+# - nfc
+# - bluetooth
+# - network
+# - wifi_direct
+# - smart
+#
+# Note: `smart` stands for SmartCard. `internal` means "on
+# the same physical device", while `external` requires an
+# independent one.
+#
+# default: not set
+# value type: [String]
+# overwritten by: WEBAUTHN_PK_ATT (`\n` separated values)
+#force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
 ```

@@ -118,6 +118,7 @@ export const I18nEn: I18n = {
             validFor: 'Password valid for {{ secs }} seconds',
         },
         passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
             rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
@@ -161,6 +162,7 @@ export const I18nEn: I18n = {
         userVerifiedTooltip: 'Secured with fingerprint or PIN',
         residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
             providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `You can configure the fields that should be exposed with your WebID.\nThis is a 
             feature used by some networks for decentralized logins. If you do not know what it is,
             \nyou most probably do not need it.`,

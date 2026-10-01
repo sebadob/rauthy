@@ -1745,11 +1745,7 @@ pub async fn get_user_webauthn_passkeys(
         }
     }
 
-    let pks = PasskeyEntity::find_for_user(&id)
-        .await?
-        .into_iter()
-        .map(PasskeyResponse::from)
-        .collect::<Vec<PasskeyResponse>>();
+    let pks = PasskeyEntity::find_for_user_with_details(&id).await?;
 
     Ok(HttpResponse::Ok().json(pks))
 }
@@ -1966,10 +1962,18 @@ pub async fn post_webauthn_auth_finish_login(
         .await
         .map_err(|err| {
             error!("Webauthn Auth Finish error: {err:?}");
-            ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Error during Webauthn auth finish ceremony",
-            )
+
+            // It's important to forward the 406 as-is. The UI is matching on that status to show
+            // the correctly translated error message. This only happens when the passkey does not
+            // meet attestation requirements.
+            if err.error == ErrorResponseType::NotAccepted {
+                err
+            } else {
+                ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Error during Webauthn auth finish ceremony",
+                )
+            }
         })?;
     Ok(res.into_response())
 }

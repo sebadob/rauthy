@@ -117,6 +117,7 @@ export const I18nNb: I18n = {
             validFor: 'Passord gyldig i {{ secs }} sekunder',
         },
         passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
             rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
@@ -160,6 +161,7 @@ export const I18nNb: I18n = {
         userVerifiedTooltip: 'Sikret med fingeravtrykk eller PIN',
         residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
             providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `Her kan du angi feltene som skal publiseres via din WebID. Dette er en 
             funksjon som brukes av enkelte nettverk for desentraliserte pålogginger. Hvis du ikke 
             vet hva WebID er, trenger du sannsynligvis ikke å bruke det.`,

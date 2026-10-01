@@ -184,8 +184,14 @@
             passkeyType === t.account.passkeys.types[1],
         );
         if (res.error) {
+            console.log(res.error.toLowerCase());
+            // Either completely missing attestation or no matching requirements.
+            if (res.error.toLowerCase().includes('missing attestation')) {
+                msg = t.account.passkeys.missingAttestation;
+            } else {
+                msg = `${t.mfa.errorReg} - ${res.error}`;
+            }
             err = true;
-            msg = `${t.mfa.errorReg} - ${res.error}`;
         } else {
             showRegInput = false;
             passkeyName = '';
@@ -374,6 +380,7 @@
     }
 
     function onMfaError(error: string) {
+        console.log('mfa err', error);
         err = true;
         msg = error;
         mfaPurpose = undefined;

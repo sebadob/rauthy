@@ -20,6 +20,7 @@ accept-language = { workspace = true }
 actix-multipart = { workspace = true }
 actix-web = { workspace = true }
 actix-web-lab = { workspace = true }
+ahash = { workspace = true }
 arc-swap = { workspace = true }
 argon2 = { workspace = true }
 askama = { workspace = true }
@@ -67,6 +68,7 @@ rsa = { workspace = true }
 s3-simple = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
+serde_cbor_2 = { workspace = true }
 serde_json = { workspace = true }
 serde_json_path = { workspace = true }
 serde_rusqlite = { workspace = true }
@@ -92,6 +94,7 @@ refinery = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }
 webpki-roots = { workspace = true }
+uuid = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1"

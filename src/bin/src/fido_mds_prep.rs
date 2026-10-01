@@ -10,7 +10,8 @@
 //! trusted as far as whoever put the file there.
 
 use clap::Parser;
-use rauthy_data::fido_mds::MdsDataset;
+use rauthy_data::fido_mds::dataset::MdsDataset;
+use reqwest::tls;
 use std::error::Error;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -52,6 +53,9 @@ async fn download(source: &str) -> Result<String, Box<dyn Error>> {
                 attempt.error("refusing to follow a redirect off https")
             }
         }))
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(10))
+        .tls_version_min(tls::Version::TLS_1_2)
         .build()?;
 
     let mut last_err = String::new();

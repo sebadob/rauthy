@@ -105,6 +105,7 @@ pub static IDX_USER_COUNT: &str = "users_count_total";
 pub static IDX_USERS_VALUES: &str = "users_values_";
 pub static IDX_USER_ATTR_CONFIG: &str = "user_attrs_";
 pub static IDX_WEBAUTHN: &str = "webauthn_";
+pub static IDX_WEBAUTHN_MDS_CA_LIST: &str = "webauthn_mds_ca_list";
 
 pub static APP_START: LazyLock<DateTime<Utc>> = LazyLock::new(Utc::now);
 pub static RAUTHY_ADMIN_ROLE: &str = "rauthy_admin";

@@ -93,6 +93,7 @@ export interface I18n {
             validFor: string;
         };
         passkeys: {
+            missingAttestation: string;
             type: string;
             // [Default, Resident Key]
             types: string[];
@@ -130,6 +131,7 @@ export interface I18n {
         userExpiry: string;
         userVerifiedTooltip: string;
         residentKeyTooltip: string;
+        aaguidTooltip: string;
         webIdDesc: string;
         webIdDescData: string;
         webIdExpertMode: string;

@@ -119,6 +119,7 @@ export const I18nRu: I18n = {
         },
 
         passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
             rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
@@ -162,6 +163,7 @@ export const I18nRu: I18n = {
         userVerifiedTooltip: 'Защищено отпечатком пальца или ПИН-кодом',
         residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
             providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `Вы можете настроить поля, которые будут доступны через ваш WebID.\nЭто
             функция, используемая некоторыми сетями для децентрализованного входа. Если вы не знаете, что это,
             \nвам, скорее всего, это не нужно.`,

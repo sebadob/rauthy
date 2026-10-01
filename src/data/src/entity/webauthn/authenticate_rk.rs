@@ -5,6 +5,7 @@ use crate::entity::users::User;
 use crate::entity::webauthn::auth_data::{WebauthnAdditionalData, WebauthnData};
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::entity::webauthn::rk_token::ResidentKeyToken;
+use crate::entity::webauthn::verify_attestation;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use chrono::Utc;
@@ -112,7 +113,7 @@ pub async fn auth_finish_discover(
     // resident key, which we can validate against our saved data. We generated this user ID
     // during the registration ceremony. The credential ID is already
     //
-    // TODO we should use something way faster than JSON after enough testing
+    // TODO we should use something faster than JSON after enough testing
     let mut state_local =
         serde_json::from_str::<PasskeyAuthenticationLocal>(&auth_data.auth_state_json)?;
     state_local.ast.credentials.push(cred);
@@ -124,7 +125,14 @@ pub async fn auth_finish_discover(
         .finish_passkey_authentication(&pubkey_cred, &auth_state)
     {
         Ok(auth_result) => {
-            if !auth_result.user_verified() {
+            verify_attestation(
+                pk_entity.aaguid.as_deref(),
+                &pk_entity.user_id,
+                &pk_entity.name,
+            )
+            .await?;
+
+            if RauthyConfig::get().vars.webauthn.force_uv && !auth_result.user_verified() {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     "User Verification missing",
