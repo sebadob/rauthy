@@ -43,6 +43,7 @@ pub struct WellKnown {
     pub service_documentation: String,
     pub ui_locales_supported: Vec<String>,
     pub claims_parameter_supported: bool,
+    pub authorization_response_iss_parameter_supported: bool,
     pub client_id_metadata_document_supported: bool,
 }
 
@@ -55,6 +56,8 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
     let content = res.json::<WellKnown>().await?;
     // strip trailing /
     assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
+    // RFC 9207
+    assert!(content.authorization_response_iss_parameter_supported);
     // don't test the rest for now as it might change soon again
 
     Ok(())
@@ -90,6 +93,7 @@ async fn test_get_well_known_oauth_rfc8414() -> Result<(), Box<dyn Error>> {
         let content = res.json::<WellKnown>().await?;
         // strip trailing /
         assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
+        assert!(content.authorization_response_iss_parameter_supported);
     }
 
     Ok(())

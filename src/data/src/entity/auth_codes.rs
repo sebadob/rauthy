@@ -5,7 +5,6 @@ use chrono::Utc;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use std::time::Duration;
@@ -139,26 +138,45 @@ impl AuthCode {
     }
 }
 
+/// Appends `params`, `state` and the RFC 9207 `iss`, form-urlencoded, to `redirect_uri`.
+/// `redirect_uri` must already have passed `validate_redirect_uri_shape`.
+pub fn authorization_redirect(
+    redirect_uri: &str,
+    params: &[(&str, &str)],
+    state: Option<&str>,
+    issuer: &str,
+) -> String {
+    debug_assert!(!redirect_uri.contains('#'));
+    let mut url = reqwest::Url::parse("http://x/").expect("static URL to parse");
+    {
+        let mut query = url.query_pairs_mut();
+        for (key, value) in params {
+            query.append_pair(key, value);
+        }
+        if let Some(state) = state {
+            query.append_pair("state", state);
+        }
+        query.append_pair("iss", issuer);
+    }
+    let query = url.query().unwrap_or_default();
+
+    let append_char = if redirect_uri.contains('?') { '&' } else { '?' };
+    let mut loc = String::with_capacity(redirect_uri.len() + 1 + query.len());
+    loc.push_str(redirect_uri);
+    loc.push(append_char);
+    loc.push_str(query);
+    loc
+}
+
 impl AuthCode {
     #[inline]
-    pub fn build_location_header(&self, state: Option<&str>) -> Result<String, ErrorResponse> {
-        let append_char = if self.redirect_uri.contains('?') {
-            '&'
-        } else {
-            '?'
-        };
-        let mut loc = format!("{}{}code={}", self.redirect_uri, append_char, self.id);
-        if let Some(state) = state {
-            write!(
-                loc,
-                "&state={}",
-                percent_encoding::percent_encode(
-                    state.as_bytes(),
-                    percent_encoding::NON_ALPHANUMERIC
-                )
-            )?;
-        };
-        Ok(loc)
+    pub fn build_location_header(&self, state: Option<&str>) -> String {
+        authorization_redirect(
+            &self.redirect_uri,
+            &[("code", &self.id)],
+            state,
+            &RauthyConfig::get().issuer,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -276,5 +294,94 @@ impl AuthCodeToSAwait {
     #[inline]
     pub fn generate_code() -> String {
         get_rand(64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ISSUER: &str = "https://iam.example.com/auth/v1/";
+    const ISSUER_ENC: &str = "https%3A%2F%2Fiam.example.com%2Fauth%2Fv1%2F";
+    const CB: &str = "https://client.example.com/cb";
+
+    fn decoded_query(loc: &str) -> Vec<(String, String)> {
+        let url = reqwest::Url::parse(loc).expect("location to parse");
+        assert!(url.fragment().is_none(), "{loc}");
+        url.query_pairs()
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect()
+    }
+
+    #[test]
+    fn test_success_without_state() {
+        let loc = authorization_redirect(CB, &[("code", "c0de")], None, ISSUER);
+        assert_eq!(loc, format!("{CB}?code=c0de&iss={ISSUER_ENC}"));
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("code".to_string(), "c0de".to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_success_with_state_and_existing_query() {
+        let loc = authorization_redirect(
+            &format!("{CB}?foo=bar"),
+            &[("code", "c0de")],
+            Some("st4te"),
+            ISSUER,
+        );
+        assert_eq!(
+            loc,
+            format!("{CB}?foo=bar&code=c0de&state=st4te&iss={ISSUER_ENC}")
+        );
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("foo".to_string(), "bar".to_string()),
+                ("code".to_string(), "c0de".to_string()),
+                ("state".to_string(), "st4te".to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_state_cannot_inject_iss() {
+        let state = "orig&iss=https://attacker.example.com/";
+        let loc = authorization_redirect(CB, &[("code", "c0de")], Some(state), ISSUER);
+
+        assert_eq!(loc.matches("iss=").count(), 1);
+        assert!(loc.ends_with(&format!("&iss={ISSUER_ENC}")));
+        assert!(!loc.contains("attacker.example.com/"));
+
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("code".to_string(), "c0de".to_string()),
+                ("state".to_string(), state.to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_error_redirect() {
+        let loc = authorization_redirect(CB, &[("error", "login_required")], Some("x"), ISSUER);
+        assert_eq!(
+            loc,
+            format!("{CB}?error=login_required&state=x&iss={ISSUER_ENC}")
+        );
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("error".to_string(), "login_required".to_string()),
+                ("state".to_string(), "x".to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
     }
 }

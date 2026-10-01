@@ -1,6 +1,7 @@
 use crate::common::{
-    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, check_status, code_state_from_headers,
-    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url, get_solved_pow,
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
+    authorization_response_params_decoded, check_status, code_state_from_headers,
+    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
     init_client_bcl_uri,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
@@ -36,6 +37,9 @@ use tokio::time;
 
 mod common;
 
+/// a `state` that would inject its own `iss` if the server did not encode it
+const INJECTING_STATE: &str = "orig&iss=https://attacker.example.com/";
+const INJECTING_STATE_ENC: &str = "orig%26iss%3Dhttps%3A%2F%2Fattacker.example.com%2F";
 /// `init_client` requires PKCE - without a challenge, `/authorize` would fail for another reason
 const CHALLENGE_PLAIN: &str = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
 
@@ -72,6 +76,50 @@ async fn test_certs() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let new_certs = res.json::<JWKS>().await?;
     assert_eq!(new_certs.keys.len(), 8);
+
+    Ok(())
+}
+
+// RFC 9207 - the `error=login_required` redirect must carry `state` and exactly one `iss`
+#[tokio::test]
+async fn test_authorize_prompt_none_without_session() -> Result<(), Box<dyn Error>> {
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let url = format!(
+        "{}/oidc/authorize?client_id=init_client&redirect_uri={}&response_type=code&code_challenge={}&prompt=none&state={}",
+        get_backend_url(),
+        redirect_uri,
+        CHALLENGE_PLAIN,
+        INJECTING_STATE_ENC,
+    );
+    let res = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?
+        .get(&url)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 302);
+
+    let params = authorization_response_params(&res)?;
+    assert!(
+        params
+            .iter()
+            .any(|(k, v)| k == "error" && v == "login_required")
+    );
+    assert_eq!(params.iter().filter(|(k, _)| k == "iss").count(), 1);
+    assert!(!params.iter().any(|(k, _)| k == "code"));
+
+    let decoded = authorization_response_params_decoded(&res)?;
+    assert_eq!(decoded.iter().filter(|(k, _)| k == "iss").count(), 1);
+    assert!(
+        decoded
+            .iter()
+            .any(|(k, v)| k == "iss" && v == &format!("{}/", get_issuer()))
+    );
+    assert!(
+        decoded
+            .iter()
+            .any(|(k, v)| k == "state" && v == INJECTING_STATE)
+    );
 
     Ok(())
 }
@@ -211,7 +259,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         client_id: CLIENT_ID.to_string(),
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,
-        state: None,
+        state: Some(INJECTING_STATE.to_string()),
         nonce: Some(nonce.to_owned()),
         code_challenge: Some(challenge_plain.to_owned()),
         code_challenge_method: Some("plain".to_string()),
@@ -238,6 +286,18 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     res = check_status(res, 202).await?;
 
     // Step 3: extract values from callback location header
+    let decoded = authorization_response_params_decoded(&res)?;
+    assert_eq!(decoded.iter().filter(|(k, _)| k == "iss").count(), 1);
+    assert!(
+        decoded
+            .iter()
+            .any(|(k, v)| k == "iss" && v == &format!("{}/", get_issuer()))
+    );
+    assert!(
+        decoded
+            .iter()
+            .any(|(k, v)| k == "state" && v == INJECTING_STATE)
+    );
     let (code, _) = code_state_from_headers(res)?;
     println!("Extracted code: {:?}", code);
 
@@ -360,6 +420,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let challenge_s256 = base64_url_encode(hash.as_ref());
     req_login.code_challenge_method = Some("S256".to_string());
     req_login.code_challenge = Some(challenge_s256);
+    req_login.state = None;
     req_login.pow = get_solved_pow().await;
     let mut res = reqwest::Client::new()
         .post(&url_auth)
