@@ -25,10 +25,11 @@ pub async fn user_login_states_cleanup() {
 
         // It makes no sense to keep login states around for longer than the maximum allowed
         // total lifetime for sessions. Adds 1 day of grace time already.
+        // `timestamp` is stored in millis.
         let threshold = Utc::now()
             .sub(RauthyConfig::get().vars.lifetimes.session_lifetime)
             .sub(Duration::from_secs(24 * 3600))
-            .timestamp();
+            .timestamp_millis();
         let sql = "DELETE FROM user_login_states WHERE timestamp < $1";
 
         if is_hiqlite() {
