@@ -730,6 +730,14 @@ by default they have their `nbf` set to `access_token.exp - 60`. Revokking a tok
 
 [#1740](https://github.com/sebadob/rauthy/pull/1740)
 
+#### Color Picker in the Branding Editor
+
+The color preview next to each HSL slider group in the Admin UI branding editor is now a native
+color picker. It makes it possible to pick a color or enter it as RGB or hex, which is then
+converted into the HSL values the theme uses.
+
+[#1750](https://github.com/sebadob/rauthy/pull/1750)
+
 ### Bugfix
 
 - The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`
