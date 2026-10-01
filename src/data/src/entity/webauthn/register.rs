@@ -4,7 +4,7 @@ use crate::entity::webauthn::aaguid::attested_aaguid;
 use crate::entity::webauthn::ceremony::{RegistrationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::entity::webauthn::{force_mds_attestation, verify_attestation};
-use crate::fido_mds::mds_authenticator::MdsAuthenticator;
+use crate::fido_mds::authenticator::MdsAuthenticator;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_api_types::users::{WebauthnRegFinishRequest, WebauthnRegStartRequest};
 use rauthy_error::{ErrorResponse, ErrorResponseType};

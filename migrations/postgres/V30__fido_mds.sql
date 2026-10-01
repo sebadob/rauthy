@@ -1,3 +1,11 @@
+CREATE TABLE fido_mds_metadata
+(
+    current_blob_no BIGINT NOT NULL
+        CONSTRAINT fido_mds_metadata_pk
+            PRIMARY KEY,
+    next_update     BIGINT NOT NULL
+);
+
 CREATE TABLE fido_mds_certs
 (
     hash     BYTEA NOT NULL

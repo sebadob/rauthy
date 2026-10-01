@@ -185,6 +185,6 @@ mod tests {
         out.extend_from_slice(&[0x67]); // text(7): "attStmt"
         out.extend_from_slice(b"attStmt");
         out.push(0xA0); // map(0)
-        assert_eq!(extract_aaguid(&out).unwrap(), None);
+        assert!(extract_aaguid(&out).is_err());
     }
 }

@@ -84,7 +84,7 @@ impl MdsDataset {
         }
 
         let slf = Self::deserialize(MDS_DATASET)?;
-        slf.insert().await?;
+        slf.upsert().await?;
 
         info!(
             "Seeded FIDO MDS dataset no. {}: {} entries, {} root certs",
@@ -110,7 +110,13 @@ impl MdsDataset {
         Ok(count)
     }
 
-    async fn insert(&self) -> Result<(), ErrorResponse> {
+    pub async fn upsert(&self) -> Result<(), ErrorResponse> {
+        // we always want to have a single row in metadata
+        let sql_meta_delete = "DELETE FROM fido_mds_metadata";
+        let sql_meta = r#"
+INSERT INTO fido_mds_metadata (current_blob_no, next_update)
+VALUES ($1, $2)
+"#;
         let sql_cert = r#"
 INSERT INTO fido_mds_certs (hash, cert_der) VALUES ($1, $2)
 ON CONFLICT (hash) DO UPDATE SET cert_der = $2
@@ -131,7 +137,10 @@ ON CONFLICT (aaguid, cert_hash) DO NOTHING
 
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> =
-                Vec::with_capacity(self.certs.len() + self.entries.len() * 2);
+                Vec::with_capacity(2 + self.certs.len() + self.entries.len() * 2);
+
+            txn.push((sql_meta_delete, params!()));
+            txn.push((sql_meta, params!(self.blob_no, self.next_update_ts)));
 
             for c in &self.certs {
                 txn.push((sql_cert, params!(c.hash.to_vec(), c.cert_der.clone())));
@@ -160,12 +169,19 @@ ON CONFLICT (aaguid, cert_hash) DO NOTHING
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
 
-            let st_cert = txn.prepare_cached(sql_cert).await?;
-            let st_entry = txn.prepare_cached(sql_entry).await?;
-            let st_join = txn.prepare_cached(sql_join).await?;
+            let st_meta_delete = txn.prepare(sql_meta_delete).await?;
+            let st_meta = txn.prepare(sql_meta).await?;
+            let st_cert = txn.prepare(sql_cert).await?;
+            let st_entry = txn.prepare(sql_entry).await?;
+            let st_join = txn.prepare(sql_join).await?;
+
+            txn.execute(&st_meta_delete, &[]).await?;
+            txn.execute(&st_meta, &[&self.blob_no, &self.next_update_ts])
+                .await?;
 
             for c in &self.certs {
                 let hash = c.hash.as_slice();
+
                 txn.execute(&st_cert, &[&hash, &c.cert_der]).await?;
             }
             for e in &self.entries {

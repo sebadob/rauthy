@@ -5219,6 +5219,7 @@ dependencies = [
  "rauthy-data",
  "rauthy-error",
  "rauthy-service",
+ "reqwest 0.13.4",
  "semver",
  "tokio",
  "tracing",

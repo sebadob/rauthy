@@ -123,7 +123,7 @@ impl DB {
         stmt: &str,
         params: &[&(dyn postgres_types::ToSql + Sync)],
     ) -> Result<u64, ErrorResponse> {
-        let st = txn.prepare(stmt).await?;
+        let st = txn.prepare_cached(stmt).await?;
         let rows_affected = txn.execute(&st, params).await?;
         Ok(rows_affected)
     }

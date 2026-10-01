@@ -204,7 +204,7 @@ mod tests {
     use rstest::rstest;
     use serde::de::DeserializeOwned;
     use std::collections::BTreeMap;
-    use webauthn_rs::prelude::{AttestationCa, AttestationCaListBuilder, Url, WebauthnBuilder};
+    use webauthn_rs::prelude::{AttestationCaListBuilder, Url, WebauthnBuilder};
     use webauthn_rs_proto::{CredentialProtectionPolicy, UserVerificationPolicy};
 
     fn webauthn() -> Webauthn {
