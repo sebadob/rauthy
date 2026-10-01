@@ -685,6 +685,26 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         .unwrap();
     println!("nonce we should use: {}", nonce);
 
+    // A nonce the server never issued must be answered like a missing one. `latest` is the
+    // cache key under which the current nonce is also stored, and must not pass either.
+    for forged in ["never-issued-by-this-server", "latest"] {
+        claims.nonce = Some(forged.to_string());
+        let claims_json = serde_json::to_string(&claims).unwrap();
+        let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
+        let mut forged_token = format!("{}.{}", header_b64, claims_b64);
+        let sig = kp.sk.sign(&forged_token, Some(Noise::generate()));
+        write!(forged_token, ".{}", base64_url_no_pad_encode(sig.as_ref())).unwrap();
+
+        let res = client
+            .post(&url)
+            .header(TOKEN_DPOP, &forged_token)
+            .form(&body)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "nonce '{forged}' was accepted");
+        assert!(res.headers().get(HEADER_DPOP_NONCE).is_some());
+    }
+
     // insert the nonce and rebuild
     claims.nonce = Some(nonce.to_string());
 
