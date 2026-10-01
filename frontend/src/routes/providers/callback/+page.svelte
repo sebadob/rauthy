@@ -62,7 +62,7 @@
             code,
             pkce_verifier: getVerifierUpstreamFromStorage(),
             xsrf_token: getProviderToken(),
-            iss,
+            iss_atproto: iss,
         };
 
         let url = '/auth/v1/providers/callback';

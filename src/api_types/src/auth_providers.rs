@@ -92,12 +92,9 @@ pub struct ProviderCallbackRequest {
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub pkce_verifier: String,
 
-    /// The RFC 9207 `iss` from the upstream authorization response, if any.
-    ///
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
-    #[serde(alias = "iss_atproto")]
-    pub iss: Option<String>,
+    pub iss_atproto: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

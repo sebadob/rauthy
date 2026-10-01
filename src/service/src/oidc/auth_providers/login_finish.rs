@@ -34,13 +34,8 @@ pub async fn login_finish<'a>(
     let slf = AuthProviderCallback::find(callback_id).await?;
     let provider = AuthProvider::find(&slf.provider_id).await?;
 
-    // validate state and RFC 9207 iss
-    if let Err(err) = validate_callback_response(
-        &provider.issuer,
-        &slf.callback_id,
-        &payload.state,
-        payload.iss.as_deref(),
-    ) {
+    // validate state
+    if let Err(err) = validate_callback_state(&provider.issuer, &slf.callback_id, payload) {
         AuthProviderCallback::delete(slf.callback_id).await?;
 
         error!("{}", err.message);
@@ -141,35 +136,25 @@ pub async fn login_finish<'a>(
     Ok((auth_step, cookie, is_new_user))
 }
 
-/// Validates `state` and the RFC 9207 `iss` of an upstream authorization response.
+/// Validates the `state` of an upstream authorization response.
 ///
 /// ATProto is skipped here: its `state` is generated and validated by the ATProto client
 /// itself, which also checks `iss` and binds its app state to `callback_id`.
-/// For all other providers, `state` must always match. If the provider sent an `iss`, it must
-/// match the provider's issuer (RFC 9207 section 2.4), ignoring only a trailing `/`.
-fn validate_callback_response(
+/// For all other providers, `state` must always match, no matter which other values the
+/// client sent along. In particular, `iss_atproto` is only ever used for ATProto.
+fn validate_callback_state(
     provider_issuer: &str,
     callback_id: &str,
-    state: &str,
-    iss: Option<&str>,
+    payload: &ProviderCallbackRequest,
 ) -> Result<(), ErrorResponse> {
     if provider_issuer == PROVIDER_ATPROTO {
         return Ok(());
     }
 
-    if !constant_time_eq::constant_time_eq(callback_id.as_bytes(), state.as_bytes()) {
+    if !constant_time_eq::constant_time_eq(callback_id.as_bytes(), payload.state.as_bytes()) {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "`state` does not match",
-        ));
-    }
-
-    if let Some(iss) = iss
-        && iss.trim_end_matches('/') != provider_issuer.trim_end_matches('/')
-    {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "`iss` does not match the provider issuer",
         ));
     }
 
@@ -182,52 +167,45 @@ mod tests {
 
     const ISSUER: &str = "https://upstream.example.com/auth/v1/";
 
-    #[test]
-    fn test_validate_callback_response_state() {
-        assert!(validate_callback_response(ISSUER, "cb1", "cb1", None).is_ok());
-
-        let err = validate_callback_response(ISSUER, "cb1", "cb2", None).unwrap_err();
-        assert_eq!(err.error, ErrorResponseType::BadRequest);
-
-        // an `iss` must never disable the `state` check for a non-ATProto provider
-        assert!(validate_callback_response(ISSUER, "cb1", "cb2", Some(ISSUER)).is_err());
-        assert!(validate_callback_response(ISSUER, "cb1", "cb2", Some("atproto")).is_err());
+    fn payload(state: &str, iss_atproto: Option<&str>) -> ProviderCallbackRequest {
+        ProviderCallbackRequest {
+            state: state.to_string(),
+            code: "code".to_string(),
+            xsrf_token: "xsrf".to_string(),
+            pkce_verifier: "verifier".to_string(),
+            iss_atproto: iss_atproto.map(String::from),
+        }
     }
 
     #[test]
-    fn test_validate_callback_response_iss() {
-        assert!(validate_callback_response(ISSUER, "cb1", "cb1", Some(ISSUER)).is_ok());
-        assert!(
-            validate_callback_response(
-                ISSUER,
-                "cb1",
-                "cb1",
-                Some("https://upstream.example.com/auth/v1")
-            )
-            .is_ok()
-        );
+    fn test_validate_callback_state() {
+        assert!(validate_callback_state(ISSUER, "cb1", &payload("cb1", None)).is_ok());
 
-        for iss in [
-            "https://attacker.example.com/auth/v1/",
-            "https://upstream.example.com/",
-            "https://upstream.example.com/auth/v1/x",
-            "",
-        ] {
-            let err = validate_callback_response(ISSUER, "cb1", "cb1", Some(iss)).unwrap_err();
+        let err = validate_callback_state(ISSUER, "cb1", &payload("cb2", None)).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+    }
+
+    #[test]
+    fn test_validate_callback_state_ignores_iss_for_non_atproto() {
+        // an `iss_atproto` must never disable the `state` check for a non-ATProto provider
+        for iss in [ISSUER, "https://bsky.social", "atproto"] {
+            assert!(validate_callback_state(ISSUER, "cb1", &payload("cb1", Some(iss))).is_ok());
+
+            let err =
+                validate_callback_state(ISSUER, "cb1", &payload("cb2", Some(iss))).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{iss}");
         }
     }
 
     #[test]
-    fn test_validate_callback_response_atproto() {
+    fn test_validate_callback_state_atproto() {
         // state and iss are validated by the ATProto client itself
-        assert!(validate_callback_response(PROVIDER_ATPROTO, "cb1", "other", None).is_ok());
+        assert!(validate_callback_state(PROVIDER_ATPROTO, "cb1", &payload("other", None)).is_ok());
         assert!(
-            validate_callback_response(
+            validate_callback_state(
                 PROVIDER_ATPROTO,
                 "cb1",
-                "other",
-                Some("https://bsky.social")
+                &payload("other", Some("https://bsky.social"))
             )
             .is_ok()
         );

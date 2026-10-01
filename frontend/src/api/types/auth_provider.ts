@@ -50,8 +50,8 @@ export interface ProviderCallbackRequest {
     /// Validation: PATTERN_URI
     pkce_verifier: string;
 
-    /// Validation: PATTERN_URI
-    iss?: string;
+    /// Validation: PATTERN_ALNUM
+    iss_atproto?: string;
 }
 
 export interface ProviderLoginRequest {
