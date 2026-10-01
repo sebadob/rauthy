@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { formatDateFromTs, saveCsrfToken } from '$utils/helpers';
+    import { formatDateFromTs, normalizeClientUri, saveCsrfToken } from '$utils/helpers';
     import Button from '$lib5/button/Button.svelte';
     import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
     import Input from '$lib5/form/Input.svelte';
@@ -66,6 +66,7 @@
     let clientFaviconUpdated = $state(-1);
     let clientLogoUpdated = $state(-1);
     let clientUri = $state('');
+    let clientUriNormalized = $state('');
     let redirectUri = useParam('redirect_uri').get();
     let nonce = useParam('nonce').get();
     let idpHint = useParam('idp_hint').get();
@@ -188,6 +189,12 @@
             browserIdDev();
         } else if (csrfToken) {
             saveCsrfToken(csrfToken);
+        }
+    });
+
+    $effect(() => {
+        if (clientUri) {
+            clientUriNormalized = normalizeClientUri(clientUri);
         }
     });
 
@@ -582,8 +589,8 @@
                             updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}
                         />
                     {/if}
-                    {#if clientUri}
-                        <a class="home" href={clientUri} aria-label="Client Home Page">
+                    {#if clientUriNormalized}
+                        <a class="home" href={clientUriNormalized} aria-label="Client Home Page">
                             <IconHome color="hsla(var(--text) / .9)" />
                         </a>
                     {/if}

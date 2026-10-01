@@ -1076,6 +1076,21 @@ impl AuthProviderIdClaims<'_> {
         }
     }
 
+    fn apply_provider_email(&self, user: &mut User, email: String) -> Option<String> {
+        if user.email == email {
+            if self.email_verified == Some(true) {
+                user.email_verified = true;
+            }
+
+            None
+        } else {
+            let old_email = std::mem::replace(&mut user.email, email);
+            user.email_verified = self.email_verified.unwrap_or(false);
+
+            Some(old_email)
+        }
+    }
+
     pub fn self_as_bytes_from_token(token: &str) -> Result<Vec<u8>, ErrorResponse> {
         let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
@@ -1324,11 +1339,7 @@ impl AuthProviderIdClaims<'_> {
                 ));
             }
 
-            // check / update email
-            if user.email != email {
-                old_email = Some(user.email);
-                user.email = email.clone();
-            }
+            old_email = self.apply_provider_email(&mut user, email);
 
             // check other existing values and possibly update them
             let given_name = self.given_name();
@@ -1479,6 +1490,108 @@ impl AuthProviderIdClaims<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn user_with_email(email: &str, email_verified: bool) -> User {
+        User {
+            email: email.to_string(),
+            email_verified,
+            ..Default::default()
+        }
+    }
+
+    fn claims_with_email_verified(email_verified: Option<bool>) -> AuthProviderIdClaims<'static> {
+        AuthProviderIdClaims {
+            email_verified,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn provider_verifies_matching_email() {
+        let claims = claims_with_email_verified(Some(true));
+        let mut user = user_with_email("user@example.com", false);
+
+        let old_email = claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(user.email_verified);
+        assert_eq!(old_email, None);
+    }
+
+    #[test]
+    fn unverified_provider_claim_does_not_verify_matching_email() {
+        let claims = claims_with_email_verified(Some(false));
+        let mut user = user_with_email("user@example.com", false);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(!user.email_verified);
+    }
+
+    #[test]
+    fn missing_provider_claim_does_not_verify_matching_email() {
+        let claims = claims_with_email_verified(None);
+        let mut user = user_with_email("user@example.com", false);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(!user.email_verified);
+    }
+
+    #[test]
+    fn unverified_provider_claim_does_not_revoke_matching_email() {
+        let claims = claims_with_email_verified(Some(false));
+        let mut user = user_with_email("user@example.com", true);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(user.email_verified);
+    }
+
+    #[test]
+    fn missing_provider_claim_does_not_revoke_matching_email() {
+        let claims = claims_with_email_verified(None);
+        let mut user = user_with_email("user@example.com", true);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(user.email_verified);
+    }
+
+    #[test]
+    fn verified_provider_claim_verifies_changed_email() {
+        let claims = claims_with_email_verified(Some(true));
+        let mut user = user_with_email("old@example.com", false);
+
+        let old_email = claims.apply_provider_email(&mut user, "new@example.com".to_string());
+
+        assert_eq!(user.email, "new@example.com");
+        assert!(user.email_verified);
+        assert_eq!(old_email.as_deref(), Some("old@example.com"));
+    }
+
+    #[test]
+    fn unverified_provider_claim_does_not_carry_verification_to_changed_email() {
+        let claims = claims_with_email_verified(Some(false));
+        let mut user = user_with_email("old@example.com", true);
+
+        let old_email = claims.apply_provider_email(&mut user, "new@example.com".to_string());
+
+        assert_eq!(user.email, "new@example.com");
+        assert!(!user.email_verified);
+        assert_eq!(old_email.as_deref(), Some("old@example.com"));
+    }
+
+    #[test]
+    fn missing_provider_claim_does_not_carry_verification_to_changed_email() {
+        let claims = claims_with_email_verified(None);
+        let mut user = user_with_email("old@example.com", true);
+
+        let old_email = claims.apply_provider_email(&mut user, "new@example.com".to_string());
+
+        assert_eq!(user.email, "new@example.com");
+        assert!(!user.email_verified);
+        assert_eq!(old_email.as_deref(), Some("old@example.com"));
+    }
 
     // exists only to understand the query syntax and experiment with it
     #[test]

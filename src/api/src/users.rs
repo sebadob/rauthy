@@ -519,23 +519,46 @@ pub async fn post_users_register_handle(
         .finish())
 }
 
+/// A `client_uri` can only serve as a prefix anchor for a `redirect_uri` if it carries a
+/// non-empty host part. Otherwise, the remainder of `redirect_uri` could supply the host itself:
+/// e.g. a stored `client_uri` of `"https://"` (or `"/"`) would allow any absolute URL to pass,
+/// and the WHATWG parser resolves `https:///evil.com/x` with host `evil.com`.
+fn client_uri_has_non_empty_host(uri: &str) -> bool {
+    let authority_start = uri.find("//").map_or(0, |i| i + 2);
+    let Some(authority) = uri.get(authority_start..) else {
+        return false;
+    };
+    let host = authority
+        .split(|c: char| ['/', '?', '#'].contains(&c))
+        .next()
+        .unwrap_or("");
+    !host.is_empty()
+}
+
+/// Returns `true` if `redirect_uri` equals `client_uri` or continues it at a path, query or
+/// fragment boundary. The prefix must carry a non-empty host (see
+/// [`client_uri_has_non_empty_host`]), otherwise the remainder of `redirect_uri` could supply
+/// the host itself (open redirect).
+pub(crate) fn redirect_uri_matches_client(redirect_uri: &str, client_uri: &str) -> bool {
+    if !client_uri_has_non_empty_host(client_uri) {
+        return false;
+    }
+    match redirect_uri.strip_prefix(client_uri) {
+        None => false,
+        Some(rest) => {
+            rest.is_empty()
+                || rest.starts_with('/')
+                || rest.starts_with('?')
+                || rest.starts_with('#')
+        }
+    }
+}
+
 /// Validates a registration or password-reset redirect URI against configured clients.
 #[inline]
-async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
+pub(super) async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
     for uri in Client::find_all_client_uris().await? {
-        let matches = match redirect_uri.strip_prefix(&uri) {
-            None => false,
-            Some(rest) => {
-                rest.is_empty()
-                    || rest.starts_with('/')
-                    || rest.starts_with('?')
-                    || rest.starts_with('#')
-                    || uri.ends_with('/')
-                    || uri.ends_with('?')
-                    || uri.ends_with('#')
-            }
-        };
-        if matches {
+        if redirect_uri_matches_client(redirect_uri, &uri) {
             return Ok(());
         }
     }
@@ -943,7 +966,7 @@ async fn validate_user_picture_access(
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
         let mut buf = Vec::with_capacity(512);
-        if JwtToken::validate_claims_into(&bearer, None, Duration::from_secs(0), &mut buf)
+        if JwtToken::validate_claims_into(&bearer, None, Duration::from_secs(0), &mut buf, false)
             .await
             .is_ok()
         {
@@ -2852,4 +2875,65 @@ pub async fn delete_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
     let user = User::find(id.into_inner()).await?;
     handle_user_delete(user).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redirect_uri_matches_client;
+
+    #[test]
+    fn test_redirect_uri_matches_client() {
+        // Host-locked prefixes match themselves and continuations at a boundary.
+        assert!(redirect_uri_matches_client(
+            "https://app.example.com",
+            "https://app.example.com"
+        ));
+        assert!(redirect_uri_matches_client(
+            "https://app.example.com/callback?x=1#f",
+            "https://app.example.com"
+        ));
+        assert!(redirect_uri_matches_client(
+            "app.example.com/x",
+            "app.example.com"
+        ));
+        assert!(redirect_uri_matches_client(
+            "https://app.example.com/cb/",
+            "https://app.example.com/cb/"
+        ));
+
+        // Boundary violations must not match.
+        assert!(!redirect_uri_matches_client(
+            "https://app.example.com.evil.com/x",
+            "https://app.example.com"
+        ));
+        assert!(!redirect_uri_matches_client(
+            "https://evil.com/app.example.com/",
+            "https://app.example.com/"
+        ));
+
+        // Degenerate `client_uri`s without a non-empty host must never match, no matter what
+        // the remainder of `redirect_uri` is (open redirect).
+        for bad in ["https://", "http://", "/", "//", "///", "?x=1", "#f", ""] {
+            assert!(
+                !redirect_uri_matches_client("https://evil.com/phish", bad),
+                "client_uri={bad:?}"
+            );
+            assert!(
+                !redirect_uri_matches_client("javascript:alert(1)//x", bad),
+                "client_uri={bad:?}"
+            );
+        }
+
+        // A `javascript:` prefix still locks the final URL to itself (the resolved URL is
+        // unparseable, and the frontend normalizes it before navigating), so only its own
+        // continuations may match.
+        assert!(redirect_uri_matches_client(
+            "javascript:alert(1)//x",
+            "javascript:alert(1)/"
+        ));
+        assert!(!redirect_uri_matches_client(
+            "https://evil.com/phish",
+            "javascript:alert(1)/"
+        ));
+    }
 }

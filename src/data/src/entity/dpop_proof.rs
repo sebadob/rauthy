@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn test_dpop_validation_rsa() {
         // manually build up a dpop token
-        let mut rng = argon2::password_hash::rand_core::OsRng;
+        let mut rng = rand_08::thread_rng();
         let rsa_sk = rsa::RsaPrivateKey::new(&mut rng, 2048).unwrap();
         let rsa_pk = rsa_sk.to_public_key();
         let n = rsa_pk.n().to_bytes_be();

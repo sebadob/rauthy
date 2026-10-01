@@ -14,10 +14,10 @@ If you run a single instance, you can ignore this block. However, if you run a H
 data, or even a crashing application.
 
 The reason for this is a major internal rework of Hiqlite with lots of optimizations and
-improvements. This may be annoying right now, but makes everything a lot more maintanable
+improvements. This may be annoying right now, but makes everything a lot more maintainable,
 future-proof, and more robust. We also gained a bit more efficiency and speed for the Raft network.
 
-You cache data will be cleaned up on restart, when you start this new version for the first time.
+Your cache data will be cleaned up on restart, when you start this new version for the first time.
 Rauthy does as much as possible automatically. You only **MUST GUARANTEE** that you do a full
 cluster shutdown with the old version, before you then start this new one!
 
@@ -182,6 +182,8 @@ provide them either as a integer, and they will be interpretet as seconds, or wi
 > that the value type was changed. When they have data in `Old Unit`, it highlights that it was NOT
 > in seconds before and it needs an update even without a name change.
 
+[#1739](https://github.com/sebadob/rauthy/pull/1739)
+
 #### SMTP Setup Rework
 
 Setting up SMTP connections was found to be a bit misleading or hard to debug. By default, implicit
@@ -225,23 +227,14 @@ smtp_tls_mode = 'tls'
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
 
-#### KV Store Validation
-
-The regex for KV store keys was made quite a bit more strict. This was necessary since the key is
-used as a path segment in API calls. This is only important when you used the KV store API manually.
-
-The validation is now the following:
-
-```
-r"^[a-zA-Z0-9-._~]{2,64}$"
-```
-
 #### Forward Auth `redirect_state`
 
 The `redirect_state` query param used in Forward Auth is now limited to codes of 300 - 599. By
 default, a success will always return a 200 anyway, so there is no need to overwrite it. The reason
 is to prevent dynamic proxy configs from potentially forwarding this value from a client, which
 tries to spoof a value that usually only the reverse proxy should ever set.
+
+[#1728](https://github.com/sebadob/rauthy/pull/1728)
 
 ### Changes
 
@@ -344,6 +337,8 @@ The security and usability was improved in lots of places with small changes:
 - In general, lots of tiny fixes that either convert a `panic` (mostly unreachable anyway) into an
   `Err(_)`, or things about normalizing error responses, and so on.
 
+[#1728](https://github.com/sebadob/rauthy/pull/1728)
+
 #### Discoverable Credentials
 
 Even though it was strongly discouraged up until now, Rauthy now supports Webauthn Discoverable
@@ -376,6 +371,22 @@ There are no config values. Everything is the users choice to provide as much co
 possible.
 
 [#1715](https://github.com/sebadob/rauthy/pull/1715)
+
+#### Improved Password Hashing
+
+Rauthy is now using the latest release of `argon2`. That version finally brings the `parallel`
+feautre, which is activated now. This means that if you have multiple cores available for your
+hasing (set in combination with `hashing.max_hash_threads`), you will get a huge speed boost. The
+`p_cost` can now be fully utilized, as long as you have the cores available. This on its own does
+not bump the security, but it reduces the time taken for hashing, which on the other hand means you
+can bump the `m_cost` (if you have the memory) or the `t_cost` higher. This will keep the same UX
+during logins, but with increased password hash strength.
+
+> Just as a reference: on my test machine with `m_cost=131072` and `p_cost=8`, I needed a `t_cost`
+> of `24` to get to ~1 second of time taken for hashing. With the `parallel` feature enabled, I was
+> able to set `t_cost=138` for the same time, which is an improvement by 5.75x.
+
+[#1741](https://github.com/sebadob/rauthy/pull/1741)
 
 #### OTP
 
@@ -448,7 +459,7 @@ renew_exp = '30d'
 enable = true
 ```
 
-[#1620](https://github.com/sebadob/rauthy/pull/1620)
+[#1620](https://github.com/sebadob/rauthy/pull/1620)  
 [#1705](https://github.com/sebadob/rauthy/pull/1705)
 
 #### Updated Validation Regexes
@@ -463,7 +474,26 @@ RE_USER_NAME:   ^[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}$
 RE_CLIENT_NAME: ^[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}$
 ```
 
+The regex for KV store keys was made quite a bit more strict. This was necessary since the key is
+used as a path segment in API calls. This is only important when you used the KV store API manually.
+
+The validation is now the following:
+
+```
+r"^[a-zA-Z0-9-._~]{2,64}$"
+```
+
+There is also a new one. A stricter version of `RE_URI`, that makes sure the given URI always has a
+host part. This is necessary for e.g. `redirect_uri`s in different places, and so on. Technically,
+it's a breaking change, but it should not be one if you provided proper URLs anyway.
+
+```
+RE_CLIENT_URI:  ^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?#][a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]*)?$
+```
+
 [#1708](https://github.com/sebadob/rauthy/pull/1708)
+[#1728](https://github.com/sebadob/rauthy/pull/1728)
+[#1743](https://github.com/sebadob/rauthy/pull/1743)
 
 #### Theme CSS uses explicit percent units
 
@@ -503,6 +533,15 @@ password_exp_days = 10
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
 
+#### Home / Back button on Account Dashboard
+
+You can now link to the account dashboard from your external application, and provide a
+`redirect_uri`. If it is a valid one that is registered for a client inside Rauthys DB, you will
+then see a Home / Back button in the top left corner. A user can click that to have a way back to
+your external app.
+
+[#1743](https://github.com/sebadob/rauthy/pull/1743)
+
 #### `resource` is carried through Auth Provider logins
 
 RFC 8707: `resource` is now carried through upstream-provider logins. This fixes e.g. Claude's MCP
@@ -518,6 +557,22 @@ API Keys with `Users` + `Delete` can now call `DELETE /auth/v1/users/{id}/webaut
 
 [#1713](https://github.com/sebadob/rauthy/pull/1713)
 
+#### `nbf` during Token Revocation
+
+The `nbf` claim is now ignored when you try to revoke a `refresh_token`. This is necessary, because
+by default they have their `nbf` set to `access_token.exp - 60`. Revokking a token though is always
+"safe".
+
+[#1740](https://github.com/sebadob/rauthy/pull/1740)
+
+#### Color Picker in the Branding Editor
+
+The color preview next to each HSL slider group in the Admin UI branding editor is now a native
+color picker. It makes it possible to pick a color or enter it as RGB or hex, which is then
+converted into the HSL values the theme uses.
+
+[#1750](https://github.com/sebadob/rauthy/pull/1750)
+
 ### Bugfix
 
 - The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`
@@ -528,6 +583,7 @@ API Keys with `Users` + `Delete` can now call `DELETE /auth/v1/users/{id}/webaut
 - The SSE event listeners were keyed by IP internally. This was a left-over from the very old days.
   The issue with this was that it was not possible to listen from multiple sources that share the
   same IP without them evicting each other all the time.
+  [#1728](https://github.com/sebadob/rauthy/pull/1728)
 
 ## v0.36.2
 

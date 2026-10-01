@@ -13,7 +13,7 @@ ammonia = { workspace = true }
 argon2 = { workspace = true }
 async-compression = { workspace = true }
 base64 = { workspace = true }
-bincode = { workspace = true }
+bincode-next = { workspace = true }
 chrono = { workspace = true }
 cidr = { workspace = true }
 flume = { workspace = true }

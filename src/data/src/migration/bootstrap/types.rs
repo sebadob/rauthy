@@ -178,10 +178,10 @@ pub struct Client {
     /// avoid potential issues in different situations. This is also why it's 64 characters long.
     /// Stick to alphanumeric unless you really have to do something else for a good reason.
     pub secret: Option<ClientSecret>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
     /// Validation: `Vec<^(http|https)://[a-z0-9.:-]+$>`

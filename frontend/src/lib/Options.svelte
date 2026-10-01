@@ -245,7 +245,8 @@
     .optPopover {
         width: 100%;
         text-align: left;
-        padding: 0.25rem 0.7rem;
+        /* to the right, big scrollbars like in chrome can crash with not enough space */
+        padding: 0.25rem 1rem 0.25rem 0.7rem;
         color: hsl(var(--text));
         font-weight: normal;
         border-radius: var(--border-radius);

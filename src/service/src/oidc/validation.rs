@@ -73,6 +73,7 @@ pub async fn validate_and_refresh_token(
         Some(JwtTokenType::Refresh),
         clock_skew_secs,
         &mut buf,
+        false,
     )
     .await?;
     let claims: JwtRefreshClaims = serde_json::from_slice(&buf)?;
@@ -138,7 +139,14 @@ pub async fn validate_and_refresh_token(
 
     let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
     let rt_scope = if let Some(device_id) = &claims.common.did {
-        let rt = RefreshTokenDevice::find_delete(validation_str).await?;
+        let rt = RefreshTokenDevice::find_delete(validation_str)
+            .await
+            .map_err(|mut err| {
+                if matches!(err.error, ErrorResponseType::NotFound) {
+                    err.message = "Device Refresh Token not found".into();
+                }
+                err
+            })?;
 
         if rt.exp < now_plus_skew {
             return Err(ErrorResponse::new(
@@ -161,7 +169,14 @@ pub async fn validate_and_refresh_token(
 
         rt.scope
     } else {
-        let rt = RefreshToken::find_delete(validation_str).await?;
+        let rt = RefreshToken::find_delete(validation_str)
+            .await
+            .map_err(|mut err| {
+                if matches!(err.error, ErrorResponseType::NotFound) {
+                    err.message = "Refresh Token not found".into();
+                }
+                err
+            })?;
 
         if rt.exp < now_plus_skew {
             return Err(ErrorResponse::new(

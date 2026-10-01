@@ -25,6 +25,7 @@ pub async fn get_userinfo(
         Some(JwtTokenType::Bearer),
         Duration::from_secs(0),
         buf.as_mut(),
+        false,
     )
     .await?;
     let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;

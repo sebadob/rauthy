@@ -74,6 +74,7 @@ use utoipa::{OpenApi, openapi};
         clients::delete_client,
         clients::get_forward_auth_oidc,
         clients::get_forward_auth_callback,
+        clients::post_client_validate_uri,
 
         email::get_email_jobs,
         email::post_send_email,
@@ -322,6 +323,7 @@ use utoipa::{OpenApi, openapi};
             EventsRequest,
             ForwardAuthParams,
             ForwardAuthCallbackParams,
+            ClientValidateRedirectUriRequest,
             KVParams,
             KVNamespaceRequest,
             KVAccessRequest,

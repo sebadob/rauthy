@@ -39,8 +39,10 @@ impl OidcCookieState {
     ) -> Result<Self, RauthyError> {
         let enc = b64_decode(state_cookie_value)?;
         let dec = Self::decrypt(&enc, enc_key)?;
-        let (slf, _) =
-            bincode::serde::decode_from_slice::<Self, _>(&dec, bincode::config::standard())?;
+        let (slf, _) = bincode_next::serde::decode_from_slice::<Self, _>(
+            &dec,
+            bincode_next::config::standard(),
+        )?;
 
         if slf.timestamp < Utc::now().sub(chrono::Duration::minutes(5)) {
             return Err(RauthyError::Request("OIDC state cookie has expired".into()));
@@ -80,7 +82,8 @@ impl OidcCookieState {
 
     #[inline]
     pub fn to_encrypted_cookie_value(&self, key: &[u8]) -> String {
-        let ser = bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
+        let ser =
+            bincode_next::serde::encode_to_vec(self, bincode_next::config::standard()).unwrap();
         let enc = Self::encrypt(&ser, key).unwrap();
         b64_encode(&enc)
     }

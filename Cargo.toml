@@ -28,20 +28,20 @@ lto = false
 strip = false
 
 [patch.crates-io]
-hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
-hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
-hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
+#hiqlite = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite" }
+#hiqlite-derive = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-derive" }
+#hiqlite-wal = { git = "https://github.com/sebadob/hiqlite.git", package = "hiqlite-wal" }
 
 [workspace.dependencies]
 accept-language = "3"
 actix = "0.13"
 actix-multipart = "0.8"
 actix-web = { version = "4", features = ["rustls-0_23"] }
-actix-web-lab = "0.27"
+actix-web-lab = "0.28"
 actix-web-prom = "0.10"
 ammonia = "4.1"
 arc-swap = "1.7"
-argon2 = { version = "0.5", features = ["std", "zeroize"] }
+argon2 = { version = "0.6", features = ["parallel", "zeroize"] }
 askama = "0.16"
 async-trait = "0.1.74"
 async-compression = { version = "0.4.41", features = ["brotli", "gzip", "tokio"] }
@@ -50,10 +50,9 @@ atrium-common = "0.1.2"
 atrium-identity = "0.1.4"
 atrium-oauth = "0.1.2"
 base64 = "0.23"
-bincode = { version = "2", features = ["serde"] }
+bincode-next = { version = "3.1.1", features = ["derive", "serde"] }
 bytes = "1.11.1"
-# update blocked by cryptr
-chacha20poly1305 = { version = "0.10", features = ["std"] }
+chacha20poly1305 = { version = "0.11", features = ["rand_core", "zeroize"] }
 chrono = { version = "0.4", default-features = false, features = [
     "clock", "serde", "std"
 ] }
@@ -77,7 +76,7 @@ futures-util = "0.3"
 gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.26.1"
-hiqlite = { version = "0.15.0-20260920", features = [
+hiqlite = { version = "0.15", features = [
     "cache", "cast_ints", "counters", "dashboard", "listen_notify", "macros"
 ] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
