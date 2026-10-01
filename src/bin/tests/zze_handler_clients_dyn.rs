@@ -97,7 +97,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let url = format!("{}/clients_dyn", backend_url);
     let mut payload = DynamicClientRequest {
         redirect_uris: vec![GOOD_REDIRECT_URI.to_string()],
-        grant_types: vec![GrantType::AuthorizationCode],
+        grant_types: vec![GrantType::AuthorizationCode, GrantType::RefreshToken],
         client_name: Some("Dyn Test Client 123".to_string()),
         client_uri: None,
         contacts: None,
@@ -135,6 +135,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     // currently, we don't have a secret expiration
     assert_eq!(resp.client_secret_expires_at, 0);
     assert!(resp.grant_types.contains(&GrantType::AuthorizationCode));
+    assert!(resp.grant_types.contains(&GrantType::RefreshToken));
     // with token_endpoint_auth_method == "none", the client must be public
     assert!(resp.client_secret.is_none());
 
@@ -244,10 +245,25 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     assert_eq!(res.json::<DynamicClientResponse>().await?, resp_get);
 
+    // a self-update must not add a grant type the client does not have
+    let grant_types = payload.grant_types.clone();
+    payload.grant_types.push(GrantType::ClientCredentials);
+    let res = client
+        .put(&url)
+        .header(AUTHORIZATION, &token)
+        .json(&payload)
+        .send()
+        .await?;
+    payload.grant_types = grant_types;
+    assert_eq!(res.status(), 400);
+    let err = res.json::<serde_json::Value>().await?;
+    assert_eq!(err["error"], "invalid_client_metadata");
+    let after = admin_get_client(&resp.client_id).await?;
+    assert_eq!(after.flows_enabled, resp.grant_types);
+    assert!(!after.flows_enabled.contains(&GrantType::ClientCredentials));
+
     // self-modify
     payload.client_name = Some("Dyn Test Client 12345".to_string());
-    payload.grant_types.push(GrantType::ClientCredentials);
-    payload.grant_types.push(GrantType::RefreshToken);
     payload.token_endpoint_auth_method = Some("client_secret_post".to_string());
     payload.contacts = Some(vec![
         "batman@localhost.de".to_string(),
@@ -267,8 +283,9 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     // we changed token_endpoint_auth_method -> should be a confidential client now
     assert!(resp.client_secret.is_some());
     assert_eq!(resp.client_name, payload.client_name);
-    assert!(resp.grant_types.contains(&GrantType::ClientCredentials));
+    assert!(resp.grant_types.contains(&GrantType::AuthorizationCode));
     assert!(resp.grant_types.contains(&GrantType::RefreshToken));
+    assert!(!resp.grant_types.contains(&GrantType::ClientCredentials));
     let contacts = resp.contacts.expect("contacts to be set");
     assert!(contacts.contains(&"batman@localhost.de".to_string()));
     assert!(contacts.contains(&"@alfred:matrix.org".to_string()));
@@ -320,6 +337,25 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         "Bearer {}",
         resp.registration_access_token.as_ref().unwrap()
     );
+
+    // With the admin's `default_aud` and `claims` kept, adding `client_credentials` would let
+    // the client mint machine tokens carrying them -> rejected, the flows stay unchanged.
+    payload.grant_types = vec![GrantType::ClientCredentials];
+    let res = client
+        .put(&url)
+        .header(AUTHORIZATION, &token)
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 400);
+    let err = res.json::<serde_json::Value>().await?;
+    assert_eq!(err["error"], "invalid_client_metadata");
+    let after = admin_get_client(&client_id).await?;
+    assert_eq!(after.flows_enabled, before.flows_enabled);
+    assert!(!after.flows_enabled.contains(&GrantType::ClientCredentials));
+
+    // narrowing the grant types is allowed
+    payload.grant_types = vec![GrantType::AuthorizationCode];
     payload.client_name = Some("Dyn Test Client 1234567".to_string());
     let res = client
         .put(&url)
@@ -333,6 +369,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
 
     let after = admin_get_client(&client_id).await?;
     assert_eq!(after.name, payload.client_name);
+    assert_eq!(after.flows_enabled, vec![GrantType::AuthorizationCode]);
     assert!(after.enabled);
     assert_eq!(after.auth_code_lifetime, 17);
     assert_eq!(after.access_token_lifetime, 42);
@@ -351,6 +388,17 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         resp.registration_access_token.as_ref().unwrap()
     );
     payload.client_name = Some("Dyn Test Client re-enabled".to_string());
+    let res = client
+        .put(&url)
+        .header(AUTHORIZATION, &token)
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
+    // ... also with an invalid request, the disabled client gets the 403
+    payload.grant_types = vec![];
+    payload.redirect_uris = vec!["not a uri".to_string()];
     let res = client
         .put(&url)
         .header(AUTHORIZATION, &token)
