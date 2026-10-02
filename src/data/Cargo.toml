@@ -97,6 +97,7 @@ webpki-roots = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
+percent-encoding = { workspace = true }
 pretty_assertions = "1"
 rstest = "0.26"
 tokio-test = "*"

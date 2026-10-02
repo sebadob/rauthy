@@ -140,6 +140,10 @@ impl AuthCode {
 
 /// Appends `params`, `state` and the RFC 9207 `iss`, form-urlencoded, to `redirect_uri`.
 /// `redirect_uri` must already have passed `validate_redirect_uri_shape`.
+///
+/// A space is sent as `%20` rather than the form encoding `+`, as in previous releases, so that
+/// clients decoding the query as plain percent-encoding get the original value back. This is
+/// safe because the serializer encodes a literal `+` as `%2B`.
 #[must_use]
 pub fn authorization_redirect(
     redirect_uri: &str,
@@ -150,12 +154,7 @@ pub fn authorization_redirect(
     debug_assert!(!redirect_uri.contains('#'));
     let append_char = if redirect_uri.contains('?') { '&' } else { '?' };
 
-    let mut loc = String::with_capacity(redirect_uri.len() + 128);
-    loc.push_str(redirect_uri);
-    loc.push(append_char);
-
-    let start = loc.len();
-    let mut query = form_urlencoded::Serializer::for_suffix(loc, start);
+    let mut query = form_urlencoded::Serializer::new(String::with_capacity(128));
     for (key, value) in params {
         query.append_pair(key, value);
     }
@@ -163,7 +162,13 @@ pub fn authorization_redirect(
         query.append_pair("state", state);
     }
     query.append_pair("iss", issuer);
-    query.finish()
+    let query = query.finish().replace('+', "%20");
+
+    let mut loc = String::with_capacity(redirect_uri.len() + 1 + query.len());
+    loc.push_str(redirect_uri);
+    loc.push(append_char);
+    loc.push_str(&query);
+    loc
 }
 
 impl AuthCode {
@@ -365,6 +370,41 @@ mod tests {
                 ("iss".to_string(), ISSUER.to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn test_state_space_and_plus() {
+        let state = "a b+c";
+        for params in [[("code", "c0de")], [("error", "login_required")]] {
+            let loc = authorization_redirect(CB, &params, Some(state), ISSUER);
+            let (key, value) = params[0];
+            assert_eq!(
+                loc,
+                format!("{CB}?{key}={value}&state=a%20b%2Bc&iss={ISSUER_ENC}")
+            );
+
+            // a form decoder recovers the original value
+            assert_eq!(
+                decoded_query(&loc),
+                vec![
+                    (key.to_string(), value.to_string()),
+                    ("state".to_string(), state.to_string()),
+                    ("iss".to_string(), ISSUER.to_string()),
+                ]
+            );
+
+            // and so does a plain percent decoder
+            let raw = loc
+                .split('&')
+                .find_map(|pair| pair.strip_prefix("state="))
+                .unwrap();
+            assert_eq!(
+                percent_encoding::percent_decode_str(raw)
+                    .decode_utf8()
+                    .unwrap(),
+                state
+            );
+        }
     }
 
     #[test]

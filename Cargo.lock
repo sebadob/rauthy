@@ -5023,6 +5023,7 @@ dependencies = [
  "num_cpus",
  "openssl",
  "openssl-sys",
+ "percent-encoding",
  "postgres-types",
  "pretty_assertions",
  "rand 0.8.7",
