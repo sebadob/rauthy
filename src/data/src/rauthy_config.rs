@@ -284,6 +284,7 @@ pub struct Vars {
     pub pow: VarsPow,
     pub scim: VarsScim,
     pub server: VarsServer,
+    pub sponsor: VarsSponsor,
     pub suspicious_requests: VarsSuspiciousRequests,
     pub templates: VarsTemplates,
     pub tls: VarsTls,
@@ -597,7 +598,7 @@ impl Default for Vars {
                 digest_len_default: 512,
                 email: VarsOtpEmail {
                     enable: true,
-                }
+                },
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -637,6 +638,9 @@ impl Default for Vars {
                 swagger_ui_public: false,
                 see_keep_alive: Duration::from_secs(30),
                 ssp_threshold: 1000,
+            },
+            sponsor: VarsSponsor {
+                email_reminder_disable: false
             },
             suspicious_requests: VarsSuspiciousRequests {
                 blacklist: Duration::from_secs(24 * 3600),
@@ -692,7 +696,7 @@ impl Default for Vars {
                     },
                     ko: VarsTemplate
                     {
-                       subject: "새 비밀번호".into(),
+                        subject: "새 비밀번호".into(),
                         header: "새 비밀번호를 설정해 주세요:".into(),
                         text: None,
                         click_link: Some("비밀번호 입력창으로 이동하려면, 아래의 링크를 클릭해 주세요."
@@ -764,7 +768,7 @@ impl Default for Vars {
                     },
                     zhhans: VarsTemplate
                     {
-                         subject: "新密码".into(),
+                        subject: "新密码".into(),
                         header: "新密码".into(),
                         text: None,
                         click_link: Some("点击下方链接以打开密码设置表单。".into()),
@@ -820,7 +824,8 @@ impl Default for Vars {
                         footer: Some("Si ce lien a expiré, vous pouvez en demander un nouveau.".into()),
                         button_text_request_new: Some("Demander un nouveau lien".into()),
                     },
-                    ko: VarsTemplate {subject: "비밀번호 초기화 요청".into(),
+                    ko: VarsTemplate {
+                        subject: "비밀번호 초기화 요청".into(),
                         header: "비밀번호 초기화 요청:".into(),
                         text: None,
                         click_link:
@@ -1290,6 +1295,7 @@ impl Vars {
         slf.parse_pow(&mut table);
         slf.parse_scim(&mut table);
         slf.parse_server(&mut table);
+        slf.parse_sponsor(&mut table);
         slf.parse_suspicious_requests(&mut table);
         slf.parse_templates(&mut table);
         slf.parse_tls(&mut table);
@@ -3244,6 +3250,21 @@ impl Vars {
         check_table_empty(table, "server");
     }
 
+    fn parse_sponsor(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "sponsor");
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "sponsor",
+            "email_reminder_disable",
+            "SPONSOR_EMAIL_REMINDER_DISABLE",
+        ) {
+            self.sponsor.email_reminder_disable = v;
+        }
+
+        check_table_empty(table, "sponsor");
+    }
+
     fn parse_suspicious_requests(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "suspicious_requests");
 
@@ -3760,7 +3781,7 @@ impl Vars {
         ) {
             self.webauthn.force_passkey_cert_level = Some(
                 v.parse()
-                    .expect("Cannot parse webauthn.force_passkey_cert_level - expected one of: FIDO_CERTIFIED, FIDO_CERTIFIED_L1, FIDO_CERTIFIED_L1plus, FIDO_CERTIFIED_L2, FIDO_CERTIFIED_L2plus, FIDO_CERTIFIED_L3, FIDO_CERTIFIED_L3plus"),
+                        .expect("Cannot parse webauthn.force_passkey_cert_level - expected one of: FIDO_CERTIFIED, FIDO_CERTIFIED_L1, FIDO_CERTIFIED_L1plus, FIDO_CERTIFIED_L2, FIDO_CERTIFIED_L2plus, FIDO_CERTIFIED_L3, FIDO_CERTIFIED_L3plus"),
             );
         }
         if let Some(values) = t_str_vec(
@@ -3773,9 +3794,9 @@ impl Vars {
             let mut prot = KeyProtectionMask::default();
             for v in values {
                 prot = prot.insert(
-                        v.parse()
+                    v.parse()
                             .expect("Cannot parse entry of webauthn.force_passkey_protection - expected one of: software, hardware, tee, secure_element, remote_handle"),
-                    );
+                );
             }
             self.webauthn.force_passkey_protection = Some(prot);
         }
@@ -3789,9 +3810,9 @@ impl Vars {
             let mut att = AttachmentHintMask::default();
             for v in values {
                 att = att.insert(
-                        v.parse()
+                    v.parse()
                             .expect("Cannot parse entry of webauthn.force_passkey_attachment - expected one of: internal, external, wired, wireless, nfc, bluetooth, network, wifi_direct, smart"),
-                    );
+                );
             }
             self.webauthn.force_passkey_attachment = Some(att);
         }
@@ -4304,6 +4325,11 @@ pub struct VarsServer {
     pub swagger_ui_public: bool,
     pub see_keep_alive: Duration,
     pub ssp_threshold: u16,
+}
+
+#[derive(Debug)]
+pub struct VarsSponsor {
+    pub email_reminder_disable: bool,
 }
 
 #[derive(Debug)]

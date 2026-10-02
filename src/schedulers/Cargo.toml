@@ -9,6 +9,7 @@ license.workspace = true
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-data = { path = "../data" }
+rauthy-notify = { path = "../notify" }
 rauthy-service = { path = "../service" }
 
 actix-web = { workspace = true }

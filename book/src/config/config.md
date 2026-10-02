@@ -1101,6 +1101,17 @@ pg_password = '123SuperSafe'
 # overwritten by: DYN_CLIENT_DEFAULT_SCOPES - single String, \n separated values
 #default_scopes = ['openid']
 
+# RFC 8707 resource indicators a dynamically registered client may request. A
+# dynamic client cannot declare `allowed_resources` itself, so without this it can
+# never request a `resource`; an MCP client, which must send one, would otherwise
+# get `invalid_target`. Resolved from the live config on every request and never
+# stored with the client. Entries are matched verbatim. An empty list keeps the
+# default deny.
+#
+# default: []
+# overwritten by: DYN_CLIENT_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
+
 # If specified, this secret token will be expected during
 # dynamic client registrations to be given as a
 # `Bearer <DYN_CLIENT_REG_TOKEN>` token. Needs to be communicated
@@ -1498,6 +1509,16 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # default: false
 # overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
 #danger_allow_unvalidated_resource = false
+
+# RFC 8707 resource indicators allowed when an ephemeral client document declares
+# none of its own (a CIMD document you do not control cannot declare them). Keeps
+# the default deny without the blunt `danger_allow_unvalidated_resource`. A document
+# that declares its own resources still wins. Resolved from the live config on every
+# request. Entries are matched verbatim.
+#
+# default: []
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
 
 # A Client ID Metadata Document may advertise a grant type Rauthy does not
 # implement (e.g. claude.ai lists `urn:ietf:params:oauth:grant-type:jwt-bearer`
@@ -2537,6 +2558,28 @@ swagger_ui_enable = false
 # default: false
 # overwritten by: SUSPICIOUS_REQUESTS_LOG
 #log = false
+
+[sponsor]
+# Rauthy will send en E-Mail to the Rauthy admin, and to possibly
+# configured event notification targets, once a year. This message
+# kindly asks for sponsoring the project. As said, it will only be
+# sent once a year in the time between 6th and 28th of december. It
+# will send it to the configured `rauthy_admin_email` and possibly
+# existing `contacts` on the `rauthy` client. In addition, it will
+# create an event notification to Slack / Matrix, if it exists.
+# If none of that is true, it will instead send a mail to the max
+# 5 oldest `rauthy_admin` role accounts in the database.
+#
+# It will never annoy you or keep on asking. It's one notification
+# once a year, in the same way as KDE does it as well. This message
+# will never reach any normal user or group admin.
+#
+# If you do not want to support the project, or you already do,
+# you can disable this setting.
+#
+# default: false
+# overwritten by: SPONSOR_EMAIL_REMINDER_DISABLE
+#email_reminder_disable = false
 
 [[templates]]
 # You can overwrite some default email templating values.
