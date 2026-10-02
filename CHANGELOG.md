@@ -53,6 +53,24 @@ advistory will be released in the upcoming weeks.
 
 ### Breaking
 
+#### RFC 9068 `at+jwt` Token Type
+
+Access Tokens are issued with a JWT header `typ` of `at+jwt` now, as specified in
+[RFC 9068](https://www.rfc-editor.org/rfc/rfc9068.html). Rauthy's Access Tokens have been RFC
+9068-shaped for a long time already, but the header still used the generic `JWT`, which made it
+impossible for a resource server to tell an Access Token apart from an ID Token by the header alone.
+ID, Refresh and Logout Tokens are unchanged and keep using `JWT`.
+
+This is only breaking for downstream resource servers that check the header `typ` for exactly `JWT`.
+Rauthy itself accepts both values, so Access Tokens issued before an update stay valid until they
+expire. `rauthy-client` accepts `at+jwt` starting with `v0.14.3`; update the client before updating
+Rauthy to avoid an interruption in service.
+
+> If you use the `rauthy-client`, make sure to update it BEFORE upgrading Rauthy, so it will accept
+> the new `at+jwt` in the header. The new version will accept both `at+jwt` as well as `JWT`.
+
+[#1651](https://github.com/sebadob/rauthy/pull/1651)
+
 #### Config Values Renamed
 
 There were config values that had typos. They were not fixed earlier, because that would have been a
@@ -714,12 +732,42 @@ connector in combination with Upstream Auth Providers.
 
 [#1703](https://github.com/sebadob/rauthy/pull/1703)
 
+#### `resource` for Dynamic and Ephemeral Clients
+
+You can now allow specific resources for dynamic and ephemeral clients.
+
+```toml
+[dynamic_clients]
+# RFC 8707 resource indicators a dynamically registered client may request. A
+# dynamic client cannot declare `allowed_resources` itself, so without this it can
+# never request a `resource`; an MCP client, which must send one, would otherwise
+# get `invalid_target`. Resolved from the live config on every request and never
+# stored with the client. Entries are matched verbatim. An empty list keeps the
+# default deny.
+#
+# default: []
+# overwritten by: DYN_CLIENT_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
+
+[ephemeral_clients]
+# RFC 8707 resource indicators allowed when an ephemeral client document declares
+# none of its own (a CIMD document you do not control cannot declare them). Keeps
+# the default deny without the blunt `danger_allow_unvalidated_resource`. A document
+# that declares its own resources still wins. Resolved from the live config on every
+# request. Entries are matched verbatim.
+#
+# default: []
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
+```
+
+[#1686](https://github.com/sebadob/rauthy/pull/1686)
+
 #### API Key Passkey Deletion
 
 API Keys with `Users` + `Delete` can now call `DELETE /auth/v1/users/{id}/webauthn/delete/{name}`.
 
 [#1713](https://github.com/sebadob/rauthy/pull/1713)
-
 [#1713](https://github.com/sebadob/rauthy/pull/1713)
 
 #### `nbf` during Token Revocation
@@ -738,6 +786,52 @@ converted into the HSL values the theme uses.
 
 [#1750](https://github.com/sebadob/rauthy/pull/1750)
 
+#### `Ed25519` Token Signature
+
+The `Ed25519` identifier was added for signing tokens in the client config. This is actually the
+exact same as `EdDSA`, which is the default. The only difference is that it is more specific. There
+is a newer RFC 9864 that specifies these. This identifier can be set on clients that validate tokens
+based on RFC 9864 instead of the (still current standard) `EdDSA` value.
+
+If a client has issues fetching the JWKS, you can provide a custom query param `rfc_9864=true` to
+the URL which will then re-formad `EdDSA` as `Ed25519`.
+
+[#1719](https://github.com/sebadob/rauthy/pull/1719)
+
+#### Sponsoring Notification
+
+Rauthy will send a notification once a year that kindly asks for a sponsoring or a donation in a
+similar way like KDE does it. It will not annoy you and never reach any normal user or group admin.
+It will do this if your instance is running between 6th and 28th of december.
+
+If you don't want to support the project, or you already do, you can disable this.
+
+```toml
+[sponsor]
+# Rauthy will send en E-Mail to the Rauthy admin, and to possibly
+# configured event notification targets, once a year. This message
+# kindly asks for sponsoring the project. As said, it will only be
+# sent once a year in the time between 6th and 28th of december. It 
+# will send it to the configured `rauthy_admin_email` and possibly
+# existing `contacts` on the `rauthy` client. In addition, it will
+# create an event notification to Slack / Matrix, if it exists.
+# If none of that is true, it will instead send a mail to the max
+# 5 oldest `rauthy_admin` role accounts in the database.
+#
+# It will never annoy you or keep on asking. It's one notification
+# once a year, in the same way as KDE does it as well. This message
+# will never reach any normal user or group admin.
+#
+# If you do not want to support the project, or you already do,
+# you can disable this setting.
+#
+# default: false
+# overwritten by: SPONSOR_EMAIL_REMINDER_DISABLE
+email_reminder_disable = false
+```
+
+[#1759](https://github.com/sebadob/rauthy/pull/1759)
+
 ### Bugfix
 
 - The last color stop of the hue slider in the Admin UI branding editor used a hue of `3600`
@@ -749,6 +843,14 @@ converted into the HSL values the theme uses.
   The issue with this was that it was not possible to listen from multiple sources that share the
   same IP without them evicting each other all the time.
   [#1728](https://github.com/sebadob/rauthy/pull/1728)
+- Accept an optional PKCE challenge from confidential dynamic clients
+  [#1682](https://github.com/sebadob/rauthy/pull/1682)
+- `--border-radius` from custom branding was not used for the login card.
+  [#1704](https://github.com/sebadob/rauthy/pull/1704)
+- Reset a manually initialized users password if a passkey was added with the initial link.
+  [#1707](https://github.com/sebadob/rauthy/pull/1707)
+- `/register` endpoint was missing CORS headers.
+  [#1717](https://github.com/sebadob/rauthy/pull/1717)
 
 ## v0.36.2
 
@@ -775,23 +877,6 @@ dynamic clients, but that is out of Rauthys control. The main thread comes from 
 public client with allowed token refresh, and a stolen or leaked refresh token.
 
 An advisory and CVE / PoC will be made public at a later point.
-
-### Breaking
-
-#### RFC 9068 `at+jwt` Token Type
-
-Access Tokens are issued with a JWT header `typ` of `at+jwt` now, as specified in
-[RFC 9068](https://www.rfc-editor.org/rfc/rfc9068.html). Rauthy's Access Tokens have been RFC
-9068-shaped for a long time already, but the header still used the generic `JWT`, which made it
-impossible for a resource server to tell an Access Token apart from an ID Token by the header alone.
-ID, Refresh and Logout Tokens are unchanged and keep using `JWT`.
-
-This is only breaking for downstream resource servers that check the header `typ` for exactly `JWT`.
-Rauthy itself accepts both values, so Access Tokens issued before an update stay valid until they
-expire. `rauthy-client` accepts `at+jwt` starting with `v0.14.3`; update the client before updating
-Rauthy to avoid an interruption in service.
-
-[#1651](https://github.com/sebadob/rauthy/pull/1651)
 
 ### Changes
 

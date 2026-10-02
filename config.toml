@@ -2604,6 +2604,28 @@ blacklist = '1d'
 # overwritten by: SUSPICIOUS_REQUESTS_LOG
 log = true
 
+[sponsor]
+# Rauthy will send en E-Mail to the Rauthy admin, and to possibly
+# configured event notification targets, once a year. This message
+# kindly asks for sponsoring the project. As said, it will only be
+# sent once a year in the time between 6th and 28th of december. It
+# will send it to the configured `rauthy_admin_email` and possibly
+# existing `contacts` on the `rauthy` client. In addition, it will
+# create an event notification to Slack / Matrix, if it exists.
+# If none of that is true, it will instead send a mail to the max
+# 5 oldest `rauthy_admin` role accounts in the database.
+#
+# It will never annoy you or keep on asking. It's one notification
+# once a year, in the same way as KDE does it as well. This message
+# will never reach any normal user or group admin.
+#
+# If you do not want to support the project, or you already do,
+# you can disable this setting.
+#
+# default: false
+# overwritten by: SPONSOR_EMAIL_REMINDER_DISABLE
+email_reminder_disable = false
+
 [[templates]]
 # You can overwrite some default email templating values.
 # If you want to modify the basic templates themselves, this is
