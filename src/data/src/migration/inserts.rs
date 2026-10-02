@@ -726,11 +726,7 @@ VALUES ($1, $2)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(
-                sql_2,
-                &[&b.current_blob_no, &b.next_update],
-            )
-            .await?;
+            DB::pg_execute(sql_2, &[&b.current_blob_no, &b.next_update]).await?;
         }
     }
     Ok(())
@@ -1348,11 +1344,7 @@ VALUES ($1, $2)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            DB::pg_execute(
-                sql_2,
-                &[&b.user_id, &b.mail_sent_ts],
-            )
-            .await?;
+            DB::pg_execute(sql_2, &[&b.user_id, &b.mail_sent_ts]).await?;
         }
     }
     Ok(())
