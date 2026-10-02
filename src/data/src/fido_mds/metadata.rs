@@ -4,8 +4,9 @@ use hiqlite::params;
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
+use serde::Deserialize;
 
-#[derive(Debug, Default, FromRow, FromPgRow)]
+#[derive(Debug, Default, Deserialize, FromRow, FromPgRow)]
 pub struct MdsMetadata {
     pub current_blob_no: i64,
     pub next_update: i64,

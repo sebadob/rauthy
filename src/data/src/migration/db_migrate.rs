@@ -24,6 +24,7 @@ use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
+use crate::entity::pwd_exp_mails::PasswordExpMail;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
@@ -40,6 +41,8 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
+use crate::fido_mds::mds_entry::MdsEntrySimple;
+use crate::fido_mds::metadata::MdsMetadata;
 use crate::migration::inserts;
 use crate::rauthy_config::RauthyConfig;
 use hiqlite::macros::params;
@@ -600,6 +603,39 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .collect_vec();
     inserts::kv_values(before).await?;
 
+    // PWD EXP MAILS
+    debug!("Migrating table: pwd_exp_mails");
+    let before = query_sqlite::<PasswordExpMail>(&conn, "SELECT * FROM pwd_exp_mails").await?;
+    inserts::pwd_exp_mails(before).await?;
+
+    // FIDO MDS METADATA
+    debug!("Migrating table: fido_mds_metadata");
+    let before = query_sqlite::<MdsMetadata>(&conn, "SELECT * FROM fido_mds_metadata").await?;
+    inserts::fido_mds_metadata(before).await?;
+
+    // FIDO MDS CERTS
+    debug!("Migrating table: fido_mds_certs");
+    let mut stmt = conn.prepare("SELECT hash, cert_der FROM fido_mds_certs")?;
+    let before: Vec<(Vec<u8>, Vec<u8>)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::fido_mds_certs(before).await?;
+
+    // FIDO MDS ENTRIES
+    debug!("Migrating table: fido_mds_entries");
+    let before = query_sqlite::<MdsEntrySimple>(&conn, "SELECT * FROM fido_mds_entries").await?;
+    inserts::fido_mds_entries(before).await?;
+
+    // FIDO MDS ENTRY CERTS
+    debug!("Migrating table: fido_mds_entry_certs");
+    let mut stmt = conn.prepare("SELECT aaguid, cert_hash FROM fido_mds_entry_certs")?;
+    let before: Vec<(Vec<u8>, Vec<u8>)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::fido_mds_entry_certs(before).await?;
+
     Ok(())
 }
 
@@ -935,6 +971,52 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: kv_values");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_values", &[], 0).await?;
     inserts::kv_values(before).await?;
+
+    // PWD EXP MAILS
+    debug!("Migrating table: pwd_exp_mails");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM pwd_exp_mails", &[], 0).await?;
+    inserts::pwd_exp_mails(before).await?;
+
+    // FIDO MDS METADATA
+    debug!("Migrating table: fido_mds_metadata");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM fido_mds_metadata", &[], 0).await?;
+    inserts::fido_mds_metadata(before).await?;
+
+    // FIDO MDS CERTS
+    debug!("Migrating table: fido_mds_certs");
+    let before = DB::pg_query_rows_with(&cl, "SELECT hash, cert_der FROM fido_mds_certs", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let hash: Vec<u8> = row.get("hash");
+            let cert_der: Vec<u8> = row.get("cert_der");
+            (hash, cert_der)
+        })
+        .collect::<Vec<_>>();
+    inserts::fido_mds_certs(before).await?;
+
+    // FIDO MDS ENTRIES
+    debug!("Migrating table: fido_mds_entries");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM fido_mds_entries", &[], 0).await?;
+    inserts::fido_mds_entries(before).await?;
+
+    // FIDO MDS ENTRY CERTS
+    debug!("Migrating table: fido_mds_entry_certs");
+    let before = DB::pg_query_rows_with(
+        &cl,
+        "SELECT aaguid, cert_hash FROM fido_mds_entry_certs",
+        &[],
+        0,
+    )
+    .await?
+    .into_iter()
+    .map(|row| {
+        let aaguid: Vec<u8> = row.get("aaguid");
+        let cert_hash: Vec<u8> = row.get("cert_hash");
+        (aaguid, cert_hash)
+    })
+    .collect::<Vec<_>>();
+    inserts::fido_mds_entry_certs(before).await?;
 
     Ok(())
 }

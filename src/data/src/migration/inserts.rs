@@ -23,6 +23,7 @@ use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
+use crate::entity::pwd_exp_mails::PasswordExpMail;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
@@ -39,6 +40,8 @@ use crate::entity::users_values::UserValues;
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::Event;
+use crate::fido_mds::mds_entry::MdsEntrySimple;
+use crate::fido_mds::metadata::MdsMetadata;
 use cryptr::EncValue;
 use hiqlite::macros::params;
 use rauthy_common::is_hiqlite;
@@ -617,6 +620,122 @@ VALUES ($1, $2, $3)"#;
     Ok(())
 }
 
+pub async fn fido_mds_certs(data_before: Vec<(Vec<u8>, Vec<u8>)>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM fido_mds_certs";
+    let sql_2 = r#"
+INSERT INTO fido_mds_certs (hash, cert_der)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql().execute(sql_2, params!(b.0, b.1)).await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.0, &b.1]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn fido_mds_entries(data_before: Vec<MdsEntrySimple>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM fido_mds_entries";
+    let sql_2 = r#"
+INSERT INTO fido_mds_entries
+(aaguid, description, key_protection, attachment_hint, attestation_types, cert_level)
+VALUES ($1, $2, $3, $4, $5, $6)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(
+                        b.aaguid,
+                        b.description,
+                        b.key_protection.bits() as i64,
+                        b.attachment_hint.bits() as i64,
+                        b.attestation_types.bits() as i64,
+                        b.cert_level.as_u8() as i16
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            let key_protection = b.key_protection.bits() as i64;
+            let attachment_hint = b.attachment_hint.bits() as i64;
+            let attestation_types = b.attestation_types.bits() as i64;
+            let cert_level = b.cert_level.as_u8() as i16;
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.aaguid,
+                    &b.description,
+                    &key_protection,
+                    &attachment_hint,
+                    &attestation_types,
+                    &cert_level,
+                ],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn fido_mds_entry_certs(
+    data_before: Vec<(Vec<u8>, Vec<u8>)>,
+) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM fido_mds_entry_certs";
+    let sql_2 = r#"
+INSERT INTO fido_mds_entry_certs (aaguid, cert_hash)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql().execute(sql_2, params!(b.0, b.1)).await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(sql_2, &[&b.0, &b.1]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn fido_mds_metadata(data_before: Vec<MdsMetadata>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM fido_mds_metadata";
+    let sql_2 = r#"
+INSERT INTO fido_mds_metadata (current_blob_no, next_update)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(sql_2, params!(b.current_blob_no, b.next_update))
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[&b.current_blob_no, &b.next_update],
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
 pub async fn groups(data_before: Vec<Group>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM groups";
     let sql_2 = "INSERT INTO groups (id, name, meta) VALUES ($1, $2, $3)";
@@ -1140,8 +1259,9 @@ pub async fn passkeys(data_before: Vec<PasskeyEntity>) -> Result<(), ErrorRespon
     let sql_1 = "DELETE FROM passkeys";
     let sql_2 = r#"
 INSERT INTO passkeys
-(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified, aaguid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+(user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified,
+resident_key, aaguid)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1158,6 +1278,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                         b.registered,
                         b.last_used,
                         b.user_verified,
+                        b.resident_key,
                         b.aaguid
                     ),
                 )
@@ -1177,6 +1298,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                     &b.registered,
                     &b.last_used,
                     &b.user_verified,
+                    &b.resident_key,
                     &b.aaguid,
                 ],
             )
@@ -1207,6 +1329,32 @@ VALUES ($1, $2, $3, $4)"#;
         }
     }
 
+    Ok(())
+}
+
+pub async fn pwd_exp_mails(data_before: Vec<PasswordExpMail>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM pwd_exp_mails";
+    let sql_2 = r#"
+INSERT INTO pwd_exp_mails (user_id, mail_sent_ts)
+VALUES ($1, $2)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(sql_2, params!(b.user_id, b.mail_sent_ts))
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[&b.user_id, &b.mail_sent_ts],
+            )
+            .await?;
+        }
+    }
     Ok(())
 }
 

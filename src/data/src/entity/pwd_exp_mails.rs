@@ -5,8 +5,9 @@ use hiqlite::params;
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
+use serde::Deserialize;
 
-#[derive(Debug, FromRow, FromPgRow)]
+#[derive(Debug, Deserialize, FromRow, FromPgRow)]
 pub struct PasswordExpMail {
     pub user_id: String,
     pub mail_sent_ts: i64,
