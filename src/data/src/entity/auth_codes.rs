@@ -140,10 +140,6 @@ impl AuthCode {
 
 /// Appends `params`, `state` and the RFC 9207 `iss`, form-urlencoded, to `redirect_uri`.
 /// `redirect_uri` must already have passed `validate_redirect_uri_shape`.
-///
-/// A space is sent as `%20` rather than the form encoding `+`, as in previous releases, so that
-/// clients decoding the query as plain percent-encoding get the original value back. This is
-/// safe because the serializer encodes a literal `+` as `%2B`.
 #[must_use]
 pub fn authorization_redirect(
     redirect_uri: &str,
@@ -151,21 +147,39 @@ pub fn authorization_redirect(
     state: Option<&str>,
     issuer: &str,
 ) -> String {
-    debug_assert!(!redirect_uri.contains('#'));
-    let append_char = if redirect_uri.contains('?') { '&' } else { '?' };
+    let state = state.map(|state| ("state", state));
+    let pairs = params.iter().copied().chain(state).chain([("iss", issuer)]);
+    append_query(redirect_uri, pairs)
+}
+
+/// Appends `state`, form-urlencoded, to `post_logout_redirect_uri`, or returns it unchanged
+/// without a `state`. `post_logout_redirect_uri` must already have passed
+/// `validate_post_logout_redirect_uri_shape`.
+#[must_use]
+pub fn post_logout_redirect(post_logout_redirect_uri: &str, state: Option<&str>) -> String {
+    match state {
+        Some(state) => append_query(post_logout_redirect_uri, [("state", state)]),
+        None => post_logout_redirect_uri.to_string(),
+    }
+}
+
+/// Appends `pairs`, form-urlencoded, to the query of `uri`, which must not contain a fragment.
+///
+/// A space is sent as `%20` rather than the form encoding `+`, as in previous releases, so that
+/// clients decoding the query as plain percent-encoding get the original value back. This is
+/// safe because the serializer encodes a literal `+` as `%2B`.
+fn append_query<'a>(uri: &str, pairs: impl IntoIterator<Item = (&'a str, &'a str)>) -> String {
+    debug_assert!(!uri.contains('#'));
+    let append_char = if uri.contains('?') { '&' } else { '?' };
 
     let mut query = form_urlencoded::Serializer::new(String::with_capacity(128));
-    for (key, value) in params {
+    for (key, value) in pairs {
         query.append_pair(key, value);
     }
-    if let Some(state) = state {
-        query.append_pair("state", state);
-    }
-    query.append_pair("iss", issuer);
     let query = query.finish().replace('+', "%20");
 
-    let mut loc = String::with_capacity(redirect_uri.len() + 1 + query.len());
-    loc.push_str(redirect_uri);
+    let mut loc = String::with_capacity(uri.len() + 1 + query.len());
+    loc.push_str(uri);
     loc.push(append_char);
     loc.push_str(&query);
     loc
@@ -430,6 +444,58 @@ mod tests {
         let err = code.validate_redirect_uri_exact(&client, uri).unwrap_err();
         assert_eq!(err.error, ErrorResponseType::BadRequest);
         assert_eq!(err.message, "redirect_uri must not contain a fragment");
+    }
+
+    #[test]
+    fn test_post_logout_redirect() {
+        const BYE: &str = "https://client.example.com/bye";
+
+        // without a `state`, the URI is used as it is
+        assert_eq!(post_logout_redirect(BYE, None), BYE);
+        let with_query = format!("{BYE}?foo=bar");
+        assert_eq!(post_logout_redirect(&with_query, None), with_query);
+
+        let loc = post_logout_redirect(BYE, Some("st4te"));
+        assert_eq!(loc, format!("{BYE}?state=st4te"));
+
+        // an existing query is kept, and `state` is appended exactly once
+        let loc = post_logout_redirect(&with_query, Some("st4te"));
+        assert_eq!(loc, format!("{BYE}?foo=bar&state=st4te"));
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("foo".to_string(), "bar".to_string()),
+                ("state".to_string(), "st4te".to_string()),
+            ]
+        );
+
+        // a space is sent as `%20`, a `+` as `%2B`
+        let state = "a b+c";
+        let loc = post_logout_redirect(BYE, Some(state));
+        assert_eq!(loc, format!("{BYE}?state=a%20b%2Bc"));
+        assert_eq!(
+            decoded_query(&loc),
+            vec![("state".to_string(), state.to_string())]
+        );
+        let raw = loc.split_once("state=").unwrap().1;
+        assert_eq!(
+            percent_encoding::percent_decode_str(raw)
+                .decode_utf8()
+                .unwrap(),
+            state
+        );
+
+        // a `state` cannot add another parameter or a fragment
+        let state = "x&state=evil#frag";
+        let loc = post_logout_redirect(&with_query, Some(state));
+        assert_eq!(loc.matches("state=").count(), 1, "{loc}");
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("foo".to_string(), "bar".to_string()),
+                ("state".to_string(), state.to_string()),
+            ]
+        );
     }
 
     #[test]
