@@ -545,6 +545,8 @@ export let I18nAdminKo: I18nAdmin = {
             fragment: '리디렉션 URI에는 프래그먼트(#)를 포함할 수 없습니다',
             reservedKey:
                 '리디렉션 URI에는 쿼리 매개변수 "{{ KEY }}"를 포함할 수 없습니다. 이 매개변수는 인가 응답에서 설정됩니다',
+            reservedKeyLogout:
+                '로그아웃 후 리디렉션 URI에는 쿼리 매개변수 "{{ KEY }}"를 포함할 수 없습니다. 이 매개변수는 로그아웃 시 설정됩니다',
         },
     },
 };

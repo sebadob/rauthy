@@ -34,7 +34,12 @@
     import InputArea from '$lib/form/InputArea.svelte';
     import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
     import { untrack } from 'svelte';
-    import { invalidRedirectUrisMsg, redirectUriShapeErrorMsg } from '$utils/redirectUri';
+    import {
+        invalidPostLogoutRedirectUrisMsg,
+        invalidRedirectUrisMsg,
+        postLogoutRedirectUriShapeErrorMsg,
+        redirectUriShapeErrorMsg,
+    } from '$utils/redirectUri';
 
     let {
         client = $bindable(),
@@ -67,10 +72,13 @@
     let postLogoutRedirectURIs: string[] = $state(
         client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : [],
     );
-    // A client stored before the stricter validation may still contain an invalid redirect URI,
-    // which must be replaced before the client can be saved.
+    // A client stored before the stricter validation may still contain an invalid (post-logout)
+    // redirect URI, which must be replaced before the client can be saved.
     let redirectURIsErr = $derived(
         invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri) || '',
+    );
+    let postLogoutRedirectURIsErr = $derived(
+        invalidPostLogoutRedirectUrisMsg(postLogoutRedirectURIs, ta.validation.redirectUri) || '',
     );
     let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
     let restrict_group_prefix: string = $state(client.restrict_group_prefix || '');
@@ -216,8 +224,8 @@
     }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
-        if (redirectURIsErr) {
-            err = redirectURIsErr;
+        if (redirectURIsErr || postLogoutRedirectURIsErr) {
+            err = redirectURIsErr || postLogoutRedirectURIsErr;
             return;
         }
         err = '';
@@ -431,7 +439,13 @@
             label="Post Logout Redirect URIs"
             errMsg={ta.validation.uri}
             pattern={PATTERN_CLIENT_URI}
+            validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
         />
+        {#if postLogoutRedirectURIsErr}
+            <div class="err" transition:slide={{ duration: 150 }}>
+                {postLogoutRedirectURIsErr}
+            </div>
+        {/if}
 
         <div style:height=".5rem"></div>
         <p class="mb-0"><b>Resource Indicators</b></p>

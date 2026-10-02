@@ -1,5 +1,6 @@
-// A copy of the backend `validate_redirect_uri_shape()` (`src/data/src/entity/clients.rs`), so the
-// UI can reject an invalid redirect URI with a translated error before sending it.
+// A copy of the backend `validate_redirect_uri_shape()` and
+// `validate_post_logout_redirect_uri_shape()` (`src/data/src/entity/clients.rs`), so the UI can
+// reject an invalid (post-logout) redirect URI with a translated error before sending it.
 // Keep both in sync.
 
 import type { I18nAdmin } from '../i18n/admin/interface.ts';
@@ -15,6 +16,10 @@ export const RESERVED_REDIRECT_QUERY_KEYS = [
     'error_uri',
     'iss',
 ];
+
+// Query keys a logout response sets itself: `state` is the only parameter appended to a
+// `post_logout_redirect_uri` (OpenID Connect RP-Initiated Logout 1.0 §3).
+export const RESERVED_POST_LOGOUT_QUERY_KEYS = ['state'];
 
 export type RedirectUriShapeError =
     | { kind: 'fragment' }
@@ -33,6 +38,20 @@ export type RedirectUriShapeError =
  * Returns `undefined` if the URI is valid.
  */
 export function validateRedirectUriShape(uri: string): RedirectUriShapeError | undefined {
+    return validateUriShape(uri, RESERVED_REDIRECT_QUERY_KEYS);
+}
+
+/**
+ * The same checks as `validateRedirectUriShape()` for a `post_logout_redirect_uri`, with `state`
+ * as the only reserved query key, since nothing else is appended on logout.
+ *
+ * Returns `undefined` if the URI is valid.
+ */
+export function validatePostLogoutRedirectUriShape(uri: string): RedirectUriShapeError | undefined {
+    return validateUriShape(uri, RESERVED_POST_LOGOUT_QUERY_KEYS);
+}
+
+function validateUriShape(uri: string, reservedKeys: string[]): RedirectUriShapeError | undefined {
     if (uri.includes('#')) {
         return { kind: 'fragment' };
     }
@@ -55,7 +74,7 @@ export function validateRedirectUriShape(uri: string): RedirectUriShapeError | u
         if (RE_CONTROL.test(key)) {
             return { kind: 'controlChar' };
         }
-        const reserved = reservedQueryKey(key);
+        const reserved = reservedQueryKey(key, reservedKeys);
         if (reserved) {
             return { kind: 'reservedKey', key: reserved };
         }
@@ -101,8 +120,8 @@ function isHex(b: number): boolean {
     return (b >= 0x30 && b <= 0x39) || (b >= 0x41 && b <= 0x46) || (b >= 0x61 && b <= 0x66);
 }
 
-// Returns the reserved key a decoded query `key` would be folded into by common parsers.
-function reservedQueryKey(decoded: string): string | undefined {
+// Returns the key of `reservedKeys` a decoded query `key` would be folded into by common parsers.
+function reservedQueryKey(decoded: string, reservedKeys: string[]): string | undefined {
     // ASCII-only lowercase like Rust's `to_ascii_lowercase()`
     const key = decoded.replace(RE_TRIM, '').replace(/[A-Z]/g, c => c.toLowerCase());
     // PHP turns `.` and ` ` into `_`, and `code[]` / `iss[0]` become arrays under the plain key
@@ -111,9 +130,9 @@ function reservedQueryKey(decoded: string): string | undefined {
     const base = bracket === -1 ? normalized : normalized.slice(0, bracket);
 
     return (
-        RESERVED_REDIRECT_QUERY_KEYS.find(reserved => reserved === base) ||
+        reservedKeys.find(reserved => reserved === base) ||
         // `qs` with `allowDots` nests `iss.x` under `iss`
-        RESERVED_REDIRECT_QUERY_KEYS.find(
+        reservedKeys.find(
             reserved =>
                 key.startsWith(reserved) &&
                 (key[reserved.length] === '[' || key[reserved.length] === '.'),
@@ -123,7 +142,23 @@ function reservedQueryKey(decoded: string): string | undefined {
 
 // Returns the translated error for an invalid `uri`, or `undefined` if it is valid.
 export function redirectUriShapeErrorMsg(uri: string, i18n: I18nRedirectUri): string | undefined {
-    const err = validateRedirectUriShape(uri);
+    return shapeErrorMsg(validateRedirectUriShape(uri), i18n, i18n.reservedKey);
+}
+
+// Returns the translated error for an invalid post-logout redirect `uri`, or `undefined` if it is
+// valid.
+export function postLogoutRedirectUriShapeErrorMsg(
+    uri: string,
+    i18n: I18nRedirectUri,
+): string | undefined {
+    return shapeErrorMsg(validatePostLogoutRedirectUriShape(uri), i18n, i18n.reservedKeyLogout);
+}
+
+function shapeErrorMsg(
+    err: RedirectUriShapeError | undefined,
+    i18n: I18nRedirectUri,
+    reservedKey: string,
+): string | undefined {
     switch (err?.kind) {
         case undefined:
             return undefined;
@@ -134,15 +169,30 @@ export function redirectUriShapeErrorMsg(uri: string, i18n: I18nRedirectUri): st
         case 'controlChar':
             return i18n.controlChar;
         case 'reservedKey':
-            return i18n.reservedKey.replace('{{ KEY }}', err.key);
+            return reservedKey.replace('{{ KEY }}', err.key);
     }
 }
 
 // Returns the translated error for the first invalid URI in `uris`, prefixed with the URI, or
 // `undefined` if all are valid.
 export function invalidRedirectUrisMsg(uris: string[], i18n: I18nRedirectUri): string | undefined {
+    return firstInvalidMsg(uris, uri => redirectUriShapeErrorMsg(uri, i18n));
+}
+
+// Like `invalidRedirectUrisMsg()` for post-logout redirect URIs.
+export function invalidPostLogoutRedirectUrisMsg(
+    uris: string[],
+    i18n: I18nRedirectUri,
+): string | undefined {
+    return firstInvalidMsg(uris, uri => postLogoutRedirectUriShapeErrorMsg(uri, i18n));
+}
+
+function firstInvalidMsg(
+    uris: string[],
+    errorMsg: (uri: string) => string | undefined,
+): string | undefined {
     for (const uri of uris) {
-        const msg = redirectUriShapeErrorMsg(uri, i18n);
+        const msg = errorMsg(uri);
         if (msg) {
             return `${uri}: ${msg}`;
         }

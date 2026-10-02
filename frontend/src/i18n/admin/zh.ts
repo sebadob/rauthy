@@ -534,6 +534,7 @@ export let I18nAdminZh: I18nAdmin = {
             controlChar: '重定向 URI 的查询参数名称中不能包含控制字符',
             fragment: '重定向 URI 不能包含片段 (#)',
             reservedKey: '重定向 URI 不能包含查询参数 "{{ KEY }}"，因为它由授权响应设置',
+            reservedKeyLogout: '登出后重定向 URI 不能包含查询参数 "{{ KEY }}"，因为它在登出时设置',
         },
     },
 };

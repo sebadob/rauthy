@@ -556,6 +556,8 @@ export let I18nAdminEn: I18nAdmin = {
             fragment: 'A redirect URI must not contain a fragment (#)',
             reservedKey:
                 'A redirect URI must not contain the query parameter "{{ KEY }}", because it is set by the authorization response',
+            reservedKeyLogout:
+                'A post logout redirect URI must not contain the query parameter "{{ KEY }}", because it is set on logout',
         },
     },
 };

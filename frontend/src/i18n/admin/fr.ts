@@ -594,6 +594,8 @@ export let I18nAdminFr: I18nAdmin = {
             fragment: 'Une URI de redirection ne doit pas contenir de fragment (#)',
             reservedKey:
                 'Une URI de redirection ne doit pas contenir le paramètre de requête "{{ KEY }}", car il est défini par la réponse d\'autorisation',
+            reservedKeyLogout:
+                'Une URI de redirection après déconnexion ne doit pas contenir le paramètre de requête "{{ KEY }}", car il est défini lors de la déconnexion',
         },
     },
 };
