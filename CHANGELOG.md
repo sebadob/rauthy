@@ -768,7 +768,6 @@ You can now allow specific resources for dynamic and ephemeral clients.
 API Keys with `Users` + `Delete` can now call `DELETE /auth/v1/users/{id}/webauthn/delete/{name}`.
 
 [#1713](https://github.com/sebadob/rauthy/pull/1713)
-
 [#1713](https://github.com/sebadob/rauthy/pull/1713)
 
 #### `nbf` during Token Revocation
@@ -831,7 +830,7 @@ If you don't want to support the project, or you already do, you can disable thi
 email_reminder_disable = false
 ```
 
-[]()
+[#1759](https://github.com/sebadob/rauthy/pull/1759)
 
 ### Bugfix
 
