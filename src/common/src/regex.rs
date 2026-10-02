@@ -69,13 +69,17 @@ pub static RE_STREET: LazyLock<Regex> =
 pub static RE_URI: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
 // A URI with a non-empty host part: optional scheme, then a host (optionally with a port), and
-// only after that any `/`, `?` or `#` separator. Used for the client home URL (`client_uri`):
-// unlike `RE_URI`, degenerate values such as `https://`, `/` or `javascript:alert(1)` cannot be
-// stored, which would otherwise let arbitrary hosts pass the `redirect_uri` prefix validation
-// (open redirect).
+// only after that any `/` or `?` separator. Used for the client home URL (`client_uri`), redirect
+// URIs and post-logout redirect URIs: unlike `RE_URI`, degenerate values such as `https://`, `/`
+// or `javascript:alert(1)` cannot be stored, which would otherwise let arbitrary hosts pass the
+// `redirect_uri` prefix validation (open redirect).
+//
+// `#` and `,` are rejected as well: a redirect URI must not contain a fragment (RFC 6749 §3.1.2),
+// and (post-logout) redirect URIs are stored comma-joined, so a `,` would split one URI into
+// several. `validate_redirect_uri_shape()` checks both again for redirect URIs.
 pub static RE_CLIENT_URI: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?#][a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]*)?$",
+        r"^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\-&?=~!$'()*+%@]*)?$",
     )
     .unwrap()
 });
@@ -131,7 +135,7 @@ mod tests {
     fn test_re_client_uri() {
         assert!(RE_CLIENT_URI.is_match("https://app.example.com"));
         assert!(RE_CLIENT_URI.is_match("https://app.example.com/"));
-        assert!(RE_CLIENT_URI.is_match("https://app.example.com/cb?x=1#f"));
+        assert!(RE_CLIENT_URI.is_match("https://app.example.com/cb?x=1&y=2"));
         assert!(RE_CLIENT_URI.is_match("HTTPS://APP.EXAMPLE.COM/x"));
         assert!(RE_CLIENT_URI.is_match("app.example.com"));
         assert!(RE_CLIENT_URI.is_match("localhost:8081/callback"));
@@ -150,6 +154,14 @@ mod tests {
         assert!(!RE_CLIENT_URI.is_match("javascript:alert(1)"));
         assert!(!RE_CLIENT_URI.is_match("javascript:alert(1)/"));
         assert!(!RE_CLIENT_URI.is_match("mailto:x@y"));
+
+        // A fragment is not allowed (RFC 6749 §3.1.2), and a comma would split a URI in two,
+        // since (post-logout) redirect URIs are stored comma-joined.
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/cb?x=1#f"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com#f"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/#/cb"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/cb?x=,https://evil.example"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/a,b"));
     }
 
     #[test]

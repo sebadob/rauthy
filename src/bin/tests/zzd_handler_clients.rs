@@ -24,6 +24,16 @@ const BAD_REDIRECT_URIS: [&str; 5] = [
     "http://test.client.io/callback?x=,https://evil.example/cb",
 ];
 
+/// A `#` or `,` is already rejected by the payload validation (`RE_CLIENT_URI`), anything else by
+/// `validate_redirect_uri_shape()`.
+fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
+    if bad_uri.contains(['#', ',']) {
+        "Payload validation error"
+    } else {
+        "redirect_uri must not contain"
+    }
+}
+
 fn extract_raw_claims(token: &str) -> Vec<u8> {
     let mut split = token.split('.');
     split.next().unwrap();
@@ -216,7 +226,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             .await?;
         assert_eq!(res.status(), 400, "{bad_uri}");
         let body = res.text().await?;
-        assert!(body.contains("redirect_uri must not contain"), "{body}");
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
 
     // modify the client
@@ -282,7 +292,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             .await?;
         assert_eq!(res.status(), 400, "{bad_uri}");
         let body = res.text().await?;
-        assert!(body.contains("redirect_uri must not contain"), "{body}");
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     update_client.redirect_uris = redirect_uris.clone();
     let res = reqwest::Client::new()

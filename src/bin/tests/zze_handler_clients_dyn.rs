@@ -16,6 +16,16 @@ const BAD_REDIRECT_URIS: [&str; 4] = [
     "http://localhost:8080/cb?x=,https://evil.example/cb",
 ];
 
+/// A `#` or `,` is already rejected by the payload validation (`RE_CLIENT_URI`), anything else by
+/// `validate_redirect_uri_shape()`.
+fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
+    if bad_uri.contains(['#', ',']) {
+        "Payload validation error"
+    } else {
+        "redirect_uri must not contain"
+    }
+}
+
 #[tokio::test]
 async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
@@ -41,7 +51,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         let res = client.post(&url).json(&payload).send().await?;
         assert_eq!(res.status(), 400, "{bad_uri}");
         let body = res.text().await?;
-        assert!(body.contains("redirect_uri must not contain"), "{body}");
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     payload.redirect_uris = vec![GOOD_REDIRECT_URI.to_string()];
 
