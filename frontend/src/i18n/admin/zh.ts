@@ -529,5 +529,11 @@ export let I18nAdminZh: I18nAdmin = {
         css: '无效的CSS值',
         origin: '无效的来源',
         uri: '无效的URI',
+        redirectUri: {
+            comma: '重定向 URI 不能包含逗号 (,)',
+            controlChar: '重定向 URI 的查询参数名称中不能包含控制字符',
+            fragment: '重定向 URI 不能包含片段 (#)',
+            reservedKey: '重定向 URI 不能包含查询参数 "{{ KEY }}"，因为它由授权响应设置',
+        },
     },
 };

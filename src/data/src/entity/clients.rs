@@ -2773,6 +2773,8 @@ pub(crate) mod tests {
             ),
             ("https://app.example.com/cb?error.uri=x", "error_uri"),
             ("https://app.example.com/cb?%20iss%20=x", "iss"),
+            // Unicode whitespace is trimmed as well
+            ("https://app.example.com/cb?%E2%80%83iss=x", "iss"),
         ] {
             let err = validate_redirect_uri_shape(uri).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
@@ -2808,6 +2810,10 @@ pub(crate) mod tests {
             "https://app.example.com/cb?x=code%5B%5D",
             "https://app.example.com/cb?",
             "https://app.example.com/cb?&&;",
+            // a BOM is not whitespace, and invalid UTF-8 is replaced
+            "https://app.example.com/cb?%EF%BB%BFiss=x",
+            "https://app.example.com/cb?%A0iss=x",
+            "https://app.example.com/cb?%69ss%=x",
         ] {
             assert!(validate_redirect_uri_shape(uri).is_ok(), "{uri}");
         }

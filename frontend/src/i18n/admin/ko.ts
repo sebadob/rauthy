@@ -539,5 +539,12 @@ export let I18nAdminKo: I18nAdmin = {
         css: '비정상적인 CSS',
         origin: '비정상적인 오리진',
         uri: '비정상적인 URI',
+        redirectUri: {
+            comma: '리디렉션 URI에는 쉼표(,)를 포함할 수 없습니다',
+            controlChar: '리디렉션 URI의 쿼리 매개변수 이름에는 제어 문자를 포함할 수 없습니다',
+            fragment: '리디렉션 URI에는 프래그먼트(#)를 포함할 수 없습니다',
+            reservedKey:
+                '리디렉션 URI에는 쿼리 매개변수 "{{ KEY }}"를 포함할 수 없습니다. 이 매개변수는 인가 응답에서 설정됩니다',
+        },
     },
 };

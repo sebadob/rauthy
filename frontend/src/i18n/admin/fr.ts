@@ -587,5 +587,13 @@ export let I18nAdminFr: I18nAdmin = {
         css: 'Valeur CSS invalide',
         origin: 'Origine invalide',
         uri: 'URI invalide',
+        redirectUri: {
+            comma: 'Une URI de redirection ne doit pas contenir de virgule (,)',
+            controlChar:
+                "Une URI de redirection ne doit pas contenir de caractères de contrôle dans le nom d'un paramètre de requête",
+            fragment: 'Une URI de redirection ne doit pas contenir de fragment (#)',
+            reservedKey:
+                'Une URI de redirection ne doit pas contenir le paramètre de requête "{{ KEY }}", car il est défini par la réponse d\'autorisation',
+        },
     },
 };

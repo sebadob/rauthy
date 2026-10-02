@@ -10,6 +10,7 @@
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test": "playwright test",
         "test:webauthn": "svelte-kit sync && node --test tests/webauthn-auth.node.mjs",
+        "test:redirect-uri": "node --test tests/redirect-uri.node.mjs",
         "test:password-reset": "npm run build && node --test tests/password-reset.node.mjs",
         "lint": "prettier --check . && eslint .",
         "format": "./node_modules/prettier/bin/prettier.cjs --write .",

@@ -529,5 +529,13 @@ export let I18nAdminNb: I18nAdmin = {
         css: 'Gyldig CSS-verdi',
         origin: 'Gyldig origin',
         uri: 'Gyldig URI',
+        redirectUri: {
+            comma: 'En redirect-URI kan ikke inneholde komma (,)',
+            controlChar:
+                'En redirect-URI kan ikke inneholde kontrolltegn i navnet på en spørringsparameter',
+            fragment: 'En redirect-URI kan ikke inneholde et fragment (#)',
+            reservedKey:
+                'En redirect-URI kan ikke inneholde spørringsparameteren "{{ KEY }}", fordi den settes av autorisasjonssvaret',
+        },
     },
 };
