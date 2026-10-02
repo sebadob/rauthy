@@ -37,6 +37,7 @@ cryptr = { workspace = true }
 ed25519-compact = { workspace = true }
 flate2 = { workspace = true }
 flume = { workspace = true }
+form_urlencoded = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
 hex = { workspace = true }
@@ -52,7 +53,6 @@ mime = { workspace = true }
 num_cpus = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
-percent-encoding = { workspace = true }
 # 0.8 is necessary to provide a proper `thread_rng` for `rsa`
 rand_08 = { package = "rand", version = "0.8" }
 rand_core = { workspace = true }
@@ -97,6 +97,7 @@ webpki-roots = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
+percent-encoding = { workspace = true }
 pretty_assertions = "1"
 rstest = "0.26"
 tokio-test = "*"

@@ -1,7 +1,11 @@
 <script lang="ts">
     import Button from '$lib5/button/Button.svelte';
     import Input from '$lib5/form/Input.svelte';
-    import { PATTERN_CLIENT_ID_NEW, PATTERN_CLIENT_NAME } from '$utils/patterns';
+    import {
+        PATTERN_CLIENT_ID_NEW,
+        PATTERN_CLIENT_NAME,
+        PATTERN_CLIENT_URI,
+    } from '$utils/patterns';
     import Form from '$lib5/form/Form.svelte';
     import { fetchPost } from '$api/fetch';
     import { useI18n } from '$state/i18n.svelte';
@@ -9,6 +13,7 @@
     import type { ClientResponse, NewClientRequest } from '$api/types/clients.ts';
     import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
     import InputTags from '$lib5/form/InputTags.svelte';
+    import { invalidRedirectUrisMsg, redirectUriShapeErrorMsg } from '$utils/redirectUri';
 
     let {
         clients,
@@ -39,6 +44,11 @@
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         if (clients.find(c => c.id === id)) {
             err = ta.common.nameExistsAlready;
+            return;
+        }
+        let redirectURIsErr = invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri);
+        if (redirectURIsErr) {
+            err = redirectURIsErr;
             return;
         }
         err = '';
@@ -89,12 +99,15 @@
             bind:values={redirectURIs}
             label="Redirect URIs"
             errMsg={ta.validation.uri}
+            pattern={PATTERN_CLIENT_URI}
+            validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
         />
         <InputTags
             typ="url"
             bind:values={postLogoutRedirectURIs}
             label="Post Logout Redirect URIs"
             errMsg={ta.validation.uri}
+            pattern={PATTERN_CLIENT_URI}
         />
 
         <Button type="submit">

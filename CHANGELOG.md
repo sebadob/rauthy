@@ -254,6 +254,31 @@ tries to spoof a value that usually only the reverse proxy should ever set.
 
 [#1728](https://github.com/sebadob/rauthy/pull/1728)
 
+#### Stricter `redirect_uri` Validation
+
+Client redirect URIs are validated more strictly now. A redirect URI must not contain:
+
+- a fragment (`#`), as required by
+  [RFC 6749 §3.1.2](https://www.rfc-editor.org/rfc/rfc6749#section-3.1.2). This rejects hash-router
+  URIs like `https://app.example.com/#/callback` as well.
+- a `,`, because redirect URIs are stored comma-separated.
+- a query parameter that the authorization response sets itself: `code`, `state`, `error`,
+  `error_description`, `error_uri` or `iss`. Keys are compared decoded and case-insensitively, and
+  forms that common server-side parsers fold into one of these, like `%69ss`, `code[]` or
+  `error.description`, are rejected too.
+
+This is checked when a client is created or updated (Admin UI, API, dynamic client registration,
+ephemeral clients, bootstrap), and for the `redirect_uri` of each authorization request. The
+`client_uri`, post-logout redirect URIs and the SCIM base URI do not accept `#` or `,` anymore
+either.
+
+Already stored redirect URIs are not migrated. An authorization request with such a URI is
+rejected, and the client cannot be saved until the URI is replaced. At startup, Rauthy logs a
+warning for each affected client and URI, and the Admin UI shows why a redirect URI is invalid. To
+fix a client, replace the URI with a valid one, e.g. a path-based callback instead of a fragment.
+
+[#1757](https://github.com/sebadob/rauthy/pull/1757)
+
 ### Changes
 
 #### Security Hardening and General Stability
@@ -715,6 +740,19 @@ password_exp_days = 10
 ```
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
+
+#### RFC 9207 Issuer Identification
+
+Every authorization response redirect, both the `code` success and the `error=login_required`
+response for `prompt=none`, now carries the `iss` parameter. The discovery documents advertise
+`authorization_response_iss_parameter_supported: true`. Clients can use it to defend against mix-up
+attacks when they talk to multiple authorization servers.
+
+All redirect query params are now built in one place and are properly encoded, so a `state`
+containing e.g. `&iss=...` cannot inject its own parameters. The login UI no longer encodes `state`
+itself, which means it is encoded exactly once on the backend. A space is still sent as `%20`.
+
+[#1757](https://github.com/sebadob/rauthy/pull/1757)
 
 #### Home / Back button on Account Dashboard
 

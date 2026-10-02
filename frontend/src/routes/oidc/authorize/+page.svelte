@@ -75,7 +75,6 @@
     let refPassword: undefined | HTMLInputElement = $state();
 
     let stateParam = useParam('state').get();
-    let stateEncoded = $derived(stateParam ? encodeURIComponent(stateParam) : undefined);
     let challenge = useParam('code_challenge').get();
     let challengeMethod: CodeChallengeMethod = useParam(
         'code_challenge_method',
@@ -244,7 +243,7 @@
         const payload: LoginRefreshRequest = {
             client_id: clientId,
             redirect_uri: redirectUri,
-            state: stateEncoded,
+            state: stateParam,
             nonce: nonce,
             scopes,
         };
@@ -301,7 +300,7 @@
             pow,
             client_id: clientId,
             redirect_uri: redirectUri,
-            state: stateEncoded,
+            state: stateParam,
             nonce: nonce,
             scopes,
             resident_key_token: residentKeyToken,

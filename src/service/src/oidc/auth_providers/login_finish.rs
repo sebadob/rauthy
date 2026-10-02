@@ -31,19 +31,18 @@ pub async fn login_finish<'a>(
         )
     })?;
 
-    // validate state
-    if payload.iss_atproto.is_none() && callback_id != payload.state {
-        AuthProviderCallback::delete(callback_id).await?;
+    let slf = AuthProviderCallback::find(callback_id).await?;
+    let provider = AuthProvider::find(&slf.provider_id).await?;
 
-        error!("`state` does not match");
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "`state` does not match",
-        ));
+    // validate state
+    if let Err(err) = validate_callback_state(&provider.issuer, &slf.callback_id, payload) {
+        AuthProviderCallback::delete(slf.callback_id).await?;
+
+        error!("{}", err.message);
+        return Err(err);
     }
 
     // validate csrf token
-    let slf = AuthProviderCallback::find(callback_id).await?;
     if !constant_time_eq::constant_time_eq(slf.xsrf_token.as_bytes(), payload.xsrf_token.as_bytes())
     {
         AuthProviderCallback::delete(slf.callback_id).await?;
@@ -71,7 +70,6 @@ pub async fn login_finish<'a>(
     AuthProviderCallback::delete(slf.callback_id.clone()).await?;
 
     // request is valid -> fetch token for the user
-    let provider = AuthProvider::find(&slf.provider_id).await?;
 
     // extract a possibly existing provider link cookie for
     // linking an existing account to a provider
@@ -136,4 +134,80 @@ pub async fn login_finish<'a>(
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
 
     Ok((auth_step, cookie, is_new_user))
+}
+
+/// Validates the `state` of an upstream authorization response.
+///
+/// ATProto is skipped here: its `state` is generated and validated by the ATProto client
+/// itself, which also checks `iss` and binds its app state to `callback_id`.
+/// For all other providers, `state` must always match, no matter which other values the
+/// client sent along. In particular, `iss_atproto` is only ever used for ATProto.
+fn validate_callback_state(
+    provider_issuer: &str,
+    callback_id: &str,
+    payload: &ProviderCallbackRequest,
+) -> Result<(), ErrorResponse> {
+    if provider_issuer == PROVIDER_ATPROTO {
+        return Ok(());
+    }
+
+    if !constant_time_eq::constant_time_eq(callback_id.as_bytes(), payload.state.as_bytes()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`state` does not match",
+        ));
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ISSUER: &str = "https://upstream.example.com/auth/v1/";
+
+    fn payload(state: &str, iss_atproto: Option<&str>) -> ProviderCallbackRequest {
+        ProviderCallbackRequest {
+            state: state.to_string(),
+            code: "code".to_string(),
+            xsrf_token: "xsrf".to_string(),
+            pkce_verifier: "verifier".to_string(),
+            iss_atproto: iss_atproto.map(String::from),
+        }
+    }
+
+    #[test]
+    fn test_validate_callback_state() {
+        assert!(validate_callback_state(ISSUER, "cb1", &payload("cb1", None)).is_ok());
+
+        let err = validate_callback_state(ISSUER, "cb1", &payload("cb2", None)).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+    }
+
+    #[test]
+    fn test_validate_callback_state_ignores_iss_for_non_atproto() {
+        // an `iss_atproto` must never disable the `state` check for a non-ATProto provider
+        for iss in [ISSUER, "https://bsky.social", "atproto"] {
+            assert!(validate_callback_state(ISSUER, "cb1", &payload("cb1", Some(iss))).is_ok());
+
+            let err =
+                validate_callback_state(ISSUER, "cb1", &payload("cb2", Some(iss))).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{iss}");
+        }
+    }
+
+    #[test]
+    fn test_validate_callback_state_atproto() {
+        // state and iss are validated by the ATProto client itself
+        assert!(validate_callback_state(PROVIDER_ATPROTO, "cb1", &payload("other", None)).is_ok());
+        assert!(
+            validate_callback_state(
+                PROVIDER_ATPROTO,
+                "cb1",
+                &payload("other", Some("https://bsky.social"))
+            )
+            .is_ok()
+        );
+    }
 }

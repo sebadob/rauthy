@@ -15,6 +15,25 @@ use std::error::Error;
 
 mod common;
 
+const BAD_REDIRECT_URIS: [&str; 5] = [
+    "http://test.client.io/#/callback",
+    "http://test.client.io/callback#",
+    "http://test.client.io/callback?code=x",
+    "http://test.client.io/callback?foo=bar&iss=x",
+    // stored comma-joined, so this would become a second, unchecked redirect URI
+    "http://test.client.io/callback?x=,https://evil.example/cb",
+];
+
+/// A `#` or `,` is already rejected by the payload validation (`RE_CLIENT_URI`), anything else by
+/// `validate_redirect_uri_shape()`.
+fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
+    if bad_uri.contains(['#', ',']) {
+        "Payload validation error"
+    } else {
+        "redirect_uri must not contain"
+    }
+}
+
 fn extract_raw_claims(token: &str) -> Vec<u8> {
     let mut split = token.split('.');
     split.next().unwrap();
@@ -189,6 +208,27 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 400);
 
+    // a fragment, a reserved query key or a comma in a redirect_uri is rejected
+    for bad_uri in BAD_REDIRECT_URIS {
+        let bad_client = NewClientRequest {
+            id: "test-bad-redirect".to_string(),
+            secret: None,
+            name: None,
+            confidential: false,
+            redirect_uris: vec![bad_uri.to_string()],
+            post_logout_redirect_uris: None,
+        };
+        let res = reqwest::Client::new()
+            .post(&url)
+            .headers(auth_headers.clone())
+            .json(&bad_client)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+        let body = res.text().await?;
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
+    }
+
     // modify the client
     let mut redirect_uris = client.redirect_uris;
     redirect_uris.push("http://test.client.io/callback123".to_string());
@@ -198,7 +238,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     let mut flows_enabled = client.flows_enabled;
     flows_enabled.push(GrantType::Password);
 
-    let update_client = UpdateClientRequest {
+    let mut update_client = UpdateClientRequest {
         name: None,
         confidential: false,
         redirect_uris: redirect_uris.clone(),
@@ -237,6 +277,38 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     };
 
     let url_id = format!("{}/clients/{}", backend_url, client.id);
+
+    // an update with a fragment, a reserved query key or a comma is rejected and changes nothing
+    for bad_uri in BAD_REDIRECT_URIS {
+        update_client.redirect_uris = vec![
+            "http://test.client.io/callback".to_string(),
+            bad_uri.to_string(),
+        ];
+        let res = reqwest::Client::new()
+            .put(&url_id)
+            .headers(auth_headers.clone())
+            .json(&update_client)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+        let body = res.text().await?;
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
+    }
+    update_client.redirect_uris = redirect_uris.clone();
+    let res = reqwest::Client::new()
+        .get(&url_id)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let unchanged = res.json::<ClientResponse>().await?;
+    assert_eq!(
+        unchanged.redirect_uris,
+        vec!["http://test.client.io/callback".to_string()]
+    );
+    assert_eq!(unchanged.name, client.name);
+    assert!(unchanged.enabled);
+
     let res = reqwest::Client::new()
         .put(&url_id)
         .headers(auth_headers.clone())

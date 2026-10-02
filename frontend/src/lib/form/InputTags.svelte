@@ -24,6 +24,7 @@
         pattern,
         isError = $bindable(false),
         errMsg,
+        validate,
 
         width = 'inherit',
         maxHeightList = 'inherit',
@@ -42,6 +43,8 @@
         label?: string;
         placeholder?: string;
         errMsg?: string;
+        // custom validation of the current input, returns an error message if it is invalid
+        validate?: (value: string) => string | undefined;
         disabled?: boolean | null | undefined;
         maxLength?: number | null | undefined;
         min?: string;
@@ -62,6 +65,7 @@
     const idDatalist = genKey();
 
     let value = $state('');
+    let validateErr = $state('');
     let list = $derived(datalist && datalist.length > 0 ? idDatalist : undefined);
 
     function deleteValue(value: string) {
@@ -109,6 +113,11 @@
     }
 
     function isValid() {
+        if (validate) {
+            validateErr = (value && validate(value)) || '';
+            ref?.setCustomValidity(validateErr);
+        }
+
         let validity = ref?.validity;
         if (validity) {
             isError = !validity.valid;
@@ -174,7 +183,7 @@
         {#if isError}
             {#if isError}
                 <span class="err">
-                    {errMsg || t.common.invalidInput}
+                    {validateErr || errMsg || t.common.invalidInput}
                 </span>
             {/if}
         {/if}

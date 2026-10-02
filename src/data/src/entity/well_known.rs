@@ -41,6 +41,8 @@ pub struct WellKnown {
     pub service_documentation: &'static str,
     pub ui_locales_supported: Vec<&'static str>,
     pub claims_parameter_supported: bool,
+    /// RFC 9207
+    pub authorization_response_iss_parameter_supported: bool,
     /// SEP-991 / draft-jonesmichael-oauth-cimd. Signals that this AS accepts
     /// clients identified by a Client ID Metadata Document URL (Rauthy already
     /// implements this via `ephemeral_from_url`). ChatGPT's custom-connector UI
@@ -48,7 +50,12 @@ pub struct WellKnown {
     pub client_id_metadata_document_supported: bool,
 }
 
-static IDX: &str = ".well-known";
+// Versioned, because the cached document is shared across the cluster and its contents change
+// with releases: after an upgrade, the new version builds its own document instead of serving
+// the one cached by the previous version. This does not cover a rollback to a version whose
+// entry is still cached, or `rebuild()`, which only refreshes the current version's entry, so
+// other versions may serve a stale document until it expires after `CACHE_TTL_APP`.
+static IDX: &str = concat!(".well-known-", env!("CARGO_PKG_VERSION"));
 
 impl WellKnown {
     pub async fn json() -> Result<String, ErrorResponse> {
@@ -154,6 +161,7 @@ impl WellKnown {
             service_documentation: "https://sebadob.github.io/rauthy/",
             ui_locales_supported: Language::iter().map(|l| l.as_str()).collect(),
             claims_parameter_supported: true,
+            authorization_response_iss_parameter_supported: true,
             client_id_metadata_document_supported: true,
         }
     }

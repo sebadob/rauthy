@@ -471,5 +471,12 @@ export interface I18nAdmin {
         css: string;
         origin: string;
         uri: string;
+        redirectUri: {
+            comma: string;
+            controlChar: string;
+            fragment: string;
+            // `{{ KEY }}` is replaced with the reserved query parameter
+            reservedKey: string;
+        };
     };
 }

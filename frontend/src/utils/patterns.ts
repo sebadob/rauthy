@@ -15,9 +15,10 @@ export const PATTERN_CLIENT_ID_EPHEMERAL = "^[a-zA-Z0-9,.:\\/_\\-&?=~#!$'\\(\\)*
 export const PATTERN_CLIENT_NAME = '^[\\p{L}\\p{M}\\p{N}\\p{Zs}\\(\\)._\\-]{2,128}$';
 // A URI with a non-empty host part (optional scheme + host, optionally with a port): unlike
 // PATTERN_URI, degenerate values such as `https://`, `/` or `javascript:alert(1)` are rejected.
-// Matches the backend `RE_CLIENT_URI`.
+// A fragment (`#`) and a `,` are rejected too, since (post-logout) redirect URIs are stored
+// comma-joined. Matches the backend `RE_CLIENT_URI`.
 export const PATTERN_CLIENT_URI =
-    "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[\\/?#][a-zA-Z0-9,.:\\/_\\-&?=~#!$'\\(\\)*+%@]*)?$";
+    "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[\\/?][a-zA-Z0-9.:\\/_\\-&?=~!$'\\(\\)*+%@]*)?$";
 // export const PATTERN_DATE_STR = '[0-9]{4}\\-[0-9]{2}-[0-9]{2}$';
 // export const PATTERN_CODE_CHALLENGE = '^[a-zA-Z0-9\\-._~]{43,128}$';
 export const PATTERN_CONTACT = '^[a-zA-Z0-9\\+.@\\/:-]{0,48}$';

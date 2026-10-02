@@ -7,6 +7,25 @@ use std::error::Error;
 
 mod common;
 
+const GOOD_REDIRECT_URI: &str = "http://localhost:8080/cb";
+const BAD_REDIRECT_URIS: [&str; 4] = [
+    "http://localhost:8080/#/cb",
+    "http://localhost:8080/cb?code=x",
+    "http://localhost:8080/cb?foo=bar&iss=x",
+    // stored comma-joined, so this would become a second, unchecked redirect URI
+    "http://localhost:8080/cb?x=,https://evil.example/cb",
+];
+
+/// A `#` or `,` is already rejected by the payload validation (`RE_CLIENT_URI`), anything else by
+/// `validate_redirect_uri_shape()`.
+fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
+    if bad_uri.contains(['#', ',']) {
+        "Payload validation error"
+    } else {
+        "redirect_uri must not contain"
+    }
+}
+
 #[tokio::test]
 async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
@@ -14,7 +33,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
 
     let url = format!("{}/clients_dyn", backend_url);
     let mut payload = DynamicClientRequest {
-        redirect_uris: vec!["http://localhost:8080/cb".to_string()],
+        redirect_uris: vec![GOOD_REDIRECT_URI.to_string()],
         grant_types: vec![GrantType::AuthorizationCode],
         client_name: Some("Dyn Test Client 123".to_string()),
         client_uri: None,
@@ -25,6 +44,17 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         post_logout_redirect_uri: None,
         backchannel_logout_uri: None,
     };
+
+    // a fragment, a reserved query key or a comma is rejected - before it would consume the rate limit
+    for bad_uri in BAD_REDIRECT_URIS {
+        payload.redirect_uris = vec![bad_uri.to_string()];
+        let res = client.post(&url).json(&payload).send().await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+        let body = res.text().await?;
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
+    }
+    payload.redirect_uris = vec![GOOD_REDIRECT_URI.to_string()];
+
     let res = client.post(&url).json(&payload).send().await?;
     assert_eq!(res.status(), 201);
     let resp = res.json::<DynamicClientResponse>().await?;
@@ -107,6 +137,26 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let resp_get_new = res.json::<DynamicClientResponse>().await?;
     assert_eq!(resp_get_new, resp_get);
+
+    // self-modify with a fragment, a reserved query key or a comma is rejected and changes nothing
+    for bad_uri in BAD_REDIRECT_URIS {
+        payload.redirect_uris = vec![bad_uri.to_string()];
+        let res = client
+            .put(&url)
+            .header(AUTHORIZATION, &token)
+            .json(&payload)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+    }
+    payload.redirect_uris = vec![GOOD_REDIRECT_URI.to_string()];
+    let res = client
+        .get(&url)
+        .header(AUTHORIZATION, &token)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<DynamicClientResponse>().await?, resp_get);
 
     // self-modify
     payload.client_name = Some("Dyn Test Client 12345".to_string());

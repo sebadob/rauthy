@@ -24,6 +24,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::auth_codes::authorization_redirect;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderTemplate, NewFederatedUserCreated,
 };
@@ -52,7 +53,6 @@ use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
-use std::fmt::Write;
 use std::ops::Add;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -162,28 +162,13 @@ pub async fn get_authorize(
             .unwrap_or(false)
         && principal.validate_session_auth().is_err()
     {
-        let mut loc = params.redirect_uri;
-        let state_len = params.state.as_ref().map(|s| 7 + s.len()).unwrap_or(0);
-        loc.reserve(1 + 20 + state_len);
-
-        // make sure URIs that already contain params work fine
-        if loc.contains('?') {
-            loc.push('&');
-        } else {
-            loc.push('?');
-        }
-        loc.push_str("error=login_required");
-
-        if let Some(state) = params.state {
-            write!(
-                loc,
-                "&state={}",
-                percent_encoding::percent_encode(
-                    state.as_bytes(),
-                    percent_encoding::NON_ALPHANUMERIC,
-                )
-            )?;
-        }
+        // RFC 9207 - error responses carry `iss` as well
+        let loc = authorization_redirect(
+            &params.redirect_uri,
+            &[("error", "login_required")],
+            params.state.as_deref(),
+            &RauthyConfig::get().issuer,
+        );
 
         return Ok(HttpResponse::Found()
             .insert_header(("location", loc))

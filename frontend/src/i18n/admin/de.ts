@@ -578,5 +578,13 @@ export let I18nAdminDe: I18nAdmin = {
         css: 'Ungültiger CSS Wert',
         origin: 'Ungültige Origin',
         uri: 'Ungültige URI',
+        redirectUri: {
+            comma: 'Eine Redirect URI darf kein Komma (,) enthalten',
+            controlChar:
+                'Eine Redirect URI darf keine Steuerzeichen im Namen eines Query-Parameters enthalten',
+            fragment: 'Eine Redirect URI darf kein Fragment (#) enthalten',
+            reservedKey:
+                'Eine Redirect URI darf den Query-Parameter "{{ KEY }}" nicht enthalten, da er von der Autorisierungsantwort gesetzt wird',
+        },
     },
 };

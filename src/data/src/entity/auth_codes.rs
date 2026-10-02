@@ -5,7 +5,6 @@ use chrono::Utc;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
-use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use std::time::Duration;
@@ -139,26 +138,49 @@ impl AuthCode {
     }
 }
 
+/// Appends `params`, `state` and the RFC 9207 `iss`, form-urlencoded, to `redirect_uri`.
+/// `redirect_uri` must already have passed `validate_redirect_uri_shape`.
+///
+/// A space is sent as `%20` rather than the form encoding `+`, as in previous releases, so that
+/// clients decoding the query as plain percent-encoding get the original value back. This is
+/// safe because the serializer encodes a literal `+` as `%2B`.
+#[must_use]
+pub fn authorization_redirect(
+    redirect_uri: &str,
+    params: &[(&str, &str)],
+    state: Option<&str>,
+    issuer: &str,
+) -> String {
+    debug_assert!(!redirect_uri.contains('#'));
+    let append_char = if redirect_uri.contains('?') { '&' } else { '?' };
+
+    let mut query = form_urlencoded::Serializer::new(String::with_capacity(128));
+    for (key, value) in params {
+        query.append_pair(key, value);
+    }
+    if let Some(state) = state {
+        query.append_pair("state", state);
+    }
+    query.append_pair("iss", issuer);
+    let query = query.finish().replace('+', "%20");
+
+    let mut loc = String::with_capacity(redirect_uri.len() + 1 + query.len());
+    loc.push_str(redirect_uri);
+    loc.push(append_char);
+    loc.push_str(&query);
+    loc
+}
+
 impl AuthCode {
     #[inline]
-    pub fn build_location_header(&self, state: Option<&str>) -> Result<String, ErrorResponse> {
-        let append_char = if self.redirect_uri.contains('?') {
-            '&'
-        } else {
-            '?'
-        };
-        let mut loc = format!("{}{}code={}", self.redirect_uri, append_char, self.id);
-        if let Some(state) = state {
-            write!(
-                loc,
-                "&state={}",
-                percent_encoding::percent_encode(
-                    state.as_bytes(),
-                    percent_encoding::NON_ALPHANUMERIC
-                )
-            )?;
-        };
-        Ok(loc)
+    #[must_use]
+    pub fn build_location_header(&self, state: Option<&str>) -> String {
+        authorization_redirect(
+            &self.redirect_uri,
+            &[("code", &self.id)],
+            state,
+            &RauthyConfig::get().issuer,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -276,5 +298,154 @@ impl AuthCodeToSAwait {
     #[inline]
     pub fn generate_code() -> String {
         get_rand(64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ISSUER: &str = "https://iam.example.com/auth/v1/";
+    const ISSUER_ENC: &str = "https%3A%2F%2Fiam.example.com%2Fauth%2Fv1%2F";
+    const CB: &str = "https://client.example.com/cb";
+
+    fn decoded_query(loc: &str) -> Vec<(String, String)> {
+        let url = reqwest::Url::parse(loc).expect("location to parse");
+        assert!(url.fragment().is_none(), "{loc}");
+        url.query_pairs()
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect()
+    }
+
+    #[test]
+    fn test_success_without_state() {
+        let loc = authorization_redirect(CB, &[("code", "c0de")], None, ISSUER);
+        assert_eq!(loc, format!("{CB}?code=c0de&iss={ISSUER_ENC}"));
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("code".to_string(), "c0de".to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_success_with_state_and_existing_query() {
+        let loc = authorization_redirect(
+            &format!("{CB}?foo=bar"),
+            &[("code", "c0de")],
+            Some("st4te"),
+            ISSUER,
+        );
+        assert_eq!(
+            loc,
+            format!("{CB}?foo=bar&code=c0de&state=st4te&iss={ISSUER_ENC}")
+        );
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("foo".to_string(), "bar".to_string()),
+                ("code".to_string(), "c0de".to_string()),
+                ("state".to_string(), "st4te".to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_state_cannot_inject_iss() {
+        let state = "orig&iss=https://attacker.example.com/";
+        let loc = authorization_redirect(CB, &[("code", "c0de")], Some(state), ISSUER);
+
+        assert_eq!(loc.matches("iss=").count(), 1);
+        assert!(loc.ends_with(&format!("&iss={ISSUER_ENC}")));
+        assert!(!loc.contains("attacker.example.com/"));
+
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("code".to_string(), "c0de".to_string()),
+                ("state".to_string(), state.to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_state_space_and_plus() {
+        let state = "a b+c";
+        for params in [[("code", "c0de")], [("error", "login_required")]] {
+            let loc = authorization_redirect(CB, &params, Some(state), ISSUER);
+            let (key, value) = params[0];
+            assert_eq!(
+                loc,
+                format!("{CB}?{key}={value}&state=a%20b%2Bc&iss={ISSUER_ENC}")
+            );
+
+            // a form decoder recovers the original value
+            assert_eq!(
+                decoded_query(&loc),
+                vec![
+                    (key.to_string(), value.to_string()),
+                    ("state".to_string(), state.to_string()),
+                    ("iss".to_string(), ISSUER.to_string()),
+                ]
+            );
+
+            // and so does a plain percent decoder
+            let raw = loc
+                .split('&')
+                .find_map(|pair| pair.strip_prefix("state="))
+                .unwrap();
+            assert_eq!(
+                percent_encoding::percent_decode_str(raw)
+                    .decode_utf8()
+                    .unwrap(),
+                state
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_exact_rejects_stored_fragment_uri() {
+        // a URI stored before fragments were rejected at registration time
+        let uri = "https://app.example.com/#/cb";
+        let client = crate::entity::clients::tests::redirect_test_client("legacy", uri);
+        let code = AuthCode {
+            id: "c0de".to_string(),
+            exp: 0,
+            client_id: client.id.clone(),
+            redirect_uri: uri.to_string(),
+            user_id: "user".to_string(),
+            session_id: None,
+            challenge: None,
+            challenge_method: None,
+            nonce: None,
+            scopes: vec!["openid".to_string()],
+            resource: None,
+            state: None,
+        };
+
+        let err = code.validate_redirect_uri_exact(&client, uri).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+        assert_eq!(err.message, "redirect_uri must not contain a fragment");
+    }
+
+    #[test]
+    fn test_error_redirect() {
+        let loc = authorization_redirect(CB, &[("error", "login_required")], Some("x"), ISSUER);
+        assert_eq!(
+            loc,
+            format!("{CB}?error=login_required&state=x&iss={ISSUER_ENC}")
+        );
+        assert_eq!(
+            decoded_query(&loc),
+            vec![
+                ("error".to_string(), "login_required".to_string()),
+                ("state".to_string(), "x".to_string()),
+                ("iss".to_string(), ISSUER.to_string()),
+            ]
+        );
     }
 }

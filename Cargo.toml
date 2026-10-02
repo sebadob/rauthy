@@ -72,6 +72,7 @@ dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
 flate2 = "1.1"
 flume = "0.12"
+form_urlencoded = "1"
 futures = "0.3"
 futures-util = "0.3"
 gethostname = "1"

@@ -98,7 +98,9 @@ pub fn validate_vec_origin(value: &[String]) -> Result<(), ValidationError> {
 pub fn validate_vec_uri(value: &[String]) -> Result<(), ValidationError> {
     for v in value {
         if !RE_CLIENT_URI.is_match(v) {
-            return Err(ValidationError::new("valid URI with a non-empty host part"));
+            return Err(ValidationError::new(
+                "valid URI with a non-empty host part, without # or ,",
+            ));
         }
     }
     Ok(())

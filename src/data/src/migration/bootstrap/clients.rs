@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::clients::validate_redirect_uri_shape;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
@@ -16,6 +17,30 @@ use rauthy_common::utils::base64_decode;
 use rauthy_error::ErrorResponse;
 use tracing::info;
 use zeroize::Zeroize;
+
+/// Validates the `redirect_uris` of all bootstrap clients. This must run before anything is
+/// written during bootstrap, so that an invalid config fails cleanly and can be fixed.
+pub async fn validate() -> Result<(), ErrorResponse> {
+    let clients = bootstrap_data!(Client, "clients");
+    if let Err(err) = validate_redirect_uris(&clients) {
+        panic!("Validation error when bootstrapping clients: {err}");
+    }
+    Ok(())
+}
+
+fn validate_redirect_uris(clients: &[Client]) -> Result<(), String> {
+    for client in clients {
+        for uri in &client.redirect_uris {
+            if let Err(err) = validate_redirect_uri_shape(uri) {
+                return Err(format!(
+                    "client '{}' has an invalid redirect_uri '{uri}': {}",
+                    client.id, err.message
+                ));
+            }
+        }
+    }
+    Ok(())
+}
 
 pub async fn bootstrap() -> Result<(), ErrorResponse> {
     let clients = bootstrap_data!(Client, "clients");
@@ -213,4 +238,46 @@ fn opt_vec_to_csv(input: &Option<Vec<String>>) -> Option<String> {
             })
             .join(",")
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn client(id: &str, redirect_uri: &str) -> Client {
+        serde_json::from_value(serde_json::json!({
+            "id": id,
+            "redirect_uris": ["https://localhost/callback", redirect_uri],
+            "enabled": true,
+            "flows_enabled": ["authorization_code"],
+            "access_token_alg": "EdDSA",
+            "id_token_alg": "EdDSA",
+            "auth_code_lifetime": 10,
+            "access_token_lifetime": 900,
+            "scopes": ["openid"],
+            "default_scopes": ["openid"],
+            "force_mfa": false
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn test_validate_redirect_uris() {
+        let valid = || client("valid", "https://localhost/other?foo=bar");
+        assert!(validate_redirect_uris(&[valid()]).is_ok());
+
+        // an invalid client anywhere in the list fails the whole set before any write
+        for uri in [
+            "https://localhost/#/cb",
+            "https://localhost/cb?iss=x",
+            // would be split into `https://localhost/cb?a=` and `iss=x` once stored
+            "https://localhost/cb?a=,iss=x",
+            "https://localhost/cb,https://localhost/cb?iss=x",
+        ] {
+            let clients = [valid(), client("invalid", uri)];
+            let err = validate_redirect_uris(&clients).unwrap_err();
+            assert!(err.contains("'invalid'"), "{err}");
+            assert!(err.contains(uri), "{err}");
+        }
+    }
 }
