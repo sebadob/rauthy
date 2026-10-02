@@ -83,8 +83,10 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
     info!("Initializing empty production database");
 
-    // Validate before the first write: once JWKs exist, this init never runs again, so a
-    // failure halfway through would leave a partially bootstrapped database behind.
+    // Validate the bootstrap clients' redirect URIs before the first write, so that an invalid
+    // one fails before anything is changed. This does not make the whole init atomic: once JWKs
+    // exist, it never runs again, and any other failure later on can still leave a partially
+    // initialized database behind.
     validate_additional_data().await?;
 
     // For initializing a prod database, we need to:

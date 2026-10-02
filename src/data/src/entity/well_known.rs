@@ -51,8 +51,10 @@ pub struct WellKnown {
 }
 
 // Versioned, because the cached document is shared across the cluster and its contents change
-// with releases. Each version serves the document it actually implements, even during a rolling
-// upgrade, and an upgrade never serves a stale document from before.
+// with releases: after an upgrade, the new version builds its own document instead of serving
+// the one cached by the previous version. This does not cover a rollback to a version whose
+// entry is still cached, or `rebuild()`, which only refreshes the current version's entry, so
+// other versions may serve a stale document until it expires after `CACHE_TTL_APP`.
 static IDX: &str = concat!(".well-known-", env!("CARGO_PKG_VERSION"));
 
 impl WellKnown {
