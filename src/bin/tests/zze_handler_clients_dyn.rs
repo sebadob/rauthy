@@ -26,6 +26,21 @@ fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
     }
 }
 
+const BAD_POST_LOGOUT_REDIRECT_URIS: [&str; 3] = [
+    "http://localhost:8080/#/bye",
+    "http://localhost:8080/bye?state=x",
+    "http://localhost:8080/bye?foo=bar&State=x",
+];
+
+/// Like `expected_redirect_uri_err()`, for `validate_post_logout_redirect_uri_shape()`.
+fn expected_post_logout_redirect_uri_err(bad_uri: &str) -> &'static str {
+    if bad_uri.contains(['#', ',']) {
+        "Payload validation error"
+    } else {
+        "post_logout_redirect_uri must not contain the query parameter 'state'"
+    }
+}
+
 #[tokio::test]
 async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
@@ -54,6 +69,19 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     payload.redirect_uris = vec![GOOD_REDIRECT_URI.to_string()];
+
+    // the same for a post_logout_redirect_uri with a fragment or a `state` query key
+    for bad_uri in BAD_POST_LOGOUT_REDIRECT_URIS {
+        payload.post_logout_redirect_uri = Some(bad_uri.to_string());
+        let res = client.post(&url).json(&payload).send().await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+        let body = res.text().await?;
+        assert!(
+            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
+            "{body}"
+        );
+    }
+    payload.post_logout_redirect_uri = None;
 
     let res = client.post(&url).json(&payload).send().await?;
     assert_eq!(res.status(), 201);
@@ -150,6 +178,22 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         assert_eq!(res.status(), 400, "{bad_uri}");
     }
     payload.redirect_uris = vec![GOOD_REDIRECT_URI.to_string()];
+    for bad_uri in BAD_POST_LOGOUT_REDIRECT_URIS {
+        payload.post_logout_redirect_uri = Some(bad_uri.to_string());
+        let res = client
+            .put(&url)
+            .header(AUTHORIZATION, &token)
+            .json(&payload)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+        let body = res.text().await?;
+        assert!(
+            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
+            "{body}"
+        );
+    }
+    payload.post_logout_redirect_uri = None;
     let res = client
         .get(&url)
         .header(AUTHORIZATION, &token)
