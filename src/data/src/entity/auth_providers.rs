@@ -662,17 +662,11 @@ pub struct AuthProviderCallback {
 
 // CRUD
 impl AuthProviderCallback {
-    pub async fn delete(callback_id: String) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::AuthProviderCallback, callback_id)
-            .await?;
-
-        Ok(())
-    }
-
-    pub async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+    /// Atomically takes the callback out of the cache, so that it can only ever be used once,
+    /// even with concurrent requests.
+    pub async fn find_remove(callback_id: String) -> Result<Self, ErrorResponse> {
         let opt: Option<Self> = DB::hql()
-            .get(Cache::AuthProviderCallback, callback_id)
+            .get_remove(Cache::AuthProviderCallback, callback_id)
             .await?;
 
         match opt {
