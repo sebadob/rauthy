@@ -15,11 +15,13 @@ use std::error::Error;
 
 mod common;
 
-const BAD_REDIRECT_URIS: [&str; 4] = [
+const BAD_REDIRECT_URIS: [&str; 5] = [
     "http://test.client.io/#/callback",
     "http://test.client.io/callback#",
     "http://test.client.io/callback?code=x",
     "http://test.client.io/callback?foo=bar&iss=x",
+    // stored comma-joined, so this would become a second, unchecked redirect URI
+    "http://test.client.io/callback?x=,https://evil.example/cb",
 ];
 
 fn extract_raw_claims(token: &str) -> Vec<u8> {
@@ -196,7 +198,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 400);
 
-    // a fragment or a reserved query key in a redirect_uri is rejected
+    // a fragment, a reserved query key or a comma in a redirect_uri is rejected
     for bad_uri in BAD_REDIRECT_URIS {
         let bad_client = NewClientRequest {
             id: "test-bad-redirect".to_string(),
@@ -266,7 +268,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 
     let url_id = format!("{}/clients/{}", backend_url, client.id);
 
-    // an update with a fragment or a reserved query key is rejected and changes nothing
+    // an update with a fragment, a reserved query key or a comma is rejected and changes nothing
     for bad_uri in BAD_REDIRECT_URIS {
         update_client.redirect_uris = vec![
             "http://test.client.io/callback".to_string(),

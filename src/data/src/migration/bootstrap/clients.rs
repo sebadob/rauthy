@@ -31,14 +31,6 @@ pub async fn validate() -> Result<(), ErrorResponse> {
 fn validate_redirect_uris(clients: &[Client]) -> Result<(), String> {
     for client in clients {
         for uri in &client.redirect_uris {
-            // Redirect URIs are stored comma-joined and split on ',' again when read, so a ','
-            // inside a single URI would turn it into several URIs that skip the check below.
-            if uri.contains(',') {
-                return Err(format!(
-                    "client '{}' has an invalid redirect_uri '{uri}': must not contain ','",
-                    client.id
-                ));
-            }
             if let Err(err) = validate_redirect_uri_shape(uri) {
                 return Err(format!(
                     "client '{}' has an invalid redirect_uri '{uri}': {}",

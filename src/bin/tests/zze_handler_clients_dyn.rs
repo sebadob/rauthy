@@ -8,10 +8,12 @@ use std::error::Error;
 mod common;
 
 const GOOD_REDIRECT_URI: &str = "http://localhost:8080/cb";
-const BAD_REDIRECT_URIS: [&str; 3] = [
+const BAD_REDIRECT_URIS: [&str; 4] = [
     "http://localhost:8080/#/cb",
     "http://localhost:8080/cb?code=x",
     "http://localhost:8080/cb?foo=bar&iss=x",
+    // stored comma-joined, so this would become a second, unchecked redirect URI
+    "http://localhost:8080/cb?x=,https://evil.example/cb",
 ];
 
 #[tokio::test]
@@ -33,7 +35,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         backchannel_logout_uri: None,
     };
 
-    // a fragment or a reserved query key is rejected - before it would consume the rate limit
+    // a fragment, a reserved query key or a comma is rejected - before it would consume the rate limit
     for bad_uri in BAD_REDIRECT_URIS {
         payload.redirect_uris = vec![bad_uri.to_string()];
         let res = client.post(&url).json(&payload).send().await?;
@@ -126,7 +128,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let resp_get_new = res.json::<DynamicClientResponse>().await?;
     assert_eq!(resp_get_new, resp_get);
 
-    // self-modify with a fragment or a reserved query key is rejected and changes nothing
+    // self-modify with a fragment, a reserved query key or a comma is rejected and changes nothing
     for bad_uri in BAD_REDIRECT_URIS {
         payload.redirect_uris = vec![bad_uri.to_string()];
         let res = client

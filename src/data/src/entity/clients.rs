@@ -1687,6 +1687,9 @@ pub const RESERVED_REDIRECT_QUERY_KEYS: [&str; 6] = [
 /// reserved key - a wildcard registration would otherwise let `https://app/cb?iss=attacker` or
 /// `https://app/cb#?iss=attacker` pass the prefix match.
 ///
+/// A `,` is rejected as well: redirect URIs are stored comma-joined and split on `,` when read,
+/// so a `,` inside one URI would turn it into several URIs that never passed this check.
+///
 /// Query keys are split on both `&` and `;`, percent-decoded, trimmed and compared
 /// case-insensitively. Since common server-side parsers (PHP, Rack, `qs`) fold `code[]`, `iss[0]`
 /// or `error.description` into the plain key, a reserved key followed by `[` or `.` is rejected
@@ -1696,6 +1699,12 @@ pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorRespon
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "redirect_uri must not contain a fragment",
+        ));
+    }
+    if redirect_uri.contains(',') {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "redirect_uri must not contain a comma",
         ));
     }
 
@@ -2816,6 +2825,22 @@ pub(crate) mod tests {
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert_eq!(
                 err.message, "redirect_uri must not contain a fragment",
+                "{uri}"
+            );
+        }
+
+        // a ',' would split one stored URI into several, the later ones never checked
+        for uri in [
+            "https://app.example.com/cb?x=,https://evil.example/cb",
+            "https://app.example.com/cb?a=,iss=x",
+            "https://app.example.com/cb,https://app.example.com/cb?iss=x",
+            "https://app.example.com/*,https://evil.example/*",
+            "http://localhost:*/cb?x=a,b",
+        ] {
+            let err = validate_redirect_uri_shape(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_eq!(
+                err.message, "redirect_uri must not contain a comma",
                 "{uri}"
             );
         }
