@@ -2,24 +2,22 @@
 
 Support for loading the config from a Vault source was added in v0.31.0. To enable it,
 set the environment variable `USE_VAULT_CONFIG=true` and include a [vault.toml](../../vault.toml)
-file,
-that specifies the Vault connection details and how configuration values can be overridden using
-environment variables.
-If you are testing with an insecure connection (e.g., http://), also set
-`DANGER_VAULT_INSECURE=true` — use this only for development/testing, never in production.
+file, that specifies the Vault connection details and how configuration values can be overridden
+using environment variables. If you are testing with an insecure connection (e.g., http://), also
+set `DANGER_VAULT_INSECURE=true` — use this only for development/testing, never in production.
 
 ## Load config from Vault
 
-1) Put your config into Vault (KV)
+1) Put your config into Vault (KV)  
    Store the Rauthy config values under a KV path (most examples assume KV v2).
-  - Mount: secret
-  - Path: rauthy
-  - Version: 2
 
-   So the effective secret would be at something like secret/data/rauthy (KV v2 layout).
+- Mount: secret
+- Path: rauthy
+- Version: 2
 
+So the effective secret would be at something like secret/data/rauthy (KV v2 layout).
 
-2) Provide Vault connection info to Rauthy via environment variables
+2) Provide Vault connection info to Rauthy via environment variables.
    When Vault token is available, Rauthy loads its config from Vault.
 
    Set:
@@ -56,8 +54,7 @@ production.
 Example docker compose file using a predefined root token:
 
 IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or
-edit the compose file,
-else you will see something like this error in the logs:
+edit the compose file, else you will see something like this error in the logs:
 `http://:8202/v1/auth/token/lookup-self": dial tcp :8202: connect: connection refused`
 
 ```yaml
@@ -87,7 +84,7 @@ services:
       - "8202:8200"  # Expose Vault port 8200 on host port 8202
     command: server -dev  # Start Vault in development mode
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: [ "CMD", "vault", "status" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -242,7 +239,7 @@ services:
       - "8202:8200"  # Expose Vault port 8200 on host port 8202
     command: server -dev  # Start Vault in development mode
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: [ "CMD", "vault", "status" ]
       interval: 30s
       timeout: 10s
       retries: 5
