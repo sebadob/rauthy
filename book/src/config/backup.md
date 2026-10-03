@@ -84,13 +84,14 @@ The process is really simple:
 
 1. Have the cluster shut down. This is probably the case anyway, if you need to restore from a
    backup.
-2. Provide a backup file name on S3 storage with the `HQL_BACKUP_RESTORE` ENV value with prefix
+2. Ensure the directory /app/data is empty
+3. Provide a backup file name on S3 storage with the `HQL_BACKUP_RESTORE` ENV value with prefix
    `s3:object_name` (encrypted), or a file on disk (plain sqlite file) with the prefix
    `file:/path/to/backup`.
-3. Start up Rauthy
-4. Check the logs and wait for the backup to be finished
-5. After a successful restore, Rauthy will start its normal operation
-6. Make sure to remove the `HQL_BACKUP_RESTORE` env value.
+4. Start up Rauthy
+5. Check the logs and wait for the recovery to be finished
+6. After a successful restore, Rauthy will start its normal operation
+7. Make sure to remove the `HQL_BACKUP_RESTORE` env value.
 
 ```admonish danger 
 After a successful restore, you **MUST** remove the env var again! If you don't do it, Rauthy will 
