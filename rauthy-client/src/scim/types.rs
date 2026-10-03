@@ -1,4 +1,3 @@
-use crate::rauthy_error::RauthyError;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -219,27 +218,30 @@ impl Default for ScimListQuery {
 }
 
 impl ScimListQuery {
-    pub fn filter_by(&self) -> Result<ScimFilterBy<'_>, RauthyError> {
+    pub fn filter_by(&self) -> Result<ScimFilterBy<'_>, ScimError> {
         let filter = if self.filter.is_none() {
             ScimFilterBy::None
         } else {
             let filter = self.filter.as_deref().unwrap_or_default();
 
             if let Some(v) = filter.strip_prefix("externalId eq \"")
-                    && !v.is_empty()
+                && !v.is_empty()
             {
                 ScimFilterBy::ExternalId(&v[..v.len() - 1])
             } else if let Some(v) = filter.strip_prefix("userName eq \"")
-                    && !v.is_empty() {
+                && !v.is_empty()
+            {
                 let stripped = &v[..v.len() - 1];
                 ScimFilterBy::UserName(stripped)
             } else if let Some(v) = filter.strip_prefix("displayName eq \"")
-                    && !v.is_empty() {
+                && !v.is_empty()
+            {
                 let stripped = &v[..v.len() - 1];
                 ScimFilterBy::DisplayName(stripped)
             } else {
-                return Err(RauthyError::Request(
-                    format!("invalid filter type: {filter}").into(),
+                return Err(ScimError::new(
+                    400,
+                    Some(format!("invalid filter type: {filter}").into()),
                 ));
             }
         };

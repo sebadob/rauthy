@@ -1,7 +1,7 @@
 use crate::provider::SCIM_TOKEN;
 use crate::scim::types::ScimError;
-use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use http::HeaderMap;
+use http::header::{AUTHORIZATION, CONTENT_TYPE};
 use tracing::error;
 
 #[cfg(feature = "axum")]
