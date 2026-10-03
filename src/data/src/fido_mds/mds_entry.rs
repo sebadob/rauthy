@@ -6,7 +6,6 @@ use hiqlite::macros::FromRow;
 use hiqlite::params;
 use rauthy_common::constants::IDX_WEBAUTHN;
 use rauthy_common::is_hiqlite;
-use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -24,7 +23,7 @@ pub struct MdsEntry {
     pub cert_hashes: Vec<[u8; 32]>,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow, FromPgRow)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct MdsEntrySimple {
     pub aaguid: Vec<u8>,
     pub description: String,
@@ -36,6 +35,19 @@ pub struct MdsEntrySimple {
     pub attestation_types: AttestationTypeMask,
     #[column(from_i64)]
     pub cert_level: MdsCertLevel,
+}
+
+impl From<tokio_postgres::Row> for MdsEntrySimple {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            aaguid: row.get("aaguid"),
+            description: row.get("description"),
+            key_protection: row.get::<_, i64>("key_protection").into(),
+            attachment_hint: row.get::<_, i64>("attachment_hint").into(),
+            attestation_types: row.get::<_, i64>("attestation_types").into(),
+            cert_level: (row.get::<_, i16>("cert_level") as i64).into(),
+        }
+    }
 }
 
 impl MdsEntrySimple {
