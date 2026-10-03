@@ -1,17 +1,20 @@
 # Rauthy + Vault config
 
-Support for loading the config from a Vault source was added in v0.31.0. To enable it, 
-set the environment variable `USE_VAULT_CONFIG=true` and include a [vault.toml](../../vault.toml) file, 
-that specifies the Vault connection details and how configuration values can be overridden using environment variables.
-If you are testing with an insecure connection (e.g., http://), also set `DANGER_VAULT_INSECURE=true` — use this only for development/testing, never in production.
+Support for loading the config from a Vault source was added in v0.31.0. To enable it,
+set the environment variable `USE_VAULT_CONFIG=true` and include a [vault.toml](../../vault.toml)
+file,
+that specifies the Vault connection details and how configuration values can be overridden using
+environment variables.
+If you are testing with an insecure connection (e.g., http://), also set
+`DANGER_VAULT_INSECURE=true` — use this only for development/testing, never in production.
 
 ## Load config from Vault
 
 1) Put your config into Vault (KV)
    Store the Rauthy config values under a KV path (most examples assume KV v2).
-   - Mount: secret
-   - Path: rauthy
-   - Version: 2
+  - Mount: secret
+  - Path: rauthy
+  - Version: 2
 
    So the effective secret would be at something like secret/data/rauthy (KV v2 layout).
 
@@ -30,7 +33,8 @@ If you are testing with an insecure connection (e.g., http://), also set `DANGER
    ```
 
 3) Start Rauthy normally
-Run Rauthy as usual; it will decide whether to load config locally vs remotely based on the Vault env setup (e.g., if `USE_VAULT_CONFIG=true` is set, it uses the Vault path).
+   Run Rauthy as usual; it will decide whether to load config locally vs remotely based on the Vault
+   env setup (e.g., if `USE_VAULT_CONFIG=true` is set, it uses the Vault path).
 
 ## Example ENV vars for Docker
 
@@ -46,11 +50,13 @@ Run Rauthy as usual; it will decide whether to load config locally vs remotely b
 ## Local Vault Example using Docker
 
 Warning: These examples are dangerous as written! They include secrets (e.g., in `vault kv put ...`)
-only for automated demonstration purposes, and it would never be included in such a file for production.
+only for automated demonstration purposes, and it would never be included in such a file for
+production.
 
 Example docker compose file using a predefined root token:
 
-IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or edit the compose file,
+IMPORTANT: make sure to run `export DOCKER_MACHINE_IP=<YOUR IP>` first, if using this example or
+edit the compose file,
 else you will see something like this error in the logs:
 `http://:8202/v1/auth/token/lookup-self": dial tcp :8202: connect: connection refused`
 
@@ -169,7 +175,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.36.2
+    image: ghcr.io/sebadob/rauthy:0.37.0
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443
@@ -342,7 +348,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.36.2
+    image: ghcr.io/sebadob/rauthy:0.37.0
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443
