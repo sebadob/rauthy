@@ -2,6 +2,13 @@ set shell := ["bash", "-uc"]
 
 export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 
+# Allows overwriting a dependency version if we pin it specifically.
+export CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE := 'allow'
+
+[private]
+default:
+    @just --list
+
 # prints out the currently set version
 version:
     #!/usr/bin/env bash
@@ -16,6 +23,9 @@ clippy-examples:
     cargo +nightly clippy -- -D warnings
 
     cd ../axum
+    cargo +nightly clippy -- -D warnings
+
+    cd ../device-code
     cargo +nightly clippy -- -D warnings
 
     cd ../generic

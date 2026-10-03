@@ -1,7 +1,7 @@
 use crate::rauthy_error::RauthyError;
 use crate::{b64_decode, b64_encode, generate_pkce_challenge, secure_random};
-use chacha20poly1305::aead::{Aead, OsRng};
-use chacha20poly1305::{AeadCore, ChaCha20Poly1305, Key, KeyInit, Nonce};
+use chacha20poly1305::aead::{Aead, Generate};
+use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -89,27 +89,32 @@ impl OidcCookieState {
     }
 
     fn decrypt(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, RauthyError> {
-        // TODO can this check be removed safely?
         if ciphertext.len() < 12 {
             error!("Invalid ciphertext for decryption: {:?}", ciphertext);
             return Err(RauthyError::Encryption(Cow::from(
                 "Invalid ciphertext for decryption",
             )));
         }
-        let k = Key::from_slice(key);
-        let cipher = ChaCha20Poly1305::new(k);
+        let k = Key::try_from(key).map_err(|err| {
+            RauthyError::Internal(format!("Cannot create Encryption key: {err:?}").into())
+        })?;
+        let cipher = ChaCha20Poly1305::new(&k);
         // 96 bits nonce is always the first bytes, if the `encrypt()` was used before
         let (n, text) = ciphertext.split_at(12);
-        let nonce = Nonce::from_slice(n);
-        let plaintext = cipher.decrypt(nonce, text)?;
+        let nonce = n.try_into().map_err(|err| {
+            RauthyError::Internal(format!("Cannot generate Nonce for decryption: {err:?}").into())
+        })?;
+        let plaintext = cipher.decrypt(&nonce, text)?;
 
         Ok(plaintext)
     }
 
     fn encrypt(plain: &[u8], key: &[u8]) -> Result<Vec<u8>, RauthyError> {
-        let k = Key::from_slice(key);
-        let cipher = ChaCha20Poly1305::new(k);
-        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+        let k = Key::try_from(key).map_err(|err| {
+            RauthyError::Internal(format!("Cannot create Encryption key: {err:?}").into())
+        })?;
+        let cipher = ChaCha20Poly1305::new(&k);
+        let nonce = Nonce::generate();
         let ciphertext = cipher.encrypt(&nonce, plain)?;
 
         let mut res = nonce.to_vec();

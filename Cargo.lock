@@ -5218,6 +5218,7 @@ dependencies = [
  "rauthy-common",
  "rauthy-data",
  "rauthy-error",
+ "rauthy-notify",
  "rauthy-service",
  "reqwest 0.13.4",
  "semver",
