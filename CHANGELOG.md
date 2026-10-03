@@ -716,7 +716,7 @@ host part. This is necessary for e.g. `redirect_uri`s in different places, and s
 it's a breaking change, but it should not be one if you provided proper URLs anyway.
 
 ```
-RE_CLIENT_URI:  ^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?#][a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]*)?$
+RE_CLIENT_URI: ^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\-&?=~!$'()*+%@]*)?$
 ```
 
 [#1708](https://github.com/sebadob/rauthy/pull/1708)

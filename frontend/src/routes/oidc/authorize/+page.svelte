@@ -774,7 +774,7 @@
                     <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
-                {#if !clientMfaForce && !isAtproto}
+                {#if !showReset && !clientMfaForce && !isAtproto}
                     <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>

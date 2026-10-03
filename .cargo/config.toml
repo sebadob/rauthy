@@ -3,7 +3,7 @@ rustflags = ['--cfg', 'getrandom_backend="wasm_js"', '-Ctarget-cpu=mvp']
 
 [registry]
 # This is only respected with at least nightly-2026-06-21
-global-min-publish-age = '10 days'
+global-min-publish-age = '5 days'
 
-[unstable]
-min-publish-age = true
+[resolver]
+incompatible-publish-age = "deny"

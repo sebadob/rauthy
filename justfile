@@ -5,6 +5,7 @@ export TAG := `cat Cargo.toml | grep '^version =' | cut -d " " -f3 | xargs`
 export TODAY := `date +%Y%m%d`
 export DEV_HOST := `echo ${PUB_URL:-localhost:8080} | cut -d':' -f1`
 export USER := `echo "$(id -u):$(id -g)"`
+
 arch := if arch() == "x86_64" { "amd64" } else { "arm64" }
 is_mac_container := `if test -f /usr/local/bin/container; then echo true; else echo false; fi`
 docker := `which docker || which podman || which container || echo 'no-container-runtime-found'`
@@ -537,7 +538,11 @@ update:
         exit 1
     fi
     cargo +nightly update
+    #CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo +nightly update
 
     cd frontend
     # min release is set via `frontend/.npmrc`
     {{ npm }} update
+
+update-precise package="" version="":
+    CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo update {{ package }} --precise {{ version }}

@@ -49,11 +49,11 @@ Rauthy supports Passkey-Only-Accounts: you provide your E-Mail address and log i
 Passkey. Your account will not even have / need a password. This login flow is restricted, though,
 to only those passkeys that can provide User Verification (UV) to always have at least 2FA security.
 
-> [!TIP]
-> Discoverable credentials are discouraged with Rauthy (for good reason). This means you will need
-> to enter your E-Mail for the login (which will be autofilled after the first one), but Rauthy
-> passkeys do not use any storage on your device. For instance when you have a Yubikey which can
-> store 25 passkeys, it will not use a single slot there even having full support.
+> [!NOTE]
+> The user can choose between default Passkeys that do not use a storage slot on the device, and
+> discoverable credentials, which will use a storage slot, but can be used for a direct login
+> without any E-Mail necessary. Since this can brick some older hardware keys, it is an opt-in, and
+> it shows a warning message before registration.
 
 ### Fast and efficient
 
@@ -69,13 +69,16 @@ Rauthy comes with two database options:
 - or you can optionally use a Postgres as your database, if you already have an instance running
   anyway.
 
-The resource usage depends a lot on your setup (Hiqlite, Postgres, HA deployment, amount of
+The resource usage depends a lot on your setup (Hiqlite, Postgres, HA deployment, number of
 users, ...). However, if you apply memory allocator tuning from the book, and you have a small set
 of users, it usually looks like this:
 
-- Hiqlite single instance ~57mb
+- Hiqlite single instance ~40mb
 - Hiqlite HA cluster ~65mb
-- Postgres-based ~35 mb
+- Postgres-based ~35mb
+
+> If you enable the SwaggerUI or the embedded IPGeo DB, they will consume quite a bit more idle
+> memory.
 
 ### Highly Available
 
@@ -172,6 +175,8 @@ more secure) and how many concurrent logins at the exact same time you need to s
 - [x] Highly configurable
 - [x] High-Availability
 - [x] True passwordless accounts with E-Mail + Magic Link + Passkey
+- [x] Passkeys as Security Keys (don't consume storage slot) or Discoverable Credentials
+- [x] FIDO Device Attestation
 - [x] Dedicated Admin UI
 - [x] Account dashboard UI for each user with self-service
 - [x] OpenID Connect Dynamic Client Registration
@@ -180,7 +185,7 @@ more secure) and how many concurrent logins at the exact same time you need to s
 - [x] OAuth 2 Device Authorization Grant flow
 - [x] Upstream Authentication Providers (Login with ...)
 - [x] DPoP tokens for decentralized login flows
-- [x] Ephemeral, dynamic clients for decentralized login flows
+- [x] Ephemeral (CIMD), dynamic clients for decentralized login flows
 - [x] SCIM v2 for downstream clients
 - [x] All End-User facing sites support i18n server-side translation with the possibility to add
   more languages
