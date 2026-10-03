@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.15.1
+
+`v0.15.0` made `ScimListQuery.filter_by()` return a `Result<_>`, because it can fail on a bad
+server input. The issue is, that this wrongly returned a `RauthyError` instead of a `ScimError`,
+which made it very annoying to use when the API endpoint needs to return a `ScimError`. This was
+an unintentional change, so this version is a patch rather than a major version. It returns a
+`ScimError` now as it should have done in the first place.
+
 ## v0.15.0
 
 The JWT header `typ` validation accepts `at+jwt` in addition to `JWT` now. RFC 9068 specifies

@@ -1615,7 +1615,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-client"
-version = "0.15.0"
+version = "0.15.1"
 dependencies = [
  "actix-web",
  "arc-swap",
