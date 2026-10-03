@@ -38,6 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc.js"></script>
@@ -94,10 +95,13 @@
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
@@ -148,7 +152,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -485,7 +494,7 @@ the <a href="getting_started/../config/config_minimal.html">Minimal Production C
 <p>For getting a first look at Rauthy, you can start it with docker (or any other container runtime) on
 your localhost. The image contains a basic default config which is sufficient for local testing
 (don't use it in production, it contains hardcoded secrets).</p>
-<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.36.2
+<pre><code>docker run -it --rm -e LOCAL_TEST=true -p 8443:8443 ghcr.io/sebadob/rauthy:0.37.0
 </code></pre>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
@@ -542,7 +551,7 @@ a minimal setup that is able to send E-Mails. The easiest way (works on localhos
       - "1080:1080"
 
   rauthy:
-    image: ghcr.io/sebadob/rauthy:0.36.2
+    image: ghcr.io/sebadob/rauthy:0.37.0
     environment:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
@@ -676,7 +685,7 @@ the <a href="getting_started/../config/production_config.html">Production Config
     -v $(pwd)/rauthy/data:/app/data \
     -p 8443:8443 \
     --name rauthy \
-    ghcr.io/sebadob/rauthy:0.36.2
+    ghcr.io/sebadob/rauthy:0.37.0
 </code></pre>
 <ul>
 <li><code>-v $(pwd)/rauthy/config.toml:/app/config.toml</code> mounts the config in the correct place</li>
@@ -928,7 +937,7 @@ spec:
         fsGroup: 10001
       containers:
         - name: rauthy
-          image: ghcr.io/sebadob/rauthy:0.36.2
+          image: ghcr.io/sebadob/rauthy:0.37.0
           securityContext:
             capabilities:
               drop:
@@ -1262,7 +1271,374 @@ state can always be guaranteed.</p>
 for <code>podman</code>, or for <code>docker compose</code>.</p>
 <p>Make sure to adjust your shutdown timeout to at least 30 seconds.</p>
 </div>
-</div><div style="break-before: page; page-break-before: always;"></div><h1 id="production-config"><a class="header" href="#production-config">Production Config</a></h1>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="rauthy--vault-config"><a class="header" href="#rauthy--vault-config">Rauthy + Vault config</a></h1>
+<p>Support for loading the config from a Vault source was added in v0.31.0. To enable it,
+set the environment variable <code>USE_VAULT_CONFIG=true</code> and include a <a href="getting_started/../../vault.toml">vault.toml</a>
+file, that specifies the Vault connection details and how configuration values can be overridden
+using environment variables. If you are testing with an insecure connection (e.g., http://), also
+set <code>DANGER_VAULT_INSECURE=true</code> — use this only for development/testing, never in production.</p>
+<h2 id="load-config-from-vault"><a class="header" href="#load-config-from-vault">Load config from Vault</a></h2>
+<ol>
+<li>Put your config into Vault (KV)<br />
+Store the Rauthy config values under a KV path (most examples assume KV v2).</li>
+</ol>
+<ul>
+<li>Mount: secret</li>
+<li>Path: rauthy</li>
+<li>Version: 2</li>
+</ul>
+<p>So the effective secret would be at something like secret/data/rauthy (KV v2 layout).</p>
+<ol start="2">
+<li>
+<p>Provide Vault connection info to Rauthy via environment variables.
+When Vault token is available, Rauthy loads its config from Vault.</p>
+<p>Set:</p>
+<pre><code class="language-toml">VAULT_ADDR="http://127.0.0.1:8201"
+VAULT_TOKEN="hvs...."
+VAULT_MOUNT="secret"
+VAULT_PATH="rauthy"
+VAULT_VERSION="2"
+</code></pre>
+</li>
+<li>
+<p>Start Rauthy normally
+Run Rauthy as usual; it will decide whether to load config locally vs remotely based on the Vault
+env setup (e.g., if <code>USE_VAULT_CONFIG=true</code> is set, it uses the Vault path).</p>
+</li>
+</ol>
+<h2 id="example-env-vars-for-docker"><a class="header" href="#example-env-vars-for-docker">Example ENV vars for Docker</a></h2>
+<pre><code>-e VAULT_ADDR=https://myvault.example.com:8200 \
+-e VAULT_TOKEN=hvs.... \
+-e VAULT_MOUNT=secret \
+-e VAULT_PATH=rauthy_config \
+-e VAULT_CONFIG_KEY=config.toml \
+-e VAULT_KV_VERSION=2 \
+</code></pre>
+<h2 id="local-vault-example-using-docker"><a class="header" href="#local-vault-example-using-docker">Local Vault Example using Docker</a></h2>
+<p>Warning: These examples are dangerous as written! They include secrets (e.g., in <code>vault kv put ...</code>)
+only for automated demonstration purposes, and it would never be included in such a file for
+production.</p>
+<p>Example docker compose file using a predefined root token:</p>
+<p>IMPORTANT: make sure to run <code>export DOCKER_MACHINE_IP=&lt;YOUR IP&gt;</code> first, if using this example or
+edit the compose file, else you will see something like this error in the logs:
+<code>http://:8202/v1/auth/token/lookup-self": dial tcp :8202: connect: connection refused</code></p>
+<pre><code class="language-yaml"># Example using a manually defined root token
+# export DOCKER_MACHINE_IP=$(docker-machine ip)
+# or fixed ip:
+# export DOCKER_MACHINE_IP=10.0.0.100
+# docker compose up
+
+version: "3"
+
+networks:
+  rauthy-test:
+    driver: bridge
+
+services:
+  dev-vault-svc:
+    image: hashicorp/vault:1.20.0
+    container_name: dev-vault
+    cap_add:
+      - IPC_LOCK  # Lock memory to prevent sensitive data from swapping to disk
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=unsafe
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}  # Set the Vault address
+    ports:
+      - "8202:8200"  # Expose Vault port 8200 on host port 8202
+    command: server -dev  # Start Vault in development mode
+    healthcheck:
+      test: [ "CMD", "vault", "status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  vault-setup-svc:
+    image: hashicorp/vault:1.20.0
+    environment:
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+    depends_on:
+      - dev-vault-svc
+    restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sleep 5 &amp;&amp;
+        vault login unsafe &amp;&amp;
+        vault kv put /secret/rauthy_config \
+          config.toml='[auth_headers]
+        enable = true
+        [cluster]
+        node_id = 1
+        nodes = ["1 localhost:8100 localhost:8200"]
+        # 123SuperMegaSafe
+        password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+        secret_raft = "SuperSecureSecret1337"
+        secret_api = "SuperSecureSecret1337"
+        [database]
+        pg_host = "localhost"
+        pg_user = "rauthy"
+        pg_password = "123SuperSafe"
+        [dynamic_clients]
+        enable = true
+        [email]
+        rauthy_admin_email = "admin@localhost"
+        [encryption]
+        keys = ["bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ="]
+        key_active = "bVCyTsGaggVy5yqQ"
+        [ephemeral_clients]
+        enable = true
+        enable_web_id = true
+        enable_solid_aud = true
+        allowed_flows = ["authorization_code", "refresh_token"]
+        [http_client]
+        danger_unencrypted = true
+        danger_insecure = true
+        [mfa]
+        admin_force_mfa = false
+        [pow]
+        difficulty = 10
+        [server]
+        port_http = 8080
+        port_https = 8443
+        scheme = "https"
+        pub_url = "localhost:8443"
+        http_workers = 1
+        metrics_enable = false
+        swagger_ui_enable = true
+        [tls]
+        cert_path = "tls/cert-chain.pem"
+        key_path = "tls/key.pem"
+        [user_registration]
+        enable = true
+        [webauthn]
+        rp_id = "localhost"
+        rp_origin = "http://localhost:8080"'
+    healthcheck:
+      test:
+        - "CMD"
+        - "vault"
+        - "kv"
+        - "get"
+        - "rauthy_config/config.toml"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mailcrab-svc:
+    image: marlonb/mailcrab:latest
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+    networks:
+      - rauthy-test
+
+  rauthy-svc:
+    container_name: rauthy-test
+    image: ghcr.io/sebadob/rauthy:0.37.0
+    environment:
+      - DANGER_VAULT_INSECURE=true
+      - PUB_URL=${DOCKER_MACHINE_IP}:8443
+      #- TLS_CERT=tls/cert-chain.pem
+      #- TLS_KEY=tls/key.pem
+      - USE_VAULT_CONFIG=true
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+      - VAULT_TOKEN=unsafe
+      - VAULT_MOUNT=secret
+      - VAULT_PATH=rauthy_config
+      - VAULT_CONFIG_KEY=config.toml
+      - VAULT_KV_VERSION=2
+      - SMTP_URL=${DOCKER_MACHINE_IP}
+      - SMTP_PORT=1025
+      - SMTP_DANGER_INSECURE=true
+    ports:
+      - "8443:8443"
+    depends_on:
+      mailcrab-svc:
+        condition: service_started
+      dev-vault-svc:
+        condition: service_started
+      vault-setup-svc:
+        condition: service_completed_successfully
+    networks:
+      - rauthy-test
+</code></pre>
+<p>Example docker compose file for one time use token:</p>
+<pre><code class="language-yaml"># Example for a one-time-use token using a shared .env file to transfer
+# the token from vault-setup to rauthy.
+#
+# First create the .env file in the current directory where
+# docker compose up is run from, next to the compose file.
+#
+# touch .env
+# export DOCKER_MACHINE_IP=$(docker-machine ip)
+# or fixed ip:
+# export DOCKER_MACHINE_IP=10.0.0.100
+# docker compose up
+#
+# A restart of the rauthy-test container is expected to fail because
+# the one-time-use token is now expired/invalid.
+
+version: "3"
+
+networks:
+  rauthy-test:
+    driver: bridge
+
+services:
+  dev-vault-svc:
+    image: hashicorp/vault:1.20.0
+    container_name: dev-vault
+    cap_add:
+      - IPC_LOCK  # Lock memory to prevent sensitive data from swapping to disk
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=unsafe
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}
+    ports:
+      - "8202:8200"  # Expose Vault port 8200 on host port 8202
+    command: server -dev  # Start Vault in development mode
+    healthcheck:
+      test: [ "CMD", "vault", "status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  vault-setup-svc:
+    image: hashicorp/vault:1.20.0
+    environment:
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+    depends_on:
+      - dev-vault-svc
+    restart: "no"
+    volumes:
+      - type: bind
+        source: ./.env
+        target: /vault/tokens/.env
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sleep 5 &amp;&amp;
+        vault login unsafe &amp;&amp;
+        vault kv put /secret/rauthy_config \
+          config.toml='[auth_headers]
+        enable = true
+        [cluster]
+        node_id = 1
+        nodes = ["1 localhost:8100 localhost:8200"]
+        # 123SuperMegaSafe
+        password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZFBlSEZDT0EkTklCN0txTy8vanB4WFE5bUdCaVM2SlhraEpwaWVYOFRUNW5qdG9wcXkzQQ=="
+        secret_raft = "SuperSecureSecret1337"
+        secret_api = "SuperSecureSecret1337"
+        [database]
+        pg_host = "localhost"
+        pg_user = "rauthy"
+        pg_password = "123SuperSafe"
+        [dynamic_clients]
+        enable = true
+        [email]
+        rauthy_admin_email = "admin@localhost"
+        [encryption]
+        keys = ["bVCyTsGaggVy5yqQ/UzluN29DZW41M3hTSkx6Y3NtZmRuQkR2TnJxUTYzcjQ="]
+        key_active = "bVCyTsGaggVy5yqQ"
+        [ephemeral_clients]
+        enable = true
+        enable_web_id = true
+        enable_solid_aud = true
+        allowed_flows = ["authorization_code", "refresh_token"]
+        [http_client]
+        danger_unencrypted = true
+        danger_insecure = true
+        [mfa]
+        admin_force_mfa = false
+        [pow]
+        difficulty = 10
+        [server]
+        port_http = 8080
+        port_https = 8443
+        scheme = "https"
+        pub_url = "localhost:8443"
+        http_workers = 1
+        metrics_enable = false
+        swagger_ui_enable = true
+        [tls]
+        cert_path = "tls/cert-chain.pem"
+        key_path = "tls/key.pem"
+        [user_registration]
+        enable = true
+        [webauthn]
+        rp_id = "localhost"
+        rp_origin = "http://localhost:8080"' &amp;&amp;
+        echo 'path "secret/data/rauthy_config" {
+          capabilities = ["read"]
+        }' |
+        vault policy write rauthy_config_acl_policy - &amp;&amp;
+        export ONETIME_TOKEN=$$(vault token create \
+          -policy=rauthy_config_acl_policy \
+          -use-limit=1 \
+          -orphan=true \
+          -renewable=false \
+          -ttl=10m |
+          grep -m 1 token |
+          awk '{print $$2}') &amp;&amp;
+        echo "VAULT_TOKEN=$$ONETIME_TOKEN" &gt; /vault/tokens/.env &amp;&amp;
+        cat /vault/tokens/.env
+    healthcheck:
+      test:
+        - "CMD"
+        - "vault"
+        - "kv"
+        - "get"
+        - "rauthy_config/config.toml"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mailcrab-svc:
+    image: marlonb/mailcrab:latest
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+    networks:
+      - rauthy-test
+
+  rauthy-svc:
+    container_name: rauthy-test
+    image: ghcr.io/sebadob/rauthy:0.37.0
+    environment:
+      - DANGER_VAULT_INSECURE=true
+      - PUB_URL=${DOCKER_MACHINE_IP}:8443
+      #- TLS_CERT=tls/cert-chain.pem
+      #- TLS_KEY=tls/key.pem
+      - USE_VAULT_CONFIG=true
+      - VAULT_ADDR=http://${DOCKER_MACHINE_IP}:8202
+      #- VAULT_TOKEN=unsafe
+      - VAULT_MOUNT=secret
+      - VAULT_PATH=rauthy_config
+      - VAULT_CONFIG_KEY=config.toml
+      - VAULT_KV_VERSION=2
+      - SMTP_URL=${DOCKER_MACHINE_IP}
+      - SMTP_PORT=1025
+      - SMTP_DANGER_INSECURE=true
+    ports:
+      - "8443:8443"
+    volumes:
+      - type: bind
+        source: ./.env
+        target: /app/.env
+    depends_on:
+      mailcrab-svc:
+        condition: service_started
+      dev-vault-svc:
+        condition: service_started
+      vault-setup-svc:
+        condition: service_completed_successfully
+    networks:
+      - rauthy-test
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="production-config"><a class="header" href="#production-config">Production Config</a></h1>
 <p>If you want to go into production, the configuration from the Getting Started section is most
 probably not enough.</p>
 <p>The best thing you could do is just taking a look at the <a href="config/../config/config.html">Reference Config</a>
@@ -1394,9 +1770,10 @@ more if you want to be extra secure.</p>
 <h2 id="serve-rauthy"><a class="header" href="#serve-rauthy">Serve Rauthy</a></h2>
 <p>The last option here is <code>rauthy serve</code>. This will actually launch Rauthy.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="minimal-production-config"><a class="header" href="#minimal-production-config">Minimal Production Config</a></h1>
-<p>This section gives you a template for probably the most minimal config you could do when going into production.</p>
-<p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take a look at the
-complete <a href="config/config.html">Reference Config</a> and check each existing value.</p>
+<p>This section gives you a template for probably the most minimal config you could do when going into
+production.</p>
+<p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take
+a look at the complete <a href="config/config.html">Reference Config</a> and check each existing value.</p>
 <pre><code class="language-toml">[bootstrap]
 # If set, the email of the default admin will be changed during
 # the initialization of an empty production database.
@@ -1431,9 +1808,9 @@ node_id = 1
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+  "1 localhost:8100 localhost:8200",
+  #    "2 localhost:8101 localhost:8201",
+  #    "3 localhost:8102 localhost:8202",
 ]
 
 # Secrets for Raft internal authentication as well as for the API.
@@ -1448,11 +1825,6 @@ secret_raft = "SuperSecureSecret1337"
 secret_api = "SuperSecureSecret1337"
 
 [email]
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
 # overwritten by: SMTP_URL
 smtp_url = "localhost"
 # optional, default will be used depending on TLS / STARTTLS
@@ -1706,7 +2078,7 @@ containing the effective domain name + port.</p>
 </div>
 <p>In this example, assuming Rauthy will be available at port 443, correct would be:</p>
 <pre><code class="language-toml">[webauthn]
-rp_origin = https://auth.example.com:443
+rp_origin = "https://auth.example.com:443"
 </code></pre>
 <h3 id="rp_name"><a class="header" href="#rp_name"><code>RP_NAME</code></a></h3>
 <p>This variable can be set to anything "pretty".</p>
@@ -2206,9 +2578,9 @@ persist_level = 'info'
 # Define the number of days when events should be cleaned
 # up from the database.
 #
-# default: 30
-# overwritten by: EVENT_CLEANUP_DAYS
-cleanup_days = 30
+# default: '60d'
+# overwritten by: EVENT_CLEANUP_THRESHOLD
+cleanup_threshold = '60d'
 </code></pre>
 <h3 id="level_-values"><a class="header" href="#level_-values"><code>level_*</code> Values</a></h3>
 <p>There are a lot of values starting with <code>level_*</code>. These can be used to configure the level for
@@ -2375,16 +2747,16 @@ backup_cron = "0 30 2 * * * *"
 # Backups older than the configured days will be cleaned up on S3
 # after the backup cron job `backup_cron`.
 #
-# default: 30
-# overwritten by: HQL_BACKUP_KEEP_DAYS
-backup_keep_days = 30
+# default: "30d'
+# overwritten by: HQL_BACKUP_KEEP_FOR
+backup_keep_for = "30d"
 
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
 #
-# default: 3
-# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-backup_keep_days_local = 3
+# default: "3d"
+# overwritten by: HQL_BACKUP_KEEP_FOR_LOCAL
+backup_keep_days_local = "3d"
 </code></pre>
 <p>All these backups are written inside the pod / container into <code>data/state_machine/backups</code>.</p>
 <p>This difference makes it possible that you could add a second volume mount to the container.<br />
@@ -2854,13 +3226,14 @@ session_validate_ip = true
 <p>The default session lifetimes and timeouts are pretty secure, but you may find them to be too
 strict. You can adjust them with the following config variables:</p>
 <pre><code class="language-toml">[lifetimes]
-# Session lifetime in seconds - the session can not be extended
+# Session lifetime duration - the session cannot be extended
 # beyond this time and a new login will be forced. This is the
 # session for the authorization code flow.
 #
-# default: 14400
+# type: duration
+# default: '10h'
 # overwritten by: SESSION_LIFETIME
-session_lifetime = 14400
+session_lifetime = '10h'
 
 # If 'true', a 2FA / MFA check will be done with each automatic
 # token generation, even with an active session, which kind of
@@ -2872,16 +3245,17 @@ session_lifetime = 14400
 # overwritten by: SESSION_RENEW_MFA
 session_renew_mfa = false
 
-# Session timeout in seconds. When a new token / login is requested
+# Session timeout duration. When a new token / login is requested
 # before this timeout hits the limit, the user will be authenticated
 # without prompting for the credentials again.
 #
-# This is the value which can extend the session, until it hits its
-# maximum lifetime set with session_lifetime.
+# This is the duration that can extend an expiring session until
+# it hits its maximum lifetime set with session_lifetime.
 #
-# default: 5400
+# type: duration
+# default: '90m'
 # overwritten by: SESSION_TIMEOUT
-session_timeout = 5400
+session_timeout = '90m'
 </code></pre>
 <h2 id="security"><a class="header" href="#security">Security</a></h2>
 <p>You usually don't need to configure anything about session security or CSRF protection, all of it
@@ -2985,9 +3359,9 @@ enable = true
 </code></pre>
 <p>This will open the registration endpoint and make it accessible without upfront authentication.<br />
 You will now see a new button at the page root which directs you to the registration form.</p>
-<p>After successful registration, the user will receive an E-Mail with an activation link.
-Clicking on this link will direct the user on a page, where a new password or passkey can be set.
-At the same time, the account will be activated and the E-Mail will be validated as well of course.</p>
+<p>After successful registration, the user will receive an E-Mail with an activation link. Clicking on
+this link will direct the user on a page, where a new password or passkey can be set. At the same
+time, the account will be activated and the E-Mail will be validated as well of course.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -3168,11 +3542,11 @@ calculation.</p>
 </span>struct NewUserRegistrationRequest {
   #[validate(email)]
   email: String,
-  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
   family_name: String,
-  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
   given_name: String,
   /// Validation: `[a-zA-Z0-9,.:/_\-&amp;?=~#!$'()*+%]+`
   #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+"))]
@@ -3357,12 +3731,12 @@ password_plain = '123SuperSafe'
 
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -&gt; see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+password_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 </code></pre>
 <p>You can use any tool for hashing as long as the output format is a proper argon2id string.
 The <a href="config/cli.html">Rauthy CLI</a> can do it for you as well.</p>
@@ -3416,7 +3790,8 @@ rights could look like this:</p>
   }
 ]
 </code></pre>
-<p>The <code>secret</code> can be <code>{"Plain": "..."}</code>, <code>{"Encrypted": "..."}</code>, or <code>"generate"</code>. Plain secrets must be at
+<p>The <code>secret</code> can be <code>{"Plain": "..."}</code>, <code>{"Encrypted": "..."}</code>, or <code>"generate"</code>. Plain secrets must
+be at
 least 64 characters long. Encrypted secrets are encrypted with
 <a href="https://github.com/sebadob/cryptr"><code>cryptr</code></a> and base64-encoded, just like encrypted client
 secrets. Generated API-key secrets store the full usable <code>name$secret</code> token in the generated
@@ -3429,11 +3804,19 @@ bootstrap secret container under <code>api-key/&lt;name&gt;/token</code>.</p>
     "access": [
       {
         "group": "Clients",
-        "access_rights": ["read", "create", "update", "delete"]
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
       },
       {
         "group": "Secrets",
-        "access_rights": ["read", "update"]
+        "access_rights": [
+          "read",
+          "update"
+        ]
       }
     ]
   }
@@ -3553,20 +3936,30 @@ initializes an empty production database. If you add <code>"generate"</code> to 
 or <code>api_keys.json</code> after the database has already been initialized, that day-2 change is ignored by
 the first-boot bootstrap gate and no new generated secret is written.</p>
 <pre><code class="language-toml">[bootstrap]
-# Path to the encrypted generated-secret container. If unset, Rauthy stores it
-# below Hiqlite's configured data directory as:
+# Generated bootstrap secrets are written to this encrypted
+# local container before their matching database rows are
+# inserted. Later bootstrap phases use it for generated
+# client secrets, user passwords, and API-key secrets that
+# cannot be reconstructed from the database after insertion.
 #
-# `${cluster.data_dir}/bootstrap.secrets.enc`
+# The file is a single AEAD-encrypted JSON payload. The expiry
+# deadline lives inside that encrypted payload, so expiry
+# checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
 #
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
 #generated_secrets_file = 'data/bootstrap.secrets.enc'
 
-# Time in seconds before generated bootstrap secrets expire. A value of `0`
-# disables expiry and runtime auto-purge.
+# Duration before generated bootstrap secrets are purged.
+# The default keeps first-start credentials available briefly
+# for local extraction. Set to `0` to disable expiry and runtime
+# auto-purge.
 #
-# default: 600
+# type: duration
+# default: '10m'
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
-generated_secrets_ttl = 600
+#generated_secrets_ttl = '10m'
 </code></pre>
 <p>Use the local CLI to retrieve or purge the encrypted container after first start. The command does
 not talk to the Rauthy server.</p>
@@ -3594,15 +3987,28 @@ arguments.</p>
     "id": "my-service",
     "name": "My Service",
     "secret": "generate",
-    "redirect_uris": ["https://my-service.example.com/callback"],
+    "redirect_uris": [
+      "https://my-service.example.com/callback"
+    ],
     "enabled": true,
-    "flows_enabled": ["authorization_code", "refresh_token"],
+    "flows_enabled": [
+      "authorization_code",
+      "refresh_token"
+    ],
     "access_token_alg": "EdDSA",
     "id_token_alg": "EdDSA",
     "auth_code_lifetime": 60,
     "access_token_lifetime": 3600,
-    "scopes": ["openid", "profile", "email"],
-    "default_scopes": ["openid", "profile", "email"],
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
+    "default_scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
     "force_mfa": false
   }
 ]
@@ -3615,7 +4021,9 @@ generated secret from the encrypted container.</p>
   {
     "email": "admin@example.com",
     "password": "generate",
-    "roles": ["admin"],
+    "roles": [
+      "admin"
+    ],
     "enabled": true,
     "email_verified": true
   }
@@ -4435,14 +4843,16 @@ open any user and add them to a group it manages, even if that user was created 
 other's users), that is a separate, more restrictive mode that can be added as an opt-in in a future
 iteration.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ephemeral-clients"><a class="header" href="#ephemeral-clients">Ephemeral Clients</a></h1>
-<p>In addition to static, upfront registered clients, which should always be preferred if they work out for your, and
-dynamically registered clients via OIDC DCR, Rauthy supports an additional feature, which is <em>Ephemeral Clients</em>.
-Originally implemented when the support for SolidOIDC came, this feature is fully working on its own. These are very
-easy to use and provide a completely new functionality, but keep in mind that these are the least efficient of the 3,
-as they require an additional network round trip to where ever their document is hosted (apart from caching).</p>
+<p>In addition to static, upfront registered clients, which should always be preferred if they work out
+for your, and dynamically registered clients via OIDC DCR, Rauthy supports an additional feature,
+which is <em>Ephemeral Clients</em>. Originally implemented when the support for SolidOIDC came, this
+feature is fully working on its own. These are straightforward to use and provide a completely new
+functionality, but keep in mind that these are the least efficient of the 3, as they require an
+additional network round trip to where ever their document is hosted (apart from caching).</p>
 <p>Just to make clear what I am talking about, a high level comparison of these different clients:</p>
-<p><strong>Static clients</strong> are the ones that you register and configure via the Admin UI. These are the most efficient and
-secure ones. They require less work in the backend and exist inside the Rauthy database.</p>
+<p><strong>Static clients</strong> are the ones that you register and configure via the Admin UI. These are the most
+efficient and secure ones. They require less work in the backend and exist inside the Rauthy
+database.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -4457,17 +4867,19 @@ location their client document is fetched from. A static client therefore never 
 ID.</p>
 </div>
 </div>
-<p>Then there is OIDC <strong>Dynamic Client Registration</strong> (DCR), which is an OIDC extension that Rauthy supports as well. If a
-downstream application has support for this feature, it can self-register a client, which then can be used for the
-login afterward. This sound very nice in the beginning, but brings quite a few problems:</p>
+<p>Then there is OIDC <strong>Dynamic Client Registration</strong> (DCR), which is an OIDC extension that Rauthy
+supports as well. If a downstream application has support for this feature, it can self-register a
+client, which then can be used for the login afterward. This sound very nice in the beginning, but
+brings quite a few problems:</p>
 <ul>
 <li>If the endpoint is open, anyone can register a client, also bots and spammers</li>
-<li>If the endpoint is secured an additional token for the registration, there is not much benefit from it, because the
-token must be communicated upfront anyway. If so, you could simply register a faster and more efficient static client.</li>
-<li>The downstream application must manage its own client. If they don't do it properly, they can spam Rauthys database
-again.</li>
-<li>As mentioned already, dynamic clients are a bit less efficient than static ones and require at least one additional
-database round trip during each login.</li>
+<li>If the endpoint is secured an additional token for the registration, there is not much benefit
+from it, because the token must be communicated upfront anyway. If so, you could simply register a
+faster and more efficient static client.</li>
+<li>The downstream application must manage its own client. If they don't do it properly, they can spam
+Rauthys database again.</li>
+<li>As mentioned already, dynamic clients are a bit less efficient than static ones and require at
+least one additional database round trip during each login.</li>
 </ul>
 <div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
 <div class="admonition-title">
@@ -4477,22 +4889,24 @@ database round trip during each login.</li>
 <a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-info"></a>
 </div>
 <div>
-<p>In case of an open, unauthenticated endpoint for DCR, Rauthy has a simple internal cleanup logic. For instance, if a
-dynamic client is registered by bots or spammers and is not used within the first hour after the registration, it will
-be deleted automatically. Usually, when an app registers via DCR, the client will be used immediately for at least one
-login.</p>
+<p>In case of an open, unauthenticated endpoint for DCR, Rauthy has a simple internal cleanup logic.
+For instance, if a dynamic client is registered by bots or spammers and is not used within the first
+hour after the registration, it will be deleted automatically. Usually, when an app registers via
+DCR, the client will be used immediately for at least one login.</p>
 </div>
 </div>
-<p>As the third option, Rauthy gives you the ability to use <strong>Ephemeral Clients</strong>. These are disabled by default, because
-they are not a default OIDC feature yet (There is an open Draft to include them though). Ephemeral Clients provide
-way fewer configuration options, but make it possible that user can self-manage their own clients without any additional
-upfront tasks on Rauthy's side. This means as long as you have an account on a Rauthy instance with this feature
-enabled, you would not even need an admin to be able to connect any new application to this Rauthy instance.</p>
-<p>The client definition exists in some JSON document that is hosted on some domain the user controls, which must be
-reachable by Rauthy. The format must be parsable by Rauthy of course, which I will mention later. Whatever information
-you provide in this JSON document, Rauthy will use it to authenticate your login request with that very client. The
-most important part about this is, that the <code>client_id</code> <strong>must match</strong> the exact URI the document is hosted on.<br />
-For instance, let's say you have a JSON on a GitHub repo at
+<p>As the third option, Rauthy gives you the ability to use <strong>Ephemeral Clients</strong>. These are disabled
+by default, because they are not a default OIDC feature yet (There is an open Draft to include them
+though). Ephemeral Clients provide way fewer configuration options, but make it possible that user
+can self-manage their own clients without any additional upfront tasks on Rauthy's side. This means
+as long as you have an account on a Rauthy instance with this feature enabled, you would not even
+need an admin to be able to connect any new application to this Rauthy instance.</p>
+<p>The client definition exists in some JSON document that is hosted on some domain the user controls,
+which must be reachable by Rauthy. The format must be parsable by Rauthy of course, which I will
+mention later. Whatever information you provide in this JSON document, Rauthy will use it to
+authenticate your login request with that very client. The most important part about this is, that
+the <code>client_id</code> <strong>must match</strong> the exact URI the document is hosted on.</p>
+<p>For instance, let's say you have a JSON on a GitHub repo at
 <a href="https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json">https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json</a>
 , then the <code>client_id</code> <strong>must</strong> be</p>
 <pre><code>"client_id": "https://github.com/sebadob/rauthy/blob/main/ephemeral_client_example.json"
@@ -4505,15 +4919,17 @@ For instance, let's say you have a JSON on a GitHub repo at
 <a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-danger"></a>
 </div>
 <div>
-<p>It is very important that the domain for an ephemeral client JSON is under your control and no one else you don't fully
-trust has access. Otherwise, someone else could modify this JSON which affects your login flow. For instance, add an
-additional allowed <code>redirect_uri</code> and trick you into a scam website.</p>
+<p>It is very important that the domain for an ephemeral client JSON is under your control and no one
+else you don't fully trust has access. Otherwise, someone else could modify this JSON which affects
+your login flow. For instance, add an additional allowed <code>redirect_uri</code> and trick you into a scam
+website.</p>
 </div>
 </div>
-<p>To keep the whole setup as simple as possible, apart from the <code>client_id</code>, there is only one other mandatory field
-in this document, which is <code>redirect_uris</code>. This must be an array with at least one allowed redirect URI which is
-allowed during the login flow. Rauthy allows a wildcard <code>*</code> at the end of given redirect uri, but be careful with these.
-Wildcards should only be used during initial setup and testing, when you don't know the final URI yet.</p>
+<p>To keep the whole setup as simple as possible, apart from the <code>client_id</code>, there is only one other
+mandatory field in this document, which is <code>redirect_uris</code>. This must be an array with at least one
+allowed redirect URI which is allowed during the login flow. Rauthy allows a wildcard <code>*</code> at the end
+of given redirect uri, but be careful with these. Wildcards should only be used during initial setup
+and testing, when you don't know the final URI yet.</p>
 <div id="admonition-danger-1" class="admonition admonish-danger" role="note" aria-labelledby="admonition-danger-1-title">
 <div class="admonition-title">
 <div id="admonition-danger-1-title">
@@ -4522,11 +4938,13 @@ Wildcards should only be used during initial setup and testing, when you don't k
 <a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-danger-1"></a>
 </div>
 <div>
-<p>Technically, it is possible to just use a single <code>*</code> as a <code>redirect_uri</code>. This would allow any
-redirect URI without further validation. You must never use this apart from maybe some internal DEV or testing setups!</p>
+<p>Technically, it is possible to just use a single <code>*</code> as a <code>redirect_uri</code>. This
+would allow any redirect URI without further validation. You must never use this apart from maybe
+some internal DEV or testing setups!</p>
 </div>
 </div>
-<p>The JSON document for the ephemeral clients follows the same rules and works in the same ways any other OIDC client.</p>
+<p>The JSON document for the ephemeral clients follows the same rules and works in the same ways any
+other OIDC client.</p>
 <h2 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h2>
 <p>The support for ephemeral clients is opt-in. You need to set at least</p>
 <pre><code class="language-toml">[ephemeral_clients]
@@ -4537,10 +4955,10 @@ redirect URI without further validation. You must never use this apart from mayb
 # overwritten by: ENABLE_EPHEMERAL_CLIENTS
 enable = false
 </code></pre>
-<p>Apart from this, there are more options you can modify. Ephemeral clients are the least flexible, and they share some
-common restrictions. These are valid for all ephemeral clients used with this instance, no matter if they define
-something else in their JSON document. This is important so a Rauthy admin can configure a security standard that
-can't be broken or ignored.</p>
+<p>Apart from this, there are more options you can modify. Ephemeral clients are the least flexible,
+and they share some common restrictions. These are valid for all ephemeral clients used with this
+instance, no matter if they define something else in their JSON document. This is important so a
+Rauthy admin can configure a security standard that can't be broken or ignored.</p>
 <pre><code class="language-toml">[ephemeral_clients]
 # If set to 'true', MFA / Passkeys will be forced for ephemeral
 # clients.
@@ -4577,16 +4995,18 @@ enable_web_id = false
 # overwritten by: ENABLE_SOLID_AUD
 enable_solid_aud = false
 </code></pre>
-<p>The last option is the caching timeout. The cache for these documents is very important for performance. Without any
-cache, Rauthy would need to do an additional network round trip to the client JSON <strong>with each login</strong>. This is very
-inefficient, because usually these documents rarely change after the initial setup.</p>
+<p>The last option is the caching timeout. The cache for these documents is very important for
+performance. Without any cache, Rauthy would need to do an additional network round trip to the
+client JSON <strong>with each login</strong>. This is very inefficient, because usually these documents rarely
+change after the initial setup.</p>
 <pre><code class="language-toml">[ephemeral_clients]
-# The lifetime in seconds ephemeral clients will be kept inside
+# The lifetime duration ephemeral clients will be kept inside
 # the cache.
 #
-# default: 3600
+# type: duration
+# default: '1h'
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
-cache_lifetime = 3600
+cache_lifetime = '1h'
 </code></pre>
 <div id="admonition-hint" class="admonition admonish-tip" role="note" aria-labelledby="admonition-hint-title">
 <div class="admonition-title">
@@ -4596,13 +5016,14 @@ cache_lifetime = 3600
 <a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-hint"></a>
 </div>
 <div>
-<p>If you are developing or testing, set the <code>cache_lifetime</code> to a very low value. Otherwise, Rauthy would not
-see any changes you do to this document as long as the internal cache has not expired.</p>
+<p>If you are developing or testing, set the <code>cache_lifetime</code> to a very low value.
+Otherwise, Rauthy would not see any changes you do to this document as long as the internal cache
+has not expired.</p>
 </div>
 </div>
 <h2 id="minimal-client-json-document"><a class="header" href="#minimal-client-json-document">Minimal Client JSON Document</a></h2>
-<p>The minimal requirements for the client JSON were described above already. They are <code>client_id</code> and <code>redirect_uris</code>.
-This means a minimal example JSON could look like this</p>
+<p>The minimal requirements for the client JSON were described above already. They are <code>client_id</code> and
+<code>redirect_uris</code>. This means a minimal example JSON could look like this</p>
 <pre><code class="language-json">{
   "client_id": "https://example.com/my_ephemeral_client.json",
   "redirect_uris": [
@@ -4613,34 +5034,32 @@ This means a minimal example JSON could look like this</p>
 <p>If this is all you care about, you're done.<br />
 If you want to configure some more things, keep reading.</p>
 <h2 id="advanced-client-json-document"><a class="header" href="#advanced-client-json-document">Advanced Client JSON Document</a></h2>
-<p>All values in the client document are validated of course. Below you see a simplified version of the current Rust
-<code>struct</code> Rauthy tries to deserialize the document into:</p>
+<p>All values in the client document are validated of course. Below you see a simplified version of the
+current Rust <code>struct</code> Rauthy tries to deserialize the document into:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct EphemeralClientRequest {
-    /// Validation: `^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]{2,256}$`
-    client_id: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    client_name: Option&lt;String&gt;,
-    /// Validation: `[a-zA-Z0-9,.:/_-&amp;?=~#!$'()*+%]+$`
-    client_uri: Option&lt;String&gt;,
-    /// Validation: `Vec&lt;^[a-zA-Z0-9\+.@/]{0,48}$&gt;`
-    contacts: Option&lt;Vec&lt;String&gt;&gt;,
-    /// Validation: `Vec&lt;^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+$&gt;`
-    redirect_uris: Vec&lt;String&gt;,
-    /// Validation: `Vec&lt;^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+$&gt;`
-    post_logout_redirect_uris: Option&lt;Vec&lt;String&gt;&gt;,
-    /// Validation: `Vec&lt;^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$&gt;`
-    grant_types: Option&lt;Vec&lt;String&gt;&gt;,
-    /// Validation: `60 &lt;= access_token_lifetime &lt;= 86400`
-    default_max_age: Option&lt;i32&gt;,
-    /// Validation: `[a-z0-9-_/:\s*]{0,512}`
-    scope: Option&lt;String&gt;,
-    require_auth_time: Option&lt;bool&gt;,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
-    access_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
-    id_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
+  /// Validation: `^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]{2,256}$`
+  client_id: String,
+  /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
+  client_name: Option&lt;String&gt;,
+  /// Validation: `[a-zA-Z0-9,.:/_-&amp;?=~#!$'()*+%]+$`
+  client_uri: Option&lt;String&gt;,
+  /// Validation: `Vec&lt;^[a-zA-Z0-9\+.@/]{0,48}$&gt;`
+  contacts: Option&lt;Vec&lt;String&gt;&gt;,
+  /// Validation: `Vec&lt;^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+$&gt;`
+  redirect_uris: Vec&lt;String&gt;,
+  /// Validation: `Vec&lt;^[a-zA-Z0-9,.:/_\\-&amp;?=~#!$'()*+%]+$&gt;`
+  post_logout_redirect_uris: Option&lt;Vec&lt;String&gt;&gt;,
+  /// Validation: `Vec&lt;^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$&gt;`
+  grant_types: Option&lt;Vec&lt;String&gt;&gt;,
+  /// Validation: `60 &lt;= access_token_lifetime &lt;= 86400`
+  default_max_age: Option&lt;i32&gt;,
+  /// Validation: `[a-z0-9-_/:\s*]{0,512}`
+  scope: Option&lt;String&gt;,
+  require_auth_time: Option&lt;bool&gt;,
+  access_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
+  id_token_signed_response_alg: Option&lt;JwkKeyPairAlg&gt;,
 }
 <span class="boring">}</span></code></pre></pre>
 <div id="admonition-note-1" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-1-title">
@@ -4655,7 +5074,8 @@ If you want to configure some more things, keep reading.</p>
 <code>EPHEMERAL_CLIENTS_ALLOWED_FLOWS</code> config variable.</p>
 </div>
 </div>
-<p>With this information, we can now build a complete example JSON with all the possible values you can set:</p>
+<p>With this information, we can now build a complete example JSON with all the possible values you can
+set:</p>
 <pre><code class="language-json">{
   "client_id": "https://example.com/my_ephemeral_client.json",
   "client_name": "My Ephemeral Client",
@@ -4684,8 +5104,8 @@ If you want to configure some more things, keep reading.</p>
 <a class="admonition-anchor-link" href="work/ephemeral_clients.html#admonition-hint-1"></a>
 </div>
 <div>
-<p>Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it possible to host your
-file on GitHub for instance and receive a valid JSON.</p>
+<p>Rauthy fetches the document with an <code>Accept: application/json</code> header. This makes it
+possible to host your file on GitHub for instance and receive a valid JSON.</p>
 </div>
 </div>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="resource-indicators-rfc-8707"><a class="header" href="#resource-indicators-rfc-8707">Resource Indicators (RFC 8707)</a></h1>
@@ -4957,9 +5377,9 @@ this for whatever reason. You can modify this behavior with the following config
 # IP will be blacklisted preemptively for the set time in minutes.
 # You can disable it by setting it to `0`.
 #
-# default: 1440
+# default: '1d'
 # overwritten by: SUSPICIOUS_REQUESTS_BLACKLIST
-blacklist = 1440
+blacklist = '1d'
 
 # Will emit a log with level of warning if a request to `/` has
 # been made that has not been caught by any of the usual routes
@@ -5102,12 +5522,13 @@ easier, as I will reorganize the way it's done. Offline preparations have been m
 <div style="break-before: page; page-break-before: always;"></div><h1 id="user-logout"><a class="header" href="#user-logout">User Logout</a></h1>
 <p>User logout can mean quite a few different things and there are multiple ways for logging out users.</p>
 <h2 id="user-initiated-logout"><a class="header" href="#user-initiated-logout">User Initiated Logout</a></h2>
-<p>This is the most straight forward logging out. If a user (or an admin in the Admin UI) clicks the logout button and
-confirms the logout, the associated Rauthy session will be logged out. This means, to access any Rauthy UI's again, the
-user needs to do a fresh login.</p>
-<p>If you have OIDC Backchannel Logout (mentioned below) configured for any clients, this will trigger it for the Session
-ID <code>sid</code> only. This means only clients where the user logged in in the past that are associated with this <code>sid</code> will
-receive a Logout Token. All others will not. This is NOT a global user logout, only for this very session.</p>
+<p>This is the most straight forward logging out. If a user (or an admin in the Admin UI) clicks the
+logout button and confirms the logout, the associated Rauthy session will be logged out. This means,
+to access any Rauthy UI's again, the user needs to do a fresh login.</p>
+<p>If you have OIDC Backchannel Logout (mentioned below) configured for any clients, this will trigger
+it for the Session ID <code>sid</code> only. This means only clients where the user logged in in the past that
+are associated with this <code>sid</code> will receive a Logout Token. All others will not. This is NOT a
+global user logout, only for this very session.</p>
 <div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
 <div class="admonition-title">
 <div id="admonition-caution-title">
@@ -5116,8 +5537,9 @@ receive a Logout Token. All others will not. This is NOT a global user logout, o
 <a class="admonition-anchor-link" href="work/logout.html#admonition-caution"></a>
 </div>
 <div>
-<p>The User Initiated Logout does NOT affect already signed and issue stateless(!) tokens. A stateless token, once singned,
-cannot be revoked by design, even though you might read things like this in many places on the internet.</p>
+<p>The User Initiated Logout does NOT affect already signed and issue stateless(!) tokens. A stateless
+token, once singned, cannot be revoked by design, even though you might read things like this in
+many places on the internet.</p>
 <p>It is impossible to revoke a stateless JWT token.</p>
 </div>
 </div>
@@ -5127,10 +5549,10 @@ cannot be revoked by design, even though you might read things like this in many
 <li>Admin UI -&gt; Sessions -&gt; click delete on a specific session or <code>Invalidate All Sessions</code></li>
 <li>Admin UI -&gt; Users -&gt; select user -&gt; Logout Tab -&gt; Logout</li>
 </ul>
-<p>The first session-targeted logout / invalidation will only trigger Backchannel Logouts for this specific session only.
-If you log out a user via the Logout Tab for a selected user, it will be a global User Logout everywhere. This will
-delete all existing sessions on all devices, delete all refresh tokens and trigger a Backchannel Logout for the whole
-user for all configured clients.</p>
+<p>The first session-targeted logout / invalidation will only trigger Backchannel Logouts for this
+specific session only. If you log out a user via the Logout Tab for a selected user, it will be a
+global User Logout everywhere. This will delete all existing sessions on all devices, delete all
+refresh tokens and trigger a Backchannel Logout for the whole user for all configured clients.</p>
 <div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
 <div id="admonition-note-title">
@@ -5139,17 +5561,20 @@ user for all configured clients.</p>
 <a class="admonition-anchor-link" href="work/logout.html#admonition-note"></a>
 </div>
 <div>
-<p>The global, forced user logout does NOT affect logged in devices via the device flow, which are usually either IoT
-devices or maybe a CLI tool on a headless server. If you also want to remove access for all of these, do this
-additionally via the Admin UI -&gt; Users -&gt; select user -&gt; Devices Tab.</p>
+<p>The global, forced user logout does NOT affect logged in devices via the device flow, which are
+usually either IoT devices or maybe a CLI tool on a headless server. If you also want to remove
+access for all of these, do this additionally via the Admin UI -&gt; Users -&gt; select user -&gt; Devices
+Tab.</p>
 </div>
 </div>
 <h2 id="rp-initiated-logout"><a class="header" href="#rp-initiated-logout">RP Initiated Logout</a></h2>
-<p>An RP Initiated Logout can be done by any client, that has a valid <code>id_token</code> for a given user. This logout provides
-the best UX and makes it possible to redirect the user back to the downstream client afterward instead of Rauthy itself.</p>
-<p>To make this possible, you first need to make sure, that you set a proper <code>Redirect URI</code> for your client in the Admin
-UI -&gt; Client Config. Only URLs added here upfront will be allowed for the automated redirect. This logout procedure also
-does not ask for Logout validation and the whole process works without any user interaction.</p>
+<p>An RP Initiated Logout can be done by any client, that has a valid <code>id_token</code> for a given user. This
+logout provides the best UX and makes it possible to redirect the user back to the downstream client
+afterward instead of Rauthy itself.</p>
+<p>To make this possible, you first need to make sure, that you set a proper <code>Redirect URI</code> for your
+client in the Admin UI -&gt; Client Config. Only URLs added here upfront will be allowed for the
+automated redirect. This logout procedure also does not ask for Logout validation and the whole
+process works without any user interaction.</p>
 <p>If you added a redirect URI, you can do this logout in 2 ways:</p>
 <ul>
 <li>Use the users browser, for instance after clicking a <em>Logout</em> button in the downstream client app</li>
@@ -5157,38 +5582,41 @@ does not ask for Logout validation and the whole process works without any user 
 </ul>
 <p>Via the browser is pretty simple:</p>
 <ul>
-<li>Redirect the user to Rauthy's logout endpoint, which is <code>/auth/v1/oidc/logout</code> and provide a valid <code>id_token</code> via the
-<code>id_token_hint</code> URL parameter. If this contains a valid <code>id_token</code>, Rauthy will not ask for Logout confirmation and
-it will accept an optionally given, valid redirect URI.</li>
-<li>Add the <code>post_logout_redirect_uri</code> param and provide a URI, that has been allowed for this client upfront to avoid
-open redirects.</li>
-<li>You may also add a <code>state</code> parameter if you need to provide any information back to your client. This <code>state</code> will be
-appended to the <code>post_logout_redirect_uri</code>, if it exists.</li>
+<li>Redirect the user to Rauthy's logout endpoint, which is <code>/auth/v1/oidc/logout</code> and provide a valid
+<code>id_token</code> via the <code>id_token_hint</code> URL parameter. If this contains a valid <code>id_token</code>, Rauthy will
+not ask for Logout confirmation, and it will accept an optionally given, valid redirect URI.</li>
+<li>Add the <code>post_logout_redirect_uri</code> param and provide a URI, that has been allowed for this client
+upfront to avoid open redirects. - You may also add a <code>state</code> parameter if you need to provide any
+information back to your client. This <code>state</code> will be appended to the <code>post_logout_redirect_uri</code>,
+if it exists.</li>
 </ul>
-<p>Via the backend without user interaction, an RP can initiate a logout in the same way. This a lot simpler though. You
-only would do a <code>POST /auth/v1/oidc/logout?id_token_hint=pasteAValidIdTokenHere</code>. It will work in the exact same way
-with the exception, that you of course don't need any redirect or state, because your backend would do this request
-directly.</p>
-<p>In both situations, you at least need a valid <code>id_token</code> which has been returned in the past via the <code>/token</code> endpoint
-after a successful login or token refresh.</p>
-<p>The <em>RP Initiated Logout</em> will always trigger a Backchannel Logout on configured clients that are associated to the
-<code>sid</code> from the <code>id_token</code>.</p>
+<p>Via the backend without user interaction, an RP can initiate a logout in the same way. This a lot
+simpler though. You only would do a
+<code>POST /auth/v1/oidc/logout?id_token_hint=pasteAValidIdTokenHere</code>. It will work in the exact same way
+with the exception, that you of course don't need any redirect or state, because your backend would
+do this request directly.</p>
+<p>In both situations, you at least need a valid <code>id_token</code> which has been returned in the past via the
+<code>/token</code> endpoint after a successful login or token refresh.</p>
+<p>The <em>RP Initiated Logout</em> will always trigger a Backchannel Logout on configured clients that are
+associated to the <code>sid</code> from the <code>id_token</code>.</p>
 <h2 id="backchannel-logout---client-side"><a class="header" href="#backchannel-logout---client-side">Backchannel Logout - Client Side</a></h2>
-<p>A Backchannel Logout is sent from Rauthy to your downstream client application, if you configured it to do so. You can
-configure it in the <code>Admin UI -&gt; Clients -&gt; select your client -&gt; Backchannel Logout</code>.</p>
+<p>A Backchannel Logout is sent from Rauthy to your downstream client application, if you configured it
+to do so. You can configure it in the
+<code>Admin UI -&gt; Clients -&gt; select your client -&gt; Backchannel Logout</code>.</p>
 <p>Either your client application already
-supports <a href="https://openid.net/specs/openid-connect-backchannel-1_0.html">OIDC Backchannel Logout</a>, or you might need to
-implement it on your own. Accepting these logout requests is pretty straight forward, if you just take a look at the
-RFC.</p>
+supports <a href="https://openid.net/specs/openid-connect-backchannel-1_0.html">OIDC Backchannel Logout</a>, or
+you might need to implement it on your own. Accepting these logout requests is pretty straight
+forward, if you just take a look at the RFC.</p>
 <p>The <code>rauthy-client</code> will provide all the necessary tools for this in a future version as well.</p>
 <h2 id="backchannel-logout---rauthys-side"><a class="header" href="#backchannel-logout---rauthys-side">Backchannel Logout - Rauthy's Side</a></h2>
-<p>An <a href="https://openid.net/specs/openid-connect-backchannel-1_0.html">OIDC Backchannel Logout</a> can be done as well against
-Rauthy. You usually never implement it yourself though. Rauthy only accepts these backchannel logouts from configured
-Upstream Auth Providers. These will provide a <code>logout_token</code> on the logout endpoint, which Rauthy will validate and on
-success, forward the backchannel logout to all configured and associated clients.</p>
-<p>You have quite a few config options regarding Backchannel Logout. All these values have reasonable defaults, but you
-might take a look at them if you have issues like e.g. an upstream provider with self-signed certificates or inside
-test environments.</p>
+<p>An <a href="https://openid.net/specs/openid-connect-backchannel-1_0.html">OIDC Backchannel Logout</a> can be
+done as well against Rauthy. You usually never implement it yourself though. Rauthy only accepts
+these backchannel logouts from configured Upstream Auth Providers. These will provide a
+<code>logout_token</code> on the logout endpoint, which Rauthy will validate and on success, forward the
+backchannel logout to all configured and associated clients.</p>
+<p>You have quite a few config options regarding Backchannel Logout. All these values have reasonable
+defaults, but you might take a look at them if you have issues like e.g. an upstream provider with
+self-signed certificates or inside test environments.</p>
 <pre><code class="language-toml">[backchannel_logout]
 # The maximum amount of retries made for a failed backchannel logout.
 # Failed backchannel logouts will be retried every 60 - 90 seconds
@@ -5201,26 +5629,24 @@ test environments.</p>
 # overwritten by: BACKCHANNEL_LOGOUT_RETRY_COUNT
 retry_count = 100
 
-# The lifetime / validity for Logout Tokens issued by Rauthy in
-# seconds. These Logout Tokens are being generated during OIDC
+# The lifetime / validity for Logout Tokens issued by Rauthy.
+# These Logout Tokens are being generated during OIDC
 # Backchannel Logout requests to configured clients. The token
 # lifetime should be as short as possible and at most 120 seconds.
 #
-# default: 30
+# type: duration
+# default: '30s'
 # overwritten by: LOGOUT_TOKEN_LIFETIME
-token_lifetime = 30
+token_lifetime = '30s'
 
 # You can allow a clock skew during the validation of Logout Tokens,
 # when Rauthy is being used as a client for an upstream auth
 # provider that uses backchannel logout.
 #
-# The allowed skew will be in seconds and a value of e.g. 5 would
-# mean, that 5 seconds are added to the `iat` and `exp` claim
-# validations and expand the range.
-#
-# default: 5
+# type: duration
+# default: '5s'
 # overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
-allow_clock_skew = 5
+allow_clock_skew = '5s'
 
 # The maximum allowed lifetime for Logout Tokens. This value is
 # a security check for upstream auth providers. If Rauthy
@@ -5231,9 +5657,10 @@ allow_clock_skew = 5
 # poor implementations. The RFC states that tokens should be
 # valid for at most 120 seconds.
 #
-# default: 120
+# type: duration
+# default: '120s'
 # overwritten by: LOGOUT_TOKEN_ALLOWED_LIFETIME
-allowed_token_lifetime = 120
+allowed_token_lifetime = '120s'
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="scim"><a class="header" href="#scim">SCIM</a></h1>
 <h2 id="tldr"><a class="header" href="#tldr">tl;dr</a></h2>
@@ -5892,29 +6319,35 @@ to the IP <code>192.168.1.100</code> without any additional DNS servers.</p>
 <p>The notes field is just for cases when you want to write some notes for all users that can log in to this hosts, like
 e.g. mention some special directory or things like that.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pam-users"><a class="header" href="#pam-users">PAM Users</a></h1>
-<p>A PAM User is always linked to a "real" user and after it was created, it is immutable and automatically bound to the
-lifetime of the "real" user. You cannot change the <code>username</code> afterward or even delete it and create a new one easily.
-The reason is the same as for the immutable group names, to never accidentally leak some left-over files. There is also
-typically no need to ever change these names, as it would just be confusing anyway.</p>
-<p>A <code>uid</code> is globally unique over all hosts, just as <code>gid</code>s for groups. This means you can rely on it even for managing
-NFS shares and things like that. The only value you can change for a user after the creation is the <code>shell</code>, but this
-will just stay the default <code>/bin/bash</code> in probably almost all cases anyway.</p>
-<p>The more important section for a user is the groups membership. Groups are separated by type, and these types are
-explained in the <a href="work/pam_groups.html#types">PAM Groups</a> doc. At this point, there should be not open questions about them.</p>
-<p>PAM Users are pretty simple. The most important thing about them is their additional <code>username</code>, which must follow
-Linux username regexes. Technically, in most situations, providing your email address from Rauthy should work, but there
-are drawbacks and in some cases, such usernames lead to errors and not working commands. If Rauthy had chosen emails as
-Linux usernames, you would also do very confusing stuff like <code>ssh my.user@example.com@host</code>, which is not only hard to
-read, but does not even work on some systems.</p>
-<p>Users are not allowed to choose their Linux username themselves. This must be done by a Rauthy admin to avoid users
-trying things like <code>root</code>, <code>postgres</code> or <code>systemd</code>, which would be very bad of course. An admin needs to configure
-access to hosts anyway, so there is no real drawback, that users cannot choose on their own. Maintaining a blacklist
-with all possibly problematic usernames across all distros and systems is actually impossible, as Rauthy cannot even
-know which names might already be special in some companies and situations.</p>
-<p>As soon as an Admin has configured a Linux user for a "real" user, this user can log in to the account dashboard and a
-PAM section will pop up in the tab bar. Here you can generate the auto-expiring Remote PAM Passwords that are used for
-basically all actions via SSH like logging in and <code>sudo</code>, and you will see a list of all hosts you have access to. For
-these PAM passwords, you have 2 static config variables:</p>
+<p>A PAM User is always linked to a "real" user and after it was created, it is immutable and
+automatically bound to the lifetime of the "real" user. You cannot change the <code>username</code> afterward
+or even delete it and create a new one easily. The reason is the same as for the immutable group
+names, to never accidentally leak some left-over files. There is also typically no need to ever
+change these names, as it would just be confusing anyway.</p>
+<p>A <code>uid</code> is globally unique over all hosts, just as <code>gid</code>s for groups. This means you can rely on it
+even for managing NFS shares and things like that. The only value you can change for a user after
+the creation is the <code>shell</code>, but this will just stay the default <code>/bin/bash</code> in probably almost all
+cases anyway.</p>
+<p>The more important section for a user is the groups membership. Groups are separated by type, and
+these types are explained in the <a href="work/pam_groups.html#types">PAM Groups</a> doc. At this point, there should
+be not open questions about them.</p>
+<p>PAM Users are pretty simple. The most important thing about them is their additional <code>username</code>,
+which must follow Linux username regexes. Technically, in most situations, providing your email
+address from Rauthy should work, but there are drawbacks and in some cases, such usernames lead to
+errors and not working commands. If Rauthy had chosen emails as Linux usernames, you would also do
+very confusing stuff like <code>ssh my.user@example.com@host</code>, which is not only hard to read, but does
+not even work on some systems.</p>
+<p>Users are not allowed to choose their Linux username themselves. This must be done by a Rauthy admin
+to avoid users trying things like <code>root</code>, <code>postgres</code> or <code>systemd</code>, which would be very bad of
+course. An admin needs to configure access to hosts anyway, so there is no real drawback, that users
+cannot choose on their own. Maintaining a blacklist with all possibly problematic usernames across
+all distros and systems is actually impossible, as Rauthy cannot even know which names might already
+be special in some companies and situations.</p>
+<p>As soon as an Admin has configured a Linux user for a "real" user, this user can log in to the
+account dashboard and a PAM section will pop up in the tab bar. Here you can generate the
+auto-expiring Remote PAM Passwords that are used for basically all actions via SSH like logging in
+and <code>sudo</code>, and you will see a list of all hosts you have access to. For these PAM passwords, you
+have 2 static config variables:</p>
 <pre><code class="language-toml">[pam]
 # The length of newly generated PAM remote passwords via the
 # account dashboard. The default is fine as long as you can copy
@@ -5926,14 +6359,15 @@ these PAM passwords, you have 2 static config variables:</p>
 # overwritten by: PAM_REMOTE_PASSWORD_LEN
 remote_password_len = 24
 
-# The TTL for newly generated PAM remote passwords in seconds.
+# The TTL for newly generated PAM remote passwords.
 # The default gives you plenty of time to open a few sessions in
 # some terminals and maybe switch to `root` on some remote machines,
 # while still expiring quick enough to be secure.
 #
-# default: 120
+# type: duration
+# default: '2m'
 # overwritten by: PAM_REMOTE_PASSWORD_TTL
-remote_password_ttl = 120
+remote_password_ttl = '2m'
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pam--nss-modules"><a class="header" href="#pam--nss-modules">PAM + NSS Modules</a></h1>
 <p>This is a documentation for the separately managed
@@ -6440,26 +6874,24 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BACKCHANNEL_LOGOUT_RETRY_COUNT
 #retry_count = 100
 
-# The lifetime / validity for Logout Tokens issued by Rauthy in
-# seconds. These Logout Tokens are being generated during OIDC
+# The lifetime / validity for Logout Tokens issued by Rauthy.
+# These Logout Tokens are being generated during OIDC
 # Backchannel Logout requests to configured clients. The token
 # lifetime should be as short as possible and at most 120 seconds.
 #
-# default: 30
+# type: duration
+# default: '30s'
 # overwritten by: LOGOUT_TOKEN_LIFETIME
-#token_lifetime = 30
+#token_lifetime = '30s'
 
 # You can allow a clock skew during the validation of Logout Tokens,
 # when Rauthy is being used as a client for an upstream auth
 # provider that uses backchannel logout.
 #
-# The allowed skew will be in seconds and a value of e.g. 5 would
-# mean, that 5 seconds are added to the `iat` and `exp` claim
-# validations and expand the range.
-#
-# default: 5
+# type: duration
+# default: '5s'
 # overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
-#allow_clock_skew = 5
+#allow_clock_skew = '5s'
 
 # The maximum allowed lifetime for Logout Tokens. This value is
 # a security check for upstream auth providers. If Rauthy
@@ -6470,9 +6902,10 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # poor implementations. The RFC states that tokens should be
 # valid for at most 120 seconds.
 #
-# default: 120
+# type: duration
+# default: '120s'
 # overwritten by: LOGOUT_TOKEN_ALLOWED_LIFETIME
-#allowed_token_lifetime = 120
+#allowed_token_lifetime = '120s'
 
 [bootstrap]
 # If set, the email of the default admin will be changed during
@@ -6491,12 +6924,12 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -&gt; see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-#pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+#password_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 
 # You can provide a single API Key during the initial prod database
 # bootstrap. This legacy config value must match the format and pass validation.
@@ -6557,6 +6990,31 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 #
 # overwritten by: BOOTSTRAP_API_KEY_SECRET
 #api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQynMh'
+
+# Generated bootstrap secrets are written to this encrypted
+# local container before their matching database rows are
+# inserted. Later bootstrap phases use it for generated
+# client secrets, user passwords, and API-key secrets that
+# cannot be reconstructed from the database after insertion.
+#
+# The file is a single AEAD-encrypted JSON payload. The expiry
+# deadline lives inside that encrypted payload, so expiry
+# checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Duration before generated bootstrap secrets are purged.
+# The default keeps first-start credentials available briefly
+# for local extraction. Set to `0` to disable expiry and runtime
+# auto-purge.
+#
+# type: duration
+# default: '10m'
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+#generated_secrets_ttl = '10m'
 
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with
@@ -6783,8 +7241,10 @@ secret_api = "SuperSecureSecret1337"
 # and-egg problem when you want to cold-start a cluster while
 # relying on `readinessProbe` checks.
 #
-# default: 30
-#health_check_delay_secs = 30
+# type: duration
+# default: '30s'
+# overwritten by: HQL_HEALTH_CHECK_DELAY
+#health_check_delay = '30s'
 
 # When the auto-backup task should run.
 # Accepts cron syntax:
@@ -6797,16 +7257,18 @@ secret_api = "SuperSecureSecret1337"
 # Backups older than the configured days will be cleaned up on S3
 # after the backup cron job `backup_cron`.
 #
-# default: 30
-# overwritten by: HQL_BACKUP_KEEP_DAYS
-#backup_keep_days = 30
+# type: duration
+# default: '30d'
+# overwritten by: HQL_BACKUP_KEEP_FOR
+backup_keep_for = '30d'
 
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
 #
-# default: 3
-# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-#backup_keep_days_local = 3
+# type: duration
+# default: '3d'
+# overwritten by: HQL_BACKUP_KEEP_FOR_LOCAL
+backup_keep_for_local = '3d'
 
 # If you ever need to restore from a backup, the process is simple.
 # 1. Have the cluster shut down. This is probably the case anyway, if
@@ -6923,13 +7385,13 @@ secret_api = "SuperSecureSecret1337"
 ## detection algorithm. In most cases the defaults should be
 ## fine.
 
-# The duration in seconds for how long an IP will be
-# blacklisted after it was considered harmful, doing
-# credential stuffing.
+# The duration for how long an IP will be blacklisted after
+# it was considered harmful, doing credential stuffing.
 #
-# default: 86400
+# type: duration
+# default: '24h'
 # overwritten by: CRED_STUFF_BLACKLIST_DUR
-#blacklist_duration = 86400
+#blacklist_duration = '24h'
 
 # The threshold for username / password combinations. When
 # this is reached within the `scan_window` the IP will be
@@ -6939,7 +7401,7 @@ secret_api = "SuperSecureSecret1337"
 # overwritten by: CRED_STUFF_BLACKLIST_THRES
 #blacklist_threshold = 15
 
-# The time in seconds within the detector should operate.
+# The duration within the detector should operate.
 # Whenever either a non-existing email or a email with a
 # wrong password is sent, the combination of both will be
 # hashed and stored (in-memory) for the duration of this
@@ -6954,9 +7416,10 @@ secret_api = "SuperSecureSecret1337"
 # to blacklist an IP again, after it was removed from the
 # blacklist.
 #
-# default: 10800
+# type: duration
+# default: '3h'
 # overwritten by: CRED_STUFF_SCAN_WINDOW
-#scan_window = 10800
+#scan_window = '3h'
 
 [database]
 # Hiqlite is the default database for Rauthy.
@@ -6968,7 +7431,7 @@ secret_api = "SuperSecureSecret1337"
 # overwritten by: HIQLITE
 hiqlite = true
 
-# Defines the time in seconds after which the `/health` endpoint
+# Defines the duration after which the `/health` endpoint
 # includes HA quorum checks. The initial delay solves problems
 # like Kubernetes StatefulSet starts that include the health
 # endpoint in the scheduling routine. In these cases, the scheduler
@@ -6977,9 +7440,10 @@ hiqlite = true
 # This is a chicken-and-egg problem which the delay solves.
 # There is usually no need to adjust this value.
 #
-# default: 30
-# overwritten by: HEALTH_CHECK_DELAY_SECS
-#health_check_delay_secs = 30
+# type: duration
+# default: '30s'
+# overwritten by: HEALTH_CHECK_DELAY
+#health_check_delay = '30s'
 
 # If you set `hiqlite = false` and want to use Postgres as your
 # database, you need to set the following variables.
@@ -7063,30 +7527,33 @@ pg_password = '123SuperSafe'
 # overwritten by: MIGRATE_PG_DB_NAME
 #migrate_pg_db_name = 'rauthy'
 
-# The interval in minutes in which the scheduler for expired
+# The interval duration in which the scheduler for expired
 # users should run. If this finds expired users, it invalidates
 # all existing sessions and refresh tokens for this user.
 #
-# default: 60
-# overwritten by: SCHED_USER_EXP_MINS
-#sched_user_exp_mins = 60
+# type: duration
+# default: '1h'
+# overwritten by: SCHED_USER_EXP
+#sched_user_exp = '1h'
 
-# The threshold in minutes after which time the user expiry
+# The threshold duration after which time the user expiry
 # scheduler should automatically clean up expired users. If not
 # set at all, expired users will never be cleaned up automatically.
 #
+# type: duration
 # default: disabled / not set
-# overwritten by: SCHED_USER_EXP_DELETE_MINS
-#sched_user_exp_delete_mins = 7200
+# overwritten by: SCHED_USER_EXP_DELETE
+#sched_user_exp_delete = '5d'
 
 [device_grant]
-# The lifetime in seconds of auth codes for the Device Authorization
+# The lifetime duration of auth codes for the Device Authorization
 # Grant flow. You may increase the default of 300 seconds, if you have
 # "slow users" and they are simply not fast enough with the verification.
 #
-# default: 300
+# type: duration
+# default: '5m'
 # overwritten by: DEVICE_GRANT_CODE_LIFETIME
-#code_lifetime = 300
+#code_lifetime = '5m'
 
 # The length of the `user_code` the user has to enter manually for
 # auth request validation. This must be &lt; 64 characters.
@@ -7095,7 +7562,7 @@ pg_password = '123SuperSafe'
 # overwritten by: DEVICE_GRANT_USER_CODE_LENGTH
 #user_code_length = 8
 
-# Specifies the rate-limit in seconds per IP for starting new Device
+# Specifies the rate-limit duration per IP for starting new Device
 # Authorization Grant flows. This is especially important for public
 # clients, because a code request for this flow will actually create
 # cached data. If this happened on an unrestricted, open endpoint,
@@ -7103,25 +7570,28 @@ pg_password = '123SuperSafe'
 # If you use the `device_code` grant with confidential clients only,
 # you can leave this unset, which will not rate-limit the endpoint.
 #
+# type: duration
 # default: not set
 # overwritten by: DEVICE_GRANT_RATE_LIMIT
-#rate_limit = 1
+#rate_limit = '10m'
 
-# The interval in seconds which devices are told to use when they
+# The interval duration which devices are told to use when they
 # poll the token endpoint during Device Authorization Grant flow.
 #
-# default: 5
+# type: duration
+# default: '5s'
 # overwritten by: DEVICE_GRANT_POLL_INTERVAL
-#poll_interval = 5
+#poll_interval = '5s'
 
-# You can define a global lifetime in hours for refresh tokens issued
+# You can define a global lifetime duration for refresh tokens issued
 # from a Device Authorization Grant flow. You might want to have a
 # higher lifetime than normal refresh tokens, because they might be
 # used in IoT devices which may be offline for longer periods of time.
 #
-# default: 72
-# overwritten by: DEVICE_GRANT_REFRESH_TOKEN_LIFETIME
-#refresh_token_lifetime = 72
+# type: duration
+# default: '3d'
+#' overwritten by: DEVICE_GRANT_REFRESH_TOKEN_LIFETIME
+#refresh_token_lifetime = '3d'
 
 [dpop]
 # May be set to 'false' to disable forcing the usage of DPoP nonce's.
@@ -7130,13 +7600,14 @@ pg_password = '123SuperSafe'
 # overwritten by: DPOP_FORCE_NONCE
 #force_nonce = true
 
-# Lifetime in seconds for DPoP nonces. These are used to limit the
+# Lifetime duration for DPoP nonces. These are used to limit the
 # lifetime of a client's DPoP proof. Do not set lower than 30 seconds
 # to avoid too many failed client token requests.
 #
-# default: 900
+# type: duration
+# default: '15m'
 # overwritten by: DPOP_NONCE_EXP
-#nonce_exp = 900
+#nonce_exp = '15m'
 
 [dynamic_clients]
 # If set to `true`, dynamic client registration will be enabled.
@@ -7163,6 +7634,17 @@ pg_password = '123SuperSafe'
 # overwritten by: DYN_CLIENT_DEFAULT_SCOPES - single String, \n separated values
 #default_scopes = ['openid']
 
+# RFC 8707 resource indicators a dynamically registered client may request. A
+# dynamic client cannot declare `allowed_resources` itself, so without this it can
+# never request a `resource`; an MCP client, which must send one, would otherwise
+# get `invalid_target`. Resolved from the live config on every request and never
+# stored with the client. Entries are matched verbatim. An empty list keeps the
+# default deny.
+#
+# default: []
+# overwritten by: DYN_CLIENT_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
+
 # If specified, this secret token will be expected during
 # dynamic client registrations to be given as a
 # `Bearer &lt;DYN_CLIENT_REG_TOKEN&gt;` token. Needs to be communicated
@@ -7172,14 +7654,15 @@ pg_password = '123SuperSafe'
 # overwritten by: DYN_CLIENT_REG_TOKEN
 #reg_token = '123SuperSafeToken'
 
-# The default token lifetime in seconds for a dynamic client,
+# The default token lifetime duration for a dynamic client
 # that will be set during the registration.
 # This value can be modified manually after registration via
 # the Admin UI like for any other client.
 #
-# default: 1800
+# type: duration
+# default: '30m'
 # overwritten by: DYN_CLIENT_DEFAULT_TOKEN_LIFETIME
-#default_token_lifetime = 1800
+#default_token_lifetime = '30m'
 
 # If set to 'true', client secret and registration token will be
 # automatically rotated each time a dynamic client updates itself
@@ -7197,51 +7680,53 @@ pg_password = '123SuperSafe'
 # overwritten by: DYN_CLIENT_SECRET_AUTO_ROTATE
 #secret_auto_rotate = true
 
-# This scheduler will be running in the background, if
+# This scheduler will be running in the background if
 # `ENABLE_DYN_CLIENT_REG=true`. It will auto-delete dynamic clients,
 # that have been registered and not been used in the following
 # `DYN_CLIENT_CLEANUP_THRES` hours.
 # Since a dynamic client should be used right away, this should never
 # be a problem with "real" clients, that are not bots or spammers.
 #
-# The interval is specified in minutes.
-# default: 60
+# type: duration
+# default: '1h'
 # overwritten by: DYN_CLIENT_CLEANUP_INTERVAL
-#cleanup_interval = 60
+#cleanup_interval = '1h'
 
 # The threshold for newly registered dynamic clients cleanup, if
 # not being used within this timeframe. This is a helper to keep
-# the database clean, if you are not using any `DYN_CLIENT_REG_TOKEN`.
-# The threshold should be specified in minutes. Any client, that has
+# the database clean if you are not using any `DYN_CLIENT_REG_TOKEN`.
+# The threshold should be specified in minutes. Any client that has
 # not been used within this time after the registration will be
 # automatically deleted.
 #
-# Note: This scheduler will only run, if you have not set any
+# Note: This scheduler will only run if you have not set any
 # `DYN_CLIENT_REG_TOKEN`.
 #
-# default: 60
-# overwritten by: DYN_CLIENT_CLEANUP_MINUTES
-#cleanup_minutes = 60
+# type: duration
+# default: '1h'
+# overwritten by: DYN_CLIENT_CLEANUP
+#cleanup_threshold = '1h'
 
-# Defines the number of days after which an inactive dynamic client will be
+# Defines the duration after which an inactive dynamic client will be
 # cleaned up. This applies to clients that have been used at least once but
-# have not been active since the configured amount of days.
+# have not been active since then.
 #
 # WARNING: This will permanently delete client registrations.
 #
-# default: 0 (disabled)
-# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_DAYS
-#cleanup_inactive_days = 0
+# type: duration
+# default: not set (disabled)
+# overwritten by: DYN_CLIENT_CLEANUP_INACTIVE_THRESHOLD
+#cleanup_inactive_threshold = '1h'
 
 # The rate-limiter timeout for dynamic client registration.
-# This is the timeout in seconds which will prevent an IP from
-# registering another dynamic client, if no `DYN_CLIENT_REG_TOKEN`
-# is set. With a `DYN_CLIENT_REG_TOKEN`, the rate-limiter will not
-# be applied.
+# This is the timeout duration preventing an IP from registering
+# another dynamic client if no `DYN_CLIENT_REG_TOKEN` is set.
+# With a `DYN_CLIENT_REG_TOKEN`, the rate-limiter will not be applied.
 #
-# default: 60
-# overwritten by: DYN_CLIENT_RATE_LIMIT_SEC
-#rate_limit_sec = 60
+# type: duration
+# default: '1h'
+# overwritten by: DYN_CLIENT_RATE_LIMIT_REG
+#rate_limit_reg = '1h'
 
 [email]
 # This contact information will be added to the `rauthy`client
@@ -7258,11 +7743,6 @@ rauthy_admin_email = 'admin@localhost'
 # overwritten by: EMAIL_SUB_PREFIX
 sub_prefix = 'Rauthy IAM'
 
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
 # overwritten by: SMTP_URL
 smtp_url = 'localhost'
 # optional, default will be used depending on TLS / STARTTLS
@@ -7276,6 +7756,23 @@ smtp_url = 'localhost'
 # default: "Rauthy &lt;rauthy@localhost&gt;"
 # overwritten by: SMTP_FROM
 #smtp_from = 'Rauthy &lt;rauthy@localhost&gt;'
+
+# Configure the TLS mode for SMTP connections.
+#
+# The default is implicit TLS. Depending on the mode the
+# proper default port will be used automatically if you
+# don't overwrite via `smtp_port`.
+#
+# NOTE: 'danger-insecure' will allow an unencrypted and
+# unauthenticated SMTP connection to an SMTP relay on e.g.
+# your localhost or for development purposes. When set,
+# `smtp_username` and `smtp_password` will be ignored
+# and smtp_port will default to 1025.
+#
+# possible values: tls, starttls, danger-insecure
+# default: tls
+# overwritten by: SMTP_TLS_MODE
+#smtp_tls_mode = 'tls'
 
 # You usually do not need to change this value. The 'default'
 # will connect via SMTP PLAIN or LOGIN, which works in almost
@@ -7335,15 +7832,15 @@ smtp_url = 'localhost'
 #-----END CERTIFICATE-----
 #"""
 
-# You can set this to `true` to allow an unencrypted and
-# unauthenticated SMTP connection to an SMTP relay on your localhost
-# or for development purposes.
-# When set to `true`, `SMTP_USERNAME` and `SMTP_PASSWORD` will be
-# ignored and SMTP_PORT will default to 1025.
+# Configure the number of days when to send a reminder E-Mail
+# before a password expiration for a user password.
 #
-# default: false
-# overwritten by: SMTP_DANGER_INSECURE
-#danger_insecure = false
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
+#
+# default: '10d'
+# overwritten by: EMAIL_PWD_EXP
+#password_exp = '10d'
 
 [email.jobs]
 
@@ -7353,22 +7850,24 @@ smtp_url = 'localhost'
 # a new user registration will be sent immediately.
 
 # If an open email job has not been updated for more than
-# `orphaned_seconds` seconds, it will be considered as orphaned.
+# `orphaned_pickup`, it will be considered as orphaned.
 # In this case, the current cluster leader can pick up this
 # job and start after the last successful email sent.
 #
-# default: 300
-# overwritten by: EMAIL_JOBS_ORPHANED_SECONDS
-#orphaned_seconds = 300
+# type: duration
+# default: '5m'
+# overwritten by: EMAIL_JOBS_ORPHANED_PICKUP
+#orphaned_pickup = '5m'
 
-# The interval in seconds at which the scheduler for orphaned
+# The interval durationat that the scheduler for orphaned
 # or scheduled jobs should run and check. Smaller values
 # increase precision for scheduled jobs with sacrificing a bit
 # higher resource usage.
 #
-# default: 300
-# overwritten by: EMAIL_JOBS_SCHED_SECONDS
-#scheduler_interval_seconds = 300
+# type: duration
+# default: '5m'
+# overwritten by: EMAIL_JOBS_SCHED
+#scheduler_interval = '5m'
 
 # Configures the batch size and delay between batches of users
 # for sending custom emails. The batch size configures the
@@ -7385,21 +7884,25 @@ smtp_url = 'localhost'
 # take a higher load, be careful with sending too quickly to not
 # trigger spam filters. Only increase throughput if needed.
 #
-# Note: If any error comes up during a batch, some users from this
-# very batch may get duplicate emails when it is retried after
-# being marked as orphaned.
+# Delay between email batches. If you set this to 0, Rauthy will
+# send out emails as fast as possible. This should be avoided,
+# especially for high user counts.
 #
-# default: 3
-# overwritten by: EMAIL_JOBS_BATCH_SIZE
-#batch_size = 3
+# type: duration
+# default: '2s'
+# overwritten by: EMAIL_JOBS_BATCH_DELAY
+#batch_delay = '2s'
+
+# Configure the time left when to send a reminder E-Mail
+# before a password expiration for a user password.
 #
-# Delay in ms between email batches. If you set this to 0,
-# Rauthy will send out emails as fast as possible. This
-# should be avoided, especially for high user counts.
+# NOTE: When you change this value for an already running
+# instance, users might receive duplicate emails.
 #
-# default: 2000
-# overwritten by: EMAIL_JOBS_BATCH_DELAY_MS
-#batch_delay_ms = 2000
+# type: duration
+# default: '10d'
+# overwritten by: EMAIL_PWD_EXP
+#password_exp = '10d'
 
 [email.tz_fmt]
 
@@ -7520,12 +8023,13 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # overwritten by: EPHEMERAL_CLIENTS_ALLOWED_SCOPES - single String, \n separated values
 #allowed_scopes = ['openid', 'profile', 'email', 'webid']
 
-# The lifetime in seconds ephemeral clients will be kept inside
+# The lifetime duration ephemeral clients will be kept inside
 # the cache.
 #
-# default: 3600
+# type: duration
+# default: '1h'
 # overwritten by: EPHEMERAL_CLIENTS_CACHE_LIFETIME
-#cache_lifetime = 3600
+#cache_lifetime = '1h'
 
 # RFC 8707: when an ephemeral client document declares no `allowed_resources`,
 # a requested `resource` is rejected by default. Setting this to `true` lets such
@@ -7538,6 +8042,16 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # default: false
 # overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_UNVALIDATED_RESOURCE
 #danger_allow_unvalidated_resource = false
+
+# RFC 8707 resource indicators allowed when an ephemeral client document declares
+# none of its own (a CIMD document you do not control cannot declare them). Keeps
+# the default deny without the blunt `danger_allow_unvalidated_resource`. A document
+# that declares its own resources still wins. Resolved from the live config on every
+# request. Entries are matched verbatim.
+#
+# default: []
+# overwritten by: EPHEMERAL_CLIENTS_ALLOWED_RESOURCES - single String, \n separated values
+#allowed_resources = []
 
 # A Client ID Metadata Document may advertise a grant type Rauthy does not
 # implement (e.g. claude.ai lists `urn:ietf:params:oauth:grant-type:jwt-bearer`
@@ -7654,12 +8168,13 @@ notify_level_slack = 'notice'
 # overwritten by: EVENT_PERSIST_LEVEL
 #persist_level = 'info'
 
-# Define the number of days when events should be cleaned
+# Define the duration when events should be cleaned
 # up from the database.
 #
-# default: 30
-# overwritten by: EVENT_CLEANUP_DAYS
-#cleanup_days = 30
+# type: duration
+# default: '60d'
+# overwritten by: EVENT_CLEANUP_THRESHOLD
+#cleanup_threshold = '60d'
 
 # Can be set to `false` to disable events being generated
 # when a new token was issued. These events improve your
@@ -7858,7 +8373,7 @@ level_failed_login = 'info'
 # set this to `true`.
 #
 # default: false
-# overwritten by: GEO_BLOCK_UNKONW
+# overwritten by: GEO_BLOCK_UNKNOWN
 #block_unknown = false
 
 # If you have a WAF or CDN which injects a geoloaction header
@@ -7962,25 +8477,28 @@ argon2_t_cost = 4
 # overwritten by: ARGON2_P_COST
 argon2_p_cost = 8
 
-# Limits the maximum amount of parallel password hashes at the exact same time
-# to never exceed system memory while still allowing a good amount of memory
-# for the Argon2ID algorithm
+# Limits the maximum amount of parallel password hashes at 
+# the exact same time to never exceed system memory while 
+# still allowing a good amount of memory for the Argon2ID 
+# algorithm
 #
 # CAUTION: You must make sure, that you have at least
-# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory of your deployment available.
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory 
+# of your deployment available.
 #
 # default: 2
 # overwritten by: MAX_HASH_THREADS
 max_hash_threads = 2
 
-# The time in ms when to log a warning, if a request waited longer than this time.
-# This is an indicator, that you have more concurrent logins than allowed and may
-# need config adjustments,
+# The duration when to log a warning if a request waited longer
+# than this time. This is an indicator, that you have more
+# concurrent logins than allowed and may need config adjustments
 # if this happens more often.
 #
-# default: 500
+# type: duration
+# default: '1s'
 # overwritten by: HASH_AWAIT_WARN_TIME
-#hash_await_warn_time = 500
+#hash_await_warn_time = '1s'
 
 [http_client]
 ## In this section, you can configure the HTTP Client
@@ -7998,18 +8516,19 @@ max_hash_threads = 2
 ## with connection pooling to reduce the amount of TLS
 ## handshakes necessary, especially during high traffic.
 
-# The connect timeout in seconds for new connections.
+# The connect timeout for new connections.
 #
-# default: 10
+# type: duration
+# default: '10s'
 # overwritten by: HTTP_CONNECT_TIMEOUT
-#connect_timeout = 10
+#connect_timeout = '10s'
 
-# The total request timeout in seconds for all outgoing
-# requests.
+# The total request timeout for all outgoing requests.
 #
-# default: 10
+# type: duration
+# default: '10s'
 # overwritten by: HTTP_REQUEST_TIMEOUT
-#request_timeout = 10
+#request_timeout = '10s'
 
 # Set the min TLS version for all outgoing connections.
 # Allowed values: '1.3', '1.2', '1.1', '1.0'
@@ -8023,9 +8542,10 @@ max_hash_threads = 2
 # this value at the cost of needing more TLS handshakes
 # and re-connecting more often.
 #
-# default: 900
+# type: duration
+# default: '15m'
 # overwritten by: HTTP_IDLE_TIMEOUT
-#idle_timeout = 900
+#idle_timeout = '15m'
 
 # By default, the HTTP Client will enforce HTTPS and
 # simply fail if an unencrypted HTTP URL is given
@@ -8077,35 +8597,34 @@ filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
-# Set the grace time in seconds for how long in seconds the refresh
+# Set the grace time duration for how long in seconds the refresh
 # token should still be valid after usage. Keep this value small,
 # but do not set it to 0 with an HA deployment to not get issues with
 # small HA cache latencies.
 #
-# If you have an external client, which does concurrent requests, from
-# which the request interceptor wants to refresh the token, you may
-# have multiple hits on the endpoint and all of them should be valid.
-#
 # Caching is done on the endpoint itself, but grace time of 0 will only
-# be good for a single instance of rauthy.
+# be acceptable for a single instance of rauthy.
 #
-# default: 5
+# type: duration
+# default: '5s'
 # overwritten by: REFRESH_TOKEN_GRACE_TIME
-#refresh_token_grace_time = 5
+#refresh_token_grace_time = '5s'
 
-# Global default lifetime in hours for refresh tokens.
+# Global default lifetime for refresh tokens.
 #
-# default: 48
+# type: duration
+# default: '2d'
 # overwritten by: REFRESH_TOKEN_LIFETIME
-#refresh_token_lifetime = 48
+#refresh_token_lifetime = '2d'
 
-# Session lifetime in seconds - the session can not be extended
+# Session lifetime duration - the session cannot be extended
 # beyond this time and a new login will be forced. This is the
 # session for the authorization code flow.
 #
-# default: 14400
+# type: duration
+# default: '10h'
 # overwritten by: SESSION_LIFETIME
-#session_lifetime = 14400
+#session_lifetime = '10h'
 
 # If 'true', a 2FA / MFA check will be done with each automatic
 # token generation, even with an active session, which kind of
@@ -8117,29 +8636,32 @@ filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # overwritten by: SESSION_RENEW_MFA
 #session_renew_mfa = false
 
-# Session timeout in seconds. When a new token / login is requested
+# Session timeout duration. When a new token / login is requested
 # before this timeout hits the limit, the user will be authenticated
 # without prompting for the credentials again.
 #
-# This is the value which can extend the session, until it hits its
-# maximum lifetime set with session_lifetime.
+# This is the duration that can extend an expiring session until
+# it hits its maximum lifetime set with session_lifetime.
 #
-# default: 5400
+# type: duration
+# default: '90m'
 # overwritten by: SESSION_TIMEOUT
-#session_timeout = 5400
+#session_timeout = '90m'
 
-# Lifetime in minutes for password reset magic links.
+# Lifetime for password reset magic links.
 #
-# default: 30
+# type: duration
+# default: '30m'
 # overwritten by: ML_LT_PWD_RESET
-#magic_link_pwd_reset = 30
+#magic_link_pwd_reset = '30m'
 
-# Lifetime in minutes for the first password magic link,
-# for setting the initial password.
+# Lifetime for the first password magic link for setting the
+# initial password.
 #
-# default: 4320
+# type: duration
+# default: '3d'
 # overwritten by: ML_LT_PWD_FIRST
-#magic_link_pwd_first = 4320
+#magic_link_pwd_first = '3d'
 
 # JWKS auto rotate cronjob. This will (by default) rotate all JWKs every
 # 1. day of the month. If you need smaller intervals, you may adjust this
@@ -8217,6 +8739,64 @@ level_access = 'modifying'
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = true
 
+[otp]
+# Enable E-Mail or HMAC-based One Time Passwords as 2FA.
+#
+# CAUTION: Passkeys are much safer than OTP. Only enable
+# OTP if you really need / want to.
+#
+# default: 'false'
+# overwritten by: OTP_ENABLE
+enable = false
+
+# The length of the generated one-time passwords.
+# Must be 6 - 8 digits.
+#
+# default: 6
+# overwritten by: OTP_LENGTH
+#length = 6
+
+# The lifetime for OTP requests. Within this time, an OTP 
+# request must have been validated.
+#
+# default: '5m'
+# overwritten by: OTP_EXP
+#exp = '5m'
+
+# Default digest algorithm's length, HMAC using SHA-X.
+# SHA-1 is forbidden.
+#
+# NOTE: This value currently has no effect. It's a 
+# preparation for future support for TOTP. At the time
+# of writing, only E-Mail-based OTP is implemented.
+#
+# Possible values: 256, 384, 512
+# default: 512
+# overwritten by: OTP_DIGEST_LEN_DEFAULT
+#digest_len_default = 512
+
+# The expiration duration when an MFA cookie set via OTP
+# must be revalidated.
+#
+# While such a cookie exists and is valid, a user may not
+# need to provide a password on a new login on this known
+# device, only a new OTP.
+#
+# You can disable this feature by setting the value to 0.
+#
+# type: duration
+# default: '30d'
+# overwritten by: OTP_RENEW_EXP
+renew_exp = '30d'
+
+[otp.email]
+# Wether to enable or disable OTPs via E-Mail.
+# This value is ignored if `otp.enable` is set to `false`.
+#
+# default: 'true'
+# overwritten by: OTP_EMAIL_ENABLE
+enable = true
+
 [pam]
 # The length of newly generated PAM remote passwords via the
 # account dashboard. The default is fine as long as you can copy
@@ -8228,14 +8808,15 @@ admin_force_mfa = true
 # overwritten by: PAM_REMOTE_PASSWORD_LEN
 #remote_password_len = 24
 
-# The TTL for newly generated PAM remote passwords in seconds.
+# The TTL for newly generated PAM remote passwords.
 # The default gives you plenty of time to open a few sessions in
 # some terminals and maybe switch to `root` on some remote machines,
 # while still expiring quick enough to be secure.
 #
-# default: 120
+# type: duration
+# default: '2m'
 # overwritten by: PAM_REMOTE_PASSWORD_TTL
-#remote_password_ttl = 120
+#remote_password_ttl = '2m'
 
 [pam.authorized_keys]
 
@@ -8264,7 +8845,7 @@ admin_force_mfa = true
 #auth_required = true
 
 # By default, SSH keys that have expired because of
-# `forced_key_expiry_days` below will be added to an internal
+# `forced_key_expiry` below will be added to an internal
 # blacklist. This blacklist will be checked upon key add to
 # make sure keys were actually rotated and that not an old key
 # is added again.
@@ -8276,9 +8857,10 @@ admin_force_mfa = true
 # Configure the days after which blacklisted SSH keys will be
 # cleaned up.
 #
-# default: 730
-# overwritten by: PAM_SSH_BLACKLIST_CLEANUP_DAYS
-#blacklist_cleanup_days = 730
+# type: duration
+# default: '2y'
+# overwritten by: PAM_SSH_BLACKLIST_CLEANUP_THRESHOLD
+#blacklist_cleanup_threshold = '2y'
 
 # You can include comments in the public response for the
 # `authorized_keys` for each user. This can be helpful for
@@ -8289,14 +8871,15 @@ admin_force_mfa = true
 # overwritten by: PAM_SSH_INCLUDE_COMMENTS
 #include_comments = true
 
-# You can enforce an SSH key expiry in days. After this time,
-# users must generate new keys. This enforces a key rotation
-# with is usually overlooked especially for SSH keys.
-# Set to `0` to disable the forced expiry.
+# You can enforce an SSH key expiry. After this time, users
+# must generate new keys. This enforces a key rotation with
+# is usually overlooked especially for SSH keys. Set to `0`
+# to disable the forced expiry.
 #
-# default: 365
-# overwritten by: PAM_SSH_KEY_EXP_DAYS
-#forced_key_expiry_days = 365
+# type: duration
+# default: '1y'
+# overwritten by: PAM_SSH_KEY_EXP
+#forced_key_expiry = '1y'
 
 [pow]
 # The difficulty for a Proof-of-Work (PoW).
@@ -8308,11 +8891,12 @@ admin_force_mfa = true
 # overwritten by: POW_DIFFICULTY
 #difficulty = 19
 
-# The expiration duration in seconds for a PoW
+# The expiration duration for a PoW.
 #
-# default: 30
+# type: duration
+# default: '30s'
 # overwritten by: POW_EXP
-#exp = 30
+#exp = '30s'
 
 [scim]
 # If set to `true`, already possibly synced groups / users on a
@@ -8467,14 +9051,14 @@ swagger_ui_enable = false
 # overwritten by: SWAGGER_UI_PUBLIC
 #swagger_ui_public = false
 
-# The interval in seconds in which keep-alives should be
-# sent to SSE clients. Depending on your network setup,
-# proxy timeouts, ..., you may adjust this value to fit
-# your needs.
+# The interval in which keep-alives should be sent to SSE
+# clients. Depending on your network setup, proxy timeouts,
+# ..., you may adjust this value to fit your needs.
 #
-# default: 30
+# type: duration
+# default: '30s'
 # overwritten by: SSE_KEEP_ALIVE
-#see_keep_alive = 30
+#see_keep_alive = '30s'
 
 # Dynamic server side pagination threshold
 # If the total users count exceeds this value, Rauthy will dynamically
@@ -8492,9 +9076,10 @@ swagger_ui_enable = false
 # IP will be blacklisted preemptively for the set time in minutes.
 # You can disable it by setting it to `0`.
 #
-# default: 1440
+# type: duration
+# default: '1d'
 # overwritten by: SUSPICIOUS_REQUESTS_BLACKLIST
-#blacklist = 1440
+#blacklist = '1d'
 
 # Will emit a log with level of warning if a request to `/` has
 # been made that has not been caught by any of the usual routes
@@ -8506,6 +9091,28 @@ swagger_ui_enable = false
 # default: false
 # overwritten by: SUSPICIOUS_REQUESTS_LOG
 #log = false
+
+[sponsor]
+# Rauthy will send en E-Mail to the Rauthy admin, and to possibly
+# configured event notification targets, once a year. This message
+# kindly asks for sponsoring the project. As said, it will only be
+# sent once a year in the time between 6th and 28th of december. It
+# will send it to the configured `rauthy_admin_email` and possibly
+# existing `contacts` on the `rauthy` client. In addition, it will
+# create an event notification to Slack / Matrix, if it exists.
+# If none of that is true, it will instead send a mail to the max
+# 5 oldest `rauthy_admin` role accounts in the database.
+#
+# It will never annoy you or keep on asking. It's one notification
+# once a year, in the same way as KDE does it as well. This message
+# will never reach any normal user or group admin.
+#
+# If you do not want to support the project, or you already do,
+# you can disable this setting.
+#
+# default: false
+# overwritten by: SPONSOR_EMAIL_REMINDER_DISABLE
+#email_reminder_disable = false
 
 [[templates]]
 # You can overwrite some default email templating values.
@@ -8592,9 +9199,10 @@ key_path = 'tls/key.pem'
 # too long to read and accept update ToS, the user may run into an auth
 # error and do the login again.
 #
-# default: 900
+# type: duration
+# default: '15m'
 # overwritten by: TOS_ACCEPT_TIMEOUT
-#accept_timeout = 900
+#accept_timeout = '15m'
 
 [user_delete]
 # You can enable user self-deletion via the Account Dashboard.
@@ -8866,17 +9474,19 @@ rp_origin = 'http://localhost:8080'
 # The Cache lifetime in seconds for Webauthn requests. Within
 # this time, a webauthn request must have been validated.
 #
-# default: 60
+# type: duration
+# default: '60s'
 # overwritten by: WEBAUTHN_REQ_EXP
-#req_exp = 60
+#req_exp = '60s'
 
 # The Cache lifetime for additional Webauthn Data like auth
 # codes and so on. Should not be lower than WEBAUTHN_REQ_EXP.
 # The value is in seconds
 #
-# default: 90
+# type: duration
+# default: '90s'
 # overwritten by: WEBAUTHN_DATA_EXP
-#data_exp = 90
+#data_exp = '90s'
 
 # With Webauthn enabled for a user, he needs to enter username
 # / password on a new system. If these credentials are verified,
@@ -8892,10 +9502,11 @@ rp_origin = 'http://localhost:8080'
 # again. That is why we should ask for the original password in
 # addition once in a while to set the cookie.
 #
+# type: duration
 # The value is in hours
-# default: 2160
+# default: '90d'
 # overwritten by: WEBAUTHN_RENEW_EXP
-#renew_exp = 2160
+#renew_exp = '90d'
 
 # This feature can be set to 'true' to force User verification
 # during the Webauthn ceremony. UV will be true, if the user
@@ -8922,6 +9533,129 @@ rp_origin = 'http://localhost:8080'
 # default: true
 # overwritten by: WEBAUTHN_NO_PASSWORD_EXPIRY
 #no_password_exp = true
+
+# When you want to migrate an existing deployment over to enforced
+# attestation, you usually have a chicken-and-egg problem: You
+# have users that already use Passkeys. Device attestation only
+# works during the registration ceremony. When devices are only
+# ever attested with enforcement, either all users need to remove
+# the passkeys, leaving all their accounts password-only, and then
+# re-registert, or they would be locked out as soon as attestation
+# would be enforced.
+#
+# To counter this, you can enable optimistic_attestation. This will
+# always try to attest devices during registration and use a plain
+# fallback on error. This is opt-in on purpose. It requires a bit
+# more resources and memory, and it does not make any sense to
+# enable it when you never plan to enforce attestation at some point.
+# Just the optimistic attestation on its own does not increase the
+# security. It helps you migrate users.
+#
+# Once enabled, you can give your users a grace-period in which
+# they need to re-register their passkeys. When that is done, and
+# they see the "Certified Passkey" badge in their account dashboard,
+# you can then switch to enforced attestation.
+#
+# default: false
+# overwritten by: WEBAUTHN_OPT_ATTESTATION
+#optimistic_attestation = false
+
+######################################################################
+## The block below enforces passkey attestation. You can set different
+## combinations of
+##
+## - force_passkey_cert_level
+## - force_passkey_protection
+## - force_passkey_attachment
+##
+## If any of these values are set, authenticator attestation will
+## be enforced. This will immediately reject most of the software
+## passkeys like in browser extensions.
+##
+## Note: You probably never want these setting on any public-facing
+## instance, as it will allow only properly validarted Passkeys.
+## That basically excludes almost all software-based keys. If you
+## don't control what keys your users are using, like e.g. in an
+## enterprise, you probably don't want this feature.
+## Even if the examples for certification levels also mention
+## software implementations, most software passkeys are not
+## certified at all, and they don't send attestation data. Only
+## because a device meets the needs for a specific level does not
+## mean it's actually certified.
+##
+## For more information on the different security levels:
+## https://fidoalliance.org/certification/authenticator-certification-levels/
+## https://fidoalliance.org/security-certification-authenticator-security-levels/
+##
+## CAUTION: If you make the requirements more strict for an
+## already existing deployment, you can lock accounts! If a
+## user has registered keys that do not meet the new standards,
+## it will be impossible to log in, and this needs manual cleanup
+## from an Admin!
+
+# Enforces FIDO passkey attestation. If not set, attestation is
+# disabled. If you set a level, it is a minimum requirement. E.g.
+# L1 is a boundary for the minimum, and it means L1 and above.
+# The possible levels (case-sensitive) in ascending order:
+#
+# - FIDO_CERTIFIED
+# - FIDO_CERTIFIED_L1
+# - FIDO_CERTIFIED_L1plus
+# - FIDO_CERTIFIED_L2
+# - FIDO_CERTIFIED_L2plus
+# - FIDO_CERTIFIED_L3
+# - FIDO_CERTIFIED_L3plus
+#
+# default: not set
+# overwritten by: WEBAUTHN_PK_CERT_LEVEL
+#force_passkey_cert_level = 'FIDO_CERTIFIED_L1'
+
+# Enforces the passkey protection to be included in the given
+# list. Authenticators will send an array of values, so this
+# is not a hard equality check. Instead, the values sent by the
+# authenticator mut be a subset of the configured value. E.g.
+# the authenticator sends `['hardware', 'tee']` then a
+# configured value of ['hardware', 'tee', 'secure_element']
+# would allow it. If, however, the authenticator sent
+# `['hardware', 'remote_handle']`, it would be rejected.
+#
+# Possible values:
+# - software
+# - hardware
+# - tee
+# - secure_element
+# - remote_handle
+#
+# default: not set
+# value type: [String]
+# overwritten by: WEBAUTHN_PK_PROT (`\n` separated values)
+#force_passkey_protection = ['hardware', 'tee', 'secure_element']
+
+# This works in the same way as `force_passkey_protection`
+# above. The configured value must be a superset of the array
+# of values that an authenticator might send. For instance,
+# to allow only external, dedicated authenticators that must
+# not use any radio technology, specify: `['external', 'wired']`
+#
+# Possible values:
+# - internal
+# - external
+# - wired
+# - wireless
+# - nfc
+# - bluetooth
+# - network
+# - wifi_direct
+# - smart
+#
+# Note: `smart` stands for SmartCard. `internal` means "on
+# the same physical device", while `external` requires an
+# independent one.
+#
+# default: not set
+# value type: [String]
+# overwritten by: WEBAUTHN_PK_ATT (`\n` separated values)
+#force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="swagger-ui"><a class="header" href="#swagger-ui">Swagger UI</a></h1>
 <p>Rauthy comes with its own OpenAPI documentation and Swagger UI. There are some things you should know about it.</p>
@@ -9026,6 +9760,7 @@ or via <code>/auth/v1/docs/</code> on your Rauthy instance.</p>
             window.setTimeout(window.print, 100);
         });
         </script>
+
 
     </div>
     </body>

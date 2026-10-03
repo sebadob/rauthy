@@ -37,6 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -93,10 +94,13 @@
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
@@ -147,7 +151,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -202,12 +211,12 @@ password_plain = '123SuperSafe'
 
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -&gt; see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+password_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 </code></pre>
 <p>You can use any tool for hashing as long as the output format is a proper argon2id string.
 The <a href="cli.html">Rauthy CLI</a> can do it for you as well.</p>
@@ -261,7 +270,8 @@ rights could look like this:</p>
   }
 ]
 </code></pre>
-<p>The <code>secret</code> can be <code>{"Plain": "..."}</code>, <code>{"Encrypted": "..."}</code>, or <code>"generate"</code>. Plain secrets must be at
+<p>The <code>secret</code> can be <code>{"Plain": "..."}</code>, <code>{"Encrypted": "..."}</code>, or <code>"generate"</code>. Plain secrets must
+be at
 least 64 characters long. Encrypted secrets are encrypted with
 <a href="https://github.com/sebadob/cryptr"><code>cryptr</code></a> and base64-encoded, just like encrypted client
 secrets. Generated API-key secrets store the full usable <code>name$secret</code> token in the generated
@@ -274,11 +284,19 @@ bootstrap secret container under <code>api-key/&lt;name&gt;/token</code>.</p>
     "access": [
       {
         "group": "Clients",
-        "access_rights": ["read", "create", "update", "delete"]
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
       },
       {
         "group": "Secrets",
-        "access_rights": ["read", "update"]
+        "access_rights": [
+          "read",
+          "update"
+        ]
       }
     ]
   }
@@ -398,20 +416,30 @@ initializes an empty production database. If you add <code>"generate"</code> to 
 or <code>api_keys.json</code> after the database has already been initialized, that day-2 change is ignored by
 the first-boot bootstrap gate and no new generated secret is written.</p>
 <pre><code class="language-toml">[bootstrap]
-# Path to the encrypted generated-secret container. If unset, Rauthy stores it
-# below Hiqlite's configured data directory as:
+# Generated bootstrap secrets are written to this encrypted
+# local container before their matching database rows are
+# inserted. Later bootstrap phases use it for generated
+# client secrets, user passwords, and API-key secrets that
+# cannot be reconstructed from the database after insertion.
 #
-# `${cluster.data_dir}/bootstrap.secrets.enc`
+# The file is a single AEAD-encrypted JSON payload. The expiry
+# deadline lives inside that encrypted payload, so expiry
+# checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
 #
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
 #generated_secrets_file = 'data/bootstrap.secrets.enc'
 
-# Time in seconds before generated bootstrap secrets expire. A value of `0`
-# disables expiry and runtime auto-purge.
+# Duration before generated bootstrap secrets are purged.
+# The default keeps first-start credentials available briefly
+# for local extraction. Set to `0` to disable expiry and runtime
+# auto-purge.
 #
-# default: 600
+# type: duration
+# default: '10m'
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
-generated_secrets_ttl = 600
+#generated_secrets_ttl = '10m'
 </code></pre>
 <p>Use the local CLI to retrieve or purge the encrypted container after first start. The command does
 not talk to the Rauthy server.</p>
@@ -439,15 +467,28 @@ arguments.</p>
     "id": "my-service",
     "name": "My Service",
     "secret": "generate",
-    "redirect_uris": ["https://my-service.example.com/callback"],
+    "redirect_uris": [
+      "https://my-service.example.com/callback"
+    ],
     "enabled": true,
-    "flows_enabled": ["authorization_code", "refresh_token"],
+    "flows_enabled": [
+      "authorization_code",
+      "refresh_token"
+    ],
     "access_token_alg": "EdDSA",
     "id_token_alg": "EdDSA",
     "auth_code_lifetime": 60,
     "access_token_lifetime": 3600,
-    "scopes": ["openid", "profile", "email"],
-    "default_scopes": ["openid", "profile", "email"],
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
+    "default_scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
     "force_mfa": false
   }
 ]
@@ -460,7 +501,9 @@ generated secret from the encrypted container.</p>
   {
     "email": "admin@example.com",
     "password": "generate",
-    "roles": ["admin"],
+    "roles": [
+      "admin"
+    ],
     "enabled": true,
     "email_verified": true
   }
@@ -550,6 +593,7 @@ files <a href="https://github.com/sebadob/rauthy/tree/main/bootstrap">here</a>, 
         <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+
 
 
     </div>

@@ -37,6 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -93,10 +94,13 @@
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
@@ -147,7 +151,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -321,13 +330,14 @@ session_validate_ip = true
 <p>The default session lifetimes and timeouts are pretty secure, but you may find them to be too
 strict. You can adjust them with the following config variables:</p>
 <pre><code class="language-toml">[lifetimes]
-# Session lifetime in seconds - the session can not be extended
+# Session lifetime duration - the session cannot be extended
 # beyond this time and a new login will be forced. This is the
 # session for the authorization code flow.
 #
-# default: 14400
+# type: duration
+# default: '10h'
 # overwritten by: SESSION_LIFETIME
-session_lifetime = 14400
+session_lifetime = '10h'
 
 # If 'true', a 2FA / MFA check will be done with each automatic
 # token generation, even with an active session, which kind of
@@ -339,16 +349,17 @@ session_lifetime = 14400
 # overwritten by: SESSION_RENEW_MFA
 session_renew_mfa = false
 
-# Session timeout in seconds. When a new token / login is requested
+# Session timeout duration. When a new token / login is requested
 # before this timeout hits the limit, the user will be authenticated
 # without prompting for the credentials again.
 #
-# This is the value which can extend the session, until it hits its
-# maximum lifetime set with session_lifetime.
+# This is the duration that can extend an expiring session until
+# it hits its maximum lifetime set with session_lifetime.
 #
-# default: 5400
+# type: duration
+# default: '90m'
 # overwritten by: SESSION_TIMEOUT
-session_timeout = 5400
+session_timeout = '90m'
 </code></pre>
 <h2 id="security"><a class="header" href="#security">Security</a></h2>
 <p>You usually don't need to configure anything about session security or CSRF protection, all of it
@@ -483,6 +494,7 @@ doing and if you have a good reason to do so.</p>
         <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+
 
 
     </div>

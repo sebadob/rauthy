@@ -37,6 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -93,10 +94,13 @@
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
@@ -147,7 +151,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -168,9 +177,10 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="minimal-production-config"><a class="header" href="#minimal-production-config">Minimal Production Config</a></h1>
-<p>This section gives you a template for probably the most minimal config you could do when going into production.</p>
-<p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take a look at the
-complete <a href="config.html">Reference Config</a> and check each existing value.</p>
+<p>This section gives you a template for probably the most minimal config you could do when going into
+production.</p>
+<p>You can either copy &amp; paste this (with adjustments of course) and expand it when necessary, or take
+a look at the complete <a href="config.html">Reference Config</a> and check each existing value.</p>
 <pre><code class="language-toml">[bootstrap]
 # If set, the email of the default admin will be changed during
 # the initialization of an empty production database.
@@ -205,9 +215,9 @@ node_id = 1
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+  "1 localhost:8100 localhost:8200",
+  #    "2 localhost:8101 localhost:8201",
+  #    "3 localhost:8102 localhost:8202",
 ]
 
 # Secrets for Raft internal authentication as well as for the API.
@@ -222,11 +232,6 @@ secret_raft = "SuperSecureSecret1337"
 secret_api = "SuperSecureSecret1337"
 
 [email]
-# Rauthy will force TLS and try a downgrade to STARTTLS, if
-# TLS fails. It will never allow an unencrypted connection.
-# You might want to set `SMTP_DANGER_INSECURE=true` if you
-# need this for local dev.
-#
 # overwritten by: SMTP_URL
 smtp_url = "localhost"
 # optional, default will be used depending on TLS / STARTTLS
@@ -394,6 +399,7 @@ rp_origin = "http://localhost:5173"
         <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+
 
 
     </div>
