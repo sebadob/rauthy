@@ -73,9 +73,12 @@ The resource usage depends a lot on your setup (Hiqlite, Postgres, HA deployment
 users, ...). However, if you apply memory allocator tuning from the book, and you have a small set
 of users, it usually looks like this:
 
-- Hiqlite single instance ~57mb
+- Hiqlite single instance ~40mb
 - Hiqlite HA cluster ~65mb
 - Postgres-based ~35mb
+
+> If you enable the SwaggerUI or the embedded IPGeo DB, they will consume quite a bit more idle
+> memory.
 
 ### Highly Available
 
