@@ -30,6 +30,7 @@
       <excludeFolder url="file://$MODULE_DIR$/rauthy-client/examples/axum/target" />
       <excludeFolder url="file://$MODULE_DIR$/rauthy-client/examples/device-code/target" />
       <excludeFolder url="file://$MODULE_DIR$/rauthy-client/examples/generic/target" />
+      <excludeFolder url="file://$MODULE_DIR$/data_old" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
