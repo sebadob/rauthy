@@ -1,21 +1,27 @@
 // Run with: npm run test:redirect-uri
-// Mirrors the backend `test_validate_redirect_uri_shape()` in `src/data/src/entity/clients.rs`.
+// Mirrors the backend `test_validate_redirect_uri_shape()` and
+// `test_validate_post_logout_redirect_uri_shape()` in `src/data/src/entity/clients.rs`.
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { createServer } from 'vite';
 
 let server;
 let validateRedirectUriShape;
+let validatePostLogoutRedirectUriShape;
 let RESERVED_REDIRECT_QUERY_KEYS;
+let RESERVED_POST_LOGOUT_QUERY_KEYS;
 
 before(async () => {
     server = await createServer({
         configFile: false,
         server: { middlewareMode: true, watch: null },
     });
-    ({ validateRedirectUriShape, RESERVED_REDIRECT_QUERY_KEYS } = await server.ssrLoadModule(
-        '/src/utils/redirectUri.ts',
-    ));
+    ({
+        validateRedirectUriShape,
+        validatePostLogoutRedirectUriShape,
+        RESERVED_REDIRECT_QUERY_KEYS,
+        RESERVED_POST_LOGOUT_QUERY_KEYS,
+    } = await server.ssrLoadModule('/src/utils/redirectUri.ts'));
 });
 
 after(async () => {
@@ -152,5 +158,50 @@ test('commas are rejected', () => {
         'http://localhost:*/cb?x=a,b',
     ]) {
         assert.deepEqual(validateRedirectUriShape(uri), { kind: 'comma' }, uri);
+    }
+});
+
+test('post-logout redirect URIs only reserve state', () => {
+    assert.deepEqual(RESERVED_POST_LOGOUT_QUERY_KEYS, ['state']);
+
+    for (const uri of [
+        'https://app.example.com/',
+        'https://app.example.com/bye?foo=bar&x=y',
+        'https://app.example.com/*',
+        // only `state` is set on logout, so the authorization response keys are fine here
+        'https://app.example.com/bye?code=x&iss=y&error=z&error_description=a&error_uri=b',
+        'https://app.example.com/bye?states=x&state_x=1&x=state',
+        'https://app.example.com/bye?x%5Bstate%5D=1',
+    ]) {
+        assert.equal(validatePostLogoutRedirectUriShape(uri), undefined, uri);
+    }
+
+    // `state`, including the forms that common server-side parsers fold into it
+    for (const uri of [
+        'https://app.example.com/bye?state=x',
+        'https://app.example.com/bye?foo=bar&state=x',
+        'https://app.example.com/bye?foo=bar;state=x',
+        'https://app.example.com/*?state=x',
+        'https://app.example.com/bye?state',
+        'https://app.example.com/bye?STATE=x',
+        'https://app.example.com/bye?%73tate=x',
+        'https://app.example.com/bye?+state=x',
+        'https://app.example.com/bye?state%5B%5D=x',
+        'https://app.example.com/bye?state.x=y',
+    ]) {
+        assert.deepEqual(
+            validatePostLogoutRedirectUriShape(uri),
+            { kind: 'reservedKey', key: 'state' },
+            uri,
+        );
+    }
+
+    for (const [uri, kind] of [
+        ['https://app.example.com/#/bye', 'fragment'],
+        ['https://app.example.com/bye?foo=bar#state=x', 'fragment'],
+        ['https://app.example.com/bye?x=,https://evil.example/', 'comma'],
+        ['https://app.example.com/bye?%09x=1', 'controlChar'],
+    ]) {
+        assert.deepEqual(validatePostLogoutRedirectUriShape(uri), { kind }, uri);
     }
 });

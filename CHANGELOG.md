@@ -279,6 +279,26 @@ fix a client, replace the URI with a valid one, e.g. a path-based callback inste
 
 [#1757](https://github.com/sebadob/rauthy/pull/1757)
 
+#### Stricter `post_logout_redirect_uri` Validation
+
+Post-logout redirect URIs follow the same rules now. A post-logout redirect URI must not contain a
+fragment (`#`), which would swallow the `state` appended on logout, a `,`, or a `state` query
+parameter, compared the same way as above. `state` is the only parameter Rauthy appends on logout
+([RP-Initiated Logout 1.0 §3](https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RedirectionAfterLogout)),
+so other keys like `code` or `iss` are still allowed here.
+
+This is checked when a client is created or updated (Admin UI, API, dynamic client registration,
+ephemeral clients, bootstrap), and for the `post_logout_redirect_uri` of each logout request, so a
+wildcard registration cannot be used to inject a second `state` or a fragment anymore. The `state`
+on the logout redirect is now form-urlencoded and appended exactly once, like on authorization
+redirects, with a space sent as `%20`.
+
+Already stored post-logout redirect URIs are not migrated. A logout request with such a URI is
+rejected, and the client cannot be saved until the URI is replaced. At startup, Rauthy logs a
+warning for each affected client and URI, and the Admin UI shows why a URI is invalid.
+
+[#1761](https://github.com/sebadob/rauthy/pull/1761)
+
 ### Changes
 
 #### Security Hardening and General Stability

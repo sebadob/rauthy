@@ -15,7 +15,9 @@ use rauthy_api_types::forward_auth::{ForwardAuthCallbackParams, ForwardAuthParam
 use rauthy_api_types::generic::LogoParams;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_data::entity::clients::{Client, validate_redirect_uri_shape};
+use rauthy_data::entity::clients::{
+    Client, validate_post_logout_redirect_uri_shape, validate_redirect_uri_shape,
+};
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
@@ -179,6 +181,9 @@ pub async fn post_clients_dyn(
     // Like `validate()`, reject an invalid request before it consumes the per-IP rate limit.
     for uri in &payload.redirect_uris {
         validate_redirect_uri_shape(uri)?;
+    }
+    if let Some(uri) = &payload.post_logout_redirect_uri {
+        validate_post_logout_redirect_uri_shape(uri)?;
     }
 
     if let Some(token) = &RauthyConfig::get().vars.dynamic_clients.reg_token {

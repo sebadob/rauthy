@@ -17,7 +17,8 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::error;
 
-/// The callback is single-use: it is deleted as soon as it has been validated.
+/// The callback is single-use: it is atomically taken out of the cache before anything is
+/// validated, so every request after the first one fails, whatever its outcome.
 pub async fn login_finish<'a>(
     req: &'a HttpRequest,
     payload: &'a ProviderCallbackRequest,
@@ -31,13 +32,11 @@ pub async fn login_finish<'a>(
         )
     })?;
 
-    let slf = AuthProviderCallback::find(callback_id).await?;
+    let slf = AuthProviderCallback::find_remove(callback_id).await?;
     let provider = AuthProvider::find(&slf.provider_id).await?;
 
     // validate state
     if let Err(err) = validate_callback_state(&provider.issuer, &slf.callback_id, payload) {
-        AuthProviderCallback::delete(slf.callback_id).await?;
-
         error!("{}", err.message);
         return Err(err);
     }
@@ -45,8 +44,6 @@ pub async fn login_finish<'a>(
     // validate csrf token
     if !constant_time_eq::constant_time_eq(slf.xsrf_token.as_bytes(), payload.xsrf_token.as_bytes())
     {
-        AuthProviderCallback::delete(slf.callback_id).await?;
-
         error!("invalid CSRF token");
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
@@ -57,17 +54,12 @@ pub async fn login_finish<'a>(
     // validate PKCE verifier
     let hash_base64 = base64_url_encode(sha256!(payload.pkce_verifier.as_bytes()));
     if !constant_time_eq::constant_time_eq(slf.pkce_challenge.as_bytes(), hash_base64.as_bytes()) {
-        AuthProviderCallback::delete(slf.callback_id).await?;
-
         error!("invalid PKCE verifier");
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
             "invalid PKCE verifier",
         ));
     }
-
-    // The callback is validated at this point, so we can safely clean up the cache.
-    AuthProviderCallback::delete(slf.callback_id.clone()).await?;
 
     // request is valid -> fetch token for the user
 

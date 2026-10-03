@@ -34,6 +34,23 @@ fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
     }
 }
 
+const BAD_POST_LOGOUT_REDIRECT_URIS: [&str; 4] = [
+    "http://test.client.io/#/logout",
+    "http://test.client.io/logout?state=x",
+    "http://test.client.io/logout?foo=bar&STATE%5B%5D=x",
+    // stored comma-joined, so this would become a second, unchecked post-logout redirect URI
+    "http://test.client.io/logout?x=,https://evil.example/",
+];
+
+/// Like `expected_redirect_uri_err()`, for `validate_post_logout_redirect_uri_shape()`.
+fn expected_post_logout_redirect_uri_err(bad_uri: &str) -> &'static str {
+    if bad_uri.contains(['#', ',']) {
+        "Payload validation error"
+    } else {
+        "post_logout_redirect_uri must not contain the query parameter 'state'"
+    }
+}
+
 fn extract_raw_claims(token: &str) -> Vec<u8> {
     let mut split = token.split('.');
     split.next().unwrap();
@@ -229,6 +246,33 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
 
+    // and so is a fragment, a `state` query key or a comma in a post_logout_redirect_uri
+    for bad_uri in BAD_POST_LOGOUT_REDIRECT_URIS {
+        let bad_client = NewClientRequest {
+            id: "test-bad-post-logout-redirect".to_string(),
+            secret: None,
+            name: None,
+            confidential: false,
+            redirect_uris: vec!["http://test.client.io/callback".to_string()],
+            post_logout_redirect_uris: Some(vec![
+                "http://test.client.io/logout".to_string(),
+                bad_uri.to_string(),
+            ]),
+        };
+        let res = reqwest::Client::new()
+            .post(&url)
+            .headers(auth_headers.clone())
+            .json(&bad_client)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+        let body = res.text().await?;
+        assert!(
+            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
+            "{body}"
+        );
+    }
+
     // modify the client
     let mut redirect_uris = client.redirect_uris;
     redirect_uris.push("http://test.client.io/callback123".to_string());
@@ -295,6 +339,22 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     update_client.redirect_uris = redirect_uris.clone();
+    for bad_uri in BAD_POST_LOGOUT_REDIRECT_URIS {
+        update_client.post_logout_redirect_uris = Some(vec![bad_uri.to_string()]);
+        let res = reqwest::Client::new()
+            .put(&url_id)
+            .headers(auth_headers.clone())
+            .json(&update_client)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "{bad_uri}");
+        let body = res.text().await?;
+        assert!(
+            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
+            "{body}"
+        );
+    }
+    update_client.post_logout_redirect_uris = None;
     let res = reqwest::Client::new()
         .get(&url_id)
         .headers(auth_headers.clone())
@@ -305,6 +365,10 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         unchanged.redirect_uris,
         vec!["http://test.client.io/callback".to_string()]
+    );
+    assert_eq!(
+        unchanged.post_logout_redirect_uris,
+        Some(vec!["http://test.client.io/logout".to_string()])
     );
     assert_eq!(unchanged.name, client.name);
     assert!(unchanged.enabled);

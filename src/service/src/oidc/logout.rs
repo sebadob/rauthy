@@ -7,7 +7,8 @@ use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
 use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM};
 use rauthy_common::http_client;
 use rauthy_data::api_cookie::ApiCookie;
-use rauthy_data::entity::clients::{Client, wildcard_prefix_match};
+use rauthy_data::entity::auth_codes::post_logout_redirect;
+use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
@@ -23,7 +24,6 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use std::borrow::Cow;
-use std::fmt::Write;
 use std::str::FromStr;
 use std::string::ToString;
 use std::time::Duration;
@@ -61,29 +61,8 @@ pub async fn get_logout_html(
 
     // from here on, the token_hint contains a valid ID token -> skip the logout confirmation
     if let Some(target) = logout_request.post_logout_redirect_uri {
-        // unwrap is safe since the token is valid already
         let client = Client::find(claims.common.azp.to_string()).await?;
-        if client.post_logout_redirect_uris.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Given 'post_logout_redirect_uri' is not allowed",
-            ));
-        }
-
-        let uri_vec = client.get_post_logout_uris();
-
-        // same host-boundary wildcard semantics as `validate_post_logout_redirect_uri`
-        let valid_redirect = uri_vec
-            .as_ref()
-            .unwrap()
-            .iter()
-            .any(|uri| wildcard_prefix_match(uri, &target) || target.eq(uri));
-        if !valid_redirect {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Given 'post_logout_redirect_uri' is not allowed",
-            ));
-        }
+        client.validate_post_logout_redirect_uri(&target)?;
     }
 
     HtmlCached::Logout(session.csrf_token)
@@ -177,24 +156,12 @@ pub async fn post_logout_handle(
     if is_backchannel {
         Ok(HttpResponse::build(StatusCode::OK).finish())
     } else {
-        let mut loc =
-            post_logout_redirect_uri.unwrap_or_else(|| RauthyConfig::get().issuer.clone());
-
-        if let Some(state) = params.state {
-            if loc.contains('?') {
-                loc.push('&');
-            } else {
-                loc.push('?');
-            }
-            write!(
-                loc,
-                "state={}",
-                percent_encoding::percent_encode(
-                    state.as_bytes(),
-                    percent_encoding::NON_ALPHANUMERIC,
-                )
-            )?;
-        }
+        let loc = post_logout_redirect(
+            post_logout_redirect_uri
+                .as_deref()
+                .unwrap_or(&RauthyConfig::get().issuer),
+            params.state.as_deref(),
+        );
 
         let mut resp = HttpResponse::build(StatusCode::from_u16(302).unwrap())
             .append_header((header::LOCATION, loc))

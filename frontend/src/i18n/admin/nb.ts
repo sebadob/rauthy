@@ -536,6 +536,8 @@ export let I18nAdminNb: I18nAdmin = {
             fragment: 'En redirect-URI kan ikke inneholde et fragment (#)',
             reservedKey:
                 'En redirect-URI kan ikke inneholde spørringsparameteren "{{ KEY }}", fordi den settes av autorisasjonssvaret',
+            reservedKeyLogout:
+                'En redirect-URI etter utlogging kan ikke inneholde spørringsparameteren "{{ KEY }}", fordi den settes ved utlogging',
         },
     },
 };

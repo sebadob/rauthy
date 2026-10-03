@@ -13,7 +13,12 @@
     import type { ClientResponse, NewClientRequest } from '$api/types/clients.ts';
     import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
     import InputTags from '$lib5/form/InputTags.svelte';
-    import { invalidRedirectUrisMsg, redirectUriShapeErrorMsg } from '$utils/redirectUri';
+    import {
+        invalidPostLogoutRedirectUrisMsg,
+        invalidRedirectUrisMsg,
+        postLogoutRedirectUriShapeErrorMsg,
+        redirectUriShapeErrorMsg,
+    } from '$utils/redirectUri';
 
     let {
         clients,
@@ -46,7 +51,9 @@
             err = ta.common.nameExistsAlready;
             return;
         }
-        let redirectURIsErr = invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri);
+        let redirectURIsErr =
+            invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri) ||
+            invalidPostLogoutRedirectUrisMsg(postLogoutRedirectURIs, ta.validation.redirectUri);
         if (redirectURIsErr) {
             err = redirectURIsErr;
             return;
@@ -108,6 +115,7 @@
             label="Post Logout Redirect URIs"
             errMsg={ta.validation.uri}
             pattern={PATTERN_CLIENT_URI}
+            validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
         />
 
         <Button type="submit">

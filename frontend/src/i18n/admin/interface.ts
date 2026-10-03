@@ -477,6 +477,8 @@ export interface I18nAdmin {
             fragment: string;
             // `{{ KEY }}` is replaced with the reserved query parameter
             reservedKey: string;
+            // like `reservedKey`, for a post logout redirect URI
+            reservedKeyLogout: string;
         };
     };
 }

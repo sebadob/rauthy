@@ -1415,6 +1415,8 @@ impl Client {
         &self,
         post_logout_redirect_uri: &str,
     ) -> Result<(), ErrorResponse> {
+        validate_post_logout_redirect_uri_shape(post_logout_redirect_uri)?;
+
         let has_any = self
             .get_post_logout_uris()
             .unwrap_or_default()
@@ -1654,6 +1656,9 @@ fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
 }
 
 /// Matches wildcard redirect URIs without crossing a host/path boundary.
+///
+/// A `#` is not a boundary: redirect URIs and post-logout redirect URIs with a fragment are
+/// rejected by their shape check before they are matched.
 #[inline]
 pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
     let Some(prefix) = registered.strip_suffix('*') else {
@@ -1665,10 +1670,8 @@ pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
             rest.is_empty()
                 || rest.starts_with('/')
                 || rest.starts_with('?')
-                || rest.starts_with('#')
                 || prefix.ends_with('/')
                 || prefix.ends_with('?')
-                || prefix.ends_with('#')
         }
     }
 }
@@ -1683,6 +1686,10 @@ pub const RESERVED_REDIRECT_QUERY_KEYS: [&str; 6] = [
     "iss",
 ];
 
+/// Query keys a logout response sets itself: `state` is the only parameter appended to a
+/// `post_logout_redirect_uri` (OpenID Connect RP-Initiated Logout 1.0 §3).
+pub const RESERVED_POST_LOGOUT_QUERY_KEYS: [&str; 1] = ["state"];
+
 /// Rejects a `redirect_uri` with a fragment (RFC 6749 §3.1.2) or whose query already carries a
 /// reserved key - a wildcard registration would otherwise let `https://app/cb?iss=attacker` or
 /// `https://app/cb#?iss=attacker` pass the prefix match.
@@ -1695,20 +1702,45 @@ pub const RESERVED_REDIRECT_QUERY_KEYS: [&str; 6] = [
 /// or `error.description` into the plain key, a reserved key followed by `[` or `.` is rejected
 /// too, with `.` and ` ` compared as `_`. Keys with control characters are rejected as well.
 pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorResponse> {
-    if redirect_uri.contains('#') {
+    validate_uri_shape(redirect_uri, "redirect_uri", &RESERVED_REDIRECT_QUERY_KEYS)
+}
+
+/// The same checks as `validate_redirect_uri_shape()` for a `post_logout_redirect_uri`, with
+/// `state` as the only reserved query key, since nothing else is appended on logout.
+///
+/// A fragment would swallow the appended `state`, a `,` would split the comma-joined stored URIs,
+/// and a `state` already in the query of a wildcard match would let a crafted URI hand the client
+/// a second, attacker-chosen `state`.
+pub fn validate_post_logout_redirect_uri_shape(
+    post_logout_redirect_uri: &str,
+) -> Result<(), ErrorResponse> {
+    validate_uri_shape(
+        post_logout_redirect_uri,
+        "post_logout_redirect_uri",
+        &RESERVED_POST_LOGOUT_QUERY_KEYS,
+    )
+}
+
+/// `param` names the URI in error messages.
+fn validate_uri_shape(
+    uri: &str,
+    param: &str,
+    reserved_keys: &[&'static str],
+) -> Result<(), ErrorResponse> {
+    if uri.contains('#') {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "redirect_uri must not contain a fragment",
+            format!("{param} must not contain a fragment"),
         ));
     }
-    if redirect_uri.contains(',') {
+    if uri.contains(',') {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            "redirect_uri must not contain a comma",
+            format!("{param} must not contain a comma"),
         ));
     }
 
-    let Some((_, query)) = redirect_uri.split_once('?') else {
+    let Some((_, query)) = uri.split_once('?') else {
         return Ok(());
     };
 
@@ -1719,13 +1751,13 @@ pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorRespon
         if key.chars().any(char::is_control) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "redirect_uri must not contain control characters in a query key",
+                format!("{param} must not contain control characters in a query key"),
             ));
         }
-        if let Some(reserved) = reserved_query_key(&key) {
+        if let Some(reserved) = reserved_query_key(&key, reserved_keys) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                format!("redirect_uri must not contain the query parameter '{reserved}'"),
+                format!("{param} must not contain the query parameter '{reserved}'"),
             ));
         }
     }
@@ -1733,8 +1765,9 @@ pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorRespon
     Ok(())
 }
 
-/// Returns the reserved key a decoded query `key` would be folded into by common parsers.
-fn reserved_query_key(key: &str) -> Option<&'static str> {
+/// Returns the key of `reserved_keys` a decoded query `key` would be folded into by common
+/// parsers.
+fn reserved_query_key(key: &str, reserved_keys: &[&'static str]) -> Option<&'static str> {
     let key = key.trim().to_ascii_lowercase();
     // PHP turns `.` and ` ` into `_`, and `code[]` / `iss[0]` become arrays under the plain key
     let normalized = key.replace(['.', ' '], "_");
@@ -1742,12 +1775,13 @@ fn reserved_query_key(key: &str) -> Option<&'static str> {
         .split_once('[')
         .map_or(normalized.as_str(), |(base, _)| base);
 
-    RESERVED_REDIRECT_QUERY_KEYS
-        .into_iter()
+    reserved_keys
+        .iter()
+        .copied()
         .find(|reserved| *reserved == base)
         .or_else(|| {
             // `qs` with `allowDots` nests `iss.x` under `iss`
-            RESERVED_REDIRECT_QUERY_KEYS.into_iter().find(|reserved| {
+            reserved_keys.iter().copied().find(|reserved| {
                 key.strip_prefix(reserved)
                     .is_some_and(|rest| rest.starts_with(['[', '.']))
             })
@@ -1919,6 +1953,14 @@ impl TryFrom<EphemeralClientRequest> for Client {
                 )
             })?;
         }
+        for uri in value.post_logout_redirect_uris.iter().flatten() {
+            validate_post_logout_redirect_uri_shape(uri).map_err(|err| {
+                ErrorResponse::new(
+                    err.error,
+                    format!("Invalid post_logout_redirect_uri '{uri}': {}", err.message),
+                )
+            })?;
+        }
 
         let scopes = RauthyConfig::get()
             .vars
@@ -2030,6 +2072,7 @@ impl TryFrom<NewClientRequest> for Client {
                 for uri in post_logout_redirect_uris {
                     let trimmed = uri.trim();
                     if !trimmed.is_empty() {
+                        validate_post_logout_redirect_uri_shape(trimmed)?;
                         write!(uris, "{trimmed},")?;
                     }
                 }
@@ -2129,6 +2172,7 @@ impl Client {
         let post_logout_redirect_uri = req.post_logout_redirect_uri.filter(|uri| !uri.is_empty());
         if let Some(uri) = &post_logout_redirect_uri {
             validate_dyn_redirect_uri(uri)?;
+            validate_post_logout_redirect_uri_shape(uri)?;
         }
 
         Ok(Self {
@@ -2439,6 +2483,15 @@ pub(crate) mod tests {
             "https://app.example.com/cb"
         ));
         assert!(!wildcard_prefix_match("no-star", "no-star"));
+        // a `#` is no boundary, a URI with a fragment never gets here
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com/cb*",
+            "https://app.example.com/cb#x"
+        ));
+        assert!(!wildcard_prefix_match(
+            "https://app.example.com/#*",
+            "https://app.example.com/#x"
+        ));
     }
 
     #[test]
@@ -2876,6 +2929,152 @@ pub(crate) mod tests {
             let err = Client::try_from(req).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert!(err.message.contains(uri), "{uri}: {}", err.message);
+        }
+    }
+
+    #[test]
+    fn test_ephemeral_client_post_logout_redirect_uri_shape() {
+        for uri in [
+            "https://app.example.com/#/logout",
+            "https://app.example.com/bye?state=x",
+        ] {
+            let req = EphemeralClientRequest {
+                client_id: "https://app.example.com/client".to_string(),
+                client_name: None,
+                client_uri: None,
+                contacts: None,
+                redirect_uris: vec!["https://app.example.com/cb".to_string()],
+                post_logout_redirect_uris: Some(vec![uri.to_string()]),
+                grant_types: None,
+                default_max_age: None,
+                scope: None,
+                require_auth_time: None,
+                access_token_signed_response_alg: None,
+                id_token_signed_response_alg: None,
+                allowed_resources: None,
+            };
+            let err = Client::try_from(req).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert!(
+                err.message.contains("post_logout_redirect_uri"),
+                "{uri}: {}",
+                err.message
+            );
+            assert!(err.message.contains(uri), "{uri}: {}", err.message);
+        }
+    }
+
+    #[test]
+    fn test_validate_post_logout_redirect_uri_shape() {
+        assert_eq!(RESERVED_POST_LOGOUT_QUERY_KEYS, ["state"]);
+
+        for uri in [
+            "https://app.example.com/",
+            "https://app.example.com/bye?foo=bar&x=y",
+            "https://app.example.com/*",
+            // only `state` is set on logout, so the authorization response keys are fine here
+            "https://app.example.com/bye?code=x&iss=y&error=z&error_description=a&error_uri=b",
+            "https://app.example.com/bye?states=x&state_x=1&x=state",
+            "https://app.example.com/bye?x%5Bstate%5D=1",
+        ] {
+            assert!(
+                validate_post_logout_redirect_uri_shape(uri).is_ok(),
+                "{uri}"
+            );
+        }
+
+        // `state`, including the forms that common server-side parsers fold into it
+        for uri in [
+            "https://app.example.com/bye?state=x",
+            "https://app.example.com/bye?foo=bar&state=x",
+            "https://app.example.com/bye?foo=bar;state=x",
+            "https://app.example.com/*?state=x",
+            "https://app.example.com/bye?state",
+            "https://app.example.com/bye?STATE=x",
+            "https://app.example.com/bye?%73tate=x",
+            "https://app.example.com/bye?+state=x",
+            "https://app.example.com/bye?state%5B%5D=x",
+            "https://app.example.com/bye?state.x=y",
+        ] {
+            let err = validate_post_logout_redirect_uri_shape(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_eq!(
+                err.message,
+                "post_logout_redirect_uri must not contain the query parameter 'state'",
+                "{uri}"
+            );
+        }
+
+        for (uri, msg) in [
+            (
+                "https://app.example.com/#/bye",
+                "post_logout_redirect_uri must not contain a fragment",
+            ),
+            (
+                "https://app.example.com/bye?foo=bar#state=x",
+                "post_logout_redirect_uri must not contain a fragment",
+            ),
+            (
+                "https://app.example.com/bye?x=,https://evil.example/",
+                "post_logout_redirect_uri must not contain a comma",
+            ),
+            (
+                "https://app.example.com/bye?%09x=1",
+                "post_logout_redirect_uri must not contain control characters in a query key",
+            ),
+        ] {
+            let err = validate_post_logout_redirect_uri_shape(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_eq!(err.message, msg, "{uri}");
+        }
+    }
+
+    #[test]
+    fn test_validate_post_logout_redirect_uri() {
+        let mut client = redirect_test_client("logout", "https://app.example.com/cb");
+        assert!(
+            client
+                .validate_post_logout_redirect_uri("https://app.example.com/")
+                .is_err()
+        );
+
+        client.post_logout_redirect_uris = Some(
+            "https://app.example.com/bye,https://app.example.com/wild/*,https://app.example.com/#/legacy"
+                .to_string(),
+        );
+
+        for uri in [
+            "https://app.example.com/bye",
+            "https://app.example.com/wild/",
+            "https://app.example.com/wild/x?foo=bar",
+            "https://app.example.com/wild/x?code=x",
+        ] {
+            assert!(
+                client.validate_post_logout_redirect_uri(uri).is_ok(),
+                "{uri}"
+            );
+        }
+
+        // these pass the wildcard prefix match or match a URI stored before fragments were
+        // rejected, and must be rejected by the shape check
+        for uri in [
+            "https://app.example.com/wild/x?state=x",
+            "https://app.example.com/wild/x#/route",
+            "https://app.example.com/wild/x?foo=bar#?state=x",
+            "https://app.example.com/#/legacy",
+        ] {
+            let err = client.validate_post_logout_redirect_uri(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_ne!(err.message, "Invalid post_logout_redirect_uri", "{uri}");
+        }
+
+        for uri in [
+            "https://app.example.com/other",
+            "https://app.example.com/wildx",
+            "https://app.example.com.evil.example/wild/",
+        ] {
+            let err = client.validate_post_logout_redirect_uri(uri).unwrap_err();
+            assert_eq!(err.message, "Invalid post_logout_redirect_uri", "{uri}");
         }
     }
 

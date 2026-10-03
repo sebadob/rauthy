@@ -1,5 +1,7 @@
 use crate::database::DB;
-use crate::entity::clients::validate_redirect_uri_shape;
+use crate::entity::clients::{
+    validate_post_logout_redirect_uri_shape, validate_redirect_uri_shape,
+};
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
@@ -18,22 +20,31 @@ use rauthy_error::ErrorResponse;
 use tracing::info;
 use zeroize::Zeroize;
 
-/// Validates the `redirect_uris` of all bootstrap clients. This must run before anything is
-/// written during bootstrap, so that an invalid config fails cleanly and can be fixed.
+/// Validates the `redirect_uris` and `post_logout_redirect_uris` of all bootstrap clients. This
+/// must run before anything is written during bootstrap, so that an invalid config fails cleanly
+/// and can be fixed.
 pub async fn validate() -> Result<(), ErrorResponse> {
     let clients = bootstrap_data!(Client, "clients");
-    if let Err(err) = validate_redirect_uris(&clients) {
+    if let Err(err) = validate_client_uris(&clients) {
         panic!("Validation error when bootstrapping clients: {err}");
     }
     Ok(())
 }
 
-fn validate_redirect_uris(clients: &[Client]) -> Result<(), String> {
+fn validate_client_uris(clients: &[Client]) -> Result<(), String> {
     for client in clients {
         for uri in &client.redirect_uris {
             if let Err(err) = validate_redirect_uri_shape(uri) {
                 return Err(format!(
                     "client '{}' has an invalid redirect_uri '{uri}': {}",
+                    client.id, err.message
+                ));
+            }
+        }
+        for uri in client.post_logout_redirect_uris.iter().flatten() {
+            if let Err(err) = validate_post_logout_redirect_uri_shape(uri) {
+                return Err(format!(
+                    "client '{}' has an invalid post_logout_redirect_uri '{uri}': {}",
                     client.id, err.message
                 ));
             }
@@ -264,7 +275,7 @@ mod tests {
     #[test]
     fn test_validate_redirect_uris() {
         let valid = || client("valid", "https://localhost/other?foo=bar");
-        assert!(validate_redirect_uris(&[valid()]).is_ok());
+        assert!(validate_client_uris(&[valid()]).is_ok());
 
         // an invalid client anywhere in the list fails the whole set before any write
         for uri in [
@@ -275,8 +286,36 @@ mod tests {
             "https://localhost/cb,https://localhost/cb?iss=x",
         ] {
             let clients = [valid(), client("invalid", uri)];
-            let err = validate_redirect_uris(&clients).unwrap_err();
+            let err = validate_client_uris(&clients).unwrap_err();
             assert!(err.contains("'invalid'"), "{err}");
+            assert!(err.contains(uri), "{err}");
+        }
+    }
+
+    #[test]
+    fn test_validate_post_logout_redirect_uris() {
+        let with_post_logout = |id: &str, uri: &str| {
+            let mut c = client(id, "https://localhost/other");
+            c.post_logout_redirect_uris =
+                Some(vec!["https://localhost/".to_string(), uri.to_string()]);
+            c
+        };
+
+        // only `state` is reserved for a post-logout redirect URI
+        let valid = || with_post_logout("valid", "https://localhost/bye?foo=bar&code=x&iss=y");
+        assert!(validate_client_uris(&[valid()]).is_ok());
+
+        for uri in [
+            "https://localhost/#/bye",
+            "https://localhost/bye?state=x",
+            "https://localhost/bye?STATE%5B%5D=x",
+            // would be split into `https://localhost/bye?a=` and `state=x` once stored
+            "https://localhost/bye?a=,state=x",
+        ] {
+            let clients = [valid(), with_post_logout("invalid", uri)];
+            let err = validate_client_uris(&clients).unwrap_err();
+            assert!(err.contains("'invalid'"), "{err}");
+            assert!(err.contains("post_logout_redirect_uri"), "{err}");
             assert!(err.contains(uri), "{err}");
         }
     }
