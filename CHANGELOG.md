@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.37.0
 
 ### BREAKING - VERY IMPORTANT (if you run a HA cluster)
 

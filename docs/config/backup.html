@@ -37,6 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -93,10 +94,13 @@
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
@@ -147,7 +151,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -185,16 +194,16 @@ backup_cron = "0 30 2 * * * *"
 # Backups older than the configured days will be cleaned up on S3
 # after the backup cron job `backup_cron`.
 #
-# default: 30
-# overwritten by: HQL_BACKUP_KEEP_DAYS
-backup_keep_days = 30
+# default: "30d'
+# overwritten by: HQL_BACKUP_KEEP_FOR
+backup_keep_for = "30d"
 
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
 #
-# default: 3
-# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-backup_keep_days_local = 3
+# default: "3d"
+# overwritten by: HQL_BACKUP_KEEP_FOR_LOCAL
+backup_keep_days_local = "3d"
 </code></pre>
 <p>All these backups are written inside the pod / container into <code>data/state_machine/backups</code>.</p>
 <p>This difference makes it possible that you could add a second volume mount to the container.<br />
@@ -313,6 +322,7 @@ HQL_BACKUP_RESTORE = ""
         <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+
 
 
     </div>
