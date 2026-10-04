@@ -1,8 +1,7 @@
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
 use rauthy_api_types::oidc::GrantType;
-use rauthy_data::entity::clients::{
-    Client, validate_post_logout_redirect_uri_shape, validate_redirect_uri_shape,
-};
+use rauthy_common::validation::validate_redirect_uri;
+use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 
@@ -27,10 +26,10 @@ pub async fn update_client(
     client.confidential = client_req.confidential;
 
     for uri in &client_req.redirect_uris {
-        validate_redirect_uri_shape(uri)?;
+        validate_redirect_uri(uri, true, true)?;
     }
     for uri in client_req.post_logout_redirect_uris.iter().flatten() {
-        validate_post_logout_redirect_uri_shape(uri)?;
+        validate_redirect_uri(uri, true, true)?;
     }
     client.redirect_uris = client_req.redirect_uris.join(",");
     client.post_logout_redirect_uris = client_req.post_logout_redirect_uris.map(|u| u.join(","));

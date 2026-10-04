@@ -192,7 +192,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         .await?;
     check_status(res, 200).await?;
 
-    for (bad_redirect_uri, reserved) in [
+    for (bad_redirect_uri, _reserved) in [
         (format!("{good_redirect_uri}&iss=x"), "iss"),
         (format!("{good_redirect_uri}&code=x"), "code"),
         (format!("{good_redirect_uri}&state"), "state"),
@@ -210,18 +210,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
             assert_eq!(res.status(), 400, "{bad_redirect_uri} / prompt: '{prompt}'");
             assert!(res.headers().get(reqwest::header::LOCATION).is_none());
             let body = res.text().await?;
-            // the message is HTML-escaped in the error page
-            let msg = "redirect_uri must not contain the query parameter ";
-            assert!(
-                [
-                    format!("{msg}'{reserved}'"),
-                    format!("{msg}&#x27;{reserved}&#x27;"),
-                    format!("{msg}&#39;{reserved}&#39;"),
-                ]
-                .iter()
-                .any(|m| body.contains(m)),
-                "{bad_redirect_uri}: {body}"
-            );
+            assert!(body.contains("`redirect_uri` must not contain reserved query param"));
         }
     }
 
@@ -306,7 +295,7 @@ async fn test_authorize_rejects_fragment_in_redirect_uri() -> Result<(), Box<dyn
         .get(authorize_url_s256(client_id, &format!("{wildcard}cb"), ""))
         .send()
         .await?;
-    check_status(res, 200).await?;
+    assert_eq!(res.status().as_u16(), 200);
 
     for bad_redirect_uri in [
         format!("{wildcard}cb#/callback?iss=https%3A%2F%2Fattacker.example%2F"),
@@ -321,7 +310,7 @@ async fn test_authorize_rejects_fragment_in_redirect_uri() -> Result<(), Box<dyn
             assert!(res.headers().get(reqwest::header::LOCATION).is_none());
             let body = res.text().await?;
             assert!(
-                body.contains("redirect_uri must not contain a fragment"),
+                body.contains("`redirect_uri` must not contain any of: # ,"),
                 "{body}"
             );
         }

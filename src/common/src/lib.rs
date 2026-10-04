@@ -10,6 +10,7 @@ pub mod password_hasher;
 pub mod regex;
 pub mod sanitize_html;
 pub mod utils;
+pub mod validation;
 
 pub static DB_TYPE: OnceLock<DbType> = OnceLock::new();
 pub static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();

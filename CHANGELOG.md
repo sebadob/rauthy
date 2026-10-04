@@ -748,15 +748,16 @@ In addition, you can now configure the time when users will be reminded of an ex
 
 ```toml
 [email.jobs]
-# Configure the number of days when to send a reminder E-Mail
+# Configure the time left when to send a reminder E-Mail
 # before a password expiration for a user password.
 #
 # NOTE: When you change this value for an already running
 # instance, users might receive duplicate emails.
 #
-# default: 10
-# overwritten by: EMAIL_PWD_EXP_DAYS
-password_exp_days = 10
+# type: duration
+# default: '10d'
+# overwritten by: EMAIL_PWD_EXP
+password_exp = '10d'
 ```
 
 [#1721](https://github.com/sebadob/rauthy/pull/1721)
