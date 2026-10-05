@@ -42,27 +42,28 @@ pub struct AuthCode {
     /// No `serde` skip/default attributes here: auth codes are cached with bincode (a
     /// positional, non-self-describing format), so the field must always be present.
     pub resource: Option<String>,
-    /// The opaque `state` from the authorization request, bound to this code so that consumers
-    /// can verify a presented `state` belongs to exactly this code. No `serde` skip/default
-    /// attributes here: auth codes are cached with bincode (a positional, non-self-describing
-    /// format), so the field must always be present.
+    /// The opaque `state` sha256 hash from the authorization request, bound to this code so that
+    /// consumers can verify a presented `state` belongs to exactly this code. No `serde`
+    /// skip/default attributes here: auth codes are cached with bincode (a positional,
+    /// non-self-describing format), so the field must always be present.
     ///
     /// Note: This is only used for Forward Auth, because in this case, we are also our own client.
     /// We will not save the state during normal logins, because it does not make any sense. We will
     /// not get anything from the client we could compare it to.
-    pub state: Option<String>,
+    pub state: Option<Vec<u8>>,
 }
 
 impl Debug for AuthCode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "AuthCode {{ id: {}(...), exp: {}, client_id: {}, user_id: {}, scopes: {:?} }}",
+            "AuthCode {{ id: {}(...), exp: {}, client_id: {}, user_id: {}, scopes: {:?}, state: {:?} }}",
             &self.id[..5],
             self.exp,
             self.client_id,
             self.user_id,
-            self.scopes
+            self.scopes,
+            self.state,
         )
     }
 }
@@ -208,7 +209,7 @@ impl AuthCode {
         nonce: Option<String>,
         scopes: Vec<String>,
         resource: Option<String>,
-        state: Option<String>,
+        state: Option<Vec<u8>>,
         lifetime: Duration,
     ) -> Self {
         debug_assert!(!redirect_uri.is_empty());

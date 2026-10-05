@@ -71,6 +71,7 @@
     let nonce = useParam('nonce').get();
     let idpHint = useParam('idp_hint').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
+    let fwda = useParam('fwda').get() === 'true';
 
     let refPassword: undefined | HTMLInputElement = $state();
 
@@ -246,6 +247,7 @@
             state: stateParam,
             nonce: nonce,
             scopes,
+            fwda,
         };
         if (
             challenge &&
@@ -304,6 +306,7 @@
             nonce: nonce,
             scopes,
             resident_key_token: residentKeyToken,
+            fwda,
         };
         if (
             challenge &&
@@ -484,6 +487,7 @@
             provider_id: id,
             pkce_challenge: '',
             pow: '',
+            fwda,
             ...(isAtproto && { handle: atprotoHandle }),
         };
         execProviderLogin(payload).then(errMsg => {

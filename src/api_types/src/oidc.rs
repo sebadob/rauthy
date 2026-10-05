@@ -288,6 +288,9 @@ pub struct LoginRequest {
     pub resource: Option<String>,
     #[validate(length(max = 64))]
     pub resident_key_token: Option<String>,
+    /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
+    /// do additional state lookup checks.
+    pub fwda: Option<bool>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -322,6 +325,9 @@ pub struct LoginRefreshRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
     #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
     pub resource: Option<String>,
+    /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
+    /// do additional state lookup checks.
+    pub fwda: Option<bool>,
 }
 
 #[derive(Default, Deserialize, Validate, ToSchema, IntoParams)]

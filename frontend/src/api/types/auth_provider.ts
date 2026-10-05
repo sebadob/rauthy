@@ -84,6 +84,7 @@ export interface ProviderLoginRequest {
 
     /// Validation: PATTERN_ATPROTO_ID
     handle?: string;
+    fwda?: boolean;
 }
 
 export interface ProviderLookupRequest {
