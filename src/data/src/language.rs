@@ -23,7 +23,7 @@ pub enum Language {
 }
 
 impl Language {
-    fn all_available<'a>() -> [&'a str; 18] {
+    pub fn all_available() -> [&'static str; 18] {
         [
             "en", "en-US", "de", "de-DE", "fr", "fr-FR", "ko", "nb", "nb-NO", "no-NO", "nl",
             "nl-NL", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",

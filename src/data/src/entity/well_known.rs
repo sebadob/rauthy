@@ -6,7 +6,6 @@ use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::CACHE_TTL_APP;
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
-use strum::IntoEnumIterator;
 use utoipa::ToSchema;
 
 /// The struct for the `.well-known` endpoint for automatic OIDC discovery.
@@ -112,6 +111,13 @@ impl WellKnown {
         let end_session_endpoint = format!("{issuer}oidc/logout");
         let jwks_uri = format!("{issuer}oidc/certs");
 
+        // Filter all available languages
+        let langs = &RauthyConfig::get().vars.i18n.filter_lang_common;
+        let ui_locales_supported = Language::all_available()
+            .into_iter()
+            .filter(|l| langs.iter().any(|f| l.starts_with(&f.as_ref()[..2])))
+            .collect::<Vec<&str>>();
+
         WellKnown {
             issuer: String::from(issuer),
             authorization_endpoint,
@@ -159,7 +165,7 @@ impl WellKnown {
             code_challenge_methods_supported: ["plain", "S256"],
             dpop_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA", "Ed25519"],
             service_documentation: "https://sebadob.github.io/rauthy/",
-            ui_locales_supported: Language::iter().map(|l| l.as_str()).collect(),
+            ui_locales_supported,
             claims_parameter_supported: true,
             authorization_response_iss_parameter_supported: true,
             client_id_metadata_document_supported: true,
