@@ -71,7 +71,7 @@
     let nonce = useParam('nonce').get();
     let idpHint = useParam('idp_hint').get();
     let scopes = useParam('scope').get()?.split(' ') || [];
-    let fwda = useParam('fwda').get() === 'true';
+    let fwda = useParam('fwda').get() === 'true' || undefined;
 
     let refPassword: undefined | HTMLInputElement = $state();
 
