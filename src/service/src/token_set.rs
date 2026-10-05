@@ -359,6 +359,7 @@ impl TokenSet {
             email: None,
             email_verified: None,
             preferred_username: None,
+            name: None,
             given_name: None,
             family_name: None,
             address: None,
@@ -383,6 +384,18 @@ impl TokenSet {
         if scope.contains("profile") {
             claims.given_name = Some(user.given_name.as_str());
             claims.family_name = user.family_name.as_deref();
+
+            let mut name = user.given_name.clone();
+            if let Some(family) = &user.family_name {
+                if !name.is_empty() {
+                    name.push(' ');
+                }
+                name.push_str(family);
+            }
+            if !name.is_empty() {
+                claims.name = Some(name);
+            }
+
             claims.locale = Some(user.language.as_str());
 
             if let Some(uv) = &user_values {
