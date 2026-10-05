@@ -172,6 +172,8 @@ pub struct JwtIdClaims<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preferred_username: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub given_name: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub family_name: Option<&'a str>,
