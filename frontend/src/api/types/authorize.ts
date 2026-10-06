@@ -26,6 +26,7 @@ export interface LoginRequest {
     resource?: string;
     /// Validation: max 64
     resident_key_token?: string;
+    fwda?: boolean;
 }
 
 export interface LoginRefreshRequest {
@@ -45,6 +46,7 @@ export interface LoginRefreshRequest {
     /// RFC 8707 resource indicator forwarded from the authorization request.
     /// Validation: PATTERN_RESOURCE
     resource?: string;
+    fwda?: boolean;
 }
 
 export interface RequestResetRequest {

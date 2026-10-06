@@ -157,6 +157,9 @@ pub struct ProviderLoginRequest {
         code = "^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|@?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$"
     ))]
     pub handle: Option<String>,
+    /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
+    /// do additional state lookup checks.
+    pub fwda: Option<bool>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

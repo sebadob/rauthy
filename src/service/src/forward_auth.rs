@@ -4,6 +4,7 @@ use actix_web::{HttpRequest, HttpResponse};
 use chrono::Utc;
 use rauthy_api_types::forward_auth::{ForwardAuthCallbackParams, ForwardAuthParams};
 use rauthy_common::constants::TRUSTED_PROXIES;
+use rauthy_common::sha256;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::clients::Client;
@@ -119,7 +120,7 @@ pub async fn get_forward_auth_client(
             percent_encoding::NON_ALPHANUMERIC,
         );
         let location = format!(
-            "{iss}oidc/authorize?client_id={cid}&redirect_uri={redirect_uri_enc}&response_type=code&state={state}"
+            "{iss}oidc/authorize?client_id={cid}&redirect_uri={redirect_uri_enc}&response_type=code&state={state}&fwda=true"
         );
 
         let status =
@@ -250,10 +251,17 @@ pub async fn get_forward_auth_client_callback(
     // Bind the presented `state` to this exact authorization code. Without this check, an
     // attacker on the same proxy IP could pair their own valid `state` with a victim's
     // unconsumed auth code.
-    if auth_code.state.as_deref() != Some(params.state.as_str()) {
+    if let Some(st) = auth_code.state {
+        if st.as_slice() != sha256!(params.state.as_bytes()) {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "The `state` does not match this authorization code",
+            ));
+        }
+    } else {
         return Err(ErrorResponse::new(
-            ErrorResponseType::Forbidden,
-            "The `state` does not match this authorization code",
+            ErrorResponseType::BadRequest,
+            "The internal `state` binding is missing",
         ));
     }
     let now = Utc::now().timestamp();

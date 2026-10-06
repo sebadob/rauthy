@@ -656,8 +656,8 @@ pub struct AuthProviderCallback {
 
     pub provider_id: String,
 
-    // TODO add a nonce upstream as well? -> improvement?
     pub pkce_challenge: String,
+    pub is_forward_auth: Option<bool>,
 }
 
 // CRUD

@@ -47,6 +47,7 @@ pub async fn login_start<'a>(
         provider_id: provider.id,
 
         pkce_challenge: payload.pkce_challenge,
+        is_forward_auth: payload.fwda,
     };
 
     let mut location = format!(

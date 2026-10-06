@@ -5,6 +5,7 @@ use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
 use rauthy_api_types::oidc::{LoginRefreshRequest, LoginRequest};
 use rauthy_common::constants::COOKIE_MFA;
+use rauthy_common::sha256;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
@@ -12,6 +13,7 @@ use rauthy_data::entity::auth_providers::ProviderMfaLogin;
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
+use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
@@ -212,6 +214,7 @@ pub async fn post_authorize(
             header_origin,
             require_webauthn,
             require_otp,
+            is_forward_auth: req_data.fwda,
         },
         Some(user_needs_mfa),
         None,
@@ -273,6 +276,7 @@ pub async fn post_authorize_refresh(
             header_origin,
             require_webauthn,
             require_otp,
+            is_forward_auth: req_data.fwda,
         },
         None,
         None,
@@ -291,6 +295,7 @@ pub(crate) struct AuthorizeData {
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub require_webauthn: bool,
     pub require_otp: bool,
+    pub is_forward_auth: Option<bool>,
 }
 
 /// Expects the user checks already been done, but does all the necessary client validations.
@@ -339,6 +344,30 @@ pub(crate) async fn finish_authorize(
     }
     let needs_user_update = UserValuesValidator::does_user_need_update(&user, &client.id).await?;
 
+    let state = data.state.as_deref();
+    let state_hash = if data.is_forward_auth == Some(true) {
+        let state = state.unwrap_or_default();
+        let cb = ForwardAuthCallbackState::try_from(state)?;
+        if client.id != cb.client_id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Mismatch in client_id for forward auth state",
+            ));
+        }
+        if cb.peer_ip.to_string().as_str() != session.remote_ip.as_deref().unwrap_or_default() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Mismatch in peer_ip for forward auth state",
+            ));
+        }
+        Some(sha256!(state.as_bytes()).to_vec())
+    } else {
+        // We do NOT save the state here on purpose. It exists on `AuthCode` only to harden
+        // forward auth logins, where we manage the state, because we are also our own client.
+        // The `state` is for hardening on the client side, which this function does not belong to.
+        None
+    };
+
     let code = AuthCode::new(
         user.id.clone(),
         client.id,
@@ -349,10 +378,7 @@ pub(crate) async fn finish_authorize(
         data.nonce,
         scopes,
         data.resource,
-        // We do NOT save the state here on purpose. It exists on `AuthCode` only to harden
-        // forward auth logins, where we manage the state, because we are also our own client.
-        // The `state` is for hardening on the client side, which this function does not belong to.
-        None,
+        state_hash,
         code_lifetime,
     );
     // safe downcase - originated from u32 and then only added tiny amounts

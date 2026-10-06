@@ -135,7 +135,7 @@ nginx-start:
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    rm assets/nginx/access.log
+    test -f assets/nginx/access.log && rm assets/nginx/access.log
     touch assets/nginx/access.log
 
     {{ docker }} run -it --rm \
@@ -389,7 +389,8 @@ build-wasm:
     wasm-pack build -d ../../frontend/src/wasm/md --no-pack --out-name md --features md
 
 # Build the final container image.
-build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui fido-mds-prep
+#build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui fido-mds-prep
+build image="ghcr.io/sebadob/rauthy" push="push": build-wasm build-ui
     #!/usr/bin/env bash
     set -euxo pipefail
 
