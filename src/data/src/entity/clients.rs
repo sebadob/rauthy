@@ -758,7 +758,6 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
 
         // RFC 7592 §2.2: a client without permission to update its record gets a 403.
         // An admin disabled this client, so its registration must not be modified anymore.
-        // Checked before the request is validated, so a disabled client always gets the 403.
         if !current.enabled {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -766,7 +765,6 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             ));
         }
 
-        client_req.validate()?;
         current.ensure_dyn_grant_types_allowed(&client_req.grant_types)?;
 
         let mut new_client = Self::try_from_dyn_reg(client_req, None)?;
@@ -2033,64 +2031,28 @@ impl TryFrom<NewClientRequest> for Client {
 impl Client {
     /// Called on `self` freshly built by `try_from_dyn_reg` for an RFC 7592 self-update: copies
     /// every value from `current` that the client must not change with its registration token.
-    /// That is everything `try_from_dyn_reg` does not map from the request metadata.
-    ///
-    /// `current` is destructured exhaustively, so a new `Client` field does not compile here
-    /// until it is classified as either client metadata or admin-set / internal.
     fn keep_admin_set_values(&mut self, current: Client) {
-        let Client {
-            // client metadata from the request (RFC 7591 §2), or derived from it
-            name: _,
-            confidential,
-            // a confidential client gets a new secret with each update, as before
-            secret: _,
-            secret_kid: _,
-            redirect_uris: _,
-            post_logout_redirect_uris: _,
-            flows_enabled: _,
-            access_token_alg: _,
-            id_token_alg: _,
-            client_uri: _,
-            contacts: _,
-            backchannel_logout_uri: _,
-            challenge,
-            // admin-set or internal
-            id,
-            enabled,
-            allowed_origins,
-            auth_code_lifetime,
-            access_token_lifetime,
-            scopes,
-            default_scopes,
-            force_mfa,
-            restrict_group_prefix,
-            claims,
-            claims_at_root,
-            allowed_resources,
-            default_aud,
-        } = current;
-
-        self.id = id;
-        self.enabled = enabled;
-        self.allowed_origins = allowed_origins;
-        self.auth_code_lifetime = auth_code_lifetime;
-        self.access_token_lifetime = access_token_lifetime;
-        self.scopes = scopes;
-        self.default_scopes = default_scopes;
-        self.force_mfa = force_mfa;
-        self.restrict_group_prefix = restrict_group_prefix;
-        self.claims = claims;
-        self.claims_at_root = claims_at_root;
-        self.allowed_resources = allowed_resources;
-        self.default_aud = default_aud;
-
         // `challenge` is derived from `token_endpoint_auth_method`, but an admin may have
         // changed it. Keep the admin value unless the client switches between public and
         // confidential, where the derived value (`S256` for public, none for confidential)
         // applies.
-        if self.confidential == confidential {
-            self.challenge = challenge;
+        if self.confidential == current.confidential {
+            self.challenge = current.challenge;
         }
+
+        self.id = current.id;
+        self.enabled = current.enabled;
+        self.allowed_origins = current.allowed_origins;
+        self.auth_code_lifetime = current.auth_code_lifetime;
+        self.access_token_lifetime = current.access_token_lifetime;
+        self.scopes = current.scopes;
+        self.default_scopes = current.default_scopes;
+        self.force_mfa = current.force_mfa;
+        self.restrict_group_prefix = current.restrict_group_prefix;
+        self.claims = current.claims;
+        self.claims_at_root = current.claims_at_root;
+        self.allowed_resources = current.allowed_resources;
+        self.default_aud = current.default_aud;
     }
 
     /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one

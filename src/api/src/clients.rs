@@ -270,13 +270,13 @@ pub async fn put_clients_dyn(
     if !RauthyConfig::get().vars.dynamic_clients.enable {
         return Ok(HttpResponse::NotFound().finish());
     }
+    payload.validate()?;
 
     let bearer = helpers::get_bearer_token_from_header(req.headers())?;
     let id = id.into_inner();
     let client_dyn = ClientDyn::find(id.clone()).await?;
     client_dyn.validate_token(&bearer)?;
 
-    // `update_dynamic` validates the payload, after it rejected a disabled client with a 403
     let resp = Client::update_dynamic(payload, client_dyn).await?;
     Ok(HttpResponse::Ok().json(resp))
 }

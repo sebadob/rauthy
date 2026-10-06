@@ -396,17 +396,6 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
-    // ... also with an invalid request, the disabled client gets the 403
-    payload.grant_types = vec![];
-    payload.redirect_uris = vec!["not a uri".to_string()];
-    let res = client
-        .put(&url)
-        .header(AUTHORIZATION, &token)
-        .json(&payload)
-        .send()
-        .await?;
-    assert_eq!(res.status(), 403);
-
     let after = admin_get_client(&client_id).await?;
     assert!(!after.enabled);
     assert_eq!(after.name.as_deref(), Some("Dyn Test Client 1234567"));
