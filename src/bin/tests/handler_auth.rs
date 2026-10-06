@@ -1,8 +1,8 @@
 use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
     authorization_response_params_decoded, check_status, code_state_from_headers,
-    cookie_csrf_headers_from_res, decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
-    init_client_bcl_uri,
+    cookie_csrf_headers_from_res, decode_claims, get_auth_headers, get_backend_url, get_issuer,
+    get_solved_pow, init_client_bcl_uri,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
