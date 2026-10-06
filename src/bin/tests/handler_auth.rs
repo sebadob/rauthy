@@ -1,15 +1,15 @@
 use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
     authorization_response_params_decoded, check_status, code_state_from_headers,
-    cookie_csrf_headers_from_res, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
-    init_client_bcl_uri,
+    cookie_csrf_headers_from_res, decode_claims, get_auth_headers, get_backend_url, get_issuer,
+    get_solved_pow, init_client_bcl_uri,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
 use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
-use rauthy_api_types::clients::{NewClientRequest, UpdateClientRequest};
+use rauthy_api_types::clients::{ClientResponse, NewClientRequest, UpdateClientRequest};
 use rauthy_api_types::oidc::{
     GrantType, JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest,
     TokenRevocationRequest, TokenValidationRequest,
@@ -467,6 +467,10 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
     assert_eq!(ts.expires_in, 60);
+    let scope = ts.scope.as_deref().expect("scope in token response");
+    assert!(scope.split_whitespace().any(|s| s == "openid"));
+    let access_claims = decode_claims(&ts.access_token);
+    assert_eq!(ts.scope.as_deref(), access_claims["scope"].as_str());
 
     // verify 'nonce' existing in id token
     let id_token = ts.id_token.unwrap();
@@ -694,6 +698,20 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     assert!(ts.id_token.is_none());
     assert!(ts.refresh_token.is_none());
 
+    // client_credentials always grants the client's `default_scopes`
+    assert!(ts.scope.is_some());
+    let res = client
+        .get(format!("{}/clients/{}", backend_url, CLIENT_ID))
+        .headers(get_auth_headers().await?)
+        .send()
+        .await?;
+    let res = check_status(res, 200).await?;
+    let client_res = res.json::<ClientResponse>().await?;
+    let default_scopes = client_res.default_scopes.join(" ");
+    assert_eq!(ts.scope.as_deref(), Some(default_scopes.as_str()));
+    let access_claims = decode_claims(&ts.access_token);
+    assert_eq!(ts.scope.as_deref(), access_claims["scope"].as_str());
+
     validate_token(ts.access_token.clone(), None).await?;
 
     Ok(())
@@ -835,6 +853,9 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert!(!ts.refresh_token.as_ref().unwrap().is_empty());
     // test token is valid for only 60 seconds to make the refresh token valid immediately
     assert_eq!(ts.expires_in, 60);
+    let claims = decode_claims(&ts.access_token);
+    assert!(ts.scope.is_some());
+    assert_eq!(ts.scope.as_deref(), claims["scope"].as_str());
 
     // validate against the backend
     validate_token(ts.access_token.to_owned(), None).await?;
@@ -866,6 +887,9 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert!(new_ts.refresh_token.is_some());
     assert!(!new_ts.refresh_token.as_ref().unwrap().is_empty());
     assert_eq!(new_ts.expires_in, 60);
+    let new_claims = decode_claims(&new_ts.access_token);
+    assert!(new_ts.scope.is_some());
+    assert_eq!(new_ts.scope.as_deref(), new_claims["scope"].as_str());
 
     assert_ne!(ts.refresh_token, new_ts.refresh_token);
     assert_ne!(ts.access_token, new_ts.access_token);

@@ -193,7 +193,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             AuthTime::now(),
             None,
             code.nonce.map(TokenNonce),
-            code.scopes.map(TokenScopes),
+            code.scopes.map(TokenScopes::new),
             None,
             // resource indicators are not supported for the device flow yet
             None,
