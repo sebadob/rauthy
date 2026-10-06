@@ -28,6 +28,11 @@ pub enum ErrorResponseType {
     /// token exchange for a `subject_token` / `actor_token` that cannot be accepted.
     #[serde(rename = "invalid_grant")]
     InvalidGrant,
+    /// RFC 7591 §3.2.2: the value of one or more client metadata fields is invalid or not
+    /// allowed. Serialized as the RFC error code `invalid_client_metadata`. Used by the
+    /// RFC 7592 self-update of a dynamic client that requests a grant type it does not have.
+    #[serde(rename = "invalid_client_metadata")]
+    InvalidClientMetadata,
     /// RFC 8707 §2: the requested `resource` is invalid, unknown, malformed, or not
     /// allowed for the client. Serialized as the RFC error code `invalid_target`.
     #[serde(rename = "invalid_target")]
