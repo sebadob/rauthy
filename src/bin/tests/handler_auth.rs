@@ -853,6 +853,9 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert!(!ts.refresh_token.as_ref().unwrap().is_empty());
     // test token is valid for only 60 seconds to make the refresh token valid immediately
     assert_eq!(ts.expires_in, 60);
+    let claims = decode_claims(&ts.access_token);
+    assert!(ts.scope.is_some());
+    assert_eq!(ts.scope.as_deref(), claims["scope"].as_str());
 
     // validate against the backend
     validate_token(ts.access_token.to_owned(), None).await?;

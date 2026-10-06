@@ -820,6 +820,7 @@ impl TokenSet {
             auth_code_flow,
         )
         .await?;
+        let scope = scope.into_owned();
         let refresh_token = if client.allow_refresh_token() {
             Some(
                 Self::build_refresh_token(
@@ -828,7 +829,7 @@ impl TokenSet {
                     client,
                     auth_time,
                     Duration::from_secs(lifetime as u64),
-                    scopes.as_deref().map(TokenScopes::new),
+                    scopes.map(TokenScopes::new),
                     user.has_webauthn_enabled(),
                     device_code_flow,
                     sid,
@@ -847,7 +848,7 @@ impl TokenSet {
             id_token: Some(id_token),
             expires_in: client.access_token_lifetime,
             refresh_token,
-            scope: Some(scope.into_owned()),
+            scope: Some(scope),
         })
     }
 }
