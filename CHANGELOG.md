@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Bugfix
+
+- A dynamic client updating its own registration (`PUT /clients_dyn/{id}`, RFC 7592) reset every
+  value only an admin can set to its default, among them `enabled`, the token lifetimes,
+  `restrict_group_prefix`, custom `claims`, `allowed_resources` and `default_aud`. A disabled
+  dynamic client could enable itself again this way. These values are now kept, and a disabled
+  dynamic client gets a `403` on `PUT /clients_dyn/{id}`.
+  A self-update can no longer add a grant type the client does not have yet: it may keep or
+  narrow its `grant_types`, anything else is rejected with a `400` and
+  `invalid_client_metadata` (RFC 7591 §3.2.2). Otherwise a client restricted to e.g.
+  `authorization_code` could add `client_credentials` and mint tokens carrying the kept
+  admin-set `default_aud` and `claims`. Grant types beyond the current ones need an admin.
+
 ## v0.37.0
 
 ### BREAKING - VERY IMPORTANT (if you run a HA cluster)
@@ -910,19 +925,6 @@ email_reminder_disable = false
   [#1707](https://github.com/sebadob/rauthy/pull/1707)
 - `/register` endpoint was missing CORS headers.
   [#1717](https://github.com/sebadob/rauthy/pull/1717)
-
-### Bugfix
-
-- A dynamic client updating its own registration (`PUT /clients_dyn/{id}`, RFC 7592) reset every
-  value only an admin can set to its default, among them `enabled`, the token lifetimes,
-  `restrict_group_prefix`, custom `claims`, `allowed_resources` and `default_aud`. A disabled
-  dynamic client could enable itself again this way. These values are now kept, and a disabled
-  dynamic client gets a `403` on `PUT /clients_dyn/{id}`.
-  A self-update can no longer add a grant type the client does not have yet: it may keep or
-  narrow its `grant_types`, anything else is rejected with a `400` and
-  `invalid_client_metadata` (RFC 7591 §3.2.2). Otherwise a client restricted to e.g.
-  `authorization_code` could add `client_credentials` and mint tokens carrying the kept
-  admin-set `default_aud` and `claims`. Grant types beyond the current ones need an admin.
 
 ## v0.36.2
 
