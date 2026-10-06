@@ -210,7 +210,7 @@ pub async fn grant_type_token_exchange(
         user.as_ref(),
         &client,
         dpop_fingerprint,
-        TokenScopes(scope),
+        TokenScopes::new(scope),
         target,
         act,
     )

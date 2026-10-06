@@ -180,7 +180,7 @@ pub async fn grant_type_authorization_code(
         AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         dpop_fingerprint,
         code.nonce.clone().map(TokenNonce),
-        Some(TokenScopes(code.scopes.join(" "))),
+        Some(TokenScopes::new(code.scopes.join(" "))),
         code.session_id.clone().map(SessionId),
         resource,
         AuthCodeFlow::Yes,

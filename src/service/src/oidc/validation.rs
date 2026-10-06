@@ -217,7 +217,7 @@ pub async fn validate_and_refresh_token(
         auth_time,
         dpop_fingerprint,
         None,
-        rt_scope.map(TokenScopes),
+        rt_scope.map(TokenScopes::new),
         None,
         // carry the granted resource forward so the refreshed access token keeps its
         // audience binding; a refresh can never widen it

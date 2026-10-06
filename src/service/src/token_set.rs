@@ -111,7 +111,14 @@ pub struct SessionId(pub String);
 pub struct TokenNonce(pub String);
 
 /// Contains the scopes as a single String separated by `\s`
-pub struct TokenScopes(pub String);
+pub struct TokenScopes<'a>(pub Cow<'a, str>);
+
+impl<'a> TokenScopes<'a> {
+    #[inline]
+    pub fn new(scopes: impl Into<Cow<'a, str>>) -> Self {
+        Self(scopes.into())
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TokenSet {
@@ -135,7 +142,7 @@ impl TokenSet {
         client: &Client,
         dpop_fingerprint: Option<DpopFingerprint>,
         lifetime: i64,
-        scope: Option<TokenScopes>,
+        scope: TokenScopes<'_>,
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
         sid: Option<SessionId>,
         resource: Option<&str>,
@@ -146,9 +153,7 @@ impl TokenSet {
             DeviceCodeFlow::Yes(did) => Some(did),
             DeviceCodeFlow::No => None,
         };
-        let scope = scope
-            .map(|s| Cow::from(s.0))
-            .unwrap_or_else(|| Cow::from(client.default_scopes.replace(',', " ")));
+        let scope = scope.0;
 
         let email = if scope.contains("email") {
             user.as_ref().map(|u| u.email.as_str())
@@ -484,7 +489,7 @@ impl TokenSet {
         client: &Client,
         auth_time: AuthTime,
         access_token_lifetime: Duration,
-        scope: Option<TokenScopes>,
+        scope: Option<TokenScopes<'_>>,
         is_mfa: bool,
         device_code_flow: DeviceCodeFlow,
         sid: Option<SessionId>,
@@ -556,7 +561,7 @@ impl TokenSet {
                 user.id.clone(),
                 nbf.timestamp(),
                 exp,
-                scope.map(|s| s.0),
+                scope.map(|s| s.0.into_owned()),
                 Some(jti.0),
             )
             .await?;
@@ -566,7 +571,7 @@ impl TokenSet {
                 user.id.clone(),
                 nbf.timestamp(),
                 exp,
-                scope.map(|s| s.0),
+                scope.map(|s| s.0.into_owned()),
                 is_mfa,
                 sid.map(|s| s.0),
                 Some(jti.0),
@@ -587,14 +592,13 @@ impl TokenSet {
         } else {
             JwtTokenType::Bearer
         };
-        // same fallback as `build_access_token`, so this matches the `scope` claim
         let scope = client.default_scopes.replace(',', " ");
         let (_jti, access_token) = Self::build_access_token(
             None,
             client,
             dpop_fingerprint,
             client.access_token_lifetime as i64,
-            Some(TokenScopes(scope.clone())),
+            TokenScopes::new(scope.as_str()),
             None,
             None,
             resource,
@@ -621,7 +625,7 @@ impl TokenSet {
         user: Option<&User>,
         client: &Client,
         dpop_fingerprint: Option<DpopFingerprint>,
-        scope: TokenScopes,
+        scope: TokenScopes<'_>,
         resource: Option<&str>,
         act: Option<ActClaim<'_>>,
     ) -> Result<Self, ErrorResponse> {
@@ -672,7 +676,7 @@ impl TokenSet {
             client,
             dpop_fingerprint,
             client.access_token_lifetime as i64,
-            Some(TokenScopes(scope.0.clone())),
+            TokenScopes::new(scope.0.as_ref()),
             customs_access,
             None,
             resource,
@@ -687,7 +691,7 @@ impl TokenSet {
             id_token: None,
             expires_in: client.access_token_lifetime,
             refresh_token: None,
-            scope: Some(scope.0),
+            scope: Some(scope.0.into_owned()),
         })
     }
 
@@ -699,17 +703,16 @@ impl TokenSet {
         auth_time: AuthTime,
         dpop_fingerprint: Option<DpopFingerprint>,
         nonce: Option<TokenNonce>,
-        scopes: Option<TokenScopes>,
+        scopes: Option<TokenScopes<'_>>,
         sid: Option<SessionId>,
         resource: Option<String>,
         auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
     ) -> Result<Self, ErrorResponse> {
         let scopes = scopes.map(|s| s.0);
-        let scope = if let Some(s) = &scopes {
-            s.clone()
-        } else {
-            client.default_scopes.clone().replace(',', " ")
+        let scope = match scopes.as_deref() {
+            Some(s) => Cow::Borrowed(s),
+            None => Cow::Owned(client.default_scopes.replace(',', " ")),
         };
 
         // check for any non-custom scopes and prepare data
@@ -790,7 +793,7 @@ impl TokenSet {
             client,
             dpop_fingerprint.clone(),
             lifetime,
-            Some(TokenScopes(scope.clone())),
+            TokenScopes::new(scope.as_ref()),
             customs_access,
             sid.clone(),
             resource.as_deref(),
@@ -825,7 +828,7 @@ impl TokenSet {
                     client,
                     auth_time,
                     Duration::from_secs(lifetime as u64),
-                    scopes.map(TokenScopes),
+                    scopes.as_deref().map(TokenScopes::new),
                     user.has_webauthn_enabled(),
                     device_code_flow,
                     sid,
@@ -844,7 +847,7 @@ impl TokenSet {
             id_token: Some(id_token),
             expires_in: client.access_token_lifetime,
             refresh_token,
-            scope: Some(scope),
+            scope: Some(scope.into_owned()),
         })
     }
 }
