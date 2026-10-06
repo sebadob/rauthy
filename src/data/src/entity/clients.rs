@@ -21,6 +21,7 @@ use rauthy_api_types::clients::{
 use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
 use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_common::validation::validate_redirect_uri;
 use rauthy_common::{http_client, is_hiqlite};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -1374,40 +1375,88 @@ impl Client {
 
     #[inline]
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
-        self.validate_redirect_uri_with(redirect_uri, || {
-            RauthyConfig::get().vars.access.rfc_8252_enable
-        })
+        self.validate_redirect_uri_with(
+            redirect_uri,
+            RauthyConfig::get().vars.access.rfc_8252_enable,
+        )
     }
 
     /// `rfc_8252_enable` is only evaluated after the shape check has passed.
-    fn validate_redirect_uri_with(
+    #[inline]
+    pub(crate) fn validate_redirect_uri_with(
         &self,
         redirect_uri: &str,
-        rfc_8252_enable: impl FnOnce() -> bool,
+        rfc_8252_enable: bool,
     ) -> Result<(), ErrorResponse> {
-        validate_redirect_uri_shape(redirect_uri)?;
-
-        // RFC 8252 loopback any-port matching — opt-in via access.rfc_8252_enable,
-        // and only for dynamic and ephemeral clients (never static ones).
-        let loopback = (self.is_dynamic() || self.is_ephemeral()) && rfc_8252_enable();
-        let has_any = self.get_redirect_uris().iter().any(|uri| {
-            wildcard_prefix_match(uri, redirect_uri)
-                || uri.as_str().eq(redirect_uri)
-                || (loopback && loopback_redirect_match(uri, redirect_uri))
-        });
-
-        if has_any {
-            Ok(())
-        } else {
-            debug!(
-                "Invalid `redirect_uri`: {} / expected one of: {}",
-                redirect_uri, self.redirect_uris
-            );
-            Err(ErrorResponse::new(
+        let req_url = validate_redirect_uri(redirect_uri, true, true)?;
+        let Some(req_host) = req_url.host_str() else {
+            return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid redirect uri",
-            ))
+                "invalid redirect_uri - must contain an origin",
+            ));
+        };
+        let req_path_query = if let Some(q) = req_url.query() {
+            format!("{}?{}", req_url.path(), q)
+        } else {
+            req_url.path().to_string()
+        };
+
+        let is_loopback = rfc_8252_enable
+            && (req_host == "localhost"
+                || req_host == "127.0.0.1"
+                || req_host == "[::1]"
+                || req_host == "::1");
+
+        let mut path_query = String::with_capacity(32);
+
+        for uri in self.get_redirect_uris() {
+            // TODO in a future version, we should have a temp migration that actually deletes
+            //  any stored, bad URLs. This check each time is only done to prevent stored URI
+            //  issues. The check each time is a waste of resources.
+            if uri.contains('#') {
+                warn!(
+                    "Found an insecure, stored redirect_uri for client {}: {} - you need to fix this",
+                    self.id, uri
+                );
+                continue;
+            }
+            let Ok(url) = Url::parse(&uri) else {
+                // this should never happen - validated during API updates
+                continue;
+            };
+            if url.scheme() != req_url.scheme() {
+                continue;
+            }
+            let host = url.host_str().unwrap_or_default();
+            if host != req_host {
+                continue;
+            }
+            if !is_loopback && url.port() != req_url.port() {
+                continue;
+            }
+
+            path_query.clear();
+            if let Some(q) = url.query() {
+                write!(path_query, "{}?{}", url.path(), q)?;
+            } else {
+                write!(path_query, "{}", url.path())?;
+            };
+
+            if is_wildcard_prefix_match(&path_query, &req_path_query)
+                || path_query == req_path_query
+            {
+                return Ok(());
+            }
         }
+
+        debug!(
+            "Invalid `redirect_uri`: {} / expected one of: {}",
+            redirect_uri, self.redirect_uris
+        );
+        Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid redirect uri",
+        ))
     }
 
     #[inline]
@@ -1415,26 +1464,52 @@ impl Client {
         &self,
         post_logout_redirect_uri: &str,
     ) -> Result<(), ErrorResponse> {
-        validate_post_logout_redirect_uri_shape(post_logout_redirect_uri)?;
+        let req_url = validate_redirect_uri(post_logout_redirect_uri, true, true)?;
 
-        let has_any = self
-            .get_post_logout_uris()
-            .unwrap_or_default()
-            .iter()
-            .any(|uri| {
-                wildcard_prefix_match(uri, post_logout_redirect_uri)
-                    || uri.as_str().eq(post_logout_redirect_uri)
-            });
-
-        if has_any {
-            Ok(())
-        } else {
-            trace!("Invalid `post_logout_redirect_uri`");
-            Err(ErrorResponse::new(
+        let Some(req_host) = req_url.host_str() else {
+            return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid post_logout_redirect_uri",
-            ))
+                "invalid post_logout_redirect_uri - must contain an origin",
+            ));
+        };
+
+        for uri in self.get_post_logout_uris().iter().flatten() {
+            // TODO in a future version, we should have a temp migration that actually deletes
+            //  any stored, bad URLs. This check each time is only done to prevent stored URI
+            //  issues. The check each time is a waste of resources.
+            if uri.contains('#') {
+                warn!(
+                    "Found an insecure, stored post_logout_redirect_uri for client {}: {} - you need to fix this",
+                    self.id, uri
+                );
+                continue;
+            }
+            let Ok(url) = Url::parse(uri) else {
+                // this should never happen - validated during API updates
+                continue;
+            };
+            if url.scheme() != req_url.scheme() || url.port() != req_url.port() {
+                continue;
+            }
+            if url.host_str().unwrap_or_default() != req_host {
+                continue;
+            }
+
+            if is_wildcard_prefix_match(uri, post_logout_redirect_uri)
+                || uri == post_logout_redirect_uri
+            {
+                return Ok(());
+            }
         }
+
+        debug!(
+            "Invalid `post_logout_redirect_uri`: {} / expected one of: {:?}",
+            post_logout_redirect_uri, self.post_logout_redirect_uris
+        );
+        Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid post_logout_redirect_uri",
+        ))
     }
 
     #[inline]
@@ -1624,20 +1699,9 @@ fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorR
     Ok(())
 }
 
-fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
-    if uri.contains('*') {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "wildcard `redirect_uris` are not allowed for dynamic clients",
-        ));
-    }
-    let url = Url::parse(uri).map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("invalid `redirect_uri`: '{uri}'"),
-        )
-    })?;
-    let loopback = url
+pub fn validate_dyn_client_redirect_uri(url: &str) -> Result<(), ErrorResponse> {
+    let uri = validate_redirect_uri(url, false, true)?;
+    let loopback = uri
         .host_str()
         .map(|h| {
             h.eq_ignore_ascii_case("localhost")
@@ -1646,7 +1710,7 @@ fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
                     .unwrap_or(false)
         })
         .unwrap_or(false);
-    if url.scheme() != "https" && !(url.scheme() == "http" && loopback) {
+    if uri.scheme() != "https" && !(uri.scheme() == "http" && loopback) {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "`redirect_uris` must be https (http loopback allowed)",
@@ -1660,7 +1724,7 @@ fn validate_dyn_redirect_uri(uri: &str) -> Result<(), ErrorResponse> {
 /// A `#` is not a boundary: redirect URIs and post-logout redirect URIs with a fragment are
 /// rejected by their shape check before they are matched.
 #[inline]
-pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
+pub fn is_wildcard_prefix_match(registered: &str, requested: &str) -> bool {
     let Some(prefix) = registered.strip_suffix('*') else {
         return false;
     };
@@ -1673,142 +1737,6 @@ pub fn wildcard_prefix_match(registered: &str, requested: &str) -> bool {
                 || prefix.ends_with('/')
                 || prefix.ends_with('?')
         }
-    }
-}
-
-/// Query keys an authorization response sets itself (RFC 6749 §4.1.2 / §4.1.2.1, RFC 9207).
-pub const RESERVED_REDIRECT_QUERY_KEYS: [&str; 6] = [
-    "code",
-    "state",
-    "error",
-    "error_description",
-    "error_uri",
-    "iss",
-];
-
-/// Query keys a logout response sets itself: `state` is the only parameter appended to a
-/// `post_logout_redirect_uri` (OpenID Connect RP-Initiated Logout 1.0 §3).
-pub const RESERVED_POST_LOGOUT_QUERY_KEYS: [&str; 1] = ["state"];
-
-/// Rejects a `redirect_uri` with a fragment (RFC 6749 §3.1.2) or whose query already carries a
-/// reserved key - a wildcard registration would otherwise let `https://app/cb?iss=attacker` or
-/// `https://app/cb#?iss=attacker` pass the prefix match.
-///
-/// A `,` is rejected as well: redirect URIs are stored comma-joined and split on `,` when read,
-/// so a `,` inside one URI would turn it into several URIs that never passed this check.
-///
-/// Query keys are split on both `&` and `;`, percent-decoded, trimmed and compared
-/// case-insensitively. Since common server-side parsers (PHP, Rack, `qs`) fold `code[]`, `iss[0]`
-/// or `error.description` into the plain key, a reserved key followed by `[` or `.` is rejected
-/// too, with `.` and ` ` compared as `_`. Keys with control characters are rejected as well.
-pub fn validate_redirect_uri_shape(redirect_uri: &str) -> Result<(), ErrorResponse> {
-    validate_uri_shape(redirect_uri, "redirect_uri", &RESERVED_REDIRECT_QUERY_KEYS)
-}
-
-/// The same checks as `validate_redirect_uri_shape()` for a `post_logout_redirect_uri`, with
-/// `state` as the only reserved query key, since nothing else is appended on logout.
-///
-/// A fragment would swallow the appended `state`, a `,` would split the comma-joined stored URIs,
-/// and a `state` already in the query of a wildcard match would let a crafted URI hand the client
-/// a second, attacker-chosen `state`.
-pub fn validate_post_logout_redirect_uri_shape(
-    post_logout_redirect_uri: &str,
-) -> Result<(), ErrorResponse> {
-    validate_uri_shape(
-        post_logout_redirect_uri,
-        "post_logout_redirect_uri",
-        &RESERVED_POST_LOGOUT_QUERY_KEYS,
-    )
-}
-
-/// `param` names the URI in error messages.
-fn validate_uri_shape(
-    uri: &str,
-    param: &str,
-    reserved_keys: &[&'static str],
-) -> Result<(), ErrorResponse> {
-    if uri.contains('#') {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("{param} must not contain a fragment"),
-        ));
-    }
-    if uri.contains(',') {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("{param} must not contain a comma"),
-        ));
-    }
-
-    let Some((_, query)) = uri.split_once('?') else {
-        return Ok(());
-    };
-
-    for pair in query.split(['&', ';']) {
-        let Some((key, _)) = form_urlencoded::parse(pair.as_bytes()).next() else {
-            continue;
-        };
-        if key.chars().any(char::is_control) {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("{param} must not contain control characters in a query key"),
-            ));
-        }
-        if let Some(reserved) = reserved_query_key(&key, reserved_keys) {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("{param} must not contain the query parameter '{reserved}'"),
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-/// Returns the key of `reserved_keys` a decoded query `key` would be folded into by common
-/// parsers.
-fn reserved_query_key(key: &str, reserved_keys: &[&'static str]) -> Option<&'static str> {
-    let key = key.trim().to_ascii_lowercase();
-    // PHP turns `.` and ` ` into `_`, and `code[]` / `iss[0]` become arrays under the plain key
-    let normalized = key.replace(['.', ' '], "_");
-    let base = normalized
-        .split_once('[')
-        .map_or(normalized.as_str(), |(base, _)| base);
-
-    reserved_keys
-        .iter()
-        .copied()
-        .find(|reserved| *reserved == base)
-        .or_else(|| {
-            // `qs` with `allowDots` nests `iss.x` under `iss`
-            reserved_keys.iter().copied().find(|reserved| {
-                key.strip_prefix(reserved)
-                    .is_some_and(|rest| rest.starts_with(['[', '.']))
-            })
-        })
-}
-
-/// RFC 8252 section 7.3: for a loopback redirect URI, the authorization
-/// server MUST allow any port chosen by the client at request time. Native
-/// apps (and CLI OAuth clients) bind an ephemeral loopback port, so a
-/// registered `http://127.0.0.1/cb` must match a requested
-/// `http://127.0.0.1:52345/cb`. Everything except the port must be equal,
-/// and both sides must be loopback hosts. Gated behind access.rfc_8252_enable
-/// and applied to dynamic and ephemeral clients only (see `validate_redirect_uri`).
-fn loopback_redirect_match(registered: &str, requested: &str) -> bool {
-    fn parts(u: &str) -> Option<(String, String, String)> {
-        let url = Url::parse(u).ok()?;
-        let host = url.host_str()?.to_string();
-        Some((url.scheme().to_string(), host, url.path().to_string()))
-    }
-    fn is_loopback(host: &str) -> bool {
-        host == "localhost" || host == "127.0.0.1" || host == "[::1]" || host == "::1"
-    }
-    match (parts(registered), parts(requested)) {
-        (Some((rs, rh, rp)), Some((qs, qh, qp))) => {
-            is_loopback(&rh) && is_loopback(&qh) && rs == qs && rh == qh && rp == qp
-        }
-        _ => false,
     }
 }
 
@@ -1946,7 +1874,7 @@ impl TryFrom<EphemeralClientRequest> for Client {
 
     fn try_from(value: EphemeralClientRequest) -> Result<Self, Self::Error> {
         for uri in &value.redirect_uris {
-            validate_redirect_uri_shape(uri).map_err(|err| {
+            validate_redirect_uri(uri, false, true).map_err(|err| {
                 ErrorResponse::new(
                     err.error,
                     format!("Invalid redirect_uri '{uri}': {}", err.message),
@@ -1954,7 +1882,7 @@ impl TryFrom<EphemeralClientRequest> for Client {
             })?;
         }
         for uri in value.post_logout_redirect_uris.iter().flatten() {
-            validate_post_logout_redirect_uri_shape(uri).map_err(|err| {
+            validate_redirect_uri(uri, false, true).map_err(|err| {
                 ErrorResponse::new(
                     err.error,
                     format!("Invalid post_logout_redirect_uri '{uri}': {}", err.message),
@@ -2060,7 +1988,7 @@ impl TryFrom<NewClientRequest> for Client {
         for uri in client.redirect_uris {
             let trimmed = uri.trim();
             if !trimmed.is_empty() {
-                validate_redirect_uri_shape(trimmed)?;
+                validate_redirect_uri(trimmed, true, true)?;
                 write!(redirect_uris, "{trimmed},")?;
             }
         }
@@ -2072,7 +2000,7 @@ impl TryFrom<NewClientRequest> for Client {
                 for uri in post_logout_redirect_uris {
                     let trimmed = uri.trim();
                     if !trimmed.is_empty() {
-                        validate_post_logout_redirect_uri_shape(trimmed)?;
+                        validate_redirect_uri(trimmed, true, true)?;
                         write!(uris, "{trimmed},")?;
                     }
                 }
@@ -2157,10 +2085,9 @@ impl Client {
         validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
 
         let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
-        for uri in &req.redirect_uris {
-            validate_dyn_redirect_uri(uri)?;
-            validate_redirect_uri_shape(uri)?;
-            redirect_uris.push(uri.clone());
+        for uri in req.redirect_uris {
+            validate_dyn_client_redirect_uri(&uri)?;
+            redirect_uris.push(uri);
         }
         if redirect_uris.is_empty() {
             return Err(ErrorResponse::new(
@@ -2171,8 +2098,7 @@ impl Client {
 
         let post_logout_redirect_uri = req.post_logout_redirect_uri.filter(|uri| !uri.is_empty());
         if let Some(uri) = &post_logout_redirect_uri {
-            validate_dyn_redirect_uri(uri)?;
-            validate_post_logout_redirect_uri_shape(uri)?;
+            validate_dyn_client_redirect_uri(uri)?;
         }
 
         Ok(Self {
@@ -2319,19 +2245,19 @@ pub(crate) mod tests {
     #[test]
     fn test_validate_dyn_redirect_uri() {
         // https allowed
-        assert!(validate_dyn_redirect_uri("https://app.example.com/cb").is_ok());
+        assert!(validate_dyn_client_redirect_uri("https://app.example.com/cb").is_ok());
         // http loopback allowed (RFC 8252 native apps)
-        assert!(validate_dyn_redirect_uri("http://127.0.0.1:52345/cb").is_ok());
-        assert!(validate_dyn_redirect_uri("http://localhost:8080/cb").is_ok());
+        assert!(validate_dyn_client_redirect_uri("http://127.0.0.1:52345/cb").is_ok());
+        assert!(validate_dyn_client_redirect_uri("http://localhost:8080/cb").is_ok());
         // wildcards rejected
-        assert!(validate_dyn_redirect_uri("https://*").is_err());
-        assert!(validate_dyn_redirect_uri("https://app.example.com/*").is_err());
+        assert!(validate_dyn_client_redirect_uri("https://*").is_err());
+        assert!(validate_dyn_client_redirect_uri("https://app.example.com/*").is_err());
         // non-https and non-loopback http rejected
-        assert!(validate_dyn_redirect_uri("http://app.example.com/cb").is_err());
-        assert!(validate_dyn_redirect_uri("ftp://app.example.com/cb").is_err());
+        assert!(validate_dyn_client_redirect_uri("http://app.example.com/cb").is_err());
+        assert!(validate_dyn_client_redirect_uri("ftp://app.example.com/cb").is_err());
         // not a URI at all
-        assert!(validate_dyn_redirect_uri("not a uri").is_err());
-        assert!(validate_dyn_redirect_uri("").is_err());
+        assert!(validate_dyn_client_redirect_uri("not a uri").is_err());
+        assert!(validate_dyn_client_redirect_uri("").is_err());
     }
     use pretty_assertions::assert_eq;
 
@@ -2410,85 +2336,85 @@ pub(crate) mod tests {
     #[test]
     fn test_wildcard_prefix_match() {
         // path-suffixed wildcards keep working
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://app.example.com/callback*",
             "https://app.example.com/callback"
         ));
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://app.example.com/callback*",
             "https://app.example.com/callback?state=x"
         ));
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://app.example.com/callback*",
             "https://app.example.com/callback/deep"
         ));
         // bare-host wildcard must not match a different host
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://app.example.com*",
             "https://app.example.com.evil.com"
         ));
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://app.example.com*",
             "https://app.example.com.evil.com/cb"
         ));
         // but path continuation on the same host is fine
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://app.example.com*",
             "https://app.example.com/cb"
         ));
         // a wildcard must only ever appear at the very end
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://example.com/*/cb",
             "https://example.com/a/cb"
         ));
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://example.com/*/cb",
             "https://example.com/cb"
         ));
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://example.com/*/cb",
             "https://example.com//cb"
         ));
         // a prefix that already ends at a boundary matches any continuation
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://example.com/*",
             "https://example.com/app"
         ));
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://example.com/*",
             "https://example.com/"
         ));
         // a registered base with a trailing slash matches continuations after it
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://app.example.com/app/*",
             "https://app.example.com/app/foo"
         ));
-        assert!(wildcard_prefix_match(
+        assert!(is_wildcard_prefix_match(
             "https://app.example.com/app/*",
             "https://app.example.com/app/"
         ));
         // but the bare base without the trailing slash is still not under `base/`
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://app.example.com/app/*",
             "https://app.example.com/app"
         ));
         // non-boundary continuation is still rejected
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://example.com/cb*",
             "https://example.com/cbX"
         ));
         // non-wildcard registered URIs never match via the helper
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://app.example.com/cb",
             "https://app.example.com/cb"
         ));
-        assert!(!wildcard_prefix_match("no-star", "no-star"));
+        assert!(!is_wildcard_prefix_match("no-star", "no-star"));
         // a `#` is no boundary, a URI with a fragment never gets here
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://app.example.com/cb*",
             "https://app.example.com/cb#x"
         ));
-        assert!(!wildcard_prefix_match(
+        assert!(!is_wildcard_prefix_match(
             "https://app.example.com/#*",
             "https://app.example.com/#x"
         ));
@@ -2751,161 +2677,6 @@ pub(crate) mod tests {
     // }
 
     #[test]
-    fn test_validate_redirect_uri_shape() {
-        for uri in [
-            "https://app.example.com/cb",
-            "https://app.example.com/cb?foo=bar&x=y",
-            "https://app.example.com/*",
-            "http://localhost:*/cb?foo=bar",
-            // keys only, not values or substrings
-            "https://app.example.com/cb?foo=iss&issuer=x&code_x=1",
-        ] {
-            assert!(validate_redirect_uri_shape(uri).is_ok(), "{uri}");
-        }
-
-        for key in RESERVED_REDIRECT_QUERY_KEYS {
-            for uri in [
-                format!("https://app.example.com/cb?{key}=x"),
-                format!("https://app.example.com/cb?foo=bar&{key}=x"),
-                format!("https://app.example.com/*?{key}=x"),
-                format!("http://localhost:*/cb?{key}=x"),
-            ] {
-                let err = validate_redirect_uri_shape(&uri).unwrap_err();
-                assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-                assert!(err.message.contains(key), "{uri}: {}", err.message);
-            }
-        }
-
-        for uri in [
-            "https://app.example.com/cb?%69ss=x",
-            "https://app.example.com/cb?x=1;iss=https://evil.example",
-            "https://app.example.com/cb?x=1;%69ss=x",
-            "https://app.example.com/*?x=1;state=x",
-            "http://localhost:*/cb?%69ss=x",
-            "http://localhost:*/cb?x=1;iss=x",
-            "https://app.example.com/cb?+iss=x",
-            "https://app.example.com/cb?%20iss=x",
-        ] {
-            let err = validate_redirect_uri_shape(uri).unwrap_err();
-            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-        }
-        assert!(validate_redirect_uri_shape("https://app.example.com/cb?x=1;issuer=y").is_ok());
-        assert!(validate_redirect_uri_shape("https://app.example.com/cb?issx=1").is_ok());
-
-        // forms that common server-side parsers fold into a reserved key, and valueless keys
-        for (uri, reserved) in [
-            ("https://app.example.com/cb?iss", "iss"),
-            ("https://app.example.com/cb?x=1&code", "code"),
-            ("https://app.example.com/cb?x=1&code=", "code"),
-            ("https://app.example.com/cb?ISS=x", "iss"),
-            ("https://app.example.com/cb?State=x", "state"),
-            ("https://app.example.com/cb?code%5B%5D=x", "code"),
-            ("https://app.example.com/cb?iss%5B0%5D=x", "iss"),
-            ("https://app.example.com/cb?state%5Bx%5D=y", "state"),
-            ("https://app.example.com/*?code%5B%5D=x", "code"),
-            (
-                "https://app.example.com/cb?error.description=x",
-                "error_description",
-            ),
-            (
-                "https://app.example.com/cb?error+description=x",
-                "error_description",
-            ),
-            (
-                "https://app.example.com/cb?error%20description=x",
-                "error_description",
-            ),
-            (
-                "https://app.example.com/cb?error.description%5B%5D=x",
-                "error_description",
-            ),
-            ("https://app.example.com/cb?iss.x=y", "iss"),
-            (
-                "https://app.example.com/cb?error_uri=https://evil.example",
-                "error_uri",
-            ),
-            ("https://app.example.com/cb?error.uri=x", "error_uri"),
-            ("https://app.example.com/cb?%20iss%20=x", "iss"),
-            // Unicode whitespace is trimmed as well
-            ("https://app.example.com/cb?%E2%80%83iss=x", "iss"),
-        ] {
-            let err = validate_redirect_uri_shape(uri).unwrap_err();
-            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-            assert_eq!(
-                err.message,
-                format!("redirect_uri must not contain the query parameter '{reserved}'"),
-                "{uri}"
-            );
-        }
-
-        // control characters in a decoded key
-        for uri in [
-            "https://app.example.com/cb?%09iss=x",
-            "https://app.example.com/cb?iss%00=x",
-            "https://app.example.com/cb?x%0Ay=1",
-            "https://app.example.com/cb?%7Fcode=x",
-        ] {
-            let err = validate_redirect_uri_shape(uri).unwrap_err();
-            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-            assert!(err.message.contains("control characters"), "{uri}");
-        }
-
-        // no false positives for keys that only look similar
-        for uri in [
-            "https://app.example.com/cb?issuer=x",
-            "https://app.example.com/cb?codes=x",
-            "https://app.example.com/cb?state_x=1",
-            "https://app.example.com/cb?state%20x=1",
-            "https://app.example.com/cb?errors%5B%5D=1",
-            "https://app.example.com/cb?error_uris=1",
-            "https://app.example.com/cb?x%5Biss%5D=1",
-            "https://app.example.com/cb?x.iss=1",
-            "https://app.example.com/cb?x=code%5B%5D",
-            "https://app.example.com/cb?",
-            "https://app.example.com/cb?&&;",
-            // a BOM is not whitespace, and invalid UTF-8 is replaced
-            "https://app.example.com/cb?%EF%BB%BFiss=x",
-            "https://app.example.com/cb?%A0iss=x",
-            "https://app.example.com/cb?%69ss%=x",
-        ] {
-            assert!(validate_redirect_uri_shape(uri).is_ok(), "{uri}");
-        }
-
-        // fragments are rejected, wildcard registrations included
-        for uri in [
-            "https://app.example.com/#/callback",
-            "https://app.example.com/cb#",
-            "https://app.example.com/cb?foo=bar#/route",
-            "https://app.example.com/cb#/callback?iss=https%3A%2F%2Fattacker.example%2F",
-            "https://app.example.com/#/*",
-            "http://localhost:*/cb#x",
-        ] {
-            let err = validate_redirect_uri_shape(uri).unwrap_err();
-            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-            assert_eq!(
-                err.message, "redirect_uri must not contain a fragment",
-                "{uri}"
-            );
-        }
-
-        // a ',' would split one stored URI into several, the later ones never checked
-        for uri in [
-            "https://app.example.com/cb?x=,https://evil.example/cb",
-            "https://app.example.com/cb?a=,iss=x",
-            "https://app.example.com/cb,https://app.example.com/cb?iss=x",
-            "https://app.example.com/*,https://evil.example/*",
-            "http://localhost:*/cb?x=a,b",
-        ] {
-            let err = validate_redirect_uri_shape(uri).unwrap_err();
-            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-            assert_eq!(
-                err.message, "redirect_uri must not contain a comma",
-                "{uri}"
-            );
-        }
-    }
-
-    #[test]
     fn test_ephemeral_client_redirect_uri_shape() {
         for uri in [
             "https://app.example.com/#/callback",
@@ -2965,71 +2736,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_validate_post_logout_redirect_uri_shape() {
-        assert_eq!(RESERVED_POST_LOGOUT_QUERY_KEYS, ["state"]);
-
-        for uri in [
-            "https://app.example.com/",
-            "https://app.example.com/bye?foo=bar&x=y",
-            "https://app.example.com/*",
-            // only `state` is set on logout, so the authorization response keys are fine here
-            "https://app.example.com/bye?code=x&iss=y&error=z&error_description=a&error_uri=b",
-            "https://app.example.com/bye?states=x&state_x=1&x=state",
-            "https://app.example.com/bye?x%5Bstate%5D=1",
-        ] {
-            assert!(
-                validate_post_logout_redirect_uri_shape(uri).is_ok(),
-                "{uri}"
-            );
-        }
-
-        // `state`, including the forms that common server-side parsers fold into it
-        for uri in [
-            "https://app.example.com/bye?state=x",
-            "https://app.example.com/bye?foo=bar&state=x",
-            "https://app.example.com/bye?foo=bar;state=x",
-            "https://app.example.com/*?state=x",
-            "https://app.example.com/bye?state",
-            "https://app.example.com/bye?STATE=x",
-            "https://app.example.com/bye?%73tate=x",
-            "https://app.example.com/bye?+state=x",
-            "https://app.example.com/bye?state%5B%5D=x",
-            "https://app.example.com/bye?state.x=y",
-        ] {
-            let err = validate_post_logout_redirect_uri_shape(uri).unwrap_err();
-            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-            assert_eq!(
-                err.message,
-                "post_logout_redirect_uri must not contain the query parameter 'state'",
-                "{uri}"
-            );
-        }
-
-        for (uri, msg) in [
-            (
-                "https://app.example.com/#/bye",
-                "post_logout_redirect_uri must not contain a fragment",
-            ),
-            (
-                "https://app.example.com/bye?foo=bar#state=x",
-                "post_logout_redirect_uri must not contain a fragment",
-            ),
-            (
-                "https://app.example.com/bye?x=,https://evil.example/",
-                "post_logout_redirect_uri must not contain a comma",
-            ),
-            (
-                "https://app.example.com/bye?%09x=1",
-                "post_logout_redirect_uri must not contain control characters in a query key",
-            ),
-        ] {
-            let err = validate_post_logout_redirect_uri_shape(uri).unwrap_err();
-            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
-            assert_eq!(err.message, msg, "{uri}");
-        }
-    }
-
-    #[test]
     fn test_validate_post_logout_redirect_uri() {
         let mut client = redirect_test_client("logout", "https://app.example.com/cb");
         assert!(
@@ -3047,7 +2753,7 @@ pub(crate) mod tests {
             "https://app.example.com/bye",
             "https://app.example.com/wild/",
             "https://app.example.com/wild/x?foo=bar",
-            "https://app.example.com/wild/x?code=x",
+            "https://app.example.com/wild/x?some=x",
         ] {
             assert!(
                 client.validate_post_logout_redirect_uri(uri).is_ok(),
@@ -3119,7 +2825,7 @@ pub(crate) mod tests {
             "https://app.example.com/cb?issuer=x",
         ] {
             assert!(
-                client.validate_redirect_uri_with(uri, || false).is_ok(),
+                client.validate_redirect_uri_with(uri, false).is_ok(),
                 "{uri}"
             );
         }
@@ -3133,13 +2839,13 @@ pub(crate) mod tests {
             "https://app.example.com/cb#/route",
             "https://app.example.com/cb#?iss=https://attacker.example",
         ] {
-            let err = client.validate_redirect_uri(uri).unwrap_err();
+            let err = client.validate_redirect_uri_with(uri, false).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert_ne!(err.message, "Invalid redirect uri", "{uri}");
         }
 
         let err = client
-            .validate_redirect_uri_with("https://other.example.com/cb", || false)
+            .validate_redirect_uri_with("https://other.example.com/cb", false)
             .unwrap_err();
         assert_eq!(err.message, "Invalid redirect uri");
     }
@@ -3150,13 +2856,13 @@ pub(crate) mod tests {
 
         assert!(
             client
-                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", || true)
+                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", true)
                 .is_ok()
         );
         // any-port matching is opt-in
         assert!(
             client
-                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", || false)
+                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", false)
                 .is_err()
         );
 
@@ -3167,18 +2873,44 @@ pub(crate) mod tests {
             "http://127.0.0.1:52345/cb#x",
             "http://127.0.0.1/cb#x",
         ] {
-            let err = client.validate_redirect_uri_with(uri, || true).unwrap_err();
+            let err = client.validate_redirect_uri_with(uri, true).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert_ne!(err.message, "Invalid redirect uri", "{uri}");
         }
+    }
 
-        // static clients never get any-port matching
-        let client = redirect_test_client("static", "http://127.0.0.1/cb");
-        assert!(
-            client
-                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", || true)
-                .is_err()
-        );
+    #[test]
+    fn test_validate_redirect_uri_loopback_wildcard() {
+        let client = redirect_test_client("loopback_wc", "http://127.0.0.1/*");
+
+        for uri in [
+            "http://127.0.0.1:1337/cb",
+            "http://127.0.0.1:52345/cb",
+            "http://127.0.0.1:52345/deep/cb",
+            "http://127.0.0.1",
+            "http://127.0.0.1/",
+        ] {
+            client.validate_redirect_uri_with(uri, true).unwrap();
+        }
+
+        let client = redirect_test_client("loopback_wc", "http://127.0.0.1/sub/*");
+        for uri in [
+            "http://127.0.0.1:1337/cb",
+            "http://127.0.0.1:52345/cb",
+            "http://127.0.0.1:52345/deep/cb",
+            "http://127.0.0.1",
+            "http://127.0.0.1/",
+        ] {
+            assert!(client.validate_redirect_uri_with(uri, true).is_err());
+        }
+
+        let client = redirect_test_client("loopback_wc", "http://127.0.0.1/sub/*");
+        for uri in [
+            "http://127.0.0.1:1337/sub/cb",
+            "http://127.0.0.1:52345/sub/subsub/cb",
+        ] {
+            client.validate_redirect_uri_with(uri, true).unwrap();
+        }
     }
 
     #[test]

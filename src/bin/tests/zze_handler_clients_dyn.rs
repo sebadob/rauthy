@@ -22,7 +22,7 @@ fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
     if bad_uri.contains(['#', ',']) {
         "Payload validation error"
     } else {
-        "redirect_uri must not contain"
+        "`redirect_uri` must not contain"
     }
 }
 
@@ -31,15 +31,6 @@ const BAD_POST_LOGOUT_REDIRECT_URIS: [&str; 3] = [
     "http://localhost:8080/bye?state=x",
     "http://localhost:8080/bye?foo=bar&State=x",
 ];
-
-/// Like `expected_redirect_uri_err()`, for `validate_post_logout_redirect_uri_shape()`.
-fn expected_post_logout_redirect_uri_err(bad_uri: &str) -> &'static str {
-    if bad_uri.contains(['#', ',']) {
-        "Payload validation error"
-    } else {
-        "post_logout_redirect_uri must not contain the query parameter 'state'"
-    }
-}
 
 #[tokio::test]
 async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
@@ -76,10 +67,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         let res = client.post(&url).json(&payload).send().await?;
         assert_eq!(res.status(), 400, "{bad_uri}");
         let body = res.text().await?;
-        assert!(
-            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
-            "{body}"
-        );
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     payload.post_logout_redirect_uri = None;
 
@@ -188,10 +176,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
             .await?;
         assert_eq!(res.status(), 400, "{bad_uri}");
         let body = res.text().await?;
-        assert!(
-            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
-            "{body}"
-        );
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     payload.post_logout_redirect_uri = None;
     let res = client

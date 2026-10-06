@@ -250,13 +250,14 @@ impl AuthCode {
         &self,
         client: &Client,
         redirect_uri: &str,
+        rfc_8252_enable: bool,
     ) -> Result<(), ErrorResponse> {
         // The `client.validate_redirect_uri()` already prevents an empty URI, this makes it obvious.
         debug_assert!(!self.redirect_uri.is_empty());
 
         // Technically, this additional validation is not necessary, but it does not hurt either,
         // and it just an additional defense. It's a very inexpensive operation.
-        client.validate_redirect_uri(redirect_uri)?;
+        client.validate_redirect_uri_with(redirect_uri, rfc_8252_enable)?;
 
         if self.redirect_uri == redirect_uri {
             Ok(())
@@ -441,9 +442,11 @@ mod tests {
             state: None,
         };
 
-        let err = code.validate_redirect_uri_exact(&client, uri).unwrap_err();
+        let err = code
+            .validate_redirect_uri_exact(&client, uri, false)
+            .unwrap_err();
         assert_eq!(err.error, ErrorResponseType::BadRequest);
-        assert_eq!(err.message, "redirect_uri must not contain a fragment");
+        assert_eq!(err.message, "`redirect_uri` must not contain any of: # ,");
     }
 
     #[test]

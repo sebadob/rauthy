@@ -30,7 +30,7 @@ fn expected_redirect_uri_err(bad_uri: &str) -> &'static str {
     if bad_uri.contains(['#', ',']) {
         "Payload validation error"
     } else {
-        "redirect_uri must not contain"
+        "`redirect_uri` must not contain"
     }
 }
 
@@ -41,15 +41,6 @@ const BAD_POST_LOGOUT_REDIRECT_URIS: [&str; 4] = [
     // stored comma-joined, so this would become a second, unchecked post-logout redirect URI
     "http://test.client.io/logout?x=,https://evil.example/",
 ];
-
-/// Like `expected_redirect_uri_err()`, for `validate_post_logout_redirect_uri_shape()`.
-fn expected_post_logout_redirect_uri_err(bad_uri: &str) -> &'static str {
-    if bad_uri.contains(['#', ',']) {
-        "Payload validation error"
-    } else {
-        "post_logout_redirect_uri must not contain the query parameter 'state'"
-    }
-}
 
 fn extract_raw_claims(token: &str) -> Vec<u8> {
     let mut split = token.split('.');
@@ -267,10 +258,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             .await?;
         assert_eq!(res.status(), 400, "{bad_uri}");
         let body = res.text().await?;
-        assert!(
-            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
-            "{body}"
-        );
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
 
     // modify the client
@@ -349,10 +337,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             .await?;
         assert_eq!(res.status(), 400, "{bad_uri}");
         let body = res.text().await?;
-        assert!(
-            body.contains(expected_post_logout_redirect_uri_err(bad_uri)),
-            "{body}"
-        );
+        assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     update_client.post_logout_redirect_uris = None;
     let res = reqwest::Client::new()

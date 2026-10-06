@@ -112,6 +112,7 @@ pub async fn grant_type_authorization_code(
     code.validate_redirect_uri_exact(
         &client,
         req_data.redirect_uri.as_deref().unwrap_or_default(),
+        RauthyConfig::get().vars.access.rfc_8252_enable,
     )?;
     if code.client_id != client_id {
         let err = format!("Wrong 'code' for client_id '{client_id}'");

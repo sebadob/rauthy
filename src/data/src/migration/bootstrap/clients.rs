@@ -1,7 +1,4 @@
 use crate::database::DB;
-use crate::entity::clients::{
-    validate_post_logout_redirect_uri_shape, validate_redirect_uri_shape,
-};
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
@@ -16,6 +13,7 @@ use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::SECRET_LEN_CLIENTS;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
+use rauthy_common::validation::validate_redirect_uri;
 use rauthy_error::ErrorResponse;
 use tracing::info;
 use zeroize::Zeroize;
@@ -34,7 +32,7 @@ pub async fn validate() -> Result<(), ErrorResponse> {
 fn validate_client_uris(clients: &[Client]) -> Result<(), String> {
     for client in clients {
         for uri in &client.redirect_uris {
-            if let Err(err) = validate_redirect_uri_shape(uri) {
+            if let Err(err) = validate_redirect_uri(uri, true, true) {
                 return Err(format!(
                     "client '{}' has an invalid redirect_uri '{uri}': {}",
                     client.id, err.message
@@ -42,7 +40,7 @@ fn validate_client_uris(clients: &[Client]) -> Result<(), String> {
             }
         }
         for uri in client.post_logout_redirect_uris.iter().flatten() {
-            if let Err(err) = validate_post_logout_redirect_uri_shape(uri) {
+            if let Err(err) = validate_redirect_uri(uri, true, true) {
                 return Err(format!(
                     "client '{}' has an invalid post_logout_redirect_uri '{uri}': {}",
                     client.id, err.message
@@ -301,8 +299,7 @@ mod tests {
             c
         };
 
-        // only `state` is reserved for a post-logout redirect URI
-        let valid = || with_post_logout("valid", "https://localhost/bye?foo=bar&code=x&iss=y");
+        let valid = || with_post_logout("valid", "https://localhost/bye?foo=bar");
         assert!(validate_client_uris(&[valid()]).is_ok());
 
         for uri in [
