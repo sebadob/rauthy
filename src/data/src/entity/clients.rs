@@ -426,12 +426,30 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
+    /// Reads a cached client. An entry this version cannot decode, like one cached by an older
+    /// version without `generation`, counts as a miss.
+    async fn find_cached(cache: Cache, key: String) -> Result<Option<Self>, ErrorResponse> {
+        let Some(bytes) = DB::hql().get_bytes(cache, key).await? else {
+            return Ok(None);
+        };
+        match bincode_next::serde::decode_from_slice::<Self, _>(
+            &bytes,
+            bincode_next::config::legacy(),
+        ) {
+            Ok((slf, _)) => Ok(Some(slf)),
+            Err(err) => {
+                debug!(?err, "Ignoring a cached client that cannot be decoded");
+                Ok(None)
+            }
+        }
+    }
+
     // Returns a client by id without its secret.
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
-        if let Some(slf) = client.get(Cache::App, Self::cache_idx(&id)).await? {
+        if let Some(slf) = Self::find_cached(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         };
+        let client = DB::hql();
 
         let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
@@ -540,7 +558,7 @@ VALUES ($1, $2, $3, $4)"#;
             return Self::find(id).await;
         }
 
-        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, &id).await? {
+        if let Some(slf) = Self::find_cached(Cache::ClientEphemeral, id.clone()).await? {
             return Ok(slf);
         }
 
@@ -907,7 +925,7 @@ WHERE id = $4"#;
                 .put_bytes(
                     Cache::ClientSecret,
                     plain,
-                    serde_json::to_vec(&(&self.id, &self.generation))?,
+                    cached_secret_value(&self.id, &self.generation)?,
                     Some(hours as i64),
                 )
                 .await?;
@@ -938,6 +956,15 @@ WHERE id = $4"#;
             debug!("Found cached client_secret, but for a different client.");
             Err(err())
         }
+    }
+}
+
+/// Clients that were never recreated keep the raw id, which older versions compare against.
+fn cached_secret_value(client_id: &str, generation: &str) -> Result<Vec<u8>, ErrorResponse> {
+    if generation.is_empty() {
+        Ok(client_id.as_bytes().to_vec())
+    } else {
+        Ok(serde_json::to_vec(&(client_id, generation))?)
     }
 }
 
@@ -2413,6 +2440,18 @@ pub(crate) mod tests {
         assert!(!cached_secret_matches(b"client", "client", "gen1"));
         assert!(!cached_secret_matches(b"other", "client", ""));
         assert!(!cached_secret_matches(&[0xff, 0xfe], "client", ""));
+    }
+
+    #[test]
+    fn cached_secret_value_roundtrip() {
+        let legacy = cached_secret_value("client", "").unwrap();
+        assert_eq!(legacy, b"client");
+        assert!(cached_secret_matches(&legacy, "client", ""));
+        assert!(!cached_secret_matches(&legacy, "client", "gen1"));
+
+        let bound = cached_secret_value("client", "gen1").unwrap();
+        assert!(cached_secret_matches(&bound, "client", "gen1"));
+        assert!(!cached_secret_matches(&bound, "client", ""));
     }
 
     #[test]
