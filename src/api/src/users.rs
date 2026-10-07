@@ -2509,8 +2509,16 @@ async fn handle_put_user_by_id(
     payload: UpdateUserRequest,
     preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let password_reset_by = if payload.password.is_some() {
-        Some(match principal.user_id() {
+    let actor_id = principal.user_id();
+    if actor_id.is_err() && principal.api_key.is_none() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "No authenticated user or API key for user update",
+        ));
+    }
+    let is_self_update = actor_id == Ok(user_id.as_str());
+    let password_reset_by = if payload.password.is_some() && !is_self_update {
+        Some(match actor_id {
             Ok(actor_id) => User::find(actor_id.to_string()).await?.email,
             Err(err) => {
                 let api_key = principal.api_key.as_ref().ok_or(err)?;
@@ -2525,6 +2533,7 @@ async fn handle_put_user_by_id(
         payload,
         None,
         preferred_username,
+        is_self_update,
         password_reset_by.as_deref(),
     )
     .await?;
