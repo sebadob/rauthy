@@ -1922,7 +1922,11 @@ impl Client {
                 .join(",")
         };
         let scopes = join(&vars.allowed_scopes);
-        let default_scopes = join(&vars.default_scopes);
+        let default_scopes = join(
+            vars.default_scopes
+                .as_deref()
+                .unwrap_or(&vars.allowed_scopes),
+        );
 
         Ok(Self {
             id: value.client_id,
@@ -2776,8 +2780,7 @@ pub(crate) mod tests {
             force_mfa: false,
             allowed_flows: vec!["authorization_code".into()],
             allowed_scopes: allowed.iter().map(|s| Cow::Owned(s.to_string())).collect(),
-            default_scopes: default.iter().map(|s| Cow::Owned(s.to_string())).collect(),
-            default_scopes_explicit: true,
+            default_scopes: Some(default.iter().map(|s| Cow::Owned(s.to_string())).collect()),
             cache_lifetime: std::time::Duration::from_secs(3600),
             danger_allow_unvalidated_resource: false,
             ignore_unknown_auth_flows: false,
@@ -2814,10 +2817,11 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ephemeral_client_default_scopes_fallback_grants_all() {
-        let vars = ephemeral_vars(
-            &["openid", "profile", "email"],
-            &["openid", "profile", "email"],
-        );
+        // unset `default_scopes` fall back to `allowed_scopes`
+        let vars = VarsEphemeralClients {
+            default_scopes: None,
+            ..ephemeral_vars(&["openid", "profile", "email"], &[])
+        };
         let client =
             Client::try_from_ephemeral(ephemeral_request("https://cimd.example/client"), &vars)
                 .unwrap();

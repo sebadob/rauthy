@@ -298,14 +298,6 @@ pub struct Vars {
 
 impl Default for Vars {
     fn default() -> Self {
-        // `ephemeral_clients.default_scopes` defaults to the same list as `allowed_scopes`.
-        let ephemeral_allowed_scopes: Vec<Cow<'static, str>> = vec![
-            "openid".into(),
-            "profile".into(),
-            "email".into(),
-            "webid".into(),
-        ];
-
         Self {
             dev: VarsDev {
                 dev_mode: false,
@@ -464,9 +456,13 @@ impl Default for Vars {
                 enable_solid_aud: false,
                 force_mfa: false,
                 allowed_flows: vec!["authorization_code".into()],
-                allowed_scopes: ephemeral_allowed_scopes.clone(),
-                default_scopes: ephemeral_allowed_scopes,
-                default_scopes_explicit: false,
+                allowed_scopes: vec![
+                    "openid".into(),
+                    "profile".into(),
+                    "email".into(),
+                    "webid".into(),
+                ],
+                default_scopes: None,
                 cache_lifetime: Duration::from_secs(3600),
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
@@ -2224,12 +2220,8 @@ impl Vars {
         ) {
             let v = trimmed_scopes(v);
             if !v.is_empty() {
-                self.ephemeral_clients.default_scopes = v;
-                self.ephemeral_clients.default_scopes_explicit = true;
+                self.ephemeral_clients.default_scopes = Some(v);
             }
-        }
-        if !self.ephemeral_clients.default_scopes_explicit {
-            self.ephemeral_clients.default_scopes = self.ephemeral_clients.allowed_scopes.clone();
         }
 
         if let Some(v) = t_duration(
@@ -3929,16 +3921,19 @@ impl Vars {
     /// Only enforced for an enabled feature and an explicitly set `default_scopes`.
     fn validate_ephemeral_clients(&self) {
         let eph = &self.ephemeral_clients;
-        if !eph.enable || !eph.default_scopes_explicit {
+        let Some(default_scopes) = eph.default_scopes.as_ref() else {
+            return;
+        };
+        if !eph.enable {
             return;
         }
 
         assert!(
-            eph.default_scopes.iter().any(|s| s == "openid"),
+            default_scopes.iter().any(|s| s == "openid"),
             "`ephemeral_clients.default_scopes` must contain `openid` - ephemeral clients are \
             OIDC clients and always need an ID token"
         );
-        for scope in &eph.default_scopes {
+        for scope in default_scopes {
             assert!(
                 eph.allowed_scopes.contains(scope),
                 "`ephemeral_clients.default_scopes` contains '{scope}', which is not part of \
@@ -4156,10 +4151,9 @@ pub struct VarsEphemeralClients {
     pub allowed_flows: Vec<Cow<'static, str>>,
     pub allowed_scopes: Vec<Cow<'static, str>>,
     /// Scopes always granted to an ephemeral client, regardless of the request.
-    /// Defaults to `allowed_scopes` when unset or empty. An explicit list must contain
-    /// `openid` and be a subset of `allowed_scopes`.
-    pub default_scopes: Vec<Cow<'static, str>>,
-    pub(crate) default_scopes_explicit: bool,
+    /// `None` (unset or empty) means `allowed_scopes`. A set list must contain `openid` and
+    /// be a subset of `allowed_scopes`.
+    pub default_scopes: Option<Vec<Cow<'static, str>>>,
     pub cache_lifetime: Duration,
     /// RFC 8707: when an ephemeral client document declares no `allowed_resources`,
     /// a requested `resource` is rejected by default. Setting this to `true` lets such
@@ -4852,10 +4846,7 @@ allowed_scopes = ['openid', 'profile', 'email']
             vars.ephemeral_clients.allowed_scopes,
             cows(&["openid", "profile", "email"])
         );
-        assert_eq!(
-            vars.ephemeral_clients.default_scopes,
-            vars.ephemeral_clients.allowed_scopes
-        );
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
     }
 
     #[test]
@@ -4867,10 +4858,7 @@ allowed_scopes = ['openid', 'profile']
 default_scopes = []
 "#,
         );
-        assert_eq!(
-            vars.ephemeral_clients.default_scopes,
-            vars.ephemeral_clients.allowed_scopes
-        );
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
 
         // all-blank entries count as empty as well
         let vars = parse_eph(
@@ -4880,10 +4868,7 @@ allowed_scopes = ['openid', 'profile']
 default_scopes = ['', '  ']
 "#,
         );
-        assert_eq!(
-            vars.ephemeral_clients.default_scopes,
-            vars.ephemeral_clients.allowed_scopes
-        );
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
     }
 
     #[test]
@@ -4897,7 +4882,7 @@ default_scopes = ['openid', ' email ']
         );
         assert_eq!(
             vars.ephemeral_clients.default_scopes,
-            cows(&["openid", "email"])
+            Some(cows(&["openid", "email"]))
         );
     }
 
@@ -4927,7 +4912,7 @@ enable = true
 allowed_scopes = ['profile', 'email']
 "#,
         );
-        assert!(!vars.ephemeral_clients.default_scopes_explicit);
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
         vars.validate_ephemeral_clients();
 
         let vars = parse_eph(
@@ -4959,8 +4944,7 @@ default_scopes = ['profile']
         let mut vars = Vars::default();
         vars.ephemeral_clients.enable = enable;
         vars.ephemeral_clients.allowed_scopes = cows(allowed);
-        vars.ephemeral_clients.default_scopes = cows(default);
-        vars.ephemeral_clients.default_scopes_explicit = true;
+        vars.ephemeral_clients.default_scopes = Some(cows(default));
         vars
     }
 
