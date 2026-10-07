@@ -2510,17 +2510,13 @@ async fn handle_put_user_by_id(
     preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let password_reset_by = if payload.password.is_some() {
-        // Match the credential precedence used by validate_api_key_or_group_admin.
-        Some(
-            if let Some(api_key) = &principal.api_key
-                && !principal.is_admin()
-                && !principal.is_group_admin()
-            {
+        Some(match principal.user_id() {
+            Ok(actor_id) => User::find(actor_id.to_string()).await?.email,
+            Err(err) => {
+                let api_key = principal.api_key.as_ref().ok_or(err)?;
                 format!("API key {}", api_key.name)
-            } else {
-                User::find(principal.user_id()?.to_string()).await?.email
-            },
-        )
+            }
+        })
     } else {
         None
     };
