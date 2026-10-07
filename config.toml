@@ -1562,20 +1562,15 @@ ignore_unknown_auth_flows = false
 # Larger documents will be rejected during the lookup.
 # Must be at least 1024.
 #
-# Rollout note: `max_document_size` and `danger_allow_private_addresses`
-# are new keys. Older versions reject unknown keys, so add them to the
-# config file only after every replica runs a version that knows them,
-# and remove them before rolling back. The `EPHEMERAL_CLIENTS_*` env
-# vars below are the rollout-safe way to set them.
-#
 # default: 65536
-# overwritten by: EPHEMERAL_CLIENTS_MAX_DOCUMENT_SIZE
-#max_document_size = 65536
+# overwritten by: EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES
+#max_document_bytes = 65536
 
 # Ephemeral client URLs that resolve to a loopback, private,
 # link-local or otherwise non-public address are rejected by
 # default to prevent SSRF into internal services (like cloud
-# metadata endpoints). The lookup never follows redirects.
+# metadata endpoints). Redirects are followed only to https, and the
+# redirect target is subject to the same address checks.
 #
 # Ephemeral client lookups never use system proxies (HTTP_PROXY etc.),
 # because a proxy would bypass the address checks.

@@ -466,7 +466,7 @@ impl Default for Vars {
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
                 allowed_resources: Vec::default(),
-                max_document_size: 65536,
+                max_document_bytes: 65536,
                 danger_allow_private_addresses: false,
             },
             events: VarsEvents {
@@ -2254,10 +2254,10 @@ impl Vars {
         if let Some(v) = t_u32(
             &mut table,
             "ephemeral_clients",
-            "max_document_size",
-            "EPHEMERAL_CLIENTS_MAX_DOCUMENT_SIZE",
+            "max_document_bytes",
+            "EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES",
         ) {
-            self.ephemeral_clients.max_document_size = v;
+            self.ephemeral_clients.max_document_bytes = v;
         }
 
         if let Some(v) = t_bool(
@@ -3853,7 +3853,7 @@ impl Vars {
             panic!("device_grant.user_code_length must be <=255");
         }
 
-        if let Err(err) = validate_max_document_size(self.ephemeral_clients.max_document_size) {
+        if let Err(err) = validate_max_document_bytes(self.ephemeral_clients.max_document_bytes) {
             panic!("{err}");
         }
 
@@ -4127,11 +4127,11 @@ pub struct VarsEncryption {
     pub keys: Vec<String>,
 }
 
-/// `ephemeral_clients.max_document_size` must leave room for a minimal CIMD document.
-pub fn validate_max_document_size(v: u32) -> Result<(), String> {
+/// `ephemeral_clients.max_document_bytes` must leave room for a minimal CIMD document.
+pub fn validate_max_document_bytes(v: u32) -> Result<(), String> {
     if v < 1024 {
         Err(format!(
-            "ephemeral_clients.max_document_size must be >= 1024, got {v}"
+            "ephemeral_clients.max_document_bytes must be >= 1024, got {v}"
         ))
     } else {
         Ok(())
@@ -4168,11 +4168,11 @@ pub struct VarsEphemeralClients {
     pub allowed_resources: Vec<String>,
     /// The maximum size in bytes of a remote ephemeral client document.
     /// Larger documents will be rejected.
-    pub max_document_size: u32,
+    pub max_document_bytes: u32,
     /// Ephemeral client URLs that resolve to loopback, private, link-local or otherwise
     /// non-public addresses are rejected by default to prevent SSRF into internal services.
     /// Only set this to `true` for local development with a metadata server on a private address.
-    /// Ephemeral lookups never follow redirects and never use system proxies.
+    /// Ephemeral lookups follow redirects only to https and never use system proxies.
     pub danger_allow_private_addresses: bool,
 }
 

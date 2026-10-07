@@ -4970,6 +4970,7 @@ dependencies = [
  "bincode-next",
  "chrono",
  "chrono-tz",
+ "cidr",
  "constant_time_eq",
  "cryptr",
  "deadpool",

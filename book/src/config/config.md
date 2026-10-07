@@ -1538,20 +1538,15 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # Larger documents will be rejected during the lookup.
 # Must be at least 1024.
 #
-# Rollout note: `max_document_size` and `danger_allow_private_addresses`
-# are new keys. Older versions reject unknown keys, so add them to the
-# config file only after every replica runs a version that knows them,
-# and remove them before rolling back. The `EPHEMERAL_CLIENTS_*` env
-# vars below are the rollout-safe way to set them.
-#
 # default: 65536
-# overwritten by: EPHEMERAL_CLIENTS_MAX_DOCUMENT_SIZE
-#max_document_size = 65536
+# overwritten by: EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES
+#max_document_bytes = 65536
 
 # Ephemeral client URLs that resolve to a loopback, private,
 # link-local or otherwise non-public address are rejected by
 # default to prevent SSRF into internal services (like cloud
-# metadata endpoints). The lookup never follows redirects.
+# metadata endpoints). Redirects are followed only to https, and the
+# redirect target is subject to the same address checks.
 #
 # Ephemeral client lookups never use system proxies (HTTP_PROXY etc.),
 # because a proxy would bypass the address checks.
@@ -1562,14 +1557,6 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # default: false
 # overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES
 #danger_allow_private_addresses = false
-
-# Upgrade note: ephemeral client lookups are now hardened
-# against SSRF. `client_id` URLs that redirect, or that point to a
-# loopback / private / link-local / otherwise non-public address, stop
-# working by default, and the document size is capped by
-# `max_document_size`. Set
-# `EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES=true` only for
-# trusted networks. Ephemeral fetches ignore system proxies.
 
 [events]
 # The E-Mail address event notifications should be sent to.

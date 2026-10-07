@@ -1755,11 +1755,14 @@ impl Client {
                 "invalid ephemeral client URL",
             )
         })?;
-        let max_size = RauthyConfig::get().vars.ephemeral_clients.max_document_size as usize;
+        let max_size = RauthyConfig::get()
+            .vars
+            .ephemeral_clients
+            .max_document_bytes as usize;
 
         // SSRF-guarded fetch: no redirects, no proxies, non-public addresses rejected,
         // body size capped. The address policy lives in the global fetcher.
-        let bytes = fetch_bounded(&url, max_size).await?;
+        let bytes = fetch_bounded(url, max_size).await?;
 
         let mut body = match serde_json::from_slice::<EphemeralClientRequest>(&bytes) {
             Ok(b) => b,

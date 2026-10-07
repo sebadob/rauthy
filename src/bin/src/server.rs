@@ -143,8 +143,6 @@ pub async fn run(
     DB::hql().clear_cache(Cache::Html).await?;
     // whole App cache to make sure config changes are always updated
     DB::hql().clear_cache(Cache::App).await?;
-    // entries fetched by unhardened (pre-SSRF-guard) code must not survive an upgrade
-    DB::hql().clear_cache(Cache::ClientEphemeral).await?;
 
     #[cfg(debug_assertions)]
     {
@@ -152,6 +150,7 @@ pub async fn run(
         DB::hql().clear_cache(Cache::DeviceCode).await?;
         DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
         DB::hql().clear_cache(Cache::ClientDynamic).await?;
+        DB::hql().clear_cache(Cache::ClientEphemeral).await?;
         DB::hql().clear_cache(Cache::ClientSecret).await?;
         DB::hql().clear_cache(Cache::DPoPNonce).await?;
         DB::hql().clear_cache(Cache::JwksRemote).await?;
