@@ -110,7 +110,8 @@ static EPHEMERAL_FETCHER: LazyLock<GuardedFetcher> = LazyLock::new(|| {
         .expect("Cannot build HTTP client for ephemeral client lookups")
 });
 
-/// Initializes the global ephemeral fetcher. Must be called at startup.
+/// Initializes the global ephemeral fetcher. Called at startup when ephemeral clients are
+/// enabled, so a bad TLS / resolver config fails the boot instead of the first lookup.
 pub fn init_ephemeral_fetcher() {
     LazyLock::force(&EPHEMERAL_FETCHER);
     LazyLock::force(&FORBIDDEN);

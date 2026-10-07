@@ -75,7 +75,9 @@ pub async fn trigger() {
         .expect("Cannot build global HTTP client");
     HTTP_CLIENT.set(http_client).unwrap();
     // fail the boot on a bad TLS / resolver config instead of the first CIMD request
-    rauthy_data::http_client::init_ephemeral_fetcher();
+    if vars.ephemeral_clients.enable {
+        rauthy_data::http_client::init_ephemeral_fetcher();
+    }
 
     // constants
     let _ = *APP_START;
