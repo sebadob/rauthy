@@ -166,7 +166,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
         }
 
         for client in clients {
-            client.save_cache().await?;
+            client.delete_cache().await?;
         }
 
         client
@@ -334,7 +334,7 @@ WHERE id = $5"#,
 
         if let Some(clients) = clients {
             for client in clients {
-                client.save_cache().await?;
+                client.delete_cache().await?;
             }
         }
 

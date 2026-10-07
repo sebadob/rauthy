@@ -14,7 +14,7 @@ use rauthy_common::constants::SECRET_LEN_CLIENTS;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
 use rauthy_common::validation::validate_redirect_uri;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::info;
 use zeroize::Zeroize;
 
@@ -65,9 +65,9 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, generation)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22)"#;
+$18, $19, $20, $21, $22, $23)"#;
 
     for client in clients {
         let (kid, secret) = if let Some(secret) = client.secret {
@@ -122,6 +122,17 @@ $18, $19, $20, $21, $22)"#;
             (None, None)
         };
 
+        for uri in &client.redirect_uris {
+            if let Err(err) = validate_redirect_uri(uri, true, true) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "Bootstrap client '{}' has an invalid redirect_uri '{uri}': {}",
+                        client.id, err.message
+                    ),
+                ));
+            }
+        }
         let redirect_uris = opt_vec_to_csv(&Some(client.redirect_uris)).unwrap();
         let post_logout_redirect_uris = opt_vec_to_csv(&client.post_logout_redirect_uris);
         let allowed_origins = opt_vec_to_csv(&client.allowed_origins);
@@ -154,6 +165,7 @@ $18, $19, $20, $21, $22)"#;
             }
         }
         let default_scopes = client.default_scopes.join(",");
+        let generation = crate::entity::clients::Client::new_generation();
 
         if is_hiqlite() {
             DB::hql()
@@ -181,7 +193,8 @@ $18, $19, $20, $21, $22)"#;
                         client.client_uri,
                         contacts,
                         client.backchannel_logout_uri,
-                        client.restrict_group_prefix
+                        client.restrict_group_prefix,
+                        generation
                     ),
                 )
                 .await?;
@@ -211,10 +224,12 @@ $18, $19, $20, $21, $22)"#;
                     &contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &generation,
                 ],
             )
             .await?;
         }
+        crate::entity::clients::Client::delete_cache_for(&client.id).await?;
 
         if let Some(scim) = client.scim {
             ClientScim::upsert(

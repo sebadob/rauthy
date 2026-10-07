@@ -714,7 +714,40 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     // Do not change the order - tables below have FKs to clients
     // CLIENTS
     debug!("Migrating table: clients");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM clients", &[], 2).await?;
+    // `generation` may not exist yet in the source DB -> map manually instead of `FromPgRow`
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM clients", &[], 2)
+        .await?
+        .into_iter()
+        .map(|row| Client {
+            id: row.get("id"),
+            name: row.get("name"),
+            enabled: row.get("enabled"),
+            confidential: row.get("confidential"),
+            secret: row.get("secret"),
+            secret_kid: row.get("secret_kid"),
+            redirect_uris: row.get("redirect_uris"),
+            post_logout_redirect_uris: row.get("post_logout_redirect_uris"),
+            allowed_origins: row.get("allowed_origins"),
+            flows_enabled: row.get("flows_enabled"),
+            access_token_alg: row.get("access_token_alg"),
+            id_token_alg: row.get("id_token_alg"),
+            auth_code_lifetime: row.get("auth_code_lifetime"),
+            access_token_lifetime: row.get("access_token_lifetime"),
+            scopes: row.get("scopes"),
+            default_scopes: row.get("default_scopes"),
+            challenge: row.get("challenge"),
+            force_mfa: row.get("force_mfa"),
+            client_uri: row.get("client_uri"),
+            contacts: row.get("contacts"),
+            backchannel_logout_uri: row.get("backchannel_logout_uri"),
+            restrict_group_prefix: row.get("restrict_group_prefix"),
+            claims: row.get("claims"),
+            claims_at_root: row.get("claims_at_root"),
+            allowed_resources: row.get("allowed_resources"),
+            default_aud: row.get("default_aud"),
+            generation: row.try_get("generation").unwrap_or_default(),
+        })
+        .collect();
     inserts::clients(before).await?;
 
     // CLIENTS DYN
@@ -775,7 +808,23 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM refresh_tokens", &[], 0).await?;
+    // `client_id` may not exist yet in the source DB -> map manually instead of `FromPgRow`
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM refresh_tokens", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| RefreshToken {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            nbf: row.get("nbf"),
+            exp: row.get("exp"),
+            scope: row.get("scope"),
+            is_mfa: row.get("is_mfa"),
+            session_id: row.get("session_id"),
+            access_token_jti: row.get("access_token_jti"),
+            client_id: row.try_get("client_id").ok().flatten(),
+            client_generation: row.try_get("client_generation").ok().flatten(),
+        })
+        .collect();
     inserts::refresh_tokens(before).await?;
 
     // ROLES
@@ -815,7 +864,22 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // DEVICES
     debug!("Migrating table: devices");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM devices", &[], 0).await?;
+    // `client_generation` may not exist yet in the source DB -> map manually instead of `FromPgRow`
+    let before = DB::pg_query_rows_with(&cl, "SELECT * FROM devices", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| DeviceEntity {
+            id: row.get("id"),
+            client_id: row.get("client_id"),
+            user_id: row.get("user_id"),
+            created: row.get("created"),
+            access_exp: row.get("access_exp"),
+            refresh_exp: row.get("refresh_exp"),
+            peer_ip: row.get("peer_ip"),
+            name: row.get("name"),
+            client_generation: row.try_get("client_generation").unwrap_or_default(),
+        })
+        .collect();
     inserts::devices(before).await?;
 
     // REFRESH TOKENS DEVICES
