@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Features
+
+- Ephemeral clients get a configurable `ephemeral_clients.default_scopes`
+  (`EPHEMERAL_CLIENTS_DEFAULT_SCOPES`). Until now, every ephemeral (CIMD) client got the full
+  `allowed_scopes` list as its default scopes, so each token carried all of them no matter what
+  the client requested. With e.g. `default_scopes = ['openid']`, a client gets only what it
+  requests explicitly, within `allowed_scopes`. Unset or empty keeps the current behavior. An
+  explicit list must contain `openid` and be a subset of `allowed_scopes`, otherwise Rauthy
+  refuses to start. The FedCM token endpoint issues tokens from `default_scopes` alone, so keep
+  what FedCM needs if you narrow them.
+
 ### Bugfix
 
 - A dynamic client updating its own registration (`PUT /clients_dyn/{id}`, RFC 7592) reset every

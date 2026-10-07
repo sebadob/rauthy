@@ -5,7 +5,7 @@ use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
-use crate::rauthy_config::RauthyConfig;
+use crate::rauthy_config::{RauthyConfig, VarsEphemeralClients};
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -28,6 +28,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt::Write;
@@ -1231,26 +1232,32 @@ impl Client {
         &self,
         scopes: &Option<Vec<String>>,
     ) -> Result<Vec<String>, ErrorResponse> {
-        if scopes.is_none() {
-            return Ok(self
-                .default_scopes
-                .split(',')
-                .map(|s| s.to_string())
-                .collect());
-        }
-
-        let scopes = scopes.as_ref().unwrap();
-        let mut res = Vec::with_capacity(scopes.len());
-
-        // Always add the configured default scopes
-        for s in self.default_scopes.split(',') {
-            res.push(s.to_string());
-        }
-
         let matrix_enabled = RauthyConfig::get().vars.matrix.msc3861_enable;
+        Ok(self.sanitize_login_scopes_with(scopes.as_deref(), matrix_enabled))
+    }
+
+    /// Config-free core of [`Self::sanitize_login_scopes`]: default scopes first, then the
+    /// requested scopes that are allowed for this client, deduplicated.
+    fn sanitize_login_scopes_with(
+        &self,
+        scopes: Option<&[String]>,
+        matrix_enabled: bool,
+    ) -> Vec<String> {
+        // Always add the configured default scopes
+        let mut res = self
+            .default_scopes
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
+
+        let Some(scopes) = scopes else {
+            return res;
+        };
+        res.reserve(scopes.len());
 
         for s in scopes {
-            if self.default_scopes.split(',').any(|d| d == s) {
+            if res.iter().any(|existing| existing == s) {
                 continue;
             }
 
@@ -1263,7 +1270,7 @@ impl Client {
             }
         }
 
-        Ok(res)
+        res
     }
 
     /// Returns an error if the client is not enabled.
@@ -1879,6 +1886,17 @@ impl TryFrom<EphemeralClientRequest> for Client {
     type Error = ErrorResponse;
 
     fn try_from(value: EphemeralClientRequest) -> Result<Self, Self::Error> {
+        Self::from_ephemeral(value, &RauthyConfig::get().vars.ephemeral_clients)
+    }
+}
+
+impl Client {
+    /// Config-free core of `TryFrom<EphemeralClientRequest>`. `allowed_scopes` becomes the
+    /// client's `scopes`, `default_scopes` its `default_scopes`.
+    pub(crate) fn from_ephemeral(
+        value: EphemeralClientRequest,
+        eph: &VarsEphemeralClients,
+    ) -> Result<Self, ErrorResponse> {
         for uri in &value.redirect_uris {
             validate_redirect_uri(uri, false, true).map_err(|err| {
                 ErrorResponse::new(
@@ -1896,11 +1914,15 @@ impl TryFrom<EphemeralClientRequest> for Client {
             })?;
         }
 
-        let scopes = RauthyConfig::get()
-            .vars
-            .ephemeral_clients
-            .allowed_scopes
-            .join(",");
+        let join = |v: &[Cow<'static, str>]| {
+            v.iter()
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+        let scopes = join(&eph.allowed_scopes);
+        let default_scopes = join(&eph.default_scopes);
 
         Ok(Self {
             id: value.client_id,
@@ -1912,11 +1934,7 @@ impl TryFrom<EphemeralClientRequest> for Client {
             redirect_uris: value.redirect_uris.join(","),
             post_logout_redirect_uris: value.post_logout_redirect_uris.map(|uris| uris.join(",")),
             allowed_origins: None,
-            flows_enabled: RauthyConfig::get()
-                .vars
-                .ephemeral_clients
-                .allowed_flows
-                .join(","),
+            flows_enabled: eph.allowed_flows.join(","),
             access_token_alg: value
                 .access_token_signed_response_alg
                 .unwrap_or_default()
@@ -1927,10 +1945,10 @@ impl TryFrom<EphemeralClientRequest> for Client {
                 .to_string(),
             auth_code_lifetime: 60,
             access_token_lifetime: value.default_max_age.unwrap_or(1800),
-            scopes: scopes.clone(),
-            default_scopes: scopes,
+            scopes,
+            default_scopes,
             challenge: Some("S256".to_string()),
-            force_mfa: RauthyConfig::get().vars.ephemeral_clients.force_mfa,
+            force_mfa: eph.force_mfa,
             client_uri: value.client_uri,
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
@@ -2732,6 +2750,101 @@ pub(crate) mod tests {
     //     })
     // }
 
+    fn ephemeral_request(client_id: &str) -> EphemeralClientRequest {
+        EphemeralClientRequest {
+            client_id: client_id.to_string(),
+            client_name: Some("Ephemeral Test".to_string()),
+            client_uri: None,
+            contacts: None,
+            redirect_uris: vec!["https://example.com/cb".to_string()],
+            post_logout_redirect_uris: None,
+            grant_types: None,
+            default_max_age: None,
+            scope: None,
+            require_auth_time: None,
+            access_token_signed_response_alg: None,
+            id_token_signed_response_alg: None,
+            allowed_resources: None,
+        }
+    }
+
+    fn ephemeral_vars(allowed: &[&str], default: &[&str]) -> VarsEphemeralClients {
+        VarsEphemeralClients {
+            enable: true,
+            enable_web_id: false,
+            enable_solid_aud: false,
+            force_mfa: false,
+            allowed_flows: vec!["authorization_code".into()],
+            allowed_scopes: allowed.iter().map(|s| Cow::Owned(s.to_string())).collect(),
+            default_scopes: default.iter().map(|s| Cow::Owned(s.to_string())).collect(),
+            default_scopes_explicit: true,
+            cache_lifetime: std::time::Duration::from_secs(3600),
+            danger_allow_unvalidated_resource: false,
+            ignore_unknown_auth_flows: false,
+            allowed_resources: Vec::default(),
+        }
+    }
+
+    fn strs(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn test_ephemeral_client_scope_mapping() {
+        let eph = ephemeral_vars(&["openid", "profile", "email"], &["openid"]);
+        let client =
+            Client::from_ephemeral(ephemeral_request("https://cimd.example/client"), &eph).unwrap();
+
+        assert_eq!(client.id, "https://cimd.example/client");
+        assert_eq!(client.scopes, "openid,profile,email");
+        assert_eq!(client.default_scopes, "openid");
+        assert_eq!(client.flows_enabled, "authorization_code");
+
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["email"])), false);
+        assert_eq!(res, strs(&["openid", "email"]));
+
+        let res = client.sanitize_login_scopes_with(None, false);
+        assert_eq!(res, strs(&["openid"]));
+
+        // a scope outside `allowed_scopes` is silently dropped
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["groups", "profile"])), false);
+        assert_eq!(res, strs(&["openid", "profile"]));
+    }
+
+    #[test]
+    fn test_ephemeral_client_default_scopes_fallback_grants_all() {
+        let eph = ephemeral_vars(
+            &["openid", "profile", "email"],
+            &["openid", "profile", "email"],
+        );
+        let client =
+            Client::from_ephemeral(ephemeral_request("https://cimd.example/client"), &eph).unwrap();
+        assert_eq!(client.default_scopes, "openid,profile,email");
+
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["email"])), false);
+        assert_eq!(res, strs(&["openid", "profile", "email"]));
+    }
+
+    #[test]
+    fn test_ephemeral_client_skips_blank_scope_entries() {
+        let eph = ephemeral_vars(&["openid", "", " ", "email"], &["openid", ""]);
+        let client =
+            Client::from_ephemeral(ephemeral_request("https://cimd.example/client"), &eph).unwrap();
+        assert_eq!(client.scopes, "openid,email");
+        assert_eq!(client.default_scopes, "openid");
+    }
+
+    #[test]
+    fn test_sanitize_login_scopes_dedupes_request() {
+        let client = Client {
+            scopes: "openid,profile,email".to_string(),
+            default_scopes: "openid".to_string(),
+            ..Default::default()
+        };
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["email", "email"])), false);
+        assert_eq!(res, strs(&["openid", "email"]));
+    }
+
     #[test]
     fn test_ephemeral_client_redirect_uri_shape() {
         for uri in [
@@ -2753,7 +2866,8 @@ pub(crate) mod tests {
                 id_token_signed_response_alg: None,
                 allowed_resources: None,
             };
-            let err = Client::try_from(req).unwrap_err();
+            let err =
+                Client::from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"])).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert!(err.message.contains(uri), "{uri}: {}", err.message);
         }
@@ -2780,7 +2894,8 @@ pub(crate) mod tests {
                 id_token_signed_response_alg: None,
                 allowed_resources: None,
             };
-            let err = Client::try_from(req).unwrap_err();
+            let err =
+                Client::from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"])).unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert!(
                 err.message.contains("post_logout_redirect_uri"),
