@@ -49,7 +49,7 @@ pub async fn grant_type_authorization_code(
 
     // check the client for external origin and oidc flow
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
-    let client = Client::find_maybe_ephemeral(client_id.clone())
+    let mut client = Client::find_maybe_ephemeral(client_id.clone())
         .await
         .map_err(|mut err| {
             if err.error == ErrorResponseType::NotFound {
@@ -119,6 +119,15 @@ pub async fn grant_type_authorization_code(
         warn!(err);
         return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
     }
+    let generation = client.find_current_generation().await?;
+    if !code.is_for_client_generation(generation.as_deref()) {
+        warn!("The Authorization Code was issued for a deleted client");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "'auth_code' could not be found inside the cache",
+        ));
+    }
+    client.generation = code.client_generation.clone();
     if code.exp < Utc::now().timestamp() {
         warn!("The Authorization Code has expired");
         return Err(ErrorResponse::new(

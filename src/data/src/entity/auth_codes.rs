@@ -15,6 +15,7 @@ struct AuthCodeOld {
     id: String,
     exp: i64,
     client_id: String,
+    client_generation: String,
     user_id: String,
     session_id: Option<String>,
     challenge: Option<String>,
@@ -29,6 +30,8 @@ pub struct AuthCode {
     pub id: String,
     pub exp: i64,
     pub client_id: String,
+    /// `Client::generation` of `client_id` when the code was issued.
+    pub client_generation: String,
     /// The exact URI used during authorization
     pub redirect_uri: String,
     pub user_id: String,
@@ -113,6 +116,7 @@ impl AuthCode {
                     id: code_old.id,
                     exp: code_old.exp,
                     client_id: code_old.client_id,
+                    client_generation: code_old.client_generation,
                     // This is not an Option on purpose to prevent another migration being necessary
                     redirect_uri: String::default(),
                     user_id: code_old.user_id,
@@ -202,6 +206,7 @@ impl AuthCode {
     pub fn new(
         user_id: String,
         client_id: String,
+        client_generation: String,
         redirect_uri: String,
         session_id: Option<String>,
         challenge: Option<String>,
@@ -222,6 +227,7 @@ impl AuthCode {
             id,
             exp,
             client_id,
+            client_generation,
             redirect_uri,
             user_id,
             session_id,
@@ -232,6 +238,12 @@ impl AuthCode {
             resource,
             state,
         }
+    }
+
+    /// `current` is the stored `Client::generation` of `client_id`, `None` if it does not exist.
+    #[inline]
+    pub fn is_for_client_generation(&self, current: Option<&str>) -> bool {
+        current == Some(self.client_generation.as_str())
     }
 
     /// CAUTION: DO NOT use this reset in any other case than after accepting updated ToS!
@@ -432,6 +444,7 @@ mod tests {
             id: "c0de".to_string(),
             exp: 0,
             client_id: client.id.clone(),
+            client_generation: client.generation.clone(),
             redirect_uri: uri.to_string(),
             user_id: "user".to_string(),
             session_id: None,
@@ -517,5 +530,29 @@ mod tests {
                 ("iss".to_string(), ISSUER.to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn test_auth_code_client_generation() {
+        let code = AuthCode {
+            id: "c0de".to_string(),
+            exp: 0,
+            client_id: "client_1".to_string(),
+            client_generation: "gen_a".to_string(),
+            redirect_uri: "https://client.example.com/cb".to_string(),
+            user_id: "user_1".to_string(),
+            session_id: None,
+            challenge: None,
+            challenge_method: None,
+            nonce: None,
+            scopes: Vec::new(),
+            resource: None,
+            state: None,
+        };
+
+        assert!(code.is_for_client_generation(Some("gen_a")));
+        assert!(!code.is_for_client_generation(Some("gen_b")));
+        assert!(!code.is_for_client_generation(Some("")));
+        assert!(!code.is_for_client_generation(None));
     }
 }

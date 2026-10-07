@@ -131,6 +131,28 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             }
         };
 
+        match Client::find_generation(&code.client_id).await {
+            Ok(generation) if code.is_for_client_generation(generation.as_deref()) => {}
+            Ok(_) => {
+                if let Err(err) = code.delete().await {
+                    error!(?err, "deleting DeviceAuthCode");
+                }
+                return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::ExpiredToken,
+                    error_description: Some(Cow::from(
+                        "invalid `device_code` or request has expired",
+                    )),
+                });
+            }
+            Err(err) => {
+                error!("{:?}", err);
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from(err.to_string())),
+                });
+            }
+        }
+
         let access_exp = now.add(chrono::Duration::seconds(
             client.access_token_lifetime as i64,
         ));
@@ -177,6 +199,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             // This is a better UX than asking for a custom name each time.
             // TODO add an optional `name` param to the initial device request?
             name: id.clone(),
+            client_generation: code.client_generation,
         };
         if let Err(err) = device.insert().await {
             error!("{:?}", err);

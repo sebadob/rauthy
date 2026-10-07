@@ -23,14 +23,23 @@ pub struct DeviceEntity {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
+    /// `Client::generation` of `client_id` when the device was authorized.
+    #[serde(default)]
+    pub client_generation: String,
 }
 
-impl DeviceEntity {
-    pub async fn insert(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+pub(crate) const SQL_INSERT: &str = r#"
 INSERT INTO devices
-(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name, client_generation)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+
+impl DeviceEntity {
+    pub fn is_for_client_generation(&self, generation: &str) -> bool {
+        self.client_generation == generation
+    }
+
+    pub async fn insert(self) -> Result<(), ErrorResponse> {
+        let sql = SQL_INSERT;
 
         if is_hiqlite() {
             DB::hql()
@@ -44,7 +53,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                         self.access_exp,
                         self.refresh_exp,
                         self.peer_ip,
-                        self.name
+                        self.name,
+                        self.client_generation
                     ),
                 )
                 .await?;
@@ -60,6 +70,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                     &self.refresh_exp,
                     &self.peer_ip,
                     &self.name,
+                    &self.client_generation,
                 ],
             )
             .await?;
@@ -180,6 +191,8 @@ impl From<DeviceEntity> for DeviceResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceAuthCode {
     pub client_id: String,
+    /// `Client::generation` of `client_id` when the code was created.
+    pub client_generation: String,
     pub device_code: String,
     /// Will be Some(user_id) once a user has been validated the auth request
     pub verified_by: Option<String>,
@@ -210,6 +223,7 @@ impl DeviceAuthCode {
     pub async fn new(
         scopes: Option<String>,
         client_id: String,
+        client_generation: String,
         client_secret: Option<String>,
         nonce: Option<String>,
     ) -> Result<Self, ErrorResponse> {
@@ -218,6 +232,7 @@ impl DeviceAuthCode {
         let exp = now.add(ttl);
         let slf = Self {
             client_id,
+            client_generation,
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
             verified_by: None,
             exp,
@@ -298,6 +313,12 @@ impl DeviceAuthCode {
 }
 
 impl DeviceAuthCode {
+    /// `current` is the stored `Client::generation` of `client_id`, `None` if it does not exist.
+    #[inline]
+    pub fn is_for_client_generation(&self, current: Option<&str>) -> bool {
+        current == Some(self.client_generation.as_str())
+    }
+
     /// Validates the given `user_code`
     #[inline]
     pub fn user_code(&self) -> &str {
@@ -315,5 +336,55 @@ impl DeviceAuthCode {
             RauthyConfig::get().pub_url_with_scheme,
             self.user_code()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_device_code_client_generation() {
+        let now = Utc::now();
+        let code = DeviceAuthCode {
+            client_id: "client_1".to_string(),
+            client_generation: "gen_a".to_string(),
+            device_code: "code".to_string(),
+            verified_by: Some("user_1".to_string()),
+            exp: now,
+            last_poll: now,
+            scopes: None,
+            nonce: None,
+            client_secret: None,
+            warnings: 0,
+        };
+
+        assert!(code.is_for_client_generation(Some("gen_a")));
+        assert!(!code.is_for_client_generation(Some("gen_b")));
+        assert!(!code.is_for_client_generation(Some("")));
+        assert!(!code.is_for_client_generation(None));
+    }
+
+    #[test]
+    fn test_device_client_generation() {
+        let mut device: DeviceEntity = serde_json::from_value(serde_json::json!({
+            "id": "dev_1",
+            "client_id": "client_1",
+            "user_id": "user_1",
+            "created": 1,
+            "access_exp": 2,
+            "refresh_exp": 3,
+            "peer_ip": "127.0.0.1",
+            "name": "dev_1",
+        }))
+        .unwrap();
+        assert_eq!(device.client_generation, "");
+        assert!(device.is_for_client_generation(""));
+        assert!(!device.is_for_client_generation("gen_a"));
+
+        device.client_generation = "gen_a".to_string();
+        assert!(device.is_for_client_generation("gen_a"));
+        assert!(!device.is_for_client_generation("gen_b"));
+        assert!(!device.is_for_client_generation(""));
     }
 }
