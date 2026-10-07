@@ -462,6 +462,7 @@ impl Default for Vars {
                     "email".into(),
                     "webid".into(),
                 ],
+                default_scopes: None,
                 cache_lifetime: Duration::from_secs(3600),
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
@@ -2209,8 +2210,18 @@ impl Vars {
             "allowed_scopes",
             "EPHEMERAL_CLIENTS_ALLOWED_SCOPES",
         ) {
-            self.ephemeral_clients.allowed_scopes =
-                v.into_iter().map(Cow::from).collect::<Vec<_>>();
+            self.ephemeral_clients.allowed_scopes = trimmed_scopes(v);
+        }
+        if let Some(v) = t_str_vec(
+            &mut table,
+            "ephemeral_clients",
+            "default_scopes",
+            "EPHEMERAL_CLIENTS_DEFAULT_SCOPES",
+        ) {
+            let v = trimmed_scopes(v);
+            if !v.is_empty() {
+                self.ephemeral_clients.default_scopes = Some(v);
+            }
         }
 
         if let Some(v) = t_duration(
@@ -3833,6 +3844,8 @@ impl Vars {
             panic!("device_grant.user_code_length must be <=255");
         }
 
+        self.validate_ephemeral_clients();
+
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
                 "Open dynamic client registration - consider setting a registration token, if possible."
@@ -3900,6 +3913,32 @@ impl Vars {
             .expect("Invalid format for `webauthn.rp_origin` - missing port");
         if webauthn_port.parse::<u16>().is_err() {
             panic!("Invalid value for `webauthn.rp_origin` port");
+        }
+    }
+}
+
+impl Vars {
+    /// Only enforced for an enabled feature and an explicitly set `default_scopes`.
+    fn validate_ephemeral_clients(&self) {
+        let eph = &self.ephemeral_clients;
+        let Some(default_scopes) = eph.default_scopes.as_ref() else {
+            return;
+        };
+        if !eph.enable {
+            return;
+        }
+
+        assert!(
+            default_scopes.iter().any(|s| s == "openid"),
+            "`ephemeral_clients.default_scopes` must contain `openid` - ephemeral clients are \
+            OIDC clients and always need an ID token"
+        );
+        for scope in default_scopes {
+            assert!(
+                eph.allowed_scopes.contains(scope),
+                "`ephemeral_clients.default_scopes` contains '{scope}', which is not part of \
+                `ephemeral_clients.allowed_scopes` - every default scope must also be allowed"
+            );
         }
     }
 }
@@ -4111,6 +4150,10 @@ pub struct VarsEphemeralClients {
     pub force_mfa: bool,
     pub allowed_flows: Vec<Cow<'static, str>>,
     pub allowed_scopes: Vec<Cow<'static, str>>,
+    /// Scopes always granted to an ephemeral client, regardless of the request.
+    /// `None` (unset or empty) means `allowed_scopes`. A set list must contain `openid` and
+    /// be a subset of `allowed_scopes`.
+    pub default_scopes: Option<Vec<Cow<'static, str>>>,
     pub cache_lifetime: Duration,
     /// RFC 8707: when an ephemeral client document declares no `allowed_resources`,
     /// a requested `resource` is rejected by default. Setting this to `true` lets such
@@ -4718,6 +4761,23 @@ fn err_env(var_name: &str, typ: &str) -> String {
     format!("Cannot parse {var_name} as `{typ}`")
 }
 
+/// Trims each scope and drops blank entries.
+fn trimmed_scopes(scopes: Vec<String>) -> Vec<Cow<'static, str>> {
+    scopes
+        .into_iter()
+        .filter_map(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else if trimmed.len() == s.len() {
+                Some(Cow::Owned(s))
+            } else {
+                Some(Cow::Owned(trimmed.to_string()))
+            }
+        })
+        .collect()
+}
+
 #[inline]
 pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
@@ -4727,6 +4787,7 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_parse_duration() {
@@ -4760,5 +4821,155 @@ mod tests {
             parse_duration("2y").unwrap(),
             Duration::from_secs(2 * 365 * 24 * 3600)
         );
+    }
+
+    fn parse_eph(toml_src: &str) -> Vars {
+        let mut table: toml::Table = toml::from_str(toml_src).unwrap();
+        let mut vars = Vars::default();
+        vars.parse_ephemeral_clients(&mut table);
+        vars
+    }
+
+    fn cows(v: &[&str]) -> Vec<Cow<'static, str>> {
+        v.iter().map(|s| Cow::Owned(s.to_string())).collect()
+    }
+
+    #[test]
+    fn ephemeral_default_scopes_fall_back_to_allowed_when_absent() {
+        let vars = parse_eph(
+            r#"
+[ephemeral_clients]
+allowed_scopes = ['openid', 'profile', 'email']
+"#,
+        );
+        assert_eq!(
+            vars.ephemeral_clients.allowed_scopes,
+            cows(&["openid", "profile", "email"])
+        );
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
+    }
+
+    #[test]
+    fn ephemeral_default_scopes_empty_falls_back_to_allowed() {
+        let vars = parse_eph(
+            r#"
+[ephemeral_clients]
+allowed_scopes = ['openid', 'profile']
+default_scopes = []
+"#,
+        );
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
+
+        // all-blank entries count as empty as well
+        let vars = parse_eph(
+            r#"
+[ephemeral_clients]
+allowed_scopes = ['openid', 'profile']
+default_scopes = ['', '  ']
+"#,
+        );
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
+    }
+
+    #[test]
+    fn ephemeral_default_scopes_explicit_value_is_kept() {
+        let vars = parse_eph(
+            r#"
+[ephemeral_clients]
+allowed_scopes = ['openid', 'profile', 'email']
+default_scopes = ['openid', ' email ']
+"#,
+        );
+        assert_eq!(
+            vars.ephemeral_clients.default_scopes,
+            Some(cows(&["openid", "email"]))
+        );
+    }
+
+    #[test]
+    fn ephemeral_allowed_scopes_are_trimmed() {
+        let vars = parse_eph(
+            r#"
+[ephemeral_clients]
+enable = true
+allowed_scopes = ['openid', ' email ', '  ']
+default_scopes = ['openid', 'email']
+"#,
+        );
+        assert_eq!(
+            vars.ephemeral_clients.allowed_scopes,
+            cows(&["openid", "email"])
+        );
+        vars.validate_ephemeral_clients();
+    }
+
+    #[test]
+    fn validate_ephemeral_default_scopes_fallback_without_openid_is_accepted() {
+        let vars = parse_eph(
+            r#"
+[ephemeral_clients]
+enable = true
+allowed_scopes = ['profile', 'email']
+"#,
+        );
+        assert_eq!(vars.ephemeral_clients.default_scopes, None);
+        vars.validate_ephemeral_clients();
+
+        let vars = parse_eph(
+            r#"
+[ephemeral_clients]
+enable = true
+allowed_scopes = []
+default_scopes = []
+"#,
+        );
+        vars.validate_ephemeral_clients();
+    }
+
+    #[test]
+    #[should_panic(expected = "must contain `openid`")]
+    fn validate_ephemeral_default_scopes_explicit_without_openid_panics() {
+        parse_eph(
+            r#"
+[ephemeral_clients]
+enable = true
+allowed_scopes = ['openid', 'profile', 'email']
+default_scopes = ['profile']
+"#,
+        )
+        .validate_ephemeral_clients();
+    }
+
+    fn eph_vars(enable: bool, allowed: &[&str], default: &[&str]) -> Vars {
+        let mut vars = Vars::default();
+        vars.ephemeral_clients.enable = enable;
+        vars.ephemeral_clients.allowed_scopes = cows(allowed);
+        vars.ephemeral_clients.default_scopes = Some(cows(default));
+        vars
+    }
+
+    #[test]
+    fn validate_ephemeral_default_scopes_accepts_openid_subset() {
+        eph_vars(true, &["openid", "profile", "email"], &["openid"]).validate_ephemeral_clients();
+        eph_vars(true, &["openid", "profile", "email"], &["openid", "email"])
+            .validate_ephemeral_clients();
+    }
+
+    #[test]
+    #[should_panic(expected = "must contain `openid`")]
+    fn validate_ephemeral_default_scopes_rejects_missing_openid() {
+        eph_vars(true, &["openid", "profile"], &["profile"]).validate_ephemeral_clients();
+    }
+
+    #[test]
+    #[should_panic(expected = "which is not part of `ephemeral_clients.allowed_scopes`")]
+    fn validate_ephemeral_default_scopes_rejects_subset_violation() {
+        eph_vars(true, &["openid", "profile"], &["openid", "groups"]).validate_ephemeral_clients();
+    }
+
+    #[test]
+    fn validate_ephemeral_default_scopes_is_skipped_when_disabled() {
+        eph_vars(false, &["openid"], &["groups"]).validate_ephemeral_clients();
+        eph_vars(false, &["openid"], &[]).validate_ephemeral_clients();
     }
 }
