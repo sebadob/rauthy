@@ -5,7 +5,7 @@ use cidr::{Ipv4Cidr, Ipv6Cidr};
 use rauthy_common::constants::{APPLICATION_JSON, RAUTHY_VERSION};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
-use reqwest::header::CONTENT_TYPE;
+use reqwest::header::ACCEPT;
 use reqwest::tls;
 use reqwest::{Certificate, Url};
 use std::cmp::min;
@@ -103,6 +103,8 @@ const FETCH_PERMITS: usize = 16;
 const FETCH_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(2);
 /// Maximum number of redirects followed for a single fetch.
 const MAX_REDIRECTS: usize = 5;
+/// Upper bound for the body buffer allocated up front, before any byte arrived.
+const PREALLOC_LIMIT: usize = 64 * 1024;
 
 /// Forced at startup via [`init_ephemeral_fetcher`] so a bad config fails the boot.
 static EPHEMERAL_FETCHER: LazyLock<GuardedFetcher> = LazyLock::new(|| {
@@ -159,6 +161,7 @@ impl GuardedFetcher {
                 },
             ))
             .no_proxy()
+            .referer(false)
             .dns_resolver(GuardedResolver {
                 allow_private,
                 timeout: dns_timeout,
@@ -172,7 +175,8 @@ impl GuardedFetcher {
     }
 
     /// Fetches a document from a user-provided URL, at most `max_size` bytes.
-    /// Upstream 4xx maps to `BadRequest`; 5xx and transport failures map to `Connection`.
+    /// Upstream 5xx maps to `Connection`; upstream 4xx, transport and policy failures (DNS,
+    /// timeout, refused address or redirect) map to `BadRequest`.
     pub(crate) async fn fetch_bounded(
         &self,
         url: Url,
@@ -196,7 +200,7 @@ impl GuardedFetcher {
         let mut res = self
             .client
             .get(url)
-            .header(CONTENT_TYPE, APPLICATION_JSON)
+            .header(ACCEPT, APPLICATION_JSON)
             .send()
             .await
             .map_err(|err| {
@@ -250,8 +254,11 @@ impl GuardedFetcher {
             return Err(too_large());
         }
 
-        let mut bytes =
-            Vec::with_capacity(min(res.content_length().unwrap_or(4096) as usize, max_size));
+        // never trust a server-controlled `Content-Length` for more than a small pre-allocation
+        let mut bytes = Vec::with_capacity(min(
+            res.content_length().unwrap_or(4096) as usize,
+            min(max_size, PREALLOC_LIMIT),
+        ));
         while let Some(chunk) = res.chunk().await.map_err(|err| {
             warn!("Cannot read ephemeral client data from {url}: {err:?}");
             ErrorResponse::new(
@@ -293,31 +300,39 @@ impl Resolve for GuardedResolver {
                 .await
                 .map_err(|_| format!("DNS lookup for {host} timed out"))??;
 
-            let mut rejected = false;
-            let allowed = addrs
-                .filter(|addr| {
-                    if !allow_private && is_forbidden_addr(addr.ip()) {
-                        warn!("Refusing ephemeral client lookup: {host} resolves to {addr}");
-                        rejected = true;
-                        false
-                    } else {
-                        true
-                    }
-                })
-                .collect::<Vec<SocketAddr>>();
-
-            if allowed.is_empty() {
-                let msg = if rejected {
-                    format!("{host} resolves to non-public addresses only")
-                } else {
-                    format!("{host} did not resolve to any address")
-                };
-                return Err(msg.into());
-            }
-
+            let allowed = filter_resolved(&host, addrs, allow_private)?;
             Ok(Box::new(allowed.into_iter()) as Addrs)
         })
     }
+}
+
+/// Keeps only the addresses a lookup may connect to. Errors if none is left.
+fn filter_resolved(
+    host: &str,
+    addrs: impl Iterator<Item = SocketAddr>,
+    allow_private: bool,
+) -> Result<Vec<SocketAddr>, String> {
+    let mut rejected = false;
+    let allowed = addrs
+        .filter(|addr| {
+            if !allow_private && is_forbidden_addr(addr.ip()) {
+                warn!("Refusing ephemeral client lookup: {host} resolves to {addr}");
+                rejected = true;
+                false
+            } else {
+                true
+            }
+        })
+        .collect::<Vec<SocketAddr>>();
+
+    if allowed.is_empty() {
+        return Err(if rejected {
+            format!("{host} resolves to non-public addresses only")
+        } else {
+            format!("{host} did not resolve to any address")
+        });
+    }
+    Ok(allowed)
 }
 
 /// Forbidden IPv4 ranges: "this" network, private, CGNAT, loopback, link-local, IETF protocol
@@ -425,7 +440,8 @@ fn is_forbidden_v6(addr: &Ipv6Addr) -> bool {
 /// resolver, so without it a redirect to e.g. `https://169.254.169.254/` would bypass the
 /// address filter. Names are still checked by the resolver.
 fn check_redirect(url: &Url, previous: usize, allow_private: bool) -> Result<(), &'static str> {
-    if previous >= MAX_REDIRECTS {
+    // `previous` includes the initial URL, so the Nth redirect is checked with `previous == N`
+    if previous > MAX_REDIRECTS {
         return Err("too many redirects");
     }
     if url.scheme() != "https" {
@@ -633,6 +649,42 @@ mod tests {
     }
 
     #[test]
+    fn test_filter_resolved() {
+        let sock = |s: &str| SocketAddr::new(s.parse().unwrap(), 443);
+        let public = [sock("93.184.216.34"), sock("2606:2800:220:1::1")];
+        let private = [
+            sock("127.0.0.1"),
+            sock("10.0.0.1"),
+            sock("169.254.169.254"),
+            sock("::1"),
+            sock("::ffff:10.0.0.1"),
+            sock("fd00:ec2::254"),
+        ];
+
+        // a mixed answer keeps only the public addresses
+        let mixed = private.iter().chain(public.iter()).copied();
+        assert_eq!(
+            filter_resolved("mixed.example", mixed, false).unwrap(),
+            public.to_vec()
+        );
+
+        // only non-public addresses
+        let err = filter_resolved("private.example", private.iter().copied(), false).unwrap_err();
+        assert!(err.contains("non-public addresses only"), "{err}");
+
+        // nothing at all
+        let err = filter_resolved("empty.example", std::iter::empty(), false).unwrap_err();
+        assert!(err.contains("did not resolve"), "{err}");
+
+        // `danger_allow_private_addresses` keeps everything
+        let all = private.iter().chain(public.iter()).copied();
+        assert_eq!(
+            filter_resolved("mixed.example", all, true).unwrap().len(),
+            private.len() + public.len()
+        );
+    }
+
+    #[test]
     fn test_check_redirect() {
         let url = |s: &str| Url::parse(s).unwrap();
 
@@ -669,9 +721,9 @@ mod tests {
 
         // hop limit
         let target = url("https://example.com/client");
-        assert_eq!(check_redirect(&target, MAX_REDIRECTS - 1, false), Ok(()));
+        assert_eq!(check_redirect(&target, MAX_REDIRECTS, false), Ok(()));
         assert_eq!(
-            check_redirect(&target, MAX_REDIRECTS, false),
+            check_redirect(&target, MAX_REDIRECTS + 1, false),
             Err("too many redirects")
         );
     }
