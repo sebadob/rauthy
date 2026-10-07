@@ -2425,7 +2425,7 @@ pub async fn put_user_by_id(
     )?;
 
     let preferred_username = UserValues::find_preferred_username(&id).await?;
-    handle_put_user_by_id(id, req, payload, preferred_username).await
+    handle_put_user_by_id(id, req, principal, payload, preferred_username).await
 }
 
 /// Modifies a user via a patch operation
@@ -2498,18 +2498,45 @@ pub async fn patch_user(
         )?;
     }
 
-    handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
+    handle_put_user_by_id(user_id, req, principal, upd_req, has_preferred_username).await
 }
 
 #[inline]
 async fn handle_put_user_by_id(
     user_id: String,
     req: HttpRequest,
+    principal: ReqPrincipal,
     payload: UpdateUserRequest,
     preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (user, user_values, is_new_admin) =
-        User::update(user_id, payload, None, preferred_username, false).await?;
+    let actor_id = principal.user_id();
+    if actor_id.is_err() && principal.api_key.is_none() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "No authenticated user or API key for user update",
+        ));
+    }
+    let is_self_update = actor_id == Ok(user_id.as_str());
+    let password_reset_by = if payload.password.is_some() && !is_self_update {
+        Some(match actor_id {
+            Ok(actor_id) => User::find(actor_id.to_string()).await?.email,
+            Err(err) => {
+                let api_key = principal.api_key.as_ref().ok_or(err)?;
+                format!("API key {}", api_key.name)
+            }
+        })
+    } else {
+        None
+    };
+    let (user, user_values, is_new_admin) = User::update(
+        user_id,
+        payload,
+        None,
+        preferred_username,
+        is_self_update,
+        password_reset_by.as_deref(),
+    )
+    .await?;
 
     if is_new_admin {
         RauthyConfig::get()

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Features
+
+- Ephemeral clients get a configurable `ephemeral_clients.default_scopes`
+  (`EPHEMERAL_CLIENTS_DEFAULT_SCOPES`). Until now, every ephemeral (CIMD) client got the full
+  `allowed_scopes` list as its default scopes, so each token carried all of them no matter what
+  the client requested. With e.g. `default_scopes = ['openid']`, a client gets only what it
+  requests explicitly, within `allowed_scopes`. Unset or empty keeps the current behavior. An
+  explicit list must contain `openid` and be a subset of `allowed_scopes`, otherwise Rauthy
+  refuses to start. Already cached ephemeral clients keep their previous scopes until their cache
+  entry expires.
+  Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
+  via `EPHEMERAL_CLIENTS_DEFAULT_SCOPES` until every node is upgraded.
+
 ### Security
 
 - The lookup of an ephemeral (CIMD) client document fetched any `client_id` URL with the shared

@@ -123,6 +123,20 @@ allowed_flows = ['authorization_code', 'refresh_token']
 # default: ['openid', 'profile', 'email', 'webid']
 # overwritten by: EPHEMERAL_CLIENTS_ALLOWED_SCOPES - single String, \n separated values
 allowed_scopes = ['openid', 'profile', 'email', 'webid']
+
+# The default scopes for ephemeral clients. These will always be
+# added to a token for an ephemeral client, no matter which scopes
+# it requested.
+#
+# If not set (or set to an empty list), this defaults to the full
+# `allowed_scopes` list. If you want minimal grants and let the
+# client request additional scopes explicitly, set it to
+# `['openid']`. A non-empty list must contain `openid`, and every
+# entry must also exist in `allowed_scopes`.
+#
+# default: same as `allowed_scopes`
+# overwritten by: EPHEMERAL_CLIENTS_DEFAULT_SCOPES - single String, \n separated values
+#default_scopes = ['openid', 'profile', 'email', 'webid']
 ```
 
 If you need support for Solid OIDC, you need to at least enable web IDs and the solid `aud`:

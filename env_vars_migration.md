@@ -120,6 +120,7 @@
 | EPHEMERAL_CLIENTS_FORCE_MFA                | ephemeral_clients.force_mfa                 | bool       |          |
 | EPHEMERAL_CLIENTS_ALLOWED_FLOWS            | ephemeral_clients.allowed_flows             | \[String\] |          |
 | EPHEMERAL_CLIENTS_ALLOWED_SCOPES           | ephemeral_clients.allowed_scopes            | \[String\] |          |
+| EPHEMERAL_CLIENTS_DEFAULT_SCOPES           | ephemeral_clients.default_scopes            | \[String\] |          |
 | EPHEMERAL_CLIENTS_CACHE_LIFETIME           | ephemeral_clients.cache_lifetime            | u32        |          |
 | EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES       | ephemeral_clients.max_document_bytes        | u32        | >= 1024  |
 | EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES | ephemeral_clients.danger_allow_private_addresses | bool |     |
