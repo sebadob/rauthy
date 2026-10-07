@@ -115,6 +115,15 @@ pub async fn run(
     debug!("Starting Password Hasher");
     tokio::spawn(password_hasher::run());
 
+    debug!("Waiting for Raft-Node to be in sync with the cluster");
+    if let Err(err) = DB::hql()
+        .wait_for_cluster_sync_timeout(Duration::from_secs(30))
+        .await
+    {
+        // This should never happen in reality. Syncs should even be done in ms rather than seconds.
+        error!("Waiting for Raft-cluster sync timed out: {err}");
+    }
+
     debug!("Applying database migrations");
     let previous_db_version = DB::migrate().await.expect("Database migration error");
 

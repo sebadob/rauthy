@@ -1502,7 +1502,7 @@ key_active = 'bVCyTsGaggVy5yqQ'
 #
 # default: same as `allowed_scopes`
 # overwritten by: EPHEMERAL_CLIENTS_DEFAULT_SCOPES - single String, \n separated values
-#default_scopes = ['openid', 'profile', 'email', 'webid']
+#default_scopes = ['openid', 'profile', 'email']
 
 # The lifetime duration ephemeral clients will be kept inside
 # the cache.

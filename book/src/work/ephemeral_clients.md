@@ -136,7 +136,7 @@ allowed_scopes = ['openid', 'profile', 'email', 'webid']
 #
 # default: same as `allowed_scopes`
 # overwritten by: EPHEMERAL_CLIENTS_DEFAULT_SCOPES - single String, \n separated values
-#default_scopes = ['openid', 'profile', 'email', 'webid']
+#default_scopes = ['openid', 'profile', 'email']
 ```
 
 If you need support for Solid OIDC, you need to at least enable web IDs and the solid `aud`:
