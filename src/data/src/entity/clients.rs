@@ -5,6 +5,7 @@ use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
+use crate::http_client::fetch_bounded;
 use crate::rauthy_config::{RauthyConfig, VarsEphemeralClients};
 use actix_web::HttpRequest;
 use actix_web::http::header;
@@ -19,14 +20,13 @@ use rauthy_api_types::clients::{
     NewClientRequest, ScimClientRequestResponse,
 };
 use rauthy_api_types::oidc::GrantType;
-use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
+use rauthy_common::constants::{CACHE_TTL_APP, SECRET_LEN_CLIENTS};
+use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_common::validation::validate_redirect_uri;
-use rauthy_common::{http_client, is_hiqlite};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
-use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::cmp::min;
@@ -1755,31 +1755,30 @@ pub fn is_wildcard_prefix_match(registered: &str, requested: &str) -> bool {
 
 impl Client {
     async fn ephemeral_from_url(value: &str) -> Result<Self, ErrorResponse> {
-        let res = http_client()
-            .get(value)
-            .header(CONTENT_TYPE, APPLICATION_JSON)
-            .send()
-            .await
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Cannot fetch ephemeral client data from {value}: {err:?}"),
-                )
-            })?;
+        let url = Url::parse(value).map_err(|err| {
+            warn!("Invalid ephemeral client URL {value}: {err}");
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "invalid ephemeral client URL",
+            )
+        })?;
+        let max_size = RauthyConfig::get()
+            .vars
+            .ephemeral_clients
+            .max_document_bytes as usize;
 
-        if !res.status().is_success() {
-            let msg = format!("Cannot fetch ephemeral client information from {value}");
-            error!("{msg}");
-            return Err(ErrorResponse::new(ErrorResponseType::Connection, msg));
-        }
+        // SSRF-guarded fetch: no redirects, no proxies, non-public addresses rejected,
+        // body size capped. The address policy lives in the global fetcher.
+        let bytes = fetch_bounded(url, max_size).await?;
 
-        let mut body = match res.json::<EphemeralClientRequest>().await {
+        let mut body = match serde_json::from_slice::<EphemeralClientRequest>(&bytes) {
             Ok(b) => b,
             Err(err) => {
-                let msg =
-                    format!("Cannot deserialize into EphemeralClientRequest from {value}: {err:?}");
-                error!("{}", msg);
-                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, msg));
+                warn!("Cannot deserialize into EphemeralClientRequest from {value}: {err:?}");
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "invalid ephemeral client document",
+                ));
             }
         };
 
@@ -2785,6 +2784,8 @@ pub(crate) mod tests {
             danger_allow_unvalidated_resource: false,
             ignore_unknown_auth_flows: false,
             allowed_resources: Vec::default(),
+            max_document_bytes: 65536,
+            danger_allow_private_addresses: false,
         }
     }
 

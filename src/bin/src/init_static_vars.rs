@@ -7,8 +7,6 @@ use rauthy_common::{DB_TYPE, DbType, HTTP_CLIENT};
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::generic::{I18N_CONFIG, TIMEZONES_BR};
 use regex::Regex;
-use reqwest::tls;
-use tracing::{debug, warn};
 
 /// The only job of this function is to trigger the `LazyLock` init for some values that will be
 /// used all the time anyway. When this is triggered at the very start of the application, the
@@ -72,62 +70,14 @@ pub async fn trigger() {
         .set(vars.hashing.hash_await_warn_time.as_secs())
         .unwrap();
 
-    let http_client = {
-        let tls_version = match vars.http_client.min_tls.as_ref() {
-            "1.3" => tls::Version::TLS_1_3,
-            "1.2" => tls::Version::TLS_1_2,
-            "1.1" => {
-                warn!(
-                    r#"
-    You are allowing TLS 1.1 for the global HTTP client.
-    Only do this, if you know what you are doing!
-    "#
-                );
-                tls::Version::TLS_1_1
-            }
-            "1.0" => {
-                warn!(
-                    r#"
-    You are allowing TLS 1.0 for the global HTTP client.
-    Only do this, if you know what you are doing!
-    "#
-                );
-                tls::Version::TLS_1_0
-            }
-            _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
-        };
-
-        #[cfg(debug_assertions)]
-        let https_only = !(vars.http_client.danger_unencrypted || vars.dev.dev_mode);
-        #[cfg(not(debug_assertions))]
-        let https_only = !vars.http_client.danger_unencrypted;
-
-        let mut builder = reqwest::Client::builder()
-            .connect_timeout(vars.http_client.connect_timeout)
-            .timeout(vars.http_client.request_timeout)
-            .pool_idle_timeout(vars.http_client.idle_timeout)
-            .min_tls_version(tls_version)
-            .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
-            .https_only(https_only)
-            .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode)
-            .use_rustls_tls();
-
-        if let Some(bundle) = vars.http_client.root_ca_bundle.as_ref() {
-            let certs = reqwest::Certificate::from_pem_bundle(bundle.trim().as_bytes())
-                .expect("Cannot parse given HTTP_CUST_ROOT_CA_BUNDLE");
-            debug!(
-                "Adding {} custom Root CA certificates to HTTP Client",
-                certs.len()
-            );
-
-            for cert in certs {
-                builder = builder.add_root_certificate(cert);
-            }
-        }
-
-        builder.build().unwrap()
-    };
+    let http_client = rauthy_data::http_client::http_client_builder()
+        .build()
+        .expect("Cannot build global HTTP client");
     HTTP_CLIENT.set(http_client).unwrap();
+    // fail the boot on a bad TLS / resolver config instead of the first CIMD request
+    if vars.ephemeral_clients.enable {
+        rauthy_data::http_client::init_ephemeral_fetcher();
+    }
 
     // constants
     let _ = *APP_START;

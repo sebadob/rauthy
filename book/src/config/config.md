@@ -1548,6 +1548,30 @@ key_active = 'bVCyTsGaggVy5yqQ'
 # overwritten by: EPHEMERAL_CLIENTS_IGNORE_UNKNOWN_AUTH_FLOWS
 #ignore_unknown_auth_flows = false
 
+# The maximum size in bytes of a remote ephemeral client document.
+# Larger documents will be rejected during the lookup.
+# Must be at least 1024.
+#
+# default: 65536
+# overwritten by: EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES
+#max_document_bytes = 65536
+
+# Ephemeral client URLs that resolve to a loopback, private,
+# link-local or otherwise non-public address are rejected by
+# default to prevent SSRF into internal services (like cloud
+# metadata endpoints). Redirects are followed only to https, and the
+# redirect target is subject to the same address checks.
+#
+# Ephemeral client lookups never use system proxies (HTTP_PROXY etc.),
+# because a proxy would bypass the address checks.
+#
+# CAUTION: only enable this for local development, when your
+# ephemeral client document is served from a private address.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES
+#danger_allow_private_addresses = false
+
 [events]
 # The E-Mail address event notifications should be sent to.
 #

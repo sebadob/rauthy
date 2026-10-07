@@ -12,6 +12,7 @@ pub mod entity;
 pub mod events;
 pub mod fido_mds;
 pub mod html;
+pub mod http_client;
 pub mod ipgeo;
 pub mod language;
 pub mod migration;

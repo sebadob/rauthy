@@ -51,11 +51,11 @@ pub async fn grant_type_authorization_code(
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find_maybe_ephemeral(client_id.clone())
         .await
-        .map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                format!("Client '{client_id}' not found"),
-            )
+        .map_err(|mut err| {
+            if err.error == ErrorResponseType::NotFound {
+                err.message = format!("Client '{client_id}' not found").into();
+            }
+            err
         })?;
     client.validate_enabled()?;
     let header_origin = client.get_validated_origin_header(&req)?;

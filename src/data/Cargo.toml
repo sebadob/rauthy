@@ -32,6 +32,7 @@ atrium-oauth = { workspace = true }
 bincode-next = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
+cidr = { workspace = true }
 constant_time_eq = { workspace = true }
 cryptr = { workspace = true }
 ed25519-compact = { workspace = true }

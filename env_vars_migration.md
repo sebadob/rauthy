@@ -122,6 +122,8 @@
 | EPHEMERAL_CLIENTS_ALLOWED_SCOPES           | ephemeral_clients.allowed_scopes            | \[String\] |          |
 | EPHEMERAL_CLIENTS_DEFAULT_SCOPES           | ephemeral_clients.default_scopes            | \[String\] |          |
 | EPHEMERAL_CLIENTS_CACHE_LIFETIME           | ephemeral_clients.cache_lifetime            | u32        |          |
+| EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES       | ephemeral_clients.max_document_bytes        | u32        | >= 1024  |
+| EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES | ephemeral_clients.danger_allow_private_addresses | bool |     |
 | EVENT_EMAIL                                | events.email                                | String     |          |
 | EVENT_MATRIX_USER_ID                       | events.matrix_user_id                       | String     |          |
 | EVENT_MATRIX_ROOM_ID                       | events.matrix_room_id                       | String     |          |
