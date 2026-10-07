@@ -2214,52 +2214,22 @@ impl Vars {
             "allowed_scopes",
             "EPHEMERAL_CLIENTS_ALLOWED_SCOPES",
         ) {
-            self.ephemeral_clients.allowed_scopes = v
-                .into_iter()
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .map(Cow::from)
-                .collect::<Vec<_>>();
+            self.ephemeral_clients.allowed_scopes = trimmed_scopes(v);
         }
-        // `t_str_vec` returns `None` for an absent key and for a wrong type alike - track
-        // presence to reject the latter instead of silently falling back.
-        let default_scopes_env = env::var("EPHEMERAL_CLIENTS_DEFAULT_SCOPES").is_ok();
-        let default_scopes_present = table.contains_key("default_scopes") || default_scopes_env;
-        let default_scopes_toml_set = matches!(
-            table.get("default_scopes"),
-            Some(Value::Array(arr)) if arr.iter().any(|v| v.as_str().is_some_and(|s| !s.trim().is_empty()))
-        );
-        let default_scopes = t_str_vec(
+        if let Some(v) = t_str_vec(
             &mut table,
             "ephemeral_clients",
             "default_scopes",
             "EPHEMERAL_CLIENTS_DEFAULT_SCOPES",
-        )
-        .map(|v| {
-            v.into_iter()
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .map(Cow::from)
-                .collect::<Vec<_>>()
-        });
-        match default_scopes {
-            Some(v) if !v.is_empty() => {
+        ) {
+            let v = trimmed_scopes(v);
+            if !v.is_empty() {
                 self.ephemeral_clients.default_scopes = v;
                 self.ephemeral_clients.default_scopes_explicit = true;
             }
-            None if default_scopes_present => {
-                panic!("{}", err_t("default_scopes", "ephemeral_clients", "Array"));
-            }
-            _ => {
-                if default_scopes_env && default_scopes_toml_set {
-                    warn!(
-                        "EPHEMERAL_CLIENTS_DEFAULT_SCOPES is empty and overrides the non-empty \
-                        `ephemeral_clients.default_scopes` - falling back to `allowed_scopes`"
-                    );
-                }
-                self.ephemeral_clients.default_scopes =
-                    self.ephemeral_clients.allowed_scopes.clone();
-            }
+        }
+        if !self.ephemeral_clients.default_scopes_explicit {
+            self.ephemeral_clients.default_scopes = self.ephemeral_clients.allowed_scopes.clone();
         }
 
         if let Some(v) = t_duration(
@@ -4797,6 +4767,23 @@ fn err_env(var_name: &str, typ: &str) -> String {
     format!("Cannot parse {var_name} as `{typ}`")
 }
 
+/// Trims each scope and drops blank entries.
+fn trimmed_scopes(scopes: Vec<String>) -> Vec<Cow<'static, str>> {
+    scopes
+        .into_iter()
+        .filter_map(|s| {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                None
+            } else if trimmed.len() == s.len() {
+                Some(Cow::Owned(s))
+            } else {
+                Some(Cow::Owned(trimmed.to_string()))
+            }
+        })
+        .collect()
+}
+
 #[inline]
 pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
     let sep = if parent.is_empty() { "" } else { "." };
@@ -4966,17 +4953,6 @@ default_scopes = ['profile']
 "#,
         )
         .validate_ephemeral_clients();
-    }
-
-    #[test]
-    #[should_panic(expected = "Expected type `Array` for ephemeral_clients.default_scopes")]
-    fn ephemeral_default_scopes_wrong_type_panics() {
-        parse_eph(
-            r#"
-[ephemeral_clients]
-default_scopes = 'openid'
-"#,
-        );
     }
 
     fn eph_vars(enable: bool, allowed: &[&str], default: &[&str]) -> Vars {

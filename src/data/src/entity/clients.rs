@@ -1256,14 +1256,14 @@ impl Client {
         };
         res.reserve(scopes.len());
 
+        let allowed = self.scopes.split(',').collect::<Vec<_>>();
         for s in scopes {
             if res.iter().any(|existing| existing == s) {
                 continue;
             }
 
-            if self
-                .scopes
-                .split(',')
+            if allowed
+                .iter()
                 .any(|allowed| Scope::matches(allowed, s, matrix_enabled))
             {
                 res.push(s.clone());
@@ -1886,16 +1886,16 @@ impl TryFrom<EphemeralClientRequest> for Client {
     type Error = ErrorResponse;
 
     fn try_from(value: EphemeralClientRequest) -> Result<Self, Self::Error> {
-        Self::from_ephemeral(value, &RauthyConfig::get().vars.ephemeral_clients)
+        Self::try_from_ephemeral(value, &RauthyConfig::get().vars.ephemeral_clients)
     }
 }
 
 impl Client {
     /// Config-free core of `TryFrom<EphemeralClientRequest>`. `allowed_scopes` becomes the
     /// client's `scopes`, `default_scopes` its `default_scopes`.
-    pub(crate) fn from_ephemeral(
+    pub(crate) fn try_from_ephemeral(
         value: EphemeralClientRequest,
-        eph: &VarsEphemeralClients,
+        vars: &VarsEphemeralClients,
     ) -> Result<Self, ErrorResponse> {
         for uri in &value.redirect_uris {
             validate_redirect_uri(uri, false, true).map_err(|err| {
@@ -1921,8 +1921,8 @@ impl Client {
                 .collect::<Vec<_>>()
                 .join(",")
         };
-        let scopes = join(&eph.allowed_scopes);
-        let default_scopes = join(&eph.default_scopes);
+        let scopes = join(&vars.allowed_scopes);
+        let default_scopes = join(&vars.default_scopes);
 
         Ok(Self {
             id: value.client_id,
@@ -1934,7 +1934,7 @@ impl Client {
             redirect_uris: value.redirect_uris.join(","),
             post_logout_redirect_uris: value.post_logout_redirect_uris.map(|uris| uris.join(",")),
             allowed_origins: None,
-            flows_enabled: eph.allowed_flows.join(","),
+            flows_enabled: vars.allowed_flows.join(","),
             access_token_alg: value
                 .access_token_signed_response_alg
                 .unwrap_or_default()
@@ -1948,7 +1948,7 @@ impl Client {
             scopes,
             default_scopes,
             challenge: Some("S256".to_string()),
-            force_mfa: eph.force_mfa,
+            force_mfa: vars.force_mfa,
             client_uri: value.client_uri,
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
@@ -2791,9 +2791,10 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ephemeral_client_scope_mapping() {
-        let eph = ephemeral_vars(&["openid", "profile", "email"], &["openid"]);
+        let vars = ephemeral_vars(&["openid", "profile", "email"], &["openid"]);
         let client =
-            Client::from_ephemeral(ephemeral_request("https://cimd.example/client"), &eph).unwrap();
+            Client::try_from_ephemeral(ephemeral_request("https://cimd.example/client"), &vars)
+                .unwrap();
 
         assert_eq!(client.id, "https://cimd.example/client");
         assert_eq!(client.scopes, "openid,profile,email");
@@ -2813,12 +2814,13 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ephemeral_client_default_scopes_fallback_grants_all() {
-        let eph = ephemeral_vars(
+        let vars = ephemeral_vars(
             &["openid", "profile", "email"],
             &["openid", "profile", "email"],
         );
         let client =
-            Client::from_ephemeral(ephemeral_request("https://cimd.example/client"), &eph).unwrap();
+            Client::try_from_ephemeral(ephemeral_request("https://cimd.example/client"), &vars)
+                .unwrap();
         assert_eq!(client.default_scopes, "openid,profile,email");
 
         let res = client.sanitize_login_scopes_with(Some(&strs(&["email"])), false);
@@ -2827,9 +2829,10 @@ pub(crate) mod tests {
 
     #[test]
     fn test_ephemeral_client_skips_blank_scope_entries() {
-        let eph = ephemeral_vars(&["openid", "", " ", "email"], &["openid", ""]);
+        let vars = ephemeral_vars(&["openid", "", " ", "email"], &["openid", ""]);
         let client =
-            Client::from_ephemeral(ephemeral_request("https://cimd.example/client"), &eph).unwrap();
+            Client::try_from_ephemeral(ephemeral_request("https://cimd.example/client"), &vars)
+                .unwrap();
         assert_eq!(client.scopes, "openid,email");
         assert_eq!(client.default_scopes, "openid");
     }
@@ -2866,8 +2869,8 @@ pub(crate) mod tests {
                 id_token_signed_response_alg: None,
                 allowed_resources: None,
             };
-            let err =
-                Client::from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"])).unwrap_err();
+            let err = Client::try_from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"]))
+                .unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert!(err.message.contains(uri), "{uri}: {}", err.message);
         }
@@ -2894,8 +2897,8 @@ pub(crate) mod tests {
                 id_token_signed_response_alg: None,
                 allowed_resources: None,
             };
-            let err =
-                Client::from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"])).unwrap_err();
+            let err = Client::try_from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"]))
+                .unwrap_err();
             assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
             assert!(
                 err.message.contains("post_logout_redirect_uri"),

@@ -134,22 +134,6 @@ allowed_scopes = ['openid', 'profile', 'email', 'webid']
 # `['openid']`. A non-empty list must contain `openid`, and every
 # entry must also exist in `allowed_scopes`.
 #
-# FedCM: the FedCM token endpoint issues tokens for ephemeral
-# clients from `default_scopes` alone - there is no scope
-# parameter in that flow. If you narrow the defaults, keep
-# whatever FedCM needs (`openid`, `email`, `profile`), or accept
-# that FedCM ID tokens lose the corresponding claims.
-#
-# Already cached ephemeral clients keep their previous scopes
-# until their cache entry expires (`cache_lifetime`).
-#
-# Rollout: older Rauthy versions fail startup on unknown config
-# keys. Only add `default_scopes` to your config file once every
-# node runs a version that knows the key, and remove it again
-# before rolling back. The `EPHEMERAL_CLIENTS_DEFAULT_SCOPES`
-# env var is ignored by older versions and is the rollout-safe
-# way to set it.
-#
 # default: same as `allowed_scopes`
 # overwritten by: EPHEMERAL_CLIENTS_DEFAULT_SCOPES - single String, \n separated values
 #default_scopes = ['openid', 'profile', 'email', 'webid']

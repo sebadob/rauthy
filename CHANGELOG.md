@@ -10,8 +10,10 @@
   the client requested. With e.g. `default_scopes = ['openid']`, a client gets only what it
   requests explicitly, within `allowed_scopes`. Unset or empty keeps the current behavior. An
   explicit list must contain `openid` and be a subset of `allowed_scopes`, otherwise Rauthy
-  refuses to start. The FedCM token endpoint issues tokens from `default_scopes` alone, so keep
-  what FedCM needs if you narrow them.
+  refuses to start. Already cached ephemeral clients keep their previous scopes until their cache
+  entry expires.
+  Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
+  via `EPHEMERAL_CLIENTS_DEFAULT_SCOPES` until every node is upgraded.
 
 ### Bugfix
 
