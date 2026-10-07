@@ -1,5 +1,5 @@
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenScopes, TokenSet,
+    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenScopes, TokenSet,
 };
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -138,7 +138,7 @@ pub async fn validate_and_refresh_token(
     client.validate_user_groups(&user)?;
 
     let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
-    let rt_scope = if let Some(device_id) = &claims.common.did {
+    let (rt_scope, session_id, pending_refresh) = if let Some(device_id) = &claims.common.did {
         let rt = RefreshTokenDevice::find_delete(validation_str)
             .await
             .map_err(|mut err| {
@@ -167,31 +167,36 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
-        rt.scope
+        (rt.scope, None, None)
     } else {
-        let rt = RefreshToken::find_delete(validation_str)
-            .await
-            .map_err(|mut err| {
-                if matches!(err.error, ErrorResponseType::NotFound) {
-                    err.message = "Refresh Token not found".into();
-                }
-                err
+        let mut rt = RefreshToken::find_opt(validation_str)
+            .await?
+            .ok_or_else(|| {
+                ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token not found")
             })?;
+        if rt.session_id.is_none() {
+            rt = RefreshToken::find_delete(validation_str).await?;
+        }
 
         if rt.exp < now_plus_skew {
+            rt.delete().await?;
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Refresh Token has expired",
             ));
         }
         if rt.user_id != user.id {
+            rt.delete().await?;
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "'user_id' does not match",
             ));
         }
 
-        rt.scope
+        let session_id = rt.session_id.clone().map(SessionId);
+        let scope = rt.scope.take();
+        let pending = session_id.as_ref().map(|_| rt);
+        (scope, session_id, pending)
     };
 
     // at this point, everything has been validated -> we can issue a new TokenSet safely
@@ -211,14 +216,14 @@ pub async fn validate_and_refresh_token(
         AuthTime::now()
     };
 
-    let ts = TokenSet::from_user(
+    let result = TokenSet::from_user(
         &user,
         &client,
         auth_time,
         dpop_fingerprint,
         None,
         rt_scope.map(TokenScopes::new),
-        None,
+        session_id,
         // carry the granted resource forward so the refreshed access token keeps its
         // audience binding; a refresh can never widen it
         claims.resource.map(String::from),
@@ -226,7 +231,30 @@ pub async fn validate_and_refresh_token(
         // TODO I guess we need to provide the ID if this is a refresh from a device flow?
         DeviceCodeFlow::No,
     )
-    .await?;
+    .await;
+    let ts = match result {
+        Ok(ts) => ts,
+        Err(err) => {
+            if let Some(source) = pending_refresh {
+                source.delete().await?;
+            }
+            return Err(err);
+        }
+    };
+    if let Some(source) = pending_refresh {
+        let replacement = ts.refresh_token.as_deref().ok_or_else(|| {
+            ErrorResponse::new(ErrorResponseType::Internal, "Missing rotated refresh token")
+        })?;
+        let replacement_id = replacement
+            .len()
+            .checked_sub(REFRESH_TOKEN_VALIDATION_LEN)
+            .and_then(|start| replacement.get(start..))
+            .ok_or_else(|| {
+                ErrorResponse::new(ErrorResponseType::Internal, "Invalid rotated refresh token")
+            })?;
+        // Keep the source until its replacement exists, so logout fences publication.
+        source.finish_rotation(replacement_id).await?;
+    }
 
     if RauthyConfig::get().vars.events.generate_token_issued {
         Event::token_issued("refresh", &client.id, Some(&user.email))

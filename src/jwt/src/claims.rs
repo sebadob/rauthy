@@ -550,6 +550,7 @@ mod tests {
             email: None,
             email_verified: None,
             preferred_username: None,
+            name: None,
             given_name: None,
             family_name: None,
             address: None,

@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::issued_tokens::IssuedToken;
 use chrono::Utc;
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
@@ -95,6 +96,27 @@ impl RefreshToken {
                 "Invalid Refresh Token",
             ))
         }
+    }
+
+    pub async fn finish_rotation(&self, replacement_id: &str) -> Result<(), ErrorResponse> {
+        let err = match self.delete_checked().await {
+            Ok(()) => return Ok(()),
+            Err(err) if matches!(err.error, ErrorResponseType::NotFound) => err,
+            Err(err) => return Err(err),
+        };
+
+        // Logout or another refresh consumed the source. Remove this rotation's replacement,
+        // which has a different ID and may still exist even though the source does not.
+        match Self::find_delete(replacement_id).await {
+            Ok(replacement) => {
+                if let Some(jti) = replacement.access_token_jti {
+                    IssuedToken::revoke(jti).await?;
+                }
+            }
+            Err(cleanup) if matches!(cleanup.error, ErrorResponseType::NotFound) => {}
+            Err(cleanup) => return Err(cleanup),
+        }
+        Err(err)
     }
 
     pub async fn delete_by_sid(session_id: String) -> Result<(), ErrorResponse> {

@@ -3,6 +3,8 @@ dev_mode = true
 dpop_http = true
 
 [access]
+token_revoke_on_logout = true
+disable_refresh_token_nbf = true
 password_reset_cookie_binding = true
 whoami_headers = true
 

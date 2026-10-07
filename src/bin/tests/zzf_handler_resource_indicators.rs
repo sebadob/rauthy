@@ -274,6 +274,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         code_challenge_method: Some("S256".to_string()),
         resource: Some(RES_REFRESH.to_string()),
         resident_key_token: None,
+        fwda: None,
     };
     let res = http
         .post(&url_auth)
