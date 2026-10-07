@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Security
+
+- The lookup of an ephemeral (CIMD) client document fetched any `client_id` URL with the shared
+  HTTP client: it followed redirects, used system proxies, connected to loopback, private and
+  link-local addresses (including cloud metadata endpoints) and read the body without a size
+  limit. Since the `client_id` comes from an unauthenticated request, this was an SSRF and
+  memory exhaustion vector. The lookup now uses a dedicated fetcher that never follows
+  redirects, never uses a proxy, resolves the host itself and only connects to the public
+  addresses it verified (IP literals are checked before connecting, IPv4-mapped, NAT64, SIIT,
+  6to4 and Teredo forms included), caps the document size and limits concurrent lookups. Errors
+  returned to the client are generic, details are logged. The ephemeral client cache is cleared
+  on startup so entries fetched by older versions do not survive the upgrade.
+  New config values: `ephemeral_clients.max_document_size` (default `65536`, minimum `1024`)
+  and `ephemeral_clients.danger_allow_private_addresses` (default `false`, local development
+  only).
+  **Upgrade note:** `client_id` URLs that redirect, or that resolve to a non-public address,
+  stop working by default. Older versions reject unknown config keys, so in a mixed-version
+  cluster set the new values via `EPHEMERAL_CLIENTS_MAX_DOCUMENT_SIZE` and
+  `EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES` until every node is upgraded.
+
 ### Bugfix
 
 - A dynamic client updating its own registration (`PUT /clients_dyn/{id}`, RFC 7592) reset every

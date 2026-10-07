@@ -466,6 +466,8 @@ impl Default for Vars {
                 danger_allow_unvalidated_resource: false,
                 ignore_unknown_auth_flows: false,
                 allowed_resources: Vec::default(),
+                max_document_size: 65536,
+                danger_allow_private_addresses: false,
             },
             events: VarsEvents {
                 email: None,
@@ -2249,6 +2251,24 @@ impl Vars {
             self.ephemeral_clients.allowed_resources = v;
         }
 
+        if let Some(v) = t_u32(
+            &mut table,
+            "ephemeral_clients",
+            "max_document_size",
+            "EPHEMERAL_CLIENTS_MAX_DOCUMENT_SIZE",
+        ) {
+            self.ephemeral_clients.max_document_size = v;
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "ephemeral_clients",
+            "danger_allow_private_addresses",
+            "EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES",
+        ) {
+            self.ephemeral_clients.danger_allow_private_addresses = v;
+        }
+
         check_table_empty(table, "ephemeral_clients");
     }
 
@@ -3833,6 +3853,10 @@ impl Vars {
             panic!("device_grant.user_code_length must be <=255");
         }
 
+        if let Err(err) = validate_max_document_size(self.ephemeral_clients.max_document_size) {
+            panic!("{err}");
+        }
+
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
                 "Open dynamic client registration - consider setting a registration token, if possible."
@@ -4103,6 +4127,17 @@ pub struct VarsEncryption {
     pub keys: Vec<String>,
 }
 
+/// `ephemeral_clients.max_document_size` must leave room for a minimal CIMD document.
+pub fn validate_max_document_size(v: u32) -> Result<(), String> {
+    if v < 1024 {
+        Err(format!(
+            "ephemeral_clients.max_document_size must be >= 1024, got {v}"
+        ))
+    } else {
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct VarsEphemeralClients {
     pub enable: bool,
@@ -4131,6 +4166,14 @@ pub struct VarsEphemeralClients {
     /// `allowed_resources` of its own. Keeps deny-by-default while letting an operator
     /// permit specific resources without `danger_allow_unvalidated_resource`.
     pub allowed_resources: Vec<String>,
+    /// The maximum size in bytes of a remote ephemeral client document.
+    /// Larger documents will be rejected.
+    pub max_document_size: u32,
+    /// Ephemeral client URLs that resolve to loopback, private, link-local or otherwise
+    /// non-public addresses are rejected by default to prevent SSRF into internal services.
+    /// Only set this to `true` for local development with a metadata server on a private address.
+    /// Ephemeral lookups never follow redirects and never use system proxies.
+    pub danger_allow_private_addresses: bool,
 }
 
 #[derive(Debug)]
