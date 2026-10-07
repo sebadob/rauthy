@@ -1,51 +1,138 @@
 # Changelog
 
-## Unreleased
-
-### Features
-
-- Ephemeral clients get a configurable `ephemeral_clients.default_scopes`
-  (`EPHEMERAL_CLIENTS_DEFAULT_SCOPES`). Until now, every ephemeral (CIMD) client got the full
-  `allowed_scopes` list as its default scopes, so each token carried all of them no matter what
-  the client requested. With e.g. `default_scopes = ['openid']`, a client gets only what it
-  requests explicitly, within `allowed_scopes`. Unset or empty keeps the current behavior. An
-  explicit list must contain `openid` and be a subset of `allowed_scopes`, otherwise Rauthy
-  refuses to start. Already cached ephemeral clients keep their previous scopes until their cache
-  entry expires.
-  Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
-  via `EPHEMERAL_CLIENTS_DEFAULT_SCOPES` until every node is upgraded.
+## v0.37.1
 
 ### Security
 
-- The lookup of an ephemeral (CIMD) client document fetched any `client_id` URL with the shared
-  HTTP client: it followed redirects, used system proxies, connected to loopback, private and
-  link-local addresses (including cloud metadata endpoints) and read the body without a size
-  limit. Since the `client_id` comes from an unauthenticated request, this was an SSRF and
-  memory exhaustion vector. The lookup now uses a dedicated fetcher that follows redirects only
-  to `https` (at most 5), never uses a proxy, resolves the host itself and only connects to the
-  public addresses it verified (IP literals, also as a redirect target, are checked before
-  connecting, IPv4-mapped, NAT64, SIIT, 6to4 and Teredo forms included), caps the document size
-  and limits concurrent lookups. Errors returned to the client are generic, details are logged.
-  New config values: `ephemeral_clients.max_document_bytes` (default `65536`, minimum `1024`)
-  and `ephemeral_clients.danger_allow_private_addresses` (default `false`, local development
-  only).
-  **Upgrade note:** `client_id` URLs that redirect to plain `http`, or that resolve to a
-  non-public address, stop working by default. Older versions reject unknown config keys, so in
-  a mixed-version cluster set the new values via `EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES` and
-  `EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES` until every node is upgraded.
+#### Ephemeral Clients
+
+The lookup of an ephemeral (CIMD) client document fetched any `client_id` URL with the shared HTTP
+client: it followed redirects, used system proxies, connected to loopback, private and link-local
+addresses (including cloud metadata endpoints) and read the body without a size limit. Since the
+`client_id` comes from an unauthenticated request, this was an SSRF and memory exhaustion vector.
+The lookup now uses a dedicated fetcher that follows redirects only to `https` (at most 5), never
+uses a proxy, resolves the host itself and only connects to the public addresses it verified (IP
+literals, also as a redirect target, are checked before connecting, IPv4-mapped, NAT64, SIIT, 6to4
+and Teredo forms included), caps the document size and limits concurrent lookups. Errors returned to
+the client are generic, details are logged.
+
+```toml
+[ephemeral_clients]
+# The maximum size in bytes of a remote ephemeral client document.
+# Larger documents will be rejected during the lookup.
+# Must be at least 1024.
+#
+# default: 65536
+# overwritten by: EPHEMERAL_CLIENTS_MAX_DOCUMENT_BYTES
+max_document_bytes = 65536
+
+# Ephemeral client URLs that resolve to a loopback, private,
+# link-local or otherwise non-public address are rejected by
+# default to prevent SSRF into internal services (like cloud
+# metadata endpoints). Redirects are followed only to https, and the
+# redirect target is subject to the same address checks.
+#
+# Ephemeral client lookups never use system proxies (HTTP_PROXY etc.),
+# because a proxy would bypass the address checks.
+#
+# CAUTION: only enable this for local development, when your
+# ephemeral client document is served from a private address.
+#
+# default: false
+# overwritten by: EPHEMERAL_CLIENTS_DANGER_ALLOW_PRIVATE_ADDRESSES
+danger_allow_private_addresses = false
+```
+
+[#1778](https://github.com/sebadob/rauthy/pull/1778)
+[#1780](https://github.com/sebadob/rauthy/pull/1780)
+
+#### Logout
+
+Up until now, when a token was refreshed, the new `refresh_token` did not carry the original session
+ID. This makes sense when you see it in a way that this refresh was done independently from any
+session at all. It's usually a client backend that triggers it. However, dropping the `sid` in this
+case made it impossible to also revoke refresh tokens on session logout, if the user had a long
+running session that outlived token refreshes. This version now adds the `sid` to all newly issues
+refresh tokens, which means when you set `access.token_revoke_on_logout = true`, all refresh tokens
+that may be issued in the future, that also originiated from "this" session, will be revoked as
+well. This does not happen if the session expires on its own. Only when a dedicated logout was
+requested.
+
+[#1775](https://github.com/sebadob/rauthy/issues/1775)
+
+### Changes
+
+#### `name` in `id_token`
+
+Rauthy always sent `given_name` and `family_name` as specific values (and OIDC standard claims)
+inside the `id_token`. But, `name` also exists. It's basically the concanenation of all name values
+the IdP knows, and any client can build it on its own. Rauthy never added this field because I think
+it's actually just token bloat. It's a copy & paste of values that exist anyway.
+
+However, there are apps out there that expect the `name` field being present, and that do not accept
+or even look for the specific values. For instance, this was an issue
+with [Netbird](https://netbird.io/). Even though I still think this value is unnecessary overhead, I
+added it to the `id_token` for broader compatibility. This means e.g. Netbird as well is fixed, and
+a login via Rauthy as Generic OIDC provider works flawlessly.
+
+[#1771](https://github.com/sebadob/rauthy/pull/1771)
+
+#### Ephemeral Client `default_scopes`
+
+Ephemeral clients get configurable `default_scopes`. Until now, every ephemeral client (CIMD) got
+the full `allowed_scopes` list as its default scopes, so each token carried all of them no matter
+what the client requested.
+
+```toml
+[ephemeral_clients]
+# The default scopes for ephemeral clients. These will always be
+# added to a token for an ephemeral client, no matter which scopes
+# it requested.
+#
+# If not set (or set to an empty list), this defaults to the full
+# `allowed_scopes` list. If you want minimal grants and let the
+# client request additional scopes explicitly, set it to
+# `['openid']`. A non-empty list must contain `openid`, and every
+# entry must also exist in `allowed_scopes`.
+#
+# default: same as `allowed_scopes`
+# overwritten by: EPHEMERAL_CLIENTS_DEFAULT_SCOPES - single String, \n separated values
+default_scopes = ['openid', 'profile', 'email']
+```
+
+[#1777](https://github.com/sebadob/rauthy/pull/1777)
 
 ### Bugfix
 
-- A dynamic client updating its own registration (`PUT /clients_dyn/{id}`, RFC 7592) reset every
-  value only an admin can set to its default, among them `enabled`, the token lifetimes,
-  `restrict_group_prefix`, custom `claims`, `allowed_resources` and `default_aud`. A disabled
-  dynamic client could enable itself again this way. These values are now kept, and a disabled
-  dynamic client gets a `403` on `PUT /clients_dyn/{id}`.
-  A self-update can no longer add a grant type the client does not have yet: it may keep or
-  narrow its `grant_types`, anything else is rejected with a `400` and
-  `invalid_client_metadata` (RFC 7591 §3.2.2). Otherwise a client restricted to e.g.
-  `authorization_code` could add `client_credentials` and mint tokens carrying the kept
-  admin-set `default_aud` and `claims`. Grant types beyond the current ones need an admin.
+- `0.37.0` came with a regression when you were using Forward Authentication. As part of the big
+  oevrall security hardening process, the `AuthCode` was bound to the `state` when redirecting via
+  forward auth. The issue was, that a link on the login-side was frogotten, which made forward auth
+  fail all the time (the saved state is not needed for any other flow).
+  [#1770](https://github.com/sebadob/rauthy/pull/1770)
+- `0.37.0` broucht another regression in terms of `localhost` redirects. When you wanted to match
+  any port during callbacks, you could write `http://localhost:*` as an accepted `redirect_uri`.
+  As part of the security hardening, redirect URIs are now validated much stricter, and this syntax
+  does not work anymore. It still does not, but the original issue is fixed. To get it back, enable
+  `access.rfc_8252_enable = true`. If you did, you can set a `redirect_uri` like
+  `http://localhost:/callback`, at any port (as long as its on loopback) is accepted.
+  [#1769](https://github.com/sebadob/rauthy/pull/1769)
+- `ui_locales_supported` on the `.well-known/openid-configuration` endpoint was returning an invalid
+  value `zhhans`. This should have been `zh-Hans`, and it made some parser fail (e.g. SonarQube).
+  The returned values here are fixed and have the correct format, and they also respect you config
+  of `i18n.filter_lang_common`, and shows only filtered values.
+  [#1772](https://github.com/sebadob/rauthy/pull/1772)
+- A dynamic client updating its own registration resets every value only an admin can set to its
+  default, among them `enabled`, the token lifetimes, `restrict_group_prefix`, custom `claims`,
+  `allowed_resources` and `default_aud`. A disabled dynamic client could enable itself again this
+  way (not that crucial. It could also easily re-register anyway). These values are now kept, and a
+  disabled dynamic client gets a `403` instead. A self-update can no longer add a grant type the
+  client does not have yet: it may keep or narrow its `grant_types`, anything else is rejected with
+  a `400` and `invalid_client_metadata`. Otherwise a client restricted to e.g. `authorization_code`
+  could add `client_credentials` and mint tokens carrying the kept admin-set `default_aud` and
+  `claims`. Grant types beyond the current ones need an admin.
+  All of this is not really security-related, it's good practice. When DCR is enabled, any rejected
+  client can easily re-register a fresh one anway.
+  [#1774](https://github.com/sebadob/rauthy/pull/1774)
 
 ## v0.37.0
 
