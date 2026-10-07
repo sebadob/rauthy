@@ -113,6 +113,7 @@ static EPHEMERAL_FETCHER: LazyLock<GuardedFetcher> = LazyLock::new(|| {
 /// Initializes the global ephemeral fetcher. Must be called at startup.
 pub fn init_ephemeral_fetcher() {
     LazyLock::force(&EPHEMERAL_FETCHER);
+    LazyLock::force(&FORBIDDEN);
 }
 
 impl GuardedFetcher {
