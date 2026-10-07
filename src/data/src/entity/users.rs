@@ -1244,7 +1244,7 @@ LIMIT $2"#;
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
         preferred_username: Option<String>,
-        is_self_update: bool,
+        password_reset_by: Option<&str>,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(id).await?,
@@ -1279,11 +1279,11 @@ LIMIT $2"#;
 
         user.save(old_email.clone()).await?;
 
-        if upd_user.password.is_some() && !is_self_update {
+        if let Some(actor) = password_reset_by.filter(|_| upd_user.password.is_some()) {
             RauthyConfig::get()
                 .tx_events
                 .send_async(Event::user_password_reset(
-                    format!("Reset done by admin for user {}", user.email),
+                    format!("Reset done by {actor} for user {}", user.email),
                     None,
                 ))
                 .await
@@ -1429,7 +1429,7 @@ LIMIT $2"#;
 
         // a user cannot become a new admin from a self-req
         let (user, user_values, _is_new_admin) =
-            User::update(id, req, Some(user), preferred_username, true).await?;
+            User::update(id, req, Some(user), preferred_username, None).await?;
 
         Ok((user, user_values, email_updated))
     }
