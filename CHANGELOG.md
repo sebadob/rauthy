@@ -6,7 +6,7 @@
 
 #### Ephemeral Clients
 
-The lookup of an ephemeral (CIMD) client document fetched any `client_id` URL with the shared HTTP
+The lookup of an ephemeral client (CIMD) document fetched any `client_id` URL with the shared HTTP
 client: it followed redirects, used system proxies, connected to loopback, private and link-local
 addresses (including cloud metadata endpoints) and read the body without a size limit. Since the
 `client_id` comes from an unauthenticated request, this was an SSRF and memory exhaustion vector.
@@ -35,7 +35,7 @@ max_document_bytes = 65536
 # Ephemeral client lookups never use system proxies (HTTP_PROXY etc.),
 # because a proxy would bypass the address checks.
 #
-# CAUTION: only enable this for local development, when your
+# CAUTION: only enable this for local development when your
 # ephemeral client document is served from a private address.
 #
 # default: false
@@ -114,7 +114,7 @@ default_scopes = ['openid', 'profile', 'email']
   As part of the security hardening, redirect URIs are now validated much stricter, and this syntax
   does not work anymore. It still does not, but the original issue is fixed. To get it back, enable
   `access.rfc_8252_enable = true`. If you did, you can set a `redirect_uri` like
-  `http://localhost:/callback`, at any port (as long as its on loopback) is accepted.
+  `http://localhost/callback`, at any port (as long as its on loopback) is accepted.
   [#1769](https://github.com/sebadob/rauthy/pull/1769)
 - `ui_locales_supported` on the `.well-known/openid-configuration` endpoint was returning an invalid
   value `zhhans`. This should have been `zh-Hans`, and it made some parser fail (e.g. SonarQube).
