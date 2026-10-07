@@ -107,13 +107,21 @@ pub async fn get_token_set_init_client() -> TokenSet {
 }
 
 pub async fn session_headers() -> (HeaderMap, TokenSet) {
+    let redirect_uri = format!("{}/oidc/callback", get_backend_url());
+    session_headers_for_client("rauthy", None, &redirect_uri).await
+}
+
+pub async fn session_headers_for_client(
+    client_id: &str,
+    client_secret: Option<&str>,
+    redirect_uri: &str,
+) -> (HeaderMap, TokenSet) {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
     let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
-    let redirect_uri = format!("{}/oidc/callback", backend_url);
     let query = format!(
-        "client_id=rauthy&redirect_uri={}&response_type=code",
+        "client_id={client_id}&redirect_uri={}&response_type=code",
         redirect_uri
     );
     let challenge_s256 = base64_url_encode(sha256!(challenge_plain.as_bytes()));
@@ -133,7 +141,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         email: Some(USERNAME.to_string()),
         password: Some(PASSWORD.to_string()),
         pow: get_solved_pow().await,
-        client_id: "rauthy".to_string(),
+        client_id: client_id.to_string(),
         redirect_uri: redirect_uri.to_string(),
         scopes: None,
         state: None,
@@ -142,6 +150,7 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         code_challenge_method: Some("S256".to_string()),
         resource: None,
         resident_key_token: None,
+        fwda: None,
     };
 
     let res = client
@@ -158,7 +167,8 @@ pub async fn session_headers() -> (HeaderMap, TokenSet) {
         grant_type: GrantType::AuthorizationCode,
         code: Some(code),
         redirect_uri: Some(redirect_uri.to_string()),
-        client_id: Some("rauthy".to_string()),
+        client_id: Some(client_id.to_string()),
+        client_secret: client_secret.map(String::from),
         code_verifier: Some(challenge_plain.to_string()),
         ..Default::default()
     };
@@ -212,6 +222,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
         code_challenge_method: Some("S256".to_string()),
         resource: None,
         resident_key_token: None,
+        fwda: None,
     };
 
     let res = client

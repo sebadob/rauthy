@@ -236,6 +236,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         code_challenge_method: Some("S256".to_string()),
         resource: None,
         resident_key_token: None,
+        fwda: None,
     };
 
     let bad_redirect_uri = format!("{good_redirect_uri}&iss=x");
@@ -357,6 +358,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         code_challenge_method: Some("plain".to_string()),
         resource: None,
         resident_key_token: None,
+        fwda: None,
     };
     let res = reqwest::Client::new()
         .post(&url_auth)
@@ -747,6 +749,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         code_challenge_method: None,
         resource: None,
         resident_key_token: None,
+        fwda: None,
     };
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -1112,6 +1115,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         code_challenge_method: Some("S256".to_string()),
         resource: None,
         resident_key_token: None,
+        fwda: None,
     };
     let res = client
         .post(&url_auth)
