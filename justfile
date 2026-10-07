@@ -541,6 +541,9 @@ update:
     cargo +nightly update
     #CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow cargo +nightly update
 
+    # We always want the latest versions of crates we control
+    cargo update hiqlite cryptr s3-simple spow tls-hot-reload
+
     cd frontend
     # min release is set via `frontend/.npmrc`
     {{ npm }} update
