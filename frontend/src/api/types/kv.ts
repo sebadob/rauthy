@@ -1,19 +1,19 @@
 import type { JsonValue } from '$utils/jsonValue';
 
 export interface KVNamespaceRequest {
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_KV_NAME
     name: string;
     public?: boolean;
 }
 
 export interface KVAccessRequest {
     enabled: boolean;
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_KV_NAME
     name?: string;
 }
 
 export interface KVValueRequest {
-    /// Validation: PATTERN_GROUP
+    /// Validation: PATTERN_KV_NAME
     key: string;
     /// If set to `true`, the backend will encrypt the value on the application layer.
     /// The database will only contain encrypted data. Requires more resources, but is

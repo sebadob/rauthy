@@ -12,7 +12,7 @@
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import type { SelectItem } from '$lib5/select_list/props.ts';
     import SelectList from '$lib5/select_list/SelectList.svelte';
-    import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
+    import { PATTERN_SCOPE } from '$utils/patterns';
     import { untrack } from 'svelte';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
 
@@ -124,7 +124,7 @@
         disabled={isDefault}
         width="14.5rem"
         required
-        pattern={PATTERN_ROLE_SCOPE}
+        pattern={PATTERN_SCOPE}
     />
 
     {#if isDefault}

@@ -1,4 +1,4 @@
-use rauthy_common::regex::{RE_GROUPS, RE_KV_KEY};
+use rauthy_common::regex::{RE_KV_KEY, RE_NAME_ASCII};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -12,7 +12,7 @@ pub struct KVParams {
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct KVNamespaceRequest {
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    #[validate(regex(path = "*RE_NAME_ASCII", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub name: String,
     /// If set to `true`, public READ access will be granted to all key-value pairs in this
     /// namespace. List / GET all values is NOT allowed. Only accessing a single key directly  via
@@ -26,7 +26,7 @@ pub struct KVNamespaceRequest {
 pub struct KVAccessRequest {
     pub enabled: bool,
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    #[validate(regex(path = "*RE_NAME_ASCII", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub name: Option<String>,
 }
 

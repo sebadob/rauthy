@@ -52,9 +52,9 @@ export interface UpdateClientRequest {
     auth_code_lifetime: number;
     /// Validation: `10 <= access_token_lifetime <= 86400`
     access_token_lifetime: number;
-    /// Validation: `PATTERN_ROLE_SCOPE
+    /// Validation: `PATTERN_SCOPE
     scopes: string[];
-    /// Validation: PATTERN_ROLE_SCOPE
+    /// Validation: PATTERN_SCOPE
     default_scopes: string[];
     /// Validation: `Vec<^(plain|S256)$>`
     challenges?: CodeChallengeMethod[];

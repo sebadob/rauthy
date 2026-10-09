@@ -6,8 +6,11 @@ use validator::Validate;
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(serde::Serialize))]
 pub struct GroupRequest {
-    /// Validation: `^[a-zA-Z0-9-_/,:*\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/,:*\s]--[\x{2139}\x{FE0F}]]{2,64}$`
+    #[validate(regex(
+        path = "*RE_GROUPS",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$"
+    ))]
     pub group: String,
     pub meta: Option<serde_json::Value>,
 }
