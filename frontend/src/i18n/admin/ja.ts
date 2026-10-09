@@ -2,16 +2,16 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminJa: I18nAdmin = {
     api_key: {
-        delete1: 'この API キーを削除してもよろしいですか？',
+        delete1: 'この API Key を削除してもよろしいですか？',
         expires: '有効期限',
-        generate1: 'ここで、この API キーの新しいシークレットを生成できます。',
+        generate1: 'ここで、この API Key の新しい Secret を生成できます。',
         generate2:
-            'シークレットは生成した直後に一度だけ表示されます。新しく生成すると、古いシークレットは完全に上書きされます。この操作は元に戻せません！',
+            'Secret は生成した直後に一度だけ表示されます。新しく生成すると、古い Secret は完全に上書きされます。この操作は元に戻せません！',
         generate3:
-            'API キーは、HTTP の <code>Authorization</code> ヘッダーで次の形式で渡す必要があります:',
-        generate4: '次の <code>curl</code> コマンドで、新しいキーを試せます:',
+            'API Key は、HTTP の <code>Authorization</code> ヘッダーで次の形式で渡す必要があります:',
+        generate4: '次の <code>curl</code> コマンドで、新しい Key を試せます:',
         generate5: '<code>jq</code> が入っておらず上のコマンドが失敗する場合:',
-        keyName: 'キーの名前',
+        keyName: 'Key の名前',
         limitedValidity: '有効期限を設ける',
     },
     attrs: {
@@ -37,13 +37,13 @@ export let I18nAdminJa: I18nAdmin = {
     },
     clients: {
         allowedResources: '許可するリソース',
-        defaultAud: '既定のオーディエンス',
+        defaultAud: '既定の Audience',
         descAllowedResources:
-            'このクライアントが要求できる RFC 8707 のリソースインジケーター（任意）。空にすると、「resource」リクエストパラメーターはすべて「invalid_target」で拒否されます。',
+            'この Client が要求できる RFC 8707 の Resource Indicator（任意）。空にすると、「resource」リクエストパラメーターはすべて「invalid_target」で拒否されます。',
         descDefaultAud:
-            '「resource」リクエストパラメーターに関係なく、このクライアントのトークンに常に追加されるオーディエンス。',
+            '「resource」リクエストパラメーターに関係なく、この Client の Token に常に追加される Audience。',
         backchannelLogout:
-            'このクライアントが {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
+            'この Client が {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
         branding: {
             descHsl:
                 '次の値は HSL 値で指定してください。指定するのは基本色だけです。アルファチャンネルなどの値は、テーマが動的に調整します。',
@@ -51,74 +51,74 @@ export let I18nAdminJa: I18nAdmin = {
                 '次の値は、CSS の <code>color</code> として完全に正しい値で指定してください。複雑な計算や、上で定義した CSS 変数も使えます。',
             descVariables:
                 '次の各ラベルは、そのまま CSS 変数の名前でもあります。つまり、自由入力欄で参照できます。例: <code>hsla(var(--action) / .7)</code>',
-            faviconPreviewAlt: 'クライアントのファビコンのプレビュー',
+            faviconPreviewAlt: 'Client のファビコンのプレビュー',
             faviconUpload: 'ファビコンのアップロード',
         },
-        claimsAtRoot: 'クレームをトークンの最上位に出力する',
+        claimsAtRoot: 'Claim を Token の最上位に出力する',
         claimsAtRootWarning:
-            'このクライアントのクレームは、「custom」の下ではなくトークンの最上位に書き込まれます。名前の衝突を避ける責任はあなたにあります: クレーム名が予約済みの JWT クレームと衝突すると、トークンを発行できません。最上位の独自クレームは、今後のプロトコルや機能の変更で動かなくなる可能性もあります。参考:',
-        claims: '独自クレーム（client_credentials）',
+            'この Client の Claim は、「custom」の下ではなく Token の最上位に書き込まれます。名前の衝突を避ける責任はあなたにあります: Claim 名が予約済みの JWT Claim と衝突すると、Token を発行できません。最上位の独自 Claim は、今後のプロトコルや機能の変更で動かなくなる可能性もあります。参考:',
+        claims: '独自 Claim（client_credentials）',
         claimsDesc:
-            'client_credentials のトークンに、custom クレームの下に入れて出力する JSON オブジェクト。シリアライズ後で最大 1024 文字。',
+            'client_credentials の Token に、custom Claim の下に入れて出力する JSON オブジェクト。シリアライズ後で最大 1024 文字。',
         confidential: 'コンフィデンシャル',
         confidentialNoSecret:
-            'これはコンフィデンシャルではないクライアントのため、シークレットはありません。',
-        config: 'クライアントの設定',
-        delete1: 'このクライアントを削除してもよろしいですか？',
+            'これはコンフィデンシャルではない Client のため、Secret はありません。',
+        config: 'Client の設定',
+        delete1: 'この Client を削除してもよろしいですか？',
         descAuthCode:
-            '安全性を高めるため、認可コードの有効期間を調整できます。認可コードは一度しか使えず、既定では 60 秒間有効です。クライアントがログインの手続きを十分速く行える範囲で、有効期間は短いほど良いです。',
-        descClientUri: 'ログイン画面に表示する、このクライアントの URI と連絡先の情報。',
+            '安全性を高めるため、Auth Code の有効期間を調整できます。Auth Code は一度しか使えず、既定では 60 秒間有効です。Client がログインの手続きを十分速く行える範囲で、有効期間は短いほど良いです。',
+        descClientUri: 'ログイン画面に表示する、この Client の URI と連絡先の情報。',
         descName:
-            'クライアントの名前は、クライアントの設定に影響を与えずに変更できます。ログイン画面に表示するためだけのものです。',
+            'Client の名前は、Client の設定に影響を与えずに変更できます。ログイン画面に表示するためだけのものです。',
         descGroupPrefix:
-            'このクライアントへのログインは、グループの接頭辞（任意）で制限できます。一致するグループに割り当てられたユーザーだけがログインできます。',
+            'この Client へのログインは、グループの接頭辞（任意）で制限できます。一致するグループに割り当てられたユーザーだけがログインできます。',
         descOrigin:
-            '追加で許可する外部のオリジン。通常は、このクライアントがブラウザから直接 Rauthy にリクエストを送る必要がある場合（主に SPA）だけ必要です。',
+            '追加で許可する外部の Origin。通常は、この Client がブラウザから直接 Rauthy にリクエストを送る必要がある場合（主に SPA）だけ必要です。',
         descPKCE:
-            'クライアントが対応していれば、安全性を高めるため常に S256 の PKCE を有効にしてください。コンフィデンシャルではないクライアント（SPA など）を使う場合は、十分な安全性のため少なくとも1つの PKCE チャレンジを有効にする必要があります。',
+            'Client が対応していれば、安全性を高めるため常に S256 の PKCE を有効にしてください。コンフィデンシャルではない Client（SPA など）を使う場合は、十分な安全性のため少なくとも1つの PKCE Challenge を有効にする必要があります。',
         descPKCEEnforce:
-            'PKCE を有効にすると、Rauthy はログイン時にその使用を強制し、正しいチャレンジを含まないログインリクエストを拒否します。',
+            'PKCE を有効にすると、Rauthy はログイン時にその使用を強制し、正しい Challenge を含まないログインリクエストを拒否します。',
         descUri:
-            'リダイレクト URI はいくつでも入力できます。それぞれの末尾に、ワイルドカードとして <code>*</code> を使えます。',
+            'Redirect URI はいくつでも入力できます。それぞれの末尾に、ワイルドカードとして <code>*</code> を使えます。',
         errConfidentialPKCE:
-            'クライアントはコンフィデンシャルにするか、少なくとも1つの PKCE チャレンジを有効にする必要があります。',
+            'Client はコンフィデンシャルにするか、少なくとも1つの PKCE Challenge を有効にする必要があります。',
         forceMfa: '多要素認証を必須にする',
         groupLoginPrefix: 'ログインを許可するグループの接頭辞',
-        name: 'クライアントの名前',
+        name: 'Client の名前',
         passwordFlowMfaWarn:
-            '注意: 「多要素認証を必須にする」と「password」フローが同時に有効になっています。OIDC の RFC に反するため、Rauthy はこの認証フローで多要素認証を強制できません。つまり、多要素認証を厳密に求めるなら、クライアント側で確かめる必要があります。そのためには「amr」クレームを使えます。',
+            '注意: 「多要素認証を必須にする」と「password」Flow が同時に有効になっています。OIDC の RFC に反するため、Rauthy はこの Flow で多要素認証を強制できません。つまり、多要素認証を厳密に求めるなら、Client 側で確かめる必要があります。そのためには「amr」Claim を使えます。',
         scim: {
             baseUri:
                 'SCIM のベース URI は、<code>{base_uri}/Users/{id}</code> のような下位のルートを正しく導き出せる URI です。',
-            desc: 'このクライアントが {{ SCIM_LINK }} に対応している場合は、ここで有効にできます。',
+            desc: 'この Client が {{ SCIM_LINK }} に対応している場合は、ここで有効にできます。',
             enable: 'SCIMv2 を有効にする',
             groupSync: 'グループを同期する',
             groupSyncPrefix: 'グループを絞り込む接頭辞',
             groupSyncPrefixDesc:
                 '同期するグループを、接頭辞（任意）で絞り込めます。たとえば <code>app:admins</code> と <code>app:users</code> というグループがある場合、接頭辞 <code>app:</code> を指定すると、これらのグループと、これらのグループの少なくとも1つに属するユーザーだけを同期します。',
             reqDesc: '互換性のため、いくつかの条件があります:',
-            reqLi1: 'クライアントが <code>externalId</code> を正しく扱えること。',
+            reqLi1: 'Client が <code>externalId</code> を正しく扱えること。',
             reqLi2: '少なくとも <code>/Users</code> のエンドポイントが <code>filter=externalId eq "*"</code> と <code>filter=userName eq "*"</code> に対応していること。',
             reqLi3: 'グループを同期する場合は、<code>/Groups</code> も <code>filter=displayName eq "*"</code> に対応していること。',
         },
         scopes: {
-            allowed: '許可するスコープ',
-            default: '既定のスコープ',
-            desc: '許可するスコープは、<code>authorization_code</code> フローでログインへリダイレクトするときに、クライアントが動的に要求できるスコープです。既定のスコープは、<code>password</code> フローなどで起きる問題を避けるため、常にトークンに追加されます。',
+            allowed: '許可する Scope',
+            default: '既定の Scope',
+            desc: '許可する Scope は、<code>authorization_code</code> Flow でログインへリダイレクトするときに、Client が動的に要求できる Scope です。既定の Scope は、<code>password</code> Flow などで起きる問題を避けるため、常に Token に追加されます。',
         },
         secret: {
-            doCache: 'クライアントシークレットをキャッシュする',
+            doCache: 'Client Secret をキャッシュする',
             cacheDuration: 'キャッシュする時間（時間）',
-            generate: '新しいシークレットを生成',
+            generate: '新しい Secret を生成',
             rotateDesc1:
-                '停止を伴わない更新やシークレットのローテーションができるよう、現在のシークレットをしばらくメモリー上にキャッシュしておけます。1〜24 時間の値を入力できます。',
+                '停止を伴わない更新や Secret のローテーションができるよう、現在の Secret をしばらくメモリー上にキャッシュしておけます。1〜24 時間の値を入力できます。',
             rotateDesc2:
-                '注意: シークレットが漏れた場合は、現在のシークレットをキャッシュしないでください！',
+                '注意: Secret が漏れた場合は、現在の Secret をキャッシュしないでください！',
         },
         tokenLifetime: {
-            p1: 'トークンの有効期間はアクセストークンと ID トークンに適用され、秒で指定します。',
-            p2: 'クライアントが EdDSA / Ed25519 のアルゴリズムに対応していれば、常にそれを優先してください。RSA のアルゴリズムは互換性のためだけにあります。',
-            p3: 'リフレッシュトークンは Rauthy だけが使うため、そのアルゴリズムは変更できません。',
+            p1: 'Token の有効期間は Access Token と ID Token に適用され、秒で指定します。',
+            p2: 'Client が EdDSA / Ed25519 のアルゴリズムに対応していれば、常にそれを優先してください。RSA のアルゴリズムは互換性のためだけにあります。',
+            p3: 'Refresh Token は Rauthy だけが使うため、そのアルゴリズムは変更できません。',
         },
     },
     common: {
@@ -157,7 +157,7 @@ export let I18nAdminJa: I18nAdmin = {
             migrateToKey: '暗号化済みのすべての値を、次の鍵へ移行する',
             p1: 'これらの鍵は、裏で使われるデータストアの技術とは別に、保存データを追加で暗号化するために使われます。鍵は設定で固定的に指定しますが、この画面で手動でローテーション・移行できます。',
             p2: '使用中の鍵は、Rauthy の設定ファイルか環境変数で固定的に指定します。ここで動的に変更することはできません。新しく行う JWK の暗号化には、常に現在使用中の鍵が使われます。',
-            p3: '既存のシークレットをすべて移行する場合、データが多いと完了までに数秒かかることがあります。',
+            p3: '既存の Secret をすべて移行する場合、データが多いと完了までに数秒かかることがあります。',
             pNotPossible: '移行するには、少なくとも2つの暗号鍵が必要です。',
         },
         hashing: {
@@ -251,27 +251,27 @@ export let I18nAdminJa: I18nAdmin = {
     },
     jwks: {
         alg: 'アルゴリズム',
-        p1: 'これらは、トークンの署名に使う JSON Web Key（JWK）です。',
-        p2: 'JWK は既定で毎月 1 日にローテーションされます。新しく作られるトークンの署名には、そのアルゴリズムで利用できる最新の鍵だけが使われます。現在有効なトークンを引き続き正しく検証できるよう、古い鍵はしばらく残され、一定期間が過ぎると自動で削除されます。',
+        p1: 'これらは、Token の署名に使う JSON Web Key（JWK）です。',
+        p2: 'JWK は既定で毎月 1 日にローテーションされます。新しく作られる Token の署名には、そのアルゴリズムで利用できる最新の鍵だけが使われます。現在有効な Token を引き続き正しく検証できるよう、古い鍵はしばらく残され、一定期間が過ぎると自動で削除されます。',
         p3: '鍵は手動でもローテーションできます。この Rauthy が動いているハードウェアによっては、数秒かかることがあります。',
         type: '種類',
         rotateKeys: '鍵をローテーション',
     },
     kv: {
         accessTestDesc:
-            'アクセスキーは、<code>Authorization</code> ヘッダーで <code>Bearer</code> トークンとして渡す必要があります。試すには、次の <code>curl</code> コマンドを使えます。',
-        addNewKey: '新しいアクセスキー',
+            'Access Key は、<code>Authorization</code> ヘッダーで <code>Bearer</code> Token として渡す必要があります。試すには、次の <code>curl</code> コマンドを使えます。',
+        addNewKey: '新しい Access Key',
         addNewNs: '新しい名前空間',
         addNewValue: '新しい値',
-        delConfirm: 'このアクセスキーを本当に削除しますか？',
+        delConfirm: 'この Access Key を本当に削除しますか？',
         delNsMsg: 'この名前空間を、中のデータもすべて含めて本当に削除しますか？',
         encryptedDesc:
-            '性能上の理由から、追加の暗号化は、アクセスキーや個人情報など特に機密性の高い値だけに使ってください。',
+            '性能上の理由から、追加の暗号化は、Access Key や個人情報など特に機密性の高い値だけに使ってください。',
         deleteConfirmMsg: 'キー「{{ key }}」を本当に削除しますか？',
         help: {
             help: 'ヘルプ',
             ops: [
-                'アクセスキーを試す',
+                'Access Key を試す',
                 '既存のキーをすべて取得',
                 '既存のキーと値をすべて取得',
                 'キーと値を設定',
@@ -279,7 +279,7 @@ export let I18nAdminJa: I18nAdmin = {
                 'キーを削除',
             ],
             p1: 'KV ストアへの外部からのアクセスは、あえてとても単純にしてあります。操作は次のいくつかだけです:',
-            p2: 'どの操作にも、<code>Authorization</code> ヘッダーに <code>Bearer</code> トークン（<code>{id}\${secret}</code>）としてアクセスキーが必要です。アクセスキーは、それが属する名前空間でだけ有効です。',
+            p2: 'どの操作にも、<code>Authorization</code> ヘッダーに <code>Bearer</code> Token（<code>{id}\${secret}</code>）として Access Key が必要です。Access Key は、それが属する名前空間でだけ有効です。',
             p3: '上で挙げた操作の、<code>curl</code> を使った例を示します。',
         },
         key: 'キー',
@@ -290,17 +290,17 @@ export let I18nAdminJa: I18nAdmin = {
         value: 'JSON の値',
     },
     nav: {
-        apiKeys: 'API キー',
+        apiKeys: 'API Keys',
         attributes: '属性',
         blacklist: 'ブロックリスト',
-        clients: 'クライアント',
+        clients: 'Clients',
         config: '設定',
         docs: 'ドキュメント',
         events: 'イベント',
         groups: 'グループ',
         providers: 'プロバイダー',
         roles: 'ロール',
-        scopes: 'スコープ',
+        scopes: 'Scopes',
         sessions: 'セッション',
         users: 'ユーザー',
     },
@@ -331,13 +331,13 @@ export let I18nAdminJa: I18nAdmin = {
         hostAliases: 'ホストの別名',
         hostLocalPwdOnly: 'ローカルのパスワードでのログイン',
         hostLocalPwdOnlyInfo:
-            '「ローカルのパスワードでのログイン」を設定すると、ローカルでのログインについて「多要素認証を必須にする」を上書きします。同時に、ユーザーが多要素認証で保護されていても、（ローカルの）ログインでパスキーは一切求められなくなります。このオプションは、多要素認証で保護されたユーザーがハードウェアのパスキーを使わずにローカルでログインできる必要がある場合など、本当に必要なときだけ設定してください。',
+            '「ローカルのパスワードでのログイン」を設定すると、ローカルでのログインについて「多要素認証を必須にする」を上書きします。同時に、ユーザーが多要素認証で保護されていても、（ローカルの）ログインで Passkey は一切求められなくなります。このオプションは、多要素認証で保護されたユーザーがハードウェアの Passkey を使わずにローカルでログインできる必要がある場合など、本当に必要なときだけ設定してください。',
         ipAddresses: 'IP アドレス',
         member: 'メンバー',
         nameExistsAlready: 'この名前はすでに使われています',
         notes: 'メモ',
-        secretShow: 'シークレットを表示',
-        secretRotate: 'シークレットをローテーション',
+        secretShow: 'Secret を表示',
+        secretRotate: 'Secret をローテーション',
         userEmail: '紐づいたユーザーのメールアドレス',
         username: 'ユーザー名',
         usernameNewDesc:
@@ -357,21 +357,21 @@ export let I18nAdminJa: I18nAdmin = {
                 '「ユーザーを自動で連携」を有効にすると、このプロバイダーでログインしたときに、まだ連携していない既存のユーザーがいれば自動でこのプロバイダーと連携します。',
             autoLinkDesc2:
                 '注意: プロバイダーがユーザーのメールアドレスを十分に確認せず、他人のアドレスを追加できてしまう場合、このオプションは非常に危険で、アカウントの乗っ取りにつながります！そのような場合は絶対に使わないでください！',
-            clientName: 'クライアントの名前',
+            clientName: 'Client の名前',
             custRootCa: '独自のルート CA（PEM）',
             descAuthMethod:
                 '<code>/token</code> エンドポイントで使う認証方式。<br>ほとんどのプロバイダーは <code>basic</code> で動きますが、<code>post</code> でしか動かないものもあります。まれに両方が必要な場合がありますが、ほかのプロバイダーではエラーになることがあります。',
-            descClientId: '認証プロバイダーから発行されたクライアント ID。',
-            descClientName: 'Rauthy のログイン画面に表示するクライアントの名前。',
+            descClientId: '認証プロバイダーから発行された Client ID。',
+            descClientName: 'Rauthy のログイン画面に表示する Client の名前。',
             descClientSecret:
-                '認証プロバイダーから発行されたクライアントシークレット。クライアントシークレットか PKCE の少なくとも一方が必要です。',
+                '認証プロバイダーから発行された Client Secret。Client Secret か PKCE の少なくとも一方が必要です。',
             descScope:
-                'ログインへリダイレクトするときにクライアントが使うスコープ。値はスペースで区切って入力してください。',
+                'ログインへリダイレクトするときに Client が使う Scope。値はスペースで区切って入力してください。',
             errNoAuthMethod:
-                'クライアントシークレットが入力されていますが、クライアントの認証方式が1つも有効になっていません',
-            errConfidential: 'コンフィデンシャルなクライアントにするか、PKCE を使う必要があります',
+                'Client Secret が入力されていますが、Client の認証方式が1つも有効になっていません',
+            errConfidential: 'コンフィデンシャルな Client にするか、PKCE を使う必要があります',
             jsonPath: {
-                p1: '外部のプロバイダーでのログインに成功した後、ID トークンの値を自動で対応付けられます。',
+                p1: '外部のプロバイダーでのログインに成功した後、ID Token の値を自動で対応付けられます。',
                 p2: '<code>path</code> は正規表現に似た書き方で指定します。単一の JSON の値にも、JSON のオブジェクトや配列の中の値にも解決できます。',
                 p3: '<code>$.</code> は JSON オブジェクトの始まりを表します',
                 p4: 'パスの中で <code>*</code> をワイルドカードとして使えます',
@@ -379,21 +379,21 @@ export let I18nAdminJa: I18nAdmin = {
                 p6: '<code>$.roles.*</code> は、次のようなオブジェクトや配列の中の値を対象にできます<br><code>&#123;"roles": ["value", "notMyValue"]&#125;</code>',
             },
             lookup: '照会',
-            pathAdminClaim: '管理者クレームのパス',
-            pathMfaClaim: '多要素認証クレームのパス',
+            pathAdminClaim: '管理者 Claim のパス',
+            pathMfaClaim: '多要素認証 Claim のパス',
             rootPemCert: 'ルート証明書（PEM）',
-            mapMfa: 'ユーザーがログイン時に少なくとも 2 要素認証を使ったことを示すクレームをプロバイダーが発行する場合は、多要素認証クレームのパスを指定できます。',
+            mapMfa: 'ユーザーがログイン時に少なくとも 2 要素認証を使ったことを示す Claim をプロバイダーが発行する場合は、多要素認証 Claim のパスを指定できます。',
             mapUser:
-                '外部のプロバイダーの ID クレームに応じて、ユーザーを Rauthy の管理者に対応付けられます。',
-            valueAdminClaim: '管理者クレームの値',
-            valueMfaClaim: '多要素認証クレームの値',
+                '外部のプロバイダーの ID Claim に応じて、ユーザーを Rauthy の管理者に対応付けられます。',
+            valueAdminClaim: '管理者 Claim の値',
+            valueMfaClaim: '多要素認証 Claim の値',
         },
         delete: {
             areYouSure: 'このプロバイダーを削除してもよろしいですか？',
             forceDelete: '強制的に削除',
             isInUse1: 'このプロバイダーは、有効なユーザーが使っています！',
             isInUse2:
-                '強制的に削除することもできますが、ローカルのパスワードもパスキーも持たないユーザーはログインできなくなります。',
+                '強制的に削除することもできますが、ローカルのパスワードも Passkey も持たないユーザーはログインできなくなります。',
             linkedUsers: '連携しているユーザー',
         },
     },
@@ -403,16 +403,16 @@ export let I18nAdminJa: I18nAdmin = {
         name: 'ロールの名前',
     },
     scopes: {
-        claimsAtRoot: 'クレームをトークンの最上位に出力する',
+        claimsAtRoot: 'Claim を Token の最上位に出力する',
         claimsAtRootWarning:
-            'このスコープに対応付けた属性は、「custom」の下ではなくトークンの最上位に書き込まれます。名前の衝突を避ける責任はあなたにあります: 対応付けた属性の名前が予約済みの JWT クレームと衝突すると、トークンを発行できません。最上位の独自クレームは、今後のプロトコルや機能の変更で動かなくなる可能性もあります。参考:',
-        defaultNoMod: 'これは OIDC の既定のスコープです。変更できません。',
-        delete1: 'このスコープを削除してもよろしいですか？',
-        deleteDefault: 'OIDC の既定のスコープは削除できません。',
-        mapping1: '独自のスコープを属性に対応付けられます。',
+            'この Scope に対応付けた属性は、「custom」の下ではなく Token の最上位に書き込まれます。名前の衝突を避ける責任はあなたにあります: 対応付けた属性の名前が予約済みの JWT Claim と衝突すると、Token を発行できません。最上位の独自 Claim は、今後のプロトコルや機能の変更で動かなくなる可能性もあります。参考:',
+        defaultNoMod: 'これは OIDC の既定の Scope です。変更できません。',
+        delete1: 'この Scope を削除してもよろしいですか？',
+        deleteDefault: 'OIDC の既定の Scope は削除できません。',
+        mapping1: '独自の Scope を属性に対応付けられます。',
         mapping2:
-            '設定した追加の属性は、ユーザーごとに独自の値を持てます。スコープに対応付けると、アクセストークンや ID トークンに含められます。',
-        name: 'スコープの名前',
+            '設定した追加の属性は、ユーザーごとに独自の値を持てます。Scope に対応付けると、Access Token や ID Token に含められます。',
+        name: 'Scope の名前',
     },
     search: {
         orderBy: '並べ替え ...',
@@ -453,7 +453,7 @@ export let I18nAdminJa: I18nAdmin = {
         descAttr:
             'ユーザーの独自属性を設定します。すべてのキーと値の組は、文字列 / JSON の値として扱われます。',
         forceLogout:
-            'このユーザーの既存のセッションをすべて無効にし、リフレッシュトークンをすべて削除してもよろしいですか？',
+            'このユーザーの既存のセッションをすべて無効にし、Refresh Token をすべて削除してもよろしいですか？',
         groupAdmin: {
             notManagedTitle: 'あなたが管理するグループ外のユーザー',
             notManagedDesc:
@@ -473,18 +473,18 @@ export let I18nAdminJa: I18nAdmin = {
                 noMfaOtps: 'このユーザーには、登録済みのワンタイムパスワードがありません。',
             },
             webauthn: {
-                title: 'パスキー',
-                mfaDelete1: 'このユーザーのパスキーを削除できます。',
+                title: 'Passkeys',
+                mfaDelete1: 'このユーザーの Passkey を削除できます。',
                 mfaDelete2:
-                    '注意！パスキーを削除すると、ユーザーが新しく登録し直さない限り<b>元に戻せません</b>。',
-                noMfaKeys: 'このユーザーには、登録済みのパスキーがありません。',
+                    '注意！Passkey を削除すると、ユーザーが新しく登録し直さない限り<b>元に戻せません</b>。',
+                noMfaKeys: 'このユーザーには、登録済みの Passkey がありません。',
             },
         },
-        pkOnly1: 'これはパスキーだけでログインするアカウントです。',
+        pkOnly1: 'これは Passkey だけでログインするアカウントです。',
         pkOnly2:
             'つまり、このユーザーはパスワードを使わないログインを使っており、パスワードはまったく設定されていません。',
         pkOnly3:
-            'このユーザーがすべてのパスキーをなくした場合は、アカウントを完全にリセットし、パスワードリセットのメールを新たに送れます。そのためには、「多要素認証」タブで既存のパスキーをすべて削除してください。',
+            'このユーザーがすべての Passkey をなくした場合は、アカウントを完全にリセットし、パスワードリセットのメールを新たに送れます。そのためには、「多要素認証」タブで既存の Passkey をすべて削除してください。',
         pwdNoInit: 'このユーザーは、最初のパスワード設定をまだ済ませていません。',
         pwdSendEmailBtn: 'リセットメールを送信',
         pwdSendEmailDesc: 'ユーザーが受け取っていない場合は、リセットメールを新たに送れます。',
@@ -494,16 +494,16 @@ export let I18nAdminJa: I18nAdmin = {
     },
     validation: {
         css: 'CSS の値が正しくありません',
-        origin: 'オリジンが正しくありません',
+        origin: 'Origin が正しくありません',
         uri: 'URI が正しくありません',
         redirectUri: {
-            comma: 'リダイレクト URI にカンマ（,）は使えません',
-            controlChar: 'リダイレクト URI のクエリーパラメーター名に制御文字は使えません',
-            fragment: 'リダイレクト URI にフラグメント（#）は使えません',
+            comma: 'Redirect URI にカンマ（,）は使えません',
+            controlChar: 'Redirect URI のクエリーパラメーター名に制御文字は使えません',
+            fragment: 'Redirect URI にフラグメント（#）は使えません',
             reservedKey:
-                'リダイレクト URI にクエリーパラメーター「{{ KEY }}」は使えません。認可の応答で設定されるためです',
+                'Redirect URI にクエリーパラメーター「{{ KEY }}」は使えません。認可の応答で設定されるためです',
             reservedKeyLogout:
-                'ログアウト後のリダイレクト URI にクエリーパラメーター「{{ KEY }}」は使えません。ログアウト時に設定されるためです',
+                'Post Logout Redirect URI にクエリーパラメーター「{{ KEY }}」は使えません。ログアウト時に設定されるためです',
         },
     },
 };

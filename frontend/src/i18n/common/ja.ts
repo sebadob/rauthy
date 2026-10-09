@@ -56,7 +56,7 @@ export const I18nJa: I18n = {
         account: 'ユーザーアカウント',
         accType: 'アカウントの種類',
         accTypePasskeyText1:
-            'このアカウントは現在、パスキーだけでログインするアカウントです。\nパスワードは必要ないため、設定されていません。',
+            'このアカウントは現在、Passkey だけでログインするアカウントです。\nパスワードは必要ないため、設定されていません。',
         accTypePasskeyText2:
             'アカウントを変換してパスワードを追加できます。ただし、その場合は\n新しい端末ごとにパスワードでの確認も必要になります。\n一度もパスワードを入力したことのない端末では、そのままログインできなくなります。',
         accTypePasskeyText3: 'アカウントを変換してパスワードを追加しますか？',
@@ -69,7 +69,7 @@ export const I18nJa: I18n = {
         changePassword: 'パスワードを変更',
         convertAccount: 'アカウントを変換',
         convertAccountP1:
-            'アカウントを、パスキーだけでログインするアカウントに変換できます。\n変換するとパスワードは削除され、以後は登録済みの\nパスキーでしかログインできなくなります。追加の本人確認（ユーザー検証）に対応したパスキーだけが使えます。\nお使いのパスキーが対応していれば、「多要素認証」の画面でキーの名前の後ろに\n小さな印が表示されます。',
+            'アカウントを、Passkey だけでログインするアカウントに変換できます。\n変換するとパスワードは削除され、以後は登録済みの\nPasskey でしかログインできなくなります。追加の本人確認（ユーザー検証）に対応した Passkey だけが使えます。\nお使いの Passkey が対応していれば、「多要素認証」の画面で Passkey の名前の後ろに\n小さな印が表示されます。',
         country: '国',
         deleteAccount: {
             deleteAccount: 'アカウントを削除',
@@ -102,7 +102,7 @@ export const I18nJa: I18n = {
         navBackToAdmin: '管理画面',
         other: 'その他',
         pam: {
-            addSshKey: '新しいキーを追加',
+            addSshKey: '新しい Key を追加',
             comment: 'コメント',
             generatePassword: '新しいパスワード',
             keyAdded: '追加日時',
@@ -112,8 +112,8 @@ export const I18nJa: I18n = {
         },
         passkeys: {
             missingAttestation:
-                'このパスキーは、求められているセキュリティ基準を満たしていません。',
-            type: 'パスキーの種類',
+                'この Passkey は、求められているセキュリティ基準を満たしていません。',
+            type: 'Passkey の種類',
             types: ['標準', '端末に保存（Resident Key）'],
             rkWarning:
                 '注意: 端末に保存するキー（Resident Key）はメールアドレスを入力せずにそのままログインに使えますが、アプリケーションごとに保存領域を1つ使います。空きが十分にあることを確かめてください。',
@@ -141,7 +141,7 @@ export const I18nJa: I18n = {
             'このアカウントを、次のいずれかのログインプロバイダーと連携できます。\n有効にすると、選んだプロバイダーのログイン画面に移動します。\nログインに成功し、メールアドレスが一致すれば、アカウントが連携されます。',
         providerUnlink: '連携を解除',
         providerUnlinkDesc:
-            'このアカウントにパスワードかパスキーを少なくとも1つ設定している場合だけ、\n外部のプロバイダーとの連携を解除できます。',
+            'このアカウントにパスワードか Passkey を少なくとも1つ設定している場合だけ、\n外部のプロバイダーとの連携を解除できます。',
         regDate: '登録日',
         regIp: '登録時の IP アドレス',
         roles: 'ロール',
@@ -153,7 +153,7 @@ export const I18nJa: I18n = {
         userVerifiedTooltip: '指紋または PIN で保護されています',
         residentKeyTooltip:
             'これは端末に保存するキー（Resident Key）です。メールアドレスを入力せずに、そのままログインに使えます。',
-        aaguidTooltip: '認定済みのパスキー',
+        aaguidTooltip: '認定済みの Passkey',
         webIdDesc:
             'WebID で公開する項目を設定できます。\nこれは一部のネットワークで分散ログインに使われる機能です。よく分からない場合は、\nおそらく必要ありません。',
         webIdDescData: 'WebID に独自のデータ項目を、正しい FOAF 語彙で追加できます',
@@ -162,13 +162,13 @@ export const I18nJa: I18n = {
     },
     authorize: {
         clientForceMfa:
-            'このログインでは、安全性を高めるため多要素認証が必須です。\nアクセスするには、アカウントにログインしてパスキーを少なくとも1つ追加してください',
+            'このログインでは、安全性を高めるため多要素認証が必須です。\nアクセスするには、アカウントにログインして Passkey を少なくとも1つ追加してください',
         clientGroupPrefixForbidden: 'このログインに必要なグループに所属していません',
         email: 'メールアドレス',
         emailBadFormat: 'メールアドレスの形式が正しくありません',
         emailRequired: 'メールアドレスを入力してください',
         emailSentMsg: 'メールアドレスが登録されていれば、依頼を送信しました',
-        expectingPasskey: 'パスキーでの認証を待っています',
+        expectingPasskey: 'Passkey での認証を待っています',
         expectingOtp: 'ワンタイムパスワードでの認証を待っています',
         http429: '誤った入力が多すぎます。ロック解除の時刻:',
         invalidCredentials: '認証情報が正しくありません',
@@ -230,12 +230,12 @@ export const I18nJa: I18n = {
     },
     mfa: {
         webauthn: {
-            title: 'パスキー',
+            title: 'Passkeys',
             p1: '多要素認証のキーを Windows と Android など複数のシステムで使う予定なら、Android で登録してください。',
             p2: 'Android は、パスワードを使わない技術への対応が最も少ないプラットフォームです。Android で登録したキーはほかの環境でも使えますが、その逆は成り立ちません。',
             p3: '詳しくは次をご覧ください:',
-            registerNew: '新しいパスキーを登録',
-            docLinkText: 'パスキーについての説明',
+            registerNew: '新しい Passkey を登録',
+            docLinkText: 'Passkey についての説明',
             unsupportedText: 'お使いのブラウザは WebAuthn に対応していないため、更新が必要です。',
         },
         otp: {
@@ -252,7 +252,7 @@ export const I18nJa: I18n = {
         errorReg: '登録を開始できませんでした',
         lastUsed: '最終使用',
         noKey: 'この枠にはセキュリティキーが登録されていません',
-        reAuthenticatePasskey: '多要素認証を変更する前に、パスキーで認証してください:',
+        reAuthenticatePasskey: '多要素認証を変更する前に、Passkey で認証してください:',
         reAuthenticatePwd: '多要素認証を変更する前に、パスワードでもう一度認証してください。',
         reAuthenticateOtp:
             '多要素認証を変更する前に、ワンタイムパスワードでもう一度認証してください:',
@@ -260,7 +260,7 @@ export const I18nJa: I18n = {
         registered: '登録日時',
         registeredKeys: '登録済みのキー',
         registeredOtps: '登録済みのワンタイムパスワード',
-        passkeyName: 'パスキーの名前',
+        passkeyName: 'Passkey の名前',
         passkeyNameErr: '特殊文字を除く 2〜32 文字',
         passwordInvalid: 'パスワードが正しくありません',
         test: 'テスト',
@@ -294,11 +294,11 @@ export const I18nJa: I18n = {
         newAccDesc1:
             'アカウントの種類は2つから選べます: パスワードを使わない方式と、従来のパスワード方式です',
         newAccDesc2:
-            'パスワードを使わない方式のほうが、より強い安全性を得られるためおすすめです。\nこの方式のアカウントを作るには、パスキー（YubiKey、Apple Touch ID、Windows Hello\nなど）が少なくとも1つ必要です。お使いの端末が FIDO2 規格に対応している必要があります。\n詳しくは次のリンクをご覧ください: ',
+            'パスワードを使わない方式のほうが、より強い安全性を得られるためおすすめです。\nこの方式のアカウントを作るには、Passkey（YubiKey、Apple Touch ID、Windows Hello\nなど）が少なくとも1つ必要です。お使いの端末が FIDO2 規格に対応している必要があります。\n詳しくは次のリンクをご覧ください: ',
         newAccount: '新しいアカウント',
         passwordReset: 'パスワードのリセット',
         password: 'パスワード',
-        passwordless: 'パスキー',
+        passwordless: 'Passkey',
         passwordConfirm: 'パスワード（確認）',
         passwordNoMatch: 'パスワードが一致しません',
         required: '必須',
@@ -306,9 +306,9 @@ export const I18nJa: I18n = {
         success1: 'パスワードを更新しました。',
         success2: 'まもなく移動します。',
         success3: '移動しない場合は、こちらをクリックしてください:',
-        successPasskey1: '新しいパスキーを登録しました。',
+        successPasskey1: '新しい Passkey を登録しました。',
         successPasskey2:
-            'アカウントにログインし、できるだけ早く予備のキーをもう1つ登録してください。\nパスキーだけのアカウントでは、今のキーをなくしたときにメールで\nパスワードをリセットすることができません。',
+            'アカウントにログインし、できるだけ早く予備のキーをもう1つ登録してください。\nPasskey だけのアカウントでは、今のキーをなくしたときにメールで\nパスワードをリセットすることができません。',
     },
     register: {
         alreadyRegisteredEmail: 'このメールアドレスはすでに登録されています',
