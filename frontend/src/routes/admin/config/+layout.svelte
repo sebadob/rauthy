@@ -25,12 +25,12 @@
     <NavLinkSub bind:ref={refA} href="/auth/v1/admin/config/policy">
         {t.passwordPolicy.passwordPolicy}
     </NavLinkSub>
-    <NavLinkSub href="/auth/v1/admin/config/jwks">{ta.config.jwks}</NavLinkSub>
-    <NavLinkSub href="/auth/v1/admin/config/argon2">{ta.config.passwordHashing}</NavLinkSub>
+    <NavLinkSub href="/auth/v1/admin/config/jwks">JWKS</NavLinkSub>
+    <NavLinkSub href="/auth/v1/admin/config/argon2">Password Hashing</NavLinkSub>
     <NavLinkSub href="/auth/v1/admin/config/encryption">
         {ta.docs.encryption}
     </NavLinkSub>
-    <NavLinkSub href="/auth/v1/admin/config/backups">{ta.config.backups}</NavLinkSub>
+    <NavLinkSub href="/auth/v1/admin/config/backups">Backups</NavLinkSub>
     <NavLinkSub href="/auth/v1/admin/config/tos">
         {ta.tos.tos}
     </NavLinkSub>

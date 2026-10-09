@@ -152,7 +152,7 @@
                             maxLength={40}
                         />
                         <InputDateTimeCombo
-                            label={ta.api_key.expires}
+                            label="Expiry"
                             bind:value={expDate}
                             bind:timeValue={expTime}
                             min={fmtDateInput()}

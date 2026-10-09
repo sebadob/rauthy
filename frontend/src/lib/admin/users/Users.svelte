@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
     import { onMount } from 'svelte';
     import { fetchGet } from '$api/fetch';
     import type { UserResponse, UserResponseSimple } from '$api/types/user.ts';
@@ -27,10 +25,6 @@
     import SendMail from '$lib/SendMail.svelte';
     import EmailJobs from '$lib/EmailJobs.svelte';
 
-    let ta = useI18nAdmin();
-
-    let t = useI18n();
-
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
     tr.set('navMain', () => refAddNew?.focus());
@@ -54,10 +48,10 @@
     let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
     let isSearchedServer = $state(false);
 
-    let searchOptions = $state([t.common.email, 'ID']);
+    let searchOptions = $state(['E-Mail', 'ID']);
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
-    let orderOptions = $state([t.common.email, 'ID', ta.common.created, ta.users.lastLogin]);
+    let orderOptions = $state(['E-Mail', 'ID', 'Created', 'Last Login']);
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);

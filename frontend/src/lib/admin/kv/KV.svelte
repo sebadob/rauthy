@@ -110,8 +110,8 @@
                     placeholder={ta.common.name}
                     pattern={PATTERN_GROUP}
                 />
-                <InputCheckbox ariaLabel={ta.kv.publicAccess} name="public" checked={false}>
-                    {ta.kv.publicAccess}
+                <InputCheckbox ariaLabel="Public Access" name="public" checked={false}>
+                    Public Access
                 </InputCheckbox>
 
                 <div class="btns">
@@ -136,7 +136,7 @@
                     <div style:margin-top=".25rem">
                         {namespace.name}
                         {#if namespace.public}
-                            <i>{ta.kv.public}</i>
+                            <i>(public)</i>
                         {/if}
                     </div>
                 </NavButtonTile>

@@ -1,9 +1,6 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { PATTERN_URI } from '$utils/patterns';
     import Input from '$lib/form/Input.svelte';
-
-    let ta = useI18nAdmin();
 
     let {
         issuer = $bindable(),
@@ -25,8 +22,8 @@
 <Input
     bind:value={issuer}
     autocomplete="off"
-    label={ta.providers.config.issuerUrl}
-    placeholder={ta.providers.config.issuerUrl}
+    label="Issuer URL"
+    placeholder="Issuer URL"
     required
     pattern={PATTERN_URI}
     width={inputWidth}
@@ -36,8 +33,8 @@
     typ="url"
     bind:value={authorizationEndpoint}
     autocomplete="off"
-    label={ta.providers.config.authorizationEndpoint}
-    placeholder={ta.providers.config.authorizationEndpoint}
+    label="Authorization Endpoint"
+    placeholder="Authorization Endpoint"
     required
     pattern={PATTERN_URI}
     width={inputWidth}
@@ -47,8 +44,8 @@
     typ="url"
     bind:value={tokenEndpoint}
     autocomplete="off"
-    label={ta.providers.config.tokenEndpoint}
-    placeholder={ta.providers.config.tokenEndpoint}
+    label="Token Endpoint"
+    placeholder="Token Endpoint"
     required
     pattern={PATTERN_URI}
     width={inputWidth}
@@ -58,8 +55,8 @@
     typ="url"
     bind:value={userinfoEndpoint}
     autocomplete="off"
-    label={ta.providers.config.userinfoEndpoint}
-    placeholder={ta.providers.config.userinfoEndpoint}
+    label="Userinfo Endpoint"
+    placeholder="Userinfo Endpoint"
     required
     pattern={PATTERN_URI}
     width={inputWidth}

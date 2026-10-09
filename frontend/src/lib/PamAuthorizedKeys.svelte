@@ -80,7 +80,7 @@
 {#if authorizedKeys}
     <div class="container">
         <div class="keyAdd">
-            <h4>{t.account.pam.sshKeys}</h4>
+            <h4>SSH Keys</h4>
             {#if !isAdmin}
                 <Button level={2} onclick={() => (showModal = true)}>
                     {t.account.pam.addSshKey}
@@ -140,7 +140,7 @@
                         </Tooltip>
                     </div>
                 </div>
-                <LabeledValue label={t.account.key}>
+                <LabeledValue label="Key">
                     <div class="font-mono">
                         {key.data}
                     </div>

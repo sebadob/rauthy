@@ -2,29 +2,6 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminJa: I18nAdmin = {
     api_key: {
-        apiKey: 'API キー',
-        rights: {
-            create: '作成',
-            read: '読取',
-            update: '更新',
-            delete: '削除',
-        },
-        accessGroups: {
-            Blacklist: 'ブロックリスト',
-            Clients: 'クライアント',
-            Events: 'イベント',
-            Generic: '汎用',
-            Groups: 'グループ',
-            Pam: 'PAM',
-            Roles: 'ロール',
-            Secrets: 'シークレット',
-            Sessions: 'セッション',
-            Scopes: 'スコープ',
-            UserAttributes: 'ユーザー属性',
-            Users: 'ユーザー',
-            AuthProviders: 'プロバイダー',
-            ApiKeys: 'API キー',
-        },
         delete1: 'この API キーを削除してもよろしいですか？',
         expires: '有効期限',
         generate1: 'ここで、この API キーの新しいシークレットを生成できます。',
@@ -59,24 +36,6 @@ export let I18nAdminJa: I18nAdmin = {
         size: 'サイズ',
     },
     clients: {
-        accessTokenAlg: 'アクセストークンのアルゴリズム',
-        allowedOrigins: '許可するオリジン',
-        authCodeLifetime: '認可コードの有効期間',
-        authFlows: '認証フロー',
-        backchannelLogoutTitle: 'バックチャネルログアウト',
-        backchannelLogoutUri: 'バックチャネルログアウトの URI',
-        bearerToken: 'Bearer トークン',
-        clientId: 'クライアント ID',
-        clientSecret: 'クライアントシークレット',
-        customClaims: '独自クレーム',
-        idTokenAlg: 'ID トークンのアルゴリズム',
-        origin: 'オリジン',
-        postLogoutRedirectUris: 'ログアウト後のリダイレクト URI',
-        redirectUris: 'リダイレクト URI',
-        resourceIndicators: 'リソースインジケーター',
-        scimBaseUri: 'SCIM のベース URI',
-        tokenLifetimeLabel: 'トークンの有効期間',
-        tokens: 'トークン',
         allowedResources: '許可するリソース',
         defaultAud: '既定のオーディエンス',
         descAllowedResources:
@@ -86,15 +45,6 @@ export let I18nAdminJa: I18nAdmin = {
         backchannelLogout:
             'このクライアントが {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
         branding: {
-            button: 'ボタン',
-            darkTheme: 'ダークテーマ',
-            header: '見出し',
-            hue: '色相',
-            lightTheme: 'ライトテーマ',
-            link: 'リンク',
-            logoUpload: 'ロゴのアップロード',
-            lum: '明度',
-            sat: '彩度',
             descHsl:
                 '次の値は HSL 値で指定してください。指定するのは基本色だけです。アルファチャンネルなどの値は、テーマが動的に調整します。',
             descFullCss:
@@ -172,8 +122,6 @@ export let I18nAdminJa: I18nAdmin = {
         },
     },
     common: {
-        created: '作成日時',
-        send: '送信',
         account: 'アカウント',
         addNew: '新規追加',
         back: '戻る',
@@ -276,7 +224,6 @@ export let I18nAdminJa: I18nAdmin = {
         textArea: 'テキストを編集',
     },
     email: {
-        updated: '更新日時',
         cancelJob: 'ジョブを取り消す',
         filterType: ['なし', 'グループに所属', 'グループに非所属', 'ロールあり', 'ロールなし'],
         immediate: 'すぐに送信',
@@ -295,21 +242,6 @@ export let I18nAdminJa: I18nAdmin = {
             'Rauthy の管理者アカウントでは、<b>多要素認証を有効にする</b>必要があります。<br>お使いの<b>アカウント</b>の画面で多要素認証を有効にしてください。<br>その後、一度ログアウトしてから、もう一度ログインしてください。',
     },
     events: {
-        content: '内容',
-        level: 'レベル',
-        levels: {
-            info: '情報',
-            notice: '通知',
-            warning: '警告',
-            critical: '重大',
-        },
-        newVersion: '新しい版',
-        noEvents: 'イベントはありません',
-        test: 'テスト',
-        testEvent: 'テストイベント',
-        timestamp: '発生日時',
-        title: 'イベント',
-        type: '種類',
         eventLevel: 'イベントのレベル',
         eventType: 'イベントの種類',
     },
@@ -326,11 +258,6 @@ export let I18nAdminJa: I18nAdmin = {
         rotateKeys: '鍵をローテーション',
     },
     kv: {
-        generateNew: '新しく生成',
-        limit: '取得する件数',
-        public: '（公開）',
-        publicAccess: '公開アクセス',
-        publicAccessLink: '公開アクセスのリンク',
         accessTestDesc:
             'アクセスキーは、<code>Authorization</code> ヘッダーで <code>Bearer</code> トークンとして渡す必要があります。試すには、次の <code>curl</code> コマンドを使えます。',
         addNewKey: '新しいアクセスキー',
@@ -363,8 +290,6 @@ export let I18nAdminJa: I18nAdmin = {
         value: 'JSON の値',
     },
     nav: {
-        kv: 'KV ストア',
-        pam: 'PAM',
         apiKeys: 'API キー',
         attributes: '属性',
         blacklist: 'ブロックリスト',
@@ -385,12 +310,6 @@ export let I18nAdminJa: I18nAdmin = {
         state: '状態',
     },
     pam: {
-        home: 'ホームディレクトリ',
-        hostId: 'ホスト ID',
-        hostname: 'ホスト名',
-        hosts: 'ホスト',
-        shell: 'シェル',
-        wheel: 'wheel',
         addGroup: '新しい PAM グループ',
         addHost: '新しい PAM ホスト',
         addUser: '新しい PAM ユーザー',
@@ -432,18 +351,6 @@ export let I18nAdminJa: I18nAdmin = {
     },
     providers: {
         config: {
-            authorizationEndpoint: '認可エンドポイント',
-            autoOnboarding: '初回ログイン時に自動登録',
-            claimMappings: 'ID トークンのクレームの対応付け',
-            clientId: 'クライアント ID',
-            clientSecret: 'クライアントシークレット',
-            issuerUrl: '発行者（Issuer）の URL',
-            metadataUrl: 'メタデータの URL',
-            modeAuto: '自動',
-            modeCustom: 'カスタム',
-            scope: 'スコープ',
-            tokenEndpoint: 'トークンエンドポイント',
-            userinfoEndpoint: 'ユーザー情報エンドポイント',
             allowInsecureTls: '安全でない TLS を許可する',
             autoLink: 'ユーザーを自動で連携',
             autoLinkDesc1:
@@ -496,9 +403,6 @@ export let I18nAdminJa: I18nAdmin = {
         name: 'ロールの名前',
     },
     scopes: {
-        accessTokenMappings: 'アクセストークンへの対応付け',
-        default: '既定',
-        idTokenMappings: 'ID トークンへの対応付け',
         claimsAtRoot: 'クレームをトークンの最上位に出力する',
         claimsAtRootWarning:
             'このスコープに対応付けた属性は、「custom」の下ではなくトークンの最上位に書き込まれます。名前の衝突を避ける責任はあなたにあります: 対応付けた属性の名前が予約済みの JWT クレームと衝突すると、トークンを発行できません。最上位の独自クレームは、今後のプロトコルや機能の変更で動かなくなる可能性もあります。参考:',
@@ -516,15 +420,11 @@ export let I18nAdminJa: I18nAdmin = {
         orderChangeToDesc: '降順に並べ替える',
     },
     sessions: {
-        sessionId: 'セッション ID',
-        userId: 'ユーザー ID',
         invalidateAll: 'すべてのセッションを無効にする',
     },
     tabs: {
-        branding: '表示設定',
         config: '設定',
         delete: '削除',
-        secret: 'シークレット',
     },
     tos: {
         accepted: '同意日時',
@@ -605,15 +505,5 @@ export let I18nAdminJa: I18nAdmin = {
             reservedKeyLogout:
                 'ログアウト後のリダイレクト URI にクエリーパラメーター「{{ KEY }}」は使えません。ログアウト時に設定されるためです',
         },
-    },
-    config: {
-        argon2Title: 'Argon2ID - パスワードハッシュ',
-        backups: 'バックアップ',
-        curve: '曲線',
-        jsonWebKeys: 'JSON Web Key',
-        jwks: 'JWKS',
-        keyId: '鍵 ID',
-        loginTime: 'ログイン時間',
-        passwordHashing: 'パスワードハッシュ',
     },
 };

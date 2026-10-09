@@ -109,11 +109,6 @@ export const I18nNl: I18n = {
         navBackToAdmin: 'Beheer-UI',
         other: 'Overige',
         pam: {
-            aliases: 'Aliases',
-            hosts: 'Hosts',
-            ips: 'IPs',
-            shell: 'Shell',
-            sshKeys: 'SSH Keys',
             addSshKey: 'Nieuwe sleutel toevoegen',
             comment: 'Opmerking',
             generatePassword: 'Nieuw wachtwoord',
@@ -178,7 +173,6 @@ export const I18nNl: I18n = {
         zip: 'Postcode',
     },
     authorize: {
-        passkey: 'Passkey',
         clientForceMfa: `Voor deze login is MFA vereist voor hogere veiligheid.\nOm toegang te
             krijgen, moet u inloggen op uw account en minimaal één extra Passkey toevoegen`,
         clientGroupPrefixForbidden: 'Ontbrekende groepstoewijzing voor deze login',

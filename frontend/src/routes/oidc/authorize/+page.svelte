@@ -798,7 +798,7 @@
                             >
                                 <div class="flex gap-05">
                                     <IconKey width="1.2rem" />
-                                    {t.authorize.passkey}
+                                    Passkey
                                 </div>
                             </Button>
                         </div>

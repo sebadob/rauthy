@@ -111,11 +111,6 @@ export const I18nUk: I18n = {
         navBackToAdmin: 'Панель адміністратора',
         other: 'Інше',
         pam: {
-            aliases: 'Aliases',
-            hosts: 'Hosts',
-            ips: 'IPs',
-            shell: 'Shell',
-            sshKeys: 'SSH Keys',
             addSshKey: 'Додати новий ключ',
             comment: 'Коментар',
             generatePassword: 'Новий пароль',
@@ -180,7 +175,6 @@ export const I18nUk: I18n = {
         zip: 'Індекс / Поштовий код',
     },
     authorize: {
-        passkey: 'Passkey',
         clientForceMfa: `Цей вхід вимагає MFA для підвищення безпеки.\nЩоб отримати доступ, вам
             потрібно увійти у свій акаунт та додати принаймні один додатковий ключ доступу
             (Passkey).`,

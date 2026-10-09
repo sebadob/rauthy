@@ -90,11 +90,11 @@
         {/snippet}
 
         {#snippet details()}
-            <LabeledValue label={ta.sessions.sessionId}>
+            <LabeledValue label="Session ID">
                 {session.id}
             </LabeledValue>
 
-            <LabeledValue label={ta.sessions.userId}>
+            <LabeledValue label="User ID">
                 {session.user_id}
             </LabeledValue>
 

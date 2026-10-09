@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import type {
         AccessGroup,
         AccessRight,
@@ -8,8 +7,6 @@
     } from '$api/types/api_keys.ts';
     import Button from '$lib5/button/Button.svelte';
     import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-
-    let ta = useI18nAdmin();
 
     let {
         key,
@@ -204,7 +201,7 @@
     {#snippet btnRight(r: AccessRight)}
         <div class="center">
             <Button ariaLabel={`Toggle: ${r}`} invisible onclick={() => toggleRight(r)}>
-                {ta.api_key.rights[r]}
+                {r}
             </Button>
         </div>
     {/snippet}
@@ -219,7 +216,7 @@
     {#snippet btnGroup(g: AccessGroup)}
         <div>
             <Button ariaLabel={`Toggle: ${g}`} invisible onclick={() => toggleGroup(g)}>
-                {ta.api_key.accessGroups[g]}
+                {g}
             </Button>
         </div>
     {/snippet}

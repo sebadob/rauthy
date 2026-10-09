@@ -2,29 +2,6 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminNb: I18nAdmin = {
     api_key: {
-        apiKey: 'API Key',
-        rights: {
-            create: 'create',
-            read: 'read',
-            update: 'update',
-            delete: 'delete',
-        },
-        accessGroups: {
-            Blacklist: 'Blacklist',
-            Clients: 'Clients',
-            Events: 'Events',
-            Generic: 'Generic',
-            Groups: 'Groups',
-            Pam: 'Pam',
-            Roles: 'Roles',
-            Secrets: 'Secrets',
-            Sessions: 'Sessions',
-            Scopes: 'Scopes',
-            UserAttributes: 'UserAttributes',
-            Users: 'Users',
-            AuthProviders: 'AuthProviders',
-            ApiKeys: 'ApiKeys',
-        },
         delete1: 'Skal denne API nøkkelen slettes?',
         expires: 'Utløper',
         generate1: 'Her kan man opprette et nytt Secret for denne API nøkkelen.',
@@ -62,39 +39,12 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
-        accessTokenAlg: 'Access Token Algorithm',
-        allowedOrigins: 'Allowed Origins',
-        authCodeLifetime: 'Auth Code Lifetime',
-        authFlows: 'Authentication Flows',
-        backchannelLogoutTitle: 'Backchannel Logout',
-        backchannelLogoutUri: 'Backchannel Logout URI',
-        bearerToken: 'Bearer Token',
-        clientId: 'Client ID',
-        clientSecret: 'Client Secret',
-        customClaims: 'Custom Claims',
-        idTokenAlg: 'ID Token Algorithm',
-        origin: 'Origin',
-        postLogoutRedirectUris: 'Post Logout Redirect URIs',
-        redirectUris: 'Redirect URIs',
-        resourceIndicators: 'Resource Indicators',
-        scimBaseUri: 'SCIM Base URI',
-        tokenLifetimeLabel: 'Token Lifetime',
-        tokens: 'Tokens',
         allowedResources: 'Tillatte ressurser',
         defaultAud: 'Standard-mottakere (aud)',
         descAllowedResources: `Valgfrie RFC 8707 ressursindikatorer denne klienten kan be om. En tom liste avviser enhver 'resource'-parameter med 'invalid_target'.`,
         descDefaultAud: `Mottakere (aud) som alltid legges til i denne klientens tokens, uavhengig av en 'resource'-parameter.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
-            button: 'Button',
-            darkTheme: 'Dark Theme',
-            header: 'Header',
-            hue: 'Hue',
-            lightTheme: 'Light Theme',
-            link: 'Link',
-            logoUpload: 'Logo Upload',
-            lum: 'Lum',
-            sat: 'Sat',
             descHsl: `Fargene må angis som HSL. Her defineres kun basisfargen.
                 Alpha kanaler og andre verdier justeres dynamisk av temaet.`,
             descFullCss: `Fargene må angis som fullstendige, gyldige CSS <code>color</code> verdier.
@@ -187,8 +137,6 @@ export let I18nAdminNb: I18nAdmin = {
         },
     },
     common: {
-        created: 'Created',
-        send: 'Send',
         account: 'Konto',
         addNew: 'Legg til ny',
         back: 'Tilbake',
@@ -317,7 +265,6 @@ export let I18nAdminNb: I18nAdmin = {
         textArea: 'Edit Text',
     },
     email: {
-        updated: 'Update',
         cancelJob: 'Cancel Job',
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
         immediate: 'Immediate',
@@ -336,21 +283,6 @@ export let I18nAdminNb: I18nAdmin = {
             Deretter må du logge ut og inn igjen`,
     },
     events: {
-        content: 'Content',
-        level: 'Level',
-        levels: {
-            info: 'Info',
-            notice: 'Notice',
-            warning: 'Warning',
-            critical: 'Critical',
-        },
-        newVersion: 'New Version',
-        noEvents: 'No events found',
-        test: 'Test',
-        testEvent: 'Test Event',
-        timestamp: 'Timestamp',
-        title: 'Events',
-        type: 'Type',
         eventLevel: 'Hendelsesnivå',
         eventType: 'Hendelsestype',
     },
@@ -367,11 +299,6 @@ export let I18nAdminNb: I18nAdmin = {
         rotateKeys: 'Roter nøkler',
     },
     kv: {
-        generateNew: 'Generate New',
-        limit: 'Limit',
-        public: '(public)',
-        publicAccess: 'Public Access',
-        publicAccessLink: 'Public Access Link',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -409,8 +336,6 @@ export let I18nAdminNb: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
-        kv: 'KV Store',
-        pam: 'PAM',
         apiKeys: 'API-nøkler',
         attributes: 'Attributter',
         blacklist: 'Svarteliste',
@@ -431,12 +356,6 @@ export let I18nAdminNb: I18nAdmin = {
         state: 'Status',
     },
     pam: {
-        home: 'Home',
-        hostId: 'Host ID',
-        hostname: 'Hostname',
-        hosts: 'Hosts',
-        shell: 'Shell',
-        wheel: 'Wheel',
         addGroup: 'Ny PAM-gruppe',
         addHost: 'Ny PAM-vert',
         addUser: 'Ny PAM-bruker',
@@ -471,18 +390,6 @@ export let I18nAdminNb: I18nAdmin = {
     },
     providers: {
         config: {
-            authorizationEndpoint: 'Authorization Endpoint',
-            autoOnboarding: 'Auto-Onboarding',
-            claimMappings: 'ID token claim mappings',
-            clientId: 'Client ID',
-            clientSecret: 'Client Secret',
-            issuerUrl: 'Issuer URL',
-            metadataUrl: 'Metadata URL',
-            modeAuto: 'Auto',
-            modeCustom: 'Custom',
-            scope: 'Scope',
-            tokenEndpoint: 'Token Endpoint',
-            userinfoEndpoint: 'Userinfo Endpoint',
             allowInsecureTls: 'Tillat usikker TLS',
             autoLink: 'Auto-link bruker',
             autoLinkDesc1: `Hvis auto-link bruker er aktivert, vil en eventuell eksisterende, ikke-koblet bruker automatisk kobles til denne leverandøren ved innlogging.`,
@@ -528,9 +435,6 @@ export let I18nAdminNb: I18nAdmin = {
         name: 'Rollenavn',
     },
     scopes: {
-        accessTokenMappings: 'Access Token Mappings',
-        default: 'default',
-        idTokenMappings: 'Id Token Mappings',
         claimsAtRoot: 'Emit claims at token root',
         claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
@@ -544,8 +448,6 @@ export let I18nAdminNb: I18nAdmin = {
         name: 'Scope-navn',
     },
     sessions: {
-        sessionId: 'Session ID',
-        userId: 'User ID',
         invalidateAll: 'Invalidér alle økter',
     },
     search: {
@@ -554,10 +456,8 @@ export let I18nAdminNb: I18nAdmin = {
         orderChangeToDesc: 'Bytt til synkende sortering',
     },
     tabs: {
-        branding: 'Branding',
         config: 'Konfigurasjon',
         delete: 'Slett',
-        secret: 'Secret',
     },
     tos: {
         accepted: 'Accepted',
@@ -639,15 +539,5 @@ export let I18nAdminNb: I18nAdmin = {
             reservedKeyLogout:
                 'En redirect-URI etter utlogging kan ikke inneholde spørringsparameteren "{{ KEY }}", fordi den settes ved utlogging',
         },
-    },
-    config: {
-        argon2Title: 'Argon2ID - Password Hashing',
-        backups: 'Backups',
-        curve: 'Curve',
-        jsonWebKeys: 'Json Web Keys',
-        jwks: 'JWKS',
-        keyId: 'Key ID',
-        loginTime: 'Login Time',
-        passwordHashing: 'Password Hashing',
     },
 };

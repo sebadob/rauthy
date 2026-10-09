@@ -55,8 +55,8 @@
         <InputPassword
             autocomplete="off"
             value={secret}
-            label={ta.api_key.apiKey}
-            placeholder={ta.api_key.apiKey}
+            label="API Key"
+            placeholder="API Key"
             disabled
             showCopy
             width="min(25rem, calc(100dvw - .5rem))"

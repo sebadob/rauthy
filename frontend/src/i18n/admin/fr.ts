@@ -2,29 +2,6 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminFr: I18nAdmin = {
     api_key: {
-        apiKey: 'API Key',
-        rights: {
-            create: 'create',
-            read: 'read',
-            update: 'update',
-            delete: 'delete',
-        },
-        accessGroups: {
-            Blacklist: 'Blacklist',
-            Clients: 'Clients',
-            Events: 'Events',
-            Generic: 'Generic',
-            Groups: 'Groups',
-            Pam: 'Pam',
-            Roles: 'Roles',
-            Secrets: 'Secrets',
-            Sessions: 'Sessions',
-            Scopes: 'Scopes',
-            UserAttributes: 'UserAttributes',
-            Users: 'Users',
-            AuthProviders: 'AuthProviders',
-            ApiKeys: 'ApiKeys',
-        },
         delete1: 'Êtes-vous sûr de vouloir supprimer cette clé API ?',
         expires: 'Expiration',
         generate1: 'Ici, vous pouvez générer un nouveau secret pour cette clé API.',
@@ -64,24 +41,6 @@ export let I18nAdminFr: I18nAdmin = {
         size: 'Taille',
     },
     clients: {
-        accessTokenAlg: 'Access Token Algorithm',
-        allowedOrigins: 'Allowed Origins',
-        authCodeLifetime: 'Auth Code Lifetime',
-        authFlows: 'Authentication Flows',
-        backchannelLogoutTitle: 'Backchannel Logout',
-        backchannelLogoutUri: 'Backchannel Logout URI',
-        bearerToken: 'Bearer Token',
-        clientId: 'Client ID',
-        clientSecret: 'Client Secret',
-        customClaims: 'Custom Claims',
-        idTokenAlg: 'ID Token Algorithm',
-        origin: 'Origin',
-        postLogoutRedirectUris: 'Post Logout Redirect URIs',
-        redirectUris: 'Redirect URIs',
-        resourceIndicators: 'Resource Indicators',
-        scimBaseUri: 'SCIM Base URI',
-        tokenLifetimeLabel: 'Token Lifetime',
-        tokens: 'Tokens',
         allowedResources: 'Ressources autorisées',
         defaultAud: 'Audiences par défaut',
         descAllowedResources: `Indicateurs de ressources RFC 8707 optionnels que ce client peut demander. Une liste vide rejette tout paramètre 'resource' avec 'invalid_target'.`,
@@ -89,15 +48,6 @@ export let I18nAdminFr: I18nAdmin = {
         backchannelLogout:
             'Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l’URI ici.',
         branding: {
-            button: 'Button',
-            darkTheme: 'Dark Theme',
-            header: 'Header',
-            hue: 'Hue',
-            lightTheme: 'Light Theme',
-            link: 'Link',
-            logoUpload: 'Logo Upload',
-            lum: 'Lum',
-            sat: 'Sat',
             descHsl: `Les valeurs suivantes doivent être fournies au format HSL. Seules les couleurs de base sont
                 fournies. Les canaux alpha et les autres valeurs sont gérés dynamiquement par le thème.`,
             descFullCss: `Les valeurs suivantes doivent être des valeurs CSS <code>color</code> entièrement valides.
@@ -194,8 +144,6 @@ export let I18nAdminFr: I18nAdmin = {
         },
     },
     common: {
-        created: 'Created',
-        send: 'Send',
         account: 'Compte',
         addNew: 'Ajouter',
         back: 'Précédent',
@@ -328,7 +276,6 @@ export let I18nAdminFr: I18nAdmin = {
         textArea: 'Modifier le texte',
     },
     email: {
-        updated: 'Update',
         cancelJob: 'Annuler la tâche',
         filterType: ['Aucun', 'Dans le groupe', 'Hors du groupe', 'A un rôle', `N'a pas de rôle`],
         immediate: 'Immédiat',
@@ -348,21 +295,6 @@ export let I18nAdminFr: I18nAdmin = {
             Ensuite, vous devrez vous déconnecter puis vous reconnecter.`,
     },
     events: {
-        content: 'Content',
-        level: 'Level',
-        levels: {
-            info: 'Info',
-            notice: 'Notice',
-            warning: 'Warning',
-            critical: 'Critical',
-        },
-        newVersion: 'New Version',
-        noEvents: 'No events found',
-        test: 'Test',
-        testEvent: 'Test Event',
-        timestamp: 'Timestamp',
-        title: 'Events',
-        type: 'Type',
         eventLevel: `Niveau d'événement`,
         eventType: `Type d'événement`,
     },
@@ -384,11 +316,6 @@ export let I18nAdminFr: I18nAdmin = {
         rotateKeys: 'Rotation des clés',
     },
     kv: {
-        generateNew: 'Generate New',
-        limit: 'Limit',
-        public: '(public)',
-        publicAccess: 'Public Access',
-        publicAccessLink: 'Public Access Link',
         accessTestDesc: `La clé d'accès doit être fournie dans l'en-tête <code>Authorization</code> sous forme de jeton
             <code>Bearer</code>. La commande <code>curl</code> suivante peut être utilisée pour les tests.`,
         addNewKey: `Nouvelle clé d'accès`,
@@ -426,8 +353,6 @@ export let I18nAdminFr: I18nAdmin = {
         value: 'Valeur JSON',
     },
     nav: {
-        kv: 'KV Store',
-        pam: 'PAM',
         apiKeys: 'Clés API',
         attributes: 'Attributs',
         blacklist: 'Liste noire',
@@ -448,12 +373,6 @@ export let I18nAdminFr: I18nAdmin = {
         state: 'État',
     },
     pam: {
-        home: 'Home',
-        hostId: 'Host ID',
-        hostname: 'Hostname',
-        hosts: 'Hosts',
-        shell: 'Shell',
-        wheel: 'Wheel',
         addGroup: 'Nouveau groupe PAM',
         addHost: 'Nouvel hôte PAM',
         addUser: 'Nouvel utilisateur PAM',
@@ -505,18 +424,6 @@ export let I18nAdminFr: I18nAdmin = {
     },
     providers: {
         config: {
-            authorizationEndpoint: 'Authorization Endpoint',
-            autoOnboarding: 'Auto-Onboarding',
-            claimMappings: 'ID token claim mappings',
-            clientId: 'Client ID',
-            clientSecret: 'Client Secret',
-            issuerUrl: 'Issuer URL',
-            metadataUrl: 'Metadata URL',
-            modeAuto: 'Auto',
-            modeCustom: 'Custom',
-            scope: 'Scope',
-            tokenEndpoint: 'Token Endpoint',
-            userinfoEndpoint: 'Userinfo Endpoint',
             allowInsecureTls: 'Autoriser TLS non sécurisé',
             autoLink: `Lien automatique avec l'utilisateur`,
             autoLinkDesc1: `Si l'option Lien automatique avec l'utilisateur est activée,
@@ -577,9 +484,6 @@ export let I18nAdminFr: I18nAdmin = {
         name: 'Nom du rôle',
     },
     scopes: {
-        accessTokenMappings: 'Access Token Mappings',
-        default: 'default',
-        idTokenMappings: 'Id Token Mappings',
         claimsAtRoot: 'Émettre les claims à la racine du token',
         claimsAtRootWarning: `Les attributs associés à cette étendue sont écrits à la racine du token au
             lieu d'être imbriqués sous « custom ». C'est à vous de garantir la correction face aux
@@ -602,15 +506,11 @@ export let I18nAdminFr: I18nAdmin = {
         orderChangeToDesc: 'Trier par ordre décroissant',
     },
     sessions: {
-        sessionId: 'Session ID',
-        userId: 'User ID',
         invalidateAll: 'Invalider toutes les sessions',
     },
     tabs: {
-        branding: 'Branding',
         config: 'Configuration',
         delete: 'Supprimer',
-        secret: 'Secret',
     },
     tos: {
         accepted: 'Accepté',
@@ -697,15 +597,5 @@ export let I18nAdminFr: I18nAdmin = {
             reservedKeyLogout:
                 'Une URI de redirection après déconnexion ne doit pas contenir le paramètre de requête "{{ KEY }}", car il est défini lors de la déconnexion',
         },
-    },
-    config: {
-        argon2Title: 'Argon2ID - Password Hashing',
-        backups: 'Backups',
-        curve: 'Curve',
-        jsonWebKeys: 'Json Web Keys',
-        jwks: 'JWKS',
-        keyId: 'Key ID',
-        loginTime: 'Login Time',
-        passwordHashing: 'Password Hashing',
     },
 };

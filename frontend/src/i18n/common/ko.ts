@@ -105,11 +105,6 @@ export const I18nKo: I18n = {
         navBackToAdmin: '관리자 UI',
         other: 'Other',
         pam: {
-            aliases: 'Aliases',
-            hosts: 'Hosts',
-            ips: 'IPs',
-            shell: 'Shell',
-            sshKeys: 'SSH Keys',
             addSshKey: 'Add New Key',
             comment: 'Comment',
             generatePassword: 'New Password',
@@ -171,7 +166,6 @@ export const I18nKo: I18n = {
         zip: '우편번호',
     },
     authorize: {
-        passkey: 'Passkey',
         clientForceMfa: `이 로그인은 더 높은 수준의 보안을 위해서 MFA를 강제합니다.\n접근하려면, 계정에 
             로그인하고 최소 하나 이상의 패스키를 추가해야 합니다.`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',

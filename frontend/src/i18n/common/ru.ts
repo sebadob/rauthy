@@ -109,11 +109,6 @@ export const I18nRu: I18n = {
         navBackToAdmin: 'Панель администратора',
         other: 'Другое',
         pam: {
-            aliases: 'Aliases',
-            hosts: 'Hosts',
-            ips: 'IPs',
-            shell: 'Shell',
-            sshKeys: 'SSH Keys',
             addSshKey: 'Добавить новый ключ',
             comment: 'Комментарий',
             generatePassword: 'Новый пароль',
@@ -178,7 +173,6 @@ export const I18nRu: I18n = {
         zip: 'Почтовый индекс',
     },
     authorize: {
-        passkey: 'Passkey',
         clientForceMfa: `Этот вход требует МФА для обеспечения более высокой безопасности.\nДля получения доступа вам необходимо
             войти в свою учётную запись и добавить хотя бы один дополнительный ключ доступа`,
         clientGroupPrefixForbidden: 'Отсутствует назначение группы для этого входа',

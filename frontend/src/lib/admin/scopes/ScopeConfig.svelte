@@ -134,11 +134,11 @@
         <p>{ta.scopes.mapping2}</p>
 
         {#if itemsAccess}
-            <SelectList bind:items={itemsAccess}>{ta.scopes.accessTokenMappings}</SelectList>
+            <SelectList bind:items={itemsAccess}>Access Token Mappings</SelectList>
         {/if}
 
         {#if itemsId}
-            <SelectList bind:items={itemsId}>{ta.scopes.idTokenMappings}</SelectList>
+            <SelectList bind:items={itemsId}>Id Token Mappings</SelectList>
         {/if}
 
         <div class="rootClaims">

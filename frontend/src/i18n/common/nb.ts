@@ -108,11 +108,6 @@ export const I18nNb: I18n = {
         navBackToAdmin: 'Admin-grensesnitt',
         other: 'Annet',
         pam: {
-            aliases: 'Aliases',
-            hosts: 'Hosts',
-            ips: 'IPs',
-            shell: 'Shell',
-            sshKeys: 'SSH Keys',
             addSshKey: 'Add New Key',
             comment: 'Comment',
             generatePassword: 'Nytt passord',
@@ -175,7 +170,6 @@ export const I18nNb: I18n = {
         zip: 'Postnummer',
     },
     authorize: {
-        passkey: 'Passkey',
         clientForceMfa: `Denne påloggingen krever MFA for økt sikkerhet. For å få tilgang, må du 
             logge inn på kontoen din og legge til minst én passkey.`,
         clientGroupPrefixForbidden: 'Manglende gruppetilhørighet for denne påloggingen',

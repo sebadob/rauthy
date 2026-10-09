@@ -101,9 +101,9 @@
     </div>
 </Form>
 
-<InputPassword ariaLabel={ta.tabs.secret} label={ta.tabs.secret} value={key.secret} disabled />
+<InputPassword ariaLabel="Secret" label="Secret" value={key.secret} disabled />
 <div class="flex gap-05">
-    <Button level={2} onclick={generateSecret}>{ta.kv.generateNew}</Button>
+    <Button level={2} onclick={generateSecret}>Generate New</Button>
     {#if successSecret}
         <IconCheck />
     {/if}

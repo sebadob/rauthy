@@ -37,14 +37,14 @@
     let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
     let isSearchedServer = $state(false);
 
-    let searchOptions = [ta.sessions.userId, ta.sessions.sessionId, 'IP'];
+    let searchOptions = ['User ID', 'Session ID', 'IP'];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
     let orderOptions = [
         ta.options.expires,
         ta.options.lastSeen,
-        ta.sessions.sessionId,
-        ta.sessions.userId,
+        'Session ID',
+        'User ID',
         ta.options.state,
         'IP',
     ];

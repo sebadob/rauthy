@@ -102,11 +102,6 @@ export const I18nJa: I18n = {
         navBackToAdmin: '管理画面',
         other: 'その他',
         pam: {
-            aliases: '別名',
-            hosts: 'ホスト',
-            ips: 'IP アドレス',
-            shell: 'シェル',
-            sshKeys: 'SSH 鍵',
             addSshKey: '新しいキーを追加',
             comment: 'コメント',
             generatePassword: '新しいパスワード',
@@ -166,7 +161,6 @@ export const I18nJa: I18n = {
         zip: '郵便番号',
     },
     authorize: {
-        passkey: 'パスキー',
         clientForceMfa:
             'このログインでは、安全性を高めるため多要素認証が必須です。\nアクセスするには、アカウントにログインしてパスキーを少なくとも1つ追加してください',
         clientGroupPrefixForbidden: 'このログインに必要なグループに所属していません',
@@ -215,10 +209,9 @@ export const I18nJa: I18n = {
     },
     emailChange: {
         title: 'メールアドレスの変更完了',
-        textChanged: 'メールアドレスを変更しました。',
-        from: '変更前:',
+        textChanged: 'メールアドレスを次のとおり変更しました',
         textLogin: '今後は新しいアドレスでログインできます。',
-        to: '変更後:',
+        to: '→',
     },
     error: {
         // errorText: "The requested data could not be found",

@@ -112,11 +112,6 @@ export const I18nFr: I18n = {
         navBackToAdmin: 'Interface admin',
         other: 'Autre',
         pam: {
-            aliases: 'Aliases',
-            hosts: 'Hosts',
-            ips: 'IPs',
-            shell: 'Shell',
-            sshKeys: 'SSH Keys',
             addSshKey: 'Ajouter une nouvelle clé',
             comment: 'Commentaire',
             generatePassword: 'Nouveau mot de passe',
@@ -179,7 +174,6 @@ export const I18nFr: I18n = {
         zip: 'Code postal',
     },
     authorize: {
-        passkey: 'Passkey',
         clientForceMfa: `Cette connexion nécessite la double authentification (MFA) pour une sécurité renforcée.\nPour y accéder, vous devez
             vous connecter à votre compte et ajouter au moins une clé d'accès supplémentaire`,
         clientGroupPrefixForbidden: 'Attribution de groupe manquante pour cette connexion',

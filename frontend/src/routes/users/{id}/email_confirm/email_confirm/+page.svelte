@@ -26,9 +26,8 @@
         <div class="container">
             <h1>{t.emailChange.title}</h1>
             <p>
-                {t.emailChange.textChanged}{#if !t.emailChange.from}:{/if}<br />
-                {#if t.emailChange.from}{t.emailChange.from}{/if}
-                <b>{emailOld}</b><br />
+                {t.emailChange.textChanged}:<br />
+                <b>{emailOld}</b>
                 {t.emailChange.to}
                 <b>{emailNew}</b>
             </p>

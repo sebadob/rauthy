@@ -129,7 +129,7 @@
                     {scope.name}
                     {#if isDefaultScope(scope.name)}
                         <span class="default">
-                            <i>{ta.scopes.default}</i>
+                            <i>default</i>
                         </span>
                     {/if}
                 </NavButtonTile>

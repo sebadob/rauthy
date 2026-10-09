@@ -24,7 +24,7 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const tabs = [ta.nav.config, ta.tabs.secret, ta.tabs.branding, t.common.delete];
+    const tabs = [ta.nav.config, 'Secret', 'Branding', t.common.delete];
     let selected = $state(tabs[0]);
 
     let focusFirst: undefined | (() => void) = $state();
@@ -45,9 +45,9 @@
 <div class="details">
     {#if selected === ta.nav.config}
         <ClientConfig {client} {clients} {scopesAll} {onSave} />
-    {:else if selected === ta.tabs.secret}
+    {:else if selected === 'Secret'}
         <ClientSecret {client} />
-    {:else if selected === ta.tabs.branding}
+    {:else if selected === 'Branding'}
         <ClientBranding {client} />
     {:else if selected === t.common.delete}
         <ClientDelete {client} {onSave} />

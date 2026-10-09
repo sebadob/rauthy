@@ -5,7 +5,7 @@
 </script>
 
 <div class="desc">
-    <h4>{ta.providers.config.claimMappings}</h4>
+    <h4>ID token claim mappings</h4>
     <p>{ta.providers.config.jsonPath.p1}</p>
     <p>{@html ta.providers.config.jsonPath.p2}</p>
     <p>{@html ta.providers.config.jsonPath.p3}</p>

@@ -127,11 +127,8 @@
             </InputCheckbox>
         </div>
         <div class="checkbox">
-            <InputCheckbox
-                ariaLabel={ta.providers.config.autoOnboarding}
-                bind:checked={provider.auto_onboarding}
-            >
-                {ta.providers.config.autoOnboarding}
+            <InputCheckbox ariaLabel="Auto-Onboarding" bind:checked={provider.auto_onboarding}>
+                Auto-Onboarding
             </InputCheckbox>
         </div>
         <div class="checkbox">

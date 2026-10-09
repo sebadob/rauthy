@@ -222,14 +222,7 @@
 {/snippet}
 
 <div class="btnsLim">
-    <Input
-        typ="number"
-        bind:value={limit}
-        label={ta.kv.limit}
-        min="1"
-        max="4294967295"
-        width="7rem"
-    />
+    <Input typ="number" bind:value={limit} label="Limit" min="1" max="4294967295" width="7rem" />
     <div class="btns">
         <Button level={2} onclick={fetchAll}>{ta.kv.loadAllValues}</Button>
         <Button onclick={() => (showModalAdd = true)}>{ta.kv.addNewValue}</Button>
@@ -296,7 +289,7 @@
                 {/if}
                 {#if ns.public}
                     <Button invisible onclick={() => openPubLink(entry.key)}>
-                        <div title={ta.kv.publicAccessLink} style:margin-bottom="-.5rem">
+                        <div title="Public Access Link" style:margin-bottom="-.5rem">
                             <IconLink width="1.1rem" />
                         </div>
                     </Button>

@@ -74,8 +74,8 @@
     <Form action="/auth/v1/pam/hosts" {onSubmit}>
         <Input
             bind:ref
-            label={ta.pam.hostname}
-            placeholder={ta.pam.hostname}
+            label="Hostname"
+            placeholder="Hostname"
             bind:value={host.hostname}
             required
             pattern={PATTERN_LINUX_HOSTNAME}

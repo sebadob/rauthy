@@ -23,7 +23,7 @@
     });
 </script>
 
-<h3>{ta.config.argon2Title}</h3>
+<h3>Argon2ID - Password Hashing</h3>
 <p>{ta.docs.hashing.pUtility}</p>
 <p>
     <b>{ta.docs.hashing.tune}</b><br />
@@ -77,7 +77,7 @@
 
     <br />
     <div class="flex">
-        <div class="label">{ta.config.loginTime}:</div>
+        <div class="label">Login Time:</div>
         {loginTime} ms
     </div>
 

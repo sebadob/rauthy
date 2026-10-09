@@ -66,16 +66,10 @@
         // maybe additional ones in the future like client_logo
     });
 
-    let modes: string[] = [
-        'OIDC',
-        ta.providers.config.modeAuto,
-        ta.providers.config.modeCustom,
-        'GitHub',
-        'Google',
-    ];
+    let modes: string[] = ['OIDC', 'Auto', 'Custom', 'GitHub', 'Google'];
     let mode = $state(modes[0]);
-    let isAuto = $derived(mode === modes[1]);
-    let isCustom = $derived(mode === modes[2]);
+    let isAuto = $derived(mode === 'Auto');
+    let isCustom = $derived(mode === 'Custom');
     let isOidc = $derived(mode === 'OIDC');
     let isSpecial = $derived(!isAuto && !isCustom && !isOidc);
 
@@ -317,8 +311,8 @@
         {#if isOidc && !lookupSuccess}
             <Input
                 name="issuer"
-                label={ta.providers.config.issuerUrl}
-                placeholder={ta.providers.config.issuerUrl}
+                label="Issuer URL"
+                placeholder="Issuer URL"
                 bind:value={configLookup.issuer}
                 width={inputWidth}
                 required
@@ -329,7 +323,7 @@
                 typ="url"
                 name="metadata"
                 bind:value={configLookup.metadata_url}
-                label={ta.providers.config.metadataUrl}
+                label="Metadata URL"
                 placeholder=".../.well-known/openid-configuration"
                 width={inputWidth}
                 required

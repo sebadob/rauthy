@@ -25,27 +25,12 @@
     let untilDate: undefined | string = $state('');
     let untilTime = $state('--:--');
     let level: EventLevel = $state('info');
-    // The options show translated labels, while `level` keeps the value used by the API.
-    let levelLabels = [
-        ta.events.levels.info,
-        ta.events.levels.notice,
-        ta.events.levels.warning,
-        ta.events.levels.critical,
-    ];
-    let levelLabel = $state(levelLabels[0]);
-
-    $effect(() => {
-        let idx = levelLabels.indexOf(levelLabel);
-        if (idx > -1) {
-            level = EVENT_LEVELS[idx] as EventLevel;
-        }
-    });
     let typ: EventType = $state(EVENT_TYPES[0] as EventType);
 
-    let searchOptions = ['IP', ta.events.content];
+    let searchOptions = ['IP', 'Content'];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
-    let orderOptions = [ta.events.timestamp, ta.events.level, ta.events.type];
+    let orderOptions = ['Timestamp', 'Level', 'Type'];
 
     $effect(() => {
         fetchData();
@@ -134,8 +119,8 @@
             <div class="level">
                 <Options
                     ariaLabel={ta.events.eventLevel}
-                    options={levelLabels}
-                    bind:value={levelLabel}
+                    options={EVENT_LEVELS}
+                    bind:value={level}
                     borderless
                 />
             </div>
@@ -150,7 +135,7 @@
         </div>
 
         {#if eventsFiltered.length === 0}
-            <div class="row">{ta.events.noEvents}</div>
+            <div class="row">No events found</div>
         {:else}
             <div class="eventsList">
                 {#each eventsFiltered as event (event.id)}

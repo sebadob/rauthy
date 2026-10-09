@@ -2,7 +2,6 @@
     import Button from '$lib5/button/Button.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
     import { fetchDelete } from '$api/fetch';
 
     let {
@@ -11,7 +10,6 @@
         userId: string;
     } = $props();
 
-    let t = useI18n();
     let ta = useI18nAdmin();
 
     let err = $state('');
@@ -35,7 +33,7 @@
 <p>{ta.users.forceLogout}</p>
 
 <div class="flex gap-05">
-    <Button level={-1} onclick={onSubmit}>{t.logout.logout}</Button>
+    <Button level={-1} onclick={onSubmit}>Logout</Button>
     {#if success}
         <IconCheck />
     {/if}

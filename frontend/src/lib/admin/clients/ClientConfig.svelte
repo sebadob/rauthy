@@ -368,7 +368,7 @@
             pattern={PATTERN_GROUP}
         />
 
-        <p class="mb-0"><b>{ta.clients.authFlows}</b></p>
+        <p class="mb-0"><b>Authentication Flows</b></p>
         <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
             authorization_code
         </InputCheckbox>
@@ -411,11 +411,11 @@
         {/if}
         <div style:height=".5rem"></div>
 
-        <p class="mb-0"><b>{ta.clients.origin}</b></p>
+        <p class="mb-0"><b>Origin</b></p>
         <p class="desc">{ta.clients.descOrigin}</p>
         <InputTags
             bind:values={origins}
-            label={ta.clients.allowedOrigins}
+            label="Allowed Origins"
             errMsg={ta.validation.origin}
             pattern={PATTERN_ORIGIN}
         />
@@ -423,7 +423,7 @@
         <p class="desc">{@html ta.clients.descUri}</p>
         <InputTags
             bind:values={redirectURIs}
-            label={ta.clients.redirectUris}
+            label="Redirect URIs"
             errMsg={ta.validation.uri}
             required={flows.authorizationCode}
             pattern={PATTERN_CLIENT_URI}
@@ -436,7 +436,7 @@
         {/if}
         <InputTags
             bind:values={postLogoutRedirectURIs}
-            label={ta.clients.postLogoutRedirectUris}
+            label="Post Logout Redirect URIs"
             errMsg={ta.validation.uri}
             pattern={PATTERN_CLIENT_URI}
             validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
@@ -448,7 +448,7 @@
         {/if}
 
         <div style:height=".5rem"></div>
-        <p class="mb-0"><b>{ta.clients.resourceIndicators}</b></p>
+        <p class="mb-0"><b>Resource Indicators</b></p>
         <p class="desc">{ta.clients.descAllowedResources}</p>
         <InputTags
             bind:values={allowedResources}
@@ -465,7 +465,7 @@
         />
 
         <div style:height=".5rem"></div>
-        <p class="mb-0"><b>{ta.nav.scopes}</b></p>
+        <p class="mb-0"><b>Scopes</b></p>
         <p class="desc">{@html ta.clients.scopes.desc}</p>
         <SelectList bind:items={scopes}>
             {ta.clients.scopes.allowed}
@@ -475,14 +475,14 @@
         </SelectList>
 
         <div style:height=".75rem"></div>
-        <p class="mb-0"><b>{ta.clients.tokens}</b></p>
+        <p class="mb-0"><b>Tokens</b></p>
         <p>{ta.clients.tokenLifetime.p1}</p>
         <Input
             typ="number"
             bind:value={tokenLifetime}
             autocomplete="off"
-            label={ta.clients.tokenLifetimeLabel}
-            placeholder={ta.clients.tokenLifetimeLabel}
+            label="Token Lifetime"
+            placeholder="Token Lifetime"
             width={inputWidth}
             min="10"
             max="86400"
@@ -492,17 +492,17 @@
         <div style:height=".5rem"></div>
         <p>{ta.clients.tokenLifetime.p2}</p>
         <p>{ta.clients.tokenLifetime.p3}</p>
-        <LabeledValue label={ta.clients.accessTokenAlg}>
+        <LabeledValue label="Access Token Algorithm">
             <Options
-                ariaLabel={ta.clients.accessTokenAlg}
+                ariaLabel="Access Token Algorithm"
                 options={optionsAlgs}
                 bind:value={accessTokenAlg}
                 borderless
             />
         </LabeledValue>
-        <LabeledValue label={ta.clients.idTokenAlg}>
+        <LabeledValue label="ID Token Algorithm">
             <Options
-                ariaLabel={ta.clients.idTokenAlg}
+                ariaLabel="ID Token Algorithm"
                 options={optionsAlgs}
                 bind:value={idTokenAlg}
                 borderless
@@ -515,8 +515,8 @@
             typ="number"
             bind:value={authCodeLifetime}
             autocomplete="off"
-            label={ta.clients.authCodeLifetime}
-            placeholder={ta.clients.authCodeLifetime}
+            label="Auth Code Lifetime"
+            placeholder="Auth Code Lifetime"
             width={inputWidth}
             min="10"
             max="300"
@@ -524,7 +524,7 @@
         />
 
         <div style:height=".5rem"></div>
-        <p class="mb-0"><b>{ta.clients.customClaims}</b></p>
+        <p class="mb-0"><b>Custom Claims</b></p>
         <p class="desc">{ta.clients.claimsDesc}</p>
         <div class="claims">
             <InputArea
@@ -550,7 +550,7 @@
             </p>
         {/if}
 
-        <p class="mb-0"><b>{ta.clients.backchannelLogoutTitle}</b></p>
+        <p class="mb-0"><b>Backchannel Logout</b></p>
         <p class="desc">
             {@html ta.clients.backchannelLogout.replace(
                 '{{ OIDC_BCL }}',
@@ -561,8 +561,8 @@
             typ="url"
             bind:value={backchannel_logout_uri}
             autocomplete="off"
-            label={ta.clients.backchannelLogoutUri}
-            placeholder={ta.clients.backchannelLogoutUri}
+            label="Backchannel Logout URI"
+            placeholder="Backchannel Logout URI"
             width={inputWidth}
             pattern={PATTERN_URI}
             disabled={client.id === 'rauthy'}
@@ -600,8 +600,8 @@
                     typ="url"
                     bind:value={scim.base_uri}
                     autocomplete="off"
-                    label={ta.clients.scimBaseUri}
-                    placeholder={ta.clients.scimBaseUri}
+                    label="SCIM Base URI"
+                    placeholder="SCIM Base URI"
                     width={inputWidth}
                     pattern={PATTERN_CLIENT_URI}
                     required={scimEnabled}
@@ -609,8 +609,8 @@
                 <InputPassword
                     bind:value={scim.bearer_token}
                     autocomplete="off"
-                    label={ta.clients.bearerToken}
-                    placeholder={ta.clients.bearerToken}
+                    label="Bearer Token"
+                    placeholder="Bearer Token"
                     width={inputWidth}
                     pattern={PATTERN_URI}
                     maxLength={2048}

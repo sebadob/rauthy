@@ -1,12 +1,9 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import type { ThemeCss } from '$api/types/themes.ts';
     import Button from '$lib5/button/Button.svelte';
     import Input from '$lib5/form/Input.svelte';
     import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
     import RauthyLogo from '$lib/RauthyLogo.svelte';
-
-    let ta = useI18nAdmin();
 
     let {
         logoUrl,
@@ -70,46 +67,35 @@
                 {/if}
             </div>
 
-            <h3>{ta.clients.branding.header}</h3>
+            <h3>Header</h3>
             <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam</p>
             <p><span>--accent-color</span></p>
 
-            <Input label={ta.common.preview} placeholder={ta.common.preview} width="12.5rem" />
+            <Input label="Preview" placeholder="Preview" width="12.5rem" />
 
             <div class="btn">
                 <div>
-                    <Button level={1} {isLoading} onclick={() => (isLoading = true)}
-                        >{ta.clients.branding.button}</Button
-                    >
+                    <Button level={1} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
                     <br />
-                    <Button level={2} {isLoading} onclick={() => (isLoading = true)}
-                        >{ta.clients.branding.button}</Button
-                    >
+                    <Button level={2} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
                     <br />
-                    <Button level={3} {isLoading} onclick={() => (isLoading = true)}
-                        >{ta.clients.branding.button}</Button
-                    >
+                    <Button level={3} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
                     <br />
                 </div>
 
                 <div>
-                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}
-                        >{ta.clients.branding.button}</Button
+                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}>Button</Button
                     >
                     <br />
-                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}
-                        >{ta.clients.branding.button}</Button
+                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}>Button</Button
                     >
                     <br />
-                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}
-                        >{ta.clients.branding.button}</Button
+                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}>Button</Button
                     >
                 </div>
             </div>
 
-            <a href={window.location.href} onclick={ev => ev.preventDefault()}
-                >{ta.clients.branding.link}</a
-            >
+            <a href={window.location.href} onclick={ev => ev.preventDefault()}>Link</a>
 
             <br />
             <ThemeSwitch />
