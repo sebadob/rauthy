@@ -88,8 +88,8 @@
         <InputPassword
             bind:value={secret}
             autocomplete="off"
-            label="Client Secret"
-            placeholder="Client Secret"
+            label={ta.clients.clientSecret}
+            placeholder={ta.clients.clientSecret}
             disabled
             showCopy
         />

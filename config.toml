@@ -1417,6 +1417,9 @@ en = '%m/%d/%Y %T (%Z)'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 fr = '%d/%m/%Y %T (%Z)'
+# default: '%Y/%m/%d %T (%Z)'
+# overwritten by: TZ_FMT_JA
+ja = '%Y/%m/%d %T (%Z)'
 # default: '%d-%m-%Y %T (%Z)'
 # overwritten by: TZ_FMT_NL
 nl = '%d-%m-%Y %T (%Z)'
@@ -2137,13 +2140,13 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ko nb nl ru uk zhhans
+# Available Options: en de fr ja ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['de', 'en', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['de', 'en', 'fr', 'ja', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ko nb nl ru uk zhhans
+# Available Options: en de fr ja ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ja', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -2674,7 +2677,7 @@ email_reminder_disable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de ko uk zh_hans
+# one of: en de fr ja ko nb nl ru uk zh_hans
 lang = 'en'
 # one of: password_new, password_reset, email_registered_already
 typ = 'password_new'

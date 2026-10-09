@@ -83,8 +83,8 @@
             bind:ref
             bind:value={id}
             autocomplete="off"
-            label="Client ID"
-            placeholder="Client ID"
+            label={ta.clients.clientId}
+            placeholder={ta.clients.clientId}
             required
             pattern={PATTERN_CLIENT_ID_NEW}
         />
@@ -104,7 +104,7 @@
         <InputTags
             typ="url"
             bind:values={redirectURIs}
-            label="Redirect URIs"
+            label={ta.clients.redirectUris}
             errMsg={ta.validation.uri}
             pattern={PATTERN_CLIENT_URI}
             validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
@@ -112,7 +112,7 @@
         <InputTags
             typ="url"
             bind:values={postLogoutRedirectURIs}
-            label="Post Logout Redirect URIs"
+            label={ta.clients.postLogoutRedirectUris}
             errMsg={ta.validation.uri}
             pattern={PATTERN_CLIENT_URI}
             validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}

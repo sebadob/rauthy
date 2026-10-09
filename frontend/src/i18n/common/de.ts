@@ -111,6 +111,11 @@ export const I18nDe: I18n = {
         navBackToAdmin: 'Admin-UI',
         other: 'Sonstiges',
         pam: {
+            aliases: 'Aliases',
+            hosts: 'Hosts',
+            ips: 'IPs',
+            shell: 'Shell',
+            sshKeys: 'SSH Keys',
             addSshKey: 'Neuen Key Hinzufügen',
             comment: 'Kommentar',
             generatePassword: 'Neues Passwort',
@@ -178,6 +183,7 @@ export const I18nDe: I18n = {
         zip: 'PLZ',
     },
     authorize: {
+        passkey: 'Passkey',
         clientForceMfa: `Dieser Login setzt MFA voraus für eine erhöhte Sicherheit.\nUm Zugang zu 
             bekommen, müssen Sie sie in Ihren Account einloggen und mindestens einen Passkey\n
             hinzufügen.`,

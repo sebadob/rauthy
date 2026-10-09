@@ -120,7 +120,7 @@
             <LabeledValue label={t.account.pam.username}>
                 {pamUser.name}
             </LabeledValue>
-            <LabeledValue label="Shell">
+            <LabeledValue label={t.account.pam.shell}>
                 <code>{pamUser.shell}</code>
             </LabeledValue>
         </div>
@@ -182,7 +182,7 @@
                 {host.hostname}
             </h4>
             <div class="hostValue">
-                <LabeledValue label="IPs">
+                <LabeledValue label={t.account.pam.ips}>
                     <div class="items">
                         {#each host.ips as ip}
                             {@render btnClip(ip)}
@@ -192,7 +192,7 @@
             </div>
 
             <div class="hostValue">
-                <LabeledValue label="Aliases">
+                <LabeledValue label={t.account.pam.aliases}>
                     <div class="items">
                         {#each host.aliases as alias}
                             {@render btnClip(alias)}
@@ -210,7 +210,7 @@
 
     {#if hosts.length > 0}
         <div class="hosts">
-            <h3>Hosts</h3>
+            <h3>{t.account.pam.hosts}</h3>
 
             <div class="search">
                 <SearchBar bind:value={search} />

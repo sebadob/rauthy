@@ -48,7 +48,7 @@
 <Input
     bind:value={scope}
     autocomplete="off"
-    label="Scope"
+    label={ta.providers.config.scope}
     placeholder="openid profile email"
     required
     pattern={PATTERN_SCOPE_SPACE}
@@ -70,8 +70,8 @@
 <Input
     bind:value={clientId}
     autocomplete="off"
-    label="Client ID"
-    placeholder="Client ID"
+    label={ta.providers.config.clientId}
+    placeholder={ta.providers.config.clientId}
     required
     pattern={PATTERN_URI}
     width={inputWidth}
@@ -81,8 +81,8 @@
 <InputPassword
     bind:value={clientSecret}
     autocomplete="off"
-    label="Client Secret"
-    placeholder="Client Secret"
+    label={ta.providers.config.clientSecret}
+    placeholder={ta.providers.config.clientSecret}
     maxLength={256}
     errMsg={ta.providers.config.errConfidential}
     required={!usePKCE}

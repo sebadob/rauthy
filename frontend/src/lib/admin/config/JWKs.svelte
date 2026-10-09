@@ -47,7 +47,7 @@
     }
 </script>
 
-<h2>Json Web Keys</h2>
+<h2>{ta.config.jsonWebKeys}</h2>
 <p>{ta.jwks.p1}</p>
 <p>{ta.jwks.p2}</p>
 <p>{ta.jwks.p3}</p>
@@ -62,7 +62,7 @@
             </div>
         {/snippet}
         {#snippet details()}
-            <LabeledValue label="Key ID" mono>
+            <LabeledValue label={ta.config.keyId} mono>
                 {jwk.kid}
             </LabeledValue>
             <LabeledValue label={ta.jwks.type} mono>
@@ -73,7 +73,7 @@
             </LabeledValue>
 
             {#if jwk.crv}
-                <LabeledValue label="Curve" mono>
+                <LabeledValue label={ta.config.curve} mono>
                     {jwk.crv}
                 </LabeledValue>
             {/if}

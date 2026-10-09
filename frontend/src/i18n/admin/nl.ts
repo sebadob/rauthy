@@ -2,6 +2,29 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminNl: I18nAdmin = {
     api_key: {
+        apiKey: 'API Key',
+        rights: {
+            create: 'create',
+            read: 'read',
+            update: 'update',
+            delete: 'delete',
+        },
+        accessGroups: {
+            Blacklist: 'Blacklist',
+            Clients: 'Clients',
+            Events: 'Events',
+            Generic: 'Generic',
+            Groups: 'Groups',
+            Pam: 'Pam',
+            Roles: 'Roles',
+            Secrets: 'Secrets',
+            Sessions: 'Sessions',
+            Scopes: 'Scopes',
+            UserAttributes: 'UserAttributes',
+            Users: 'Users',
+            AuthProviders: 'AuthProviders',
+            ApiKeys: 'ApiKeys',
+        },
         delete1: 'Weet u zeker dat u deze API-sleutel wilt verwijderen?',
         expires: 'Vervaldatum',
         generate1: 'Hier kunt u een nieuw geheim genereren voor deze API-sleutel.',
@@ -40,6 +63,24 @@ export let I18nAdminNl: I18nAdmin = {
         size: 'Grootte',
     },
     clients: {
+        accessTokenAlg: 'Access Token Algorithm',
+        allowedOrigins: 'Allowed Origins',
+        authCodeLifetime: 'Auth Code Lifetime',
+        authFlows: 'Authentication Flows',
+        backchannelLogoutTitle: 'Backchannel Logout',
+        backchannelLogoutUri: 'Backchannel Logout URI',
+        bearerToken: 'Bearer Token',
+        clientId: 'Client ID',
+        clientSecret: 'Client Secret',
+        customClaims: 'Custom Claims',
+        idTokenAlg: 'ID Token Algorithm',
+        origin: 'Origin',
+        postLogoutRedirectUris: 'Post Logout Redirect URIs',
+        redirectUris: 'Redirect URIs',
+        resourceIndicators: 'Resource Indicators',
+        scimBaseUri: 'SCIM Base URI',
+        tokenLifetimeLabel: 'Token Lifetime',
+        tokens: 'Tokens',
         allowedResources: 'Toegestane resources',
         defaultAud: 'Standaard audiences',
         descAllowedResources: `Optionele RFC 8707 resource-indicatoren die deze client mag opvragen. Een lege lijst weigert elke 'resource'-parameter met 'invalid_target'.`,
@@ -47,6 +88,15 @@ export let I18nAdminNl: I18nAdmin = {
         backchannelLogout:
             'Als deze client {{ OIDC_BCL }} ondersteunt, kunt u de URI hier opgeven.',
         branding: {
+            button: 'Button',
+            darkTheme: 'Dark Theme',
+            header: 'Header',
+            hue: 'Hue',
+            lightTheme: 'Light Theme',
+            link: 'Link',
+            logoUpload: 'Logo Upload',
+            lum: 'Lum',
+            sat: 'Sat',
             descHsl: `De volgende waarden moeten worden opgegeven als HSL-waarden. U geeft alleen de basiskleuren op.
             Alfakanalen en andere waarden worden dynamisch gemanipuleerd door het thema.`,
             descFullCss: `De volgende waarden moeten volledig geldige CSS <code>color</code>-waarden zijn.
@@ -139,6 +189,8 @@ export let I18nAdminNl: I18nAdmin = {
         },
     },
     common: {
+        created: 'Created',
+        send: 'Send',
         account: 'Account',
         addNew: 'Nieuw toevoegen',
         back: 'Terug',
@@ -269,6 +321,7 @@ export let I18nAdminNl: I18nAdmin = {
         textArea: 'Tekst bewerken',
     },
     email: {
+        updated: 'Update',
         cancelJob: 'Taak annuleren',
         filterType: ['Geen', 'In groep', 'Niet in groep', 'Heeft rol', 'Heeft rol niet'],
         immediate: 'Direct',
@@ -288,6 +341,21 @@ export let I18nAdminNl: I18nAdmin = {
             Daarna moet u uitloggen en opnieuw inloggen.`,
     },
     events: {
+        content: 'Content',
+        level: 'Level',
+        levels: {
+            info: 'Info',
+            notice: 'Notice',
+            warning: 'Warning',
+            critical: 'Critical',
+        },
+        newVersion: 'New Version',
+        noEvents: 'No events found',
+        test: 'Test',
+        testEvent: 'Test Event',
+        timestamp: 'Timestamp',
+        title: 'Events',
+        type: 'Type',
         eventLevel: 'Gebeurtenisniveau',
         eventType: 'Gebeurtenistype',
     },
@@ -308,6 +376,11 @@ export let I18nAdminNl: I18nAdmin = {
         rotateKeys: 'Sleutels roteren',
     },
     kv: {
+        generateNew: 'Generate New',
+        limit: 'Limit',
+        public: '(public)',
+        publicAccess: 'Public Access',
+        publicAccessLink: 'Public Access Link',
         accessTestDesc: `De toegangssleutel moet worden opgegeven in de <code>Authorization</code>-header als
             <code>Bearer</code>-token. De volgende <code>curl</code>-opdracht kan worden gebruikt voor testen.`,
         addNewKey: 'Nieuwe toegangssleutel',
@@ -344,6 +417,8 @@ export let I18nAdminNl: I18nAdmin = {
         value: 'JSON-waarde',
     },
     nav: {
+        kv: 'KV Store',
+        pam: 'PAM',
         apiKeys: 'API-sleutels',
         attributes: 'Attributen',
         blacklist: 'Zwarte lijst',
@@ -364,6 +439,12 @@ export let I18nAdminNl: I18nAdmin = {
         state: 'Status',
     },
     pam: {
+        home: 'Home',
+        hostId: 'Host ID',
+        hostname: 'Hostname',
+        hosts: 'Hosts',
+        shell: 'Shell',
+        wheel: 'Wheel',
         addGroup: 'Nieuwe PAM-groep',
         addHost: 'Nieuwe PAM-host',
         addUser: 'Nieuwe PAM-gebruiker',
@@ -411,6 +492,18 @@ export let I18nAdminNl: I18nAdmin = {
     },
     providers: {
         config: {
+            authorizationEndpoint: 'Authorization Endpoint',
+            autoOnboarding: 'Auto-Onboarding',
+            claimMappings: 'ID token claim mappings',
+            clientId: 'Client ID',
+            clientSecret: 'Client Secret',
+            issuerUrl: 'Issuer URL',
+            metadataUrl: 'Metadata URL',
+            modeAuto: 'Auto',
+            modeCustom: 'Custom',
+            scope: 'Scope',
+            tokenEndpoint: 'Token Endpoint',
+            userinfoEndpoint: 'Userinfo Endpoint',
             allowInsecureTls: 'Onveilige TLS toestaan',
             autoLink: 'Gebruiker automatisch koppelen',
             autoLinkDesc1: `Als Gebruiker automatisch koppelen is geactiveerd, wordt bij inloggen via deze provider
@@ -467,6 +560,9 @@ export let I18nAdminNl: I18nAdmin = {
         name: 'Rolnaam',
     },
     scopes: {
+        accessTokenMappings: 'Access Token Mappings',
+        default: 'default',
+        idTokenMappings: 'Id Token Mappings',
         claimsAtRoot: 'Claims op tokenroot plaatsen',
         claimsAtRootWarning: `Wanneer ingeschakeld, worden de toegewezen attributen van dit bereik op de tokenroot
             geschreven in plaats van te worden genest onder 'custom'. U bent verantwoordelijk voor correcte
@@ -488,11 +584,15 @@ export let I18nAdminNl: I18nAdmin = {
         orderChangeToDesc: 'Sortering wijzigen naar aflopend',
     },
     sessions: {
+        sessionId: 'Session ID',
+        userId: 'User ID',
         invalidateAll: 'Alle sessies ongeldig maken',
     },
     tabs: {
+        branding: 'Branding',
         config: 'Configuratie',
         delete: 'Verwijderen',
+        secret: 'Secret',
     },
     tos: {
         accepted: 'Geaccepteerd',
@@ -578,5 +678,15 @@ export let I18nAdminNl: I18nAdmin = {
             reservedKeyLogout:
                 'Een redirect-URI na het uitloggen mag de queryparameter "{{ KEY }}" niet bevatten, omdat deze bij het uitloggen wordt ingesteld',
         },
+    },
+    config: {
+        argon2Title: 'Argon2ID - Password Hashing',
+        backups: 'Backups',
+        curve: 'Curve',
+        jsonWebKeys: 'Json Web Keys',
+        jwks: 'JWKS',
+        keyId: 'Key ID',
+        loginTime: 'Login Time',
+        passwordHashing: 'Password Hashing',
     },
 };

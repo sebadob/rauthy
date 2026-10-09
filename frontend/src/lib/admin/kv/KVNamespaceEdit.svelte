@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import type { IParam } from '$state/param.svelte';
     import Form from '$lib/form/Form.svelte';
     import Button from '$lib/button/Button.svelte';
@@ -9,6 +10,8 @@
     import type { KVNamespaceRequest, KVNamespaceResponse } from '$api/types/kv';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
+
+    let ta = useI18nAdmin();
 
     let {
         ns,
@@ -66,8 +69,8 @@
     {#if namespace}
         <Form action={url} {onSubmit}>
             <Input pattern={PATTERN_GROUP} bind:value={namespace.name} />
-            <InputCheckbox ariaLabel="Public Access" bind:checked={namespace.public}>
-                Public Access
+            <InputCheckbox ariaLabel={ta.kv.publicAccess} bind:checked={namespace.public}>
+                {ta.kv.publicAccess}
             </InputCheckbox>
 
             <div class="btn">

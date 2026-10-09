@@ -80,7 +80,7 @@
     {#if event.typ === 'InvalidLogins'}
         {`: ${event.data}`}
     {:else if event.typ === 'NewRauthyVersion'}
-        <A href={event.text || ''} target="_blank">New Version</A>
+        <A href={event.text || ''} target="_blank">{ta.events.newVersion}</A>
     {:else if event.typ === 'IpBlacklisted'}
         {ta.common.until}
         {event.data && formatDateFromTs(event.data)}

@@ -6,7 +6,7 @@
     import { isBrowser } from '$utils/helpers';
     import type { EventLevel, EventResponse } from '$api/types/events.ts';
     import Options from '$lib5/Options.svelte';
-    import { onDestroy } from 'svelte';
+    import { onDestroy, untrack } from 'svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { fetchPost } from '$api/fetch';
     import { useTrigger } from '$state/callback.svelte';
@@ -35,6 +35,23 @@
             : 'info',
     );
     let levelBefore = '';
+    // The options show translated labels, while `level` keeps the value used by the API.
+    let levelLabels = [
+        ta.events.levels.info,
+        ta.events.levels.notice,
+        ta.events.levels.warning,
+        ta.events.levels.critical,
+    ];
+    let levelLabel = $state(
+        untrack(() => levelLabels[EVENT_LEVELS.indexOf(level)] ?? levelLabels[0]),
+    );
+
+    $effect(() => {
+        let idx = levelLabels.indexOf(levelLabel);
+        if (idx > -1) {
+            level = EVENT_LEVELS[idx] as EventLevel;
+        }
+    });
 
     onDestroy(() => {
         es?.close();
@@ -123,17 +140,19 @@
     <div class="upper">
         <div class="header">
             <div class="flex gap-10">
-                <b>Events</b>
+                <b>{ta.events.title}</b>
                 <Options
                     ariaLabel={ta.events.eventLevel}
-                    options={EVENT_LEVELS}
-                    bind:value={level}
+                    options={levelLabels}
+                    bind:value={levelLabel}
                     borderless
                 />
             </div>
 
             {#if !isGroupAdmin}
-                <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>Test</Button>
+                <Button ariaLabel={ta.events.testEvent} level={3} onclick={sendTestEvent}
+                    >{ta.events.test}</Button
+                >
             {/if}
         </div>
 

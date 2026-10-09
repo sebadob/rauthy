@@ -109,6 +109,11 @@ export const I18nEn: I18n = {
         navBackToAdmin: 'Admin UI',
         other: 'Other',
         pam: {
+            aliases: 'Aliases',
+            hosts: 'Hosts',
+            ips: 'IPs',
+            shell: 'Shell',
+            sshKeys: 'SSH Keys',
             addSshKey: 'Add New Key',
             comment: 'Comment',
             generatePassword: 'New Password',
@@ -171,6 +176,7 @@ export const I18nEn: I18n = {
         zip: 'ZIP / Postal Code',
     },
     authorize: {
+        passkey: 'Passkey',
         clientForceMfa: `This login forces MFA to achieve higher security.\nTo get access, you need 
             to log in to your account and add at least one additional Passkey`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',

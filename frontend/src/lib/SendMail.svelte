@@ -237,7 +237,9 @@
         </p>
 
         <div class="flex gap-10">
-            <Button onclick={submit} isDisabled={!(body || bodyRaw) || !subject}>Send</Button>
+            <Button onclick={submit} isDisabled={!(body || bodyRaw) || !subject}
+                >{ta.common.send}</Button
+            >
 
             {#if success}
                 <IconCheck />

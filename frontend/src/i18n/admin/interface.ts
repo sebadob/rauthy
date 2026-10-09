@@ -5,6 +5,29 @@
  */
 export interface I18nAdmin {
     api_key: {
+        apiKey: string;
+        rights: {
+            create: string;
+            read: string;
+            update: string;
+            delete: string;
+        };
+        accessGroups: {
+            Blacklist: string;
+            Clients: string;
+            Events: string;
+            Generic: string;
+            Groups: string;
+            Pam: string;
+            Roles: string;
+            Secrets: string;
+            Sessions: string;
+            Scopes: string;
+            UserAttributes: string;
+            Users: string;
+            AuthProviders: string;
+            ApiKeys: string;
+        };
         delete1: string;
         expires: string;
         generate1: string;
@@ -39,8 +62,35 @@ export interface I18nAdmin {
         size: string;
     };
     clients: {
+        accessTokenAlg: string;
+        allowedOrigins: string;
+        authCodeLifetime: string;
+        authFlows: string;
+        backchannelLogoutTitle: string;
+        backchannelLogoutUri: string;
+        bearerToken: string;
+        clientId: string;
+        clientSecret: string;
+        customClaims: string;
+        idTokenAlg: string;
+        origin: string;
+        postLogoutRedirectUris: string;
+        redirectUris: string;
+        resourceIndicators: string;
+        scimBaseUri: string;
+        tokenLifetimeLabel: string;
+        tokens: string;
         backchannelLogout: string;
         branding: {
+            button: string;
+            darkTheme: string;
+            header: string;
+            hue: string;
+            lightTheme: string;
+            link: string;
+            logoUpload: string;
+            lum: string;
+            sat: string;
             descHsl: string;
             // inserted as html
             descFullCss: string;
@@ -111,6 +161,8 @@ export interface I18nAdmin {
         };
     };
     common: {
+        created: string;
+        send: string;
         account: string;
         addNew: string;
         back: string;
@@ -212,6 +264,7 @@ export interface I18nAdmin {
         textArea: string;
     };
     email: {
+        updated: string;
         cancelJob: string;
         // MUST be in the order:
         // 'none' | 'in_group' | 'not_in_group' | 'has_role' | 'has_not_role'
@@ -232,6 +285,21 @@ export interface I18nAdmin {
         noAdmin: string;
     };
     events: {
+        content: string;
+        level: string;
+        levels: {
+            info: string;
+            notice: string;
+            warning: string;
+            critical: string;
+        };
+        newVersion: string;
+        noEvents: string;
+        test: string;
+        testEvent: string;
+        timestamp: string;
+        title: string;
+        type: string;
         eventLevel: string;
         eventType: string;
     };
@@ -248,6 +316,11 @@ export interface I18nAdmin {
         rotateKeys: string;
     };
     kv: {
+        generateNew: string;
+        limit: string;
+        public: string;
+        publicAccess: string;
+        publicAccessLink: string;
         // inserted as HTML
         accessTestDesc: string;
         addNewKey: string;
@@ -283,6 +356,8 @@ export interface I18nAdmin {
         value: string;
     };
     nav: {
+        kv: string;
+        pam: string;
         apiKeys: string;
         attributes: string;
         blacklist: string;
@@ -303,6 +378,12 @@ export interface I18nAdmin {
         state: string;
     };
     pam: {
+        home: string;
+        hostId: string;
+        hostname: string;
+        hosts: string;
+        shell: string;
+        wheel: string;
         addGroup: string;
         addHost: string;
         addUser: string;
@@ -337,6 +418,18 @@ export interface I18nAdmin {
     };
     providers: {
         config: {
+            authorizationEndpoint: string;
+            autoOnboarding: string;
+            claimMappings: string;
+            clientId: string;
+            clientSecret: string;
+            issuerUrl: string;
+            metadataUrl: string;
+            modeAuto: string;
+            modeCustom: string;
+            scope: string;
+            tokenEndpoint: string;
+            userinfoEndpoint: string;
             allowInsecureTls: string;
             autoLink: string;
             autoLinkDesc1: string;
@@ -388,6 +481,9 @@ export interface I18nAdmin {
         name: string;
     };
     scopes: {
+        accessTokenMappings: string;
+        default: string;
+        idTokenMappings: string;
         claimsAtRoot: string;
         claimsAtRootWarning: string;
         defaultNoMod: string;
@@ -403,11 +499,15 @@ export interface I18nAdmin {
         orderChangeToDesc: string;
     };
     sessions: {
+        sessionId: string;
+        userId: string;
         invalidateAll: string;
     };
     tabs: {
+        branding: string;
         config: string;
         delete: string;
+        secret: string;
     };
     tos: {
         accepted: string;
@@ -480,5 +580,15 @@ export interface I18nAdmin {
             // like `reservedKey`, for a post logout redirect URI
             reservedKeyLogout: string;
         };
+    };
+    config: {
+        argon2Title: string;
+        backups: string;
+        curve: string;
+        jsonWebKeys: string;
+        jwks: string;
+        keyId: string;
+        loginTime: string;
+        passwordHashing: string;
     };
 }

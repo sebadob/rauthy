@@ -115,13 +115,13 @@
                             </div>
 
                             <div>
-                                <LabeledValue label="Update">
+                                <LabeledValue label={ta.email.updated}>
                                     {formatDateFromTs(job.updated)}
                                 </LabeledValue>
                             </div>
 
                             <div>
-                                <LabeledValue label="Filter">
+                                <LabeledValue label={ta.common.filter}>
                                     {job.filter_type}
                                     {job.filter_value}
                                 </LabeledValue>

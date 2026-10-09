@@ -118,7 +118,7 @@
 <h1>{hostSimple.name}</h1>
 
 {#if host}
-    <LabeledValue label="Host ID" copyToClip={host.id} mono>
+    <LabeledValue label={ta.pam.hostId} copyToClip={host.id} mono>
         {host.id}
     </LabeledValue>
 
@@ -126,8 +126,8 @@
 
     <Form action={url} {onSubmit}>
         <Input
-            label="Hostname"
-            placeholder="Hostname"
+            label={ta.pam.hostname}
+            placeholder={ta.pam.hostname}
             bind:value={host.hostname}
             required
             pattern={PATTERN_LINUX_HOSTNAME}

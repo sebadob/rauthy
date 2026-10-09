@@ -29,7 +29,7 @@
     let closeModal: undefined | (() => void) = $state();
     let searchValue = $state('');
 
-    const tabs = [ta.nav.users, ta.pam.groups, 'Hosts'];
+    const tabs = [ta.nav.users, ta.pam.groups, ta.pam.hosts];
     let selectedNav = $state(tabs[0]);
 
     let selectedUser: undefined | PamUserResponse = $state();

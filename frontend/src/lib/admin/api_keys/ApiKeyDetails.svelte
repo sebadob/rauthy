@@ -16,7 +16,7 @@
 
     let ta = useI18nAdmin();
 
-    const tabs = [ta.tabs.config, 'Secret', ta.tabs.delete];
+    const tabs = [ta.tabs.config, ta.tabs.secret, ta.tabs.delete];
     let selected = $state(tabs[0]);
     let focusFirst: undefined | (() => void) = $state();
 
@@ -34,7 +34,7 @@
 
     {#if selected === ta.tabs.config}
         <ApiKeyConfig bind:key {onSave} />
-    {:else if selected === 'Secret'}
+    {:else if selected === ta.tabs.secret}
         <ApiKeySecret {key} />
     {:else if selected === ta.tabs.delete}
         <ApiKeyDelete {key} {onSave} />

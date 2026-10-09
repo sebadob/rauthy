@@ -48,6 +48,7 @@ impl I18nEmailPasswordNew<'_> {
             Language::De => (&tpls.de).into(),
             Language::En => (&tpls.en).into(),
             Language::Fr => (&tpls.fr).into(),
+            Language::Ja => (&tpls.ja).into(),
             Language::Ko => (&tpls.ko).into(),
             Language::Nb => (&tpls.nb).into(),
             Language::Nl => (&tpls.nl).into(),

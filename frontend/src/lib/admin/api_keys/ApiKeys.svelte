@@ -28,8 +28,8 @@
 
     let kid = useParam('kn');
 
-    const orderOptions = ['Name'];
-    const searchOptions = ['Name'];
+    const orderOptions = [ta.common.name];
+    const searchOptions = [ta.common.name];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
 

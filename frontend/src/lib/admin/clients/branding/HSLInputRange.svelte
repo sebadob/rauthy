@@ -1,7 +1,10 @@
 <script lang="ts">
+    import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { genKey } from '$utils/helpers';
     import InputRange from '$lib5/form/InputRange.svelte';
     import InputColor from '$lib5/form/InputColor.svelte';
+
+    let ta = useI18nAdmin();
 
     let {
         label,
@@ -63,7 +66,7 @@
             </h5>
             <div {id} class="values">
                 <InputRange
-                    label="Hue"
+                    label={ta.clients.branding.hue}
                     bind:value={h}
                     min={0}
                     max={359}
@@ -74,7 +77,7 @@
                     lum={l}
                 />
                 <InputRange
-                    label="Sat"
+                    label={ta.clients.branding.sat}
                     bind:value={s}
                     min={0}
                     max={100}
@@ -85,7 +88,7 @@
                     lum={l}
                 />
                 <InputRange
-                    label="Lum"
+                    label={ta.clients.branding.lum}
                     bind:value={l}
                     min={0}
                     max={100}

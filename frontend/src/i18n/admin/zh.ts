@@ -2,6 +2,29 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminZh: I18nAdmin = {
     api_key: {
+        apiKey: 'API Key',
+        rights: {
+            create: 'create',
+            read: 'read',
+            update: 'update',
+            delete: 'delete',
+        },
+        accessGroups: {
+            Blacklist: 'Blacklist',
+            Clients: 'Clients',
+            Events: 'Events',
+            Generic: 'Generic',
+            Groups: 'Groups',
+            Pam: 'Pam',
+            Roles: 'Roles',
+            Secrets: 'Secrets',
+            Sessions: 'Sessions',
+            Scopes: 'Scopes',
+            UserAttributes: 'UserAttributes',
+            Users: 'Users',
+            AuthProviders: 'AuthProviders',
+            ApiKeys: 'ApiKeys',
+        },
         delete1: '您确定要删除此API密钥吗？',
         expires: '过期时间',
         generate1: '您可以在此处为此API密钥生成新的密钥。',
@@ -37,12 +60,39 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        accessTokenAlg: 'Access Token Algorithm',
+        allowedOrigins: 'Allowed Origins',
+        authCodeLifetime: 'Auth Code Lifetime',
+        authFlows: 'Authentication Flows',
+        backchannelLogoutTitle: 'Backchannel Logout',
+        backchannelLogoutUri: 'Backchannel Logout URI',
+        bearerToken: 'Bearer Token',
+        clientId: 'Client ID',
+        clientSecret: 'Client Secret',
+        customClaims: 'Custom Claims',
+        idTokenAlg: 'ID Token Algorithm',
+        origin: 'Origin',
+        postLogoutRedirectUris: 'Post Logout Redirect URIs',
+        redirectUris: 'Redirect URIs',
+        resourceIndicators: 'Resource Indicators',
+        scimBaseUri: 'SCIM Base URI',
+        tokenLifetimeLabel: 'Token Lifetime',
+        tokens: 'Tokens',
         allowedResources: '允许的资源',
         defaultAud: '默认受众 (aud)',
         descAllowedResources: `此客户端可以请求的可选 RFC 8707 资源指示符。空列表将以 'invalid_target' 拒绝任何 'resource' 请求参数。`,
         descDefaultAud: `无论是否提供 'resource' 请求参数，始终添加到此客户端令牌中的受众 (aud)。`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
+            button: 'Button',
+            darkTheme: 'Dark Theme',
+            header: 'Header',
+            hue: 'Hue',
+            lightTheme: 'Light Theme',
+            link: 'Link',
+            logoUpload: 'Logo Upload',
+            lum: 'Lum',
+            sat: 'Sat',
             descHsl: `以下值必须以HSL值形式给出。您只需提供基本颜色。
             透明度通道和其他值由主题动态调整。`,
             descFullCss: `以下值必须是完全有效的CSS <code>color</code>值。
@@ -130,6 +180,8 @@ export let I18nAdminZh: I18nAdmin = {
         },
     },
     common: {
+        created: 'Created',
+        send: 'Send',
         account: '账户',
         addNew: '新增',
         back: '返回',
@@ -246,6 +298,7 @@ export let I18nAdminZh: I18nAdmin = {
         textArea: '编辑文本',
     },
     email: {
+        updated: 'Update',
         cancelJob: '取消任务',
         filterType: ['无', '在组中', '不在组中', '拥有角色', '没有角色'],
         immediate: '立即',
@@ -265,6 +318,21 @@ export let I18nAdminZh: I18nAdmin = {
             之后，您需要注销并重新登录。`,
     },
     events: {
+        content: 'Content',
+        level: 'Level',
+        levels: {
+            info: 'Info',
+            notice: 'Notice',
+            warning: 'Warning',
+            critical: 'Critical',
+        },
+        newVersion: 'New Version',
+        noEvents: 'No events found',
+        test: 'Test',
+        testEvent: 'Test Event',
+        timestamp: 'Timestamp',
+        title: 'Events',
+        type: 'Type',
         eventLevel: '事件级别',
         eventType: '事件类型',
     },
@@ -284,6 +352,11 @@ export let I18nAdminZh: I18nAdmin = {
         rotateKeys: '轮换密钥',
     },
     kv: {
+        generateNew: 'Generate New',
+        limit: 'Limit',
+        public: '(public)',
+        publicAccess: 'Public Access',
+        publicAccessLink: 'Public Access Link',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -321,6 +394,8 @@ export let I18nAdminZh: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kv: 'KV Store',
+        pam: 'PAM',
         apiKeys: 'API密钥',
         attributes: '属性',
         blacklist: '黑名单',
@@ -341,6 +416,12 @@ export let I18nAdminZh: I18nAdmin = {
         state: '状态',
     },
     pam: {
+        home: 'Home',
+        hostId: 'Host ID',
+        hostname: 'Hostname',
+        hosts: 'Hosts',
+        shell: 'Shell',
+        wheel: 'Wheel',
         addGroup: '新建PAM组',
         addHost: '新建PAM主机',
         addUser: '新建PAM用户',
@@ -382,6 +463,18 @@ export let I18nAdminZh: I18nAdmin = {
     },
     providers: {
         config: {
+            authorizationEndpoint: 'Authorization Endpoint',
+            autoOnboarding: 'Auto-Onboarding',
+            claimMappings: 'ID token claim mappings',
+            clientId: 'Client ID',
+            clientSecret: 'Client Secret',
+            issuerUrl: 'Issuer URL',
+            metadataUrl: 'Metadata URL',
+            modeAuto: 'Auto',
+            modeCustom: 'Custom',
+            scope: 'Scope',
+            tokenEndpoint: 'Token Endpoint',
+            userinfoEndpoint: 'Userinfo Endpoint',
             allowInsecureTls: '允许不安全的TLS',
             autoLink: '自动链接用户',
             autoLinkDesc1: `如果激活自动链接用户，通过此提供商登录将自动将可能存在的
@@ -437,6 +530,9 @@ export let I18nAdminZh: I18nAdmin = {
         name: '角色名称',
     },
     scopes: {
+        accessTokenMappings: 'Access Token Mappings',
+        default: 'default',
+        idTokenMappings: 'Id Token Mappings',
         claimsAtRoot: 'Emit claims at token root',
         claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
@@ -456,11 +552,15 @@ export let I18nAdminZh: I18nAdmin = {
         orderChangeToDesc: '更改为降序',
     },
     sessions: {
+        sessionId: 'Session ID',
+        userId: 'User ID',
         invalidateAll: '使所有会话无效',
     },
     tabs: {
+        branding: 'Branding',
         config: '配置',
         delete: '删除',
+        secret: 'Secret',
     },
     tos: {
         accepted: '已接受',
@@ -536,5 +636,15 @@ export let I18nAdminZh: I18nAdmin = {
             reservedKey: '重定向 URI 不能包含查询参数 "{{ KEY }}"，因为它由授权响应设置',
             reservedKeyLogout: '登出后重定向 URI 不能包含查询参数 "{{ KEY }}"，因为它在登出时设置',
         },
+    },
+    config: {
+        argon2Title: 'Argon2ID - Password Hashing',
+        backups: 'Backups',
+        curve: 'Curve',
+        jsonWebKeys: 'Json Web Keys',
+        jwks: 'JWKS',
+        keyId: 'Key ID',
+        loginTime: 'Login Time',
+        passwordHashing: 'Password Hashing',
     },
 };

@@ -84,6 +84,11 @@ export interface I18n {
         navBackToAdmin: string;
         other: string;
         pam: {
+            aliases: string;
+            hosts: string;
+            ips: string;
+            shell: string;
+            sshKeys: string;
             addSshKey: string;
             comment: string;
             generatePassword: string;
@@ -138,6 +143,7 @@ export interface I18n {
         zip: string;
     };
     authorize: {
+        passkey: string;
         clientForceMfa: string;
         clientGroupPrefixForbidden: string;
         email: string;
@@ -183,6 +189,8 @@ export interface I18n {
     emailChange: {
         title: string;
         textChanged: string;
+        // optional label shown in front of the old address
+        from?: string;
         textLogin: string;
         to: string;
     };

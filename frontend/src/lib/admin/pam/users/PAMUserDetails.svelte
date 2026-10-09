@@ -199,8 +199,20 @@
         {user.email}
     </LabeledValue>
 
-    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="15rem" />
-    <Input label="Home" placeholder="Home" required bind:value={user.home_dir} width="15rem" />
+    <Input
+        label={ta.pam.shell}
+        placeholder={ta.pam.shell}
+        required
+        bind:value={user.shell}
+        width="15rem"
+    />
+    <Input
+        label={ta.pam.home}
+        placeholder={ta.pam.home}
+        required
+        bind:value={user.home_dir}
+        width="15rem"
+    />
 
     <h2>{ta.pam.groups}</h2>
 
@@ -214,7 +226,7 @@
                         <div>{ta.pam.groupName}</div>
                         <div class="center">{ta.pam.member}</div>
                         {#if withWheel}
-                            <div class="center">Wheel</div>
+                            <div class="center">{ta.pam.wheel}</div>
                         {/if}
                     </div>
 
@@ -231,7 +243,7 @@
                             {#if withWheel}
                                 <div class="center checkbox">
                                     <InputCheckbox
-                                        ariaLabel="Wheel"
+                                        ariaLabel={ta.pam.wheel}
                                         bind:checked={group.isWheel}
                                         disabled={!group.isMember}
                                     />

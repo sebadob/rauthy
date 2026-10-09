@@ -190,7 +190,7 @@
                             {#snippet icon(width: string)}
                                 <IconCommandLine {width} />
                             {/snippet}
-                            PAM
+                            {ta.nav.pam}
                         </NavLink>
                     {/if}
 
@@ -234,7 +234,7 @@
                             {#snippet icon(width: string)}
                                 <IconCircleStack {width} />
                             {/snippet}
-                            KV Store
+                            {ta.nav.kv}
                         </NavLink>
 
                         <NavLink

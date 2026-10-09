@@ -2,6 +2,29 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminUk: I18nAdmin = {
     api_key: {
+        apiKey: 'API Key',
+        rights: {
+            create: 'create',
+            read: 'read',
+            update: 'update',
+            delete: 'delete',
+        },
+        accessGroups: {
+            Blacklist: 'Blacklist',
+            Clients: 'Clients',
+            Events: 'Events',
+            Generic: 'Generic',
+            Groups: 'Groups',
+            Pam: 'Pam',
+            Roles: 'Roles',
+            Secrets: 'Secrets',
+            Sessions: 'Sessions',
+            Scopes: 'Scopes',
+            UserAttributes: 'UserAttributes',
+            Users: 'Users',
+            AuthProviders: 'AuthProviders',
+            ApiKeys: 'ApiKeys',
+        },
         delete1: 'Дійсно видалити цей API-ключ?',
         expires: 'Термін дії',
         generate1: 'Тут ви можете згенерувати новий секрет для цього API ключа.',
@@ -39,12 +62,39 @@ export let I18nAdminUk: I18nAdmin = {
         size: 'Розмір',
     },
     clients: {
+        accessTokenAlg: 'Access Token Algorithm',
+        allowedOrigins: 'Allowed Origins',
+        authCodeLifetime: 'Auth Code Lifetime',
+        authFlows: 'Authentication Flows',
+        backchannelLogoutTitle: 'Backchannel Logout',
+        backchannelLogoutUri: 'Backchannel Logout URI',
+        bearerToken: 'Bearer Token',
+        clientId: 'Client ID',
+        clientSecret: 'Client Secret',
+        customClaims: 'Custom Claims',
+        idTokenAlg: 'ID Token Algorithm',
+        origin: 'Origin',
+        postLogoutRedirectUris: 'Post Logout Redirect URIs',
+        redirectUris: 'Redirect URIs',
+        resourceIndicators: 'Resource Indicators',
+        scimBaseUri: 'SCIM Base URI',
+        tokenLifetimeLabel: 'Token Lifetime',
+        tokens: 'Tokens',
         allowedResources: 'Дозволені ресурси',
         defaultAud: 'Аудиторії за замовчуванням',
         descAllowedResources: `Необов'язкові індикатори ресурсів RFC 8707, які може запитувати цей клієнт. Порожній список відхиляє будь-який параметр 'resource' з помилкою 'invalid_target'.`,
         descDefaultAud: `Аудиторії, які завжди додаються до токенів цього клієнта, незалежно від параметра 'resource'.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
+            button: 'Button',
+            darkTheme: 'Dark Theme',
+            header: 'Header',
+            hue: 'Hue',
+            lightTheme: 'Light Theme',
+            link: 'Link',
+            logoUpload: 'Logo Upload',
+            lum: 'Lum',
+            sat: 'Sat',
             descHsl: `Наступні значення мають бути вказані як HSL-значення. Ви вказуєте лише базові кольори.
             Альфа-канали та інші значення динамічно змінюються темою.`,
             descFullCss: `Наступні значення мають бути повністю валідними CSS-значеннями <code>color</code>.
@@ -135,6 +185,8 @@ export let I18nAdminUk: I18nAdmin = {
         },
     },
     common: {
+        created: 'Created',
+        send: 'Send',
         account: 'Акаунт',
         addNew: 'Додати',
         back: 'Назад',
@@ -264,6 +316,7 @@ export let I18nAdminUk: I18nAdmin = {
         textArea: 'Редагувати текст',
     },
     email: {
+        updated: 'Update',
         cancelJob: 'Скасувати завдання',
         filterType: ['Немає', 'В групі', 'Не в групі', 'Має роль', 'Не має ролі'],
         immediate: 'Негайно',
@@ -283,6 +336,21 @@ export let I18nAdminUk: I18nAdmin = {
             Після цього вам потрібно вийти і увійти знову.`,
     },
     events: {
+        content: 'Content',
+        level: 'Level',
+        levels: {
+            info: 'Info',
+            notice: 'Notice',
+            warning: 'Warning',
+            critical: 'Critical',
+        },
+        newVersion: 'New Version',
+        noEvents: 'No events found',
+        test: 'Test',
+        testEvent: 'Test Event',
+        timestamp: 'Timestamp',
+        title: 'Events',
+        type: 'Type',
         eventLevel: 'Рівень події',
         eventType: 'Тип події',
     },
@@ -303,6 +371,11 @@ export let I18nAdminUk: I18nAdmin = {
         rotateKeys: 'Ротувати ключі',
     },
     kv: {
+        generateNew: 'Generate New',
+        limit: 'Limit',
+        public: '(public)',
+        publicAccess: 'Public Access',
+        publicAccessLink: 'Public Access Link',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -340,6 +413,8 @@ export let I18nAdminUk: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kv: 'KV Store',
+        pam: 'PAM',
         apiKeys: 'API Ключі',
         attributes: 'Атрибути',
         blacklist: 'Чорний список',
@@ -360,6 +435,12 @@ export let I18nAdminUk: I18nAdmin = {
         state: 'Стан',
     },
     pam: {
+        home: 'Home',
+        hostId: 'Host ID',
+        hostname: 'Hostname',
+        hosts: 'Hosts',
+        shell: 'Shell',
+        wheel: 'Wheel',
         addGroup: 'Нова PAM група',
         addHost: 'Новий PAM хост',
         addUser: 'Новий PAM користувач',
@@ -406,6 +487,18 @@ export let I18nAdminUk: I18nAdmin = {
     },
     providers: {
         config: {
+            authorizationEndpoint: 'Authorization Endpoint',
+            autoOnboarding: 'Auto-Onboarding',
+            claimMappings: 'ID token claim mappings',
+            clientId: 'Client ID',
+            clientSecret: 'Client Secret',
+            issuerUrl: 'Issuer URL',
+            metadataUrl: 'Metadata URL',
+            modeAuto: 'Auto',
+            modeCustom: 'Custom',
+            scope: 'Scope',
+            tokenEndpoint: 'Token Endpoint',
+            userinfoEndpoint: 'Userinfo Endpoint',
             allowInsecureTls: 'Дозволити небезпечний TLS',
             autoLink: "Автоматична прив'язка",
             autoLinkDesc1: `Якщо активовано "Авто-прив'язку", вхід через цього провайдера автоматично прив'яже
@@ -462,6 +555,9 @@ export let I18nAdminUk: I18nAdmin = {
         name: 'Назва ролі',
     },
     scopes: {
+        accessTokenMappings: 'Access Token Mappings',
+        default: 'default',
+        idTokenMappings: 'Id Token Mappings',
         claimsAtRoot: 'Emit claims at token root',
         claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
@@ -482,11 +578,15 @@ export let I18nAdminUk: I18nAdmin = {
         orderChangeToDesc: 'Сортувати за спаданням',
     },
     sessions: {
+        sessionId: 'Session ID',
+        userId: 'User ID',
         invalidateAll: 'Завершити всі сесії',
     },
     tabs: {
+        branding: 'Branding',
         config: 'Конфігурація',
         delete: 'Видалити',
+        secret: 'Secret',
     },
     tos: {
         accepted: 'Прийнято',
@@ -571,5 +671,15 @@ export let I18nAdminUk: I18nAdmin = {
             reservedKeyLogout:
                 'URI перенаправлення після виходу не повинен містити параметр запиту "{{ KEY }}", оскільки він встановлюється під час виходу',
         },
+    },
+    config: {
+        argon2Title: 'Argon2ID - Password Hashing',
+        backups: 'Backups',
+        curve: 'Curve',
+        jsonWebKeys: 'Json Web Keys',
+        jwks: 'JWKS',
+        keyId: 'Key ID',
+        loginTime: 'Login Time',
+        passwordHashing: 'Password Hashing',
     },
 };

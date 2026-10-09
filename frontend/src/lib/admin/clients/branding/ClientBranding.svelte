@@ -135,11 +135,11 @@
                     pattern={PATTERN_CSS_VALUE_LOOSE}
                 />
 
-                <h1>Light Theme</h1>
+                <h1>{ta.clients.branding.lightTheme}</h1>
                 <BrandingMode bind:values={theme.light} />
 
                 <br />
-                <h1>Dark Theme</h1>
+                <h1>{ta.clients.branding.darkTheme}</h1>
                 <BrandingMode bind:values={theme.dark} />
             </div>
             <div class="preview">
@@ -149,7 +149,7 @@
 
                 <hr />
 
-                <p>Logo Upload</p>
+                <p>{ta.clients.branding.logoUpload}</p>
                 <div class="logo">
                     <InputFile
                         method="PUT"
