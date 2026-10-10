@@ -16,6 +16,7 @@ impl I18nEmailLoginLocation<'_> {
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Fr => Self::build_fr(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
@@ -57,6 +58,16 @@ impl I18nEmailLoginLocation<'_> {
                 vos identifiants !",
             revoke_link: "Révoquer l’accès",
             account_link: "Tableau de bord du compte",
+        }
+    }
+
+    fn build_ja() -> Self {
+        Self {
+            subject: "セキュリティの警告",
+            unknown_location: "見慣れない場所からのログイン",
+            if_invalid: "心当たりのないログインであれば、すぐにアクセスを取り消し、パスワードなどの認証情報を変更してください。",
+            revoke_link: "アクセスを取り消す",
+            account_link: "アカウント画面",
         }
     }
 
