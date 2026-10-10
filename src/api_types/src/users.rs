@@ -276,8 +276,11 @@ pub struct UserAttrConfigRequest {
     /// Validation: `^[a-zA-Z0-9-_/]{2,32}$`
     #[validate(regex(path = "*RE_ATTR", code = "^[a-z0-9-_/]{2,32}$"))]
     pub name: String,
-    /// Validation: `^[a-zA-Z0-9-_/]{0,128}$`
-    #[validate(regex(path = "*RE_ATTR_DESC", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    /// Validation: `^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/\s]--[\x{2139}\x{FE0F}]]{0,128}$`
+    #[validate(regex(
+        path = "*RE_ATTR_DESC",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/\\s]--[\\x{2139}\\x{FE0F}]]{0,128}$"
+    ))]
     pub desc: Option<String>,
     pub default_value: Option<serde_json::Value>,
     /// Currently ignored - will be implemented in a future version

@@ -108,7 +108,9 @@ pub async fn trigger() {
     let _ = *RE_DATE_STR;
     let _ = *RE_GROUPS;
     let _ = *RE_KV_KEY;
-    let _ = *RE_ROLES_SCOPES;
+    let _ = *RE_ROLES;
+    let _ = *RE_SCOPES;
+    let _ = *RE_NAME_ASCII;
     let _ = *RE_LOWERCASE;
     let _ = *RE_LOWERCASE_SPACE;
     let _ = *RE_MFA_CODE;

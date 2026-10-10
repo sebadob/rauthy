@@ -17,7 +17,7 @@
     import Input from '$lib/form/Input.svelte';
     import Button from '$lib/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
+    import { PATTERN_KV_NAME } from '$utils/patterns';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import KVNamespaceEdit from '$lib/admin/kv/KVNamespaceEdit.svelte';
 
@@ -108,7 +108,7 @@
                     name="name"
                     label={ta.common.name}
                     placeholder={ta.common.name}
-                    pattern={PATTERN_GROUP}
+                    pattern={PATTERN_KV_NAME}
                 />
                 <InputCheckbox ariaLabel="Public Access" name="public" checked={false}>
                     Public Access

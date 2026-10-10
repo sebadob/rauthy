@@ -11,7 +11,7 @@
     import KVAccessDetails from '$lib/admin/kv/KVAccessDetails.svelte';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
     import Input from '$lib/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
+    import { PATTERN_KV_NAME } from '$utils/patterns';
     import KVAccessHelp from './KVAccessHelp.svelte';
 
     let {
@@ -95,7 +95,7 @@
                 label={ta.common.name}
                 placeholder={ta.common.name}
                 value=""
-                pattern={PATTERN_GROUP}
+                pattern={PATTERN_KV_NAME}
             />
 
             <div class="btns">

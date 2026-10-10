@@ -4,7 +4,7 @@
     import Button from '$lib/button/Button.svelte';
     import { useI18n } from '$state/i18n.svelte';
     import Input from '$lib/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
+    import { PATTERN_KV_NAME } from '$utils/patterns';
     import { fetchGet, fetchPut } from '$api/fetch';
     import type { KVNamespaceRequest, KVNamespaceResponse } from '$api/types/kv';
     import InputCheckbox from '$lib/form/InputCheckbox.svelte';
@@ -65,7 +65,7 @@
 <div class="container">
     {#if namespace}
         <Form action={url} {onSubmit}>
-            <Input pattern={PATTERN_GROUP} bind:value={namespace.name} />
+            <Input pattern={PATTERN_KV_NAME} bind:value={namespace.name} />
             <InputCheckbox ariaLabel="Public Access" bind:checked={namespace.public}>
                 Public Access
             </InputCheckbox>

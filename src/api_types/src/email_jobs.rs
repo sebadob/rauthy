@@ -8,8 +8,11 @@ pub struct EmailJobRequest {
     /// Validation: Unix TS in the future
     pub scheduled: Option<i64>,
     pub filter_type: EmailJobFilterType,
-    /// Validation: `^[a-zA-Z0-9-_/,:*\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/,:*\s]--[\x{2139}\x{FE0F}]]{2,64}$`
+    #[validate(regex(
+        path = "*RE_GROUPS",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$"
+    ))]
     pub filter_value: Option<String>,
     pub content_type: EmailContentType,
     #[validate(length(max = 1024))]
