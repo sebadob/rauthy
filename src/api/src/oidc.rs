@@ -632,16 +632,23 @@ pub async fn post_device_auth(
     }
 
     // we are good - create the code
-    let code =
-        match DeviceAuthCode::new(scopes, client.id, payload.client_secret, payload.nonce).await {
-            Ok(code) => code,
-            Err(err) => {
-                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                    error: OAuth2ErrorTypeResponse::InvalidRequest,
-                    error_description: Some(err.message),
-                });
-            }
-        };
+    let code = match DeviceAuthCode::new(
+        scopes,
+        client.id,
+        client.generation,
+        payload.client_secret,
+        payload.nonce,
+    )
+    .await
+    {
+        Ok(code) => code,
+        Err(err) => {
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(err.message),
+            });
+        }
+    };
 
     let user_code = code.user_code();
     let verification_uri = code.verification_uri();

@@ -847,6 +847,16 @@ backup_keep_for_local = '3d'
 # default: false
 #HQL_DANGER_RAFT_STATE_RESET=true
 
+[consent]
+# Set to `true` to enable user consent for clients. This feature is
+# still in progress. Currently, it only makes a client deletion also
+# delete all legacy refresh tokens (issued before refresh tokens were
+# bound to a client) of all users.
+#
+# default: false
+# overwritten by: CONSENT_ENABLE
+#enable = false
+
 [cred_stuff_detection]
 ## This section contains values for the credential stuffing
 ## detection algorithm. In most cases the defaults should be
