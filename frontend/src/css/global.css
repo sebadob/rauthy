@@ -68,6 +68,15 @@ body {
     --din-a4-height: 842pt;
 }
 
+/* SVG logos and native elements follow the theme switch instead of the OS preference */
+body.theme-light {
+    color-scheme: light;
+}
+
+body.theme-dark {
+    color-scheme: dark;
+}
+
 a,
 a:link,
 a:visited {
