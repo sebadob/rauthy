@@ -22,8 +22,7 @@
     import { PATTERN_USER_NAME } from '$utils/patterns';
     import type { PasswordResetRequest } from '$api/types/password_reset.ts';
     import type { MfaPurpose } from '$api/types/mfa';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import Options from '$lib/Options.svelte';
+    import PasskeyTypeSelect from '$lib/PasskeyTypeSelect.svelte';
 
     const inputWidth = '20rem';
 
@@ -48,7 +47,7 @@
     let password = $state('');
     let passwordConfirm = $state('');
 
-    let passkeyType = $state(t.account.passkeys.types[0]);
+    let residentKey = $state(false);
 
     let reportValidityNew: undefined | (() => void) = $state();
     let reportValidityConfirm: undefined | (() => void) = $state();
@@ -117,8 +116,7 @@
             tplData.magic_link_id,
             tplData.csrf_token,
             undefined,
-            // the 2nd type is the resident key
-            passkeyType === t.account.passkeys.types[1],
+            residentKey,
         );
         if (res.error) {
             console.log(res.error.toLowerCase());
@@ -345,19 +343,7 @@
                         {:else if accountTypeNew === 'passkey'}
                             <div transition:slide>
                                 <Form action="" onSubmit={handleRegister}>
-                                    <LabeledValue label={t.account.passkeys.type}>
-                                        <Options
-                                            options={[
-                                                t.account.passkeys.types[0],
-                                                t.account.passkeys.types[1],
-                                            ]}
-                                            bind:value={passkeyType}
-                                            ariaLabel={t.account.passkeys.type}
-                                        />
-                                        {#if passkeyType === t.account.passkeys.types[1]}
-                                            <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
-                                        {/if}
-                                    </LabeledValue>
+                                    <PasskeyTypeSelect bind:residentKey />
                                     <Input
                                         bind:ref={refPasskey}
                                         bind:value={passkeyName}
@@ -444,11 +430,6 @@
     .policy {
         max-width: 100dvw;
         overflow: clip;
-    }
-
-    .rkWarn {
-        color: hsl(var(--error));
-        font-size: 0.9rem;
     }
 
     .typeChoice {

@@ -113,9 +113,13 @@ export const I18nZh: I18n = {
             missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
-            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
-                the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+            rkWarning: `注意：Resident Key 可用于无需输入电子邮件地址的直接登录，但每个应用都需要占用一个额外的存储槽位。请确保剩余空间充足。如需将现有
+                Passkey 改为 Resident Key，请先将其删除，然后重新添加。`,
+            // [Default, Resident Key]
+            typesDesc: [
+                '使用此 Passkey 登录前，需要先输入电子邮件地址。',
+                '无需输入电子邮件地址，即可通过登录页面上的 Passkey 按钮使用。',
+            ],
         },
         passwordConfirm: '确认密码',
         passwordCurr: '当前密码',
@@ -177,6 +181,8 @@ export const I18nZh: I18n = {
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: '或使用其他方式登录：',
+        passkeyNotDiscovered:
+            '未作为 Resident Key 添加的 Passkey 无法通过此方式找到。请改为输入电子邮件地址。',
         password: '密码',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: '忘记密码？',

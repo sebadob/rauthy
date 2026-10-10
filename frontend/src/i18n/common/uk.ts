@@ -123,9 +123,15 @@ export const I18nUk: I18n = {
             missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
-            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
-                the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+            rkWarning: `УВАГА: Resident Key дозволяє входити напряму, без введення адреси E-Mail,
+                але для кожного застосунку потрібен додатковий слот пам'яті. Переконайтеся, що
+                вільного місця достатньо. Щоб зробити наявний Passkey ключем Resident Key, спершу
+                видаліть його, а потім додайте знову.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'Перед входом з цим Passkey потрібно ввести адресу E-Mail.',
+                'Працює з кнопкою Passkey на сторінці входу, без введення адреси E-Mail.',
+            ],
         },
         passwordConfirm: 'Підтвердіть пароль',
         passwordCurr: 'Поточний пароль',
@@ -195,6 +201,8 @@ export const I18nUk: I18n = {
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: 'або увійдіть за допомогою',
+        passkeyNotDiscovered: `Passkey, додані не як Resident Key, не можна знайти цим способом.
+            Натомість введіть адресу E-Mail.`,
         password: 'Пароль',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Забули пароль?',

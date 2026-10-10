@@ -120,9 +120,16 @@ export const I18nNb: I18n = {
             missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
-            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
-                the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+            rkWarning: `ADVARSEL: Selv om en Resident Key kan brukes til direkte innlogging uten å
+                oppgi e-postadressen, trengs det en ekstra lagringsplass for hver applikasjon. Sørg
+                for at det er nok plass igjen. For å gjøre en eksisterende Passkey om til en
+                Resident Key må du først slette den og deretter legge den til på nytt.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'Du må skrive inn e-postadressen din før du kan logge inn med denne Passkey-en.',
+                `Fungerer med Passkey-knappen på innloggingssiden, uten at du skriver inn
+                    e-postadressen din.`,
+            ],
         },
         passwordConfirm: 'Bekreft passord',
         passwordCurr: 'Nåværende passord',
@@ -188,6 +195,8 @@ export const I18nNb: I18n = {
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: 'eller logg inn med',
+        passkeyNotDiscovered: `Passkeys som ikke er lagt til som Resident Key, kan ikke finnes på
+            denne måten. Skriv inn e-postadressen din i stedet.`,
         password: 'Passord',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Glemt passord?',

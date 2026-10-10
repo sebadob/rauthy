@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+
+#### Passkey Types
+
+[#1792](https://github.com/sebadob/rauthy/issues/1792)
+
+Users often added a *Default* Passkey and then could not log in with the *Passkey* button on the
+login page, which only finds Resident Keys. The UI explains this better now:
+
+- The *Passkey Type* selection on the Account Dashboard and during a password reset shows what the
+  chosen type means at login, highlighted.
+- The Resident Key warning mentions that an existing Passkey must be deleted before it can be added
+  again as a Resident Key.
+- When a login with the *Passkey* button fails, a hint says that Passkeys not added as a Resident
+  Key cannot be found this way, and that the E-Mail should be entered instead.
+
+A new, optional `webauthn.passkey_reg_type` (`WEBAUTHN_PASSKEY_REG_TYPE`) controls which types
+users can choose from. With a single value, users have no choice. With both, the first one is
+selected by default. With only `default`, the *Passkey* button on the login page is hidden. Already
+registered Passkeys are not changed.
+
+```toml
+[webauthn]
+# default: 'default resident_key'
+# overwritten by: WEBAUTHN_PASSKEY_REG_TYPE
+passkey_reg_type = 'default resident_key'
+```
+
 ## v0.37.1
 
 ### Security
