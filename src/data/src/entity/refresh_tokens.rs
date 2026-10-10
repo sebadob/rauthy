@@ -65,24 +65,56 @@ impl RefreshToken {
         is_mfa: bool,
         session_id: Option<String>,
         access_token_jti: Option<String>,
-        client_id: String,
-        client_generation: String,
-    ) -> Result<Self, ErrorResponse> {
-        let rt = Self {
-            id,
-            user_id,
-            nbf,
-            exp,
-            scope,
-            is_mfa,
-            session_id,
-            access_token_jti,
-            client_id: Some(client_id),
-            client_generation: Some(client_generation),
-        };
+        client_id: &str,
+        client_generation: &str,
+    ) -> Result<(), ErrorResponse> {
+        let sql = r#"
+INSERT INTO refresh_tokens
+(id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
+client_generation)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT(id) DO UPDATE
+SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8,
+    client_id = $9, client_generation = $10"#;
 
-        rt.save().await?;
-        Ok(rt)
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
+                    params!(
+                        id,
+                        user_id,
+                        nbf,
+                        exp,
+                        scope,
+                        is_mfa,
+                        session_id,
+                        access_token_jti,
+                        client_id,
+                        client_generation
+                    ),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(
+                sql,
+                &[
+                    &id,
+                    &user_id,
+                    &nbf,
+                    &exp,
+                    &scope,
+                    &is_mfa,
+                    &session_id,
+                    &access_token_jti,
+                    &client_id,
+                    &client_generation,
+                ],
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
@@ -253,56 +285,6 @@ WHERE user_id = $1
         };
 
         Ok(slf)
-    }
-
-    pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let sql = r#"
-INSERT INTO refresh_tokens
-(id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
-client_generation)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-ON CONFLICT(id) DO UPDATE
-SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8,
-    client_id = $9, client_generation = $10"#;
-
-        if is_hiqlite() {
-            DB::hql()
-                .execute(
-                    sql,
-                    params!(
-                        self.id.clone(),
-                        self.user_id.clone(),
-                        self.nbf,
-                        self.exp,
-                        self.scope.clone(),
-                        self.is_mfa,
-                        self.session_id.clone(),
-                        self.access_token_jti.clone(),
-                        self.client_id.clone(),
-                        self.client_generation.clone()
-                    ),
-                )
-                .await?;
-        } else {
-            DB::pg_execute(
-                sql,
-                &[
-                    &self.id,
-                    &self.user_id,
-                    &self.nbf,
-                    &self.exp,
-                    &self.scope,
-                    &self.is_mfa,
-                    &self.session_id,
-                    &self.access_token_jti,
-                    &self.client_id,
-                    &self.client_generation,
-                ],
-            )
-            .await?;
-        }
-
-        Ok(())
     }
 }
 
