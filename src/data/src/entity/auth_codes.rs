@@ -2,6 +2,8 @@ use crate::database::{Cache, DB};
 use crate::entity::clients::Client;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
+#[cfg(debug_assertions)]
+use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -9,20 +11,6 @@ use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use std::time::Duration;
 use utoipa::ToSchema;
-
-#[derive(Deserialize)]
-struct AuthCodeOld {
-    id: String,
-    exp: i64,
-    client_id: String,
-    user_id: String,
-    session_id: Option<String>,
-    challenge: Option<String>,
-    challenge_method: Option<String>,
-    nonce: Option<String>,
-    scopes: Vec<String>,
-    resource: Option<String>,
-}
 
 /// `AuthCode` as cached before `client_generation` existed.
 #[derive(Deserialize)]
@@ -99,13 +87,6 @@ impl AuthCode {
 
     // Claims an Authorization code from the cache
     pub async fn find_remove(id: String) -> Result<Option<Self>, ErrorResponse> {
-        #[cfg(debug_assertions)]
-        if !rauthy_common::constants::RAUTHY_VERSION.starts_with("0.37.") {
-            todo!("Cleanup AuthCode::find_remove() and remove AuthCodeOld");
-        }
-
-        // TODO this versioning is only necessary during the 0.37 release.
-        //  Remove it afterwards.
         let Some(bytes) = DB::hql().get_remove_bytes(Cache::AuthCode, id).await? else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
@@ -120,52 +101,35 @@ impl AuthCode {
         // Ok(DB::hql().get_remove(Cache::AuthCode, id).await?)
     }
 
-    /// Decodes a cached code, falling back to the layouts of older versions. Codes cached
-    /// without `client_generation` get the empty one, which every client has until it is
-    /// recreated.
+    /// Decodes a cached code, falling back to the layout without `client_generation`. Such codes
+    /// get the empty one, which every client has until it is recreated.
     fn decode(bytes: &[u8]) -> Option<Self> {
+        #[cfg(debug_assertions)]
+        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
+            todo!("Remove AuthCodeNoGeneration");
+        }
+
         let config = bincode_next::config::legacy();
         if let Ok((slf, _)) = bincode_next::serde::decode_from_slice::<Self, _>(bytes, config) {
             return Some(slf);
         }
 
-        if let Ok((code, _)) =
+        let (code, _) =
             bincode_next::serde::decode_from_slice::<AuthCodeNoGeneration, _>(bytes, config)
-        {
-            return Some(Self {
-                id: code.id,
-                exp: code.exp,
-                client_id: code.client_id,
-                redirect_uri: code.redirect_uri,
-                user_id: code.user_id,
-                session_id: code.session_id,
-                challenge: code.challenge,
-                challenge_method: code.challenge_method,
-                nonce: code.nonce,
-                scopes: code.scopes,
-                resource: code.resource,
-                state: code.state,
-                client_generation: String::new(),
-            });
-        }
-
-        // This might be an old auth code during a migration.
-        let (code_old, _) =
-            bincode_next::serde::decode_from_slice::<AuthCodeOld, _>(bytes, config).ok()?;
+                .ok()?;
         Some(Self {
-            id: code_old.id,
-            exp: code_old.exp,
-            client_id: code_old.client_id,
-            // This is not an Option on purpose to prevent another migration being necessary
-            redirect_uri: String::default(),
-            user_id: code_old.user_id,
-            session_id: code_old.session_id,
-            challenge: code_old.challenge,
-            challenge_method: code_old.challenge_method,
-            nonce: code_old.nonce,
-            scopes: code_old.scopes,
-            resource: code_old.resource,
-            state: None,
+            id: code.id,
+            exp: code.exp,
+            client_id: code.client_id,
+            redirect_uri: code.redirect_uri,
+            user_id: code.user_id,
+            session_id: code.session_id,
+            challenge: code.challenge,
+            challenge_method: code.challenge_method,
+            nonce: code.nonce,
+            scopes: code.scopes,
+            resource: code.resource,
+            state: code.state,
             client_generation: String::new(),
         })
     }
