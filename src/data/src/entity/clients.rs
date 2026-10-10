@@ -3,7 +3,6 @@ use crate::entity::auth_providers::ProviderMfaLogin;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
-use crate::entity::refresh_tokens::{RefreshToken, SQL_RT_DELETE_BY_CLIENT, SQL_RT_DELETE_LEGACY};
 use crate::entity::scopes::Scope;
 use crate::entity::users::User;
 use crate::http_client::fetch_bounded;
@@ -21,6 +20,8 @@ use rauthy_api_types::clients::{
     NewClientRequest, ScimClientRequestResponse,
 };
 use rauthy_api_types::oidc::GrantType;
+#[cfg(debug_assertions)]
+use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::constants::{CACHE_TTL_APP, SECRET_LEN_CLIENTS};
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
@@ -41,7 +42,6 @@ use tracing::{debug, error, trace, warn};
 use validator::Validate;
 use zeroize::Zeroize;
 
-pub(crate) const SQL_FIND_GENERATION: &str = "SELECT generation FROM clients WHERE id = $1";
 static SQL_SAVE: &str = r#"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
@@ -379,28 +379,43 @@ VALUES ($1, $2, $3, $4)"#;
     /// Deletes the client with its refresh tokens, with `consent.enable` also all legacy refresh
     /// tokens (`client_id` NULL) of all users.
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        let sql = "DELETE FROM clients WHERE id = $1";
+        #[cfg(debug_assertions)]
+        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
+            todo!(
+                "Remove legacy refresh tokens (`client_id` NULL) as a whole: delete them with a \
+                migration, then drop the cleanup in Client::delete() and their acceptance in \
+                validate_and_refresh_token() and RefreshToken::is_for_client_generation()"
+            );
+        }
+
         self.delete_cache().await?;
 
-        // `refresh_tokens.client_id` has no FK, device refresh tokens cascade.
-        // Legacy tokens (`client_id` NULL) cannot be attributed and would be accepted by a
-        // recreated client with the same id, so with `consent.enable` all of them go.
-        // TODO remove in a future major: legacy refresh tokens without client_id are gone by then
         let drop_legacy = RauthyConfig::get().vars.consent.enable;
         if is_hiqlite() {
-            let mut stmts = vec![(SQL_RT_DELETE_BY_CLIENT, params!(self.id.as_str()))];
+            // `refresh_tokens.client_id` has no FK, device refresh tokens cascade.
+            let mut stmts = vec![(
+                "DELETE FROM refresh_tokens WHERE client_id = $1",
+                params!(self.id.as_str()),
+            )];
+            // Legacy tokens (`client_id` NULL) cannot be attributed and would be accepted by a
+            // recreated client with the same id, so with `consent.enable` all of them go.
             if drop_legacy {
-                stmts.push((SQL_RT_DELETE_LEGACY, params!()));
+                stmts.push((
+                    "DELETE FROM refresh_tokens WHERE client_id IS NULL",
+                    params!(),
+                ));
             }
-            stmts.push((sql, params!(self.id.as_str())));
+            stmts.push((
+                "DELETE FROM clients WHERE id = $1",
+                params!(self.id.as_str()),
+            ));
             for res in DB::hql().txn(stmts).await? {
                 res?;
             }
         } else {
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
-            RefreshToken::pg_delete_by_client_txn(&txn, &self.id, drop_legacy).await?;
-            DB::pg_txn_append(&txn, sql, &[&self.id]).await?;
+            Self::pg_delete_txn(&txn, &self.id, drop_legacy).await?;
             txn.commit().await?;
         }
 
@@ -410,6 +425,26 @@ VALUES ($1, $2, $3, $4)"#;
             ClientDyn::delete_from_cache(&self.id).await?;
         }
 
+        Ok(())
+    }
+
+    /// The Postgres part of `delete()`, separate to be testable against a live database.
+    pub(crate) async fn pg_delete_txn(
+        txn: &deadpool_postgres::Transaction<'_>,
+        id: &str,
+        drop_legacy: bool,
+    ) -> Result<(), ErrorResponse> {
+        // `refresh_tokens.client_id` has no FK, device refresh tokens cascade.
+        let sql_rt = "DELETE FROM refresh_tokens WHERE client_id = $1";
+        DB::pg_txn_append(txn, sql_rt, &[&id]).await?;
+        // Legacy tokens (`client_id` NULL) cannot be attributed and would be accepted by a
+        // recreated client with the same id, so with `consent.enable` all of them go.
+        if drop_legacy {
+            let sql_rt_legacy = "DELETE FROM refresh_tokens WHERE client_id IS NULL";
+            DB::pg_txn_append(txn, sql_rt_legacy, &[]).await?;
+        }
+        let sql = "DELETE FROM clients WHERE id = $1";
+        DB::pg_txn_append(txn, sql, &[&id]).await?;
         Ok(())
     }
 
@@ -429,6 +464,11 @@ VALUES ($1, $2, $3, $4)"#;
     /// Reads a cached client. An entry this version cannot decode, like one cached by an older
     /// version without `generation`, counts as a miss.
     async fn find_cached(cache: Cache, key: String) -> Result<Option<Self>, ErrorResponse> {
+        #[cfg(debug_assertions)]
+        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
+            todo!("Replace Client::find_cached() with a plain cache get");
+        }
+
         let Some(bytes) = DB::hql().get_bytes(cache, key).await? else {
             return Ok(None);
         };
@@ -467,15 +507,16 @@ VALUES ($1, $2, $3, $4)"#;
 
     /// The stored `generation` of the client `id`, bypassing the cache.
     pub async fn find_generation(id: &str) -> Result<Option<String>, ErrorResponse> {
+        let sql = "SELECT generation FROM clients WHERE id = $1";
         let generation = if is_hiqlite() {
             DB::hql()
-                .query_raw(SQL_FIND_GENERATION, params!(id))
+                .query_raw(sql, params!(id))
                 .await?
                 .into_iter()
                 .next()
                 .map(|mut r| r.get::<String>("generation"))
         } else {
-            DB::pg_query_rows(SQL_FIND_GENERATION, &[&id], 1)
+            DB::pg_query_rows(sql, &[&id], 1)
                 .await?
                 .into_iter()
                 .next()
@@ -3409,5 +3450,131 @@ pub(crate) mod tests {
         new_client.keep_admin_set_values(current);
         assert!(!new_client.confidential);
         assert_eq!(new_client.challenge.as_deref(), Some("S256"));
+    }
+
+    /// Client deletion against a live Postgres, using the production SQL.
+    /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
+    mod pg_client_delete {
+        use deadpool_postgres::{Client, Config, Runtime};
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tokio_postgres::NoTls;
+
+        async fn connect(url: &str, schema: &str) -> Client {
+            let cfg = Config {
+                url: Some(url.to_string()),
+                ..Default::default()
+            };
+            let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+            let cl = pool.get().await.unwrap();
+            cl.batch_execute(&format!("SET search_path TO {schema}"))
+                .await
+                .unwrap();
+            cl
+        }
+
+        async fn setup() -> Option<(String, String, Client)> {
+            static SEQ: AtomicUsize = AtomicUsize::new(0);
+
+            let url = std::env::var("RAUTHY_TEST_PG_URL").ok()?;
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let seq = SEQ.fetch_add(1, Ordering::Relaxed);
+            let schema = format!("rt_test_{}_{nanos}_{seq}", std::process::id());
+            let cl = connect(&url, "public").await;
+            cl.batch_execute(&format!(
+                r#"
+CREATE SCHEMA {schema};
+SET search_path TO {schema};
+CREATE TABLE refresh_tokens (
+    id VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, nbf BIGINT NOT NULL,
+    exp BIGINT NOT NULL, scope VARCHAR, is_mfa BOOLEAN NOT NULL, session_id VARCHAR,
+    access_token_jti VARCHAR, client_id VARCHAR, client_generation VARCHAR);
+CREATE TABLE clients (id VARCHAR PRIMARY KEY, generation VARCHAR NOT NULL DEFAULT '');
+CREATE TABLE devices (
+    id VARCHAR PRIMARY KEY,
+    client_id VARCHAR NOT NULL REFERENCES clients ON UPDATE CASCADE ON DELETE CASCADE,
+    user_id VARCHAR, created BIGINT NOT NULL, access_exp BIGINT NOT NULL, refresh_exp BIGINT,
+    peer_ip VARCHAR NOT NULL, name VARCHAR NOT NULL,
+    client_generation VARCHAR NOT NULL DEFAULT '');
+INSERT INTO clients (id) VALUES ('c1'), ('c2');
+INSERT INTO devices (id, client_id, created, access_exp, peer_ip, name)
+VALUES ('dev_c1', 'c1', 0, 0, '127.0.0.1', 'dev_c1'), ('dev_c2', 'c2', 0, 0, '127.0.0.1', 'dev_c2');"#
+            ))
+            .await
+            .unwrap();
+            Some((url, schema, cl))
+        }
+
+        async fn teardown(cl: &Client, schema: &str) {
+            cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+                .await
+                .unwrap();
+        }
+
+        async fn insert(cl: &Client, id: &str, user_id: &str, client_id: Option<&str>) {
+            cl.execute(
+                "INSERT INTO refresh_tokens (id, user_id, nbf, exp, is_mfa, client_id) \
+                 VALUES ($1, $2, 0, 4102444800, false, $3)",
+                &[&id, &user_id, &client_id],
+            )
+            .await
+            .unwrap();
+        }
+
+        async fn ids(cl: &Client, table: &str) -> Vec<String> {
+            cl.query(&format!("SELECT id FROM {table} ORDER BY id"), &[])
+                .await
+                .unwrap()
+                .iter()
+                .map(|r| r.get(0))
+                .collect()
+        }
+
+        /// Deletes client `c1` and returns the refresh tokens left.
+        async fn client_delete_legacy(drop_legacy: bool) -> Vec<String> {
+            let Some((url, schema, admin)) = setup().await else {
+                panic!("RAUTHY_TEST_PG_URL is not set");
+            };
+
+            insert(&admin, "legacy_u1", "u1", None).await;
+            insert(&admin, "legacy_u2", "u2", None).await;
+            insert(&admin, "c1_u1", "u1", Some("c1")).await;
+            insert(&admin, "c2_u1", "u1", Some("c2")).await;
+
+            let mut cl = connect(&url, &schema).await;
+            let txn = cl.transaction().await.unwrap();
+            super::super::Client::pg_delete_txn(&txn, "c1", drop_legacy)
+                .await
+                .unwrap();
+            txn.commit().await.unwrap();
+
+            assert_eq!(ids(&admin, "clients").await, vec!["c2".to_string()]);
+            assert_eq!(ids(&admin, "devices").await, vec!["dev_c2".to_string()]);
+            let left = ids(&admin, "refresh_tokens").await;
+
+            teardown(&admin, &schema).await;
+            left
+        }
+
+        #[tokio::test]
+        #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
+        async fn test_client_delete_drops_unattributable_legacy() {
+            assert_eq!(client_delete_legacy(true).await, vec!["c2_u1".to_string()]);
+        }
+
+        #[tokio::test]
+        #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
+        async fn test_client_delete_keeps_legacy_without_consent() {
+            assert_eq!(
+                client_delete_legacy(false).await,
+                vec![
+                    "c2_u1".to_string(),
+                    "legacy_u1".to_string(),
+                    "legacy_u2".to_string()
+                ]
+            );
+        }
     }
 }

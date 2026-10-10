@@ -3,6 +3,8 @@ use chrono::{DateTime, Utc};
 use hiqlite::macros::params;
 use rauthy_api_types::users::DeviceResponse;
 use rauthy_common::constants::DEVICE_KEY_LENGTH;
+#[cfg(debug_assertions)]
+use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::get_rand;
 use rauthy_error::ErrorResponse;
@@ -28,18 +30,16 @@ pub struct DeviceEntity {
     pub client_generation: String,
 }
 
-pub(crate) const SQL_INSERT: &str = r#"
-INSERT INTO devices
-(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name, client_generation)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
-
 impl DeviceEntity {
     pub fn is_for_client_generation(&self, generation: &str) -> bool {
         self.client_generation == generation
     }
 
     pub async fn insert(self) -> Result<(), ErrorResponse> {
-        let sql = SQL_INSERT;
+        let sql = r#"
+INSERT INTO devices
+(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name, client_generation)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -294,6 +294,11 @@ impl DeviceAuthCode {
     /// Decodes a cached code, falling back to the layout without `client_generation`. Such codes
     /// get the empty one, which every client has until it is recreated.
     fn decode(bytes: &[u8]) -> Option<Self> {
+        #[cfg(debug_assertions)]
+        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
+            todo!("Remove DeviceAuthCodeNoGeneration");
+        }
+
         let config = bincode_next::config::legacy();
         if let Ok((slf, _)) = bincode_next::serde::decode_from_slice::<Self, _>(bytes, config) {
             return Some(slf);
