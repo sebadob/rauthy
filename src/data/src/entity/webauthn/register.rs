@@ -38,6 +38,13 @@ pub async fn reg_start(
     };
 
     let cfg = &RauthyConfig::get().vars.webauthn;
+    let allow_rk = payload.allow_rk.unwrap_or(false);
+    if !cfg.is_passkey_reg_type_allowed(allow_rk) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "This Passkey Type is not allowed",
+        ));
+    }
     // New-user magic links may remove an initialized password at finish.
     let require_uv =
         requires_uv(user.account_type(), cfg.force_uv) || payload.magic_link_id.is_some();
@@ -54,7 +61,7 @@ pub async fn reg_start(
         &user.email,
         exclude_creds,
         require_uv,
-        payload.allow_rk.unwrap_or(false),
+        allow_rk,
         attestation_ca_list,
     ) {
         Ok((mut ccr, reg_state)) => {
