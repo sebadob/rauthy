@@ -64,6 +64,7 @@ pub enum HtmlTemplate {
     IsRegOpen(bool),
     LoginAction(FrontendAction),
     OtpLength(u8),
+    PasskeyRegType,
     PasswordReset(TplPasswordReset),
     RestrictedEmailDomain(String),
     StatusCode(StatusCode),
@@ -91,6 +92,7 @@ impl HtmlTemplate {
             Self::IsRegOpen(_) => "tpl_is_reg_open",
             Self::LoginAction(_) => "tpl_login_action",
             Self::OtpLength(_) => "tpl_otp_length",
+            Self::PasskeyRegType => "tpl_passkey_reg_type",
             Self::PasswordReset(_) => "tpl_password_reset",
             Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
             Self::StatusCode(_) => "tpl_status_code",
@@ -119,6 +121,7 @@ impl HtmlTemplate {
             Self::IsRegOpen(i) => i.to_string(),
             Self::LoginAction(i) => i.to_string(),
             Self::OtpLength(i) => i.to_string(),
+            Self::PasskeyRegType => RauthyConfig::get().vars.webauthn.passkey_reg_type_str(),
             Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
             Self::StatusCode(i) => i.to_string(),
             Self::RestrictedEmailDomain(i) => i.to_string(),
@@ -915,7 +918,10 @@ impl PwdResetHtml<'_> {
             lang: lang.as_str(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::PasswordReset(template)],
+            templates: &[
+                HtmlTemplate::PasswordReset(template),
+                HtmlTemplate::PasskeyRegType,
+            ],
         };
 
         res.render().unwrap()

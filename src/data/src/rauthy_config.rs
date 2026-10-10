@@ -1219,6 +1219,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 force_passkey_cert_level: None,
                 force_passkey_protection: None,
                 force_passkey_attachment: None,
+                passkey_reg_type: vec![PasskeyRegType::Default, PasskeyRegType::ResidentKey],
             },
             atproto: VarsAtproto { enable: false },
         }
@@ -3847,6 +3848,14 @@ impl Vars {
             }
             self.webauthn.force_passkey_attachment = Some(att);
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "webauthn",
+            "passkey_reg_type",
+            "WEBAUTHN_PASSKEY_REG_TYPE",
+        ) {
+            self.webauthn.passkey_reg_type = parse_passkey_reg_type(&v);
+        }
 
         check_table_empty(table, "webauthn");
     }
@@ -4558,6 +4567,58 @@ pub struct VarsWebauthn {
     pub force_passkey_cert_level: Option<MdsCertLevel>,
     pub force_passkey_protection: Option<KeyProtectionMask>,
     pub force_passkey_attachment: Option<AttachmentHintMask>,
+    /// Never empty and without duplicates. The first one is the default in the UI.
+    pub passkey_reg_type: Vec<PasskeyRegType>,
+}
+
+impl VarsWebauthn {
+    pub fn is_passkey_reg_type_allowed(&self, resident_key: bool) -> bool {
+        let typ = if resident_key {
+            PasskeyRegType::ResidentKey
+        } else {
+            PasskeyRegType::Default
+        };
+        self.passkey_reg_type.contains(&typ)
+    }
+
+    /// The allowed values, space-separated, in the configured order.
+    pub fn passkey_reg_type_str(&self) -> String {
+        self.passkey_reg_type
+            .iter()
+            .map(|t| t.as_str())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PasskeyRegType {
+    Default,
+    ResidentKey,
+}
+
+impl PasskeyRegType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::ResidentKey => "resident_key",
+        }
+    }
+}
+
+impl FromStr for PasskeyRegType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "default" => Ok(Self::Default),
+            "resident_key" => Ok(Self::ResidentKey),
+            _ => Err(format!(
+                "Invalid value for webauthn.passkey_reg_type: '{s}' - expected one of: default, \
+                resident_key"
+            )),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -4569,6 +4630,25 @@ pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
     if !table.is_empty() {
         panic!("Unknown data in section: '{tbl_name}': {table:#?}");
     }
+}
+
+/// Parses the space-separated `webauthn.passkey_reg_type`. Panics on an empty value, an unknown
+/// type, or a duplicate.
+fn parse_passkey_reg_type(input: &str) -> Vec<PasskeyRegType> {
+    let mut res = Vec::with_capacity(2);
+    for v in input.split_whitespace() {
+        let typ = v
+            .parse::<PasskeyRegType>()
+            .unwrap_or_else(|err| panic!("{err}"));
+        if res.contains(&typ) {
+            panic!("Duplicate value in webauthn.passkey_reg_type: '{v}'");
+        }
+        res.push(typ);
+    }
+    if res.is_empty() {
+        panic!("webauthn.passkey_reg_type must contain at least one of: default, resident_key");
+    }
+    res
 }
 
 /// Parses the given input into a type-safe `Duration`. The input can have the following suffixes:
@@ -4863,6 +4943,52 @@ mod tests {
             parse_duration("2y").unwrap(),
             Duration::from_secs(2 * 365 * 24 * 3600)
         );
+    }
+
+    #[test]
+    fn test_parse_passkey_reg_type() {
+        assert_eq!(
+            parse_passkey_reg_type("default resident_key"),
+            vec![PasskeyRegType::Default, PasskeyRegType::ResidentKey]
+        );
+        assert_eq!(
+            parse_passkey_reg_type(" resident_key  default "),
+            vec![PasskeyRegType::ResidentKey, PasskeyRegType::Default]
+        );
+        assert_eq!(
+            parse_passkey_reg_type("default"),
+            vec![PasskeyRegType::Default]
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "at least one")]
+    fn test_parse_passkey_reg_type_empty() {
+        parse_passkey_reg_type("  ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Duplicate")]
+    fn test_parse_passkey_reg_type_duplicate() {
+        parse_passkey_reg_type("default default");
+    }
+
+    #[test]
+    #[should_panic(expected = "expected one of")]
+    fn test_parse_passkey_reg_type_unknown() {
+        parse_passkey_reg_type("default resident");
+    }
+
+    #[test]
+    fn test_passkey_reg_type_allowed() {
+        let mut vars = Vars::default();
+        assert!(vars.webauthn.is_passkey_reg_type_allowed(false));
+        assert!(vars.webauthn.is_passkey_reg_type_allowed(true));
+        assert_eq!(vars.webauthn.passkey_reg_type_str(), "default resident_key");
+
+        vars.webauthn.passkey_reg_type = vec![PasskeyRegType::Default];
+        assert!(vars.webauthn.is_passkey_reg_type_allowed(false));
+        assert!(!vars.webauthn.is_passkey_reg_type_allowed(true));
     }
 
     fn parse_eph(toml_src: &str) -> Vars {

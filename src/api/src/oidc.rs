@@ -180,7 +180,7 @@ pub async fn get_authorize(
     let favicon_updated =
         Logo::find_updated_with_res(&client.id, LogoRes::Favicon, &LogoType::Client).await?;
 
-    let mut templates = Vec::with_capacity(9);
+    let mut templates = Vec::with_capacity(10);
     templates.push(HtmlTemplate::AuthProviders(auth_providers_json));
     templates.push(HtmlTemplate::ClientName(client.name.unwrap_or_default()));
     templates.push(HtmlTemplate::ClientUrl(
@@ -191,6 +191,7 @@ pub async fn get_authorize(
     templates.push(HtmlTemplate::IsRegOpen(
         RauthyConfig::get().vars.user_registration.enable,
     ));
+    templates.push(HtmlTemplate::PasskeyRegType);
     if RauthyConfig::get().vars.atproto.enable {
         let provider_atproto = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
         templates.push(HtmlTemplate::AtprotoId(provider_atproto.id));
