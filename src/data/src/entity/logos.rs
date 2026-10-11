@@ -4,7 +4,7 @@ use actix_web::web;
 use chrono::Utc;
 use hiqlite::macros::{FromRow, params};
 use image::imageops::FilterType;
-use image::{EncodableLayout, ImageFormat};
+use image::{DynamicImage, EncodableLayout, ImageFormat};
 use rauthy_common::constants::{
     CACHE_TTL_APP, CONTENT_TYPE_WEBP, IDX_AUTH_PROVIDER_LOGO, IDX_CLIENT_LOGO,
 };
@@ -18,6 +18,8 @@ use tracing::debug;
 
 // The default height a client logo will be resized to
 const RES_CLIENT_LOGO: u32 = 84;
+// The max `width / height` ratio a client logo can have. Wider logos will be scaled down further.
+const CLIENT_LOGO_MAX_RATIO: u32 = 4;
 // The favicon size served on authorize pages
 const RES_CLIENT_FAVICON: u32 = 32;
 // The default height an auth provider logo will be resized to
@@ -262,6 +264,15 @@ impl Logo {
             LogoType::Client => RES_CLIENT_LOGO,
             LogoType::AuthProvider => RES_PROVIDER_LOGO,
         };
+        // Client logos keep their aspect ratio, auth provider logos are always shown as a square.
+        let keep_ratio = typ == LogoType::Client;
+        let resize = move |img: &DynamicImage, height: u32| {
+            if keep_ratio {
+                img.resize(height * CLIENT_LOGO_MAX_RATIO, height, FilterType::Lanczos3)
+            } else {
+                img.resize_to_fill(height, height, FilterType::Lanczos3)
+            }
+        };
 
         // Decode and resize before deleting the existing asset. Image processing can be expensive,
         // so keep all of it off the main thread.
@@ -280,15 +291,13 @@ impl Logo {
                 ));
             }
 
-            let (image_medium, logo_res) = if img.height() < RES_LATER_USE
-                && img.width() < RES_LATER_USE
-            {
-                // if the image is smaller than our later use size, we take it as it is
-                (img, LogoRes::Custom)
-            } else {
-                let img = img.resize_to_fill(RES_LATER_USE, RES_LATER_USE, FilterType::Lanczos3);
-                (img, LogoRes::Medium)
-            };
+            let (image_medium, logo_res) =
+                if img.height() < RES_LATER_USE && img.width() < RES_LATER_USE {
+                    // if the image is smaller than our later use size, we take it as it is
+                    (img, LogoRes::Custom)
+                } else {
+                    (resize(&img, RES_LATER_USE), LogoRes::Medium)
+                };
 
             let mut buf = Cursor::new(Vec::with_capacity(48 * 1024));
             image_medium.write_to(&mut buf, ImageFormat::WebP)?;
@@ -300,8 +309,7 @@ impl Logo {
                 updated: Utc::now().timestamp_millis(),
             };
 
-            let img_small =
-                image_medium.resize_to_fill(size_small, size_small, FilterType::Lanczos3);
+            let img_small = resize(&image_medium, size_small);
             let mut buf = Cursor::new(Vec::with_capacity(8 * 1024));
             img_small.write_to(&mut buf, ImageFormat::WebP)?;
             let slf_small = Self {
