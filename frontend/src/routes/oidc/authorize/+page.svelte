@@ -15,6 +15,7 @@
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION,
         TPL_ATPROTO_ID,
+        TPL_PASSWORD_RESET_LINK_ALWAYS,
     } from '$utils/constants.js';
     import IconHome from '$icons/IconHome.svelte';
     import Main from '$lib5/Main.svelte';
@@ -97,6 +98,7 @@
     let clientMfaForce = $state(false);
     let showReset = $state(false);
     let showResetRequest = $state(false);
+    let resetLinkAlways = $state(false);
     let emailSuccess = $state(false);
     let tooManyRequests = $state(false);
     let emailAfterSubmit = $state('');
@@ -111,6 +113,16 @@
     let password = $state('');
     let showPasswordInput = $derived(
         needsPassword && existingMfaUser !== email && !showReset && !isAtproto,
+    );
+    let showResetLink = $derived(
+        !tooManyRequests &&
+            (resetLinkAlways ? !showReset && !isAtproto : showResetRequest && showPasswordInput),
+    );
+    let showRegLink = $derived(
+        isRegOpen &&
+            !tooManyRequests &&
+            !isAtproto &&
+            !(resetLinkAlways ? showReset : showResetRequest),
     );
 
     let tos: undefined | ToSLatestResponse = $state();
@@ -546,6 +558,11 @@
     }
 
     async function requestReset() {
+        if (!email) {
+            err = t.authorize.validEmail;
+            return;
+        }
+        err = '';
         isLoading = true;
         let pow = (await fetchSolvePow()) || '';
 
@@ -585,6 +602,7 @@
 <Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
 <Template id={TPL_LOGIN_ACTION} bind:value={loginAction} />
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
+<Template id={TPL_PASSWORD_RESET_LINK_ALWAYS} bind:value={resetLinkAlways} />
 
 <Main>
     {#if isAutoRefreshing}
@@ -680,21 +698,21 @@
                                 width={inputWidth}
                                 required
                             />
-
-                            {#if showResetRequest && !tooManyRequests}
-                                <div class="forgotten">
-                                    <Button
-                                        ariaLabel={t.authorize.passwordForgotten}
-                                        invisible
-                                        onclick={handleShowReset}
-                                    >
-                                        {t.authorize.passwordForgotten}
-                                    </Button>
-                                </div>
-                            {/if}
                         {:else}
                             <!-- This only exists to help password managers to trigger an auto-fill  -->
                             <input type="password" hidden aria-hidden="true" style:display="none" />
+                        {/if}
+
+                        {#if showResetLink}
+                            <div class="forgotten">
+                                <Button
+                                    ariaLabel={t.authorize.passwordForgotten}
+                                    invisible
+                                    onclick={handleShowReset}
+                                >
+                                    {t.authorize.passwordForgotten}
+                                </Button>
+                            </div>
                         {/if}
 
                         {#if !tooManyRequests && !clientMfaForce}
@@ -734,7 +752,7 @@
                         {/if}
                     </Form>
 
-                    {#if isRegOpen && !showResetRequest && !tooManyRequests && !isAtproto}
+                    {#if showRegLink}
                         {#if clientUri}
                             <a
                                 class="reg"
