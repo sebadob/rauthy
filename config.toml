@@ -297,6 +297,14 @@ whoami_headers = true
 # overwritten by: ADMIN_BUTTON_HIDE
 admin_button_hide = false
 
+# By default, the 'Password forgotten?' link on the login page will
+# only show up after a failed login. If set to `true`, it will be
+# visible from the start, even before the password input is shown.
+#
+# default: false
+# overwritten by: PASSWORD_RESET_LINK_ALWAYS
+#password_reset_link_always = false
+
 # If set to `true`, requests to `/auth/v1/` will be redirected to
 # `/auth/v1/account` (the account dashboard). This is useful if you want
 # users to land directly on their account page when visiting the root URL.

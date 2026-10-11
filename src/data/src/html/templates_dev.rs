@@ -165,6 +165,12 @@ impl HtmlTemplate {
 
                 Ok((Self::PasswordReset(tpl), Some(cookie)))
             }
+            "tpl_password_reset_link_always" => Ok((
+                Self::PasswordResetLinkAlways(
+                    RauthyConfig::get().vars.access.password_reset_link_always,
+                ),
+                None,
+            )),
             "tpl_user_values_config" => Ok((Self::UserValues, None)),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,

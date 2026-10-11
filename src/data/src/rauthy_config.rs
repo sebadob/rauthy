@@ -322,6 +322,7 @@ impl Default for Vars {
                 token_revoke_device_tokens: false,
                 whoami_headers: false,
                 admin_button_hide: false,
+                password_reset_link_always: false,
                 redirect_root_to_account: false,
             },
             auth_headers: VarsAuthHeaders {
@@ -1458,6 +1459,14 @@ impl Vars {
             "ADMIN_BUTTON_HIDE",
         ) {
             self.access.admin_button_hide = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "access",
+            "password_reset_link_always",
+            "PASSWORD_RESET_LINK_ALWAYS",
+        ) {
+            self.access.password_reset_link_always = v;
         }
         if let Some(v) = t_bool(
             &mut table,
@@ -3992,6 +4001,7 @@ pub struct VarsAccess {
     pub token_revoke_device_tokens: bool,
     pub whoami_headers: bool,
     pub admin_button_hide: bool,
+    pub password_reset_link_always: bool,
     pub redirect_root_to_account: bool,
 }
 
