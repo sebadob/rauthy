@@ -436,6 +436,7 @@ impl Default for Vars {
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
                     fr: "%d/%m/%Y %T (%Z)".into(),
+                    ja: "%Y/%m/%d %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     nl: "%d-%m-%Y %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
@@ -552,6 +553,7 @@ impl Default for Vars {
                     "de".into(),
                     "en".into(),
                     "fr".into(),
+                    "ja".into(),
                     "ko".into(),
                     "nb".into(),
                     "nl".into(),
@@ -563,6 +565,7 @@ impl Default for Vars {
                     "de".into(),
                     "en".into(),
                     "fr".into(),
+                    "ja".into(),
                     "ko".into(),
                     "nb".into(),
                     "nl".into(),
@@ -697,6 +700,17 @@ impl Default for Vars {
                         footer: None,
                         button_text_request_new: None,
                     },
+                    ja: VarsTemplate {
+                        subject: "新しいパスワードの設定".into(),
+                        header: "新しいパスワードの設定 -".into(),
+                        text: None,
+                        click_link: Some("下のリンクをクリックして、パスワードの設定画面を開いてください。".into()),
+                        validity: Some("このリンクは、安全のため短い時間だけ有効です。".into()),
+                        expires: Some("リンクの有効期限:".into()),
+                        button: Some("パスワードを設定する".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     ko: VarsTemplate
                     {
                         subject: "새 비밀번호".into(),
@@ -826,6 +840,17 @@ impl Default for Vars {
                         button: Some("Réinitialiser le mot de passe".into()),
                         footer: Some("Si ce lien a expiré, vous pouvez en demander un nouveau.".into()),
                         button_text_request_new: Some("Demander un nouveau lien".into()),
+                    },
+                    ja: VarsTemplate {
+                        subject: "パスワードリセットのご依頼".into(),
+                        header: "パスワードリセットのご依頼 -".into(),
+                        text: None,
+                        click_link: Some("下のリンクをクリックして、パスワードのリセット画面を開いてください。".into()),
+                        validity: Some("このリンクは、安全のため短い時間だけ有効です。".into()),
+                        expires: Some("リンクの有効期限:".into()),
+                        button: Some("パスワードをリセットする".into()),
+                        footer: Some("リンクの有効期限が切れている場合は、新しいリンクを依頼できます。".into()),
+                        button_text_request_new: Some("新しいリンクを依頼する".into()),
                     },
                     ko: VarsTemplate {
                         subject: "비밀번호 초기화 요청".into(),
@@ -958,6 +983,21 @@ Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.i
                         footer: None,
                         button_text_request_new: Some("Demander un lien de réinitialisation du mot de passe".into()),
                     },
+                    ja: VarsTemplate {
+                        subject: "このメールアドレスは登録済みです".into(),
+                        header: "このメールアドレスは登録済みです -".into(),
+                        text: Some(r#"すでにアカウントがあるメールアドレスで、新しいアカウントの登録が試みられました。
+ご自身の操作ミスであれば、このメッセージは無視してかまいません。
+パスワードを忘れた場合は、下のリンクからリセットできます。
+ご自身による登録でない場合も、心配はいりません。
+アカウントは侵害されておらず、情報も漏れていません。"#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("パスワードリセットのリンクを依頼する".into()),
+                    },
                     ko: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
@@ -1082,6 +1122,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
                         text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ja: VarsTemplate {
+                        subject: "ワンタイムパスワード".into(),
+                        header: "ワンタイムパスワード -".into(),
+                        text: Some("ワンタイムパスワードは次のとおりです:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -2113,6 +2164,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "fr", "TZ_FMT_FR") {
             self.email.tz_fmt.fr = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ja", "TZ_FMT_JA") {
+            self.email.tz_fmt.ja = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ko", "TZ_FMT_KO") {
             self.email.tz_fmt.ko = v.into();
@@ -3365,6 +3419,13 @@ impl Vars {
                         self.templates.password_reset.fr.clone()
                     }
                 }
+                "ja" => {
+                    if is_password_new {
+                        self.templates.password_new.ja.clone()
+                    } else {
+                        self.templates.password_reset.ja.clone()
+                    }
+                }
                 "ko" => {
                     if is_password_new {
                         self.templates.password_new.ko.clone()
@@ -3409,7 +3470,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ja ko nb nl ru uk zh_hans"
                     )
                 }
             };
@@ -3461,6 +3522,13 @@ impl Vars {
                         self.templates.password_reset.fr = tpl;
                     }
                 }
+                "ja" => {
+                    if is_password_new {
+                        self.templates.password_new.ja = tpl;
+                    } else {
+                        self.templates.password_reset.ja = tpl;
+                    }
+                }
                 "ko" => {
                     if is_password_new {
                         self.templates.password_new.ko = tpl;
@@ -3505,7 +3573,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ja ko nb nl ru uk zh_hans"
                     )
                 }
             }
@@ -4150,6 +4218,7 @@ pub struct VarsEmailTzFmt {
     pub de: Cow<'static, str>,
     pub en: Cow<'static, str>,
     pub fr: Cow<'static, str>,
+    pub ja: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub nl: Cow<'static, str>,
     pub no: Cow<'static, str>,
@@ -4436,6 +4505,7 @@ pub struct VarsTemplatesLanguages {
     pub de: VarsTemplate,
     pub en: VarsTemplate,
     pub fr: VarsTemplate,
+    pub ja: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
     pub nl: VarsTemplate,

@@ -3,6 +3,7 @@ import { type I18n } from '../i18n/common/interface';
 import { I18nEn } from '../i18n/common/en';
 import { I18nDe } from '../i18n/common/de';
 import { I18nFr } from '../i18n/common/fr';
+import { I18nJa } from '../i18n/common/ja';
 import { I18nKo } from '../i18n/common/ko';
 import { I18nNb } from '../i18n/common/nb';
 import { I18nRu } from '../i18n/common/ru';
@@ -34,6 +35,7 @@ const i18nMap: Record<string, I18n> = {
     de: I18nDe,
     en: I18nEn,
     fr: I18nFr,
+    ja: I18nJa,
     ko: I18nKo,
     nb: I18nNb,
     nl: I18nNl,

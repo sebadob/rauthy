@@ -14,6 +14,7 @@ pub enum Language {
     #[default]
     En,
     Fr,
+    Ja,
     Ko,
     Nb,
     Nl,
@@ -23,10 +24,10 @@ pub enum Language {
 }
 
 impl Language {
-    pub fn all_available() -> [&'static str; 18] {
+    pub fn all_available() -> [&'static str; 20] {
         [
-            "en", "en-US", "de", "de-DE", "fr", "fr-FR", "ko", "nb", "nb-NO", "no-NO", "nl",
-            "nl-NL", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
+            "en", "en-US", "de", "de-DE", "fr", "fr-FR", "ja", "ja-JP", "ko", "nb", "nb-NO",
+            "no-NO", "nl", "nl-NL", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
         ]
     }
 
@@ -36,6 +37,7 @@ impl Language {
             Language::De => "de",
             Language::En => "en",
             Language::Fr => "fr",
+            Language::Ja => "ja",
             Language::Ko => "ko",
             Language::Nb => "nb",
             Language::Nl => "nl",
@@ -70,6 +72,7 @@ impl From<&str> for Language {
             "en" | "en-US" => Self::En,
             "de" | "de-DE" => Self::De,
             "fr" | "fr-FR" => Self::Fr,
+            "ja" | "ja-JP" => Self::Ja,
             "ko" | "ko-KR" => Self::Ko,
             "nb" | "nb-NO" | "no-NO" => Self::Nb,
             "nl" | "nl-NL" => Self::Nl,
@@ -115,6 +118,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
             rauthy_api_types::generic::Language::De => Self::De,
             rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::Fr => Self::Fr,
+            rauthy_api_types::generic::Language::Ja => Self::Ja,
             rauthy_api_types::generic::Language::Ko => Self::Ko,
             rauthy_api_types::generic::Language::Nb => Self::Nb,
             rauthy_api_types::generic::Language::Nl => Self::Nl,
@@ -131,6 +135,7 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::De => Self::De,
             Language::En => Self::En,
             Language::Fr => Self::Fr,
+            Language::Ja => Self::Ja,
             Language::Ko => Self::Ko,
             Language::Nb => Self::Nb,
             Language::Nl => Self::Nl,

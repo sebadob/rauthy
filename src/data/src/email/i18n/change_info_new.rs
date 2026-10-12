@@ -17,6 +17,7 @@ impl I18nEmailChangeInfoNew<'_> {
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Fr => Self::build_fr(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
@@ -58,6 +59,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "Ce lien n'est valable que pendant une courte période pour des raisons de sécurité.",
             expires: "Le lien expire :",
             button_text: "Confirmer l'e-mail",
+        }
+    }
+
+    fn build_ja() -> Self {
+        Self {
+            subject: "メールアドレス変更のご依頼",
+            header: "メールアドレス変更のご依頼 -",
+            click_link: "下のリンクをクリックして、メールアドレスを確認してください。",
+            validity: "このリンクは、安全のため短い時間だけ有効です。",
+            expires: "リンクの有効期限:",
+            button_text: "メールアドレスを確認する",
         }
     }
 
