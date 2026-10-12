@@ -40,7 +40,7 @@ use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
 use rauthy_data::entity::user_revoke::UserRevoke;
-use rauthy_data::entity::users::User;
+use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::entity::webauthn;
 use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
@@ -827,6 +827,19 @@ pub async fn post_user_mfa_token(
                 "must provide `password`",
             ));
         }
+    } else if user.account_type() == AccountType::Federated {
+        // This is a special case. If the account is federated only, it means that the user has
+        // neither a password nor a passkey. In this situation, we cannot request authentication,
+        // because the user has no option to provide any. To make everything work, for the very
+        // first MFA key added, we allow fetching a mod token without any further authentication.
+        //
+        // This could be improved in the future by requesting a "special" OTP via E-Mail without
+        // the user even having registered any, but this would require quite a bit of rework and
+        // special case handling in lots of situations. For now, we grant the token without any
+        // further validation.
+        debug!(
+            "MFA Mod Token request from federated-only user - granting token without further authentication"
+        );
     } else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,

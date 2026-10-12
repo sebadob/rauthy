@@ -117,6 +117,11 @@ export const I18nJa: I18n = {
             types: ['標準', '端末に保存（Resident Key）'],
             rkWarning:
                 '注意: 端末に保存するキー（Resident Key）はメールアドレスを入力せずにそのままログインに使えますが、アプリケーションごとに保存領域を1つ使います。空きが十分にあることを確かめてください。',
+            // [Default, Resident Key]
+            typesDesc: [
+                'このパスキーでログインする前に、メールアドレスを入力しなければなりません。',
+                'ログインページのパスキーボタンで、メールを入力しずに動作します。',
+            ],
         },
         passwordConfirm: 'パスワード（確認）',
         passwordCurr: '現在のパスワード',
@@ -192,6 +197,8 @@ export const I18nJa: I18n = {
         requestExpired: '依頼の有効期限が切れています',
         signUp: 'ユーザー登録',
         validEmail: '正しいメールアドレスを入力してください',
+        passkeyNotDiscovered:
+            'レジデントキーとして追加されていないパスキーはこの方法では見つけられません。入力 代わりにあなたのメールを送ってください。',
     },
     device: {
         accept: '許可する',
