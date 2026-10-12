@@ -64,7 +64,7 @@ pub async fn validate_auth_code_req_params(
 }
 
 pub async fn validate_and_refresh_token(
-    mut client: Client,
+    client: Client,
     refresh_token: &str,
     req: &HttpRequest,
 ) -> Result<(TokenSet, Option<String>), ErrorResponse> {
@@ -139,11 +139,6 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
-    // the cached client may predate a delete and recreate of the same id
-    client.generation = client.find_current_generation().await?.ok_or_else(|| {
-        ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid refresh token")
-    })?;
-
     let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
     let (rt_scope, session_id, pending_refresh) = if let Some(device_id) = &claims.common.did {
         let rt = RefreshTokenDevice::find_delete(validation_str)
@@ -176,13 +171,10 @@ pub async fn validate_and_refresh_token(
         let device = DeviceEntity::find(device_id).await.map_err(|_| {
             ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid refresh token")
         })?;
-        if !device.is_for_client_generation(&client.generation) {
+        if !device.is_for_client(&client) {
             // cascades to the device's refresh tokens
             if let Err(err) = DeviceEntity::invalidate(device_id).await {
-                error!(
-                    ?err,
-                    "deleting device bound to a previous client generation"
-                );
+                error!(?err, "deleting device authorized for a deleted client");
             }
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
@@ -222,7 +214,7 @@ pub async fn validate_and_refresh_token(
                 "'client_id' does not match",
             ));
         }
-        if !rt.is_for_client_generation(&client.generation) {
+        if !rt.is_for_client(&client) {
             rt.delete().await?;
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,

@@ -4,11 +4,13 @@ ALTER TABLE refresh_tokens
 CREATE INDEX refresh_tokens_user_id_client_id_index
     ON refresh_tokens (user_id, client_id);
 
-ALTER TABLE refresh_tokens
-    ADD client_generation VARCHAR;
-
+-- NULL for clients created before this column existed
 ALTER TABLE clients
-    ADD generation VARCHAR NOT NULL DEFAULT '';
+    ADD created_micros BIGINT;
+
+-- `clients.created_micros` of the client the token / device was issued for
+ALTER TABLE refresh_tokens
+    ADD client_created_micros BIGINT;
 
 ALTER TABLE devices
-    ADD client_generation VARCHAR NOT NULL DEFAULT '';
+    ADD client_created_micros BIGINT;

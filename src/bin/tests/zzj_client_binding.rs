@@ -199,7 +199,7 @@ async fn refresh(client_id: &str, secret: Option<&str>, tokens: &TokenSet) -> re
 }
 
 /// An auth code issued before the client was deleted and recreated with the same id must not be
-/// exchangeable. This fails if new clients do not get a fresh generation.
+/// exchangeable. This fails if new clients do not get a fresh `created_micros`.
 #[tokio::test]
 async fn test_recreated_client_rejects_old_auth_code() -> Result<(), Box<dyn Error>> {
     let id = "binding-auth-code";
@@ -229,7 +229,7 @@ async fn test_client_delete_drops_its_refresh_tokens() -> Result<(), Box<dyn Err
 
     delete_client(id).await?;
     create_client(id).await?;
-    // 404 means the row is gone, a stale row of the old generation would be a 401
+    // 404 means the row is gone, a stale row for the deleted client would be a 401
     assert_eq!(refresh(id, None, &tokens).await.status(), 404);
     assert_eq!(
         refresh(CLIENT_ID, Some(&secret), &other).await.status(),

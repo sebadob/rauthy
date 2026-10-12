@@ -131,26 +131,15 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             }
         };
 
-        match Client::find_generation(&code.client_id).await {
-            Ok(generation) if code.is_for_client_generation(generation.as_deref()) => {}
-            Ok(_) => {
-                if let Err(err) = code.delete().await {
-                    error!(?err, "deleting DeviceAuthCode");
-                }
-                return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
-                    error: OAuth2ErrorTypeResponse::ExpiredToken,
-                    error_description: Some(Cow::from(
-                        "invalid `device_code` or request has expired",
-                    )),
-                });
+        // the code was issued for a deleted client with the same id
+        if !code.is_for_client(&client) {
+            if let Err(err) = code.delete().await {
+                error!(?err, "deleting DeviceAuthCode");
             }
-            Err(err) => {
-                error!("{:?}", err);
-                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                    error: OAuth2ErrorTypeResponse::InvalidRequest,
-                    error_description: Some(Cow::from(err.to_string())),
-                });
-            }
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::ExpiredToken,
+                error_description: Some(Cow::from("invalid `device_code` or request has expired")),
+            });
         }
 
         let access_exp = now.add(chrono::Duration::seconds(
@@ -199,7 +188,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             // This is a better UX than asking for a custom name each time.
             // TODO add an optional `name` param to the initial device request?
             name: id.clone(),
-            client_generation: code.client_generation,
+            client_created_micros: code.client_created_micros,
         };
         if let Err(err) = device.insert().await {
             error!("{:?}", err);

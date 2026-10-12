@@ -249,7 +249,7 @@ pub async fn get_forward_auth_client_callback(
             "Mismatch in AuthCode.client_id",
         ));
     }
-    if !auth_code.is_for_client_generation(Client::find_generation(&client.id).await?.as_deref()) {
+    if !auth_code.is_for_client(&client) {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Invalid auth code or code expired",

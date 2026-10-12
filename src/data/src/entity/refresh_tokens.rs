@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::clients::Client;
 use crate::entity::issued_tokens::IssuedToken;
 use chrono::Utc;
 use hiqlite::macros::{FromRow, params};
@@ -19,8 +20,8 @@ pub struct RefreshToken {
     pub session_id: Option<String>,
     pub access_token_jti: Option<String>,
     pub client_id: Option<String>,
-    /// `Client::generation` of `client_id` when the token was issued.
-    pub client_generation: Option<String>,
+    /// `Client::created_micros` of `client_id` when the token was issued.
+    pub client_created_micros: Option<i64>,
 }
 
 impl Debug for RefreshToken {
@@ -28,7 +29,7 @@ impl Debug for RefreshToken {
         write!(
             f,
             "RefreshToken {{ id: {}(...), user_id: {}, nbf: {}, exp: {}, scope: {:?}, is_mfa: {}, \
-            session_id: {:?}, client_id: {:?}, client_generation: {:?} }}",
+            session_id: {:?}, client_id: {:?}, client_created_micros: {:?} }}",
             &self.id[..5],
             self.user_id,
             self.nbf,
@@ -37,16 +38,19 @@ impl Debug for RefreshToken {
             self.is_mfa,
             self.session_id.as_ref().map(|sid| &sid[..5]),
             self.client_id,
-            self.client_generation,
+            self.client_created_micros,
         )
     }
 }
 
 impl RefreshToken {
-    /// Legacy tokens without `client_id` match any generation, all others only the one of the
-    /// client they were issued for.
-    pub fn is_for_client_generation(&self, generation: &str) -> bool {
-        self.client_id.is_none() || self.client_generation.as_deref() == Some(generation)
+    /// `false` if the token was issued for another client, or for a deleted one with the same id.
+    /// Legacy tokens without `client_id` match any client.
+    pub fn is_for_client(&self, client: &Client) -> bool {
+        match &self.client_id {
+            None => true,
+            Some(id) => *id == client.id && self.client_created_micros == client.created_micros,
+        }
     }
 }
 
@@ -65,17 +69,16 @@ impl RefreshToken {
         is_mfa: bool,
         session_id: Option<String>,
         access_token_jti: Option<String>,
-        client_id: &str,
-        client_generation: &str,
+        client: &Client,
     ) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
-client_generation)
+client_created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8,
-    client_id = $9, client_generation = $10"#;
+    client_id = $9, client_created_micros = $10"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -90,8 +93,8 @@ SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_
                         is_mfa,
                         session_id,
                         access_token_jti,
-                        client_id,
-                        client_generation
+                        client.id.as_str(),
+                        client.created_micros
                     ),
                 )
                 .await?;
@@ -107,8 +110,8 @@ SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_
                     &is_mfa,
                     &session_id,
                     &access_token_jti,
-                    &client_id,
-                    &client_generation,
+                    &client.id,
+                    &client.created_micros,
                 ],
             )
             .await?;
@@ -328,22 +331,26 @@ mod tests {
     }
 
     #[test]
-    fn test_is_for_client_generation() {
+    fn test_is_for_client() {
+        let client = |id: &str, created_micros| Client {
+            id: id.to_string(),
+            created_micros,
+            ..Default::default()
+        };
+
         let mut rt: RefreshToken = serde_json::from_value(row(None)).unwrap();
-        assert!(rt.is_for_client_generation("gen_a"));
-        assert!(rt.is_for_client_generation(""));
+        assert!(rt.is_for_client(&client("client_1", Some(1))));
+        assert!(rt.is_for_client(&client("client_2", None)));
 
         rt.client_id = Some("client_1".to_string());
-        assert!(!rt.is_for_client_generation("gen_a"));
-        assert!(!rt.is_for_client_generation(""));
+        assert!(rt.is_for_client(&client("client_1", None)));
+        assert!(!rt.is_for_client(&client("client_1", Some(1))));
+        assert!(!rt.is_for_client(&client("client_2", None)));
 
-        rt.client_generation = Some("gen_a".to_string());
-        assert!(rt.is_for_client_generation("gen_a"));
-        assert!(!rt.is_for_client_generation("gen_b"));
-        assert!(!rt.is_for_client_generation(""));
-
-        rt.client_generation = Some(String::new());
-        assert!(rt.is_for_client_generation(""));
-        assert!(!rt.is_for_client_generation("gen_a"));
+        rt.client_created_micros = Some(1);
+        assert!(rt.is_for_client(&client("client_1", Some(1))));
+        assert!(!rt.is_for_client(&client("client_1", Some(2))));
+        assert!(!rt.is_for_client(&client("client_1", None)));
+        assert!(!rt.is_for_client(&client("client_2", Some(1))));
     }
 }

@@ -636,7 +636,7 @@ pub async fn post_device_auth(
     let code = match DeviceAuthCode::new(
         scopes,
         client.id,
-        client.generation,
+        client.created_micros,
         payload.client_secret,
         payload.nonce,
     )

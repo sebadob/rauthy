@@ -100,10 +100,11 @@ pub struct Client {
     pub allowed_resources: Option<String>,
     /// Audiences always added to this client's tokens, independent of any request (CSV).
     pub default_aud: Option<String>,
-    /// Random value assigned when the row is inserted and never changed afterward. Tells a
-    /// recreated client apart from a deleted one with the same `id`.
-    #[serde(default)]
-    pub generation: String,
+    /// Creation time of this client, never changed afterward. Tells a client apart from a
+    /// deleted one with the same `id`, everything issued to a client carries a copy of it.
+    /// Micros, because a client may be deleted and recreated within the same second.
+    /// `None` for clients created before this field existed.
+    pub created_micros: Option<i64>,
 }
 
 impl Debug for Client {
@@ -116,7 +117,7 @@ impl Debug for Client {
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
         client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
         claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
-        generation: {} }}",
+        created_micros: {:?} }}",
             self.id,
             self.name,
             self.enabled,
@@ -141,7 +142,7 @@ impl Debug for Client {
             self.claims_at_root,
             self.allowed_resources,
             self.default_aud,
-            self.generation,
+            self.created_micros,
         )
     }
 }
@@ -164,14 +165,14 @@ impl Client {
         };
         let mut client = Client::try_from(client_req)?;
         client.secret_kid = kid;
-        client.generation = Self::new_generation();
+        client.created_micros = Some(Utc::now().timestamp_micros());
 
         let sql = r#"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
-default_aud, generation)
+default_aud, created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
 $18, $19, $20, $21, $22, $23, $24, $25)"#;
 
@@ -204,7 +205,7 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
                         &client.restrict_group_prefix,
                         &client.allowed_resources,
                         &client.default_aud,
-                        &client.generation
+                        client.created_micros
                     ),
                 )
                 .await?;
@@ -236,7 +237,7 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
                     &client.restrict_group_prefix,
                     &client.allowed_resources,
                     &client.default_aud,
-                    &client.generation,
+                    &client.created_micros,
                 ],
             )
             .await?;
@@ -256,7 +257,7 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
         let mut client = Self::try_from_dyn_reg(client_req, origin_header)?;
-        client.generation = Self::new_generation();
+        client.created_micros = Some(Utc::now().timestamp_micros());
 
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
@@ -265,7 +266,7 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, generation)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
 $21, $22, $23)"#;
         let sql_2 = r#"
@@ -301,7 +302,7 @@ VALUES ($1, $2, $3, $4)"#;
                             &client.contacts,
                             &client.backchannel_logout_uri,
                             &client.restrict_group_prefix,
-                            &client.generation
+                            client.created_micros
                         ),
                     ),
                     (
@@ -345,7 +346,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
-                    &client.generation,
+                    &client.created_micros,
                 ],
             )
             .await?;
@@ -384,7 +385,7 @@ VALUES ($1, $2, $3, $4)"#;
             todo!(
                 "Remove legacy refresh tokens (`client_id` NULL) as a whole: delete them with a \
                 migration, then drop the cleanup in Client::delete() and their acceptance in \
-                validate_and_refresh_token() and RefreshToken::is_for_client_generation()"
+                validate_and_refresh_token() and RefreshToken::is_for_client()"
             );
         }
 
@@ -462,7 +463,7 @@ VALUES ($1, $2, $3, $4)"#;
     }
 
     /// Reads a cached client. An entry this version cannot decode, like one cached by an older
-    /// version without `generation`, counts as a miss.
+    /// version without `created_micros`, counts as a miss.
     async fn find_cached(cache: Cache, key: String) -> Result<Option<Self>, ErrorResponse> {
         #[cfg(debug_assertions)]
         if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
@@ -503,36 +504,6 @@ VALUES ($1, $2, $3, $4)"#;
             .await?;
 
         Ok(slf)
-    }
-
-    /// The stored `generation` of the client `id`, bypassing the cache.
-    pub async fn find_generation(id: &str) -> Result<Option<String>, ErrorResponse> {
-        let sql = "SELECT generation FROM clients WHERE id = $1";
-        let generation = if is_hiqlite() {
-            DB::hql()
-                .query_raw(sql, params!(id))
-                .await?
-                .into_iter()
-                .next()
-                .map(|mut r| r.get::<String>("generation"))
-        } else {
-            DB::pg_query_rows(sql, &[&id], 1)
-                .await?
-                .into_iter()
-                .next()
-                .map(|r| r.get::<_, String>("generation"))
-        };
-
-        Ok(generation)
-    }
-
-    /// The stored `generation` of this client, bypassing the cache. Ephemeral clients are never
-    /// stored and always have an empty one. `None` if the client does not exist anymore.
-    pub async fn find_current_generation(&self) -> Result<Option<String>, ErrorResponse> {
-        if RauthyConfig::get().vars.ephemeral_clients.enable && self.is_ephemeral() {
-            return Ok(Some(String::new()));
-        }
-        Self::find_generation(&self.id).await
     }
 
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
@@ -966,7 +937,7 @@ WHERE id = $4"#;
                 .put_bytes(
                     Cache::ClientSecret,
                     plain,
-                    cached_secret_value(&self.id, &self.generation)?,
+                    cached_secret_value(&self.id, self.created_micros)?,
                     Some(hours as i64),
                 )
                 .await?;
@@ -986,11 +957,7 @@ WHERE id = $4"#;
             debug!("No cached secret found for client {}", self.id);
             return Err(err());
         };
-        let Some(generation) = self.find_current_generation().await? else {
-            return Err(err());
-        };
-
-        if cached_secret_matches(&bytes, &self.id, &generation) {
+        if cached_secret_matches(&bytes, &self.id, self.created_micros) {
             debug!("Matching cached client_secret for {}", self.id);
             Ok(())
         } else {
@@ -1000,20 +967,23 @@ WHERE id = $4"#;
     }
 }
 
-/// Clients that were never recreated keep the raw id, which older versions compare against.
-fn cached_secret_value(client_id: &str, generation: &str) -> Result<Vec<u8>, ErrorResponse> {
-    if generation.is_empty() {
-        Ok(client_id.as_bytes().to_vec())
-    } else {
-        Ok(serde_json::to_vec(&(client_id, generation))?)
+/// The cached secret is bound to `created_micros`, so it does not authenticate a recreated client
+/// with the same id. Clients without one keep the raw id, which older versions compare against.
+fn cached_secret_value(
+    client_id: &str,
+    created_micros: Option<i64>,
+) -> Result<Vec<u8>, ErrorResponse> {
+    match created_micros {
+        None => Ok(client_id.as_bytes().to_vec()),
+        Some(created) => Ok(serde_json::to_vec(&(client_id, created))?),
     }
 }
 
-fn cached_secret_matches(value: &[u8], client_id: &str, generation: &str) -> bool {
-    match serde_json::from_slice::<(String, String)>(value) {
-        Ok((id, generation_cached)) => id == client_id && generation_cached == generation,
-        // pre-generation entries hold the raw client id and only match `generation = ''`
-        Err(_) => generation.is_empty() && value == client_id.as_bytes(),
+fn cached_secret_matches(value: &[u8], client_id: &str, created_micros: Option<i64>) -> bool {
+    match serde_json::from_slice::<(String, i64)>(value) {
+        Ok((id, created)) => id == client_id && Some(created) == created_micros,
+        // raw client id entries only match clients without `created_micros`
+        Err(_) => created_micros.is_none() && value == client_id.as_bytes(),
     }
 }
 
@@ -1068,10 +1038,6 @@ impl Client {
     /// # Panics
     /// The decryption depends on correctly set up `ENC_KEYS` and `ENC_KEY_ACTIVE` environment
     /// variables and panics, if this is not the case.
-    pub fn new_generation() -> String {
-        get_rand(24)
-    }
-
     pub fn generate_new_secret() -> Result<(String, Vec<u8>), ErrorResponse> {
         // CAUTION: DO NOT change the length of the `client_secret` here.
         // If you need to at some point, make sure to update `Self::validate_secret()` as well,
@@ -2090,7 +2056,7 @@ impl Client {
             allowed_resources: value.allowed_resources.map(|r| r.join(",")),
             default_aud: None,
             // never stored, so there is no row that could be deleted and recreated
-            generation: String::new(),
+            created_micros: None,
         })
     }
 }
@@ -2134,7 +2100,7 @@ impl Default for Client {
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
-            generation: String::new(),
+            created_micros: None,
         }
     }
 }
@@ -2206,7 +2172,7 @@ impl Client {
         self.claims_at_root = current.claims_at_root;
         self.allowed_resources = current.allowed_resources;
         self.default_aud = current.default_aud;
-        self.generation = current.generation;
+        self.created_micros = current.created_micros;
     }
 
     /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one
@@ -2472,27 +2438,28 @@ pub(crate) mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn cached_secret_matches_id_and_generation() {
-        let value = serde_json::to_vec(&("client", "gen1")).unwrap();
-        assert!(cached_secret_matches(&value, "client", "gen1"));
-        assert!(!cached_secret_matches(&value, "client", "gen2"));
-        assert!(!cached_secret_matches(&value, "other", "gen1"));
-        assert!(cached_secret_matches(b"client", "client", ""));
-        assert!(!cached_secret_matches(b"client", "client", "gen1"));
-        assert!(!cached_secret_matches(b"other", "client", ""));
-        assert!(!cached_secret_matches(&[0xff, 0xfe], "client", ""));
+    fn cached_secret_matches_id_and_created() {
+        let value = serde_json::to_vec(&("client", 1)).unwrap();
+        assert!(cached_secret_matches(&value, "client", Some(1)));
+        assert!(!cached_secret_matches(&value, "client", Some(2)));
+        assert!(!cached_secret_matches(&value, "client", None));
+        assert!(!cached_secret_matches(&value, "other", Some(1)));
+        assert!(cached_secret_matches(b"client", "client", None));
+        assert!(!cached_secret_matches(b"client", "client", Some(1)));
+        assert!(!cached_secret_matches(b"other", "client", None));
+        assert!(!cached_secret_matches(&[0xff, 0xfe], "client", None));
     }
 
     #[test]
     fn cached_secret_value_roundtrip() {
-        let legacy = cached_secret_value("client", "").unwrap();
+        let legacy = cached_secret_value("client", None).unwrap();
         assert_eq!(legacy, b"client");
-        assert!(cached_secret_matches(&legacy, "client", ""));
-        assert!(!cached_secret_matches(&legacy, "client", "gen1"));
+        assert!(cached_secret_matches(&legacy, "client", None));
+        assert!(!cached_secret_matches(&legacy, "client", Some(1)));
 
-        let bound = cached_secret_value("client", "gen1").unwrap();
-        assert!(cached_secret_matches(&bound, "client", "gen1"));
-        assert!(!cached_secret_matches(&bound, "client", ""));
+        let bound = cached_secret_value("client", Some(1)).unwrap();
+        assert!(cached_secret_matches(&bound, "client", Some(1)));
+        assert!(!cached_secret_matches(&bound, "client", None));
     }
 
     #[test]
@@ -2685,7 +2652,7 @@ pub(crate) mod tests {
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
-            generation: String::new(),
+            created_micros: None,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -3149,7 +3116,7 @@ pub(crate) mod tests {
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
-            generation: String::new(),
+            created_micros: None,
         }
     }
 
@@ -3306,7 +3273,7 @@ pub(crate) mod tests {
             claims_at_root: true,
             allowed_resources: Some("https://api.example.com".to_string()),
             default_aud: Some("https://aud.example.com".to_string()),
-            generation: "gen-before-update".to_string(),
+            created_micros: Some(1),
         }
     }
 
@@ -3360,7 +3327,7 @@ pub(crate) mod tests {
         assert_eq!(new_client.claims_at_root, current.claims_at_root);
         assert_eq!(new_client.allowed_resources, current.allowed_resources);
         assert_eq!(new_client.default_aud, current.default_aud);
-        assert_eq!(new_client.generation, current.generation);
+        assert_eq!(new_client.created_micros, current.created_micros);
         // still public -> the admin's PKCE setting is kept
         assert_eq!(new_client.challenge, current.challenge);
 
@@ -3490,14 +3457,14 @@ SET search_path TO {schema};
 CREATE TABLE refresh_tokens (
     id VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, nbf BIGINT NOT NULL,
     exp BIGINT NOT NULL, scope VARCHAR, is_mfa BOOLEAN NOT NULL, session_id VARCHAR,
-    access_token_jti VARCHAR, client_id VARCHAR, client_generation VARCHAR);
-CREATE TABLE clients (id VARCHAR PRIMARY KEY, generation VARCHAR NOT NULL DEFAULT '');
+    access_token_jti VARCHAR, client_id VARCHAR, client_created_micros BIGINT);
+CREATE TABLE clients (id VARCHAR PRIMARY KEY, created_micros BIGINT);
 CREATE TABLE devices (
     id VARCHAR PRIMARY KEY,
     client_id VARCHAR NOT NULL REFERENCES clients ON UPDATE CASCADE ON DELETE CASCADE,
     user_id VARCHAR, created BIGINT NOT NULL, access_exp BIGINT NOT NULL, refresh_exp BIGINT,
     peer_ip VARCHAR NOT NULL, name VARCHAR NOT NULL,
-    client_generation VARCHAR NOT NULL DEFAULT '');
+    client_created_micros BIGINT);
 INSERT INTO clients (id) VALUES ('c1'), ('c2');
 INSERT INTO devices (id, client_id, created, access_exp, peer_ip, name)
 VALUES ('dev_c1', 'c1', 0, 0, '127.0.0.1', 'dev_c1'), ('dev_c2', 'c2', 0, 0, '127.0.0.1', 'dev_c2');"#

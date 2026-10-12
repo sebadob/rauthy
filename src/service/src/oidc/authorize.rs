@@ -374,7 +374,7 @@ pub(crate) async fn finish_authorize(
     let code = AuthCode::new(
         user.id.clone(),
         client.id,
-        client.generation,
+        client.created_micros,
         data.redirect_uri.clone(),
         Some(session.id.clone()),
         data.code_challenge,

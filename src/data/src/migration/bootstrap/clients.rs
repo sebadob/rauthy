@@ -5,6 +5,7 @@ use crate::migration::bootstrap::bootstrap_data;
 use crate::migration::bootstrap::generated_secrets::{GeneratedSecretEntry, GeneratedSecretKey};
 use crate::migration::bootstrap::types::{Client, ClientSecret};
 use crate::rauthy_config::RauthyConfig;
+use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use cryptr::{EncKeys, EncValue};
 use hiqlite::macros::params;
@@ -65,7 +66,7 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, generation)
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
 $18, $19, $20, $21, $22, $23)"#;
 
@@ -165,7 +166,7 @@ $18, $19, $20, $21, $22, $23)"#;
             }
         }
         let default_scopes = client.default_scopes.join(",");
-        let generation = crate::entity::clients::Client::new_generation();
+        let created_micros = Utc::now().timestamp_micros();
 
         if is_hiqlite() {
             DB::hql()
@@ -194,7 +195,7 @@ $18, $19, $20, $21, $22, $23)"#;
                         contacts,
                         client.backchannel_logout_uri,
                         client.restrict_group_prefix,
-                        generation
+                        created_micros
                     ),
                 )
                 .await?;
@@ -224,7 +225,7 @@ $18, $19, $20, $21, $22, $23)"#;
                     &contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
-                    &generation,
+                    &created_micros,
                 ],
             )
             .await?;

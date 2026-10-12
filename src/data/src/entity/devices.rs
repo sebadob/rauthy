@@ -1,4 +1,5 @@
 use crate::database::{Cache, DB};
+use crate::entity::clients::Client;
 use chrono::{DateTime, Utc};
 use hiqlite::macros::params;
 use rauthy_api_types::users::DeviceResponse;
@@ -25,20 +26,21 @@ pub struct DeviceEntity {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
-    /// `Client::generation` of `client_id` when the device was authorized.
-    #[serde(default)]
-    pub client_generation: String,
+    /// `Client::created_micros` of `client_id` when the device was authorized.
+    pub client_created_micros: Option<i64>,
 }
 
 impl DeviceEntity {
-    pub fn is_for_client_generation(&self, generation: &str) -> bool {
-        self.client_generation == generation
+    /// `false` if `client` was deleted and recreated since the device was authorized.
+    pub fn is_for_client(&self, client: &Client) -> bool {
+        self.client_id == client.id && self.client_created_micros == client.created_micros
     }
 
     pub async fn insert(self) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO devices
-(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name, client_generation)
+(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name,
+client_created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
         if is_hiqlite() {
@@ -54,7 +56,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                         self.refresh_exp,
                         self.peer_ip,
                         self.name,
-                        self.client_generation
+                        self.client_created_micros
                     ),
                 )
                 .await?;
@@ -70,7 +72,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                     &self.refresh_exp,
                     &self.peer_ip,
                     &self.name,
-                    &self.client_generation,
+                    &self.client_created_micros,
                 ],
             )
             .await?;
@@ -214,15 +216,15 @@ pub struct DeviceAuthCode {
     // the given interval and gets 'slow_down' from us. If this happens
     // too many times, the IP will be blacklisted.1
     pub warnings: u8,
-    /// `Client::generation` of `client_id` when the code was created. Last on purpose: bincode
+    /// `Client::created_micros` of `client_id` when the code was created. Last on purpose: bincode
     /// ignores trailing bytes, so older versions can still decode a code with this field.
-    pub client_generation: String,
+    pub client_created_micros: Option<i64>,
 }
 
-/// `DeviceAuthCode` as cached before `client_generation` existed.
+/// `DeviceAuthCode` as cached by v0.37, before `client_created_micros` existed.
 #[derive(Deserialize)]
 #[cfg_attr(test, derive(Serialize))]
-struct DeviceAuthCodeNoGeneration {
+struct DeviceAuthCodeV037 {
     client_id: String,
     device_code: String,
     verified_by: Option<String>,
@@ -239,7 +241,7 @@ impl DeviceAuthCode {
     pub async fn new(
         scopes: Option<String>,
         client_id: String,
-        client_generation: String,
+        client_created_micros: Option<i64>,
         client_secret: Option<String>,
         nonce: Option<String>,
     ) -> Result<Self, ErrorResponse> {
@@ -248,7 +250,7 @@ impl DeviceAuthCode {
         let exp = now.add(ttl);
         let slf = Self {
             client_id,
-            client_generation,
+            client_created_micros,
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
             verified_by: None,
             exp,
@@ -291,12 +293,12 @@ impl DeviceAuthCode {
         Self::validate_expiry(bytes.as_deref().and_then(Self::decode)).await
     }
 
-    /// Decodes a cached code, falling back to the layout without `client_generation`. Such codes
-    /// get the empty one, which every client has until it is recreated.
+    /// Decodes a cached code, falling back to the v0.37 layout. Such codes only match clients
+    /// created before `Client::created_micros` existed.
     fn decode(bytes: &[u8]) -> Option<Self> {
         #[cfg(debug_assertions)]
         if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
-            todo!("Remove DeviceAuthCodeNoGeneration");
+            todo!("Remove DeviceAuthCodeV037");
         }
 
         let config = bincode_next::config::legacy();
@@ -305,8 +307,7 @@ impl DeviceAuthCode {
         }
 
         let (code, _) =
-            bincode_next::serde::decode_from_slice::<DeviceAuthCodeNoGeneration, _>(bytes, config)
-                .ok()?;
+            bincode_next::serde::decode_from_slice::<DeviceAuthCodeV037, _>(bytes, config).ok()?;
         Some(Self {
             client_id: code.client_id,
             device_code: code.device_code,
@@ -317,7 +318,7 @@ impl DeviceAuthCode {
             nonce: code.nonce,
             client_secret: code.client_secret,
             warnings: code.warnings,
-            client_generation: String::new(),
+            client_created_micros: None,
         })
     }
 
@@ -361,10 +362,10 @@ impl DeviceAuthCode {
 }
 
 impl DeviceAuthCode {
-    /// `current` is the stored `Client::generation` of `client_id`, `None` if it does not exist.
+    /// `false` if `client` was deleted and recreated since the code was issued.
     #[inline]
-    pub fn is_for_client_generation(&self, current: Option<&str>) -> bool {
-        current == Some(self.client_generation.as_str())
+    pub fn is_for_client(&self, client: &Client) -> bool {
+        self.client_id == client.id && self.client_created_micros == client.created_micros
     }
 
     /// Validates the given `user_code`
@@ -391,12 +392,20 @@ impl DeviceAuthCode {
 mod tests {
     use super::*;
 
+    fn client(id: &str, created_micros: Option<i64>) -> Client {
+        Client {
+            id: id.to_string(),
+            created_micros,
+            ..Default::default()
+        }
+    }
+
     #[test]
-    fn test_device_code_client_generation() {
+    fn test_device_code_is_for_client() {
         let now = Utc::now();
         let code = DeviceAuthCode {
             client_id: "client_1".to_string(),
-            client_generation: "gen_a".to_string(),
+            client_created_micros: Some(1),
             device_code: "code".to_string(),
             verified_by: Some("user_1".to_string()),
             exp: now,
@@ -407,10 +416,10 @@ mod tests {
             warnings: 0,
         };
 
-        assert!(code.is_for_client_generation(Some("gen_a")));
-        assert!(!code.is_for_client_generation(Some("gen_b")));
-        assert!(!code.is_for_client_generation(Some("")));
-        assert!(!code.is_for_client_generation(None));
+        assert!(code.is_for_client(&client("client_1", Some(1))));
+        assert!(!code.is_for_client(&client("client_1", Some(2))));
+        assert!(!code.is_for_client(&client("client_1", None)));
+        assert!(!code.is_for_client(&client("client_2", Some(1))));
     }
 
     fn encode<T: Serialize>(value: &T) -> Vec<u8> {
@@ -418,9 +427,9 @@ mod tests {
     }
 
     #[test]
-    fn test_device_code_decode_without_generation() {
+    fn test_device_code_decode_v037() {
         let now = Utc::now();
-        let old = DeviceAuthCodeNoGeneration {
+        let old = DeviceAuthCodeV037 {
             client_id: "client_1".to_string(),
             device_code: "code".to_string(),
             verified_by: Some("user_1".to_string()),
@@ -432,11 +441,11 @@ mod tests {
             warnings: 2,
         };
         let code = DeviceAuthCode::decode(&encode(&old)).unwrap();
-        assert_eq!(code.client_generation, "");
+        assert_eq!(code.client_created_micros, None);
         assert_eq!(code.verified_by.as_deref(), Some("user_1"));
         assert_eq!(code.scopes.as_deref(), Some("openid"));
         assert_eq!(code.warnings, 2);
-        assert!(code.is_for_client_generation(Some("")));
+        assert!(code.is_for_client(&client("client_1", None)));
     }
 
     #[test]
@@ -452,15 +461,15 @@ mod tests {
             nonce: None,
             client_secret: Some("secret".to_string()),
             warnings: 1,
-            client_generation: "gen_a".to_string(),
+            client_created_micros: Some(1),
         };
         let bytes = encode(&code);
 
         let decoded = DeviceAuthCode::decode(&bytes).unwrap();
-        assert_eq!(decoded.client_generation, "gen_a");
+        assert_eq!(decoded.client_created_micros, Some(1));
         assert_eq!(decoded.client_secret.as_deref(), Some("secret"));
 
-        let (old, _) = bincode_next::serde::decode_from_slice::<DeviceAuthCodeNoGeneration, _>(
+        let (old, _) = bincode_next::serde::decode_from_slice::<DeviceAuthCodeV037, _>(
             &bytes,
             bincode_next::config::legacy(),
         )
@@ -470,7 +479,7 @@ mod tests {
     }
 
     #[test]
-    fn test_device_client_generation() {
+    fn test_device_is_for_client() {
         let mut device: DeviceEntity = serde_json::from_value(serde_json::json!({
             "id": "dev_1",
             "client_id": "client_1",
@@ -482,13 +491,14 @@ mod tests {
             "name": "dev_1",
         }))
         .unwrap();
-        assert_eq!(device.client_generation, "");
-        assert!(device.is_for_client_generation(""));
-        assert!(!device.is_for_client_generation("gen_a"));
+        assert_eq!(device.client_created_micros, None);
+        assert!(device.is_for_client(&client("client_1", None)));
+        assert!(!device.is_for_client(&client("client_1", Some(1))));
 
-        device.client_generation = "gen_a".to_string();
-        assert!(device.is_for_client_generation("gen_a"));
-        assert!(!device.is_for_client_generation("gen_b"));
-        assert!(!device.is_for_client_generation(""));
+        device.client_created_micros = Some(1);
+        assert!(device.is_for_client(&client("client_1", Some(1))));
+        assert!(!device.is_for_client(&client("client_1", Some(2))));
+        assert!(!device.is_for_client(&client("client_1", None)));
+        assert!(!device.is_for_client(&client("client_2", Some(1))));
     }
 }
