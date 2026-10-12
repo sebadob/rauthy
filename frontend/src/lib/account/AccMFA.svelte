@@ -43,7 +43,7 @@
     let err = $state(false);
     let pwdErr = $state('');
     let msg = $state('');
-    let showRegInput = $state(false);
+    let showPasskeyInput = $state(false);
     let showOtpInput = $state(false);
     let showDelete = $state(untrack(() => user.account_type) === 'password');
 
@@ -71,6 +71,13 @@
     let otpId: undefined | string = $state();
     let otpValueNew = $state('');
     let hasOtp = $state(false);
+
+    let isUserFederatedOnly = $derived(user.account_type === 'federated');
+
+    type RegType = undefined | 'passkey' | 'otp';
+    // Saves the type of the reg button the user clicked before fetching an MFA mod token, so that
+    // we can show the correct input after a successful fetch.
+    let requestedBeforeTokenFetch: RegType = $state(undefined);
 
     onMount(() => {
         fetchPasskeys();
@@ -153,7 +160,7 @@
         }
     }
 
-    async function handleRegister() {
+    async function handleRegisterPasskey() {
         resetMsgErr();
 
         if (isInputError || !userId) {
@@ -191,7 +198,7 @@
             }
             err = true;
         } else {
-            showRegInput = false;
+            showPasskeyInput = false;
             passkeyName = '';
             await fetchPasskeys();
             await fetchUser();
@@ -216,9 +223,31 @@
         }
     }
 
-    function onRegisterClick() {
+    async function onRegisterPasskeyClick(ty: RegType) {
+        isInputError = false;
+        requestedBeforeTokenFetch = ty;
+
         if (mfaModToken) {
-            showRegInput = true;
+            requestedBeforeTokenFetch = undefined;
+            showPasskeyInput = true;
+        } else if (isUserFederatedOnly) {
+            // A federated user account does neither have a password, nor a passkey. We cannot
+            // request additional authentication to get an MFA mod token, because there is none.
+            // In this special case, the user is allowed to fetch such a token directly. Without it
+            // it would be impossible to go from a federated to a federated_passkey account. You
+            // would always need to add a password beforehand only to be able to authenticate
+            // locally here.
+            //
+            // Note: a "perfect" solution would be to send this user an OTP, even when it's not
+            // registered yet, or maybe a variant of it with some callback link. But this requires
+            // a bigger setup that is not implemented so far for this special case. That could be
+            // improved in the future.
+            await fetchMfaToken({});
+            if (mfaModToken) {
+                showPasskeyInput = true;
+            } else {
+                console.error('Could not fetch MFA mod token for federated user');
+            }
         } else {
             showModal = true;
         }
@@ -246,16 +275,28 @@
         otpKind = 'email';
 
         resetMsgErr();
-        if (isInputError || !userId || !otpKind) {
+        if (!userId || !otpKind) {
             console.error('missing create OTP data', isInputError, userId, otpKind);
             return;
         }
 
         let tokenId = mfaModToken?.id;
         if (!tokenId) {
-            showModal = true;
-            return;
+            requestedBeforeTokenFetch = 'otp';
+            if (isUserFederatedOnly) {
+                await fetchMfaToken({});
+                if (mfaModToken) {
+                    tokenId = mfaModToken.id;
+                } else {
+                    console.error('Error fetching MFA mod token for federated-only user');
+                    return;
+                }
+            } else {
+                showModal = true;
+                return;
+            }
         }
+
         let res = await postOtp(userId, otpKind, otpName, tokenId);
         if (res.data) {
             otps.push(res.data);
@@ -355,13 +396,29 @@
             interval = window.setInterval(() => {
                 calcModSecs();
             }, 1000);
+
+            if (requestedBeforeTokenFetch == 'passkey') {
+                showPasskeyInput = true;
+            } else if (requestedBeforeTokenFetch == 'otp') {
+                showOtpInput = true;
+            }
         } else {
             pwdErr = t.mfa.passwordInvalid;
         }
     }
 
-    function mfaTokenRefresh() {
+    async function mfaTokenRefresh() {
+        requestedBeforeTokenFetch = undefined;
         mfaModToken = undefined;
+
+        if (isUserFederatedOnly) {
+            await fetchMfaToken({});
+            if (!mfaModToken) {
+                console.error('Could not fetch MFA mod token for federated user');
+            }
+            return;
+        }
+
         showModal = true;
     }
 
@@ -455,7 +512,7 @@
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {/if}
 
-        {#if showRegInput}
+        {#if showPasskeyInput}
             <p>
                 {t.mfa.webauthn.p1}
                 <br /><br />
@@ -468,7 +525,7 @@
             </p>
 
             <div class="pkReg">
-                <Form action="" onSubmit={handleRegister}>
+                <Form action="" onSubmit={handleRegisterPasskey}>
                     <PasskeyTypeSelect bind:residentKey />
                     <Input
                         bind:ref={refInput}
@@ -485,7 +542,7 @@
                         <Button type="submit">
                             {t.mfa.register}
                         </Button>
-                        <Button level={3} onclick={() => (showRegInput = false)}
+                        <Button level={3} onclick={() => (showPasskeyInput = false)}
                             >{t.common.cancel}</Button
                         >
                     </div>
@@ -493,7 +550,10 @@
             </div>
         {:else}
             <div class="regNewBtn">
-                <Button level={passkeys.length === 0 ? 1 : 2} onclick={onRegisterClick}>
+                <Button
+                    level={passkeys.length === 0 ? 1 : 2}
+                    onclick={() => onRegisterPasskeyClick('passkey')}
+                >
                     {t.mfa.webauthn.registerNew}
                 </Button>
             </div>
