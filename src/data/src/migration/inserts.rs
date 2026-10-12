@@ -1373,6 +1373,15 @@ pub async fn recent_passwords(
 }
 
 pub async fn refresh_tokens(data_before: Vec<RefreshToken>) -> Result<(), ErrorResponse> {
+    // Only verified MFA evidence may be imported, see `MfaMethod::Legacy`.
+    let data_before = data_before
+        .into_iter()
+        .map(|mut b| {
+            b.mfa_method = b.mfa_method.verified_or_none();
+            b.is_mfa = b.mfa_method.is_mfa();
+            b
+        })
+        .collect::<Vec<_>>();
     let sql_1 = "DELETE FROM refresh_tokens";
     let sql_2 = r#"
 INSERT INTO refresh_tokens
@@ -1534,6 +1543,15 @@ VALUES ($1, $2, $3, $4, $5)"#;
 }
 
 pub async fn sessions(data_before: Vec<Session>) -> Result<(), ErrorResponse> {
+    // Only verified MFA evidence may be imported, see `MfaMethod::Legacy`.
+    let data_before = data_before
+        .into_iter()
+        .map(|mut b| {
+            b.mfa_method = b.mfa_method.verified_or_none();
+            b.is_mfa = b.mfa_method.is_mfa();
+            b
+        })
+        .collect::<Vec<_>>();
     let sql_1 = "DELETE FROM sessions";
     let sql_2 = r#"
 INSERT INTO

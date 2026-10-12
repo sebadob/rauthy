@@ -1,6 +1,5 @@
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
-    TokenSet,
+    AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes, TokenSet,
 };
 use actix_web::HttpRequest;
 use actix_web::http::header::{
@@ -176,10 +175,14 @@ pub async fn grant_type_authorization_code(
     user.check_expired()?;
 
     let session = if let Some(sid) = code.session_id.clone() {
-        Some(Session::find(sid).await?)
+        let session = Session::find(sid).await?;
+        validate_session_user(&session, &code.user_id)?;
+        Some(session)
     } else {
         None
     };
+    // The session is bound to `code.user_id` at this point, and its MFA proof always belongs to
+    // the session user (see `Session::set_authenticated()`).
     let mfa_method = session
         .as_ref()
         .map(|session| session.mfa_method)
@@ -194,7 +197,6 @@ pub async fn grant_type_authorization_code(
         Some(TokenScopes::new(code.scopes.join(" "))),
         code.session_id.clone().map(SessionId),
         resource,
-        AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
         mfa_method,
     )
@@ -223,4 +225,46 @@ pub async fn grant_type_authorization_code(
     // No location check here, this is done in `POST /authorize` already
 
     Ok((token_set, headers))
+}
+
+/// The session an authorization code has been issued for must still be linked to the code's
+/// user. If the same session has been used for a login as another user in the meantime, the code
+/// must not be redeemed: the session's MFA proof would belong to the other user, and redeeming
+/// the code would switch the session identity back.
+fn validate_session_user(session: &Session, code_user_id: &str) -> Result<(), ErrorResponse> {
+    if session.user_id.as_deref() == Some(code_user_id) {
+        Ok(())
+    } else {
+        warn!(
+            session_user_id = ?session.user_id,
+            code_user_id,
+            "authorization code user does not match the session user"
+        );
+        Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "The session is not linked to the user of this authorization code",
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_session_user;
+    use rauthy_data::entity::sessions::{MfaMethod, Session};
+    use std::time::Duration;
+
+    #[test]
+    fn code_redemption_requires_the_session_user() {
+        let mut session = Session::new(Duration::from_secs(60), None);
+        // not linked to any user yet
+        assert!(validate_session_user(&session, "user_a").is_err());
+
+        session.user_id = Some("user_a".to_string());
+        assert!(validate_session_user(&session, "user_a").is_ok());
+
+        // the same session has been used for an MFA login as another user in the meantime
+        session.user_id = Some("user_b".to_string());
+        session.mfa_method = MfaMethod::Otp;
+        assert!(validate_session_user(&session, "user_a").is_err());
+    }
 }

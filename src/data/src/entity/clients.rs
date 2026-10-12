@@ -3319,7 +3319,8 @@ pub(crate) mod tests {
         assert!(client.validate_mfa_method(MfaMethod::Otp).is_ok());
         assert!(client.validate_mfa_method(MfaMethod::WebAuthn).is_ok());
         assert!(client.validate_mfa_method(MfaMethod::Provider).is_ok());
-        assert!(client.validate_mfa_method(MfaMethod::Legacy).is_ok());
+        // the pre-tracking `is_mfa` flag is no reliable proof
+        assert!(client.validate_mfa_method(MfaMethod::Legacy).is_err());
 
         client.force_mfa = false;
         assert!(client.validate_mfa_method(MfaMethod::None).is_ok());
