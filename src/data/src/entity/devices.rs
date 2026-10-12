@@ -145,6 +145,32 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
         Ok(())
     }
 
+    /// Moves the `refresh_exp` forward after a device refresh token rotation.
+    ///
+    /// Returns `false` if the device does not exist anymore or its refresh tokens have been
+    /// revoked via `delete_refresh_tokens()`. This acts as the fence for a concurrent revocation:
+    /// a replacement token published before the revocation is deleted by it, and a replacement
+    /// published after it will see `false` here and must be deleted by the caller.
+    pub async fn extend_refresh_exp(
+        device_id: &str,
+        user_id: &str,
+        refresh_exp: i64,
+    ) -> Result<bool, ErrorResponse> {
+        let sql = r#"
+UPDATE devices SET refresh_exp = $1
+WHERE id = $2 AND user_id = $3 AND refresh_exp IS NOT NULL"#;
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(refresh_exp, device_id, user_id))
+                .await?
+        } else {
+            DB::pg_execute(sql, &[&refresh_exp, &device_id, &user_id]).await?
+        };
+
+        Ok(rows_affected == 1)
+    }
+
     pub async fn update_name(
         device_id: &str,
         user_id: &str,

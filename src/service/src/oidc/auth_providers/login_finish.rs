@@ -10,7 +10,6 @@ use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, NewFederatedUserCreated,
-    ProviderMfaLogin,
 };
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::{MfaMethod, Session};
@@ -94,16 +93,12 @@ pub async fn login_finish<'a>(
 
     let require_webauthn = user.has_webauthn_enabled();
     let require_otp = user.has_otp_enabled().await;
-    // Only an MFA verified by the upstream provider counts as MFA right away. Local factors mark
-    // the session as MFA once their ceremony has succeeded.
-    if provider_mfa_login == ProviderMfaLogin::Yes {
-        session.is_mfa = true;
-        session.mfa_method = MfaMethod::Provider;
-    } else {
-        session.is_mfa = false;
-        session.mfa_method = MfaMethod::None;
-    }
-    session.upsert().await?;
+    // A fresh upstream login must never inherit MFA proof from an earlier login on the same
+    // session. Nothing is persisted here: `finish_authorize()` validates the client request first
+    // and only then links the session to `user` together with the provider MFA proof, so that a
+    // failed callback can never strengthen whatever the session has been authenticated as before.
+    session.is_mfa = false;
+    session.mfa_method = MfaMethod::None;
 
     let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;

@@ -316,6 +316,7 @@ pub(crate) async fn finish_authorize(
     user_needs_mfa: Option<&mut bool>,
     provider_mfa_login: Option<ProviderMfaLogin>,
 ) -> Result<AuthStep, ErrorResponse> {
+    let is_provider_mfa = provider_mfa_login == Some(ProviderMfaLogin::Yes);
     client.validate_enabled()?;
     client
         .validate_mfa(&user, provider_mfa_login)
@@ -457,8 +458,14 @@ pub(crate) async fn finish_authorize(
 
         Ok(AuthStep::AwaitOtpCode(step))
     } else {
-        // password only account
-        session.set_authenticated(&user).await?;
+        // password only account, or MFA verified by the upstream provider
+        if is_provider_mfa {
+            session
+                .set_authenticated_with_mfa(&user, MfaMethod::Provider)
+                .await?;
+        } else {
+            session.set_authenticated(&user).await?;
+        }
 
         if need_tos_accept {
             let code_await = AuthCodeToSAwait {
