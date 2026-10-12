@@ -1,12 +1,10 @@
 # Changelog
 
-## Unreleased
+## UNRELEASED
 
 ### Changes
 
 #### Passkey Types
-
-[#1792](https://github.com/sebadob/rauthy/issues/1792)
 
 Users often added a *Default* Passkey and then could not log in with the *Passkey* button on the
 login page, which only finds Resident Keys. The UI explains this better now:
@@ -29,6 +27,28 @@ registered Passkeys are not changed.
 # overwritten by: WEBAUTHN_PASSKEY_REG_TYPE
 passkey_reg_type = 'default resident_key'
 ```
+
+[#1792](https://github.com/sebadob/rauthy/issues/1792)
+
+#### MFA Modification for Federated Users
+
+It was not really a bug before, but also no good UX either.
+
+When you created a fedarated-only user, meaning direct login + user creation through an upstream
+provder, your account does neither have a password nor a passkey, and it only accessible through the
+upstream provider login. That was fine, and you could have initialized it with local credentials via
+the "request password reset" button from the Account Dashboard. You then have the option to
+initialize with either Password or Passkey.
+
+The issue was, that these users still saw the *MFA* tab as the default. But, since they were unable
+to authenticate locally, they had no possibility to reqeust an MFA Mod Token to add MFA keys. The
+logic for requesting these was simple: When the user has MFA active, request MFA authentication, and
+password otherwise. Federated-only users do have none of these. This version makes it possible for
+such users that an MFA Mod Token is granted without any additional authentication for adding the
+very first MFA key in this special case. Without this special handling, it was impossible to use the
+MFA tab in any meaningful way for these users.
+
+[#1798](https://github.com/sebadob/rauthy/pull/1798)
 
 ## v0.37.1
 
