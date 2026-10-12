@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::sessions::MfaMethod;
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
@@ -15,6 +16,8 @@ pub struct RefreshTokenDevice {
     pub exp: i64,
     pub scope: Option<String>,
     pub access_token_jti: Option<String>,
+    #[column(parse)]
+    pub mfa_method: MfaMethod,
 }
 
 impl Debug for RefreshTokenDevice {
@@ -22,19 +25,21 @@ impl Debug for RefreshTokenDevice {
         write!(
             f,
             "RefreshTokenDevice {{ id: {}(...), device_id: {}, nbf: {}, exp: {}, scope: {:?}, \
-            access_token_jti: {:?} }}",
+            access_token_jti: {:?}, mfa_method: {} }}",
             &self.id[..5],
             self.device_id,
             self.nbf,
             self.exp,
             self.scope,
             self.access_token_jti,
+            self.mfa_method.as_str(),
         )
     }
 }
 
 // CRUD
 impl RefreshTokenDevice {
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         id: String,
         device_id: String,
@@ -42,6 +47,7 @@ impl RefreshTokenDevice {
         nbf: i64,
         exp: i64,
         scope: Option<String>,
+        mfa_method: MfaMethod,
         access_token_jti: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let rt = Self {
@@ -52,6 +58,7 @@ impl RefreshTokenDevice {
             exp,
             scope,
             access_token_jti,
+            mfa_method,
         };
 
         rt.save().await?;
@@ -149,10 +156,11 @@ impl RefreshTokenDevice {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO refresh_tokens_devices
-(id, device_id, user_id, nbf, exp, scope, access_token_jti)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+(id, device_id, user_id, nbf, exp, scope, access_token_jti, mfa_method)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT(id) DO UPDATE
-SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_jti = $7"#;
+SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_jti = $7,
+    mfa_method = $8"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -165,7 +173,8 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_j
                         self.nbf,
                         self.exp,
                         self.scope.clone(),
-                        self.access_token_jti.clone()
+                        self.access_token_jti.clone(),
+                        self.mfa_method.as_str()
                     ),
                 )
                 .await?;
@@ -180,6 +189,7 @@ SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_j
                     &self.exp,
                     &self.scope,
                     &self.access_token_jti,
+                    &self.mfa_method.as_str(),
                 ],
             )
             .await?;

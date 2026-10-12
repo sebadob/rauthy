@@ -1,4 +1,5 @@
 use crate::database::{Cache, DB};
+use crate::entity::sessions::MfaMethod;
 use chrono::{DateTime, Utc};
 use hiqlite::macros::params;
 use rauthy_api_types::users::DeviceResponse;
@@ -203,6 +204,11 @@ pub struct DeviceAuthCode {
     // the given interval and gets 'slow_down' from us. If this happens
     // too many times, the IP will be blacklisted.1
     pub warnings: u8,
+    /// MFA proof copied from the browser session which approved this request.
+    /// Appended last for cache compatibility: in-flight grants from an older version decode
+    /// with `MfaMethod::None`.
+    #[serde(default)]
+    pub mfa_method: MfaMethod,
 }
 
 impl DeviceAuthCode {
@@ -226,6 +232,7 @@ impl DeviceAuthCode {
             nonce,
             client_secret,
             warnings: 0,
+            mfa_method: MfaMethod::None,
         };
 
         DB::hql()
@@ -315,5 +322,48 @@ impl DeviceAuthCode {
             RauthyConfig::get().pub_url_with_scheme,
             self.user_code()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rauthy_common::utils::{deserialize, serialize};
+
+    /// Exact pre-method-tracking cache shape. An approved grant created by an older process
+    /// during an upgrade must decode without any MFA proof, so that `force_mfa` fails closed.
+    #[derive(Debug, Serialize)]
+    struct LegacyDeviceAuthCode {
+        client_id: String,
+        device_code: String,
+        verified_by: Option<String>,
+        exp: DateTime<Utc>,
+        last_poll: DateTime<Utc>,
+        scopes: Option<String>,
+        nonce: Option<String>,
+        client_secret: Option<String>,
+        warnings: u8,
+    }
+
+    #[test]
+    fn legacy_device_grant_payload_decodes_without_mfa_proof() {
+        let now = Utc::now();
+        let bytes = serialize(&LegacyDeviceAuthCode {
+            client_id: "client".to_string(),
+            device_code: "device-code".to_string(),
+            verified_by: Some("user".to_string()),
+            exp: now,
+            last_poll: now,
+            scopes: Some("openid".to_string()),
+            nonce: None,
+            client_secret: None,
+            warnings: 0,
+        })
+        .unwrap();
+
+        let code = deserialize::<DeviceAuthCode>(&bytes).unwrap();
+        assert_eq!(code.verified_by.as_deref(), Some("user"));
+        assert_eq!(code.warnings, 0);
+        assert_eq!(code.mfa_method, MfaMethod::None);
     }
 }

@@ -138,6 +138,8 @@ pub async fn validate_and_refresh_token(
     client.validate_user_groups(&user)?;
 
     let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
+    // the verified MFA method of the original login is carried over to the new refresh token
+    let mfa_method;
     let (rt_scope, session_id, pending_refresh) = if let Some(device_id) = &claims.common.did {
         let rt = RefreshTokenDevice::find_delete(validation_str)
             .await
@@ -167,6 +169,7 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
+        mfa_method = rt.mfa_method;
         (rt.scope, None, None)
     } else {
         let mut rt = RefreshToken::find_opt(validation_str)
@@ -195,6 +198,7 @@ pub async fn validate_and_refresh_token(
 
         let session_id = rt.session_id.clone().map(SessionId);
         let scope = rt.scope.take();
+        mfa_method = rt.mfa_method;
         let pending = session_id.as_ref().map(|_| rt);
         (scope, session_id, pending)
     };
@@ -230,6 +234,7 @@ pub async fn validate_and_refresh_token(
         AuthCodeFlow::No,
         // TODO I guess we need to provide the ID if this is a refresh from a device flow?
         DeviceCodeFlow::No,
+        mfa_method,
     )
     .await;
     let ts = match result {

@@ -175,6 +175,16 @@ pub async fn grant_type_authorization_code(
     user.check_enabled()?;
     user.check_expired()?;
 
+    let session = if let Some(sid) = code.session_id.clone() {
+        Some(Session::find(sid).await?)
+    } else {
+        None
+    };
+    let mfa_method = session
+        .as_ref()
+        .map(|session| session.mfa_method)
+        .unwrap_or_default();
+
     let token_set = TokenSet::from_user(
         &user,
         &client,
@@ -186,12 +196,12 @@ pub async fn grant_type_authorization_code(
         resource,
         AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
+        mfa_method,
     )
     .await?;
 
     // update session metadata
-    if let Some(sid) = code.session_id.clone() {
-        let mut session = Session::find(sid).await?;
+    if let Some(mut session) = session {
         session.set_authenticated(&user).await?;
     }
 

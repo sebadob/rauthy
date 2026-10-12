@@ -9,6 +9,7 @@ use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::scopes::Scope;
+use rauthy_data::entity::sessions::MfaMethod;
 use rauthy_data::entity::user_attr::UserAttrValueEntity;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
@@ -490,7 +491,7 @@ impl TokenSet {
         auth_time: AuthTime,
         access_token_lifetime: Duration,
         scope: Option<TokenScopes<'_>>,
-        is_mfa: bool,
+        mfa_method: MfaMethod,
         device_code_flow: DeviceCodeFlow,
         sid: Option<SessionId>,
         resource: Option<&str>,
@@ -562,6 +563,7 @@ impl TokenSet {
                 nbf.timestamp(),
                 exp,
                 scope.map(|s| s.0.into_owned()),
+                mfa_method,
                 Some(jti.0),
             )
             .await?;
@@ -572,7 +574,7 @@ impl TokenSet {
                 nbf.timestamp(),
                 exp,
                 scope.map(|s| s.0.into_owned()),
-                is_mfa,
+                mfa_method,
                 sid.map(|s| s.0),
                 Some(jti.0),
             )
@@ -708,6 +710,7 @@ impl TokenSet {
         resource: Option<String>,
         auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
+        mfa_method: MfaMethod,
     ) -> Result<Self, ErrorResponse> {
         let scopes = scopes.map(|s| s.0);
         let scope = match scopes.as_deref() {
@@ -830,7 +833,7 @@ impl TokenSet {
                     auth_time,
                     Duration::from_secs(lifetime as u64),
                     scopes.map(TokenScopes::new),
-                    user.has_webauthn_enabled(),
+                    mfa_method,
                     device_code_flow,
                     sid,
                     resource.as_deref(),
