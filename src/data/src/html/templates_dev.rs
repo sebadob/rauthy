@@ -90,6 +90,7 @@ impl HtmlTemplate {
             // "tpl_client_name" => todo!("extract info from referrer?"),
             // "tpl_client_url" => todo!("extract info from referrer?"),
             "tpl_otp_length" => Ok((Self::OtpLength(RauthyConfig::get().vars.otp.length), None)),
+            "tpl_passkey_reg_type" => Ok((Self::PasskeyRegType, None)),
             "tpl_restricted_email_domain" => Ok((
                 Self::RestrictedEmailDomain(
                     RauthyConfig::get()

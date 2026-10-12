@@ -27,8 +27,7 @@
     import OtpRequest from '$lib5/OtpRequest.svelte';
     import InputOtp from '$lib5/form/InputOtp.svelte';
     import IconCheck from '$icons/IconCheck.svelte';
-    import Options from '$lib/Options.svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
+    import PasskeyTypeSelect from '$lib/PasskeyTypeSelect.svelte';
 
     let { user = $bindable() }: { user: UserResponse } = $props();
 
@@ -59,7 +58,7 @@
     let closeModal: undefined | (() => void) = $state();
 
     let passkeys: PasskeyResponse[] = $state([]);
-    let passkeyType = $state(t.account.passkeys.types[0]);
+    let residentKey = $state(false);
     let mfaModToken: undefined | MfaModTokenResponse = $state();
     let mfaModSecs: undefined | number = $state();
     let interval: undefined | number;
@@ -180,8 +179,7 @@
             undefined,
             undefined,
             tokenId,
-            // the 2nd type is the resident key
-            passkeyType === t.account.passkeys.types[1],
+            residentKey,
         );
         if (res.error) {
             console.log(res.error.toLowerCase());
@@ -471,16 +469,7 @@
 
             <div class="pkReg">
                 <Form action="" onSubmit={handleRegister}>
-                    <LabeledValue label={t.account.passkeys.type}>
-                        <Options
-                            options={[t.account.passkeys.types[0], t.account.passkeys.types[1]]}
-                            bind:value={passkeyType}
-                            ariaLabel={t.account.passkeys.type}
-                        />
-                        {#if passkeyType === t.account.passkeys.types[1]}
-                            <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
-                        {/if}
-                    </LabeledValue>
+                    <PasskeyTypeSelect bind:residentKey />
                     <Input
                         bind:ref={refInput}
                         bind:value={passkeyName}
@@ -493,7 +482,7 @@
                         required
                     />
                     <div class="regBtns">
-                        <Button type="submit" isDisabled={passkeyType === '-'}>
+                        <Button type="submit">
                             {t.mfa.register}
                         </Button>
                         <Button level={3} onclick={() => (showRegInput = false)}
@@ -711,11 +700,6 @@
         background-color: hsla(var(--bg-high) / 0.25);
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
-    }
-
-    .rkWarn {
-        color: hsl(var(--error));
-        font-size: 0.9rem;
     }
 
     .success {

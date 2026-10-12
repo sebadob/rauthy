@@ -121,9 +121,15 @@ export const I18nNl: I18n = {
             missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
-            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
-                the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+            rkWarning: `LET OP: Hoewel een Resident Key gebruikt kan worden om direct in te loggen
+                zonder het e-mailadres op te geven, is er voor elke applicatie een extra opslagplek
+                nodig. Zorg ervoor dat er genoeg ruimte over is. Om van een bestaande Passkey een
+                Resident Key te maken, verwijder je hem eerst en voeg je hem daarna opnieuw toe.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'Je moet je e-mailadres invoeren voordat je met deze Passkey kunt inloggen.',
+                'Werkt met de Passkey-knop op de inlogpagina, zonder je e-mailadres in te voeren.',
+            ],
         },
         passwordConfirm: 'Wachtwoord bevestigen',
         passwordCurr: 'Huidig wachtwoord',
@@ -191,6 +197,8 @@ export const I18nNl: I18n = {
         needsUserUpdate: `Sommige informatie voor dit account ontbreekt. U moet deze waarden
             bijwerken voordat u kunt doorgaan met inloggen.`,
         orLoginWith: 'of inloggen met',
+        passkeyNotDiscovered: `Passkeys die niet als Resident Key zijn toegevoegd, kunnen op deze
+            manier niet gevonden worden. Voer in plaats daarvan je e-mailadres in.`,
         password: 'Wachtwoord',
         passwordExpired: 'Wachtwoord is verlopen. Er is een e-mail met een resetlink verstuurd.',
         passwordForgotten: 'Wachtwoord vergeten?',
