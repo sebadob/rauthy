@@ -58,6 +58,7 @@ pub async fn grant_type_password(
         client.validate_secret(secret, &req).await?;
     }
     client.validate_flow(GrantType::Password)?;
+    validate_password_grant_mfa(&client)?;
 
     let mut headers = Vec::new();
     let dpop_fingerprint =
@@ -173,5 +174,30 @@ pub async fn grant_type_password(
 
             Err(err)
         }
+    }
+}
+
+/// The password grant can never provide an MFA proof, so it must be rejected for `force_mfa`
+/// clients.
+fn validate_password_grant_mfa(client: &Client) -> Result<(), ErrorResponse> {
+    client.validate_mfa_method(MfaMethod::None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_password_grant_mfa;
+    use rauthy_data::entity::clients::Client;
+
+    #[test]
+    fn password_grant_rejects_force_mfa_without_an_interactive_proof() {
+        let mut client = Client {
+            id: "password-grant-client".to_string(),
+            force_mfa: true,
+            ..Default::default()
+        };
+        assert!(validate_password_grant_mfa(&client).is_err());
+
+        client.force_mfa = false;
+        assert!(validate_password_grant_mfa(&client).is_ok());
     }
 }
