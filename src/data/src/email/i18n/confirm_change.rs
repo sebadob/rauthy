@@ -13,11 +13,13 @@ impl I18nEmailConfirmChange<'_> {
         match lang {
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
+            Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -42,6 +44,14 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
+    fn build_es() -> Self {
+        Self {
+            subject: "Cambio de correo electrónico confirmado para",
+            msg: "Su dirección de correo electrónico se ha cambiado correctamente a:",
+            msg_from_admin: "Esta acción la ha realizado un administrador.",
+        }
+    }
+
     fn build_fr() -> Self {
         Self {
             subject: "Changement d'adresse e-mail confirmé pour",
@@ -63,6 +73,14 @@ impl I18nEmailConfirmChange<'_> {
             subject: "E-Mail wijziging bevestigd voor",
             msg: "Uw e-mailadres is succesvol gewijzigd naar:",
             msg_from_admin: "Deze actie is uitgevoerd door een beheerder.",
+        }
+    }
+
+    fn build_pt() -> Self {
+        Self {
+            subject: "Alteração de e-mail confirmada para",
+            msg: "O seu endereço de e-mail foi alterado com sucesso para:",
+            msg_from_admin: "Esta ação foi realizada por um administrador.",
         }
     }
 

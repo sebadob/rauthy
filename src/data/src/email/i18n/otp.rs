@@ -25,11 +25,13 @@ impl I18nEmailOtp<'_> {
         match lang {
             Language::De => (&tpls.de).into(),
             Language::En => (&tpls.en).into(),
+            Language::Es => (&tpls.es).into(),
             Language::Fr => (&tpls.fr).into(),
             Language::Ja => (&tpls.ja).into(),
             Language::Ko => (&tpls.ko).into(),
             Language::Nb => (&tpls.nb).into(),
             Language::Nl => (&tpls.nb).into(),
+            Language::Pt => (&tpls.pt).into(),
             Language::Ru => (&tpls.ru).into(),
             Language::Uk => (&tpls.uk).into(),
             Language::ZhHans => (&tpls.zhhans).into(),

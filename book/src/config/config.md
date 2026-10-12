@@ -1386,6 +1386,9 @@ smtp_url = 'localhost'
 # overwritten by: TZ_FMT_EN
 #en = '%m/%d/%Y %T (%Z)'
 # default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_ES
+#es = '%d/%m/%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
 # default: '%Y/%m/%d %T (%Z)'
@@ -1400,6 +1403,9 @@ smtp_url = 'localhost'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_NO
 #no = '%d.%m.%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_PT
+#pt = '%d/%m/%Y %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_RU
 #ru = '%d.%m.%Y %T (%Z)'
@@ -2096,13 +2102,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ja ko nb nl ru uk zhhans
+# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'fr', 'ja', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ja ko nb nl ru uk zhhans
+# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ja', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -2632,7 +2638,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de fr ja ko nb nl ru uk zh_hans
+# one of: en de es fr ja ko nb nl pt ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset
