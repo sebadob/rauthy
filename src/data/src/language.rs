@@ -51,6 +51,20 @@ impl Language {
             Language::ZhHans => "zhhans",
         }
     }
+
+    /// The BCP 47 tag for `<html lang>`, which browsers, screen readers and
+    /// spell checkers read. It names the region or script where the bare code
+    /// would mean another variant: a bare `pt` is Brazilian Portuguese to
+    /// browsers and CLDR, and `zhhans` is not a valid tag. The frontend only
+    /// reads the first two characters back, so this changes nothing else.
+    pub fn html_lang(&self) -> &'static str {
+        match self {
+            Language::Es => "es-ES",
+            Language::Pt => "pt-PT",
+            Language::ZhHans => "zh-Hans",
+            _ => self.as_str(),
+        }
+    }
 }
 
 impl Display for Language {
@@ -154,5 +168,19 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::Uk => Self::Uk,
             Language::ZhHans => Self::ZhHans,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn html_lang_names_the_variant() {
+        assert_eq!(Language::Pt.html_lang(), "pt-PT");
+        assert_eq!(Language::Es.html_lang(), "es-ES");
+        assert_eq!(Language::ZhHans.html_lang(), "zh-Hans");
+        assert_eq!(Language::De.html_lang(), "de");
+        assert_eq!(Language::En.html_lang(), "en");
     }
 }
