@@ -5,7 +5,7 @@
     import InputPassword from '$lib/form/InputPassword.svelte';
     import Button from '$lib/button/Button.svelte';
     import Input from '$lib/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
+    import { PATTERN_KV_NAME } from '$utils/patterns';
     import { useI18n } from '$state/i18n.svelte';
     import { useI18nAdmin } from '$state/i18n_admin.svelte';
     import { slide } from 'svelte/transition';
@@ -91,7 +91,7 @@
         label={ta.common.name}
         placeholder={ta.common.name}
         bind:value={name}
-        pattern={PATTERN_GROUP}
+        pattern={PATTERN_KV_NAME}
     />
     <div class="save" transition:slide={{ duration: 150 }}>
         <Button type="submit">{t.common.save}</Button>

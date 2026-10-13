@@ -1,5 +1,5 @@
 export interface ScopeRequest {
-    /// Validation: PATTERN_ROLE_SCOPE
+    /// Validation: PATTERN_SCOPE
     scope: string;
     /// Validation: PATTERN_ATTR
     attr_include_access?: string[];

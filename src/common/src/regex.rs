@@ -11,8 +11,10 @@ pub static RE_API_KEY: LazyLock<Regex> =
 pub static RE_APP_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{12}$").unwrap());
 pub static RE_ATTR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/]{2,32}$").unwrap());
-pub static RE_ATTR_DESC: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap());
+// Human-readable description. Allows letters of any script like user and client names do.
+pub static RE_ATTR_DESC: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/\s]--[\x{2139}\x{FE0F}]]{0,128}$").unwrap()
+});
 pub static RE_BASE64: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap());
 pub static RE_BASE64_NO_PAD: LazyLock<Regex> =
@@ -45,9 +47,20 @@ pub static RE_LINUX_HOSTNAME: LazyLock<Regex> =
 // slightly modified from the original: at least 2 characters and max 62 (we will apply a prefix)
 pub static RE_LINUX_USERNAME: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z][a-z0-9_-]{1,61}$").unwrap());
-pub static RE_ROLES_SCOPES: LazyLock<Regex> =
+// Group and role names are shown to humans and may use letters of any script, like user and
+// client names. They are still restricted to letters, marks, numbers and a few separators, so
+// emojis and other symbols are rejected.
+pub static RE_GROUPS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/,:*\s]--[\x{2139}\x{FE0F}]]{2,64}$").unwrap()
+});
+pub static RE_ROLES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/,:*.]--[\x{2139}\x{FE0F}]]{2,64}$").unwrap()
+});
+// OAuth scopes must stay ASCII (RFC 6749 section 3.3).
+pub static RE_SCOPES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*.]{2,64}$").unwrap());
-pub static RE_GROUPS: LazyLock<Regex> =
+// ASCII-only names, e.g. for KV namespaces and access keys, which are used in URL paths.
+pub static RE_NAME_ASCII: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*\s]{2,64}$").unwrap());
 pub static RE_KV_KEY: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~]{2,64}$").unwrap());
@@ -176,5 +189,77 @@ mod tests {
         assert!(!RE_ATPROTO_HANDLE.is_match("@did:plc:abc123"));
         assert!(!RE_ATPROTO_HANDLE.is_match("example..com"));
         assert!(!RE_ATPROTO_HANDLE.is_match("@example."));
+    }
+
+    #[test]
+    fn test_group_and_role_names_allow_any_script() {
+        for name in [
+            "admins",
+            "app:users",
+            "営業部",
+            "Équipe Ventes",
+            "отдел-продаж",
+        ] {
+            assert!(RE_GROUPS.is_match(name), "group '{name}' should be valid");
+        }
+        for name in ["admin", "rauthy_admin:営業部", "編集者", "app.reader"] {
+            assert!(RE_ROLES.is_match(name), "role '{name}' should be valid");
+        }
+        for name in ["x", "🔥team", "<script>", "group\"quote", "a&b"] {
+            assert!(
+                !RE_GROUPS.is_match(name),
+                "group '{name}' should be invalid"
+            );
+            assert!(!RE_ROLES.is_match(name), "role '{name}' should be invalid");
+        }
+        // keycap emojis are a digit plus combining marks and must be rejected as well
+        for name in ["1\u{20E3}", "1\u{FE0F}\u{20E3}", "営業部1\u{FE0F}\u{20E3}"] {
+            assert!(
+                !RE_GROUPS.is_match(name),
+                "group '{name}' should be invalid"
+            );
+            assert!(!RE_ROLES.is_match(name), "role '{name}' should be invalid");
+            assert!(
+                !RE_ATTR_DESC.is_match(name),
+                "desc '{name}' should be invalid"
+            );
+        }
+        // the information emoji is a lowercase letter plus the emoji variation selector
+        for name in ["\u{2139}\u{FE0F}", "team\u{2139}\u{FE0F}", "1\u{FE0F}"] {
+            assert!(
+                !RE_GROUPS.is_match(name),
+                "group '{name}' should be invalid"
+            );
+            assert!(!RE_ROLES.is_match(name), "role '{name}' should be invalid");
+            assert!(
+                !RE_ATTR_DESC.is_match(name),
+                "desc '{name}' should be invalid"
+            );
+        }
+        // combining voiced sound marks are fine
+        assert!(RE_GROUPS.is_match("か\u{3099}き"));
+        // roles never allowed whitespace
+        assert!(!RE_ROLES.is_match("two words"));
+    }
+
+    #[test]
+    fn test_scopes_and_ascii_names_stay_ascii() {
+        assert!(RE_SCOPES.is_match("openid"));
+        assert!(RE_SCOPES.is_match("app:read"));
+        assert!(!RE_SCOPES.is_match("営業部"));
+        assert!(!RE_SCOPES.is_match("Équipe"));
+
+        assert!(RE_NAME_ASCII.is_match("my namespace"));
+        assert!(!RE_NAME_ASCII.is_match("営業部"));
+    }
+
+    #[test]
+    fn test_attr_desc_allows_any_script() {
+        assert!(RE_ATTR_DESC.is_match(""));
+        assert!(RE_ATTR_DESC.is_match("Department"));
+        assert!(RE_ATTR_DESC.is_match("所属部署"));
+        assert!(RE_ATTR_DESC.is_match("Numéro de téléphone"));
+        assert!(!RE_ATTR_DESC.is_match("🔥"));
+        assert!(!RE_ATTR_DESC.is_match("<b>bold</b>"));
     }
 }

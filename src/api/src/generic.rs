@@ -639,7 +639,8 @@ pub async fn get_whoami(req: HttpRequest) -> String {
             {
                 "<hidden>"
             } else {
-                v.to_str().unwrap_or_default()
+                // `to_str()` rejects non-ASCII values, which can be valid UTF-8, e.g. user names
+                std::str::from_utf8(v.as_bytes()).unwrap_or_default()
             };
             let _ = writeln!(s, "{key}: {value}, ");
         }
