@@ -2894,6 +2894,15 @@ storage_type = 'db'
 # overwritten_by: USER_VALUES_REVALIDATE_DURING_LOGIN
 #revalidate_during_login = false
 
+# The `name` claim in the `id_token` and in `/userinfo` is built as
+# `given_name family_name`, like "Taro Yamada". Set this to `true`
+# to put the family name first, like "Yamada Taro", which is the
+# usual order in e.g. Japanese, Chinese or Korean.
+#
+# default: false
+# overwritten by: USER_VALUES_NAME_ORDER_REVERSE
+#name_order_reverse = false
+
 [user_values.preferred_username]
 
 # If the `preferred_username` is not set for a given user, the

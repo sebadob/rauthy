@@ -62,6 +62,18 @@ MFA tab in any meaningful way for these users.
 
 [#1798](https://github.com/sebadob/rauthy/pull/1798)
 
+#### Name Order for the `name` Claim
+
+The `name` claim was always built as `given_name family_name`. In Japanese, Chinese and Korean, the
+family name comes first, so applications showing `name` displayed it the wrong way around. The new,
+optional `user_values.name_order_reverse` (`USER_VALUES_NAME_ORDER_REVERSE`) puts the family name
+first, both in the `id_token` and in `/userinfo`. The default keeps the current order.
+
+```toml
+[user_values]
+name_order_reverse = true
+```
+
 ## v0.37.1
 
 ### Security

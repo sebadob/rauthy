@@ -1249,6 +1249,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 phone: UserValueConfigValue::Optional,
                 tz: UserValueConfigValue::Optional,
                 revalidate_during_login: false,
+                name_order_reverse: false,
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
@@ -3769,6 +3770,14 @@ impl Vars {
         ) {
             self.user_values.revalidate_during_login = v;
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_values",
+            "name_order_reverse",
+            "USER_VALUES_NAME_ORDER_REVERSE",
+        ) {
+            self.user_values.name_order_reverse = v;
+        }
 
         let mut pref_username = t_table(&mut table, "preferred_username");
 
@@ -4597,6 +4606,7 @@ pub struct VarsUserValuesConfig {
     pub phone: UserValueConfigValue,
     pub tz: UserValueConfigValue,
     pub revalidate_during_login: bool,
+    pub name_order_reverse: bool,
     pub preferred_username: VarsUserPreferredUsername,
 }
 
