@@ -21,7 +21,6 @@ pub(super) fn requires_uv(account_type: AccountType, force_uv: bool) -> bool {
             AccountType::New | AccountType::Passkey | AccountType::FederatedPasskey
         )
 }
-
 // Keep the ceremony type in the server-side cache so finish uses the policy chosen at start.
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) enum RegistrationState {
