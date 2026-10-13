@@ -17,7 +17,7 @@ use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaMethod, Session};
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
@@ -196,7 +196,13 @@ pub async fn post_authorize(
     let require_otp = !require_webauthn && user.has_otp_enabled().await;
     if require_webauthn || require_otp {
         *user_needs_mfa = true;
-        session.set_mfa(true).await?;
+    }
+    // A fresh credential login must never inherit MFA proof from an earlier login on the same
+    // session. The session is only marked as MFA once the 2nd factor ceremony has succeeded.
+    // A resident key login has already completed its WebAuthn ceremony on this very session.
+    if !is_rk_authenticated {
+        session.is_mfa = false;
+        session.mfa_method = MfaMethod::None;
     }
 
     finish_authorize(
@@ -252,12 +258,13 @@ pub async fn post_authorize_refresh(
     user.check_enabled()?;
     user.check_expired()?;
 
+    // Preserve the existing refresh preference while making `force_mfa` impossible to bypass
+    // with an older session that has no verified MFA.
+    let renew_mfa = RauthyConfig::get().vars.lifetimes.session_renew_mfa
+        || (client.id != "rauthy" && client.force_mfa && !session.mfa_method.is_mfa());
     // Webauthn overrides otp
-    let require_webauthn =
-        user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa;
-    let require_otp = !require_webauthn
-        && RauthyConfig::get().vars.lifetimes.session_renew_mfa
-        && user.has_otp_enabled().await;
+    let require_webauthn = user.has_webauthn_enabled() && renew_mfa;
+    let require_otp = !require_webauthn && renew_mfa && user.has_otp_enabled().await;
 
     finish_authorize(
         user,
@@ -309,6 +316,7 @@ pub(crate) async fn finish_authorize(
     user_needs_mfa: Option<&mut bool>,
     provider_mfa_login: Option<ProviderMfaLogin>,
 ) -> Result<AuthStep, ErrorResponse> {
+    let is_provider_mfa = provider_mfa_login == Some(ProviderMfaLogin::Yes);
     client.validate_enabled()?;
     client
         .validate_mfa(&user, provider_mfa_login)
@@ -450,8 +458,14 @@ pub(crate) async fn finish_authorize(
 
         Ok(AuthStep::AwaitOtpCode(step))
     } else {
-        // password only account
-        session.set_authenticated(&user).await?;
+        // password only account, or MFA verified by the upstream provider
+        if is_provider_mfa {
+            session
+                .set_authenticated_with_mfa(&user, MfaMethod::Provider)
+                .await?;
+        } else {
+            session.set_authenticated(&user).await?;
+        }
 
         if need_tos_accept {
             let code_await = AuthCodeToSAwait {

@@ -1,11 +1,12 @@
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenScopes, TokenSet,
+    AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenScopes, TokenSet,
 };
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::devices::DeviceEntity;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
@@ -16,7 +17,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use std::ops::Add;
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// Validates request parameters for the authorization and refresh endpoints
 pub async fn validate_auth_req_param(
@@ -138,6 +139,8 @@ pub async fn validate_and_refresh_token(
     client.validate_user_groups(&user)?;
 
     let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
+    // the verified MFA method of the original login is carried over to the new refresh token
+    let mfa_method;
     let (rt_scope, session_id, pending_refresh) = if let Some(device_id) = &claims.common.did {
         let rt = RefreshTokenDevice::find_delete(validation_str)
             .await
@@ -167,6 +170,31 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
+        // The device itself may have been revoked while its refresh token still existed.
+        let device = DeviceEntity::find(device_id).await.map_err(|_| {
+            ErrorResponse::new(ErrorResponseType::Forbidden, "Device has been revoked")
+        })?;
+        if device.user_id.as_deref() != Some(user.id.as_str())
+            || device.client_id != client.id
+            || device.refresh_exp.is_none()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Device has been revoked",
+            ));
+        }
+
+        // The token has been claimed already, so a denied refresh cannot be retried.
+        if let Err(err) = client.validate_mfa_method(rt.mfa_method) {
+            warn!(
+                client_id = client.id,
+                user_id = user.id,
+                "device refresh token without verified MFA rejected for a force_mfa client"
+            );
+            return Err(err);
+        }
+
+        mfa_method = rt.mfa_method;
         (rt.scope, None, None)
     } else {
         let mut rt = RefreshToken::find_opt(validation_str)
@@ -193,8 +221,21 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
+        // `force_mfa` may have been enabled after this refresh token chain has been started with
+        // a login without MFA. Such a chain must be revoked and needs an interactive MFA login.
+        if let Err(err) = client.validate_mfa_method(rt.mfa_method) {
+            warn!(
+                client_id = client.id,
+                user_id = user.id,
+                "refresh token without verified MFA rejected for a force_mfa client"
+            );
+            rt.delete().await?;
+            return Err(err);
+        }
+
         let session_id = rt.session_id.clone().map(SessionId);
         let scope = rt.scope.take();
+        mfa_method = rt.mfa_method;
         let pending = session_id.as_ref().map(|_| rt);
         (scope, session_id, pending)
     };
@@ -227,9 +268,14 @@ pub async fn validate_and_refresh_token(
         // carry the granted resource forward so the refreshed access token keeps its
         // audience binding; a refresh can never widen it
         claims.resource.map(String::from),
-        AuthCodeFlow::No,
-        // TODO I guess we need to provide the ID if this is a refresh from a device flow?
-        DeviceCodeFlow::No,
+        // A device refresh must stay a device token, so that it can still be revoked together
+        // with its device.
+        claims
+            .common
+            .did
+            .map(|did| DeviceCodeFlow::Yes(did.to_string()))
+            .unwrap_or(DeviceCodeFlow::No),
+        mfa_method,
     )
     .await;
     let ts = match result {
@@ -241,6 +287,11 @@ pub async fn validate_and_refresh_token(
             return Err(err);
         }
     };
+    if let Some(device_id) = &claims.common.did
+        && let Some(replacement) = ts.refresh_token.as_deref()
+    {
+        fence_device_refresh(device_id, &user.id, replacement).await?;
+    }
     if let Some(source) = pending_refresh {
         let replacement = ts.refresh_token.as_deref().ok_or_else(|| {
             ErrorResponse::new(ErrorResponseType::Internal, "Missing rotated refresh token")
@@ -263,4 +314,37 @@ pub async fn validate_and_refresh_token(
     }
 
     Ok((ts, dpop_nonce))
+}
+
+/// Publishes a rotated device refresh token on its device, or deletes it again if the device has
+/// been revoked concurrently.
+async fn fence_device_refresh(
+    device_id: &str,
+    user_id: &str,
+    replacement: &str,
+) -> Result<(), ErrorResponse> {
+    let replacement_id = replacement
+        .len()
+        .checked_sub(REFRESH_TOKEN_VALIDATION_LEN)
+        .and_then(|start| replacement.get(start..))
+        .ok_or_else(|| {
+            ErrorResponse::new(ErrorResponseType::Internal, "Invalid rotated refresh token")
+        })?;
+    let Some(rt) = RefreshTokenDevice::find_opt(replacement_id).await? else {
+        // already deleted by a concurrent revocation
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Device has been revoked",
+        ));
+    };
+
+    if DeviceEntity::extend_refresh_exp(device_id, user_id, rt.exp).await? {
+        Ok(())
+    } else {
+        rt.delete().await?;
+        Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Device has been revoked",
+        ))
+    }
 }

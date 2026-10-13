@@ -29,7 +29,7 @@ use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
 use crate::entity::scopes::Scope;
-use crate::entity::sessions::{Session, SessionState};
+use crate::entity::sessions::{MfaMethod, Session, SessionState};
 use crate::entity::theme::{ThemeCss, ThemeCssFull};
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
@@ -71,6 +71,51 @@ where
         })
         .collect::<Vec<_>>())
 }
+
+fn sqlite_column_exists(
+    conn: &rusqlite::Connection,
+    table: &str,
+    column: &str,
+) -> Result<bool, ErrorResponse> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let names = stmt.query_map([], |row| row.get::<_, String>(1))?;
+    for name in names {
+        if name? == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+async fn pg_column_exists(
+    cl: &tokio_postgres::Client,
+    table: &str,
+    column: &str,
+) -> Result<bool, ErrorResponse> {
+    Ok(cl
+        .query_one(
+            r#"SELECT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = $1 AND column_name = $2
+            )"#,
+            &[&table, &column],
+        )
+        .await?
+        .get(0))
+}
+
+// Source databases from before the `mfa_method` columns existed. The legacy `is_mfa` flag is no
+// reliable MFA proof and is dropped, like in the `drop_legacy_mfa_evidence` DB migration.
+// Rows from newer source databases are normalized the same way in `inserts`.
+const REFRESH_TOKENS_PRE_MFA_METHOD: &str = r#"SELECT id, user_id, nbf, exp, scope,
+    false AS is_mfa, session_id, access_token_jti, 'none' AS mfa_method
+    FROM refresh_tokens"#;
+const REFRESH_TOKENS_DEVICES_PRE_MFA_METHOD: &str = r#"SELECT id, device_id, user_id, nbf, exp,
+    scope, access_token_jti, 'none' AS mfa_method FROM refresh_tokens_devices"#;
+const SESSIONS_PRE_MFA_METHOD: &str = r#"SELECT id, csrf_token, user_id, roles, groups,
+    false AS is_mfa, state, exp, last_seen, remote_ip, 'none' AS mfa_method
+    FROM sessions"#;
 
 /// Migrates `MIGRATE_DB_FROM` to current database
 ///
@@ -195,7 +240,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
-    let before = query_sqlite::<RefreshToken>(&conn, "SELECT * FROM refresh_tokens").await?;
+    let query = if sqlite_column_exists(&conn, "refresh_tokens", "mfa_method")? {
+        "SELECT * FROM refresh_tokens"
+    } else {
+        REFRESH_TOKENS_PRE_MFA_METHOD
+    };
+    let before = query_sqlite::<RefreshToken>(&conn, query).await?;
     inserts::refresh_tokens(before).await?;
 
     // ROLES
@@ -265,8 +315,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // REFRESH TOKENS DEVICES
     debug!("Migrating table: refresh_tokens_devices");
-    let before =
-        query_sqlite::<RefreshTokenDevice>(&conn, "SELECT * FROM refresh_tokens_devices").await?;
+    let query = if sqlite_column_exists(&conn, "refresh_tokens_devices", "mfa_method")? {
+        "SELECT * FROM refresh_tokens_devices"
+    } else {
+        REFRESH_TOKENS_DEVICES_PRE_MFA_METHOD
+    };
+    let before = query_sqlite::<RefreshTokenDevice>(&conn, query).await?;
     inserts::refresh_tokens_devices(before).await?;
 
     // SESSIONS
@@ -287,6 +341,11 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
                 exp: row.get("exp")?,
                 last_seen: row.get("last_seen")?,
                 remote_ip: row.get("remote_ip")?,
+                mfa_method: row
+                    .get::<_, String>("mfa_method")
+                    .ok()
+                    .and_then(|value| MfaMethod::from_str(&value).ok())
+                    .unwrap_or_default(),
             })
         })?
         .map(|r| r.unwrap())
@@ -775,7 +834,12 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM refresh_tokens", &[], 0).await?;
+    let query = if pg_column_exists(&cl, "refresh_tokens", "mfa_method").await? {
+        "SELECT * FROM refresh_tokens"
+    } else {
+        REFRESH_TOKENS_PRE_MFA_METHOD
+    };
+    let before = DB::pg_query_map_with(&cl, query, &[], 0).await?;
     inserts::refresh_tokens(before).await?;
 
     // ROLES
@@ -820,12 +884,22 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // REFRESH TOKENS DEVICES
     debug!("Migrating table: refresh_tokens_devices");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM refresh_tokens_devices", &[], 0).await?;
+    let query = if pg_column_exists(&cl, "refresh_tokens_devices", "mfa_method").await? {
+        "SELECT * FROM refresh_tokens_devices"
+    } else {
+        REFRESH_TOKENS_DEVICES_PRE_MFA_METHOD
+    };
+    let before = DB::pg_query_map_with(&cl, query, &[], 0).await?;
     inserts::refresh_tokens_devices(before).await?;
 
     // SESSIONS
     debug!("Migrating table: sessions");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM sessions", &[], 16).await?;
+    let query = if pg_column_exists(&cl, "sessions", "mfa_method").await? {
+        "SELECT * FROM sessions"
+    } else {
+        SESSIONS_PRE_MFA_METHOD
+    };
+    let before = DB::pg_query_map_with(&cl, query, &[], 16).await?;
     inserts::sessions(before).await?;
 
     // USER LOGIN STATES

@@ -9,6 +9,7 @@ use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::scopes::Scope;
+use rauthy_data::entity::sessions::MfaMethod;
 use rauthy_data::entity::user_attr::UserAttrValueEntity;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
@@ -70,12 +71,6 @@ impl AtHash {
         let (left_bits, _) = bytes.split_at(bytes.len() / 2);
         Self(base64_url_no_pad_encode(left_bits))
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum AuthCodeFlow {
-    Yes,
-    No,
 }
 
 #[derive(Debug, Clone)]
@@ -311,21 +306,11 @@ impl TokenSet {
         scope: &str,
         scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
         sid: Option<SessionId>,
-        auth_code_flow: AuthCodeFlow,
+        mfa_method: MfaMethod,
     ) -> Result<String, ErrorResponse> {
         let config = RauthyConfig::get();
 
-        let amr = if auth_code_flow == AuthCodeFlow::Yes {
-            if user.has_webauthn_enabled() {
-                JwtAmrValue::Mfa.as_str()
-            } else if user.has_otp_enabled().await {
-                JwtAmrValue::Otp.as_str()
-            } else {
-                JwtAmrValue::Pwd.as_str()
-            }
-        } else {
-            JwtAmrValue::Pwd.as_str()
-        };
+        let amr = amr_for(mfa_method);
 
         // Solid-OIDC ephemeral clients additionally carry the `solid` audience.
         let aud = if client.is_ephemeral() && config.vars.ephemeral_clients.enable_solid_aud {
@@ -360,7 +345,7 @@ impl TokenSet {
                     .as_ref()
                     .map(|jkt| JktClaim { jkt: &jkt.0 }),
             },
-            amr: vec![amr],
+            amr: vec![amr.as_str()],
             auth_time: auth_time.get(),
             at_hash: at_hash.0.as_str(),
             sid: sid.as_ref().map(|sid| sid.0.as_str()),
@@ -490,7 +475,7 @@ impl TokenSet {
         auth_time: AuthTime,
         access_token_lifetime: Duration,
         scope: Option<TokenScopes<'_>>,
-        is_mfa: bool,
+        mfa_method: MfaMethod,
         device_code_flow: DeviceCodeFlow,
         sid: Option<SessionId>,
         resource: Option<&str>,
@@ -562,6 +547,7 @@ impl TokenSet {
                 nbf.timestamp(),
                 exp,
                 scope.map(|s| s.0.into_owned()),
+                mfa_method,
                 Some(jti.0),
             )
             .await?;
@@ -572,7 +558,7 @@ impl TokenSet {
                 nbf.timestamp(),
                 exp,
                 scope.map(|s| s.0.into_owned()),
-                is_mfa,
+                mfa_method,
                 sid.map(|s| s.0),
                 Some(jti.0),
             )
@@ -706,8 +692,8 @@ impl TokenSet {
         scopes: Option<TokenScopes<'_>>,
         sid: Option<SessionId>,
         resource: Option<String>,
-        auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
+        mfa_method: MfaMethod,
     ) -> Result<Self, ErrorResponse> {
         let scopes = scopes.map(|s| s.0);
         let scope = match scopes.as_deref() {
@@ -817,7 +803,7 @@ impl TokenSet {
             &scope,
             customs_id,
             sid.clone(),
-            auth_code_flow,
+            mfa_method,
         )
         .await?;
         let scope = scope.into_owned();
@@ -830,7 +816,7 @@ impl TokenSet {
                     auth_time,
                     Duration::from_secs(lifetime as u64),
                     scopes.map(TokenScopes::new),
-                    user.has_webauthn_enabled(),
+                    mfa_method,
                     device_code_flow,
                     sid,
                     resource.as_deref(),
@@ -853,9 +839,29 @@ impl TokenSet {
     }
 }
 
+/// The `amr` describes the authentication that has actually been verified for this login, which
+/// is carried through the session, device grant and refresh tokens. It must not be derived from
+/// the factors a user has merely configured.
+fn amr_for(mfa_method: MfaMethod) -> JwtAmrValue {
+    match mfa_method {
+        MfaMethod::WebAuthn | MfaMethod::Provider => JwtAmrValue::Mfa,
+        MfaMethod::Otp => JwtAmrValue::Otp,
+        MfaMethod::None | MfaMethod::Legacy => JwtAmrValue::Pwd,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn amr_is_derived_from_the_verified_method() {
+        assert_eq!(amr_for(MfaMethod::None).as_str(), "pwd");
+        assert_eq!(amr_for(MfaMethod::Legacy).as_str(), "pwd");
+        assert_eq!(amr_for(MfaMethod::WebAuthn).as_str(), "mfa");
+        assert_eq!(amr_for(MfaMethod::Provider).as_str(), "mfa");
+        assert_eq!(amr_for(MfaMethod::Otp).as_str(), "otp");
+    }
 
     #[test]
     fn test_at_hash() {

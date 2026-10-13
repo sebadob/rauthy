@@ -1,4 +1,4 @@
-use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet};
+use crate::token_set::{AuthTime, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet};
 use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
@@ -164,6 +164,22 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             }
         };
 
+        // Re-check the approval against the current user and client state. `force_mfa` is
+        // enforced from the MFA proof of the browser session that approved this request.
+        // The code has been claimed above already, so a denied grant cannot be retried.
+        if let Err(err) = user
+            .check_enabled()
+            .and_then(|_| user.check_expired())
+            .and_then(|_| client.validate_user_groups(&user))
+            .and_then(|_| client.validate_mfa_method(code.mfa_method))
+        {
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::AccessDenied,
+                error_description: Some(Cow::from(err.to_string())),
+            });
+        }
+        let mfa_method = code.mfa_method;
+
         let id = new_store_id();
         let device = DeviceEntity {
             id: id.clone(),
@@ -197,8 +213,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             None,
             // resource indicators are not supported for the device flow yet
             None,
-            AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),
+            mfa_method,
         )
         .await
         {

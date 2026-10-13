@@ -3,7 +3,7 @@ use crate::email::otp::send_email_otp;
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
-use crate::entity::sessions::Session;
+use crate::entity::sessions::{MfaMethod, Session};
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
@@ -229,24 +229,57 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let sql =
-            "UPDATE one_time_password SET name = $1, last_used = $2, is_active = $3 WHERE id = $4";
+        let sql = r#"
+UPDATE one_time_password SET name = $1, last_used = $2, is_active = $3, secret = $4
+WHERE id = $5"#;
         if is_hiqlite() {
             DB::hql()
                 .execute(
                     sql,
-                    params!(&self.name, self.last_used, self.is_active, &self.id),
+                    params!(
+                        &self.name,
+                        self.last_used,
+                        self.is_active,
+                        self.secret.clone(),
+                        &self.id
+                    ),
                 )
                 .await?;
         } else {
             DB::pg_execute(
                 sql,
-                &[&self.name, &self.last_used, &self.is_active, &self.id],
+                &[
+                    &self.name,
+                    &self.last_used,
+                    &self.is_active,
+                    &self.secret,
+                    &self.id,
+                ],
             )
             .await?;
         }
 
         Ok(())
+    }
+
+    /// Atomically consumes the pending Email OTP challenge. Returns `false` if it has already been
+    /// consumed or replaced by a concurrent request, which makes every challenge single-use, even
+    /// for a failed verification attempt.
+    async fn consume_challenge(&mut self) -> Result<bool, ErrorResponse> {
+        let sql = r#"
+UPDATE one_time_password SET secret = $1
+WHERE id = $2 AND secret = $3"#;
+        let empty: Vec<u8> = Vec::new();
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(empty.clone(), &self.id, self.secret.clone()))
+                .await?
+        } else {
+            DB::pg_execute(sql, &[&empty, &self.id, &self.secret]).await?
+        };
+        self.secret = empty;
+
+        Ok(rows_affected == 1)
     }
 }
 
@@ -286,20 +319,27 @@ impl OneTimePassword {
         format!("{:0width$}", otp, width = code_len as usize)
     }
 
+    fn new_challenge_key() -> Result<Vec<u8>, ErrorResponse> {
+        let key: [u8; 32] = rand::generate(&rand::SystemRandom::new())?.expose();
+        Ok(key.to_vec())
+    }
+
     pub async fn activate(&mut self) -> Result<(), ErrorResponse> {
         self.is_active = true;
         self.save().await
     }
 
-    pub async fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
+    /// Validates and consumes a pending Email OTP challenge. Each challenge allows exactly one
+    /// verification attempt, whether it succeeds or not.
+    pub async fn validate(&mut self, code: &str) -> Result<(), ErrorResponse> {
         match self.kind {
             OtpKind::Email => {
-                if Utc::now().timestamp() - self.last_used
-                    >= RauthyConfig::get().vars.otp.exp.as_secs() as i64
-                {
+                // An empty key means that there is no pending challenge. This also rejects all
+                // challenges created by older versions, which used an empty, public HMAC key.
+                if self.secret.is_empty() {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
-                        "otp code expired",
+                        "no pending otp code",
                     ));
                 }
                 let valid_code = Self::generate_otp(
@@ -308,6 +348,20 @@ impl OneTimePassword {
                     RauthyConfig::get().vars.otp.digest_len_default,
                     RauthyConfig::get().vars.otp.length,
                 );
+                if !self.consume_challenge().await? {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "no pending otp code",
+                    ));
+                }
+                if Utc::now().timestamp() - self.last_used
+                    >= RauthyConfig::get().vars.otp.exp.as_secs() as i64
+                {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "otp code expired",
+                    ));
+                }
                 if !constant_time_eq::constant_time_eq(code.as_bytes(), valid_code.as_bytes()) {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::BadRequest,
@@ -329,6 +383,12 @@ impl OneTimePassword {
     pub async fn request_otp(&mut self) -> Result<(), ErrorResponse> {
         let user = User::find(self.user_id.clone()).await?;
 
+        if self.kind == OtpKind::Email {
+            // Every challenge gets a fresh random key. The code can only be derived from it and
+            // never from public data like the request timestamp. A new request replaces any
+            // pending challenge.
+            self.secret = Self::new_challenge_key()?;
+        }
         let current_time = Utc::now().timestamp();
         let code_len = RauthyConfig::get().vars.otp.length;
         let code = Self::generate_otp(
@@ -356,6 +416,12 @@ impl OneTimePassword {
     }
 
     pub async fn resend_otp(&self) -> Result<(), ErrorResponse> {
+        if self.secret.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "no pending otp code",
+            ));
+        }
         let user = User::find(self.user_id.clone()).await?;
 
         let code_len = RauthyConfig::get().vars.otp.length;
@@ -675,7 +741,14 @@ pub async fn auth_finish(
         OtpAdditionalData::LoginToSAwait(d) => (&d.user_id, false),
     };
 
-    let otp = OneTimePassword::find(&auth_data.otp_id).await?;
+    let mut otp = OneTimePassword::find(&auth_data.otp_id).await?;
+    // The OTP must belong to the user this challenge has been started for.
+    if &otp.user_id != user_id {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "OTP does not belong to this user",
+        ));
+    }
     match otp.validate(&payload.otp_code).await {
         Ok(_) => {
             let mut user = User::find(user_id.clone()).await?;
@@ -683,7 +756,9 @@ pub async fn auth_finish(
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
             if is_login && let Some(mut session) = session {
-                session.set_authenticated(&user).await?;
+                session
+                    .set_authenticated_with_mfa(&user, MfaMethod::Otp)
+                    .await?;
                 user.last_login = Some(Utc::now().timestamp());
                 user.last_failed_login = None;
                 user.failed_login_attempts = None;
@@ -804,5 +879,20 @@ mod tests {
             OneTimePassword::generate_otp(&seed64, t, 512, 8),
             "47863826"
         );
+    }
+
+    #[test]
+    fn email_otp_challenge_key_is_random() {
+        let k1 = OneTimePassword::new_challenge_key().unwrap();
+        let k2 = OneTimePassword::new_challenge_key().unwrap();
+        assert_eq!(k1.len(), 32);
+        assert_ne!(k1, k2);
+
+        // the code must not be derivable from the timestamp alone, like with the former empty key
+        let ts = 1_700_000_000;
+        let public = OneTimePassword::generate_otp(&[], ts, 512, 8);
+        let c1 = OneTimePassword::generate_otp(&k1, ts, 512, 8);
+        let c2 = OneTimePassword::generate_otp(&k2, ts, 512, 8);
+        assert!(c1 != public || c2 != public);
     }
 }

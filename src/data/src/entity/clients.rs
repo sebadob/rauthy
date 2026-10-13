@@ -4,6 +4,7 @@ use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
 use crate::entity::scopes::Scope;
+use crate::entity::sessions::MfaMethod;
 use crate::entity::users::User;
 use crate::http_client::fetch_bounded;
 use crate::rauthy_config::{RauthyConfig, VarsEphemeralClients};
@@ -1305,6 +1306,21 @@ impl Client {
 
         if force_mfa && !has_mfa {
             trace!("MFA required for this client but the user has none");
+            Err(ErrorResponse::new(
+                ErrorResponseType::MfaRequired,
+                "MFA is required for this client",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Enforces `force_mfa` from the MFA proof recorded on a session, for flows that do not run
+    /// through the interactive login, like the device authorization grant.
+    #[inline]
+    pub fn validate_mfa_method(&self, method: MfaMethod) -> Result<(), ErrorResponse> {
+        if self.id != "rauthy" && self.force_mfa && !method.is_mfa() {
+            trace!("MFA required for this client but the session has no verified MFA");
             Err(ErrorResponse::new(
                 ErrorResponseType::MfaRequired,
                 "MFA is required for this client",
@@ -3289,5 +3305,29 @@ pub(crate) mod tests {
         new_client.keep_admin_set_values(current);
         assert!(!new_client.confidential);
         assert_eq!(new_client.challenge.as_deref(), Some("S256"));
+    }
+
+    #[test]
+    fn force_mfa_accepts_only_a_verified_session_method() {
+        let mut client = Client {
+            id: "target-client".to_string(),
+            force_mfa: true,
+            ..Default::default()
+        };
+
+        assert!(client.validate_mfa_method(MfaMethod::None).is_err());
+        assert!(client.validate_mfa_method(MfaMethod::Otp).is_ok());
+        assert!(client.validate_mfa_method(MfaMethod::WebAuthn).is_ok());
+        assert!(client.validate_mfa_method(MfaMethod::Provider).is_ok());
+        // the pre-tracking `is_mfa` flag is no reliable proof
+        assert!(client.validate_mfa_method(MfaMethod::Legacy).is_err());
+
+        client.force_mfa = false;
+        assert!(client.validate_mfa_method(MfaMethod::None).is_ok());
+
+        // the Rauthy admin UI client is handled by `ADMIN_FORCE_MFA` instead
+        client.id = "rauthy".to_string();
+        client.force_mfa = true;
+        assert!(client.validate_mfa_method(MfaMethod::None).is_ok());
     }
 }

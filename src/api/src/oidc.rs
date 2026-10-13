@@ -703,7 +703,14 @@ pub async fn post_device_verify(
 
     match payload.device_accepted {
         DeviceAcceptedRequest::Accept => {
+            // `force_mfa` must be satisfied by the approving session itself. The verified MFA
+            // method is stored on the code and checked again during token issuance.
+            let mfa_method = principal.get_session()?.mfa_method;
+            let client = Client::find(device_code.client_id.clone()).await?;
+            client.validate_mfa_method(mfa_method)?;
+
             device_code.verified_by = Some(principal.user_id()?.to_string());
+            device_code.mfa_method = mfa_method;
             device_code.save().await?;
 
             // If very unlucky, we might get a race-condition here because of no distributed
@@ -721,6 +728,7 @@ pub async fn post_device_verify(
                 && device_code.verified_by.is_none()
             {
                 device_code.verified_by = Some(principal.user_id()?.to_string());
+                device_code.mfa_method = mfa_method;
                 device_code.save().await?;
             }
 

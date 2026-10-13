@@ -39,6 +39,70 @@ pub struct Session {
     pub exp: i64,
     pub last_seen: i64,
     pub remote_ip: Option<String>,
+    /// Appended last for cache compatibility: sessions cached by an older version decode with
+    /// `MfaMethod::None`, which never satisfies `force_mfa`.
+    ///
+    /// Invariant: this is always evidence of a ceremony completed by `user_id` itself. It is
+    /// reset whenever the session is bound to another user, see `Session::bind_user()`.
+    #[serde(default)]
+    #[column(parse)]
+    pub mfa_method: MfaMethod,
+}
+
+/// The MFA method actually verified for this session.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MfaMethod {
+    #[default]
+    None,
+    WebAuthn,
+    Otp,
+    Provider,
+    /// The pre-tracking `is_mfa` flag. It was set before the 2nd factor ceremony had finished,
+    /// and also after a factor enrollment, so it is not a reliable proof and is never accepted
+    /// as MFA. Only kept to be able to parse rows written by an older version.
+    #[serde(rename = "mfa")]
+    Legacy,
+}
+
+impl MfaMethod {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::WebAuthn => "webauthn",
+            Self::Otp => "otp",
+            Self::Provider => "provider",
+            Self::Legacy => "mfa",
+        }
+    }
+
+    /// `true` only for an MFA ceremony that has actually been verified.
+    pub const fn is_mfa(self) -> bool {
+        matches!(self, Self::WebAuthn | Self::Otp | Self::Provider)
+    }
+
+    /// Maps anything that is no verified MFA ceremony, like `Legacy`, to `None`.
+    pub const fn verified_or_none(self) -> Self {
+        if self.is_mfa() { self } else { Self::None }
+    }
+}
+
+impl FromStr for MfaMethod {
+    type Err = ErrorResponse;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "none" => Ok(Self::None),
+            "webauthn" => Ok(Self::WebAuthn),
+            "otp" => Ok(Self::Otp),
+            "provider" => Ok(Self::Provider),
+            "mfa" => Ok(Self::Legacy),
+            _ => Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "invalid session MFA method",
+            )),
+        }
+    }
 }
 
 impl Debug for Session {
@@ -46,13 +110,14 @@ impl Debug for Session {
         write!(
             f,
             "Session {{ id: {}(...), csrf_token: {}(...), user_id: {:?}, roles: {:?}, groups: {:?}, \
-        is_mfa: {}, state: {}, exp: {}, last_seen: {}, remote_ip: {:?} }}",
+        is_mfa: {}, mfa_method: {}, state: {}, exp: {}, last_seen: {}, remote_ip: {:?} }}",
             &self.id[..5],
             &self.csrf_token[..5],
             self.user_id,
             self.roles,
             self.groups,
             self.is_mfa,
+            self.mfa_method.as_str(),
             self.state.as_str(),
             self.exp,
             self.last_seen,
@@ -160,6 +225,8 @@ impl Session {
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         let client = DB::hql();
 
+        // Sessions cached by a version without `mfa_method` decode with `MfaMethod::None` on
+        // purpose: their `is_mfa` flag is no reliable proof and must not satisfy `force_mfa`.
         if let Some(slf) = client.get(Cache::Session, id.clone()).await? {
             return Ok(slf);
         }
@@ -376,12 +443,13 @@ OFFSET $3"#;
 
         let sql = r#"
 INSERT INTO
-sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip,
+    mfa_method)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
-    remote_ip = $10
-WHERE sessions.exp > $11"#;
+    remote_ip = $10, mfa_method = $11
+WHERE sessions.exp > $12"#;
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -398,6 +466,7 @@ WHERE sessions.exp > $11"#;
                         self.exp,
                         self.last_seen,
                         &self.remote_ip,
+                        self.mfa_method.as_str(),
                         now
                     ),
                 )
@@ -416,6 +485,7 @@ WHERE sessions.exp > $11"#;
                     &self.exp,
                     &self.last_seen,
                     &self.remote_ip,
+                    &self.mfa_method.as_str(),
                     &now,
                 ],
             )
@@ -496,6 +566,30 @@ WHERE sessions.exp > $11"#;
 
     #[inline]
     pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
+        self.bind_user(user)?;
+        self.upsert().await
+    }
+
+    /// Marks a session authenticated only after the selected MFA ceremony succeeds.
+    /// The `method` must have been verified for exactly this `user`.
+    pub async fn set_authenticated_with_mfa(
+        &mut self,
+        user: &User,
+        method: MfaMethod,
+    ) -> Result<(), ErrorResponse> {
+        debug_assert!(method.is_mfa());
+        self.bind_user(user)?;
+        self.mfa_method = method;
+        self.is_mfa = method.is_mfa();
+        self.upsert().await
+    }
+
+    /// Binds this session to `user` without persisting it.
+    ///
+    /// MFA proof always belongs to the user who completed the ceremony. If the session has been
+    /// linked to another user before, its proof is dropped, so that it can never be carried over
+    /// to a different identity.
+    fn bind_user(&mut self, user: &User) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         // An expired session must never be resurrected
         if self.exp < now {
@@ -511,13 +605,16 @@ WHERE sessions.exp > $11"#;
                 "Session has been logged out",
             ));
         }
+        self.validate_user_expiry(user)?;
+        if self.user_id.as_deref() != Some(user.id.as_str()) {
+            self.is_mfa = false;
+            self.mfa_method = MfaMethod::None;
+        }
         self.last_seen = now;
         self.state = SessionState::Auth;
-        self.validate_user_expiry(user)?;
         self.user_id = Some(user.id.clone());
         self.roles = Some(user.roles.clone());
         self.groups = user.groups.clone();
-        self.upsert().await?;
         Ok(())
     }
 }
@@ -540,6 +637,7 @@ impl Session {
             exp: now.add(exp_in).timestamp(),
             last_seen: now.timestamp(),
             remote_ip: remote_ip.map(|ip| ip.to_string()),
+            mfa_method: MfaMethod::None,
         }
     }
 
@@ -586,6 +684,7 @@ impl Session {
             exp,
             last_seen: now.timestamp(),
             remote_ip,
+            mfa_method: MfaMethod::None,
         })
     }
 
@@ -776,9 +875,16 @@ impl Session {
             .collect())
     }
 
+    /// Sets the `is_mfa` flag used by the Rauthy admin UI.
+    ///
+    /// This never records an `mfa_method`: the flag may be set after a factor enrollment, which
+    /// is no login ceremony, and must therefore never satisfy a client's `force_mfa`.
     #[inline]
     pub async fn set_mfa(&mut self, value: bool) -> Result<(), ErrorResponse> {
         self.is_mfa = value;
+        if !value {
+            self.mfa_method = MfaMethod::None;
+        }
         self.upsert().await
     }
 
@@ -832,10 +938,13 @@ pub fn get_header_value<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::entity::sessions::{Session, SessionState};
+    use crate::entity::sessions::{MfaMethod, Session, SessionState};
+    use crate::entity::users::User;
     use actix_web::test::TestRequest;
     use rauthy_common::constants::CSRF_HEADER;
+    use rauthy_common::utils::{deserialize, serialize};
     use rauthy_error::ErrorResponse;
+    use serde::Serialize;
     use std::net::IpAddr;
     use std::str::FromStr;
     use std::time::Duration;
@@ -900,5 +1009,94 @@ mod tests {
         let mut u = Session::new(Duration::from_secs(3600), None);
         u.state = SessionState::Unknown;
         assert!(!u.is_valid(600, None, "/"));
+    }
+
+    #[test]
+    fn legacy_session_cache_payload_decodes_without_mfa_method() {
+        #[derive(Debug, Serialize)]
+        struct LegacySession {
+            id: String,
+            csrf_token: String,
+            user_id: Option<String>,
+            roles: Option<String>,
+            groups: Option<String>,
+            is_mfa: bool,
+            state: SessionState,
+            exp: i64,
+            last_seen: i64,
+            remote_ip: Option<String>,
+        }
+
+        let legacy = LegacySession {
+            id: "session".into(),
+            csrf_token: "csrf".into(),
+            user_id: Some("user".into()),
+            roles: None,
+            groups: None,
+            is_mfa: true,
+            state: SessionState::Auth,
+            exp: 123,
+            last_seen: 100,
+            remote_ip: Some("127.0.0.1".into()),
+        };
+        let bytes = serialize(&legacy).unwrap();
+        let s = deserialize::<Session>(&bytes).unwrap();
+        assert_eq!(s.id, "session");
+        assert!(s.is_mfa);
+        assert_eq!(s.state, SessionState::Auth);
+        assert_eq!(s.exp, 123);
+        assert_eq!(s.last_seen, 100);
+        assert_eq!(s.remote_ip.as_deref(), Some("127.0.0.1"));
+        assert_eq!(s.mfa_method, MfaMethod::None);
+    }
+
+    #[test]
+    fn mfa_method_storage_roundtrip() {
+        for m in [
+            MfaMethod::None,
+            MfaMethod::WebAuthn,
+            MfaMethod::Otp,
+            MfaMethod::Provider,
+            MfaMethod::Legacy,
+        ] {
+            assert_eq!(MfaMethod::from_str(m.as_str()).unwrap(), m);
+        }
+        assert!(!MfaMethod::None.is_mfa());
+        assert!(!MfaMethod::Legacy.is_mfa());
+        assert!(MfaMethod::WebAuthn.is_mfa());
+        assert!(MfaMethod::Otp.is_mfa());
+        assert!(MfaMethod::Provider.is_mfa());
+
+        assert_eq!(MfaMethod::Legacy.verified_or_none(), MfaMethod::None);
+        assert_eq!(MfaMethod::None.verified_or_none(), MfaMethod::None);
+        assert_eq!(MfaMethod::Otp.verified_or_none(), MfaMethod::Otp);
+    }
+
+    #[test]
+    fn mfa_proof_is_dropped_when_the_session_user_changes() {
+        let user_a = User {
+            id: "user_a".to_string(),
+            ..Default::default()
+        };
+        let user_b = User {
+            id: "user_b".to_string(),
+            ..Default::default()
+        };
+
+        let mut s = Session::new(Duration::from_secs(60), None);
+        s.bind_user(&user_b).unwrap();
+        s.mfa_method = MfaMethod::Otp;
+        s.is_mfa = true;
+
+        // same user -> the proof is kept
+        s.bind_user(&user_b).unwrap();
+        assert_eq!(s.mfa_method, MfaMethod::Otp);
+        assert!(s.is_mfa);
+
+        // another user -> the proof of user_b must never be carried over to user_a
+        s.bind_user(&user_a).unwrap();
+        assert_eq!(s.user_id.as_deref(), Some("user_a"));
+        assert_eq!(s.mfa_method, MfaMethod::None);
+        assert!(!s.is_mfa);
     }
 }

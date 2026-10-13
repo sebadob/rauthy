@@ -15,11 +15,11 @@ use rauthy_data::entity::fed_cm::{
     FedCMAccount, FedCMAccounts, FedCMClientMetadata, FedCMIdPConfig, FedCMLoginStatus,
     FedCMTokenResponse, WebIdentity,
 };
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaMethod, Session};
 use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
+use rauthy_service::token_set::{AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
 use tracing::{debug, error, warn};
 use validator::Validate;
 
@@ -43,7 +43,7 @@ pub async fn get_fed_cm_accounts(req: HttpRequest) -> Result<HttpResponse, Error
     is_fed_cm_enabled()?;
     is_web_identity_fetch(&req)?;
 
-    let (login_status, user_id) = login_status_from_req(&req).await;
+    let (login_status, user_id, _) = login_status_from_req(&req).await;
     if login_status == FedCMLoginStatus::LoggedOut {
         return Ok(HttpResponse::Unauthorized()
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
@@ -207,7 +207,7 @@ pub async fn get_fed_cm_status(req: HttpRequest) -> HttpResponse {
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
             .finish()
     } else {
-        let (login_status, _) = login_status_from_req(&req).await;
+        let (login_status, _, _) = login_status_from_req(&req).await;
         if login_status == FedCMLoginStatus::LoggedOut {
             HttpResponse::Unauthorized()
                 .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
@@ -245,7 +245,7 @@ pub async fn post_fed_cm_token(
     is_web_identity_fetch(&req)?;
     payload.validate()?;
 
-    let (login_status, user_id) = login_status_from_req(&req).await;
+    let (login_status, user_id, mfa_method) = login_status_from_req(&req).await;
     if login_status == FedCMLoginStatus::LoggedOut {
         return Ok(HttpResponse::Unauthorized()
             .insert_header(FedCMLoginStatus::LoggedOut.as_header_pair())
@@ -287,6 +287,17 @@ pub async fn post_fed_cm_token(
         ));
     }
 
+    // The same user / client policies as for every other flow. FedCM has no way to perform a
+    // step-up, so a session without verified MFA is rejected for a `force_mfa` client.
+    client.validate_user_groups(&user)?;
+    if let Err(err) = client.validate_mfa_method(mfa_method) {
+        debug!(
+            "FedCM session has no verified MFA for force_mfa client {}",
+            client.id
+        );
+        return Err(err);
+    }
+
     // We are good - issue a TokenSet
     let ts = TokenSet::from_user(
         &user,
@@ -297,8 +308,8 @@ pub async fn post_fed_cm_token(
         None,
         None,
         None,
-        AuthCodeFlow::No,
         DeviceCodeFlow::No,
+        mfa_method,
     )
     .await?;
 
@@ -419,18 +430,26 @@ fn client_origin_header(
 }
 
 #[inline(always)]
-async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) {
+async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String, MfaMethod) {
     match ApiCookie::from_req(req, COOKIE_SESSION_FED_CM) {
         None => {
             debug!("FedCM session cookie not found -> user_id is logged-out",);
-            (FedCMLoginStatus::LoggedOut, String::default())
+            (
+                FedCMLoginStatus::LoggedOut,
+                String::default(),
+                MfaMethod::None,
+            )
         }
         Some(sid) => {
             let session = match Session::find(sid).await {
                 Ok(s) => s,
                 Err(_) => {
                     debug!("FedCM session not found -> user_id is logged-out",);
-                    return (FedCMLoginStatus::LoggedOut, String::default());
+                    return (
+                        FedCMLoginStatus::LoggedOut,
+                        String::default(),
+                        MfaMethod::None,
+                    );
                 }
             };
 
@@ -442,6 +461,7 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
                 (
                     FedCMLoginStatus::LoggedIn,
                     session.user_id.unwrap_or_default(),
+                    session.mfa_method,
                 )
             } else {
                 debug!(
@@ -451,6 +471,7 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
                 (
                     FedCMLoginStatus::LoggedOut,
                     session.user_id.unwrap_or_default(),
+                    MfaMethod::None,
                 )
             }
         }
