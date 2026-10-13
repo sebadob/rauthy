@@ -16,9 +16,9 @@ pub(super) fn requires_uv(account_type: AccountType, force_uv: bool) -> bool {
     // The `FederatedPasskey` technically has 2, but either one can be used. This means it can be
     // used in the same way as a passkey-only account.
     force_uv
-        || matches!(
+        || !matches!(
             account_type,
-            AccountType::New | AccountType::Passkey | AccountType::FederatedPasskey
+            AccountType::Password | AccountType::FederatedPassword
         )
 }
 // Keep the ceremony type in the server-side cache so finish uses the policy chosen at start.
