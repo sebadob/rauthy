@@ -58,6 +58,7 @@ export const TPL_IS_OTP_ENABLED = 'tpl_is_otp_enabled';
 export const TPL_IS_REG_OPEN = 'tpl_is_reg_open';
 export const TPL_LOGIN_ACTION = 'tpl_login_action';
 export const TPL_OTP_LENGTH = 'tpl_otp_length';
+export const TPL_PASSKEY_REG_TYPE = 'tpl_passkey_reg_type';
 export const TPL_PASSWORD_RESET = 'tpl_password_reset';
 export const TPL_STATUS_CODE = 'tpl_status_code';
 export const TPL_RESTRICTED_EMAIL_DOMAIN = 'tpl_restricted_email_domain';

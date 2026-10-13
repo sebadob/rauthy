@@ -14,6 +14,7 @@ impl I18nEmailConfirmChange<'_> {
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Fr => Self::build_fr(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
@@ -62,6 +63,14 @@ impl I18nEmailConfirmChange<'_> {
             subject: "E-Mail wijziging bevestigd voor",
             msg: "Uw e-mailadres is succesvol gewijzigd naar:",
             msg_from_admin: "Deze actie is uitgevoerd door een beheerder.",
+        }
+    }
+
+    fn build_ja() -> Self {
+        Self {
+            subject: "メールアドレスの変更完了のお知らせ",
+            msg: "メールアドレスは次のとおり変更されました:",
+            msg_from_admin: "この操作は管理者が行いました。",
         }
     }
 

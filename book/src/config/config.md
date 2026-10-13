@@ -1388,6 +1388,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%Y/%m/%d %T (%Z)'
+# overwritten by: TZ_FMT_JA
+#ja = '%Y/%m/%d %T (%Z)'
 # default: '%d-%m-%Y %T (%Z)'
 # overwritten by: TZ_FMT_NL
 #nl = '%d-%m-%Y %T (%Z)'
@@ -2093,13 +2096,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de fr ko nb nl ru uk zhhans
+# Available Options: en de fr ja ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'fr', 'ja', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de fr ko nb nl ru uk zhhans
+# Available Options: en de fr ja ko nb nl ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'fr', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'de', 'fr', 'ja', 'ko', 'nb', 'nl', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -2629,7 +2632,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de ko uk zh_hans
+# one of: en de fr ja ko nb nl ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset
@@ -3038,6 +3041,30 @@ rp_origin = 'http://localhost:8080'
 # default: true
 # overwritten by: WEBAUTHN_NO_PASSWORD_EXPIRY
 #no_password_exp = true
+
+# The Passkey Types users can choose from when they register a
+# new Passkey on the Account Dashboard or during a password reset.
+#
+# - `default` does not register a Resident Key. Users need to
+#   enter their E-Mail before they can log in with it, but it
+#   does not use one of the very limited storage slots on
+#   hardware keys, which prevents bricked devices.
+# - `resident_key` registers a Resident Key (discoverable
+#   credential). Only these can be used with the "Passkey" button
+#   on the login page without entering the E-Mail first.
+#
+# Separate values with a space. If only one value is given, the
+# user has no choice. If both are given, the first one is
+# selected by default in the UI. If only `default` is given, the
+# "Passkey" button on the login page is hidden.
+#
+# Note: This does NOT change the type of already registered keys.
+# Be careful when changing this for an existing instance in
+# combination with device attestation.
+#
+# default: 'default resident_key'
+# overwritten by: WEBAUTHN_PASSKEY_REG_TYPE
+#passkey_reg_type = 'default resident_key'
 
 # When you want to migrate an existing deployment over to enforced
 # attestation, you usually have a chicken-and-egg problem: You

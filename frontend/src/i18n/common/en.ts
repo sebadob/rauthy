@@ -123,7 +123,13 @@ export const I18nEn: I18n = {
             types: ['Default', 'Resident Key'],
             rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
                 the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+                for each application. You need to make sure there is enough space left.
+                To make an existing Passkey a Resident Key, delete it first, then add it again.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'You need to enter your E-Mail before you can log in with this Passkey.',
+                'Works with the Passkey button on the login page, without entering your E-Mail.',
+            ],
         },
         passwordConfirm: 'Confirm Password',
         passwordCurr: 'Current Password',
@@ -189,6 +195,8 @@ export const I18nEn: I18n = {
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: 'or login with',
+        passkeyNotDiscovered: `Passkeys not added as a Resident Key can't be found this way. Enter
+            your E-Mail instead.`,
         password: 'Password',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Password forgotten?',

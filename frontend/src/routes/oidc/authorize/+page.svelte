@@ -14,6 +14,7 @@
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION,
+        TPL_PASSKEY_REG_TYPE,
         TPL_ATPROTO_ID,
     } from '$utils/constants.js';
     import IconHome from '$icons/IconHome.svelte';
@@ -101,6 +102,12 @@
     let tooManyRequests = $state(false);
     let emailAfterSubmit = $state('');
     let isRegOpen = $state(false);
+    // `webauthn.passkey_reg_type`: without Resident Keys, the Passkey button can never find one
+    let passkeyRegType = $state('default resident_key');
+    let isPasskeyDiscoverable = $derived(passkeyRegType.split(' ').includes('resident_key'));
+    let hasLoginAlternatives = $derived(isPasskeyDiscoverable || providers.length > 0);
+    // the error of a failed Passkey button login, to show a hint with it
+    let passkeyDiscoverErr = $state('');
 
     let atprotoId = $state('');
     let atprotoHandle = $state('');
@@ -515,6 +522,8 @@
             err = t.account.passkeys.missingAttestation;
         } else {
             err = error;
+            // The browser found no Resident Key, or the user cancelled. Both look the same here.
+            passkeyDiscoverErr = mfaPurpose === 'Discover' ? error : '';
         }
 
         // If there is any error with the key, the user should start a new login process
@@ -585,6 +594,7 @@
 <Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
 <Template id={TPL_LOGIN_ACTION} bind:value={loginAction} />
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
+<Template id={TPL_PASSKEY_REG_TYPE} bind:value={passkeyRegType} />
 
 <Main>
     {#if isAutoRefreshing}
@@ -755,6 +765,11 @@
                     <div class="errMsg">
                         {err}
                     </div>
+                    {#if err === passkeyDiscoverErr}
+                        <div class="errMsg">
+                            {t.authorize.passkeyNotDiscovered}
+                        </div>
+                    {/if}
                 {/if}
 
                 {#if emailSuccess}
@@ -778,7 +793,7 @@
                     <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
-                {#if !showReset && !clientMfaForce && !isAtproto}
+                {#if !showReset && !clientMfaForce && !isAtproto && hasLoginAlternatives}
                     <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -789,19 +804,21 @@
                             </div>
                         </div>
 
-                        <div class="btn flex-col">
-                            <Button
-                                level={2}
-                                ariaLabel={t.authorize.login}
-                                onclick={onPasskeyDiscover}
-                                {isLoading}
-                            >
-                                <div class="flex gap-05">
-                                    <IconKey width="1.2rem" />
-                                    Passkey
-                                </div>
-                            </Button>
-                        </div>
+                        {#if isPasskeyDiscoverable}
+                            <div class="btn flex-col">
+                                <Button
+                                    level={2}
+                                    ariaLabel={t.authorize.login}
+                                    onclick={onPasskeyDiscover}
+                                    {isLoading}
+                                >
+                                    <div class="flex gap-05">
+                                        <IconKey width="1.2rem" />
+                                        Passkey
+                                    </div>
+                                </Button>
+                            </div>
+                        {/if}
 
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider

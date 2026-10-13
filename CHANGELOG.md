@@ -1,12 +1,62 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Passkey Types
+
+Users often added a *Default* Passkey and then could not log in with the *Passkey* button on the
+login page, which only finds Resident Keys. The UI explains this better now:
+
+- The *Passkey Type* selection on the Account Dashboard and during a password reset shows what the
+  chosen type means at login, highlighted.
+- The Resident Key warning mentions that an existing Passkey must be deleted before it can be added
+  again as a Resident Key.
+- When a login with the *Passkey* button fails, a hint says that Passkeys not added as a Resident
+  Key cannot be found this way, and that the E-Mail should be entered instead.
+
+A new, optional `webauthn.passkey_reg_type` (`WEBAUTHN_PASSKEY_REG_TYPE`) controls which types
+users can choose from. With a single value, users have no choice. With both, the first one is
+selected by default. With only `default`, the *Passkey* button on the login page is hidden. Already
+registered Passkeys are not changed.
+
+```toml
+[webauthn]
+# default: 'default resident_key'
+# overwritten by: WEBAUTHN_PASSKEY_REG_TYPE
+passkey_reg_type = 'default resident_key'
+```
+
+[#1792](https://github.com/sebadob/rauthy/issues/1792)
+
+#### MFA Modification for Federated Users
+
+It was not really a bug before, but also no good UX either.
+
+When you created a fedarated-only user, meaning direct login + user creation through an upstream
+provder, your account does neither have a password nor a passkey, and it only accessible through the
+upstream provider login. That was fine, and you could have initialized it with local credentials via
+the "request password reset" button from the Account Dashboard. You then have the option to
+initialize with either Password or Passkey.
+
+The issue was, that these users still saw the *MFA* tab as the default. But, since they were unable
+to authenticate locally, they had no possibility to reqeust an MFA Mod Token to add MFA keys. The
+logic for requesting these was simple: When the user has MFA active, request MFA authentication, and
+password otherwise. Federated-only users do have none of these. This version makes it possible for
+such users that an MFA Mod Token is granted without any additional authentication for adding the
+very first MFA key in this special case. Without this special handling, it was impossible to use the
+MFA tab in any meaningful way for these users.
+
+[#1798](https://github.com/sebadob/rauthy/pull/1798)
+
 ## v0.37.1
 
 ### Security
 
 #### Ephemeral Clients
 
-The lookup of an ephemeral (CIMD) client document fetched any `client_id` URL with the shared HTTP
+The lookup of an ephemeral client (CIMD) document fetched any `client_id` URL with the shared HTTP
 client: it followed redirects, used system proxies, connected to loopback, private and link-local
 addresses (including cloud metadata endpoints) and read the body without a size limit. Since the
 `client_id` comes from an unauthenticated request, this was an SSRF and memory exhaustion vector.
@@ -35,7 +85,7 @@ max_document_bytes = 65536
 # Ephemeral client lookups never use system proxies (HTTP_PROXY etc.),
 # because a proxy would bypass the address checks.
 #
-# CAUTION: only enable this for local development, when your
+# CAUTION: only enable this for local development when your
 # ephemeral client document is served from a private address.
 #
 # default: false
@@ -114,7 +164,7 @@ default_scopes = ['openid', 'profile', 'email']
   As part of the security hardening, redirect URIs are now validated much stricter, and this syntax
   does not work anymore. It still does not, but the original issue is fixed. To get it back, enable
   `access.rfc_8252_enable = true`. If you did, you can set a `redirect_uri` like
-  `http://localhost:/callback`, at any port (as long as its on loopback) is accepted.
+  `http://localhost/callback`, at any port (as long as its on loopback) is accepted.
   [#1769](https://github.com/sebadob/rauthy/pull/1769)
 - `ui_locales_supported` on the `.well-known/openid-configuration` endpoint was returning an invalid
   value `zhhans`. This should have been `zh-Hans`, and it made some parser fail (e.g. SonarQube).

@@ -427,21 +427,64 @@ spec:
 
 ### Caddy
 
-This is a very simple Caddy config example to get you started:
+This example has been tested with Caddy v2.6 and Rauthy v0.37. Rauthy itself is available at
+`auth.example.com`, and the client app you want to protect at `app.example.com`. The client
+`fwd-auth-test` must have `https://app.example.com/oidc/rauthy/callback` as its first
+`redirect_uri`, `https://app.example.com` as an allowed origin, and no PKCE challenge enabled.
+
+Caddy's `forward_auth` sets `X-Forwarded-Method` and `X-Forwarded-Uri` on its own, and
+`reverse_proxy` sets `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host`, so you don't
+need any additional `header_up` directives.
 
 ```
-test.example.com {
-    handle {
-        forward_auth rauthy {
-            uri /auth/v1/clients/test/forward_auth?redirect_state=302
+# Rauthy itself. The login UI must be reached through the same proxy as the client app,
+# because the forward auth state is bound to the client IP, which Rauthy extracts from the
+# `X-Forwarded-For` header set by Caddy.
+auth.example.com {
+    reverse_proxy rauthy:8080
+}
+
+app.example.com {
+    # This is the callback route you need to inject into your client app. Only this single path
+    # is proxied to Rauthy. It must match the first `redirect_uri` of the client.
+    handle /oidc/rauthy/callback {
+        reverse_proxy rauthy:8080 {
+            rewrite /auth/v1/clients/fwd-auth-test/forward_auth/callback?{query}
         }
-        reverse_proxy x.x.x.x:xx
     }
-    handle /auth/v1/clients/* {
-        reverse_proxy rauthy {
-            header_up X-Forwarded-Method {method}
-            header_up X-Forwarded-Uri {uri}
+
+    handle {
+        forward_auth rauthy:8080 {
+            # Like Traefik, Caddy expects a `302` status code on unsuccessful authentication.
+            uri /auth/v1/clients/fwd-auth-test/forward_auth?redirect_state=302
+            # If you don't have auth headers enabled, you can remove this block.
+            copy_headers {
+                x-forwarded-user
+                x-forwarded-user-roles
+                x-forwarded-user-groups
+                x-forwarded-user-email
+                x-forwarded-user-email-verified
+                x-forwarded-user-family-name
+                x-forwarded-user-given-name
+                x-forwarded-user-mfa
+            }
         }
+        # Your client app. Make sure it cannot be reached by skipping Caddy.
+        reverse_proxy app:3000
     }
 }
 ```
+
+Because Rauthy is running behind a reverse proxy, it must be configured to trust it. Without this,
+the forward auth endpoint will reject all requests with `Invalid proxy peer IP`:
+
+```toml
+[server]
+proxy_mode = true
+# The address Rauthy sees as the peer when Caddy connects to it.
+trusted_proxies = ['172.16.0.0/12']
+```
+
+If the login succeeds, but the callback fails with `Mismatch in peer_ip for forward auth state`,
+the login UI and the client app were reached via different paths, for instance with the login
+page being accessed directly without Caddy in between.

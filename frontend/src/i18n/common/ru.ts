@@ -122,9 +122,15 @@ export const I18nRu: I18n = {
             missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
-            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
-                the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+            rkWarning: `ВНИМАНИЕ: Resident Key позволяет входить напрямую, без ввода адреса эл.
+                почты, но для каждого приложения нужен дополнительный слот памяти. Убедитесь, что
+                свободного места достаточно. Чтобы сделать существующий Passkey ключом Resident
+                Key, сначала удалите его, а затем добавьте снова.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'Перед входом с этим Passkey нужно ввести адрес эл. почты.',
+                'Работает с кнопкой Passkey на странице входа, без ввода адреса эл. почты.',
+            ],
         },
         passwordConfirm: 'Подтверждение пароля',
         passwordCurr: 'Текущий пароль',
@@ -191,6 +197,8 @@ export const I18nRu: I18n = {
         needsUserUpdate: `Некоторая информация для этой учётной записи отсутствует. Вам необходимо обновить эти
             значения, прежде чем вы сможете продолжить вход.`,
         orLoginWith: 'или войти через',
+        passkeyNotDiscovered: `Passkey, добавленные не как Resident Key, нельзя найти этим
+            способом. Вместо этого введите адрес эл. почты.`,
         password: 'Пароль',
         passwordExpired:
             'Срок действия пароля истёк. Письмо со ссылкой для сброса было отправлено.',

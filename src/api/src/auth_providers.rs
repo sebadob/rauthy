@@ -22,7 +22,7 @@ use rauthy_data::entity::users::User;
 use rauthy_data::html::HtmlCached;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use spow::pow::Pow;
-use tracing::debug;
+use tracing::{debug, error};
 use validator::Validate;
 
 /// GET all upstream auth providers
@@ -212,13 +212,20 @@ pub async fn post_provider_callback_handle(
     payload.validate()?;
 
     let (auth_step, cookie, new_user_created) =
-        rauthy_service::oidc::auth_providers::login_finish::login_finish(
+        match rauthy_service::oidc::auth_providers::login_finish::login_finish(
             &req,
             &payload,
             // unwrap: we already checked for session auth or init above
             principal.into_inner().session.unwrap(),
         )
-        .await?;
+        .await
+        {
+            Ok(r) => r,
+            Err(err) => {
+                error!("Error during Auth Provider Callback: {}", err.message);
+                return Err(err);
+            }
+        };
 
     let mut resp = map_auth_step(auth_step, &req, new_user_created).await?;
     resp.add_cookie(&cookie).map_err(|err| {

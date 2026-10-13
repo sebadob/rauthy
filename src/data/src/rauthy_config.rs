@@ -436,6 +436,7 @@ impl Default for Vars {
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
                     fr: "%d/%m/%Y %T (%Z)".into(),
+                    ja: "%Y/%m/%d %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     nl: "%d-%m-%Y %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
@@ -552,6 +553,7 @@ impl Default for Vars {
                     "de".into(),
                     "en".into(),
                     "fr".into(),
+                    "ja".into(),
                     "ko".into(),
                     "nb".into(),
                     "nl".into(),
@@ -563,6 +565,7 @@ impl Default for Vars {
                     "de".into(),
                     "en".into(),
                     "fr".into(),
+                    "ja".into(),
                     "ko".into(),
                     "nb".into(),
                     "nl".into(),
@@ -697,6 +700,17 @@ impl Default for Vars {
                         footer: None,
                         button_text_request_new: None,
                     },
+                    ja: VarsTemplate {
+                        subject: "新しいパスワードの設定".into(),
+                        header: "新しいパスワードの設定 -".into(),
+                        text: None,
+                        click_link: Some("下のリンクをクリックして、パスワードの設定画面を開いてください。".into()),
+                        validity: Some("このリンクは、安全のため短い時間だけ有効です。".into()),
+                        expires: Some("リンクの有効期限:".into()),
+                        button: Some("パスワードを設定する".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     ko: VarsTemplate
                     {
                         subject: "새 비밀번호".into(),
@@ -826,6 +840,17 @@ impl Default for Vars {
                         button: Some("Réinitialiser le mot de passe".into()),
                         footer: Some("Si ce lien a expiré, vous pouvez en demander un nouveau.".into()),
                         button_text_request_new: Some("Demander un nouveau lien".into()),
+                    },
+                    ja: VarsTemplate {
+                        subject: "パスワードリセットのご依頼".into(),
+                        header: "パスワードリセットのご依頼 -".into(),
+                        text: None,
+                        click_link: Some("下のリンクをクリックして、パスワードのリセット画面を開いてください。".into()),
+                        validity: Some("このリンクは、安全のため短い時間だけ有効です。".into()),
+                        expires: Some("リンクの有効期限:".into()),
+                        button: Some("パスワードをリセットする".into()),
+                        footer: Some("リンクの有効期限が切れている場合は、新しいリンクを依頼できます。".into()),
+                        button_text_request_new: Some("新しいリンクを依頼する".into()),
                     },
                     ko: VarsTemplate {
                         subject: "비밀번호 초기화 요청".into(),
@@ -958,6 +983,21 @@ Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.i
                         footer: None,
                         button_text_request_new: Some("Demander un lien de réinitialisation du mot de passe".into()),
                     },
+                    ja: VarsTemplate {
+                        subject: "このメールアドレスは登録済みです".into(),
+                        header: "このメールアドレスは登録済みです -".into(),
+                        text: Some(r#"すでにアカウントがあるメールアドレスで、新しいアカウントの登録が試みられました。
+ご自身の操作ミスであれば、このメッセージは無視してかまいません。
+パスワードを忘れた場合は、下のリンクからリセットできます。
+ご自身による登録でない場合も、心配はいりません。
+アカウントは侵害されておらず、情報も漏れていません。"#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("パスワードリセットのリンクを依頼する".into()),
+                    },
                     ko: VarsTemplate {
                         subject: "E-Mail registered already".into(),
                         header: "E-Mail registered already - ".into(),
@@ -1082,6 +1122,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
                         text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    ja: VarsTemplate {
+                        subject: "ワンタイムパスワード".into(),
+                        header: "ワンタイムパスワード -".into(),
+                        text: Some("ワンタイムパスワードは次のとおりです:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -1219,6 +1270,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 force_passkey_cert_level: None,
                 force_passkey_protection: None,
                 force_passkey_attachment: None,
+                passkey_reg_type: vec![PasskeyRegType::Default, PasskeyRegType::ResidentKey],
             },
             atproto: VarsAtproto { enable: false },
         }
@@ -2113,6 +2165,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "fr", "TZ_FMT_FR") {
             self.email.tz_fmt.fr = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ja", "TZ_FMT_JA") {
+            self.email.tz_fmt.ja = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ko", "TZ_FMT_KO") {
             self.email.tz_fmt.ko = v.into();
@@ -3365,6 +3420,13 @@ impl Vars {
                         self.templates.password_reset.fr.clone()
                     }
                 }
+                "ja" => {
+                    if is_password_new {
+                        self.templates.password_new.ja.clone()
+                    } else {
+                        self.templates.password_reset.ja.clone()
+                    }
+                }
                 "ko" => {
                     if is_password_new {
                         self.templates.password_new.ko.clone()
@@ -3409,7 +3471,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ja ko nb nl ru uk zh_hans"
                     )
                 }
             };
@@ -3461,6 +3523,13 @@ impl Vars {
                         self.templates.password_reset.fr = tpl;
                     }
                 }
+                "ja" => {
+                    if is_password_new {
+                        self.templates.password_new.ja = tpl;
+                    } else {
+                        self.templates.password_reset.ja = tpl;
+                    }
+                }
                 "ko" => {
                     if is_password_new {
                         self.templates.password_new.ko = tpl;
@@ -3505,7 +3574,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ko nb nl ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de fr ja ko nb nl ru uk zh_hans"
                     )
                 }
             }
@@ -3847,6 +3916,14 @@ impl Vars {
             }
             self.webauthn.force_passkey_attachment = Some(att);
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "webauthn",
+            "passkey_reg_type",
+            "WEBAUTHN_PASSKEY_REG_TYPE",
+        ) {
+            self.webauthn.passkey_reg_type = parse_passkey_reg_type(&v);
+        }
 
         check_table_empty(table, "webauthn");
     }
@@ -4150,6 +4227,7 @@ pub struct VarsEmailTzFmt {
     pub de: Cow<'static, str>,
     pub en: Cow<'static, str>,
     pub fr: Cow<'static, str>,
+    pub ja: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub nl: Cow<'static, str>,
     pub no: Cow<'static, str>,
@@ -4436,6 +4514,7 @@ pub struct VarsTemplatesLanguages {
     pub de: VarsTemplate,
     pub en: VarsTemplate,
     pub fr: VarsTemplate,
+    pub ja: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
     pub nl: VarsTemplate,
@@ -4558,6 +4637,58 @@ pub struct VarsWebauthn {
     pub force_passkey_cert_level: Option<MdsCertLevel>,
     pub force_passkey_protection: Option<KeyProtectionMask>,
     pub force_passkey_attachment: Option<AttachmentHintMask>,
+    /// Never empty and without duplicates. The first one is the default in the UI.
+    pub passkey_reg_type: Vec<PasskeyRegType>,
+}
+
+impl VarsWebauthn {
+    pub fn is_passkey_reg_type_allowed(&self, resident_key: bool) -> bool {
+        let typ = if resident_key {
+            PasskeyRegType::ResidentKey
+        } else {
+            PasskeyRegType::Default
+        };
+        self.passkey_reg_type.contains(&typ)
+    }
+
+    /// The allowed values, space-separated, in the configured order.
+    pub fn passkey_reg_type_str(&self) -> String {
+        self.passkey_reg_type
+            .iter()
+            .map(|t| t.as_str())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PasskeyRegType {
+    Default,
+    ResidentKey,
+}
+
+impl PasskeyRegType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::ResidentKey => "resident_key",
+        }
+    }
+}
+
+impl FromStr for PasskeyRegType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "default" => Ok(Self::Default),
+            "resident_key" => Ok(Self::ResidentKey),
+            _ => Err(format!(
+                "Invalid value for webauthn.passkey_reg_type: '{s}' - expected one of: default, \
+                resident_key"
+            )),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -4569,6 +4700,25 @@ pub fn check_table_empty(table: toml::Table, tbl_name: &str) {
     if !table.is_empty() {
         panic!("Unknown data in section: '{tbl_name}': {table:#?}");
     }
+}
+
+/// Parses the space-separated `webauthn.passkey_reg_type`. Panics on an empty value, an unknown
+/// type, or a duplicate.
+fn parse_passkey_reg_type(input: &str) -> Vec<PasskeyRegType> {
+    let mut res = Vec::with_capacity(2);
+    for v in input.split_whitespace() {
+        let typ = v
+            .parse::<PasskeyRegType>()
+            .unwrap_or_else(|err| panic!("{err}"));
+        if res.contains(&typ) {
+            panic!("Duplicate value in webauthn.passkey_reg_type: '{v}'");
+        }
+        res.push(typ);
+    }
+    if res.is_empty() {
+        panic!("webauthn.passkey_reg_type must contain at least one of: default, resident_key");
+    }
+    res
 }
 
 /// Parses the given input into a type-safe `Duration`. The input can have the following suffixes:
@@ -4863,6 +5013,52 @@ mod tests {
             parse_duration("2y").unwrap(),
             Duration::from_secs(2 * 365 * 24 * 3600)
         );
+    }
+
+    #[test]
+    fn test_parse_passkey_reg_type() {
+        assert_eq!(
+            parse_passkey_reg_type("default resident_key"),
+            vec![PasskeyRegType::Default, PasskeyRegType::ResidentKey]
+        );
+        assert_eq!(
+            parse_passkey_reg_type(" resident_key  default "),
+            vec![PasskeyRegType::ResidentKey, PasskeyRegType::Default]
+        );
+        assert_eq!(
+            parse_passkey_reg_type("default"),
+            vec![PasskeyRegType::Default]
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "at least one")]
+    fn test_parse_passkey_reg_type_empty() {
+        parse_passkey_reg_type("  ");
+    }
+
+    #[test]
+    #[should_panic(expected = "Duplicate")]
+    fn test_parse_passkey_reg_type_duplicate() {
+        parse_passkey_reg_type("default default");
+    }
+
+    #[test]
+    #[should_panic(expected = "expected one of")]
+    fn test_parse_passkey_reg_type_unknown() {
+        parse_passkey_reg_type("default resident");
+    }
+
+    #[test]
+    fn test_passkey_reg_type_allowed() {
+        let mut vars = Vars::default();
+        assert!(vars.webauthn.is_passkey_reg_type_allowed(false));
+        assert!(vars.webauthn.is_passkey_reg_type_allowed(true));
+        assert_eq!(vars.webauthn.passkey_reg_type_str(), "default resident_key");
+
+        vars.webauthn.passkey_reg_type = vec![PasskeyRegType::Default];
+        assert!(vars.webauthn.is_passkey_reg_type_allowed(false));
+        assert!(!vars.webauthn.is_passkey_reg_type_allowed(true));
     }
 
     fn parse_eph(toml_src: &str) -> Vars {

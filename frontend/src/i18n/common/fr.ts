@@ -124,9 +124,16 @@ export const I18nFr: I18n = {
             missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
-            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
-                the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+            rkWarning: `ATTENTION : même si une Resident Key permet une connexion directe sans
+                saisir l'adresse e-mail, elle occupe un emplacement de stockage supplémentaire pour
+                chaque application. Assurez-vous qu'il reste assez d'espace. Pour transformer une
+                Passkey existante en Resident Key, supprimez-la d'abord, puis ajoutez-la à nouveau.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                `Vous devez saisir votre adresse e-mail avant de vous connecter avec cette Passkey.`,
+                `Fonctionne avec le bouton Passkey de la page de connexion, sans saisir votre
+                    adresse e-mail.`,
+            ],
         },
         passwordConfirm: 'Confirmer le mot de passe',
         passwordCurr: 'Mot de passe actuel',
@@ -192,6 +199,8 @@ export const I18nFr: I18n = {
         needsUserUpdate: `Certaines informations pour ce compte sont manquantes. Vous devez mettre à jour ces
             valeurs avant de pouvoir poursuivre la connexion.`,
         orLoginWith: 'ou se connecter avec',
+        passkeyNotDiscovered: `Les Passkeys qui n'ont pas été ajoutées comme Resident Key ne
+            peuvent pas être trouvées de cette façon. Saisissez plutôt votre adresse e-mail.`,
         password: 'Mot de passe',
         passwordExpired:
             'Le mot de passe a expiré. Un e-mail contenant un lien de réinitialisation a été envoyé.',
