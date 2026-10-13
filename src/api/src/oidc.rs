@@ -48,13 +48,13 @@ use rauthy_data::html::templates::{
 use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_service::forward_auth::auth_header;
 use rauthy_service::oidc::{authorize, logout, token_info, token_revocation, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
-use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{error, info, warn};
 use validator::Validate;
@@ -1218,24 +1218,6 @@ pub async fn post_userinfo(req: HttpRequest) -> Result<HttpResponse, ErrorRespon
     } else {
         Ok(HttpResponse::Ok().json(info))
     }
-}
-
-#[inline]
-fn auth_header(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
-    let name = HeaderName::from_str(name).map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            format!("Invalid header name '{name}'"),
-        )
-    })?;
-    let value = HeaderValue::from_str(value).map_err(|_| {
-        ErrorResponse::new(
-            ErrorResponseType::Internal,
-            format!("Invalid value for header '{name}'"),
-        )
-    })?;
-
-    Ok((name, value))
 }
 
 /// GET forward authentication

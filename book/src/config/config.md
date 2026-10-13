@@ -296,6 +296,18 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
 #enable_pref_username = false
 
+# If `true`, the values of all auth headers are percent-encoded
+# (UTF-8, like URLs), so that non-ASCII characters, for instance
+# in names, can be passed safely through proxies and backends.
+# Only non-ASCII bytes, control characters and `%` itself are
+# encoded, other ASCII characters like spaces and commas stay the
+# same. Decode the values once as UTF-8 on the receiving side
+# (a `+` is not a space here).
+#
+# default: false
+# overwritten by: AUTH_HEADERS_PERCENT_ENCODE
+#percent_encode = false
+
 # Configure the header names being used for the different values. You
 # can change them to your needs, if you cannot easily change your
 # downstream apps.

@@ -327,6 +327,7 @@ impl Default for Vars {
             auth_headers: VarsAuthHeaders {
                 enable: false,
                 enable_pref_username: false,
+                percent_encode: false,
                 user: "x-forwarded-user".into(),
                 roles: "x-forwarded-user-roles".into(),
                 groups: "x-forwarded-user-groups".into(),
@@ -1536,6 +1537,14 @@ impl Vars {
             "AUTH_HEADERS_ENABLE_PREF_USERNAME",
         ) {
             self.auth_headers.enable_pref_username = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "auth_headers",
+            "percent_encode",
+            "AUTH_HEADERS_PERCENT_ENCODE",
+        ) {
+            self.auth_headers.percent_encode = v;
         }
 
         if let Some(v) = t_str(&mut table, "auth_headers", "user", "AUTH_HEADER_USER") {
@@ -4076,6 +4085,7 @@ pub struct VarsAccess {
 pub struct VarsAuthHeaders {
     pub enable: bool,
     pub enable_pref_username: bool,
+    pub percent_encode: bool,
     pub user: Cow<'static, str>,
     pub roles: Cow<'static, str>,
     pub groups: Cow<'static, str>,

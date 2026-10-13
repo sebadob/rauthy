@@ -4,6 +4,18 @@
 
 ### Changes
 
+#### Percent-encoded Auth Headers
+
+Forward auth header values, like names, may contain non-ASCII characters, which can cause issues
+with proxies and backends. The new opt-in `auth_headers.percent_encode` (`AUTH_HEADERS_PERCENT_ENCODE`)
+percent-encodes (UTF-8) non-ASCII bytes, control characters and `%` in all auth header values, for
+both forward auth endpoints. Other ASCII characters stay the same.
+
+```toml
+[auth_headers]
+percent_encode = true
+```
+
 #### Passkey Types
 
 Users often added a *Default* Passkey and then could not log in with the *Passkey* button on the
