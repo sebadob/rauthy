@@ -2882,6 +2882,14 @@ storage_type = 'db'
 # overwritten_by: USER_VALUES_REVALIDATE_DURING_LOGIN
 #revalidate_during_login = false
 
+# The order of `given_name` and `family_name` in the `name` claim.
+# - 'given_family': "Taro Yamada"
+# - 'family_given': "Yamada Taro"
+#
+# default: 'given_family'
+# overwritten by: USER_VALUES_NAME_ORDER
+#name_order = 'given_family'
+
 [user_values.preferred_username]
 
 # If the `preferred_username` is not set for a given user, the

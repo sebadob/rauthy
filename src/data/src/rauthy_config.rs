@@ -1248,6 +1248,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 phone: UserValueConfigValue::Optional,
                 tz: UserValueConfigValue::Optional,
                 revalidate_during_login: false,
+                name_order: NameOrder::GivenFamily,
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
@@ -3760,6 +3761,14 @@ impl Vars {
         ) {
             self.user_values.revalidate_during_login = v;
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "user_values",
+            "name_order",
+            "USER_VALUES_NAME_ORDER",
+        ) {
+            self.user_values.name_order = NameOrder::from(v.as_str());
+        }
 
         let mut pref_username = t_table(&mut table, "preferred_username");
 
@@ -4587,6 +4596,7 @@ pub struct VarsUserValuesConfig {
     pub phone: UserValueConfigValue,
     pub tz: UserValueConfigValue,
     pub revalidate_during_login: bool,
+    pub name_order: NameOrder,
     pub preferred_username: VarsUserPreferredUsername,
 }
 
@@ -4619,6 +4629,47 @@ impl From<&str> for UserValueConfigValue {
             "optional" => Self::Optional,
             "hidden" => Self::Hidden,
             _ => panic!("Invalid value for `UserValueConfig` in `user_values`: {s}"),
+        }
+    }
+}
+
+/// The order of `given_name` and `family_name` in the `name` claim.
+#[derive(Debug, PartialEq, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NameOrder {
+    GivenFamily,
+    FamilyGiven,
+}
+
+impl From<&str> for NameOrder {
+    fn from(s: &str) -> Self {
+        match s {
+            "given_family" => Self::GivenFamily,
+            "family_given" => Self::FamilyGiven,
+            _ => panic!(
+                "Invalid value for `user_values.name_order`: '{s}' - expected one of: \
+                given_family, family_given"
+            ),
+        }
+    }
+}
+
+impl NameOrder {
+    /// Builds the full name in this order, joined with a single space.
+    /// An empty part is left out together with the space.
+    pub fn full_name(&self, given_name: &str, family_name: Option<&str>) -> String {
+        let family_name = family_name.unwrap_or_default();
+        let (first, second) = match self {
+            Self::GivenFamily => (given_name, family_name),
+            Self::FamilyGiven => (family_name, given_name),
+        };
+
+        if first.is_empty() {
+            second.to_string()
+        } else if second.is_empty() {
+            first.to_string()
+        } else {
+            format!("{first} {second}")
         }
     }
 }
@@ -5059,6 +5110,25 @@ mod tests {
         vars.webauthn.passkey_reg_type = vec![PasskeyRegType::Default];
         assert!(vars.webauthn.is_passkey_reg_type_allowed(false));
         assert!(!vars.webauthn.is_passkey_reg_type_allowed(true));
+    }
+
+    #[test]
+    fn test_name_order_full_name() {
+        let order = NameOrder::GivenFamily;
+        assert_eq!(order.full_name("Taro", None), "Taro");
+        assert_eq!(order.full_name("Taro", Some("Yamada")), "Taro Yamada");
+        assert_eq!(order.full_name("Taro", Some("")), "Taro");
+        assert_eq!(order.full_name("", Some("Yamada")), "Yamada");
+        assert_eq!(order.full_name("", None), "");
+
+        let order = NameOrder::FamilyGiven;
+        assert_eq!(order.full_name("Taro", None), "Taro");
+        assert_eq!(order.full_name("Taro", Some("Yamada")), "Yamada Taro");
+        assert_eq!(order.full_name("Taro", Some("")), "Taro");
+        assert_eq!(order.full_name("", Some("Yamada")), "Yamada");
+
+        assert_eq!(NameOrder::from("given_family"), NameOrder::GivenFamily);
+        assert_eq!(NameOrder::from("family_given"), NameOrder::FamilyGiven);
     }
 
     fn parse_eph(toml_src: &str) -> Vars {

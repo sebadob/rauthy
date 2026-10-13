@@ -50,6 +50,21 @@ MFA tab in any meaningful way for these users.
 
 [#1798](https://github.com/sebadob/rauthy/pull/1798)
 
+#### Name Order for the `name` Claim
+
+The `name` claim was always built as `given_name family_name`. In Japanese, Chinese and Korean, the
+family name comes first, so applications showing `name` displayed it the wrong way around. A new,
+optional `user_values.name_order` (`USER_VALUES_NAME_ORDER`) controls the order. The default keeps
+the current order. The `name` in the `/userinfo` response is now built the same way as the claim.
+An empty part no longer leaves a stray space behind, as it did before for an empty `family_name`.
+
+```toml
+[user_values]
+# default: 'given_family'
+# overwritten by: USER_VALUES_NAME_ORDER
+name_order = 'family_given'
+```
+
 ## v0.37.1
 
 ### Security
