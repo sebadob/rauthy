@@ -393,11 +393,7 @@ impl TokenSet {
             claims.given_name = Some(user.given_name.as_str());
             claims.family_name = user.family_name.as_deref();
 
-            let name = config
-                .vars
-                .user_values
-                .name_order
-                .full_name(&user.given_name, user.family_name.as_deref());
+            let name = user.full_name();
             if !name.is_empty() {
                 claims.name = Some(name);
             }

@@ -14,7 +14,7 @@ use rauthy_data::entity;
 use rauthy_data::entity::auth_providers::AuthProviderTemplate;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::rauthy_config::{
-    NameOrder, UserValueConfigValue, VarsUserPreferredUsername, VarsUserValuesConfig,
+    UserValueConfigValue, VarsUserPreferredUsername, VarsUserValuesConfig,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set;
@@ -468,7 +468,6 @@ use utoipa::{OpenApi, openapi};
             VarsUserValuesConfig,
             VarsUserPreferredUsername,
             UserValueConfigValue,
-            NameOrder,
         ),
     ),
     tags(

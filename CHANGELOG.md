@@ -53,16 +53,13 @@ MFA tab in any meaningful way for these users.
 #### Name Order for the `name` Claim
 
 The `name` claim was always built as `given_name family_name`. In Japanese, Chinese and Korean, the
-family name comes first, so applications showing `name` displayed it the wrong way around. A new,
-optional `user_values.name_order` (`USER_VALUES_NAME_ORDER`) controls the order. The default keeps
-the current order. The `name` in the `/userinfo` response is now built the same way as the claim.
-An empty part no longer leaves a stray space behind, as it did before for an empty `family_name`.
+family name comes first, so applications showing `name` displayed it the wrong way around. The new,
+optional `user_values.name_order_reverse` (`USER_VALUES_NAME_ORDER_REVERSE`) puts the family name
+first, both in the `id_token` and in `/userinfo`. The default keeps the current order.
 
 ```toml
 [user_values]
-# default: 'given_family'
-# overwritten by: USER_VALUES_NAME_ORDER
-name_order = 'family_given'
+name_order_reverse = true
 ```
 
 ## v0.37.1

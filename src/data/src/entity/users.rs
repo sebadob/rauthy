@@ -1785,6 +1785,23 @@ impl User {
         }
     }
 
+    /// The `name` claim for the `id_token` and `/userinfo`. With
+    /// `user_values.name_order_reverse`, the family name comes first.
+    pub fn full_name(&self) -> String {
+        let mut parts = [
+            self.given_name.as_str(),
+            self.family_name.as_deref().unwrap_or_default(),
+        ];
+        if RauthyConfig::get().vars.user_values.name_order_reverse {
+            parts.reverse();
+        }
+        parts
+            .into_iter()
+            .filter(|p| !p.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
     pub async fn from_new_user_req(new_user: NewUserRequest) -> Result<Self, ErrorResponse> {
         let roles = Role::sanitize(new_user.roles).await?;
         let groups = Group::sanitize(new_user.groups).await?;

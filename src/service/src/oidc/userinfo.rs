@@ -106,11 +106,7 @@ pub async fn get_userinfo(
     let mut userinfo = Userinfo {
         id: user.id.clone(),
         sub: user.id.clone(),
-        name: RauthyConfig::get()
-            .vars
-            .user_values
-            .name_order
-            .full_name(&user.given_name, user.family_name.as_deref()),
+        name: user.full_name(),
         roles,
         mfa_enabled: user.has_webauthn_enabled(),
 
