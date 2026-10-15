@@ -205,7 +205,7 @@
         }
     }
 
-    async function handleDelete(name: string) {
+    async function handleDeletePasskey(name: string) {
         if (!mfaModToken) {
             showModal = true;
             return;
@@ -214,7 +214,10 @@
         let payload: WebauthnDeleteRequest = {
             mfa_mod_token_id: mfaModToken.id,
         };
-        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`, payload);
+        let res = await fetchDelete(
+            `/auth/v1/users/${user.id}/webauthn/delete/${encodeURIComponent(name)}`,
+            payload,
+        );
         if (res.status === 200) {
             await fetchPasskeys();
             await fetchUser();
@@ -567,7 +570,7 @@
     {/if}
     <div class="keysContainer">
         {#each passkeys as passkey (passkey.name)}
-            <UserPasskey {passkey} {showDelete} onDelete={handleDelete} />
+            <UserPasskey {passkey} {showDelete} onDelete={handleDeletePasskey} />
         {/each}
     </div>
     {#if passkeys.length > 0}
