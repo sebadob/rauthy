@@ -17,7 +17,7 @@ export async function webauthnReg(
     allowRk?: boolean,
 ): Promise<WebauthnRegResult> {
     let payloadStart: WebauthnRegStartRequest = {
-        passkey_name: passkeyName,
+        passkey_name: passkeyName.trim(),
         magic_link_id: magicLinkId,
         mfa_mod_token_id: mfaModTokenId,
         allow_rk: allowRk,
@@ -91,7 +91,7 @@ export async function webauthnReg(
 
     // the backend expects base64 url safe string instead of array buffers
     let payloadFinish: WebauthnRegFinishRequest = {
-        passkey_name: passkeyName,
+        passkey_name: passkeyName.trim(),
         data: {
             id: credential.id,
             // @ts-ignore the `rawId` actually exists

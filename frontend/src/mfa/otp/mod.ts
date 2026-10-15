@@ -17,7 +17,7 @@ export async function postOtp(
     mfaModTokenId: string,
 ): Promise<OtpCreateResponse> {
     let payload: OtpCreateRequest = {
-        otp_name: name,
+        otp_name: name?.trim(),
         otp_kind: kind,
         mfa_mod_token_id: mfaModTokenId,
     };

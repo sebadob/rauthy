@@ -2022,45 +2022,49 @@ pub async fn delete_webauthn(
     payload.validate()?;
 
     let (id, name) = path.into_inner();
+    let ip = real_ip_from_req(&req)?;
 
-    let notify_user = if principal.is_user(&id).is_ok() {
-        let Some(token_id) = payload.mfa_mod_token_id else {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "missing `mfa_mod_token_id`",
-            ));
-        };
+    // If this deletion is triggered via the Account Dashboard, no matter if it's an admin or not,
+    // the payload will always carry an MFA Mod Token. In this case, *this* user must match the
+    // path. If no MFA Mod Token is present, we must validate for an admin-triggered action, and
+    // send a notification to the target user.
+    let notify_user = if let Some(token_id) = payload.mfa_mod_token_id {
+        principal.is_user(&id)?;
         let token = MfaModToken::find(&token_id).await?;
-        let ip = real_ip_from_req(&req)?;
         token.validate(principal.user_id()?, ip)?;
         warn!("Passkey delete for user {} for key {}", id, name);
         None
     } else {
-        if principal.is_session_group_admin() {
+        if principal
+            .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)
+            .is_err()
+        {
             principal.validate_group_admin_session()?;
-        } else {
-            principal
-                .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
         }
-
         let target = User::find(id.clone()).await?;
         principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
-        warn!("Passkey delete from admin for user {} for key {}", id, name);
+        warn!(
+            "Passkey delete from admin for user {} for key {} from {}",
+            id, name, ip
+        );
         Some(target)
     };
 
     PasskeyEntity::delete(id, name.clone()).await?;
 
+    let mut resp = HttpResponse::Ok().finish();
+
     if let Some(user) = notify_user {
         send_email_passkey_removed(&user, &name).await;
+    } else {
+        // Make sure to delete any existing MFA cookie when a key is deleted, but only when this was
+        // a self-delete via the account dashboard.
+        let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
+        if let Err(err) = resp.add_cookie(&cookie) {
+            error!("Error deleting MFA cookie in post_webauthn_delete: {}", err);
+        }
     }
 
-    // make sure to delete any existing MFA cookie when a key is deleted
-    let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
-    let mut resp = HttpResponse::Ok().finish();
-    if let Err(err) = resp.add_cookie(&cookie) {
-        error!("Error deleting MFA cookie in post_webauthn_delete: {}", err);
-    }
     Ok(resp)
 }
 
