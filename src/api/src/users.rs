@@ -2052,20 +2052,19 @@ pub async fn delete_webauthn(
 
     PasskeyEntity::delete(id, name.clone()).await?;
 
-    let is_user = notify_user.is_none();
+    let mut resp = HttpResponse::Ok().finish();
+
     if let Some(user) = notify_user {
         send_email_passkey_removed(&user, &name).await;
-    }
-
-    let mut resp = HttpResponse::Ok().finish();
-    // Make sure to delete any existing MFA cookie when a key is deleted, but only when this was
-    // a self-delete via the account dashboard.
-    if is_user {
+    } else {
+        // Make sure to delete any existing MFA cookie when a key is deleted, but only when this was
+        // a self-delete via the account dashboard.
         let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
         if let Err(err) = resp.add_cookie(&cookie) {
             error!("Error deleting MFA cookie in post_webauthn_delete: {}", err);
         }
     }
+
     Ok(resp)
 }
 
