@@ -1,0 +1,370 @@
+import { type I18n } from './interface';
+
+export const I18nPt: I18n = {
+    lang: 'pt',
+    common: {
+        accept: 'Aceitar',
+        activeTheme: 'Esquema de cores ativo',
+        authenticate: 'Autenticar',
+        cancel: 'Cancelar',
+        changeTheme: 'Mudar tema - Ativo: {{ CURRENT }}',
+        close: 'Fechar',
+        copyToClip: 'Copiar valor para a área de transferência',
+        delete: 'Eliminar',
+        details: 'Detalhes',
+        edit: 'Editar',
+        email: 'E-mail',
+        errTooShort: 'Valor demasiado curto',
+        errTooLong: 'Valor demasiado longo',
+        expandContent: 'Expandir conteúdo',
+        hide: 'Ocultar',
+        hours: 'Horas',
+        invalidInput: 'Valor inválido',
+        legend: 'Legenda',
+        maxFileSize: 'Tamanho máximo do ficheiro',
+        minutes: 'Minutos',
+        month: 'Mês',
+        months: [
+            'Janeiro',
+            'Fevereiro',
+            'Março',
+            'Abril',
+            'Maio',
+            'Junho',
+            'Julho',
+            'Agosto',
+            'Setembro',
+            'Outubro',
+            'Novembro',
+            'Dezembro',
+        ],
+        never: 'Nunca',
+        password: 'Palavra-passe',
+        refresh: 'Atualizar',
+        required: 'Obrigatório',
+        save: 'Guardar',
+        search: 'Pesquisar',
+        seconds: 'segundos',
+        selectI18n: 'Selecionar idioma',
+        show: 'Mostrar',
+        summary: 'Resumo',
+        timezone: 'Fuso horário',
+        weekDaysShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+        year: 'Ano',
+    },
+    account: {
+        account: 'Conta de utilizador',
+        accType: 'Tipo de conta',
+        accTypePasskeyText1: `Esta conta é atualmente uma conta só com Passkey.\nIsto significa que
+            não tem palavra-passe, porque não precisa de uma.`,
+        accTypePasskeyText2: `Pode converter a sua conta e adicionar uma palavra-passe. Tenha em conta,
+            no entanto, que isso implica verificar cada novo dispositivo também com a palavra-passe.\n
+            Deixará de poder iniciar sessão num dispositivo onde não tenha introduzido a palavra-passe
+            pelo menos uma vez.`,
+        accTypePasskeyText3: 'Pretende converter a sua conta e adicionar uma palavra-passe?',
+        accessExp: 'O acesso expira',
+        accessRenew: 'Acesso renovável até',
+        accessRenewDelete: 'Eliminar a possibilidade de renovação',
+        birthdate: 'Data de nascimento',
+        canModifyFor: 'A MFA pode ser alterada durante:',
+        city: 'Localidade',
+        changePassword: 'Alterar palavra-passe',
+        convertAccount: 'Converter conta',
+        convertAccountP1: `Pode converter a sua conta numa conta só com Passkey.\nEsta conversão
+            elimina a sua palavra-passe e, a partir daí, só pode e tem de iniciar sessão com as Passkeys
+            registadas.\nTenha em conta que apenas são aceites Passkeys com verificação adicional do
+            utilizador. Se as suas Passkeys o suportarem, verá um pequeno símbolo a seguir ao nome da
+            chave na página 'MFA'.`,
+        country: 'País',
+        deleteAccount: {
+            deleteAccount: 'Eliminar conta',
+            deleteAccountDesc: `ATENÇÃO: A eliminação desta conta não pode ser revertida! Para
+                confirmar, introduza:`,
+        },
+        deviceId: 'ID',
+        deviceName: 'Nome',
+        devices: 'Dispositivos',
+        devicesDesc: 'Dispositivos associados a esta conta',
+        emailUpdateConfirm: `O endereço de e-mail ainda não foi atualizado. Foi enviada uma
+            mensagem para o seu novo endereço.\nTem de clicar na ligação de confirmação que esta contém.
+            Assim que for confirmado, o seu novo endereço será atualizado.`,
+        emailVerified: 'E-mail verificado',
+        familyName: 'Apelido',
+        federatedConvertPassword1: `Tem uma conta federada. Isto significa que inicia sessão\natravés
+            de um fornecedor de autenticação externo. O seu fornecedor atual é:`,
+        federatedConvertPassword2: `Pode pedir a redefinição da palavra-passe por e-mail. Depois de
+            concluída,\nserá adicionada uma palavra-passe local à sua conta. Poderá então iniciar sessão
+            através do\nfornecedor externo ou com a palavra-passe local. Pretende pedir a redefinição?`,
+        generateRandom: 'Gerar aleatoriamente',
+        givenName: 'Nome próprio',
+        groups: 'Grupos',
+        key: 'Chave',
+        keyUnique: 'A chave tem de ser única',
+        lastLogin: 'Último início de sessão',
+        mfaActivated: 'MFA ativada',
+        navInfo: 'Informação',
+        navEdit: 'Editar',
+        navMfa: 'MFA',
+        navLogout: 'Terminar sessão',
+        navBackToAdmin: 'Interface de administração',
+        other: 'Outros',
+        pam: {
+            addSshKey: 'Adicionar nova Key',
+            comment: 'Comentário',
+            generatePassword: 'Nova palavra-passe',
+            keyAdded: 'Adicionada',
+            keyType: 'Tipo',
+            username: 'Nome de utilizador',
+            validFor: 'Palavra-passe válida durante {{ secs }} segundos',
+        },
+        passkeys: {
+            missingAttestation: 'A Passkey não cumpre os padrões de segurança exigidos.',
+            type: 'Tipo de Passkey',
+            types: ['Predefinida', 'Resident Key'],
+            rkWarning: `ATENÇÃO: Embora uma Resident Key permita iniciar sessão diretamente sem
+                indicar o endereço de e-mail, é necessário um espaço de armazenamento adicional
+                para cada aplicação. Certifique-se de que existe espaço suficiente.
+                Para transformar uma Passkey existente numa Resident Key, elimine-a primeiro e
+                depois adicione-a novamente.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'Tem de introduzir o seu e-mail antes de poder iniciar sessão com esta Passkey.',
+                `Funciona com o botão Passkey na página de início de sessão, sem introduzir o seu
+                    e-mail.`,
+            ],
+        },
+        passwordConfirm: 'Confirmar palavra-passe',
+        passwordCurr: 'Palavra-passe atual',
+        passwordCurrReq: 'A palavra-passe atual é obrigatória',
+        passwordNew: 'Nova palavra-passe',
+        passwordNewReq: 'A nova palavra-passe é obrigatória',
+        passwordNoMatch: 'É obrigatório confirmar a palavra-passe',
+        passwordExpiry: 'Expiração da palavra-passe',
+        passwordPolicyFollow: 'Tem de cumprir a política de palavras-passe',
+        passwordReset: 'Redefinir palavra-passe',
+        phone: 'Telefone',
+        preferredUsername: {
+            desc: `Algumas aplicações vão usar este nome de utilizador. Não é possível controlar
+				quais o fazem.`,
+            forceOverwrite: 'Forçar substituição',
+            immutable: 'ATENÇÃO: O nome de utilizador só pode ser escolhido uma vez!',
+            immutableInfo: 'O nome de utilizador não pode ser alterado.',
+            notAvailable: 'Este nome não está disponível.',
+            preferredUsername: 'Nome de utilizador preferido',
+        },
+        providerLink: 'Federar conta',
+        providerLinkDesc: `Pode associar esta conta a um dos seguintes fornecedores de início de
+            sessão.\nDepois de ativar esta função, será redirecionado para a página de início de sessão
+            do fornecedor escolhido.\nApós um início de sessão bem-sucedido e se o e-mail coincidir, a
+            sua conta ficará associada.`,
+        providerUnlink: 'Desassociar federação',
+        providerUnlinkDesc: `Só pode desassociar esta conta do fornecedor externo se tiver
+            configurado\npelo menos uma palavra-passe ou uma Passkey para esta conta.`,
+        regDate: 'Data de registo',
+        regIp: 'Registo a partir do IP',
+        roles: 'Funções',
+        street: 'Rua',
+        user: 'Utilizador',
+        userCreated: 'Utilizador criado',
+        userEnabled: 'Utilizador ativo',
+        userExpiry: 'O utilizador expira',
+        userVerifiedTooltip: 'Protegida com impressão digital ou PIN',
+        residentKeyTooltip: `Esta é uma Resident Key. Pode usá-la para iniciar sessão diretamente sem
+            indicar um e-mail.`,
+        aaguidTooltip: 'Passkey certificada',
+        webIdDesc: `Pode configurar os campos que devem ser expostos através do seu WebID.\nEsta é
+            uma funcionalidade usada por algumas redes para inícios de sessão descentralizados. Se não
+            sabe o que é,\nprovavelmente não precisa dela.`,
+        webIdDescData:
+            'Pode adicionar campos de dados personalizados ao seu WebID em vocabulário FOAF válido',
+        webIdExpertMode: 'Ativar modo avançado',
+        zip: 'Código postal',
+    },
+    authorize: {
+        clientForceMfa: `Este início de sessão exige MFA para garantir uma segurança reforçada.\nPara
+            obter acesso, tem de iniciar sessão na sua conta e adicionar pelo menos uma Passkey`,
+        clientGroupPrefixForbidden: 'Falta a atribuição de grupo para este início de sessão',
+        email: 'E-mail',
+        emailBadFormat: 'Formato de e-mail inválido',
+        emailRequired: 'O e-mail é obrigatório',
+        emailSentMsg: 'Se o seu e-mail existir, foi enviado um pedido',
+        expectingPasskey: 'A aguardar autenticação com Passkey',
+        expectingOtp: 'A aguardar autenticação com OTP',
+        http429: 'Demasiadas tentativas inválidas. Bloqueado até:',
+        invalidCredentials: 'Credenciais inválidas',
+        invalidKeyUsed: 'Chave inválida',
+        login: 'Iniciar sessão',
+        mfaAck: 'Confirmado',
+        navigateToAccount: 'Painel da conta',
+        needsUserUpdate: `Faltam algumas informações nesta conta. Tem de atualizar estes dados
+            antes de continuar com o início de sessão.`,
+        orLoginWith: 'ou iniciar sessão com',
+        passkeyNotDiscovered: `As Passkeys que não foram adicionadas como Resident Key não podem ser
+            encontradas desta forma. Introduza antes o seu e-mail.`,
+        password: 'Palavra-passe',
+        passwordExpired:
+            'A palavra-passe expirou. Foi enviado um e-mail com uma ligação para a redefinir.',
+        passwordForgotten: 'Esqueceu-se da palavra-passe?',
+        passwordRequest: 'Pedir',
+        passwordRequired: 'A palavra-passe é obrigatória',
+        passwordResetDesc: `Indique o seu e-mail para pedir uma ligação de redefinição da palavra-passe.
+            Se o seu endereço existir na nossa base de dados, receberá uma ligação por e-mail.`,
+        passwordResetSuccess: 'Pedido recebido. Já pode fechar esta janela.',
+        requestExpires: 'O pedido expira',
+        requestExpired: 'O pedido expirou',
+        signUp: 'Registo de utilizador',
+        validEmail: 'Indique um endereço de e-mail válido',
+    },
+    device: {
+        accept: 'Aceitar',
+        autoRedirectAccount: 'Vai ser redirecionado para a sua conta',
+        closeWindow: 'Já pode fechar esta janela.',
+        decline: 'Recusar',
+        desc: 'Introduza o código de utilizador de {{count}} carateres apresentado no seu dispositivo.',
+        descScopes: 'O dispositivo pede acesso a:',
+        isAccepted: 'O pedido foi aceite.',
+        isDeclined: 'O pedido foi recusado.',
+        submit: 'Enviar',
+        title: 'Autorização de dispositivo',
+        userCode: 'Código de utilizador',
+        wrongOrExpired: 'Código errado ou expirado',
+    },
+    emailChange: {
+        title: 'Alteração de e-mail confirmada',
+        textChanged: 'O seu endereço de e-mail foi alterado de',
+        textLogin: 'Já pode iniciar sessão com o seu novo endereço.',
+        to: 'para',
+    },
+    error: {
+        // errorText: "Não foi possível encontrar os dados pedidos",
+        details: 'Mostrar detalhes',
+        // detailsText: undefined,
+    },
+    index: {
+        register: 'Registar',
+        accountLogin: 'Conta',
+        adminLogin: 'Admin',
+    },
+    logout: {
+        logout: 'Terminar sessão',
+        confirmMsg: 'Pretende mesmo terminar a sessão?',
+        cancel: 'Cancelar',
+    },
+    mfa: {
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Se pretende usar a sua chave MFA em vários sistemas, como Windows e Android,
+                deve fazer o registo com o Android.`,
+            p2: `O Android é a plataforma que suporta menos funcionalidades da tecnologia sem
+                palavra-passe. As chaves registadas com o Android também funcionam noutros sistemas.
+                No entanto, o contrário não se aplica.`,
+            p3: 'Para mais informações, consulte',
+            registerNew: 'Registar nova Passkey',
+            docLinkText: 'a documentação sobre Passkeys',
+            unsupportedText:
+                'O seu navegador não suporta credenciais WebAuthn e tem de ser atualizado.',
+        },
+        otp: {
+            title: 'Código de utilização única',
+            titleEmail: 'OTP por e-mail',
+            activationCode:
+                'Introduza o código de utilização única enviado para o seu endereço de e-mail.',
+            code: 'Código de utilização única',
+            registerNew: 'Registar novo OTP',
+            resendOtp: 'Reenviar código',
+            sessionExpiresIn: 'A sessão OTP expira em:',
+            sessionExpired: 'A sessão OTP expirou.',
+        },
+        requestCanceled: 'O pedido foi cancelado',
+        errorReg: 'Erro ao iniciar o processo de registo',
+        lastUsed: 'Última utilização',
+        noKey: 'Nenhuma chave de segurança registada nesta posição',
+        reAuthenticatePasskey:
+            'Antes de poder alterar a sua MFA, tem de se autenticar com uma Passkey:',
+        reAuthenticatePwd:
+            'Antes de poder alterar a sua MFA, tem de se autenticar novamente com a sua palavra-passe.',
+        reAuthenticateOtp:
+            'Antes de poder alterar a sua MFA, tem de se autenticar novamente com um OTP:',
+        register: 'Registar',
+        registered: 'Registada',
+        registeredKeys: 'Chaves registadas',
+        registeredOtps: 'OTPs registados',
+        passkeyName: 'Nome da Passkey',
+        passkeyNameErr: '2 a 32 carateres, sem carateres especiais',
+        passwordInvalid: 'Palavra-passe inválida',
+        test: 'Testar',
+        testError: 'Erro ao iniciar o teste',
+        testSuccess: 'Teste bem-sucedido',
+    },
+    pagination: {
+        entries: 'Entradas',
+        gotoPage: 'Ir para a página',
+        gotoPagePrev: 'Ir para a página anterior',
+        gotoPageNext: 'Ir para a página seguinte',
+        pagination: 'Paginação',
+        showCount: 'Número de entradas',
+        total: 'Total',
+    },
+    passwordPolicy: {
+        passwordPolicy: 'Política de palavras-passe',
+        lengthMin: 'Comprimento mínimo',
+        lengthMax: 'Comprimento máximo',
+        lowercaseMin: 'Mínimo de letras minúsculas',
+        uppercaseMin: 'Mínimo de letras maiúsculas',
+        digitsMin: 'Mínimo de dígitos',
+        specialMin: 'Mínimo de carateres especiais',
+        notRecent: 'Diferente das últimas palavras-passe usadas',
+    },
+    passwordReset: {
+        accountLogin: 'Início de sessão na conta',
+        badFormat: 'Formato inválido',
+        fidoLink: 'https://fidoalliance.org/fido2',
+        generate: 'Gerar',
+        newAccDesc1:
+            'Pode escolher entre dois tipos de conta: sem palavra-passe ou com palavra-passe tradicional',
+        newAccDesc2: `A conta sem palavra-passe é sempre preferível, porque oferece\numa segurança
+            mais forte. Precisa de pelo menos uma Passkey (Yubikey, Apple Touch ID, Windows Hello,\n...)
+            para criar uma conta deste tipo. O seu dispositivo tem de suportar a norma FIDO2.
+            Para mais informações\nsobre o assunto, pode seguir esta ligação: `,
+        newAccount: 'Nova conta',
+        passwordReset: 'Redefinir palavra-passe',
+        password: 'Palavra-passe',
+        passwordless: 'Passkey',
+        passwordConfirm: 'Confirmar palavra-passe',
+        passwordNoMatch: 'As palavras-passe não coincidem',
+        required: 'Obrigatório',
+        save: 'Guardar',
+        success1: 'A palavra-passe foi atualizada com sucesso.',
+        success2: 'Vai ser redirecionado dentro de momentos.',
+        success3: 'Se não for redirecionado, clique aqui:',
+        successPasskey1: 'A sua nova Passkey foi registada com sucesso.',
+        successPasskey2: `Inicie sessão na sua conta e registe uma segunda chave de reserva\no mais
+            depressa possível. Numa conta só com Passkey, não poderá redefinir a palavra-passe\npor
+            e-mail caso perca a sua chave atual.`,
+    },
+    register: {
+        alreadyRegisteredEmail: 'O e-mail já está registado',
+        alreadyRegisteredUsername: 'O nome de utilizador já está a ser usado',
+        domainAllowed: 'Domínio permitido:',
+        domainErr: 'Domínio de e-mail não permitido',
+        domainRestricted: 'Os domínios de e-mail estão restringidos',
+        email: 'E-mail',
+        emailBadFormat: 'Formato de e-mail inválido',
+        emailCheck: 'Verifique a sua caixa de entrada de e-mail',
+        orRegisterWith: 'ou registar-se com',
+        regexName: 'O nome deve ter 2 a 32 carateres, sem carateres especiais',
+        register: 'Registar',
+        success: 'Registo concluído com sucesso',
+        userReg: 'Registo de utilizador',
+    },
+    tos: {
+        acceptOptUntil: 'A aceitação é opcional até:',
+        deny: 'Recusar',
+        tos: 'Termos de Serviço',
+    },
+    userRevoke: {
+        title: 'Revogar inícios de sessão',
+        desc1: 'Todos os inícios de sessão e sessões deste utilizador foram revogados, na medida do possível.',
+        desc2: 'Deve renovar imediatamente todas as suas palavras-passe!',
+    },
+};
