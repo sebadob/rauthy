@@ -1,4 +1,5 @@
 use crate::database::DB;
+use crate::entity::clients::Client as ClientEntity;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
@@ -230,7 +231,7 @@ $18, $19, $20, $21, $22, $23)"#;
             )
             .await?;
         }
-        crate::entity::clients::Client::delete_cache_for(&client.id).await?;
+        ClientEntity::delete_cache_for(&client.id).await?;
 
         if let Some(scim) = client.scim {
             ClientScim::upsert(

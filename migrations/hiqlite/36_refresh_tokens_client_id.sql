@@ -14,3 +14,7 @@ ALTER TABLE refresh_tokens
 
 ALTER TABLE devices
     ADD client_created_micros INTEGER;
+
+-- `RefreshToken::delete_by_user_client()` looks up the devices of a client
+CREATE INDEX devices_client_id_index
+    ON devices (client_id);

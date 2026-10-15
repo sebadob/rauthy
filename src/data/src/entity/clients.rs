@@ -421,6 +421,7 @@ VALUES ($1, $2, $3, $4)"#;
         }
 
         self.delete_cache().await?;
+        self.delete_cached_secrets().await?;
         // `clients_dyn` cascades in the database
         if self.is_dynamic() {
             ClientDyn::delete_from_cache(&self.id).await?;
@@ -462,44 +463,20 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
-    /// Reads a cached client. An entry this version cannot decode, like one cached by an older
-    /// version without `created_micros`, counts as a miss.
-    async fn find_cached(cache: Cache, key: String) -> Result<Option<Self>, ErrorResponse> {
-        #[cfg(debug_assertions)]
-        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
-            todo!("Replace Client::find_cached() with a plain cache get");
-        }
-
-        let Some(bytes) = DB::hql().get_bytes(cache, key).await? else {
-            return Ok(None);
-        };
-        match bincode_next::serde::decode_from_slice::<Self, _>(
-            &bytes,
-            bincode_next::config::legacy(),
-        ) {
-            Ok((slf, _)) => Ok(Some(slf)),
-            Err(err) => {
-                debug!(?err, "Ignoring a cached client that cannot be decoded");
-                Ok(None)
-            }
-        }
-    }
-
     // Returns a client by id without its secret.
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        if let Some(slf) = Self::find_cached(Cache::App, Self::cache_idx(&id)).await? {
+        if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         };
-        let client = DB::hql();
 
         let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
-            client.query_as_one(sql, params!(id)).await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
             DB::pg_query_one(sql, &[&id]).await?
         };
 
-        client
+        DB::hql()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
             .await?;
 
@@ -570,7 +547,7 @@ VALUES ($1, $2, $3, $4)"#;
             return Self::find(id).await;
         }
 
-        if let Some(slf) = Self::find_cached(Cache::ClientEphemeral, id.clone()).await? {
+        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, &id).await? {
             return Ok(slf);
         }
 
@@ -930,6 +907,21 @@ WHERE id = $4"#;
         if let Some(hours) = cache_current_hours
             && let Some(plain) = self.get_secret_cleartext()?
         {
+            let ttl = hours as i64;
+            // Remember the secret under the client id as well, so that `delete()` can remove it.
+            // Otherwise, it would authenticate a client recreated with the same id.
+            let idx = Self::cached_secrets_idx(&self.id);
+            let now = Utc::now().timestamp();
+            let (exp, mut secrets) = DB::hql()
+                .get::<_, _, (i64, Vec<String>)>(Cache::ClientSecret, idx.clone())
+                .await?
+                .unwrap_or_default();
+            let exp = exp.max(now + ttl);
+            secrets.push(plain.clone());
+            DB::hql()
+                .put(Cache::ClientSecret, idx, &(exp, secrets), Some(exp - now))
+                .await?;
+
             // The original idea was to save secrets hashed. However, since the secrets are used as
             // a key, the HashMap inside the `hiqlite` cache handler will take care of this for us,
             // to they could not be read from memory at runtime.
@@ -937,53 +929,60 @@ WHERE id = $4"#;
                 .put_bytes(
                     Cache::ClientSecret,
                     plain,
-                    cached_secret_value(&self.id, self.created_micros)?,
-                    Some(hours as i64),
+                    self.id.as_bytes().to_vec(),
+                    Some(ttl),
                 )
                 .await?;
         }
         Ok(())
     }
 
-    pub async fn validate_cached_secret(&self, secret: &str) -> Result<(), ErrorResponse> {
-        let err = || {
-            ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "client_secret does not exist or is invalid",
-            )
-        };
-
-        let Some(bytes) = DB::hql().get_bytes(Cache::ClientSecret, secret).await? else {
-            debug!("No cached secret found for client {}", self.id);
-            return Err(err());
-        };
-        if cached_secret_matches(&bytes, &self.id, self.created_micros) {
-            debug!("Matching cached client_secret for {}", self.id);
-            Ok(())
-        } else {
-            debug!("Found cached client_secret, but for a different client.");
-            Err(err())
+    /// Deletes all secrets cached for this client by `cache_current_secret()`.
+    async fn delete_cached_secrets(&self) -> Result<(), ErrorResponse> {
+        let idx = Self::cached_secrets_idx(&self.id);
+        if let Some((_, secrets)) = DB::hql()
+            .get::<_, _, (i64, Vec<String>)>(Cache::ClientSecret, idx.clone())
+            .await?
+        {
+            for secret in secrets {
+                DB::hql().delete(Cache::ClientSecret, secret).await?;
+            }
+            DB::hql().delete(Cache::ClientSecret, idx).await?;
         }
+        Ok(())
     }
-}
 
-/// The cached secret is bound to `created_micros`, so it does not authenticate a recreated client
-/// with the same id. Clients without one keep the raw id, which older versions compare against.
-fn cached_secret_value(
-    client_id: &str,
-    created_micros: Option<i64>,
-) -> Result<Vec<u8>, ErrorResponse> {
-    match created_micros {
-        None => Ok(client_id.as_bytes().to_vec()),
-        Some(created) => Ok(serde_json::to_vec(&(client_id, created))?),
+    /// Generated secrets are alphanumeric, so this key never collides with a cached secret.
+    #[inline]
+    fn cached_secrets_idx(id: &str) -> String {
+        format!("client:{id}")
     }
-}
 
-fn cached_secret_matches(value: &[u8], client_id: &str, created_micros: Option<i64>) -> bool {
-    match serde_json::from_slice::<(String, i64)>(value) {
-        Ok((id, created)) => id == client_id && Some(created) == created_micros,
-        // raw client id entries only match clients without `created_micros`
-        Err(_) => created_micros.is_none() && value == client_id.as_bytes(),
+    pub async fn validate_cached_secret(
+        client_id: &str,
+        secret: &str,
+    ) -> Result<(), ErrorResponse> {
+        match DB::hql().get_bytes(Cache::ClientSecret, secret).await? {
+            None => {
+                debug!("No cached secret found for client {client_id}");
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "client_secret does not exist or is invalid",
+                ))
+            }
+            Some(bytes) => {
+                if bytes == client_id.as_bytes() {
+                    debug!("Matching cached client_secret for {client_id}");
+                    Ok(())
+                } else {
+                    debug!("Found cached client_secret, but for a different client.");
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::Unauthorized,
+                        "client_secret does not exist or is invalid",
+                    ))
+                }
+            }
+        }
     }
 }
 
@@ -1760,7 +1759,9 @@ impl Client {
         let a = <&[u8; 64]>::try_from(cleartext.as_ref()).unwrap();
         let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
         if constant_time_eq::constant_time_eq_64(a, b)
-            || self.validate_cached_secret(&secret).await.is_ok()
+            || Client::validate_cached_secret(&self.id, &secret)
+                .await
+                .is_ok()
         {
             secret.zeroize();
             return Ok(());
@@ -2436,31 +2437,6 @@ pub(crate) mod tests {
         assert!(validate_dyn_client_redirect_uri("").is_err());
     }
     use pretty_assertions::assert_eq;
-
-    #[test]
-    fn cached_secret_matches_id_and_created() {
-        let value = serde_json::to_vec(&("client", 1)).unwrap();
-        assert!(cached_secret_matches(&value, "client", Some(1)));
-        assert!(!cached_secret_matches(&value, "client", Some(2)));
-        assert!(!cached_secret_matches(&value, "client", None));
-        assert!(!cached_secret_matches(&value, "other", Some(1)));
-        assert!(cached_secret_matches(b"client", "client", None));
-        assert!(!cached_secret_matches(b"client", "client", Some(1)));
-        assert!(!cached_secret_matches(b"other", "client", None));
-        assert!(!cached_secret_matches(&[0xff, 0xfe], "client", None));
-    }
-
-    #[test]
-    fn cached_secret_value_roundtrip() {
-        let legacy = cached_secret_value("client", None).unwrap();
-        assert_eq!(legacy, b"client");
-        assert!(cached_secret_matches(&legacy, "client", None));
-        assert!(!cached_secret_matches(&legacy, "client", Some(1)));
-
-        let bound = cached_secret_value("client", Some(1)).unwrap();
-        assert!(cached_secret_matches(&bound, "client", Some(1)));
-        assert!(!cached_secret_matches(&bound, "client", None));
-    }
 
     #[test]
     fn retain_supported_grant_types_strips_unknown() {
