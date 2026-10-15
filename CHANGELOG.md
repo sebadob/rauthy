@@ -111,6 +111,9 @@ The following new translations for the UI are available:
 - Dynamic Clients that only ever used the `device_code` flow were deleted by the automatic cleanup
   scheduler, since this flow never updated their `last_used` timestamp.
   [#1808](https://github.com/sebadob/rauthy/pull/1808)
+- The `rauthy` default custom fallback branding for ephemeral clients was not working properly. They
+  always got the raw default, not when you had a custom one for `rauthy` itself.
+  [#1809](https://github.com/sebadob/rauthy/pull/1809)
 
 ## v0.37.1
 
