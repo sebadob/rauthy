@@ -86,7 +86,7 @@ pub async fn get_authorize(
     let principal = principal.into_inner();
     let lang = Language::try_from(&req).unwrap_or_default();
 
-    let (client, origin_header) = match validation::validate_auth_req_param(
+    let (client, origin_header) = match validation::validate_auth_code_req_params(
         &req,
         &params.client_id,
         &params.redirect_uri,
@@ -436,7 +436,7 @@ pub async fn post_authorize_refresh(
 
     let session = principal.into_inner().session.unwrap();
 
-    let (client, header_origin) = validation::validate_auth_req_param(
+    let (client, header_origin) = validation::validate_auth_code_req_params(
         &req,
         &payload.client_id,
         &payload.redirect_uri,

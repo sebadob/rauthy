@@ -4,6 +4,7 @@ use crate::token_set::{
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
+use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
@@ -19,7 +20,7 @@ use std::ops::Add;
 use tracing::debug;
 
 /// Validates request parameters for the authorization and refresh endpoints
-pub async fn validate_auth_req_param(
+pub async fn validate_auth_code_req_params(
     req: &HttpRequest,
     client_id: &str,
     redirect_uri: &str,
@@ -35,10 +36,10 @@ pub async fn validate_auth_req_param(
             err
         })?;
 
-    let header = client.get_validated_origin_header(req)?;
-
     client.validate_enabled()?;
     client.validate_redirect_uri(redirect_uri)?;
+    client.validate_flow(GrantType::AuthorizationCode)?;
+    let header = client.get_validated_origin_header(req)?;
 
     if client.challenge.is_some() {
         if code_challenge.is_none() {
