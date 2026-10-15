@@ -108,6 +108,9 @@ The following new translations for the UI are available:
   registrations were not `trim`ed, and since we allowed lots of special characters for the key
   names, the deletion of a passkey needs to percent-encode the name.
   [#1806](https://github.com/sebadob/rauthy/pull/1806)
+- Dynamic Clients that only ever used the `device_code` flow were deleted by the automatic cleanup
+  scheduler, since this flow never updated their `last_used` timestamp.
+  [#1808](https://github.com/sebadob/rauthy/pull/1808)
 
 ## v0.37.1
 
