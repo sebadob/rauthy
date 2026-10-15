@@ -7,7 +7,8 @@
 #### Percent-encoded Auth Headers
 
 Forward auth header values, like names, may contain non-ASCII characters, which can cause issues
-with proxies and backends. The new opt-in `auth_headers.percent_encode` (`AUTH_HEADERS_PERCENT_ENCODE`)
+with proxies and backends. The new opt-in `auth_headers.percent_encode`
+(`AUTH_HEADERS_PERCENT_ENCODE`)
 percent-encodes (UTF-8) non-ASCII bytes, control characters and `%` in all auth header values, for
 both forward auth endpoints. Other ASCII characters stay the same.
 
@@ -73,6 +74,13 @@ first, both in the `id_token` and in `/userinfo`. The default keeps the current 
 [user_values]
 name_order_reverse = true
 ```
+
+### Bugfix
+
+- There were 2 smaller bugs in MFA key registration and Admin-triggered deletion. Names for new
+  registrations were not `trim`ed, and since we allowed lots of special characters for the key
+  names, the deletion of a passkey needs to percent-encode the name.
+  [#1806](https://github.com/sebadob/rauthy/pull/1806)
 
 ## v0.37.1
 
