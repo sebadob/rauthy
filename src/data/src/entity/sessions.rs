@@ -364,15 +364,13 @@ OFFSET $3"#;
 
     /// Inserts or updates a live session; expired sessions are rejected.
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
-        if self.exp < Utc::now().timestamp() {
+        let now = Utc::now().timestamp();
+        if self.exp <= now {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Session has expired",
             ));
         }
-
-        let state_str = self.state.as_str();
-        let now = Utc::now().timestamp();
 
         let sql = r#"
 INSERT INTO
@@ -381,7 +379,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
     remote_ip = $10
-WHERE sessions.exp > $11"#;
+WHERE exp > $11"#;
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -394,7 +392,7 @@ WHERE sessions.exp > $11"#;
                         &self.roles,
                         &self.groups,
                         self.is_mfa,
-                        state_str,
+                        self.state.as_str(),
                         self.exp,
                         self.last_seen,
                         &self.remote_ip,
@@ -412,7 +410,7 @@ WHERE sessions.exp > $11"#;
                     &self.roles,
                     &self.groups,
                     &self.is_mfa,
-                    &state_str,
+                    &self.state.as_str(),
                     &self.exp,
                     &self.last_seen,
                     &self.remote_ip,
@@ -498,7 +496,7 @@ WHERE sessions.exp > $11"#;
     pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         // An expired session must never be resurrected
-        if self.exp < now {
+        if self.exp <= now {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Session has expired",
@@ -517,7 +515,60 @@ WHERE sessions.exp > $11"#;
         self.user_id = Some(user.id.clone());
         self.roles = Some(user.roles.clone());
         self.groups = user.groups.clone();
-        self.upsert().await?;
+
+        // This function MUST NOT use `self.upsert()`, because it might insert
+        // a new session during a race-condition.
+        let sql = r#"
+UPDATE sessions
+SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5
+WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
+                    params!(
+                        self.last_seen,
+                        self.state.as_str(),
+                        &self.user_id,
+                        &self.roles,
+                        &self.groups,
+                        &self.id,
+                        self.last_seen,
+                        SessionState::Init.as_str(),
+                        SessionState::Auth.as_str()
+                    ),
+                )
+                .await?
+        } else {
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.last_seen,
+                    &self.state.as_str(),
+                    &self.user_id,
+                    &self.roles,
+                    &self.groups,
+                    &self.id,
+                    &self.last_seen,
+                    &SessionState::Init.as_str(),
+                    &SessionState::Auth.as_str(),
+                ],
+            )
+            .await?
+        };
+
+        if rows_affected == 0 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired, was logged-out, or removed",
+            ));
+        }
+
+        DB::hql()
+            .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
+            .await?;
+
         Ok(())
     }
 }
