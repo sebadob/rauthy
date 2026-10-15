@@ -189,8 +189,13 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         debug!("New Device with ID {id} has been created");
 
         // update timestamp if it is a dynamic client
-        if client.is_dynamic() {
-            ClientDyn::update_used(&client.id).await?;
+        if client.is_dynamic()
+            && let Err(err) = ClientDyn::update_used(&client.id).await
+        {
+            error!(
+                "Error updating last_used timestamp for dyn client: {}",
+                err.message
+            );
         }
 
         let ts = match TokenSet::from_user(
