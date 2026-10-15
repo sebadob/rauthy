@@ -7,6 +7,7 @@ use chrono::Utc;
 use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::devices::DeviceEntity;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
@@ -17,7 +18,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtRefreshClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use std::ops::Add;
-use tracing::debug;
+use tracing::{debug, error};
 
 /// Validates request parameters for the authorization and refresh endpoints
 pub async fn validate_auth_code_req_params(
@@ -167,17 +168,29 @@ pub async fn validate_and_refresh_token(
                 "'user_id' does not match",
             ));
         }
+        let device = DeviceEntity::find(device_id).await.map_err(|_| {
+            ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid refresh token")
+        })?;
+        if !device.is_for_client(&client) {
+            // cascades to the device's refresh tokens
+            if let Err(err) = DeviceEntity::invalidate(device_id).await {
+                error!(?err, "deleting device authorized for a deleted client");
+            }
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Invalid refresh token",
+            ));
+        }
 
         (rt.scope, None, None)
     } else {
+        // Sessionless tokens are kept until their replacement exists as well, so a per-client
+        // revocation fences the rotation just like a logout does.
         let mut rt = RefreshToken::find_opt(validation_str)
             .await?
             .ok_or_else(|| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token not found")
             })?;
-        if rt.session_id.is_none() {
-            rt = RefreshToken::find_delete(validation_str).await?;
-        }
 
         if rt.exp < now_plus_skew {
             rt.delete().await?;
@@ -193,11 +206,25 @@ pub async fn validate_and_refresh_token(
                 "'user_id' does not match",
             ));
         }
+        // `client_id` is NULL for legacy rows issued before the column existed -> accept those
+        if rt.client_id.as_deref().is_some_and(|c| c != client.id) {
+            rt.delete().await?;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "'client_id' does not match",
+            ));
+        }
+        if !rt.is_for_client(&client) {
+            rt.delete().await?;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Unauthorized,
+                "Invalid refresh token",
+            ));
+        }
 
         let session_id = rt.session_id.clone().map(SessionId);
         let scope = rt.scope.take();
-        let pending = session_id.as_ref().map(|_| rt);
-        (scope, session_id, pending)
+        (scope, session_id, Some(rt))
     };
 
     // at this point, everything has been validated -> we can issue a new TokenSet safely
