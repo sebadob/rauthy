@@ -7,18 +7,20 @@ use webauthn_rs::prelude::{
 };
 use webauthn_rs_proto::{
     CreationChallengeResponse, PublicKeyCredential, RegisterPublicKeyCredential,
-    RequestChallengeResponse, ResidentKeyRequirement,
+    RequestChallengeResponse, ResidentKeyRequirement, UserVerificationPolicy,
 };
 
 #[inline]
 pub(super) fn requires_uv(account_type: AccountType, force_uv: bool) -> bool {
+    // We must force UV only for accounts where the passkey is the single authentication mechanism.
+    // The `FederatedPasskey` technically has 2, but either one can be used. This means it can be
+    // used in the same way as a passkey-only account.
     force_uv
         || !matches!(
             account_type,
             AccountType::Password | AccountType::FederatedPassword
         )
 }
-
 // Keep the ceremony type in the server-side cache so finish uses the policy chosen at start.
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) enum RegistrationState {
@@ -173,7 +175,22 @@ impl AuthenticationState {
         } else {
             let keys = passkeys
                 .into_iter()
-                .map(|key| SecurityKey::from(Credential::from(key)))
+                .map(|key| {
+                    let mut cred = Credential::from(key);
+                    // TODO can we check here if UV was given at reg time and then require it? Some
+                    //  authenticators are inconsistent and may set UV during reg, but drop it
+                    //  during auth. It SHOULD not make a difference, but does it when we enforce
+                    //  the `cred.registration_policy` to `required` at this point, when it was set?
+                    //  That seems redundant, as it should not affect authentication?
+                    if cred.user_verified {
+                        // TODO in theory, this could force authenticators that do not behave
+                        //  correctly, and that might drop UV during auth, when they set it during
+                        //  reg, to not drop it.
+                        //  -> This is just a theory that needs verification!
+                        cred.registration_policy = UserVerificationPolicy::Required;
+                    }
+                    SecurityKey::from(cred)
+                })
                 .collect::<Vec<_>>();
             webauthn
                 .start_securitykey_authentication(&keys)
