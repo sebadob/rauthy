@@ -108,7 +108,13 @@ pub async fn get_authorize(
             return Ok(ErrorHtml::response(body, status));
         }
     };
-    let theme_ts = ThemeCssFull::find_theme_ts(client.id.clone()).await?;
+    // ephemeral clients cannot have a custom theme
+    let client_id_theme = if client.is_ephemeral() {
+        "rauthy"
+    } else {
+        &client.id
+    };
+    let theme_ts = ThemeCssFull::find_theme_ts(client_id_theme.to_string()).await?;
 
     // check prompt and max_age to possibly force a new session
     let force_new_session = if params
@@ -209,7 +215,7 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
         templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
 
-        let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
+        let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
     } else {
         // check if we can re-use a still valid session or need to create a new one
@@ -239,7 +245,7 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
         templates.push(HtmlTemplate::LoginAction(action));
 
-        let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
+        let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(
             accept_encoding,
             body,
