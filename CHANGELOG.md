@@ -2,6 +2,21 @@
 
 ## UNRELEASED
 
+### Security
+
+- Fixed a race-condition that could happen in lab tests when you concurrently use the immediate
+  refresh via the login form while at the same time having an admin triggering full user logout.
+  Because, the `Session::set_authenticated` used an `UPSERT` instead of a specific `UPDATE`, it was
+  possible that a session was re-inserted mid-flight.
+  [#1807](https://github.com/sebadob/rauthy/pull/1807)
+- Added additional validation for `response_type` in `POST /authorize`. This is was not a security
+  issue, since validation at this point was done upfront and only provides better UX. The
+  `response_type` during the POST is simply ignored, and you always get back an
+  `authorization_code`, which is exactly what this endpoints sole purpose is. Since all this
+  endpoint does is issuing `authorization_code`s (which is the most secure flow of all of them
+  anyway), this is more a "keep it clean" fix.
+  [#1807](https://github.com/sebadob/rauthy/pull/1807)
+
 ### Changes
 
 #### Percent-encoded Auth Headers
@@ -16,6 +31,8 @@ both forward auth endpoints. Other ASCII characters stay the same.
 [auth_headers]
 percent_encode = true
 ```
+
+[#1801](https://github.com/sebadob/rauthy/pull/1801)
 
 #### Passkey Types
 
@@ -74,6 +91,16 @@ first, both in the `id_token` and in `/userinfo`. The default keeps the current 
 [user_values]
 name_order_reverse = true
 ```
+
+[#1800](https://github.com/sebadob/rauthy/pull/1800)
+
+#### Added I18n
+
+The following new translations for the UI are available:
+
+- `ja`
+
+[#1786](https://github.com/sebadob/rauthy/pull/1786)
 
 ### Bugfix
 
