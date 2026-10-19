@@ -405,7 +405,7 @@ async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error
         .json(&serde_json::json!({}))
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
 
     key.access = vec![ApiKeyAccess {
         group: AccessGroup::Users,

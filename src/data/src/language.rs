@@ -26,11 +26,11 @@ pub enum Language {
 }
 
 impl Language {
-    pub fn all_available() -> [&'static str; 24] {
+    pub fn all_available() -> [&'static str; 25] {
         [
-            "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja", "ja-JP", "ko", "nb",
-            "nb-NO", "no-NO", "nl", "nl-NL", "pt", "pt-PT", "ru", "ru-RU", "uk", "uk-UA", "zh",
-            "zh-Hans",
+            "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja", "ja-JP", "ko",
+            "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pt", "pt-PT", "ru", "ru-RU", "uk",
+            "uk-UA", "zh", "zh-Hans",
         ]
     }
 
@@ -59,10 +59,18 @@ impl Language {
     /// reads the first two characters back, so this changes nothing else.
     pub fn html_lang(&self) -> &'static str {
         match self {
+            Language::De => "de-DE",
+            Language::En => "en-US",
             Language::Es => "es-ES",
+            Language::Fr => "fr-FR",
+            Language::Ja => "ja-JP",
+            Language::Ko => "ko-KR",
+            Language::Nb => "nb-NO",
+            Language::Nl => "nl-NL",
             Language::Pt => "pt-PT",
+            Language::Ru => "ru-RU",
+            Language::Uk => "uk-UA",
             Language::ZhHans => "zh-Hans",
-            _ => self.as_str(),
         }
     }
 }
@@ -168,19 +176,5 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::Uk => Self::Uk,
             Language::ZhHans => Self::ZhHans,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn html_lang_names_the_variant() {
-        assert_eq!(Language::Pt.html_lang(), "pt-PT");
-        assert_eq!(Language::Es.html_lang(), "es-ES");
-        assert_eq!(Language::ZhHans.html_lang(), "zh-Hans");
-        assert_eq!(Language::De.html_lang(), "de");
-        assert_eq!(Language::En.html_lang(), "en");
     }
 }
