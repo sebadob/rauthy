@@ -19,21 +19,6 @@
 
 ### Changes
 
-#### Percent-encoded Auth Headers
-
-Forward auth header values, like names, may contain non-ASCII characters, which can cause issues
-with proxies and backends. The new opt-in `auth_headers.percent_encode`
-(`AUTH_HEADERS_PERCENT_ENCODE`)
-percent-encodes (UTF-8) non-ASCII bytes, control characters and `%` in all auth header values, for
-both forward auth endpoints. Other ASCII characters stay the same.
-
-```toml
-[auth_headers]
-percent_encode = true
-```
-
-[#1801](https://github.com/sebadob/rauthy/pull/1801)
-
 #### Passkey Types
 
 Users often added a *Default* Passkey and then could not log in with the *Passkey* button on the
@@ -101,6 +86,45 @@ The following new translations for the UI are available:
 - `ja`
 
 [#1786](https://github.com/sebadob/rauthy/pull/1786)
+
+#### TLS Hot-Reload PollWatcher
+
+Rauthy supports TLS hot-reloading since quite a while. However, this does not work when you store
+your certs on e.g. an NFS backend where the kernel cannot send `inotify` events. To fix this issue,
+you can not opt-in to a poll-based file watcher:
+
+```toml
+[tls]
+# You can change from the `inotify` watcher for TLS hot-reloading
+# to a poll-based one. Usually, you never want this. However, when you
+# store your certs on e.g. an NFS backend, where the kernel cannot send
+# file change events, you want to switch to the poll watcher. If you
+# provide any duration here, it will be used as the interval for the
+# watcher. For TLS reloading, you usually want a higher value. They
+# usually don't need to be instant.
+#
+# type: duration
+# default value: not set
+# overwritten by: TLS_POLL_WATCH_INTERVAL
+poll_watch_interval = '5m'
+```
+
+[]()
+
+#### Percent-encoded Auth Headers
+
+Forward auth header values, like names, may contain non-ASCII characters, which can cause issues
+with proxies and backends. The new opt-in `auth_headers.percent_encode`
+(`AUTH_HEADERS_PERCENT_ENCODE`)
+percent-encodes (UTF-8) non-ASCII bytes, control characters and `%` in all auth header values, for
+both forward auth endpoints. Other ASCII characters stay the same.
+
+```toml
+[auth_headers]
+percent_encode = true
+```
+
+[#1801](https://github.com/sebadob/rauthy/pull/1801)
 
 ### Bugfix
 

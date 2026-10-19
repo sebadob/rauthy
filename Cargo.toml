@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.37.1"
+version = "0.37.2-20261019"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
@@ -140,7 +140,7 @@ tikv-jemallocator = { version = "0.7", features = [
 time = { version = "0.3.47", features = [
     "formatting", "local-offset", "macros", "parsing", "serde"
 ] }
-tls-hot-reload = "0.3"
+tls-hot-reload = "0.4"
 toml = "1"
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = [

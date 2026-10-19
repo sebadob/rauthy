@@ -1213,6 +1213,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 cert_path: None,
                 key_path: None,
                 generate_self_signed: false,
+                poll_watch_interval: None,
             },
             tos: VarsToS {
                 accept_timeout: Duration::from_secs(15 * 60),
@@ -3611,6 +3612,12 @@ impl Vars {
         ) {
             self.tls.generate_self_signed = v;
         }
+        self.tls.poll_watch_interval = t_duration(
+            &mut table,
+            "tls",
+            "poll_watch_interval",
+            "TLS_POLL_WATCH_INTERVAL",
+        );
 
         check_table_empty(table, "tls");
     }
@@ -4560,6 +4567,7 @@ pub struct VarsTls {
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
     pub generate_self_signed: bool,
+    pub poll_watch_interval: Option<Duration>,
 }
 
 #[derive(Debug)]

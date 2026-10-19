@@ -43,7 +43,15 @@ pub async fn load_tls() -> rustls::ServerConfig {
         }
     };
 
-    tls_hot_reload::load_server_config(key_path, cert_path).await
+    if let Some(interval) = vars.poll_watch_interval {
+        tracing::warn!(
+            "Starting TLS hot-reload with the PollWatcher backend and interval {:?}",
+            interval
+        );
+        tls_hot_reload::load_server_config_polling(key_path, cert_path, interval).await
+    } else {
+        tls_hot_reload::load_server_config(key_path, cert_path).await
+    }
 }
 
 async fn check_generate_tls() {
