@@ -172,7 +172,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.37.1
+    image: ghcr.io/sebadob/rauthy:0.37.2
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443
@@ -345,7 +345,7 @@ services:
 
   rauthy-svc:
     container_name: rauthy-test
-    image: ghcr.io/sebadob/rauthy:0.37.1
+    image: ghcr.io/sebadob/rauthy:0.37.2
     environment:
       - DANGER_VAULT_INSECURE=true
       - PUB_URL=${DOCKER_MACHINE_IP}:8443

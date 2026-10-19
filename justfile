@@ -203,7 +203,6 @@ watch ty="hiqlite":
     # In case of Postgres, the container will not be up that quickly
     if [[ {{ ty }} == "postgres" ]]; then
       just postgres-start
-      sleep 2
       command="{{ postgres }} cargo run -- serve"
     elif [[ {{ ty }} == "hiqlite" ]]; then
       command="cargo run -- serve"
@@ -218,12 +217,27 @@ version:
     #!/usr/bin/env bash
     echo "v$TAG"
 
-# only starts the backend in test mode with hiqlite database for easier test debugging
-test-backend: test-backend-stop delete-hiqlite
+# starts only the backend in test mode with hiqlite database for easier test debugging
+test-backend ty="hiqlite": test-backend-stop
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    {{ test_env_vars }} cargo run -- serve -c config-test.toml --test
+
+    if [[ {{ ty }} == "postgres" ]]; then
+      just postgres-stop
+      just postgres-rm
+      just postgres-start
+      #cargo build
+      #{{ test_env_vars }} {{ postgres }} HQL_CACHE_STORAGE_DISK=false ./target/debug/rauthy serve -c config-test.toml --test
+      {{ test_env_vars }} {{ postgres }} HQL_CACHE_STORAGE_DISK=false cargo run -- serve -c config-test.toml --test
+    elif [[ {{ ty }} == "hiqlite" ]]; then
+      just delete-hiqlite
+      {{ test_env_vars }} cargo run -- serve -c config-test.toml --test
+    else
+        echo 'Unknown test backend variant'
+        exit 1;
+    fi
+
 
 # starts the test backend with memory profiling - expects `heaptrack` to be available
 test-backend-heaptrack: test-backend-stop delete-hiqlite
