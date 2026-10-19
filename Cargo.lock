@@ -4886,7 +4886,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4938,7 +4938,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -4958,7 +4958,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -4989,7 +4989,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5081,7 +5081,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5090,7 +5090,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5127,7 +5127,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5165,7 +5165,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "chrono",
  "ed25519-compact",
@@ -5183,7 +5183,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5199,7 +5199,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5215,7 +5215,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5236,7 +5236,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5266,7 +5266,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.37.1"
+version = "0.37.2-20261019"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
@@ -5880,9 +5880,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.45"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -6545,7 +6545,7 @@ version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e690409a034dc81758d2986dcc0e01ffe4a77c65902a120777f5182dd40b1f7f"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "data-url",
  "quick-error",
  "url",
@@ -6798,9 +6798,9 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tls-hot-reload"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a405ff8d93cf593b6e1dbcf52e2c00c8a163bca856ad552843cfa55ccdb0ca6"
+checksum = "5daf2f78f6cf41fc4d2d0f515d7f750ca534632a3ee480063686cded0f9e2a95"
 dependencies = [
  "arc-swap",
  "notify",

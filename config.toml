@@ -2751,6 +2751,19 @@ key_path = 'tls/key.pem'
 # overwritten by: TLS_GENERATE_SELF_SIGNED
 generate_self_signed = true
 
+# You can change from the `inotify` watcher for TLS hot-reloading
+# to a poll-based one. Usually, you never want this. However, when you
+# store your certs on e.g. an NFS backend, where the kernel cannot send
+# file change events, you want to switch to the poll watcher. If you
+# provide any duration here, it will be used as the interval for the
+# watcher. For TLS reloading, you usually want a higher value. They
+# usually don't need to be instant.
+#
+# type: duration
+# default value: not set
+# overwritten by: TLS_POLL_WATCH_INTERVAL
+#poll_watch_interval = '5m'
+
 [tos]
 
 # The timeout in seconds for a user to accept update ToS during the
