@@ -27,11 +27,11 @@
         onRight,
         onUp,
         onDown,
-    } = $props<{
+    }: {
         ref?: undefined | HTMLTextAreaElement;
         id?: string;
         name?: string;
-        value?: string | number;
+        value?: string;
         label?: string;
         rows?: number;
         placeholder?: string;
@@ -50,7 +50,7 @@
         onRight?: () => void;
         onUp?: () => void;
         onDown?: () => void;
-    }>();
+    } = $props();
 
     const re = untrack(() => (pattern ? new RegExp(pattern, 'gm') : undefined));
 
@@ -98,7 +98,8 @@
 
     function isValid() {
         if (re) {
-            if (value.match(re).length > 2) {
+            const matches = value.match(re);
+            if (matches && matches.length > 2) {
                 ref?.setCustomValidity(errMsg);
                 isError = true;
             } else {

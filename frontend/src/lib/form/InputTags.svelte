@@ -33,7 +33,7 @@
         onEnter,
         onInput,
         onSubmit,
-    } = $props<{
+    }: {
         ref?: undefined | HTMLInputElement;
         typ?: 'text' | 'email' | 'url';
         id?: string;
@@ -59,7 +59,7 @@
         onEnter?: () => void;
         onInput?: (value: string) => void;
         onSubmit?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void;
-    }>();
+    } = $props();
 
     let t = useI18n();
     const idDatalist = genKey();
