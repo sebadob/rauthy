@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { slide } from 'svelte/transition';
-    import { untrack } from 'svelte';
+    import {slide} from 'svelte/transition';
+    import {untrack} from 'svelte';
 
     let {
         ref = $bindable(),
@@ -27,11 +27,11 @@
         onRight,
         onUp,
         onDown,
-    } = $props<{
+    }: {
         ref?: undefined | HTMLTextAreaElement;
         id?: string;
         name?: string;
-        value?: string | number;
+        value?: string;
         label?: string;
         rows?: number;
         placeholder?: string;
@@ -50,14 +50,14 @@
         onRight?: () => void;
         onUp?: () => void;
         onDown?: () => void;
-    }>();
+    } = $props();
 
     const re = untrack(() => (pattern ? new RegExp(pattern, 'gm') : undefined));
 
     function onblur(
-        event: FocusEvent & {
-            currentTarget: EventTarget & HTMLTextAreaElement;
-        },
+            event: FocusEvent & {
+                currentTarget: EventTarget & HTMLTextAreaElement;
+            },
     ) {
         isValid();
         onBlur?.();
@@ -98,7 +98,8 @@
 
     function isValid() {
         if (re) {
-            if (value.match(re).length > 2) {
+            const matches = value.match(re);
+            if (matches && matches.length > 2) {
                 ref?.setCustomValidity(errMsg);
                 isError = true;
             } else {
@@ -117,28 +118,28 @@
         </label>
     </div>
     <textarea
-        bind:this={ref}
-        {id}
-        {name}
-        class:font-mono={fontMono}
-        title={errMsg}
-        aria-label={label || placeholder}
-        bind:value
-        {rows}
-        autocomplete="off"
-        {placeholder}
-        aria-placeholder={placeholder}
-        {disabled}
-        aria-disabled={disabled}
-        maxlength={maxLength || undefined}
-        required={required || undefined}
-        aria-required={required || false}
-        aria-invalid={isError}
-        {onsubmit}
-        {oninput}
-        {oninvalid}
-        {onblur}
-        {onkeydown}
+            bind:this={ref}
+            {id}
+            {name}
+            class:font-mono={fontMono}
+            title={errMsg}
+            aria-label={label || placeholder}
+            bind:value
+            {rows}
+            autocomplete="off"
+            {placeholder}
+            aria-placeholder={placeholder}
+            {disabled}
+            aria-disabled={disabled}
+            maxlength={maxLength || undefined}
+            required={required || undefined}
+            aria-required={required || false}
+            aria-invalid={isError}
+            {onsubmit}
+            {oninput}
+            {oninvalid}
+            {onblur}
+            {onkeydown}
     >
     </textarea>
     {#if isError}

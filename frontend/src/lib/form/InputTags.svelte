@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
+    import {genKey} from '$utils/helpers';
     import Button from '$lib5/button/Button.svelte';
     import IconStop from '$icons/IconStop.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import {useI18n} from '$state/i18n.svelte';
 
     let {
         ref = $bindable(),
@@ -33,7 +33,7 @@
         onEnter,
         onInput,
         onSubmit,
-    } = $props<{
+    }: {
         ref?: undefined | HTMLInputElement;
         typ?: 'text' | 'email' | 'url';
         id?: string;
@@ -59,7 +59,7 @@
         onEnter?: () => void;
         onInput?: (value: string) => void;
         onSubmit?: (event: Event & { currentTarget: EventTarget & HTMLInputElement }) => void;
-    }>();
+    } = $props();
 
     let t = useI18n();
     const idDatalist = genKey();
@@ -109,7 +109,7 @@
 
     function focus() {
         ref?.focus();
-        ref?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        ref?.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
 
     function isValid() {
@@ -137,36 +137,36 @@
                 </div>
                 <div class="btnClose">
                     <Button invisible onclick={() => deleteValue(value)}>
-                        <IconStop width="1.2rem" />
+                        <IconStop width="1.2rem"/>
                     </Button>
                 </div>
             </li>
         {/each}
         <li>
             <input
-                bind:this={ref}
-                type={typ}
-                {id}
-                {name}
-                {list}
-                bind:value
-                autocomplete="off"
-                title={errMsg}
-                aria-label={label || placeholder}
-                {placeholder}
-                aria-placeholder={placeholder}
-                {disabled}
-                aria-disabled={disabled}
-                required={required && values.length < 1}
-                aria-required={required && values.length < 1}
-                maxlength={maxLength || undefined}
-                min={min || undefined}
-                max={max || undefined}
-                {pattern}
-                {onkeydown}
-                {oninput}
-                {oninvalid}
-                {onblur}
+                    bind:this={ref}
+                    type={typ}
+                    {id}
+                    {name}
+                    {list}
+                    bind:value
+                    autocomplete="off"
+                    title={errMsg}
+                    aria-label={label || placeholder}
+                    {placeholder}
+                    aria-placeholder={placeholder}
+                    {disabled}
+                    aria-disabled={disabled}
+                    required={required && values.length < 1}
+                    aria-required={required && values.length < 1}
+                    maxlength={maxLength || undefined}
+                    min={min || undefined}
+                    max={max || undefined}
+                    {pattern}
+                    {onkeydown}
+                    {oninput}
+                    {oninvalid}
+                    {onblur}
             />
 
             {#if datalist && datalist.length > 1}
