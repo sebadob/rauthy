@@ -16,6 +16,8 @@
   endpoint does is issuing `authorization_code`s (which is the most secure flow of all of them
   anyway), this is more a "keep it clean" fix.
   [#1807](https://github.com/sebadob/rauthy/pull/1807)
+- Fixed the possibility of an unauthenticated DoS. A security advisory will be released in the
+  upcoming week.
 
 ### Changes
 
@@ -83,7 +85,9 @@ name_order_reverse = true
 
 The following new translations for the UI are available:
 
+- `es`
 - `ja`
+- `pt`
 
 [#1786](https://github.com/sebadob/rauthy/pull/1786)
 
