@@ -478,6 +478,18 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: AUTH_HEADERS_ENABLE_PREF_USERNAME
 #enable_pref_username = false
 
+# If `true`, the values of all auth headers are percent-encoded
+# (UTF-8, like URLs), so that non-ASCII characters, for instance
+# in names, can be passed safely through proxies and backends.
+# Only non-ASCII bytes, control characters and `%` itself are
+# encoded, other ASCII characters like spaces and commas stay the
+# same. Decode the values once as UTF-8 on the receiving side
+# (a `+` is not a space here).
+#
+# default: false
+# overwritten by: AUTH_HEADERS_PERCENT_ENCODE
+#percent_encode = false
+
 # Configure the header names being used for the different values. You
 # can change them to your needs, if you cannot easily change your
 # downstream apps.
@@ -2876,6 +2888,19 @@ key_path = 'tls/key.pem'
 # overwritten by: TLS_GENERATE_SELF_SIGNED
 #generate_self_signed = false
 
+# You can change from the `inotify` watcher for TLS hot-reloading
+# to a poll-based one. Usually, you never want this. However, when you
+# store your certs on e.g. an NFS backend, where the kernel cannot send
+# file change events, you want to switch to the poll watcher. If you
+# provide any duration here, it will be used as the interval for the
+# watcher. For TLS reloading, you usually want a higher value. They
+# usually don't need to be instant.
+#
+# type: duration
+# default value: not set
+# overwritten by: TLS_POLL_WATCH_INTERVAL
+#poll_watch_interval = '5m'
+
 [tos]
 
 # The timeout in seconds for a user to accept update ToS during the
@@ -3070,6 +3095,15 @@ storage_type = 'db'
 # overwritten_by: USER_VALUES_REVALIDATE_DURING_LOGIN
 #revalidate_during_login = false
 
+# The `name` claim in the `id_token` and in `/userinfo` is built as
+# `given_name family_name`, like "Taro Yamada". Set this to `true`
+# to put the family name first, like "Yamada Taro", which is the
+# usual order in e.g. Japanese, Chinese or Korean.
+#
+# default: false
+# overwritten by: USER_VALUES_NAME_ORDER_REVERSE
+#name_order_reverse = false
+
 [user_values.preferred_username]
 
 # If the `preferred_username` is not set for a given user, the
@@ -3229,6 +3263,30 @@ rp_origin = 'http://localhost:8080'
 # default: true
 # overwritten by: WEBAUTHN_NO_PASSWORD_EXPIRY
 #no_password_exp = true
+
+# The Passkey Types users can choose from when they register a
+# new Passkey on the Account Dashboard or during a password reset.
+#
+# - `default` does not register a Resident Key. Users need to
+#   enter their E-Mail before they can log in with it, but it
+#   does not use one of the very limited storage slots on
+#   hardware keys, which prevents bricked devices.
+# - `resident_key` registers a Resident Key (discoverable
+#   credential). Only these can be used with the "Passkey" button
+#   on the login page without entering the E-Mail first.
+#
+# Separate values with a space. If only one value is given, the
+# user has no choice. If both are given, the first one is
+# selected by default in the UI. If only `default` is given, the
+# "Passkey" button on the login page is hidden.
+#
+# Note: This does NOT change the type of already registered keys.
+# Be careful when changing this for an existing instance in
+# combination with device attestation.
+#
+# default: 'default resident_key'
+# overwritten by: WEBAUTHN_PASSKEY_REG_TYPE
+#passkey_reg_type = 'default resident_key'
 
 # When you want to migrate an existing deployment over to enforced
 # attestation, you usually have a chicken-and-egg problem: You
