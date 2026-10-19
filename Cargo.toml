@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.37.2-20261019"
+version = "0.37.2"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
@@ -37,7 +37,7 @@ accept-language = "3"
 actix = "0.13"
 actix-multipart = "0.8"
 actix-web = { version = "4", features = ["rustls-0_23"] }
-actix-web-lab = "0.28"
+actix-web-lab = "0.29"
 actix-web-prom = "0.10"
 ahash = "0.8.12"
 ammonia = "4.1"
@@ -103,7 +103,7 @@ pulldown-cmark = "0.13"
 rand = "0.10"
 rand_core = { version = "0.10", features = [] }
 rcgen = "0.14.3"
-refinery = { version = "0.9", features = ["tokio-postgres"] }
+refinery = { version = "0.10", features = ["tokio-postgres"] }
 regex = "1"
 reqwest = { version = "0.13.3", default-features = false, features = [
     "charset", "form", "http2", "json", "stream", "rustls-no-provider"

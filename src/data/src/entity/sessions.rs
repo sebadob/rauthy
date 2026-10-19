@@ -379,7 +379,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
     remote_ip = $10
-WHERE exp > $11"#;
+WHERE sessions.exp > $11"#;
 
         let rows_affected = if is_hiqlite() {
             DB::hql()

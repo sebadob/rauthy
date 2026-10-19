@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## v0.37.2
 
 ### Security
 
@@ -109,7 +109,13 @@ you can not opt-in to a poll-based file watcher:
 poll_watch_interval = '5m'
 ```
 
-[]()
+[#1811](https://github.com/sebadob/rauthy/pull/1811)
+
+#### Client Logo Aspect Ratio
+
+The aspect ratio of uploaded client logos is now preserved up to a ratio of 4:1.
+
+[#1796](https://github.com/sebadob/rauthy/pull/1796)
 
 #### Percent-encoded Auth Headers
 
@@ -138,6 +144,9 @@ percent_encode = true
 - The `rauthy` default custom fallback branding for ephemeral clients was not working properly. They
   always got the raw default, not when you had a custom one for `rauthy` itself.
   [#1809](https://github.com/sebadob/rauthy/pull/1809)
+- The version bump of `tls-hot-reload` fixed an issue where multiple TLS cert replacements could
+  make the file watcher for hot reloading lose its targets.
+  [#1811](https://github.com/sebadob/rauthy/pull/1811)
 
 ## v0.37.1
 
