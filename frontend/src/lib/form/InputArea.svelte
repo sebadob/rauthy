@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {slide} from 'svelte/transition';
-    import {untrack} from 'svelte';
+    import { slide } from 'svelte/transition';
+    import { untrack } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -55,9 +55,9 @@
     const re = untrack(() => (pattern ? new RegExp(pattern, 'gm') : undefined));
 
     function onblur(
-            event: FocusEvent & {
-                currentTarget: EventTarget & HTMLTextAreaElement;
-            },
+        event: FocusEvent & {
+            currentTarget: EventTarget & HTMLTextAreaElement;
+        },
     ) {
         isValid();
         onBlur?.();
@@ -118,28 +118,28 @@
         </label>
     </div>
     <textarea
-            bind:this={ref}
-            {id}
-            {name}
-            class:font-mono={fontMono}
-            title={errMsg}
-            aria-label={label || placeholder}
-            bind:value
-            {rows}
-            autocomplete="off"
-            {placeholder}
-            aria-placeholder={placeholder}
-            {disabled}
-            aria-disabled={disabled}
-            maxlength={maxLength || undefined}
-            required={required || undefined}
-            aria-required={required || false}
-            aria-invalid={isError}
-            {onsubmit}
-            {oninput}
-            {oninvalid}
-            {onblur}
-            {onkeydown}
+        bind:this={ref}
+        {id}
+        {name}
+        class:font-mono={fontMono}
+        title={errMsg}
+        aria-label={label || placeholder}
+        bind:value
+        {rows}
+        autocomplete="off"
+        {placeholder}
+        aria-placeholder={placeholder}
+        {disabled}
+        aria-disabled={disabled}
+        maxlength={maxLength || undefined}
+        required={required || undefined}
+        aria-required={required || false}
+        aria-invalid={isError}
+        {onsubmit}
+        {oninput}
+        {oninvalid}
+        {onblur}
+        {onkeydown}
     >
     </textarea>
     {#if isError}
