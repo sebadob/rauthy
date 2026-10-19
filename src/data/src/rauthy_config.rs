@@ -436,11 +436,13 @@ impl Default for Vars {
                 tz_fmt: VarsEmailTzFmt {
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
+                    es: "%d/%m/%Y %T (%Z)".into(),
                     fr: "%d/%m/%Y %T (%Z)".into(),
                     ja: "%Y/%m/%d %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     nl: "%d-%m-%Y %T (%Z)".into(),
                     no: "%d.%m.%Y %T (%Z)".into(),
+                    pt: "%d/%m/%Y %T (%Z)".into(),
                     ru: "%d.%m.%Y %T (%Z)".into(),
                     uk: "%d.%m.%Y %T (%Z)".into(),
                     zhhans: "%d-%m-%Y %T (%Z)".into(),
@@ -553,11 +555,13 @@ impl Default for Vars {
                 filter_lang_common: vec![
                     "de".into(),
                     "en".into(),
+                    "es".into(),
                     "fr".into(),
                     "ja".into(),
                     "ko".into(),
                     "nb".into(),
                     "nl".into(),
+                    "pt".into(),
                     "ru".into(),
                     "uk".into(),
                     "zhhans".into(),
@@ -565,11 +569,13 @@ impl Default for Vars {
                 filter_lang_admin: vec![
                     "de".into(),
                     "en".into(),
+                    "es".into(),
                     "fr".into(),
                     "ja".into(),
                     "ko".into(),
                     "nb".into(),
                     "nl".into(),
+                    "pt".into(),
                     "ru".into(),
                     "uk".into(),
                     "zhhans".into(),
@@ -685,6 +691,17 @@ impl Default for Vars {
                         footer: None,
                         button_text_request_new: None,
                     },
+                    es: VarsTemplate {
+                        subject: "Nueva contraseña".into(),
+                        header: "Nueva contraseña para".into(),
+                        text: None,
+                        click_link: Some("Haga clic en el enlace de abajo para acceder al formulario de contraseña.".into()),
+                        validity: Some("Por motivos de seguridad, este enlace solo es válido durante un breve período de tiempo.".into()),
+                        expires: Some("El enlace caduca el:".into()),
+                        button: Some("Establecer contraseña".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     fr: VarsTemplate
                     {
                         subject: "Nouveau mot de passe".into(),
@@ -749,6 +766,17 @@ impl Default for Vars {
                                 .into()),
                         expires: Some("Link geldig tot:".into()),
                         button: Some("Wachtwoord instellen".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    pt: VarsTemplate {
+                        subject: "Nova palavra-passe".into(),
+                        header: "Nova palavra-passe para".into(),
+                        text: None,
+                        click_link: Some("Clique na ligação abaixo para aceder ao formulário da palavra-passe.".into()),
+                        validity: Some("Por motivos de segurança, esta ligação só é válida durante um curto período de tempo.".into()),
+                        expires: Some("A ligação expira em:".into()),
+                        button: Some("Definir palavra-passe".into()),
                         footer: None,
                         button_text_request_new: None,
                     },
@@ -829,6 +857,17 @@ impl Default for Vars {
                         footer: Some("If this link has expired, you can request a new one.".into()),
                         button_text_request_new: Some("Request New Link".into()),
                     },
+                    es: VarsTemplate {
+                        subject: "Solicitud de restablecimiento de contraseña".into(),
+                        header: "Solicitud de restablecimiento de contraseña para".into(),
+                        text: None,
+                        click_link: Some("Haga clic en el enlace de abajo para acceder al formulario de restablecimiento de contraseña.".into()),
+                        validity: Some("Por motivos de seguridad, este enlace solo es válido durante un breve período de tiempo.".into()),
+                        expires: Some("El enlace caduca el:".into()),
+                        button: Some("Restablecer contraseña".into()),
+                        footer: Some("Si este enlace ha caducado, puede solicitar uno nuevo.".into()),
+                        button_text_request_new: Some("Solicitar nuevo enlace".into()),
+                    },
                     fr: VarsTemplate {
                         subject: "Demande de réinitialisation du mot de passe".into(),
                         header: "Demande de réinitialisation du mot de passe pour".into(),
@@ -890,6 +929,17 @@ impl Default for Vars {
                         button: Some("Wachtwoord resetten".into()),
                         footer: Some("Als deze link is verlopen, kunt u een nieuwe aanvragen.".into()),
                         button_text_request_new: Some("Nieuwe link aanvragen".into()),
+                    },
+                    pt: VarsTemplate {
+                        subject: "Pedido de redefinição da palavra-passe".into(),
+                        header: "Pedido de redefinição da palavra-passe para".into(),
+                        text: None,
+                        click_link: Some("Clique na ligação abaixo para aceder ao formulário de redefinição da palavra-passe.".into()),
+                        validity: Some("Por motivos de segurança, esta ligação só é válida durante um curto período de tempo.".into()),
+                        expires: Some("A ligação expira em:".into()),
+                        button: Some("Redefinir palavra-passe".into()),
+                        footer: Some("Se esta ligação tiver expirado, pode pedir uma nova.".into()),
+                        button_text_request_new: Some("Pedir nova ligação".into()),
                     },
                     ru: VarsTemplate {
                         subject: "Запрос на сброс пароля".into(),
@@ -967,6 +1017,22 @@ Your account has not been compromised and no data was leaked."#.into()),
                         button: None,
                         footer: None,
                         button_text_request_new: Some("Request password reset Link".into()),
+                    },
+                    es: VarsTemplate {
+                        subject: "Correo electrónico ya registrado".into(),
+                        header: "Correo electrónico ya registrado - ".into(),
+                        text: Some(r#"Alguien ha intentado registrar una cuenta nueva con su dirección de correo electrónico,
+pero ya existe una cuenta con esa dirección. Si fue usted y se trató de un error,
+puede ignorar este mensaje. Sin embargo, si ha olvidado su contraseña, puede usar
+el enlace de abajo para restablecerla.
+Si no fue usted quien intentó registrar la nueva cuenta, no se preocupe.
+Su cuenta no se ha visto comprometida y no se ha filtrado ningún dato."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Solicitar enlace para restablecer la contraseña".into()),
                     },
                     fr: VarsTemplate {
                         subject: "e-mail déjà enregistré".into(),
@@ -1047,6 +1113,22 @@ Uw account is niet gecompromitteerd en er zijn geen gegevens gelekt."#.into()),
                         footer: None,
                         button_text_request_new: Some("Wachtwoordreset link aanvragen".into()),
                     },
+                    pt: VarsTemplate {
+                        subject: "E-mail já registado".into(),
+                        header: "E-mail já registado - ".into(),
+                        text: Some(r#"Alguém tentou registar uma nova conta com o seu endereço de e-mail,
+mas já existe uma conta com este endereço. Se a tentativa foi sua e se tratou de um engano,
+pode ignorar esta mensagem. No entanto, se se esqueceu da sua palavra-passe, pode usar
+a ligação abaixo para a redefinir.
+Se a tentativa de registo não foi sua, não precisa de se preocupar.
+A sua conta não foi comprometida e nenhum dado foi divulgado."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Pedir ligação para redefinir a palavra-passe".into()),
+                    },
                     ru: VarsTemplate {
                         subject: "E-Mail уже зарегистрирован".into(),
                         header: "E-Mail уже зарегистрирован - ".into(),
@@ -1119,6 +1201,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                         footer: None,
                         button_text_request_new: None,
                     },
+                    es: VarsTemplate {
+                        subject: "Código de un solo uso".into(),
+                        header: "Código de un solo uso para".into(),
+                        text: Some("Su código de un solo uso es:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     fr: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
@@ -1167,6 +1260,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
                         text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    pt: VarsTemplate {
+                        subject: "Código de utilização única".into(),
+                        header: "Código de utilização única para".into(),
+                        text: Some("O seu código de utilização única é:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -2174,6 +2278,9 @@ impl Vars {
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "en", "TZ_FMT_EN") {
             self.email.tz_fmt.en = v.into();
         }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "es", "TZ_FMT_ES") {
+            self.email.tz_fmt.es = v.into();
+        }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "fr", "TZ_FMT_FR") {
             self.email.tz_fmt.fr = v.into();
         }
@@ -2188,6 +2295,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "no", "TZ_FMT_NO") {
             self.email.tz_fmt.no = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "pt", "TZ_FMT_PT") {
+            self.email.tz_fmt.pt = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "uk", "TZ_FMT_UK") {
             self.email.tz_fmt.uk = v.into();
@@ -3424,6 +3534,13 @@ impl Vars {
                         self.templates.password_reset.de.clone()
                     }
                 }
+                "es" => {
+                    if is_password_new {
+                        self.templates.password_new.es.clone()
+                    } else {
+                        self.templates.password_reset.es.clone()
+                    }
+                }
                 "fr" => {
                     if is_password_new {
                         self.templates.password_new.fr.clone()
@@ -3459,6 +3576,13 @@ impl Vars {
                         self.templates.password_reset.nl.clone()
                     }
                 }
+                "pt" => {
+                    if is_password_new {
+                        self.templates.password_new.pt.clone()
+                    } else {
+                        self.templates.password_reset.pt.clone()
+                    }
+                }
                 "ru" => {
                     if is_password_new {
                         self.templates.password_new.ru.clone()
@@ -3482,7 +3606,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ja ko nb nl ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de es fr ja ko nb nl pt ru uk zh_hans"
                     )
                 }
             };
@@ -3527,6 +3651,13 @@ impl Vars {
                         self.templates.password_reset.de = tpl;
                     }
                 }
+                "es" => {
+                    if is_password_new {
+                        self.templates.password_new.es = tpl;
+                    } else {
+                        self.templates.password_reset.es = tpl;
+                    }
+                }
                 "fr" => {
                     if is_password_new {
                         self.templates.password_new.fr = tpl;
@@ -3562,6 +3693,13 @@ impl Vars {
                         self.templates.password_reset.nl = tpl;
                     }
                 }
+                "pt" => {
+                    if is_password_new {
+                        self.templates.password_new.pt = tpl;
+                    } else {
+                        self.templates.password_reset.pt = tpl;
+                    }
+                }
                 "ru" => {
                     if is_password_new {
                         self.templates.password_new.ru = tpl;
@@ -3585,7 +3723,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de fr ja ko nb nl ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en de es fr ja ko nb nl pt ru uk zh_hans"
                     )
                 }
             }
@@ -4252,11 +4390,13 @@ pub struct VarsEmailJobs {
 pub struct VarsEmailTzFmt {
     pub de: Cow<'static, str>,
     pub en: Cow<'static, str>,
+    pub es: Cow<'static, str>,
     pub fr: Cow<'static, str>,
     pub ja: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub nl: Cow<'static, str>,
     pub no: Cow<'static, str>,
+    pub pt: Cow<'static, str>,
     pub ru: Cow<'static, str>,
     pub uk: Cow<'static, str>,
     pub zhhans: Cow<'static, str>,
@@ -4539,11 +4679,13 @@ pub struct VarsTemplates {
 pub struct VarsTemplatesLanguages {
     pub de: VarsTemplate,
     pub en: VarsTemplate,
+    pub es: VarsTemplate,
     pub fr: VarsTemplate,
     pub ja: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
     pub nl: VarsTemplate,
+    pub pt: VarsTemplate,
     pub ru: VarsTemplate,
     pub uk: VarsTemplate,
     pub zhhans: VarsTemplate,

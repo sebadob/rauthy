@@ -37,11 +37,13 @@ pub enum I18nContent {
 pub enum Language {
     De,
     En,
+    Es,
     Fr,
     Ja,
     Ko,
     Nb,
     Nl,
+    Pt,
     Ru,
     Uk,
     ZhHans,
