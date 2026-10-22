@@ -261,6 +261,7 @@ pub struct Vars {
     pub atproto: VarsAtproto,
     pub backchannel_logout: VarsBackchannelLogout,
     pub bootstrap: VarsBootstrap,
+    pub consent: VarsConsent,
     pub cred_stuff_detect: VarsCredStuff,
     pub database: VarsDatabase,
     pub device_grant: VarsDeviceGrant,
@@ -356,6 +357,7 @@ impl Default for Vars {
                 generated_secrets_file: String::new().into(),
                 generated_secrets_ttl: Duration::from_secs(600),
             },
+            consent: VarsConsent { enable: false },
             cred_stuff_detect: VarsCredStuff {
                 blacklist_duration: Duration::from_secs(24 * 3600),
                 blacklist_threshold: 15,
@@ -1434,6 +1436,7 @@ impl Vars {
         slf.parse_auth_headers(&mut table);
         slf.parse_backchannel_logout(&mut table);
         slf.parse_bootstrap(&mut table);
+        slf.parse_consent(&mut table);
         slf.parse_cred_stuff(&mut table);
         slf.parse_database(&mut table, &mut secrets);
         slf.parse_device_grant(&mut table);
@@ -1826,6 +1829,16 @@ impl Vars {
             self.bootstrap.generated_secrets_file =
                 generated_secrets::default_file_path(&node_config.data_dir).into();
         }
+    }
+
+    fn parse_consent(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "consent");
+
+        if let Some(v) = t_bool(&mut table, "consent", "enable", "CONSENT_ENABLE") {
+            self.consent.enable = v;
+        }
+
+        check_table_empty(table, "consent");
     }
 
     fn parse_cred_stuff(&mut self, table: &mut toml::Table) {
@@ -4274,6 +4287,11 @@ pub struct VarsBootstrap {
 }
 
 #[derive(Debug)]
+pub struct VarsConsent {
+    pub enable: bool,
+}
+
+#[derive(Debug)]
 pub struct VarsCredStuff {
     pub blacklist_duration: Duration,
     pub blacklist_threshold: u32,
@@ -5150,6 +5168,17 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn consent_enable() {
+        let mut vars = Vars::default();
+        vars.parse_consent(&mut toml::Table::new());
+        assert!(!vars.consent.enable);
+
+        let mut table: toml::Table = toml::from_str("[consent]\nenable = true").unwrap();
+        vars.parse_consent(&mut table);
+        assert!(vars.consent.enable);
+    }
 
     #[test]
     fn test_parse_duration() {

@@ -569,6 +569,7 @@ impl TokenSet {
                 is_mfa,
                 sid.map(|s| s.0),
                 Some(jti.0),
+                client,
             )
             .await?;
         }

@@ -65,6 +65,7 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        created_micros: cl.created_micros,
     };
     debug!(client = ?rauthy, "Rauthy client anti-lockout");
 
