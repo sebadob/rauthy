@@ -221,8 +221,11 @@ pub struct UpdateClientRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub backchannel_logout_uri: Option<String>,
-    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$`
+    #[validate(regex(
+        path = "*RE_GROUPS",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$"
+    ))]
     pub restrict_group_prefix: Option<String>,
     /// Admin-defined custom claims emitted into `client_credentials` tokens.
     /// Validation: JSON object, max 1024 serialized characters
@@ -281,8 +284,11 @@ pub struct ScimClientRequestResponse {
     ))]
     pub base_uri: String,
     pub sync_groups: bool,
-    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$`
+    #[validate(regex(
+        path = "*RE_GROUPS",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$"
+    ))]
     pub group_sync_prefix: Option<String>,
 }
 

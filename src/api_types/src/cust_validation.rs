@@ -2,7 +2,7 @@ use crate::oidc::GrantType;
 use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
 use rauthy_common::regex::{
     RE_ATTR, RE_CLIENT_URI, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GROUPS, RE_LINUX_HOSTNAME,
-    RE_ORIGIN, RE_RESOURCE, RE_ROLES_SCOPES,
+    RE_ORIGIN, RE_RESOURCE, RE_ROLES, RE_SCOPES,
 };
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -142,14 +142,14 @@ pub fn validate_vec_grant_type(value: &[String]) -> Result<(), ValidationError> 
     Ok(())
 }
 
-// validate_vec_groups, _roles and _scopes do the same thing but are 3 functions just to
-// be clear in the validation fields above that it does not create confusion, even if they
-// all use the same `RE_GROUPS` regex.
+// Groups and roles allow letters of any script, scopes are ASCII only.
 #[inline]
 pub fn validate_vec_groups(value: &[String]) -> Result<(), ValidationError> {
     for v in value {
         if !RE_GROUPS.is_match(v) {
-            return Err(ValidationError::new("^[a-zA-Z0-9-_/,:*\\s]{2,64}$"));
+            return Err(ValidationError::new(
+                "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$",
+            ));
         }
     }
     Ok(())
@@ -158,8 +158,10 @@ pub fn validate_vec_groups(value: &[String]) -> Result<(), ValidationError> {
 #[inline]
 pub fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
     for v in value {
-        if !RE_ROLES_SCOPES.is_match(v) {
-            return Err(ValidationError::new("^[a-zA-Z0-9-_/,:*.]{2,64}$"));
+        if !RE_ROLES.is_match(v) {
+            return Err(ValidationError::new(
+                "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*.]--[\\x{2139}\\x{FE0F}]]{2,64}$",
+            ));
         }
     }
     Ok(())
@@ -168,7 +170,7 @@ pub fn validate_vec_roles(value: &[String]) -> Result<(), ValidationError> {
 #[inline]
 pub fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
     for v in value {
-        if !RE_ROLES_SCOPES.is_match(v) {
+        if !RE_SCOPES.is_match(v) {
             return Err(ValidationError::new("^[a-zA-Z0-9-_/,:*.]{2,64}$"));
         }
     }

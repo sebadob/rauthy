@@ -32,8 +32,11 @@ pub struct Group {
     /// Validation: UNIQUE `^[a-zA-Z0-9]{24}$`
     #[validate(regex(path = "*RE_DB_ID", code = "^[a-zA-Z0-9]{24}$"))]
     pub id: Option<String>,
-    /// Validation: `^[a-zA-Z0-9-_/,:*\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/,:*\s]--[\x{2139}\x{FE0F}]]{2,64}$`
+    #[validate(regex(
+        path = "*RE_GROUPS",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$"
+    ))]
     pub name: String,
 }
 
@@ -42,8 +45,11 @@ pub struct Role {
     /// Validation: UNIQUE `^[a-zA-Z0-9]{24}$`
     #[validate(regex(path = "*RE_DB_ID", code = "^[a-zA-Z0-9]{24}$"))]
     pub id: Option<String>,
-    /// Validation: `^[a-zA-Z0-9-_/,:*\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/,:*\s]--[\x{2139}\x{FE0F}]]{2,64}$`
+    #[validate(regex(
+        path = "*RE_GROUPS",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$"
+    ))]
     pub name: String,
 }
 
@@ -52,8 +58,11 @@ pub struct UserAttribute {
     /// Validation: `^[a-zA-Z0-9-_/]{2,32}$`
     #[validate(regex(path = "*RE_ATTR", code = "^[a-z0-9-_/]{2,32}$"))]
     pub name: String,
-    /// Validation: `^[a-zA-Z0-9-_/]{0,128}$`
-    #[validate(regex(path = "*RE_ATTR_DESC", code = "[a-zA-Z0-9À-ÿ-\\s]{2,128}"))]
+    /// Validation: `^[[\p{L}\p{Mn}\p{Mc}\p{N}\-_/\s]--[\x{2139}\x{FE0F}]]{0,128}$`
+    #[validate(regex(
+        path = "*RE_ATTR_DESC",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/\\s]--[\\x{2139}\\x{FE0F}]]{0,128}$"
+    ))]
     pub desc: Option<String>,
     pub default_value: Option<serde_json::Value>,
     pub user_editable: Option<bool>,
@@ -65,7 +74,7 @@ pub struct Scope {
     #[validate(regex(path = "*RE_DB_ID", code = "^[a-zA-Z0-9]{24}$"))]
     pub id: Option<String>,
     /// Validation: `^[a-zA-Z0-9-_/,:*\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    #[validate(regex(path = "*RE_NAME_ASCII", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub name: String,
     /// `[UserAttribute.name]`s that should be included in the `access_token` if this scope is
     /// requested.
@@ -226,8 +235,11 @@ pub struct Client {
     /// Restricts the login to this client by membership to a group prefix. The comparison under
     /// the hood will be `group.name.starts_with(client.restrict_group_prefix)`.
     ///
-    /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
-    #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
+    /// Validation: `^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$`
+    #[validate(regex(
+        path = "*RE_GROUPS",
+        code = "^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_/,:*\\s]--[\\x{2139}\\x{FE0F}]]{2,64}$"
+    ))]
     pub restrict_group_prefix: Option<String>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,

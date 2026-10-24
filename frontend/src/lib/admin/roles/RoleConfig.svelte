@@ -8,7 +8,7 @@
     import Form from '$lib5/form/Form.svelte';
     import LabeledValue from '$lib5/LabeledValue.svelte';
     import type { RoleRequest, RoleResponse } from '$api/types/roles.ts';
-    import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
+    import { PATTERN_ROLE } from '$utils/patterns';
     import { untrack } from 'svelte';
     import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
     import InputArea from '$lib/form/InputArea.svelte';
@@ -79,7 +79,7 @@
         disabled={isRauthyAdmin}
         width="14.5rem"
         required
-        pattern={PATTERN_ROLE_SCOPE}
+        pattern={PATTERN_ROLE}
     />
 
     {#if isRauthyAdmin}

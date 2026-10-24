@@ -3,7 +3,8 @@ export const PATTERN_ALNUM = '^[a-zA-Z0-9]*$';
 export const PATTERN_ATPROTO_ID =
     '^(?:@?([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)|(did:[a-z]+:[a-zA-Z0-9._:%\\-]*[a-zA-Z0-9._\\-])$';
 export const PATTERN_ATTR = '^[a-zA-Z0-9\\-_\\/]{2,32}$';
-export const PATTERN_ATTR_DESC = '^[a-zA-Z0-9\\-_\\/\\s]{0,128}$';
+export const PATTERN_ATTR_DESC =
+    '^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_\\/\\s]--[\\u{2139}\\u{FE0F}]]{0,128}$';
 export const PATTERN_API_KEY = '^[a-zA-Z0-9_\\/\\-]{2,24}$';
 export const PATTERN_CITY = '^[a-zA-Z0-9À-ÿ\\-\\p{Zs}]{0,48}$';
 // Technically, the API accepts `PATTERN_CLIENT_ID_EPHEMERAL` everywhere to make resolving via URL possible.
@@ -24,9 +25,15 @@ export const PATTERN_CLIENT_URI =
 export const PATTERN_CONTACT = '^[a-zA-Z0-9\\+.@\\/:-]{0,48}$';
 export const PATTERN_CSS_VALUE_LOOSE = '^[a-z0-9\\-,.#\\(\\)%\\/\\s]+$';
 // export const PATTERN_FLOW = '^(authorization_code|client_credentials|password|refresh_token)$';
-export const PATTERN_GROUP = '^[a-zA-Z0-9\\-_\\/,:*\\p{Zs}]{2,64}$';
+export const PATTERN_GROUP =
+    '^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_\\/,:*\\p{Zs}]--[\\u{2139}\\u{FE0F}]]{2,64}$';
+// KV namespaces and access key names are used in URL paths and stay ASCII only
+export const PATTERN_KV_NAME = '^[a-zA-Z0-9\\-_\\/,:*\\p{Zs}]{2,64}$';
 export const PATTERN_KV_KEY = '^[a-zA-Z0-9\\-\\._\\~]{2,64}$';
-export const PATTERN_ROLE_SCOPE = '^[a-zA-Z0-9\\-_\\/,:*.]{2,64}$';
+export const PATTERN_ROLE =
+    '^[[\\p{L}\\p{Mn}\\p{Mc}\\p{N}\\-_\\/,:*.]--[\\u{2139}\\u{FE0F}]]{2,64}$';
+// OAuth scopes must stay ASCII (RFC 6749 section 3.3)
+export const PATTERN_SCOPE = '^[a-zA-Z0-9\\-_\\/,:*.]{2,64}$';
 // export const PATTERN_IPV4 = '^(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)){3}$';
 export const PATTERN_LINUX_HOSTNAME = '^[a-zA-Z0-9][a-zA-Z0-9\\-.]*[a-zA-Z0-9]$';
 export const PATTERN_LINUX_USERNAME = '^[a-z][a-z0-9_\\-]{1,61}$';
