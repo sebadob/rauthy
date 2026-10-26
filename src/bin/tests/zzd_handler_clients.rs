@@ -667,6 +667,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     // rotate secret gracefully and cache the current one
     let payload = ClientSecretRequest {
         cache_current_hours: Some(1),
+        secret: None,
     };
     let res = client
         .put(&url)
@@ -687,6 +688,44 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     token_req.client_secret = Some(secret_rotated);
     let res = client.post(&url_token).form(&token_req).send().await?;
     assert_eq!(res.status(), 200);
+
+    // apply an externally provisioned secret
+    let external_secret =
+        "External4Secret4Value4With4More4Than4644Characters4And4Even4More4Chars0".to_string();
+    let payload = ClientSecretRequest {
+        cache_current_hours: None,
+        secret: Some(external_secret.clone()),
+    };
+    let res = client
+        .put(&url)
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert!(res.status().is_success());
+    let resp = res.json::<ClientSecretResponse>().await?;
+    assert_eq!(resp.secret.unwrap(), external_secret);
+
+    // the old secret does not work anymore, the external one does
+    let res = client.post(&url_token).form(&token_req).send().await?;
+    assert_eq!(res.status(), 401);
+
+    token_req.client_secret = Some(external_secret.clone());
+    let res = client.post(&url_token).form(&token_req).send().await?;
+    assert_eq!(res.status(), 200);
+
+    // a too short externally provisioned secret is rejected by the payload validation
+    let payload = ClientSecretRequest {
+        cache_current_hours: None,
+        secret: Some("too_short".to_string()),
+    };
+    let res = client
+        .put(&url)
+        .headers(auth_headers.clone())
+        .json(&payload)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 400);
 
     Ok(())
 }

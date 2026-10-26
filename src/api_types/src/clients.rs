@@ -255,6 +255,15 @@ pub struct ClientSecretRequest {
     /// Validation: Value between 1 and 24
     #[validate(range(min = 1, max = 24))]
     pub cache_current_hours: Option<u8>,
+    /// Optional externally-provisioned client secret. When given, it is written to the client
+    /// (encrypted with the active ENC_KEY) instead of generating a new random one. This makes
+    /// continuous declarative provisioning against a live instance possible (the bootstrap
+    /// `Plain` secret only applies to an empty database), the same way e.g. auth providers are
+    /// provisioned with their `client_secret` via the API.
+    ///
+    /// Validation: length of at least `SECRET_LEN_CLIENTS` (64) characters
+    #[validate(length(min = 64))]
+    pub secret: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
