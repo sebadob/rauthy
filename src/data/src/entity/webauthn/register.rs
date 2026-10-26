@@ -13,7 +13,7 @@ use std::cmp::min;
 use std::str::FromStr;
 use tracing::{debug, error, info, warn};
 use webauthn_rs::prelude::{Credential, Uuid, WebauthnError};
-use webauthn_rs_proto::{CreationChallengeResponse, ExtnState, UserVerificationPolicy};
+use webauthn_rs_proto::{CreationChallengeResponse, ExtnState};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WebauthnReg {
