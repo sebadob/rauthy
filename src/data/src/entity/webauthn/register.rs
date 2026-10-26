@@ -11,7 +11,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::str::FromStr;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use webauthn_rs::prelude::{Credential, Uuid, WebauthnError};
 use webauthn_rs_proto::{CreationChallengeResponse, ExtnState};
 
@@ -231,6 +231,10 @@ pub async fn reg_finish(
             };
 
             let is_rk = {
+                debug!(
+                    "Webauthn reg finish cred.extensions.cred_props: {:?}",
+                    cred.extensions.cred_props
+                );
                 match cred.extensions.cred_props {
                     ExtnState::NotRequested | ExtnState::Ignored => None,
                     ExtnState::Set(props) => props.rk,
