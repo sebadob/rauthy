@@ -1,3 +1,4 @@
+use actix_web::http::header::LOCATION;
 use actix_web::{HttpRequest, HttpResponse, cookie};
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
@@ -139,7 +140,22 @@ pub async fn handle_put_user_passkey_finish(
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
-    Ok(HttpResponse::Created().cookie(cookie).finish())
+
+    // check if we got a custom `redirect_uri` during registration
+    let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
+        MagicLinkUsage::NewUser(redirect_uri) => redirect_uri,
+        MagicLinkUsage::PasswordReset(redirect_uri) => redirect_uri,
+        _ => None,
+    };
+
+    if let Some(uri) = redirect_uri {
+        Ok(HttpResponse::Created()
+            .insert_header((LOCATION, uri))
+            .cookie(cookie)
+            .finish())
+    } else {
+        Ok(HttpResponse::Created().cookie(cookie).finish())
+    }
 }
 
 /// Returns (magic link deletion cookie, optional custom redirect uri)
