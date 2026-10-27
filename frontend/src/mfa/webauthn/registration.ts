@@ -4,6 +4,7 @@ import { getCsrfToken, promiseTimeout } from '$utils/helpers';
 
 export interface WebauthnRegResult {
     error?: string;
+    location?: string;
 }
 
 export async function webauthnReg(
@@ -115,7 +116,7 @@ export async function webauthnReg(
         body: JSON.stringify(payloadFinish),
     });
     if (resFinish.status === 201) {
-        return {};
+        return { location: resFinish.headers.get('location') || undefined };
     } else if (resFinish.status === 406) {
         let body = await resFinish.json();
         return {

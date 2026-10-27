@@ -128,6 +128,7 @@
             }
         } else {
             resetValues();
+            redirectUri = res.location || '';
             success = true;
         }
     }
