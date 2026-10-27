@@ -219,6 +219,9 @@ pub struct DeviceAuthCode {
     /// `Client::created_micros` of `client_id` when the code was created. Last on purpose: bincode
     /// ignores trailing bytes, so older versions can still decode a code with this field.
     pub client_created_micros: Option<i64>,
+    /// RFC 8707 resource indicator validated at the device authorization request. It becomes
+    /// part of the access token `aud`. After `client_created_micros` for the same reason.
+    pub resource: Option<String>,
 }
 
 /// `DeviceAuthCode` as cached by v0.37, before `client_created_micros` existed.
@@ -244,6 +247,7 @@ impl DeviceAuthCode {
         client_created_micros: Option<i64>,
         client_secret: Option<String>,
         nonce: Option<String>,
+        resource: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now();
         let ttl = RauthyConfig::get().vars.device_grant.code_lifetime;
@@ -259,6 +263,7 @@ impl DeviceAuthCode {
             nonce,
             client_secret,
             warnings: 0,
+            resource,
         };
 
         DB::hql()
@@ -319,6 +324,7 @@ impl DeviceAuthCode {
             client_secret: code.client_secret,
             warnings: code.warnings,
             client_created_micros: None,
+            resource: None,
         })
     }
 
@@ -414,6 +420,7 @@ mod tests {
             nonce: None,
             client_secret: None,
             warnings: 0,
+            resource: None,
         };
 
         assert!(code.is_for_client(&client("client_1", Some(1))));
@@ -442,6 +449,7 @@ mod tests {
         };
         let code = DeviceAuthCode::decode(&encode(&old)).unwrap();
         assert_eq!(code.client_created_micros, None);
+        assert_eq!(code.resource, None);
         assert_eq!(code.verified_by.as_deref(), Some("user_1"));
         assert_eq!(code.scopes.as_deref(), Some("openid"));
         assert_eq!(code.warnings, 2);
@@ -462,12 +470,17 @@ mod tests {
             client_secret: Some("secret".to_string()),
             warnings: 1,
             client_created_micros: Some(1),
+            resource: Some("https://api.example.com/mcp".to_string()),
         };
         let bytes = encode(&code);
 
         let decoded = DeviceAuthCode::decode(&bytes).unwrap();
         assert_eq!(decoded.client_created_micros, Some(1));
         assert_eq!(decoded.client_secret.as_deref(), Some("secret"));
+        assert_eq!(
+            decoded.resource.as_deref(),
+            Some("https://api.example.com/mcp")
+        );
 
         let (old, _) = bincode_next::serde::decode_from_slice::<DeviceAuthCodeV037, _>(
             &bytes,

@@ -63,9 +63,13 @@ pub async fn validate_auth_code_req_params(
     Ok((client, header))
 }
 
+/// `resource` is the optional RFC 8707 `resource` of the token request. It may only narrow the
+/// resource granted to the refresh token, which with a single granted resource means it must
+/// match it. Without it, the granted resource is carried forward unchanged.
 pub async fn validate_and_refresh_token(
     client: Client,
     refresh_token: &str,
+    resource: Option<&str>,
     req: &HttpRequest,
 ) -> Result<(TokenSet, Option<String>), ErrorResponse> {
     let clock_skew_secs = RauthyConfig::get().vars.lifetimes.refresh_token_grace_time;
@@ -106,6 +110,16 @@ pub async fn validate_and_refresh_token(
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "Mismatch in client.id",
+        ));
+    }
+
+    // RFC 8707: a refresh can never widen or switch the granted resource
+    if let Some(requested) = resource
+        && claims.resource != Some(requested)
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidTarget,
+            "the requested `resource` was not granted to the refresh token",
         ));
     }
 

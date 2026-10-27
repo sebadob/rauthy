@@ -13,22 +13,27 @@ servers, for instance a fleet of MCP servers.
 
 The `resource` parameter is accepted on:
 
-- the **authorization request** (`GET /oidc/authorize`), carried through the issued auth code, and
-- the **token request** (`POST /oidc/token`) for the `authorization_code`, `client_credentials`,
-  and `refresh_token` grants, as well as the [Token Exchange](token_exchange.md).
+- the **authorization request** (`GET /oidc/authorize`), carried through the issued auth code,
+- the **device authorization request** (`POST /oidc/device`), carried through the device code, and
+- the **token request** (`POST /oidc/token`) for the `authorization_code`, `device_code`,
+  `client_credentials`, and `refresh_token` grants, as well as the
+  [Token Exchange](token_exchange.md).
 
 The requested value is matched verbatim against the client's allow-list (see below). The RFC
 recommends an absolute URI such as `https://api.example.com/mcp`, but Rauthy treats the value as
 opaque, so an operator decides what a valid value looks like. A missing, unknown, or disallowed
 value is rejected with the RFC error code `invalid_target`.
 
-Rauthy currently accepts a single `resource` value per request. On a `refresh_token` grant the
-granted resource is carried inside the refresh token and reused, so a refreshed access token keeps
-its audience binding; a refresh can never widen the resource set.
+Rauthy currently accepts a single `resource` value per request. A `resource` on the token request
+of the `authorization_code` or `device_code` grant must match the one granted with the code, or it
+is rejected with `invalid_target`. Without it, the granted resource is used. On a `refresh_token`
+grant the granted resource is carried inside the refresh token and reused, so a refreshed access
+token keeps its audience binding. A `resource` sent with the refresh must match the granted one; a
+refresh can never widen or switch the resource set.
 
 ```admonish note
-The `password` and device-code grants, and logins brokered through an upstream identity provider,
-do not process the `resource` parameter yet.
+The `password` grant and logins brokered through an upstream identity provider do not process the
+`resource` parameter yet.
 ```
 
 ## Per-client configuration
