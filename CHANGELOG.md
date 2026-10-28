@@ -1,5 +1,18 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Externally Provisioned Client Secrets
+
+`PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is
+stored (encrypted with the active `ENC_KEY`) instead of generating a new random secret. This makes
+continuous declarative provisioning of clients against a running instance possible, which the
+bootstrap `Plain` secret cannot do, since the bootstrap only runs on an empty database. When
+`secret` is not given, the behavior is unchanged and a new random secret is generated, so existing
+callers (like the Admin UI) are not affected.
+
 ## v0.37.2
 
 ### Security
