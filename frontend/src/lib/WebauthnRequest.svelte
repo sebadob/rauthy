@@ -95,7 +95,7 @@
                             -->
                             {#if webauthnRes.data && 'loc' in webauthnRes.data}
                                 {@const loc = String(webauthnRes.data.loc)}
-                                {#if !/^https?:/.test(loc)}
+                                {#if !loc.startsWith('http://') && !loc.startsWith('https://')}
                                     <a class="openApp" href={loc}>{t.authorize.mfaOpenApp}</a>
                                 {/if}
                             {/if}
