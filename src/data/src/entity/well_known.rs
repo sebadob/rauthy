@@ -30,7 +30,7 @@ pub struct WellKnown {
     pub response_types_supported: [&'static str; 1],
     pub subject_types_supported: [&'static str; 1],
     pub id_token_signing_alg_values_supported: [&'static str; 5],
-    pub token_endpoint_auth_methods_supported: [&'static str; 2],
+    pub token_endpoint_auth_methods_supported: [&'static str; 3],
     pub token_endpoint_auth_signing_alg_values_supported: [&'static str; 5],
     pub claims_supported: [&'static str; 12],
     pub claim_types_supported: [&'static str; 3],
@@ -142,7 +142,13 @@ impl WellKnown {
             response_types_supported: ["code"],
             subject_types_supported: ["public"],
             id_token_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA", "Ed25519"],
-            token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
+            // `none`: public clients, including ephemeral (CIMD) clients, authenticate at the
+            // token endpoint with PKCE only.
+            token_endpoint_auth_methods_supported: [
+                "client_secret_post",
+                "client_secret_basic",
+                "none",
+            ],
             token_endpoint_auth_signing_alg_values_supported: [
                 "RS256", "RS384", "RS512", "EdDSA", "Ed25519",
             ],
