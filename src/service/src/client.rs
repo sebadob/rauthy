@@ -1,4 +1,4 @@
-use cryptr::{EncKeys, EncValue};
+use cryptr::EncValue;
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
 use rauthy_api_types::oidc::GrantType;
 use rauthy_common::validation::validate_redirect_uri;
@@ -164,10 +164,7 @@ pub async fn generate_new_secret(
 
     let (clear, enc) = if let Some(plain) = plain_secret {
         // an externally provisioned secret is applied the same way as a bootstrap `Plain` secret
-        let kid = EncKeys::get_static().enc_key_active.clone();
-        let enc = EncValue::encrypt_with_key_id(plain.as_ref(), kid.clone())?
-            .into_bytes()
-            .to_vec();
+        let enc = EncValue::encrypt(plain.as_bytes())?.into_bytes().to_vec();
         (plain, enc)
     } else {
         Client::generate_new_secret()?
