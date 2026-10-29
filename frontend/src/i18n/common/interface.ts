@@ -119,6 +119,19 @@ export interface I18n {
             notAvailable: string;
             preferredUsername: string;
         };
+        privacy: {
+            clientId: string;
+            connectedApps: string;
+            connectedAppsDesc: string;
+            granted: string;
+            noConnectedApps: string;
+            privacy: string;
+            resource: string;
+            revoke: string;
+            revokeDesc: string;
+            scopes: string;
+            updated: string;
+        };
         providerLink: string;
         providerLinkDesc: string;
         providerUnlink: string;

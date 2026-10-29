@@ -39,6 +39,7 @@ use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use rauthy_data::entity::user_consents::{ConsentRevoked, UserConsent};
 use rauthy_data::entity::user_revoke::UserRevoke;
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::users_values::UserValues;
@@ -1140,6 +1141,115 @@ pub async fn delete_user_device(
     DeviceEntity::delete_refresh_tokens(&payload.device_id).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// GET all consents this user has given to clients
+///
+/// `resource` filters by resource, an empty value returns consents without a resource.
+#[utoipa::path(
+    get,
+    path = "/users/{id}/consents",
+    tag = "users",
+    params(UserConsentsParams),
+    responses(
+        (status = 200, description = "Ok", body = [UserConsentResponse]),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/consents")]
+pub async fn get_user_consents(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    Query(params): Query<UserConsentsParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    principal.validate_user_or_admin(&user_id)?;
+    params.validate()?;
+
+    let consents = UserConsent::find_for_user(&user_id, params.resource.as_deref()).await?;
+    let mut resp = Vec::with_capacity(consents.len());
+    for consent in consents {
+        // the client may be gone or ephemeral
+        let client_name = match Client::find(consent.client_id.clone()).await {
+            Ok(client) => client.name,
+            Err(err) if err.error == ErrorResponseType::NotFound => None,
+            Err(err) => return Err(err),
+        };
+        resp.push(consent.into_response(client_name));
+    }
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+/// DELETE a consent and all refresh tokens of this user for the client
+///
+/// `resource` is required and empty for a consent without a resource. Refresh tokens are revoked
+/// for the client as a whole, independent of `resource`. With `consent.enable` on, the user's
+/// legacy refresh tokens issued without a `client_id` are deleted as well; with it off, they are
+/// kept. Only the access token of each deleted refresh token, the one issued with its latest
+/// rotation, is revoked. Access tokens from earlier rotations and access tokens issued without a
+/// refresh token stay valid until they expire. With `consent.enable` off, an authorization code
+/// issued before the revoke can still be exchanged within its lifetime.
+///
+/// The request is idempotent: `consent_deleted` is `false` when there was no consent to delete.
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/consents",
+    tag = "users",
+    params(UserConsentDeleteParams),
+    responses(
+        (status = 200, description = "Ok", body = UserConsentDeleteResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{id}/consents")]
+pub async fn delete_user_consent(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    Query(params): Query<UserConsentDeleteParams>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    principal.validate_user_or_admin(&user_id)?;
+    params.validate()?;
+
+    let user = User::find(user_id).await?;
+    let admin_email = if principal.user_id()? == user.id {
+        None
+    } else {
+        Some(User::find(principal.user_id()?.to_string()).await?.email)
+    };
+
+    let ip = real_ip_from_req(&req)?;
+    let ConsentRevoked {
+        consent_deleted,
+        refresh_tokens_deleted,
+    } = UserConsent::revoke(&user.id, &params.client_id, &params.resource).await?;
+
+    // the revoke is committed at this point, a failing event must not turn it into an error
+    if (consent_deleted || refresh_tokens_deleted > 0)
+        && let Err(err) = Event::consent_revoked(
+            &user.email,
+            &params.client_id,
+            &params.resource,
+            admin_email.as_deref(),
+            ip,
+        )
+        .send()
+        .await
+    {
+        error!(?err, "Cannot send the consent revoked event");
+    }
+
+    Ok(HttpResponse::Ok().json(UserConsentDeleteResponse {
+        consent_deleted,
+        refresh_tokens_deleted,
+    }))
 }
 
 /// Endpoint for resetting passwords

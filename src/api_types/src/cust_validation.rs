@@ -1,5 +1,5 @@
 use crate::oidc::GrantType;
-use rauthy_common::constants::CLIENT_CLAIMS_MAX_LEN;
+use rauthy_common::constants::{CLIENT_CLAIMS_MAX_LEN, RESOURCE_MAX_LEN};
 use rauthy_common::regex::{
     RE_ATTR, RE_CLIENT_URI, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GROUPS, RE_LINUX_HOSTNAME,
     RE_ORIGIN, RE_RESOURCE, RE_ROLES_SCOPES,
@@ -119,6 +119,19 @@ pub fn validate_vec_resource(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+/// A single RFC 8707 resource indicator of at most [`RESOURCE_MAX_LEN`] bytes, or empty for
+/// "no resource".
+#[inline]
+pub fn validate_resource_or_empty(value: &str) -> Result<(), ValidationError> {
+    if value.is_empty() || (value.len() <= RESOURCE_MAX_LEN && RE_RESOURCE.is_match(value)) {
+        Ok(())
+    } else {
+        Err(ValidationError::new(
+            "^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]{1,1024}$",
+        ))
+    }
+}
+
 /// Grant-type validation for ephemeral (CIMD) client documents. Strict by default: an
 /// advertised grant type Rauthy does not support is rejected. An operator can opt into
 /// accepting such a document by enabling `ephemeral_clients.ignore_unknown_auth_flows`,
@@ -179,6 +192,28 @@ pub fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn resource_or_empty() {
+        assert!(validate_resource_or_empty("").is_ok());
+        assert!(validate_resource_or_empty("https://api.example.com").is_ok());
+        assert!(validate_resource_or_empty("https://api.example.com/v1?x=1").is_ok());
+        // RFC 8707: no fragment
+        assert!(validate_resource_or_empty("https://api.example.com#frag").is_err());
+        assert!(validate_resource_or_empty("https://api.example.com/a b").is_err());
+        assert!(validate_resource_or_empty(" ").is_err());
+    }
+
+    #[test]
+    fn resource_or_empty_max_len() {
+        assert!(validate_resource_or_empty("").is_ok());
+        let prefix = "https://api.example.com/";
+        let max = format!("{prefix}{}", "a".repeat(1024 - prefix.len()));
+        assert_eq!(max.len(), 1024);
+        assert!(validate_resource_or_empty(&max).is_ok());
+        let too_long = format!("{max}a");
+        assert!(validate_resource_or_empty(&too_long).is_err());
+    }
 
     #[test]
     fn client_claims_must_be_an_object() {

@@ -3,7 +3,9 @@ use crate::entity::auth_providers::ProviderMfaLogin;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::jwk::JwkKeyPairAlg;
+use crate::entity::refresh_tokens::PgDeletedJtis;
 use crate::entity::scopes::Scope;
+use crate::entity::user_consents::SQL_CONSENT_DELETE_BY_CLIENT;
 use crate::entity::users::User;
 use crate::http_client::fetch_bounded;
 use crate::rauthy_config::{RauthyConfig, VarsEphemeralClients};
@@ -377,8 +379,9 @@ VALUES ($1, $2, $3, $4)"#;
         client.into_dynamic_client_response(client_dyn, true)
     }
 
-    /// Deletes the client with its refresh tokens, with `consent.enable` also all legacy refresh
-    /// tokens (`client_id` NULL) of all users.
+    /// Deletes the client with its refresh tokens and user consents, with `consent.enable` also
+    /// all legacy refresh tokens (`client_id` NULL) of all users, and revokes the access tokens
+    /// of the deleted refresh tokens.
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         #[cfg(debug_assertions)]
         if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
@@ -393,40 +396,36 @@ VALUES ($1, $2, $3, $4)"#;
 
         let drop_legacy = RauthyConfig::get().vars.consent.enable;
         if is_hiqlite() {
-            // `refresh_tokens.client_id` has no FK, device refresh tokens cascade.
-            let mut stmts = vec![(
-                "DELETE FROM refresh_tokens WHERE client_id = $1",
-                params!(self.id.as_str()),
-            )];
-            // Legacy tokens (`client_id` NULL) cannot be attributed and would be accepted by a
-            // recreated client with the same id, so with `consent.enable` all of them go.
-            if drop_legacy {
-                stmts.push((
-                    "DELETE FROM refresh_tokens WHERE client_id IS NULL",
-                    params!(),
-                ));
-            }
-            stmts.push((
-                "DELETE FROM clients WHERE id = $1",
-                params!(self.id.as_str()),
-            ));
+            let stmts = hql_delete_statements(drop_legacy)
+                .into_iter()
+                .map(|(sql, binds_id)| {
+                    if binds_id {
+                        (sql, params!(self.id.as_str()))
+                    } else {
+                        (sql, params!())
+                    }
+                })
+                .collect::<Vec<_>>();
             for res in DB::hql().txn(stmts).await? {
                 res?;
             }
         } else {
             let mut cl = DB::pg().await?;
-            let txn = cl.transaction().await?;
-            // `refresh_tokens.client_id` has no FK, device refresh tokens cascade.
-            let sql_rt = "DELETE FROM refresh_tokens WHERE client_id = $1";
-            DB::pg_txn_append(&txn, sql_rt, &[&self.id]).await?;
-            // Legacy tokens (`client_id` NULL) cannot be attributed and would be accepted by a
-            // recreated client with the same id, so with `consent.enable` all of them go.
-            if drop_legacy {
-                let sql_rt_legacy = "DELETE FROM refresh_tokens WHERE client_id IS NULL";
-                DB::pg_txn_append(&txn, sql_rt_legacy, &[]).await?;
+            // read committed, like `UserConsent::revoke`, whose lock order this follows
+            let txn = cl
+                .build_transaction()
+                .isolation_level(tokio_postgres::IsolationLevel::ReadCommitted)
+                .start()
+                .await?;
+            let mut jtis = PgDeletedJtis::default();
+            for (sql, binds_id) in pg_delete_statements(drop_legacy) {
+                if binds_id {
+                    jtis.delete(&txn, sql, &[&self.id]).await?;
+                } else {
+                    jtis.delete(&txn, sql, &[]).await?;
+                }
             }
-            let sql = "DELETE FROM clients WHERE id = $1";
-            DB::pg_txn_append(&txn, sql, &[&self.id]).await?;
+            jtis.revoke(&txn).await?;
             txn.commit().await?;
         }
 
@@ -1786,6 +1785,89 @@ impl Client {
     }
 }
 
+/// The device refresh tokens of all devices of the client `$1`
+const SQL_RTD_DELETE_BY_CLIENT: &str = r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#;
+const SQL_RT_DELETE_LEGACY: &str = "DELETE FROM refresh_tokens WHERE client_id IS NULL";
+const SQL_RT_DELETE_BY_CLIENT: &str = "DELETE FROM refresh_tokens WHERE client_id = $1";
+const SQL_CLIENT_DELETE: &str = "DELETE FROM clients WHERE id = $1";
+
+/// [`SQL_RTD_DELETE_BY_CLIENT`] on Postgres, returning the access tokens to revoke
+const SQL_PG_RTD_DELETE_BY_CLIENT_RET: &str = r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+RETURNING access_token_jti"#;
+const SQL_PG_RT_DELETE_LEGACY_RET: &str =
+    "DELETE FROM refresh_tokens WHERE client_id IS NULL RETURNING access_token_jti";
+const SQL_PG_RT_DELETE_BY_CLIENT_RET: &str =
+    "DELETE FROM refresh_tokens WHERE client_id = $1 RETURNING access_token_jti";
+
+/// Revoke the access tokens of the refresh tokens that the statement of the same name without
+/// `IT_REVOKE` deletes. hiqlite's `txn` returns only the number of affected rows of each
+/// statement, not the rows a delete returns, so each runs right before that delete, in the same
+/// transaction, and finds the access tokens with a subselect.
+const SQL_HQL_IT_REVOKE_RTD_BY_CLIENT: &str = r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (
+    SELECT access_token_jti FROM refresh_tokens_devices
+    WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+)"#;
+const SQL_HQL_IT_REVOKE_RT_LEGACY: &str = r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#;
+const SQL_HQL_IT_REVOKE_RT_BY_CLIENT: &str = r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#;
+
+/// The statements of [`Client::delete`] on Postgres in order, each with `true` if it binds the
+/// client id as `$1`. `refresh_tokens.client_id` and `user_consents.client_id` have no FK. Legacy
+/// refresh tokens (`client_id` NULL) cannot be attributed and would be accepted by a recreated
+/// client with the same id, so with `drop_legacy` (`consent.enable`) all of them go.
+///
+/// The tables come in the order a consent revoke (`UserConsent::revoke`) takes their row locks:
+/// user consents, device refresh tokens, legacy refresh tokens, refresh tokens of the client.
+/// With the opposite order, a revoke and a delete of the same client running at the same time
+/// could each wait for a row the other one holds, and Postgres would abort one of them as a
+/// deadlock. The device refresh tokens are deleted explicitly for the same reason, instead of
+/// with the cascade of the client delete at the end.
+///
+/// The refresh token deletes return the `access_token_jti` of their rows, which
+/// [`PgDeletedJtis::revoke`] revokes after these statements, in the same transaction, like the
+/// consent revoke does last. A discard of one of these refresh tokens that runs at the same time
+/// and finds its row deleted leaves the access token to this transaction.
+pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
+    let mut stmts = vec![
+        (SQL_CONSENT_DELETE_BY_CLIENT, true),
+        (SQL_PG_RTD_DELETE_BY_CLIENT_RET, true),
+    ];
+    if drop_legacy {
+        stmts.push((SQL_PG_RT_DELETE_LEGACY_RET, false));
+    }
+    stmts.push((SQL_PG_RT_DELETE_BY_CLIENT_RET, true));
+    stmts.push((SQL_CLIENT_DELETE, true));
+    stmts
+}
+
+/// The statements of [`Client::delete`] on hiqlite: those of [`pg_delete_statements`], with the
+/// access tokens of each refresh token table revoked right before it is deleted. hiqlite applies
+/// the transaction as one raft log entry, so no other write sees a part of it.
+pub(crate) fn hql_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
+    let mut stmts = vec![
+        (SQL_CONSENT_DELETE_BY_CLIENT, true),
+        (SQL_HQL_IT_REVOKE_RTD_BY_CLIENT, true),
+        (SQL_RTD_DELETE_BY_CLIENT, true),
+    ];
+    if drop_legacy {
+        stmts.push((SQL_HQL_IT_REVOKE_RT_LEGACY, false));
+        stmts.push((SQL_RT_DELETE_LEGACY, false));
+    }
+    stmts.push((SQL_HQL_IT_REVOKE_RT_BY_CLIENT, true));
+    stmts.push((SQL_RT_DELETE_BY_CLIENT, true));
+    stmts.push((SQL_CLIENT_DELETE, true));
+    stmts
+}
+
 /// Validates a dynamic-client redirect URI.
 /// Rejects backchannel callbacks for dynamic clients.
 fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
@@ -2427,6 +2509,121 @@ pub(crate) mod tests {
         assert!(validate_dyn_client_redirect_uri("").is_err());
     }
     use pretty_assertions::assert_eq;
+
+    /// All hiqlite migrations, in order.
+    fn sqlite_full_schema() -> rusqlite::Connection {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/hiqlite");
+        let mut files = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .map(|p| {
+                let name = p.file_name().unwrap().to_str().unwrap();
+                let nr: u32 = name.split('_').next().unwrap().parse().unwrap();
+                (nr, p)
+            })
+            .collect::<Vec<_>>();
+        files.sort();
+
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        for (_, path) in files {
+            conn.execute_batch(&std::fs::read_to_string(path).unwrap())
+                .unwrap();
+        }
+        conn
+    }
+
+    /// The hiqlite transaction of `Client::delete` against the full schema: a client recreated
+    /// with the same id inherits neither the user consents nor the refresh tokens of the old one,
+    /// and the access tokens of the deleted refresh tokens are revoked.
+    #[test]
+    fn delete_and_recreate_leaves_no_consent() {
+        for drop_legacy in [false, true] {
+            let mut conn = sqlite_full_schema();
+            conn.execute_batch(
+                r#"
+CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
+UPDATE tu SET id = 'u1', email = 'u1@example.com';
+INSERT INTO users SELECT * FROM tu;
+CREATE TEMP TABLE tc AS SELECT * FROM clients LIMIT 1;
+UPDATE tc SET id = 'c1';
+INSERT INTO clients SELECT * FROM tc;
+UPDATE tc SET id = 'c2';
+INSERT INTO clients SELECT * FROM tc;
+INSERT INTO user_consents
+    (user_id, client_id, resource, scopes, content_hash, created, updated, ip)
+VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
+       ('u1', 'c1', 'https://api.example.com', 'openid', 'h', 1, 1, '127.0.0.1'),
+       ('u1', 'c2', '', 'openid', 'h', 1, 1, '127.0.0.1');
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
+VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1'),
+       ('rt_legacy', 'u1', 1, 2, 'j_legacy', NULL),
+       ('rt_c2', 'u1', 1, 2, 'j_c2', 'c2');
+INSERT INTO devices (id, client_id, user_id, created, access_exp, peer_ip, name)
+VALUES ('d1', 'c1', 'u1', 1, 2, '127.0.0.1', 'd1'),
+       ('d2', 'c2', 'u1', 1, 2, '127.0.0.1', 'd2');
+INSERT INTO refresh_tokens_devices (id, device_id, user_id, nbf, exp, access_token_jti)
+VALUES ('rtd_c1', 'd1', 'u1', 1, 2, 'j_d1'),
+       ('rtd_c2', 'd2', 'u1', 1, 2, 'j_d2');
+INSERT INTO issued_tokens (jti, user_id, exp)
+VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
+       ('j_d1', 'u1', 2), ('j_d2', 'u1', 2);
+"#,
+            )
+            .unwrap();
+
+            let txn = conn.transaction().unwrap();
+            for (sql, binds_id) in hql_delete_statements(drop_legacy) {
+                if binds_id {
+                    txn.execute(sql, ["c1"]).unwrap();
+                } else {
+                    txn.execute(sql, []).unwrap();
+                }
+            }
+            txn.commit().unwrap();
+            conn.execute_batch("UPDATE tc SET id = 'c1'; INSERT INTO clients SELECT * FROM tc;")
+                .unwrap();
+
+            let ids = |sql: &str| -> Vec<String> {
+                let mut stmt = conn.prepare(sql).unwrap();
+                stmt.query_map([], |r| r.get::<_, String>(0))
+                    .unwrap()
+                    .map(|r| r.unwrap())
+                    .collect()
+            };
+            assert_eq!(
+                ids("SELECT client_id FROM user_consents ORDER BY client_id"),
+                vec!["c2".to_string()]
+            );
+            let mut expected_rt = vec!["rt_c2".to_string()];
+            if !drop_legacy {
+                expected_rt.push("rt_legacy".to_string());
+            }
+            assert_eq!(
+                ids("SELECT id FROM refresh_tokens ORDER BY id"),
+                expected_rt,
+                "drop_legacy: {drop_legacy}"
+            );
+            assert_eq!(
+                ids("SELECT id FROM clients WHERE id IN ('c1', 'c2') ORDER BY id"),
+                vec!["c1".to_string(), "c2".to_string()]
+            );
+            assert_eq!(
+                ids("SELECT id FROM refresh_tokens_devices ORDER BY id"),
+                vec!["rtd_c2".to_string()]
+            );
+            // the access tokens of the deleted refresh tokens are revoked, the others are not
+            let mut revoked = vec!["j_c1".to_string(), "j_d1".to_string()];
+            if drop_legacy {
+                revoked.push("j_legacy".to_string());
+            }
+            assert_eq!(
+                ids("SELECT jti FROM issued_tokens WHERE revoked ORDER BY jti"),
+                revoked,
+                "drop_legacy: {drop_legacy}"
+            );
+        }
+    }
 
     #[test]
     fn retain_supported_grant_types_strips_unknown() {

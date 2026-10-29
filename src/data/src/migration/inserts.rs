@@ -33,6 +33,7 @@ use crate::entity::theme::ThemeCssFull;
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use crate::entity::user_consents::UserConsent;
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
@@ -1786,6 +1787,54 @@ pub async fn user_attr_values(data_before: Vec<UserAttrValueEntity>) -> Result<(
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
             DB::pg_execute(sql_2, &[&b.user_id, &b.key, &b.value]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn user_consents(data_before: Vec<UserConsent>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM user_consents";
+    let sql_2 = r#"
+INSERT INTO user_consents
+(user_id, client_id, resource, scopes, content_hash, created, updated, ip)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(
+                        b.user_id,
+                        b.client_id,
+                        b.resource,
+                        b.scopes,
+                        b.content_hash,
+                        b.created,
+                        b.updated,
+                        b.ip
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.user_id,
+                    &b.client_id,
+                    &b.resource,
+                    &b.scopes,
+                    &b.content_hash,
+                    &b.created,
+                    &b.updated,
+                    &b.ip,
+                ],
+            )
+            .await?;
         }
     }
     Ok(())

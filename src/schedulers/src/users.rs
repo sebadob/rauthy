@@ -7,7 +7,7 @@ use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::oidc::logout;
 use std::time::Duration;
 use tokio::time;
@@ -84,8 +84,13 @@ async fn execute(cleanup_after_secs: Option<u64>) -> Result<(), ErrorResponse> {
                     "Auto cleanup for user after being expired for {} minutes",
                     expired_since_secs / 60,
                 );
-                if let Err(err) = user.delete().await {
-                    error!(user.id, ?err, "auto cleanup - deleting user",);
+                match user.delete().await {
+                    Ok(()) => {}
+                    // another delete of the same user got there first
+                    Err(err) if err.error == ErrorResponseType::NotFound => {
+                        debug!(user.id, "auto cleanup - user already deleted");
+                    }
+                    Err(err) => error!(user.id, ?err, "auto cleanup - deleting user"),
                 }
             }
         }

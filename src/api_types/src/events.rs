@@ -37,6 +37,7 @@ pub enum EventType {
     TokenIssued,
     CredentialStuffing,
     EmailSendError,
+    ConsentRevoked,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]
