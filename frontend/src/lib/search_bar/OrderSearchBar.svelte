@@ -37,21 +37,21 @@
 
 <div class="container">
     <OrderBy
-            bind:ref
-            options={orderOptions}
-            onChange={onChangeOrder}
-            {borderless}
-            {firstDirReverse}
+        bind:ref
+        options={orderOptions}
+        onChange={onChangeOrder}
+        {borderless}
+        {firstDirReverse}
     />
     <SearchBar
-            bind:value
-            {datalist}
-            options={searchOptions}
-            bind:option={searchOption}
-            {pattern}
-            width={searchWidth}
-            {borderless}
-            {onSearch}
+        bind:value
+        {datalist}
+        options={searchOptions}
+        bind:option={searchOption}
+        {pattern}
+        width={searchWidth}
+        {borderless}
+        {onSearch}
     />
 </div>
 

@@ -1,15 +1,15 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import { onMount } from 'svelte';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
-    import {formatDateFromTs, formatUtcTsFromDateInput} from '#utils/helpers.js';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { formatDateFromTs, formatUtcTsFromDateInput } from '#utils/helpers.js';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import {fmtDateInput, fmtTimeInput} from '#utils/form.ts';
+    import { fmtDateInput, fmtTimeInput } from '#utils/form.ts';
     import IconStop from '#icons/IconStop.svelte';
-    import {fetchDelete, fetchGet, fetchPost} from '#api/fetch.ts';
+    import { fetchDelete, fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import type {
         BlacklistedIp,
@@ -20,8 +20,8 @@
     import Form from '#lib/form/Form.svelte';
     import Tooltip from '#lib/Tooltip.svelte';
     import Pagination from '#lib/pagination/Pagination.svelte';
-    import {useTrigger} from '#state/callback.svelte.ts';
-    import {useSession} from '#state/session.svelte.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -131,11 +131,11 @@
 <ContentAdmin>
     <div class="top">
         <OrderSearchBar
-                bind:ref={refOpts}
-                bind:value={searchValue}
-                {orderOptions}
-                {onChangeOrder}
-                searchWidth="min(15.75rem, calc(100dvw - 1rem))"
+            bind:ref={refOpts}
+            bind:value={searchValue}
+            {orderOptions}
+            {onChangeOrder}
+            searchWidth="min(15.75rem, calc(100dvw - 1rem))"
         />
 
         {#if isAdmin}
@@ -143,20 +143,20 @@
                 <div class="addNew">
                     <Form action="/auth/v1/blacklist" {onSubmit}>
                         <Input
-                                bind:ref={refIp}
-                                bind:value={ip}
-                                autocomplete="off"
-                                label="IP"
-                                placeholder="IPv4"
-                                required
-                                maxLength={40}
+                            bind:ref={refIp}
+                            bind:value={ip}
+                            autocomplete="off"
+                            label="IP"
+                            placeholder="IPv4"
+                            required
+                            maxLength={40}
                         />
                         <InputDateTimeCombo
-                                label="Expiry"
-                                bind:value={expDate}
-                                bind:timeValue={expTime}
-                                min={fmtDateInput()}
-                                withTime
+                            label="Expiry"
+                            bind:value={expDate}
+                            bind:timeValue={expTime}
+                            min={fmtDateInput()}
+                            withTime
                         />
 
                         <div style:height=".5rem"></div>
@@ -197,7 +197,7 @@
                         <Button invisible onclick={() => deleteIp(entry.ip)}>
                             <Tooltip text={t.common.delete}>
                                 <div class="delete">
-                                    <IconStop width="1.25rem"/>
+                                    <IconStop width="1.25rem" />
                                 </div>
                             </Tooltip>
                         </Button>
@@ -221,9 +221,9 @@
 
     {#if blacklist.length > blacklistThreshold}
         <Pagination
-                bind:items={blacklistFiltered}
-                bind:itemsPaginated={blacklistPaginated}
-                pageSize={30}
+            bind:items={blacklistFiltered}
+            bind:itemsPaginated={blacklistPaginated}
+            pageSize={30}
         />
     {/if}
 </ContentAdmin>

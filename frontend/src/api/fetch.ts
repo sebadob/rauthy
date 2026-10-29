@@ -1,5 +1,5 @@
-import {type ErrorResponse} from '#api/types/error.ts';
-import {getCsrfToken} from '#utils/helpers.ts';
+import { type ErrorResponse } from '#api/types/error.ts';
+import { getCsrfToken } from '#utils/helpers.ts';
 
 export interface IResponse<T> {
     body: undefined | T;
@@ -10,8 +10,8 @@ export interface IResponse<T> {
 }
 
 function buildHeaders(
-        method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
-        payload: 'json' | 'form',
+    method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
+    payload: 'json' | 'form',
 ): HeadersInit {
     let headers: any;
     if (payload === 'json') {
@@ -34,18 +34,18 @@ function buildHeaders(
 }
 
 export async function fetchGet<T>(
-        uri: string,
-        typ: 'json' | 'form' = 'json',
-        redirect: 'handle401' | 'noRedirect' = 'handle401',
+    uri: string,
+    typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     return fetchWithoutBody('GET', uri, typ, redirect);
 }
 
 export async function fetchPost<T>(
-        uri: string,
-        payload?: Object,
-        typ: 'json' | 'form' = 'json',
-        redirect: 'handle401' | 'noRedirect' = 'handle401',
+    uri: string,
+    payload?: Object,
+    typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     if (payload) {
         return fetchWithBody('POST', uri, typ, redirect, payload);
@@ -65,10 +65,10 @@ export async function fetchForm(form: HTMLFormElement, body: URLSearchParams) {
 }
 
 export async function fetchPatch<T>(
-        uri: string,
-        payload?: Object,
-        typ: 'json' | 'form' = 'json',
-        redirect: 'handle401' | 'noRedirect' = 'handle401',
+    uri: string,
+    payload?: Object,
+    typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     if (payload) {
         return fetchWithBody('PATCH', uri, typ, redirect, payload);
@@ -78,10 +78,10 @@ export async function fetchPatch<T>(
 }
 
 export async function fetchPut<T>(
-        uri: string,
-        payload?: Object,
-        typ: 'json' | 'form' = 'json',
-        redirect: 'handle401' | 'noRedirect' = 'handle401',
+    uri: string,
+    payload?: Object,
+    typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     if (payload) {
         return fetchWithBody('PUT', uri, typ, redirect, payload);
@@ -91,10 +91,10 @@ export async function fetchPut<T>(
 }
 
 export async function fetchDelete<T>(
-        uri: string,
-        body?: Object,
-        typ: 'json' | 'form' = 'json',
-        redirect: 'handle401' | 'noRedirect' = 'handle401',
+    uri: string,
+    body?: Object,
+    typ: 'json' | 'form' = 'json',
+    redirect: 'handle401' | 'noRedirect' = 'handle401',
 ): Promise<IResponse<T>> {
     if (body) {
         return await fetchWithBody('DELETE', uri, typ, redirect, body);
@@ -104,10 +104,10 @@ export async function fetchDelete<T>(
 }
 
 async function fetchWithoutBody<T>(
-        method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
-        uri: string,
-        typ: 'json' | 'form',
-        redirect: 'handle401' | 'noRedirect',
+    method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
+    uri: string,
+    typ: 'json' | 'form',
+    redirect: 'handle401' | 'noRedirect',
 ): Promise<IResponse<T>> {
     let res = await fetch(uri, {
         method,
@@ -118,11 +118,11 @@ async function fetchWithoutBody<T>(
 }
 
 async function fetchWithBody<T>(
-        method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
-        uri: string,
-        typ: 'json' | 'form',
-        redirect: 'handle401' | 'noRedirect',
-        payload: Object | FormData,
+    method: 'GET' | 'PATCH' | 'POST' | 'PUT' | 'DELETE',
+    uri: string,
+    typ: 'json' | 'form',
+    redirect: 'handle401' | 'noRedirect',
+    payload: Object | FormData,
 ): Promise<IResponse<T>> {
     let body;
     if (typ === 'json') {
@@ -158,8 +158,8 @@ export function formDataFromObj(obj: Object) {
 }
 
 export async function handleResponse<T>(
-        res: Response,
-        redirect: 'handle401' | 'noRedirect',
+    res: Response,
+    redirect: 'handle401' | 'noRedirect',
 ): Promise<IResponse<T>> {
     if (redirect === 'handle401' && res.status === 401) {
         window.location.reload();
@@ -190,8 +190,8 @@ export async function handleResponse<T>(
 }
 
 export async function errorFromResponse(
-        res: Response,
-        eventOnError?: boolean,
+    res: Response,
+    eventOnError?: boolean,
 ): Promise<ErrorResponse> {
     let err = await res.json();
     // if (eventOnError) {
@@ -201,10 +201,10 @@ export async function errorFromResponse(
 }
 
 export async function uploadFile<T>(
-        method: 'POST' | 'PUT',
-        url: string,
-        file: File,
-        name: string,
+    method: 'POST' | 'PUT',
+    url: string,
+    file: File,
+    name: string,
 ): Promise<IResponse<T>> {
     const formData = new FormData();
     formData.append(name, file);

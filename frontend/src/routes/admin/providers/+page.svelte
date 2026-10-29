@@ -6,4 +6,4 @@
     <title>Rauthy Providers</title>
 </svelte:head>
 
-<Providers/>
+<Providers />

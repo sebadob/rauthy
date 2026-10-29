@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type {ThemeRequestResponse} from '#api/types/themes.ts';
+    import type { ThemeRequestResponse } from '#api/types/themes.ts';
     import Tabs from '#lib/tabs/Tabs.svelte';
     import BrandingPreview from '#lib/admin/clients/branding/BrandingPreview.svelte';
 
@@ -19,23 +19,23 @@
     <h2>Preview</h2>
 
     <div class="tabs">
-        <Tabs {tabs} bind:selected center/>
+        <Tabs {tabs} bind:selected center />
     </div>
 
     <div class="preview">
         {#if selected === tabs[0]}
             <BrandingPreview
-                    {logoUrl}
-                    borderRadius={theme.border_radius}
-                    theme={theme.light}
-                    typ="light"
+                {logoUrl}
+                borderRadius={theme.border_radius}
+                theme={theme.light}
+                typ="light"
             />
         {:else}
             <BrandingPreview
-                    {logoUrl}
-                    borderRadius={theme.border_radius}
-                    theme={theme.dark}
-                    typ="dark"
+                {logoUrl}
+                borderRadius={theme.border_radius}
+                theme={theme.dark}
+                typ="dark"
             />
         {/if}
     </div>

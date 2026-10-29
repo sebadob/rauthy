@@ -1,15 +1,19 @@
 <script lang="ts">
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
-    import {useTrigger} from '#state/callback.svelte.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
     import NavSub from '#lib/nav/NavSub.svelte';
     import SearchBar from '#lib/search_bar/SearchBar.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
-    import {fetchGet} from '#api/fetch.ts';
-    import type {PamGroupResponse, PamHostSimpleResponse, PamUserResponse} from '#api/types/pam.ts';
-    import {onMount} from 'svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import type {
+        PamGroupResponse,
+        PamHostSimpleResponse,
+        PamUserResponse,
+    } from '#api/types/pam.ts';
+    import { onMount } from 'svelte';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import PAMGroupDetails from '#lib/admin/pam/groups/PAMGroupDetails.svelte';
     import PamHostAdd from '#lib/admin/pam/hosts/PAMHostAdd.svelte';
@@ -18,7 +22,7 @@
     import PAMUserAdd from '#lib/admin/pam/users/PAMUserAdd.svelte';
     import UserPicture from '#lib/UserPicture.svelte';
     import PAMUserDetails from '#lib/admin/pam/users/PAMUserDetails.svelte';
-    import type {PamGroupsSorted} from '#lib/admin/pam/types.js';
+    import type { PamGroupsSorted } from '#lib/admin/pam/types.js';
 
     let ta = useI18nAdmin();
 
@@ -71,7 +75,7 @@
         local.sort((a, b) => a.name.localeCompare(b.name));
         user.sort((a, b) => a.name.localeCompare(b.name));
 
-        return {generic, host, local, user};
+        return { generic, host, local, user };
     });
     let hosts: PamHostSimpleResponse[] = $state([]);
     let hostsFiltered: PamHostSimpleResponse[] = $derived.by(() => {
@@ -148,26 +152,26 @@
 </script>
 
 <NavSub
-        paddingTop="2.35rem"
-        buttonTilesAriaControls="scopes"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.35rem"
+    buttonTilesAriaControls="scopes"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
     <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
         {#if isUser}
-            <PAMUserAdd onCreate={onCreateUser}/>
+            <PAMUserAdd onCreate={onCreateUser} />
         {:else if isGroup}
-            <PAMGroupAdd {groups} onCreate={onCreateGroup}/>
+            <PAMGroupAdd {groups} onCreate={onCreateGroup} />
         {:else if isHost}
-            <PamHostAdd {groups} onCreate={onCreateHost}/>
+            <PamHostAdd {groups} onCreate={onCreateHost} />
         {/if}
     </ButtonAddModal>
 
     <div class="tabs">
-        <Tabs {tabs} bind:selected={selectedNav} center/>
+        <Tabs {tabs} bind:selected={selectedNav} center />
     </div>
 
-    <SearchBar bind:value={searchValue}/>
+    <SearchBar bind:value={searchValue} />
 
     {#if err}
         <div class="err">{err}</div>
@@ -181,16 +185,16 @@
                 {:else}
                     {#each usersFiltered as user (user.id)}
                         <NavButtonTile
-                                onclick={() => (selectedUser = user)}
-                                selected={user.id === selectedUser?.id}
-                                pictureLeft
+                            onclick={() => (selectedUser = user)}
+                            selected={user.id === selectedUser?.id}
+                            pictureLeft
                         >
                             <div class="navBtn">
                                 <div class="picture">
                                     <UserPicture
-                                            fallbackCharacters={user.name[0]}
-                                            size="small"
-                                            disableUpload
+                                        fallbackCharacters={user.name[0]}
+                                        size="small"
+                                        disableUpload
                                     />
                                 </div>
                                 <div class="tile">
@@ -211,8 +215,8 @@
                 {:else}
                     {#each groupsFiltered as group (group.id)}
                         <NavButtonTile
-                                onclick={() => (selectedGroup = group)}
-                                selected={group.id === selectedGroup?.id}
+                            onclick={() => (selectedGroup = group)}
+                            selected={group.id === selectedGroup?.id}
                         >
                             <span class="typ font-mono">
                                 {group.typ[0].toUpperCase()}
@@ -227,8 +231,8 @@
                 {:else}
                     {#each hostsFiltered as host (host.id)}
                         <NavButtonTile
-                                onclick={() => (selectedHost = host)}
-                                selected={host.id === selectedHost?.id}
+                            onclick={() => (selectedHost = host)}
+                            selected={host.id === selectedHost?.id}
                         >
                             {host.name}
                         </NavButtonTile>
@@ -243,26 +247,26 @@
     <div id="pam">
         {#if isUser && selectedUser}
             <PAMUserDetails
-                    bind:user={selectedUser}
-                    {groupsSorted}
-                    onDelete={() => {
+                bind:user={selectedUser}
+                {groupsSorted}
+                onDelete={() => {
                     fetchUsers();
                     selectedUser = undefined;
                 }}
             />
         {:else if isGroup && selectedGroup}
             <PAMGroupDetails
-                    group={selectedGroup}
-                    onDelete={() => {
+                group={selectedGroup}
+                onDelete={() => {
                     fetchGroups();
                     selectedGroup = undefined;
                 }}
             />
         {:else if isHost && selectedHost}
             <PAMHostDetails
-                    hostSimple={selectedHost}
-                    {groups}
-                    onDelete={() => {
+                hostSimple={selectedHost}
+                {groups}
+                onDelete={() => {
                     fetchHosts();
                     selectedHost = undefined;
                 }}

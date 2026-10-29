@@ -2,7 +2,7 @@
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import Button from '#lib/button/Button.svelte';
     import LangSelector from '#lib/LangSelector.svelte';
-    import {page} from '$app/state';
+    import { page } from '$app/state';
     import AppVersion from '../AppVersion.svelte';
     import RauthyLogo from '#lib/RauthyLogo.svelte';
     import NavLink from '#lib/nav/NavLink.svelte';
@@ -20,15 +20,15 @@
     import IconWrenchScrew from '#icons/IconWrenchScrew.svelte';
     import IconBookOpen from '#icons/IconBookOpen.svelte';
     import IconCheckBadge from '#icons/IconCheckBadge.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import IconLogout from '#icons/IconLogout.svelte';
     import IconUserCircle from '#icons/IconUserCircle.svelte';
-    import {redirectToLogout} from '#utils/helpers.ts';
+    import { redirectToLogout } from '#utils/helpers.ts';
     import A from '#lib/A.svelte';
     import Tooltip from '#lib/Tooltip.svelte';
     import IconCommandLine from '#icons/IconCommandLine.svelte';
     import IconCircleStack from '#icons/IconCircleStack.svelte';
-    import {useSession} from '#state/session.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -89,36 +89,36 @@
     }
 </script>
 
-<svelte:window bind:innerWidth/>
+<svelte:window bind:innerWidth />
 
 <nav
-        id="mainNav"
-        aria-hidden={collapsed}
-        onmouseenter={showOpts}
-        onmouseleave={hideOpts}
-        data-compact={compact}
+    id="mainNav"
+    aria-hidden={collapsed}
+    onmouseenter={showOpts}
+    onmouseleave={hideOpts}
+    data-compact={compact}
 >
     <div class="nav-container">
         <div class="relative">
             <div
-                    class="absolute flex space-between navmod"
-                    aria-hidden={!collapsed && !optsButtons}
+                class="absolute flex space-between navmod"
+                aria-hidden={!collapsed && !optsButtons}
             >
                 <div>
                     <Button ariaControls="mainNav" invisible onclick={toggleCollapsed}>
                         <svg
-                                aria-expanded={!collapsed}
-                                class="inner"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width={2}
-                                width="1.5rem"
-                                opacity={0.9}
+                            aria-expanded={!collapsed}
+                            class="inner"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width={2}
+                            width="1.5rem"
+                            opacity={0.9}
                         >
                             <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
                             />
                         </svg>
                     </Button>
@@ -128,7 +128,7 @@
                     <div>
                         <Button invisible onclick={toggleCompact}>
                             <span class="inner">
-                                <IconArrowPathSquare/>
+                                <IconArrowPathSquare />
                             </span>
                         </Button>
                     </div>
@@ -139,13 +139,13 @@
         <div class="scrollable-content">
             {#if !collapsed}
                 <div class="logo">
-                    <RauthyLogo width={compact ? '3rem' : '7rem'}/>
+                    <RauthyLogo width={compact ? '3rem' : '7rem'} />
                 </div>
 
                 <div class="menu" style:margin-top={compact ? '.5rem' : '1.5rem'}>
                     <NavLink {compact} {params} route="/users">
                         {#snippet icon(width: string)}
-                            <IconUser {width}/>
+                            <IconUser {width} />
                         {/snippet}
                         {ta.nav.users}
                     </NavLink>
@@ -153,42 +153,42 @@
                     {#if !isGroupAdmin}
                         <NavLink {compact} {params} route="/clients">
                             {#snippet icon(width: string)}
-                                <IconOffice {width}/>
+                                <IconOffice {width} />
                             {/snippet}
                             {ta.nav.clients}
                         </NavLink>
 
                         <NavLink {compact} {params} route="/roles">
                             {#snippet icon(width: string)}
-                                <IconCheckBadge {width}/>
+                                <IconCheckBadge {width} />
                             {/snippet}
                             {ta.nav.roles}
                         </NavLink>
 
                         <NavLink {compact} {params} route="/groups">
                             {#snippet icon(width: string)}
-                                <IconUserGroup {width}/>
+                                <IconUserGroup {width} />
                             {/snippet}
                             {ta.nav.groups}
                         </NavLink>
 
                         <NavLink {compact} {params} route="/attributes">
                             {#snippet icon(width: string)}
-                                <IconDocText {width}/>
+                                <IconDocText {width} />
                             {/snippet}
                             {ta.nav.attributes}
                         </NavLink>
 
                         <NavLink {compact} {params} route="/scopes">
                             {#snippet icon(width: string)}
-                                <IconId {width}/>
+                                <IconId {width} />
                             {/snippet}
                             {ta.nav.scopes}
                         </NavLink>
 
                         <NavLink {compact} {params} route="/pam">
                             {#snippet icon(width: string)}
-                                <IconCommandLine {width}/>
+                                <IconCommandLine {width} />
                             {/snippet}
                             PAM
                         </NavLink>
@@ -196,21 +196,21 @@
 
                     <NavLink {compact} {params} route="/sessions">
                         {#snippet icon(width: string)}
-                            <IconShieldCheck {width}/>
+                            <IconShieldCheck {width} />
                         {/snippet}
                         {ta.nav.sessions}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/events">
                         {#snippet icon(width: string)}
-                            <IconBell {width}/>
+                            <IconBell {width} />
                         {/snippet}
                         {ta.nav.events}
                     </NavLink>
 
                     <NavLink {compact} {params} route="/blacklist">
                         {#snippet icon(width: string)}
-                            <IconStop {width} color="currentColor"/>
+                            <IconStop {width} color="currentColor" />
                         {/snippet}
                         {ta.nav.blacklist}
                     </NavLink>
@@ -218,33 +218,33 @@
                     {#if !isGroupAdmin}
                         <NavLink {compact} {params} route="/api_keys">
                             {#snippet icon(width: string)}
-                                <IconKey {width}/>
+                                <IconKey {width} />
                             {/snippet}
                             {ta.nav.apiKeys}
                         </NavLink>
 
                         <NavLink {compact} {params} route="/providers">
                             {#snippet icon(width: string)}
-                                <IconCloud {width}/>
+                                <IconCloud {width} />
                             {/snippet}
                             {ta.nav.providers}
                         </NavLink>
 
                         <NavLink {compact} {params} route="/kv">
                             {#snippet icon(width: string)}
-                                <IconCircleStack {width}/>
+                                <IconCircleStack {width} />
                             {/snippet}
                             KV Store
                         </NavLink>
 
                         <NavLink
-                                {compact}
-                                {params}
-                                route="/config/policy"
-                                highlightIncludes="/config/"
+                            {compact}
+                            {params}
+                            route="/config/policy"
+                            highlightIncludes="/config/"
                         >
                             {#snippet icon(width: string)}
-                                <IconWrenchScrew {width}/>
+                                <IconWrenchScrew {width} />
                             {/snippet}
                             {ta.nav.config}
                         </NavLink>
@@ -252,7 +252,7 @@
 
                     <NavLink {compact} {params} route="/docs">
                         {#snippet icon(width: string)}
-                            <IconBookOpen {width}/>
+                            <IconBookOpen {width} />
                         {/snippet}
                         {ta.nav.docs}
                     </NavLink>
@@ -266,7 +266,7 @@
                     <div class="logout">
                         <Button invisible onclick={() => redirectToLogout()}>
                             <Tooltip text="Logout" yOffset={-40}>
-                                <IconLogout/>
+                                <IconLogout />
                             </Tooltip>
                         </Button>
                     </div>
@@ -279,7 +279,7 @@
                     <div class="account">
                         <A href="/auth/v1/account" hideUnderline>
                             <Tooltip text="Account" yOffset={-40}>
-                                <IconUserCircle/>
+                                <IconUserCircle />
                             </Tooltip>
                         </A>
                     </div>
@@ -289,18 +289,18 @@
                     {@render toAccount()}
                     {@render toLogout()}
                     <div class="theme">
-                        <ThemeSwitch/>
+                        <ThemeSwitch />
                     </div>
-                    <LangSelector openTop borderless/>
+                    <LangSelector openTop borderless />
                 {:else}
                     <div class="flex gap-05">
-                        <ThemeSwitch/>
-                        <LangSelector openTop borderless/>
+                        <ThemeSwitch />
+                        <LangSelector openTop borderless />
                         {@render toAccount()}
                         {@render toLogout()}
                     </div>
                     <div class="version">
-                        <AppVersion/>
+                        <AppVersion />
                     </div>
                 {/if}
             </div>

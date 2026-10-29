@@ -6,4 +6,4 @@
     <title>Rauthy Password Hashing</title>
 </svelte:head>
 
-<Argon2Params/>
+<Argon2Params />

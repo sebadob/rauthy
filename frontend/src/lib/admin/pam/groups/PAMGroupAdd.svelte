@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Form from '#lib/form/Form.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import Input from '#lib/form/Input.svelte';
     import type {
         PamGroupCreateRequest,
@@ -11,10 +11,10 @@
         PamHostCreateRequest,
         PamHostSimpleResponse,
     } from '#api/types/pam.ts';
-    import {PATTERN_LINUX_HOSTNAME, PATTERN_LINUX_USERNAME} from '#utils/patterns.ts';
+    import { PATTERN_LINUX_HOSTNAME, PATTERN_LINUX_USERNAME } from '#utils/patterns.ts';
     import Options from '#lib/Options.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
-    import {fetchPost} from '#api/fetch.ts';
+    import { fetchPost } from '#api/fetch.ts';
 
     let {
         groups,
@@ -73,21 +73,21 @@
 
     <Form action="/auth/v1/pam/groups" {onSubmit}>
         <Input
-                bind:ref
-                label={ta.common.name}
-                placeholder={ta.common.name}
-                bind:value={group.name}
-                required
-                pattern={PATTERN_LINUX_USERNAME}
-                width="min(22rem, 100%)"
-                onBlur={isNameTaken}
+            bind:ref
+            label={ta.common.name}
+            placeholder={ta.common.name}
+            bind:value={group.name}
+            required
+            pattern={PATTERN_LINUX_USERNAME}
+            width="min(22rem, 100%)"
+            onBlur={isNameTaken}
         />
 
         <div class="row">
             <div class="label">
                 {ta.pam.groupType}
             </div>
-            <Options ariaLabel={ta.pam.groupType} {options} bind:value={group.typ}/>
+            <Options ariaLabel={ta.pam.groupType} {options} bind:value={group.typ} />
         </div>
 
         <p>

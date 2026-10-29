@@ -1,13 +1,13 @@
 <script lang="ts">
     import Input from '#lib/form/Input.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {elementsInRangeFiltered} from '#lib/text_edit/html/utils.js';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { elementsInRangeFiltered } from '#lib/text_edit/html/utils.js';
     import ToolbarIconHtml from '#lib/text_edit/html/tools/ToolbarIconHtml.svelte';
     import IconLink from '#icons/editor/IconLink.svelte';
     import Modal from '#lib/Modal.svelte';
     import Form from '#lib/form/Form.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         ref,
@@ -80,24 +80,24 @@
 </script>
 
 <ToolbarIconHtml {ref} title={ta.editor.link} onClickCustom={addLink}>
-    <IconLink width={iconSize}/>
+    <IconLink width={iconSize} />
 </ToolbarIconHtml>
 <Modal bind:showModal bind:closeModal {onClose}>
     <div>
         <h3>{ta.editor.link}</h3>
         <Form action="" {onSubmit}>
             <Input
-                    bind:ref={refName}
-                    bind:value={name}
-                    label={ta.common.name}
-                    placeholder={ta.common.name}
+                bind:ref={refName}
+                bind:value={name}
+                label={ta.common.name}
+                placeholder={ta.common.name}
             />
             <Input
-                    bind:ref={refHref}
-                    typ="url"
-                    bind:value={href}
-                    label={ta.editor.link}
-                    placeholder={ta.editor.link}
+                bind:ref={refHref}
+                typ="url"
+                bind:value={href}
+                label={ta.editor.link}
+                placeholder={ta.editor.link}
             />
             <Button type="submit">{t.common.save}</Button>
         </Form>

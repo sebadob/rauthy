@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {formatDateFromTs} from '#utils/helpers.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import type {OtpResponse} from '#api/types/otp.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import type { OtpResponse } from '#api/types/otp.ts';
     import IconCheckBadge from '#icons/IconCheckBadge.svelte';
     import IconStop from '#icons/IconStop.svelte';
 
@@ -35,11 +35,11 @@
                 <b>{otp.name}</b>
                 {#if otp.is_active}
                     <div style:margin-bottom="-.25rem">
-                        <IconCheckBadge width="1rem" color="hsl(var(--accent))"/>
+                        <IconCheckBadge width="1rem" color="hsl(var(--accent))" />
                     </div>
                 {:else}
                     <div style:margin-bottom="-.25rem">
-                        <IconStop width="1rem" color="hsl(var(--accent))"/>
+                        <IconStop width="1rem" color="hsl(var(--accent))" />
                     </div>
                 {/if}
             </div>

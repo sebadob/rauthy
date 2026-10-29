@@ -2,7 +2,7 @@
     import LangSelector from '#lib/LangSelector.svelte';
     import Main from '#lib/Main.svelte';
     import ContentCenter from '#lib/ContentCenter.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import A from '#lib/A.svelte';
 
@@ -23,8 +23,8 @@
             <A href="/auth/v1/account">Account</A>
         </div>
 
-        <ThemeSwitch absolute/>
-        <LangSelector absolute/>
+        <ThemeSwitch absolute />
+        <LangSelector absolute />
     </ContentCenter>
 </Main>
 

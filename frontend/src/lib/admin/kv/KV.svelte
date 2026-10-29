@@ -1,14 +1,14 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
-    import {fetchGet, fetchPost} from '#api/fetch.ts';
+    import { onMount } from 'svelte';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
-    import {useParam} from '#state/param.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {useTrigger} from '#state/callback.svelte.ts';
-    import type {KVNamespaceRequest, KVNamespaceResponse} from '#api/types/kv.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
+    import type { KVNamespaceRequest, KVNamespaceResponse } from '#api/types/kv.ts';
     import KVDetails from '#lib/admin/kv/KVDetails.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
     import KVAccess from '#lib/admin/kv/KVAccess.svelte';
@@ -16,8 +16,8 @@
     import Form from '#lib/form/Form.svelte';
     import Input from '#lib/form/Input.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {PATTERN_GROUP} from '#utils/patterns.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { PATTERN_GROUP } from '#utils/patterns.ts';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import KVNamespaceEdit from '#lib/admin/kv/KVNamespaceEdit.svelte';
 
@@ -39,7 +39,7 @@
     let tab = $state(ta.kv.tabs[0]);
     let namespaces: KVNamespaceResponse[] = $state([]);
     let selected: undefined | KVNamespaceResponse = $derived(
-            namespaces.find(namespace => namespace.name === ns.get()),
+        namespaces.find(namespace => namespace.name === ns.get()),
     );
 
     onMount(() => {
@@ -95,20 +95,20 @@
 
 <NavSub width="min(16rem, 100dvw - .5rem)" buttonTilesAriaControls="kv" paddingTop="2.35rem">
     <ButtonAddModal
-            bind:ref={refAddNew}
-            level={namespaces.length === 0 ? 1 : 2}
-            bind:closeModal
-            alignRight
+        bind:ref={refAddNew}
+        level={namespaces.length === 0 ? 1 : 2}
+        bind:closeModal
+        alignRight
     >
         <div class="alignLeft">
             <Form action="/auth/v1/kv/ns" {onSubmit}>
                 <h3>{ta.kv.addNewNs}</h3>
                 <Input
-                        bind:ref={refInput}
-                        name="name"
-                        label={ta.common.name}
-                        placeholder={ta.common.name}
-                        pattern={PATTERN_GROUP}
+                    bind:ref={refInput}
+                    name="name"
+                    label={ta.common.name}
+                    placeholder={ta.common.name}
+                    pattern={PATTERN_GROUP}
                 />
                 <InputCheckbox ariaLabel="Public Access" name="public" checked={false}>
                     Public Access
@@ -130,8 +130,8 @@
         <div class="nsList">
             {#each namespaces as namespace (namespace.name)}
                 <NavButtonTile
-                        onclick={() => ns.set(namespace.name)}
-                        selected={ns.get() === namespace.name}
+                    onclick={() => ns.set(namespace.name)}
+                    selected={ns.get() === namespace.name}
                 >
                     <div style:margin-top=".25rem">
                         {namespace.name}
@@ -149,17 +149,17 @@
     <div id="kv" aria-label={ta.common.details}>
         {#if selected}
             <div class="tabs">
-                <Tabs tabs={ta.kv.tabs} bind:selected={tab}/>
+                <Tabs tabs={ta.kv.tabs} bind:selected={tab} />
             </div>
 
             {#if tab === ta.kv.tabs[0]}
-                <KVDetails ns={selected}/>
+                <KVDetails ns={selected} />
             {:else if tab === ta.kv.tabs[1]}
-                <KVAccess {ns}/>
+                <KVAccess {ns} />
             {:else if tab === ta.kv.tabs[2]}
-                <KVNamespaceEdit ns={selected} {onSave}/>
+                <KVNamespaceEdit ns={selected} {onSave} />
             {:else if tab === ta.kv.tabs[3]}
-                <KVDelete {ns} {onDelete}/>
+                <KVDelete {ns} {onDelete} />
             {/if}
         {/if}
     </div>

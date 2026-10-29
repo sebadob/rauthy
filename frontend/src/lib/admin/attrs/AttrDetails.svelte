@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Tabs from '#lib/tabs/Tabs.svelte';
-    import type {UserAttrConfigValueResponse} from '#api/types/user_attrs.ts';
+    import type { UserAttrConfigValueResponse } from '#api/types/user_attrs.ts';
     import AttrConfig from '#lib/admin/attrs/AttrConfig.svelte';
     import AttrDelete from '#lib/admin/attrs/AttrDelete.svelte';
 
@@ -34,11 +34,11 @@
 </script>
 
 <div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst/>
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if selected === ta.nav.config}
-    <AttrConfig {attr} {attrs} {onSave}/>
+    <AttrConfig {attr} {attrs} {onSave} />
 {:else if selected === t.common.delete}
-    <AttrDelete {attr} {onSave}/>
+    <AttrDelete {attr} {onSave} />
 {/if}

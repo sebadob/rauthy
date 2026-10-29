@@ -6,4 +6,4 @@
     <title>Rauthy Clients</title>
 </svelte:head>
 
-<Clients/>
+<Clients />

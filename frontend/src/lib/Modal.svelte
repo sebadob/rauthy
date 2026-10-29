@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type {Snippet} from 'svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import type { Snippet } from 'svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import Button from '#lib/button/Button.svelte';
     import IconStop from '#icons/IconStop.svelte';
 
@@ -71,8 +71,8 @@
 
         for (let elem of elems) {
             if (
-                    elem.getAttribute('hidden') === 'true' ||
-                    elem.getAttribute('disabled') === 'true'
+                elem.getAttribute('hidden') === 'true' ||
+                elem.getAttribute('disabled') === 'true'
             ) {
                 // noop
             } else if (elem.getAttribute('tabindex') !== null) {
@@ -118,14 +118,14 @@ We need the onclick listener here to make easy click-outside work.
 <!--svelte-ignore a11y_click_events_have_key_events-->
 <!--svelte-ignore a11y_no_noninteractive_element_interactions-->
 <dialog
-        bind:this={refDialog}
-        aria-modal="true"
-        data-strict={strict}
-        onclose={() => {
+    bind:this={refDialog}
+    aria-modal="true"
+    data-strict={strict}
+    onclose={() => {
         showModal = false;
         onClose?.();
     }}
-        onclick={outsideClick}
+    onclick={outsideClick}
 >
     <div bind:this={refContent} role="none" onclick={stopPropagation}>
         {#if !strict}
@@ -133,7 +133,7 @@ We need the onclick listener here to make easy click-outside work.
                 <div class="absolute close">
                     <Button ariaLabel={t.common.close} invisible onclick={close}>
                         <span class="closeIcon">
-                            <IconStop color="currentColor" width="1.2rem"/>
+                            <IconStop color="currentColor" width="1.2rem" />
                         </span>
                     </Button>
                 </div>

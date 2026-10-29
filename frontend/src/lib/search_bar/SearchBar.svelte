@@ -1,11 +1,11 @@
 <script lang="ts">
-    import {genKey} from '#utils/helpers.ts';
+    import { genKey } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
     import IconMagnify from '#icons/IconMagnify.svelte';
     import Options from '#lib/Options.svelte';
     import IconBackspace from '#icons/IconBackspace.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -83,35 +83,35 @@
 </script>
 
 <search
-        class="flex container"
-        style:border={borderless ? undefined : '1px solid hsl(var(--bg-high))'}
-        style:width
+    class="flex container"
+    style:border={borderless ? undefined : '1px solid hsl(var(--bg-high))'}
+    style:width
 >
     {#if options}
         <div class="options">
             <Options
-                    ariaLabel={ta.common.searchOptions}
-                    {options}
-                    bind:value={option}
-                    borderless
-                    offsetLeft="-.25rem"
+                ariaLabel={ta.common.searchOptions}
+                {options}
+                bind:value={option}
+                borderless
+                offsetLeft="-.25rem"
             />
         </div>
     {/if}
 
     <input
-            bind:this={ref}
-            type="search"
-            {id}
-            {list}
-            autocomplete="off"
-            aria-label={ariaLabel || t.common.search}
-            {pattern}
-            {placeholder}
-            onclick={ev => ev.stopPropagation()}
-            {onkeydown}
-            onfocus={() => onFocus?.()}
-            bind:value
+        bind:this={ref}
+        type="search"
+        {id}
+        {list}
+        autocomplete="off"
+        aria-label={ariaLabel || t.common.search}
+        {pattern}
+        {placeholder}
+        onclick={ev => ev.stopPropagation()}
+        {onkeydown}
+        onfocus={() => onFocus?.()}
+        bind:value
     />
 
     {#if datalist}
@@ -126,7 +126,7 @@
         <div class="absolute btnDelete">
             <Button ariaLabel={t.common.delete} invisible onclick={() => (value = '')}>
                 <span class="backspace">
-                    <IconBackspace color="hsla(var(--text) / .5)"/>
+                    <IconBackspace color="hsla(var(--text) / .5)" />
                 </span>
             </Button>
         </div>
@@ -135,7 +135,7 @@
     {#if onSearch}
         <div class="btnSearch">
             <Button ariaLabel={t.common.search} invisible onclick={search}>
-                <IconMagnify/>
+                <IconMagnify />
             </Button>
         </div>
     {/if}

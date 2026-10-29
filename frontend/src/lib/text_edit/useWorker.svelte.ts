@@ -1,4 +1,4 @@
-import type {MDWorkerReq, MDWorkerResp} from '../../workers/md';
+import type { MDWorkerReq, MDWorkerResp } from '../../workers/md';
 
 let worker: undefined | Worker = $state();
 let renderedMarkdown = $state('');
@@ -6,7 +6,7 @@ let sanitizedHTML = $state('');
 
 export function useMarkdownWorker() {
     if (!worker) {
-        worker = new Worker(new URL('../../workers/md.ts', import.meta.url), {type: 'module'});
+        worker = new Worker(new URL('../../workers/md.ts', import.meta.url), { type: 'module' });
     }
 
     worker.onmessage = ev => {

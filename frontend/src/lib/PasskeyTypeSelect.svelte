@@ -2,8 +2,8 @@
     import LabeledValue from '#lib/LabeledValue.svelte';
     import Options from '#lib/Options.svelte';
     import Template from '#lib/Template.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {TPL_PASSKEY_REG_TYPE} from '#utils/constants.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { TPL_PASSKEY_REG_TYPE } from '#utils/constants.ts';
 
     let {
         residentKey = $bindable(false),
@@ -18,9 +18,9 @@
     // [Default, Resident Key] -> the index matches `t.account.passkeys.types`
     let allowed = $derived.by(() => {
         let idx = regTypes
-                .split(' ')
-                .filter(typ => typ === 'default' || typ === 'resident_key')
-                .map(typ => (typ === 'resident_key' ? 1 : 0));
+            .split(' ')
+            .filter(typ => typ === 'default' || typ === 'resident_key')
+            .map(typ => (typ === 'resident_key' ? 1 : 0));
         return idx.length > 0 ? idx : [0, 1];
     });
     let options = $derived(allowed.map(i => t.account.passkeys.types[i]));
@@ -36,11 +36,11 @@
     });
 </script>
 
-<Template id={TPL_PASSKEY_REG_TYPE} bind:value={regTypes}/>
+<Template id={TPL_PASSKEY_REG_TYPE} bind:value={regTypes} />
 
 <LabeledValue label={t.account.passkeys.type}>
     {#if options.length > 1}
-        <Options {options} bind:value={selected} ariaLabel={t.account.passkeys.type}/>
+        <Options {options} bind:value={selected} ariaLabel={t.account.passkeys.type} />
     {:else}
         {selected}
     {/if}

@@ -3,9 +3,9 @@
     import Button from '#lib/button/Button.svelte';
     import Main from '#lib/Main.svelte';
     import ContentCenter from '#lib/ContentCenter.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
-    import {TPL_EMAIL_NEW, TPL_EMAIL_OLD} from '#utils/constants.js';
+    import { TPL_EMAIL_NEW, TPL_EMAIL_OLD } from '#utils/constants.js';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
 
     let t = useI18n();
@@ -18,15 +18,15 @@
     <title>{t.emailChange.title || 'E-Mail Change Confirm'}</title>
 </svelte:head>
 
-<Template id={TPL_EMAIL_OLD} bind:value={emailOld}/>
-<Template id={TPL_EMAIL_NEW} bind:value={emailNew}/>
+<Template id={TPL_EMAIL_OLD} bind:value={emailOld} />
+<Template id={TPL_EMAIL_NEW} bind:value={emailNew} />
 
 <Main>
     <ContentCenter>
         <div class="container">
             <h1>{t.emailChange.title}</h1>
             <p>
-                {t.emailChange.textChanged}:<br/>
+                {t.emailChange.textChanged}:<br />
                 <b>{emailOld}</b>
                 {t.emailChange.to}
                 <b>{emailNew}</b>
@@ -39,8 +39,8 @@
             </div>
         </div>
 
-        <ThemeSwitch absolute/>
-        <LangSelector absolute/>
+        <ThemeSwitch absolute />
+        <LangSelector absolute />
     </ContentCenter>
 </Main>
 

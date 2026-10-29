@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {useI18n} from '#state/i18n.svelte.js';
-    import {fetchGet} from '#api/fetch.ts';
-    import type {DeviceResponse} from '#api/types/device.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import { fetchGet } from '#api/fetch.ts';
+    import type { DeviceResponse } from '#api/types/device.ts';
     import Device from './Device.svelte';
 
     let {
@@ -35,7 +35,7 @@
 <div class="devices">
     {#if userId}
         {#each devices as device, i (device.id)}
-            <Device bind:device={devices[i]} {userId}/>
+            <Device bind:device={devices[i]} {userId} />
         {/each}
     {/if}
 </div>

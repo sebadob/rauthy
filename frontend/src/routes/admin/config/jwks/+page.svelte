@@ -6,4 +6,4 @@
     <title>Rauthy JWKS</title>
 </svelte:head>
 
-<JWKs/>
+<JWKs />

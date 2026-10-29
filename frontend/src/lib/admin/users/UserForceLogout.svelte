@@ -1,8 +1,8 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {fetchDelete} from '#api/fetch.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchDelete } from '#api/fetch.ts';
 
     let {
         userId,
@@ -35,7 +35,7 @@
 <div class="flex gap-05">
     <Button level={-1} onclick={onSubmit}>Logout</Button>
     {#if success}
-        <IconCheck/>
+        <IconCheck />
     {/if}
 </div>
 

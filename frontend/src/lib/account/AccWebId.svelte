@@ -1,14 +1,14 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import {fade, slide} from 'svelte/transition';
+    import { fade, slide } from 'svelte/transition';
     import Switch from '#lib/Switch.svelte';
-    import {buildWebIdUri} from '#utils/helpers.ts';
-    import {useI18n} from '#state/i18n.svelte.js';
-    import type {WebIdResponse} from '#api/types/web_id.ts';
+    import { buildWebIdUri } from '#utils/helpers.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { WebIdResponse } from '#api/types/web_id.ts';
     import A from '#lib/A.svelte';
     import InputArea from '#lib/form/InputArea.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {fetchPut} from '#api/fetch.ts';
+    import { fetchPut } from '#api/fetch.ts';
 
     let {
         webIdData = $bindable(),
@@ -64,7 +64,7 @@
     {#if expertMode}
         <div transition:slide={{ duration: 150 }}>
             <p>{t.account.webIdDescData}</p>
-            <InputArea placeholder="FOAF" rows={15} bind:value={webIdData.custom_triples}/>
+            <InputArea placeholder="FOAF" rows={15} bind:value={webIdData.custom_triples} />
         </div>
     {/if}
 
@@ -75,7 +75,7 @@
 
         {#if success}
             <div class="success" transition:fade>
-                <IconCheck/>
+                <IconCheck />
             </div>
         {:else if err}
             <div class="err" transition:fade>

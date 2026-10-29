@@ -1,18 +1,18 @@
 import adapter from '@sveltejs/adapter-static';
-import {sveltekit} from '@sveltejs/kit/vite';
+import { sveltekit } from '@sveltejs/kit/vite';
 import wasm from 'vite-plugin-wasm';
 // import fs from 'fs';
 
 const backend = 'http://127.0.0.1:8080';
 
 /** @type {import('vite').UserConfig} */ const config = {
-    build: {target: 'esnext'},
+    build: { target: 'esnext' },
     plugins: [
         wasm(),
         sveltekit({
-            compilerOptions: {runes: true},
+            compilerOptions: { runes: true },
             // CAUTION: The order of the arguments is important - paths must come before adapter
-            paths: {base: '/auth/v1'},
+            paths: { base: '/auth/v1' },
             adapter: adapter({
                 pages: '../templates/html',
                 assets: '../static/v1',
@@ -67,7 +67,7 @@ const backend = 'http://127.0.0.1:8080';
             '/auth/v1/encryption/migrate': backend,
             '/auth/v1/login_time': backend,
             '^^(?!\/auth\/v1\/users\/(password_reset|register|%7Bid%7D))\/auth\/v1\/users.*':
-            backend,
+                backend,
             '/auth/v1/pam/': backend,
             '/auth/v1/pow': backend,
             '/auth/v1/roles': backend,

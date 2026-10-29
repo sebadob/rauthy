@@ -1,7 +1,7 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.js';
-    import {fetchGet, fetchPost} from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
     import type {
         PamHostAccessResponse,
         PamPasswordResponse,
@@ -9,8 +9,8 @@
     } from '#api/types/pam.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import InputPassword from '#lib/form/InputPassword.svelte';
-    import {slide} from 'svelte/transition';
-    import {onMount} from 'svelte';
+    import { slide } from 'svelte/transition';
+    import { onMount } from 'svelte';
     import SearchBar from '#lib/search_bar/SearchBar.svelte';
     import PamAuthorizedKeys from '#lib/PamAuthorizedKeys.svelte';
 
@@ -137,11 +137,11 @@
     {#if password}
         <div transition:slide={{ duration: 150 }}>
             <InputPassword
-                    label={t.common.password}
-                    placeholder={t.common.password}
-                    value={password}
-                    disabled
-                    showCopy
+                label={t.common.password}
+                placeholder={t.common.password}
+                value={password}
+                disabled
+                showCopy
             />
         </div>
     {/if}
@@ -166,7 +166,7 @@
         </div>
     {/if}
 
-    <PamAuthorizedKeys authorizedKeys={pamUser.authorized_keys} onSave={fetchPamUser}/>
+    <PamAuthorizedKeys authorizedKeys={pamUser.authorized_keys} onSave={fetchPamUser} />
 
     {#snippet btnClip(value: string)}
         <Button invisible onclick={() => navigator.clipboard.writeText(value)}>
@@ -202,7 +202,7 @@
             </div>
 
             {#if host.notes}
-                <hr/>
+                <hr />
                 {host.notes}
             {/if}
         </div>
@@ -213,7 +213,7 @@
             <h3>Hosts</h3>
 
             <div class="search">
-                <SearchBar bind:value={search}/>
+                <SearchBar bind:value={search} />
             </div>
 
             {#each hostsFiltered as host}

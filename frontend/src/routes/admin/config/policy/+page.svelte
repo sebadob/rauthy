@@ -6,4 +6,4 @@
     <title>Rauthy Password Policy</title>
 </svelte:head>
 
-<PasswordPolicy/>
+<PasswordPolicy />

@@ -6,4 +6,4 @@
     <title>Rauthy API Keys</title>
 </svelte:head>
 
-<ApiKeys/>
+<ApiKeys />

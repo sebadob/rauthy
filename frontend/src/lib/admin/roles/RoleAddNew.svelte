@@ -1,14 +1,14 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
-    import {PATTERN_ROLE_SCOPE} from '#utils/patterns.ts';
+    import { PATTERN_ROLE_SCOPE } from '#utils/patterns.ts';
     import Form from '#lib/form/Form.svelte';
-    import {fetchPost} from '#api/fetch.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import type {RoleRequest, RoleResponse} from '#api/types/roles.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import type { RoleRequest, RoleResponse } from '#api/types/roles.ts';
     import InputArea from '#lib/form/InputArea.svelte';
-    import {parseJsonValue} from '#utils/jsonValue.ts';
+    import { parseJsonValue } from '#utils/jsonValue.ts';
 
     let {
         roles,
@@ -56,20 +56,20 @@
 <div class="container">
     <Form action="/auth/v1/roles" {onSubmit}>
         <Input
-                bind:ref
-                bind:value={name}
-                autocomplete="off"
-                label={ta.roles.name}
-                placeholder={ta.roles.name}
-                required
-                pattern={PATTERN_ROLE_SCOPE}
+            bind:ref
+            bind:value={name}
+            autocomplete="off"
+            label={ta.roles.name}
+            placeholder={ta.roles.name}
+            required
+            pattern={PATTERN_ROLE_SCOPE}
         />
         <div class="meta">
             <InputArea
-                    label={ta.common.jsonMeta}
-                    placeholder={ta.common.jsonMeta}
-                    bind:value={jsonMeta}
-                    rows={15}
+                label={ta.common.jsonMeta}
+                placeholder={ta.common.jsonMeta}
+                bind:value={jsonMeta}
+                rows={15}
             />
         </div>
 

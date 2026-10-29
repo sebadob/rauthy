@@ -1,16 +1,16 @@
 <script lang="ts">
-    import {getCsrfToken, purgeStorage, saveCsrfToken} from '#utils/helpers.ts';
+    import { getCsrfToken, purgeStorage, saveCsrfToken } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import Main from '#lib/Main.svelte';
     import ContentCenter from '#lib/ContentCenter.svelte';
     import LangSelector from '#lib/LangSelector.svelte';
-    import type {LogoutParams} from '#api/types/logout.ts';
+    import type { LogoutParams } from '#api/types/logout.ts';
     import Template from '#lib/Template.svelte';
-    import {IS_DEV, TPL_CSRF_TOKEN} from '#utils/constants.ts';
-    import {useParam} from '#state/param.svelte.ts';
+    import { IS_DEV, TPL_CSRF_TOKEN } from '#utils/constants.ts';
+    import { useParam } from '#state/param.svelte.ts';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
-    import {formDataFromObj} from '#api/fetch.ts';
+    import { formDataFromObj } from '#api/fetch.ts';
 
     let t = useI18n();
     let err = '';
@@ -69,7 +69,7 @@
     <title>{t?.logout.logout || 'Logout'}</title>
 </svelte:head>
 
-<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken}/>
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
 
 <Main>
     <ContentCenter>
@@ -93,8 +93,8 @@
             {/if}
         </div>
 
-        <ThemeSwitch absolute/>
-        <LangSelector absolute/>
+        <ThemeSwitch absolute />
+        <LangSelector absolute />
     </ContentCenter>
 </Main>
 

@@ -6,4 +6,4 @@
     <title>Rauthy Scopes</title>
 </svelte:head>
 
-<Scopes/>
+<Scopes />

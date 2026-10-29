@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {genKey} from '#utils/helpers.ts';
+    import { genKey } from '#utils/helpers.ts';
     import InputRange from '#lib/form/InputRange.svelte';
     import InputColor from '#lib/form/InputColor.svelte';
 
@@ -27,8 +27,8 @@
             const k = (n + h / 30) % 12;
             const c = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
             return Math.round(c * 255)
-                    .toString(16)
-                    .padStart(2, '0');
+                .toString(16)
+                .padStart(2, '0');
         };
         return `#${f(0)}${f(8)}${f(4)}`;
     }
@@ -63,42 +63,42 @@
             </h5>
             <div {id} class="values">
                 <InputRange
-                        label="Hue"
-                        bind:value={h}
-                        min={0}
-                        max={359}
-                        {widthRange}
-                        bgMode="hue"
-                        hue={h}
-                        sat={s}
-                        lum={l}
+                    label="Hue"
+                    bind:value={h}
+                    min={0}
+                    max={359}
+                    {widthRange}
+                    bgMode="hue"
+                    hue={h}
+                    sat={s}
+                    lum={l}
                 />
                 <InputRange
-                        label="Sat"
-                        bind:value={s}
-                        min={0}
-                        max={100}
-                        {widthRange}
-                        bgMode="sat"
-                        hue={h}
-                        sat={s}
-                        lum={l}
+                    label="Sat"
+                    bind:value={s}
+                    min={0}
+                    max={100}
+                    {widthRange}
+                    bgMode="sat"
+                    hue={h}
+                    sat={s}
+                    lum={l}
                 />
                 <InputRange
-                        label="Lum"
-                        bind:value={l}
-                        min={0}
-                        max={100}
-                        {widthRange}
-                        bgMode="lum"
-                        hue={h}
-                        sat={s}
-                        lum={l}
+                    label="Lum"
+                    bind:value={l}
+                    min={0}
+                    max={100}
+                    {widthRange}
+                    bgMode="lum"
+                    hue={h}
+                    sat={s}
+                    lum={l}
                 />
             </div>
         </div>
         <div class="color">
-            <InputColor {label} bind:value={() => hex, v => setHex(v)}/>
+            <InputColor {label} bind:value={() => hex, v => setHex(v)} />
         </div>
     </div>
 </div>

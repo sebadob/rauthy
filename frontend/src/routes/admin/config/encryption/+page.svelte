@@ -6,4 +6,4 @@
     <title>Rauthy Encryption</title>
 </svelte:head>
 
-<EncKeys/>
+<EncKeys />

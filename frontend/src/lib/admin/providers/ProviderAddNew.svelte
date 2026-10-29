@@ -1,10 +1,10 @@
 <script lang="ts">
-    import {untrack} from 'svelte';
+    import { untrack } from 'svelte';
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import CheckIcon from '#lib/CheckIcon.svelte';
-    import {fetchPost} from '#api/fetch.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Options from '#lib/Options.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import LabeledValue from '#lib/LabeledValue.svelte';
@@ -15,14 +15,13 @@
         ProviderLookupResponse,
         ProviderRequest,
     } from '#api/types/auth_provider.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {PATTERN_URI} from '#utils/patterns.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { PATTERN_URI } from '#utils/patterns.ts';
     import Form from '#lib/form/Form.svelte';
     import ProviderConfigURLs from '#lib/admin/providers/blocks/ProviderConfigURLs.svelte';
-    import ProviderConfigClientInfo
-        from '#lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
+    import ProviderConfigClientInfo from '#lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
 
-    let {onSave}: { onSave: () => void } = $props();
+    let { onSave }: { onSave: () => void } = $props();
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -259,7 +258,7 @@
             config.client_secret_basic = res.body.client_secret_basic;
             // we want to res.enable basic only if it is supported for better compatibility out of the box
             config.client_secret_post =
-                    !res.body.client_secret_basic && res.body.client_secret_post;
+                !res.body.client_secret_basic && res.body.client_secret_post;
             config.scope = res.body.scope;
 
             lookupSuccess = true;
@@ -305,45 +304,45 @@
 </script>
 
 <div class="container">
-    <Options ariaLabel="Select Mode" options={modes} bind:value={mode}/>
+    <Options ariaLabel="Select Mode" options={modes} bind:value={mode} />
     <div style:height=".5rem"></div>
 
     <Form action={formAction} {onSubmit}>
         {#if isOidc && !lookupSuccess}
             <Input
-                    name="issuer"
-                    label="Issuer URL"
-                    placeholder="Issuer URL"
-                    bind:value={configLookup.issuer}
-                    width={inputWidth}
-                    required
-                    pattern={PATTERN_URI}
+                name="issuer"
+                label="Issuer URL"
+                placeholder="Issuer URL"
+                bind:value={configLookup.issuer}
+                width={inputWidth}
+                required
+                pattern={PATTERN_URI}
             />
         {:else if isAuto && !lookupSuccess}
             <Input
-                    typ="url"
-                    name="metadata"
-                    bind:value={configLookup.metadata_url}
-                    label="Metadata URL"
-                    placeholder=".../.well-known/openid-configuration"
-                    width={inputWidth}
-                    required
-                    pattern={PATTERN_URI}
+                typ="url"
+                name="metadata"
+                bind:value={configLookup.metadata_url}
+                label="Metadata URL"
+                placeholder=".../.well-known/openid-configuration"
+                width={inputWidth}
+                required
+                pattern={PATTERN_URI}
             />
         {:else if isSpecial || isCustom || lookupSuccess}
             <ProviderConfigURLs
-                    bind:issuer={config.issuer}
-                    bind:authorizationEndpoint={config.authorization_endpoint}
-                    bind:tokenEndpoint={config.token_endpoint}
-                    bind:userinfoEndpoint={config.userinfo_endpoint}
-                    {inputWidth}
-                    disabled={lookupSuccess}
+                bind:issuer={config.issuer}
+                bind:authorizationEndpoint={config.authorization_endpoint}
+                bind:tokenEndpoint={config.token_endpoint}
+                bind:userinfoEndpoint={config.userinfo_endpoint}
+                {inputWidth}
+                disabled={lookupSuccess}
             />
 
             <div class="checkbox">
                 {#if lookupSuccess}
                     <LabeledValue label="PKCE">
-                        <CheckIcon checked={config.use_pkce}/>
+                        <CheckIcon checked={config.use_pkce} />
                     </LabeledValue>
                 {:else}
                     <InputCheckbox ariaLabel="PKCE" bind:checked={config.use_pkce}>
@@ -353,18 +352,18 @@
             </div>
 
             <ProviderConfigClientInfo
-                    bind:scope={config.scope}
-                    bind:name={config.name}
-                    bind:clientId={config.client_id}
-                    bind:clientSecret={config.client_secret}
-                    bind:clientSecretBasic={config.client_secret_basic}
-                    bind:clientSecretPost={config.client_secret_post}
-                    bind:adminClaimPath={config.admin_claim_path}
-                    bind:adminClaimValue={config.admin_claim_value}
-                    bind:mfaClaimPath={config.mfa_claim_path}
-                    bind:mfaClaimValue={config.mfa_claim_value}
-                    usePKCE={config.use_pkce}
-                    {inputWidth}
+                bind:scope={config.scope}
+                bind:name={config.name}
+                bind:clientId={config.client_id}
+                bind:clientSecret={config.client_secret}
+                bind:clientSecretBasic={config.client_secret_basic}
+                bind:clientSecretPost={config.client_secret_post}
+                bind:adminClaimPath={config.admin_claim_path}
+                bind:adminClaimValue={config.admin_claim_value}
+                bind:mfaClaimPath={config.mfa_claim_path}
+                bind:mfaClaimValue={config.mfa_claim_value}
+                usePKCE={config.use_pkce}
+                {inputWidth}
             />
         {/if}
         <div class="flex gap-05">
@@ -379,7 +378,7 @@
             {/if}
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {/if}
 
             {#if err}

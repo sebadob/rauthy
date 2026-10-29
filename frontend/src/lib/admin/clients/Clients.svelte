@@ -1,18 +1,18 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
-    import {fetchGet} from '#api/fetch.ts';
-    import {useParam} from '#state/param.svelte.ts';
-    import type {ScopeResponse} from '#api/types/scopes.ts';
-    import type {ClientResponse} from '#api/types/clients.ts';
+    import { fetchGet } from '#api/fetch.ts';
+    import { useParam } from '#state/param.svelte.ts';
+    import type { ScopeResponse } from '#api/types/scopes.ts';
+    import type { ClientResponse } from '#api/types/clients.ts';
     import ClientAddNew from '#lib/admin/clients/ClientAddNew.svelte';
     import ClientDetails from '#lib/admin/clients/ClientDetails.svelte';
-    import {useTrigger} from '#state/callback.svelte.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -87,37 +87,37 @@
 </script>
 
 <NavSub
-        paddingTop="2.35rem"
-        buttonTilesAriaControls="groups"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.35rem"
+    buttonTilesAriaControls="groups"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
     <ButtonAddModal
-            bind:ref={refAddNew}
-            level={clients.length === 0 ? 1 : 2}
-            bind:closeModal
-            alignRight
+        bind:ref={refAddNew}
+        level={clients.length === 0 ? 1 : 2}
+        bind:closeModal
+        alignRight
     >
-        <ClientAddNew onSave={onAddNew} {clients}/>
+        <ClientAddNew onSave={onAddNew} {clients} />
     </ButtonAddModal>
     <OrderSearchBar
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            searchWidth="min(19.5rem, 100dvw - .5rem)"
+        {searchOptions}
+        bind:searchOption
+        bind:value={searchValue}
+        {orderOptions}
+        {onChangeOrder}
+        searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
         <div class="clientsList">
             {#each clientsFiltered as client (client.id)}
                 <NavButtonTile
-                        onclick={() => {
+                    onclick={() => {
                         cid.set(client.id);
                         tr.trigger('navSubSub');
                     }}
-                        selected={cid.get() === client.id}
+                    selected={cid.get() === client.id}
                 >
                     <div class="tile">
                         {client.id}
@@ -140,7 +140,7 @@
 
     <div id="groups">
         {#if client}
-            <ClientDetails {client} {clients} {scopesAll} {onSave}/>
+            <ClientDetails {client} {clients} {scopesAll} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

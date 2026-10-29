@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {useMarkdownWorker} from '#lib/text_edit/useWorker.svelte.js';
+    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
 
     let {
         markdown,

@@ -1,21 +1,21 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
-    import {redirectToLogin} from '#utils/helpers.ts';
+    import { onMount } from 'svelte';
+    import { redirectToLogin } from '#utils/helpers.ts';
     import LangSelector from '#lib/LangSelector.svelte';
     import Input from '#lib/form/Input.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {TPL_DEVICE_USER_CODE_LENGTH} from '#utils/constants.ts';
-    import {fetchSolvePow} from '#utils/pow.ts';
+    import { TPL_DEVICE_USER_CODE_LENGTH } from '#utils/constants.ts';
+    import { fetchSolvePow } from '#utils/pow.ts';
     import Main from '#lib/Main.svelte';
     import ContentCenter from '#lib/ContentCenter.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
-    import {useParam} from '#state/param.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
-    import type {SessionResponse} from '#api/types/session.ts';
-    import {fetchGet, fetchPost} from '#api/fetch.ts';
-    import {PATTERN_ALNUM} from '#utils/patterns.ts';
-    import type {DeviceVerifyRequest, DeviceVerifyResponse} from '#api/types/device.ts';
+    import type { SessionResponse } from '#api/types/session.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
+    import { PATTERN_ALNUM } from '#utils/patterns.ts';
+    import type { DeviceVerifyRequest, DeviceVerifyResponse } from '#api/types/device.ts';
 
     let t = useI18n();
     let session: undefined | SessionResponse = $state();
@@ -100,7 +100,7 @@
     <title>{t?.device.title || 'Device Authorization'}</title>
 </svelte:head>
 
-<Template id={TPL_DEVICE_USER_CODE_LENGTH} bind:value={userCodeLength}/>
+<Template id={TPL_DEVICE_USER_CODE_LENGTH} bind:value={userCodeLength} />
 
 <Main>
     <ContentCenter>
@@ -116,16 +116,16 @@
                     </div>
 
                     <Input
-                            name="userCode"
-                            autocomplete="off"
-                            label={t.device.userCode}
-                            placeholder={t.device.userCode}
-                            bind:value={userCode}
-                            bind:isError
-                            required
-                            min={userCodeLength.toString()}
-                            max={userCodeLength.toString()}
-                            pattern={PATTERN_ALNUM}
+                        name="userCode"
+                        autocomplete="off"
+                        label={t.device.userCode}
+                        placeholder={t.device.userCode}
+                        bind:value={userCode}
+                        bind:isError
+                        required
+                        min={userCodeLength.toString()}
+                        max={userCodeLength.toString()}
+                        pattern={PATTERN_ALNUM}
                     />
 
                     <div class="btn">
@@ -167,8 +167,8 @@
             </div>
         {/if}
 
-        <ThemeSwitch absolute/>
-        <LangSelector absolute/>
+        <ThemeSwitch absolute />
+        <LangSelector absolute />
     </ContentCenter>
 </Main>
 

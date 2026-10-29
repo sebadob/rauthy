@@ -1,4 +1,4 @@
-import type {MfaPurpose} from '#api/types/mfa.ts';
+import type { MfaPurpose } from '#api/types/mfa.ts';
 
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
@@ -55,27 +55,27 @@ export interface WebauthnRegFinishRequest {
 
 type AuthenticatorTransport = 'Usb' | 'Nfc' | 'Ble' | 'Internal' | 'Hybrid' | 'Test' | 'Unknown';
 type AttestationFormat =
-        | 'packed'
-        | 'Packed'
-        | 'tpm'
-        | 'Tpm'
-        | 'TPM'
-        | 'android-key'
-        | 'AndroidKey'
-        | 'android-safetynet'
-        | 'AndroidSafetyNet'
-        | 'AndroidSafetynet'
-        | 'fido-u2f'
-        | 'FIDOU2F'
-        | 'apple'
-        | 'AppleAnonymous'
-        | 'none'
-        | 'None';
+    | 'packed'
+    | 'Packed'
+    | 'tpm'
+    | 'Tpm'
+    | 'TPM'
+    | 'android-key'
+    | 'AndroidKey'
+    | 'android-safetynet'
+    | 'AndroidSafetyNet'
+    | 'AndroidSafetynet'
+    | 'fido-u2f'
+    | 'FIDOU2F'
+    | 'apple'
+    | 'AppleAnonymous'
+    | 'none'
+    | 'None';
 type Base64UrlSafeData = string;
 type CredentialProtectionPolicy =
-        | 'UserVerificationOptional'
-        | 'UserVerificationOptionalWithCredentialIDList'
-        | 'UserVerificationRequired';
+    | 'UserVerificationOptional'
+    | 'UserVerificationOptionalWithCredentialIDList'
+    | 'UserVerificationRequired';
 type Mediation = 'Conditional';
 type UserVerificationPolicy = 'required' | 'preferred' | 'discouraged';
 type PublicKeyCredentialHints = 'securitykey' | 'clientdevice' | 'hybrid';

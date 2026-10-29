@@ -1,13 +1,13 @@
 <script lang="ts">
     import PasswordPolicy from '#lib/PasswordPolicy.svelte';
-    import {onMount} from 'svelte';
-    import {generatePassword} from '#utils/helpers.ts';
+    import { onMount } from 'svelte';
+    import { generatePassword } from '#utils/helpers.ts';
     import InputPassword from '#lib/form/InputPassword.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.js';
-    import type {PasswordPolicyResponse} from '#api/types/password_policy.ts';
-    import {fetchGet} from '#api/fetch.ts';
-    import type {PropsPassword} from './props.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { PasswordPolicyResponse } from '#api/types/password_policy.ts';
+    import { fetchGet } from '#api/fetch.ts';
+    import type { PropsPassword } from './props.ts';
 
     let {
         passwords = $bindable(),
@@ -92,37 +92,37 @@
 
 {#if policy}
     <div class="container">
-        <PasswordPolicy bind:accepted {policy} password={passwords.new}/>
+        <PasswordPolicy bind:accepted {policy} password={passwords.new} />
 
         {#if !hideCurrentPassword}
             <InputPassword
-                    bind:value={passwords.current}
-                    autocomplete="current-password"
-                    label={t.account.passwordCurr}
-                    placeholder={t.account.passwordCurr}
-                    onInput={isPwdValid}
-                    width={inputWidth}
+                bind:value={passwords.current}
+                autocomplete="current-password"
+                label={t.account.passwordCurr}
+                placeholder={t.account.passwordCurr}
+                onInput={isPwdValid}
+                width={inputWidth}
             />
         {/if}
         <InputPassword
-                bind:value={passwords.new}
-                autocomplete="new-password"
-                label={t.account.passwordNew}
-                placeholder={t.account.passwordNew}
-                bind:reportValidity={reportValidityNew}
-                onInput={isPwdValid}
-                {showCopy}
-                width={inputWidth}
+            bind:value={passwords.new}
+            autocomplete="new-password"
+            label={t.account.passwordNew}
+            placeholder={t.account.passwordNew}
+            bind:reportValidity={reportValidityNew}
+            onInput={isPwdValid}
+            {showCopy}
+            width={inputWidth}
         />
         <InputPassword
-                bind:value={passwords.newConfirm}
-                autocomplete="new-password"
-                label={t.account.passwordConfirm}
-                placeholder={t.account.passwordConfirm}
-                bind:reportValidity={reportValidityConfirm}
-                onInput={isPwdValid}
-                {showCopy}
-                width={inputWidth}
+            bind:value={passwords.newConfirm}
+            autocomplete="new-password"
+            label={t.account.passwordConfirm}
+            placeholder={t.account.passwordConfirm}
+            bind:reportValidity={reportValidityConfirm}
+            onInput={isPwdValid}
+            {showCopy}
+            width={inputWidth}
         />
 
         <div class="btn">

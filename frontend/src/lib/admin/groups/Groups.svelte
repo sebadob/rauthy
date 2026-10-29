@@ -1,17 +1,17 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
-    import {fetchGet} from '#api/fetch.ts';
-    import {useParam} from '#state/param.svelte.ts';
-    import type {GroupResponse} from '#api/types/groups.ts';
+    import { fetchGet } from '#api/fetch.ts';
+    import { useParam } from '#state/param.svelte.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
     import GroupAddNew from '#lib/admin/groups/GroupAddNew.svelte';
     import GroupDetails from '#lib/admin/groups/GroupDetails.svelte';
-    import {useTrigger} from '#state/callback.svelte.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -64,7 +64,7 @@
         let up = direction === 'up';
         if (option === orderOptions[0]) {
             groups.sort((a, b) =>
-                    up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
             );
         } else if (option === orderOptions[1]) {
             groups.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
@@ -83,26 +83,26 @@
 </script>
 
 <NavSub
-        paddingTop="2.35rem"
-        buttonTilesAriaControls="groups"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.35rem"
+    buttonTilesAriaControls="groups"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
     <ButtonAddModal
-            bind:ref={refAddNew}
-            level={groups.length === 0 ? 1 : 2}
-            bind:closeModal
-            alignRight
+        bind:ref={refAddNew}
+        level={groups.length === 0 ? 1 : 2}
+        bind:closeModal
+        alignRight
     >
-        <GroupAddNew onSave={onAddNew} {groups}/>
+        <GroupAddNew onSave={onAddNew} {groups} />
     </ButtonAddModal>
     <OrderSearchBar
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            searchWidth="min(19.5rem, 100dvw - .5rem)"
+        {searchOptions}
+        bind:searchOption
+        bind:value={searchValue}
+        {orderOptions}
+        {onChangeOrder}
+        searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
@@ -125,7 +125,7 @@
 
     <div id="groups">
         {#if group}
-            <GroupDetails {group} {groups} {onSave}/>
+            <GroupDetails {group} {groups} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

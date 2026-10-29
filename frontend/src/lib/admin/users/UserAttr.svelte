@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import { onMount } from 'svelte';
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import type {
@@ -7,17 +7,17 @@
         UserAttrValuesUpdateRequest,
         UserResponse,
     } from '#api/types/user.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {fetchGet, fetchPut} from '#api/fetch.ts';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
         UserAttrValueResponse,
         UserAttrValuesResponse,
     } from '#api/types/user_attrs.ts';
-    import {parseJsonValue, stringifyJsonValue} from '#utils/jsonValue.ts';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
 
     let {
         user,
@@ -94,14 +94,14 @@
         let userKeys = attrsUser.map(a => a.key);
         let payload: UserAttrValuesUpdateRequest = {
             values: attrsCombined
-                    .filter(a => a.value.trim() || userKeys.includes(a.name))
-                    .map(a => {
-                        let v: UserAttrValueRequest = {
-                            key: a.name,
-                            value: parseJsonValue(a.value),
-                        };
-                        return v;
-                    }),
+                .filter(a => a.value.trim() || userKeys.includes(a.name))
+                .map(a => {
+                    let v: UserAttrValueRequest = {
+                        key: a.name,
+                        value: parseJsonValue(a.value),
+                    };
+                    return v;
+                }),
         };
 
         let res = await fetchPut(`/auth/v1/users/${user.id}/attr`, payload);
@@ -126,11 +126,11 @@
 
         {#each attrsCombined as a}
             <Input
-                    bind:value={a.value}
-                    autocomplete="off"
-                    label={a.name}
-                    placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
-                    onEnter={onSubmit}
+                bind:value={a.value}
+                autocomplete="off"
+                label={a.name}
+                placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
+                onEnter={onSubmit}
             />
         {/each}
 
@@ -140,7 +140,7 @@
             </Button>
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {/if}
         </div>
     {/if}

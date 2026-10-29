@@ -6,4 +6,4 @@
     <title>Rauthy Users</title>
 </svelte:head>
 
-<Users/>
+<Users />

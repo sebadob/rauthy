@@ -14,8 +14,8 @@
     import IconLink from '#icons/editor/IconLink.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {useMarkdownWorker} from '#lib/text_edit/useWorker.svelte.js';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
 
     let {
         markdown = $bindable(),
@@ -58,75 +58,75 @@
 
         <div class="actions" class:toolbarPreview={preview}>
             <ToolbarIcon {ref} title={ta.editor.heading1} bind:content={markdown} addLeft="# ">
-                <IconH1 width={iconSize}/>
+                <IconH1 width={iconSize} />
             </ToolbarIcon>
             <ToolbarIcon {ref} title={ta.editor.heading2} bind:content={markdown} addLeft="## ">
-                <IconH2 width={iconSize}/>
+                <IconH2 width={iconSize} />
             </ToolbarIcon>
             <ToolbarIcon {ref} title={ta.editor.heading3} bind:content={markdown} addLeft="### ">
-                <IconH3 width={iconSize}/>
+                <IconH3 width={iconSize} />
             </ToolbarIcon>
 
             <ToolbarIcon
-                    {ref}
-                    title={ta.editor.bold}
-                    bind:content={markdown}
-                    addLeft="**"
-                    addRight="**"
+                {ref}
+                title={ta.editor.bold}
+                bind:content={markdown}
+                addLeft="**"
+                addRight="**"
             >
-                <IconBold width={iconSize}/>
+                <IconBold width={iconSize} />
             </ToolbarIcon>
             <ToolbarIcon
-                    {ref}
-                    title={ta.editor.italic}
-                    bind:content={markdown}
-                    addLeft="*"
-                    addRight="*"
+                {ref}
+                title={ta.editor.italic}
+                bind:content={markdown}
+                addLeft="*"
+                addRight="*"
             >
-                <IconItalic width={iconSize}/>
+                <IconItalic width={iconSize} />
             </ToolbarIcon>
             <ToolbarIcon
-                    {ref}
-                    title={ta.editor.strikeThrough}
-                    bind:content={markdown}
-                    addLeft="~~"
-                    addRight="~~"
+                {ref}
+                title={ta.editor.strikeThrough}
+                bind:content={markdown}
+                addLeft="~~"
+                addRight="~~"
             >
-                <IconStrikeThrough width={iconSize}/>
+                <IconStrikeThrough width={iconSize} />
             </ToolbarIcon>
 
             <ToolbarIcon {ref} title={ta.editor.listBullet} bind:content={markdown} addLeft="- ">
-                <IconListBullet width={iconSize}/>
+                <IconListBullet width={iconSize} />
             </ToolbarIcon>
             <ToolbarIcon {ref} title={ta.editor.listNumbered} bind:content={markdown} addLeft="1. ">
-                <IconListNumbered width={iconSize}/>
+                <IconListNumbered width={iconSize} />
             </ToolbarIcon>
             <ToolbarIcon {ref} title={ta.editor.listTasks} bind:content={markdown} addLeft="- [ ] ">
-                <IconQueueList width={iconSize}/>
+                <IconQueueList width={iconSize} />
             </ToolbarIcon>
 
             <ToolbarIcon
-                    {ref}
-                    title={ta.editor.code}
-                    bind:content={markdown}
-                    addLeft="`"
-                    addRight="`"
+                {ref}
+                title={ta.editor.code}
+                bind:content={markdown}
+                addLeft="`"
+                addRight="`"
             >
-                <IconCode width={iconSize}/>
+                <IconCode width={iconSize} />
             </ToolbarIcon>
             <ToolbarIcon {ref} title={ta.editor.quote} bind:content={markdown} addLeft="> ">
-                <IconQuote width={iconSize}/>
+                <IconQuote width={iconSize} />
             </ToolbarIcon>
 
             <!-- TODO needs a custom way of focussing via offset -->
             <ToolbarIcon
-                    {ref}
-                    title={ta.editor.link}
-                    bind:content={markdown}
-                    addLeft="["
-                    addRightLink="https://..."
+                {ref}
+                title={ta.editor.link}
+                bind:content={markdown}
+                addLeft="["
+                addRightLink="https://..."
             >
-                <IconLink width={iconSize}/>
+                <IconLink width={iconSize} />
             </ToolbarIcon>
 
             <!--{#if showImageButton}-->
@@ -145,19 +145,19 @@
 
     {#if preview}
         <div class="renderer">
-            <MarkdownRenderer/>
+            <MarkdownRenderer />
         </div>
     {:else}
         <div
-                role="textbox"
-                tabindex="0"
-                bind:this={ref}
-                class="edit font-mono"
-                aria-label={ta.editor.textArea}
-                bind:innerText={markdown}
-                contenteditable="plaintext-only"
-                spellcheck="false"
-                {onblur}
+            role="textbox"
+            tabindex="0"
+            bind:this={ref}
+            class="edit font-mono"
+            aria-label={ta.editor.textArea}
+            bind:innerText={markdown}
+            contenteditable="plaintext-only"
+            spellcheck="false"
+            {onblur}
         ></div>
     {/if}
 </div>

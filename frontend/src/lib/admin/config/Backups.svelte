@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type {BackupListing, BackupListings} from '#api/types/backup.ts';
-    import {fetchGet, fetchPost} from '#api/fetch.ts';
-    import {onMount} from 'svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {formatDateFromTs, prettyFileSize} from '#utils/helpers.ts';
+    import type { BackupListing, BackupListings } from '#api/types/backup.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { formatDateFromTs, prettyFileSize } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
     import IconArrowPathSquare from '#icons/IconArrowPathSquare.svelte';
@@ -95,12 +95,12 @@
 
         <div class="refresh">
             <Button invisible onclick={fetchListings}>
-                <IconArrowPathSquare/>
+                <IconArrowPathSquare />
             </Button>
         </div>
 
         {#if success}
-            <IconCheck/>
+            <IconCheck />
         {/if}
     </div>
 

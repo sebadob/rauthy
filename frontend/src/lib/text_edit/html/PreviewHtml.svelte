@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {useMarkdownWorker} from '#lib/text_edit/useWorker.svelte.js';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
 
     let {
         content,
@@ -18,10 +18,10 @@
 </script>
 
 <iframe
-        title={ta.common.preview}
-        class="md-global"
-        srcdoc={worker.sanitizedHTML()}
-        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+    title={ta.common.preview}
+    class="md-global"
+    srcdoc={worker.sanitizedHTML()}
+    sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
 ></iframe>
 
 <style>

@@ -1,16 +1,16 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
-    import {fetchPost} from '#api/fetch.ts';
-    import type {ProviderResponse} from '#api/types/auth_provider.ts';
+    import { onMount } from 'svelte';
+    import { fetchPost } from '#api/fetch.ts';
+    import type { ProviderResponse } from '#api/types/auth_provider.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
-    import {useParam} from '#state/param.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import ProviderDetails from '#lib/admin/providers/ProviderDetails.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ProviderAddNew from '#lib/admin/providers/ProviderAddNew.svelte';
-    import {useTrigger} from '#state/callback.svelte.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -52,15 +52,15 @@
 
 <NavSub width="11rem" buttonTilesAriaControls="federation" paddingTop="6.65rem">
     <ButtonAddModal bind:ref={refAddNew} level={providers.length === 0 ? 1 : 2} bind:closeModal>
-        <ProviderAddNew {onSave}/>
+        <ProviderAddNew {onSave} />
     </ButtonAddModal>
 
     {#snippet buttonTiles()}
         <div class="providersList">
             {#each providers as provider (provider.id)}
                 <NavButtonTile
-                        onclick={() => pid.set(provider.id)}
-                        selected={pid.get() === provider.id}
+                    onclick={() => pid.set(provider.id)}
+                    selected={pid.get() === provider.id}
                 >
                     {provider.name}
                 </NavButtonTile>
@@ -72,7 +72,7 @@
 <ContentAdmin>
     <div id="federation" aria-label={ta.common.details}>
         {#if provider}
-            <ProviderDetails bind:provider onSave={fetchData}/>
+            <ProviderDetails bind:provider onSave={fetchData} />
         {/if}
     </div>
 

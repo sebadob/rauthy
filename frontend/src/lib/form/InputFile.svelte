@@ -1,9 +1,9 @@
 <script lang="ts">
-    import {genKey} from '#utils/helpers.ts';
+    import { genKey } from '#utils/helpers.ts';
     import Loading from '#lib/Loading.svelte';
     import IconUpload from '#icons/IconUpload.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {uploadFile} from '#api/fetch.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { uploadFile } from '#api/fetch.ts';
 
     let {
         // typ,
@@ -80,13 +80,13 @@
 </script>
 
 <form
-        aria-dropeffect="move"
-        aria-label="Upload"
-        class="flex"
-        data-nopad={buttonOnly}
-        style:width
-        style:height
-        {ondrop}
+    aria-dropeffect="move"
+    aria-label="Upload"
+    class="flex"
+    data-nopad={buttonOnly}
+    style:width
+    style:height
+    {ondrop}
 >
     {#if isUploading}
         <div class="flex space-between loading">
@@ -98,21 +98,21 @@
                 <span>/</span>
                 <span>{filesToUpload}</span>
             </span>
-            <Loading/>
+            <Loading />
         </div>
     {:else}
         <label for={id} aria-disabled={disabled}>
-            <IconUpload width={buttonSize}/>
+            <IconUpload width={buttonSize} />
         </label>
         <input
-                type="file"
-                {id}
-                aria-hidden={buttonOnly}
-                accept={accept && accept.join(', ')}
-                bind:files
-                aria-disabled={disabled}
-                {disabled}
-                {multiple}
+            type="file"
+            {id}
+            aria-hidden={buttonOnly}
+            accept={accept && accept.join(', ')}
+            bind:files
+            aria-disabled={disabled}
+            {disabled}
+            {multiple}
         />
     {/if}
 </form>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type {ThemeCss} from '#api/types/themes.ts';
+    import type { ThemeCss } from '#api/types/themes.ts';
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
@@ -38,26 +38,26 @@
 </script>
 
 <div
-        aria-label="Preview: All components inside are only for theme and colors preview and have no effect or interaction"
-        style:--border-radius={borderRadius}
-        style:--text={hslVar(theme.text)}
-        style:--text-high={hslVar(theme.text_high)}
-        style:--bg={hslVar(theme.bg)}
-        style:--bg-high={hslVar(theme.bg_high)}
-        style:--action={hslVar(theme.action)}
-        style:--accent={hslVar(theme.accent)}
-        style:--error={hslVar(theme.error)}
-        style:--btn-text={theme.btn_text}
-        style:--theme-sun={theme.theme_sun}
-        style:--theme-moon={theme.theme_moon}
+    aria-label="Preview: All components inside are only for theme and colors preview and have no effect or interaction"
+    style:--border-radius={borderRadius}
+    style:--text={hslVar(theme.text)}
+    style:--text-high={hslVar(theme.text_high)}
+    style:--bg={hslVar(theme.bg)}
+    style:--bg-high={hslVar(theme.bg_high)}
+    style:--action={hslVar(theme.action)}
+    style:--accent={hslVar(theme.accent)}
+    style:--error={hslVar(theme.error)}
+    style:--btn-text={theme.btn_text}
+    style:--theme-sun={theme.theme_sun}
+    style:--theme-moon={theme.theme_moon}
 >
     <div class="inner">
         <div class="container">
             <div class="logo" class:default={showDefault}>
                 {#if showDefault}
-                    <RauthyLogo width="100%" show={typ}/>
+                    <RauthyLogo width="100%" show={typ} />
                 {:else}
-                    <img src={logoUrl} alt="Client Logo" onerror={() => (showDefault = true)}/>
+                    <img src={logoUrl} alt="Client Logo" onerror={() => (showDefault = true)} />
                 {/if}
             </div>
 
@@ -65,37 +65,37 @@
             <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam</p>
             <p><span>--accent-color</span></p>
 
-            <Input label="Preview" placeholder="Preview" width="12.5rem"/>
+            <Input label="Preview" placeholder="Preview" width="12.5rem" />
 
             <div class="btn">
                 <div>
                     <Button level={1} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br/>
+                    <br />
                     <Button level={2} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br/>
+                    <br />
                     <Button level={3} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br/>
+                    <br />
                 </div>
 
                 <div>
-                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}>Button
-                    </Button
-                    >
-                    <br/>
-                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}>Button
-                    </Button
-                    >
-                    <br/>
-                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}>Button
-                    </Button
-                    >
+                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
+                    <br />
+                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
+                    <br />
+                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
                 </div>
             </div>
 
             <a href={window.location.href} onclick={ev => ev.preventDefault()}>Link</a>
 
-            <br/>
-            <ThemeSwitch/>
+            <br />
+            <ThemeSwitch />
         </div>
     </div>
 </div>

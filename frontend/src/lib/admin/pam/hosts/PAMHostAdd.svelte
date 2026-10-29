@@ -1,20 +1,20 @@
 <script lang="ts">
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Form from '#lib/form/Form.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import Input from '#lib/form/Input.svelte';
     import type {
         PamGroupResponse,
         PamHostCreateRequest,
         PamHostSimpleResponse,
     } from '#api/types/pam.ts';
-    import {PATTERN_LINUX_HOSTNAME} from '#utils/patterns.ts';
+    import { PATTERN_LINUX_HOSTNAME } from '#utils/patterns.ts';
     import Options from '#lib/Options.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
-    import {fetchPost} from '#api/fetch.ts';
-    import {slide} from 'svelte/transition';
-    import {untrack} from 'svelte';
+    import { fetchPost } from '#api/fetch.ts';
+    import { slide } from 'svelte/transition';
+    import { untrack } from 'svelte';
 
     let {
         groups,
@@ -73,27 +73,27 @@
 
     <Form action="/auth/v1/pam/hosts" {onSubmit}>
         <Input
-                bind:ref
-                label="Hostname"
-                placeholder="Hostname"
-                bind:value={host.hostname}
-                required
-                pattern={PATTERN_LINUX_HOSTNAME}
-                maxLength={61}
+            bind:ref
+            label="Hostname"
+            placeholder="Hostname"
+            bind:value={host.hostname}
+            required
+            pattern={PATTERN_LINUX_HOSTNAME}
+            maxLength={61}
         />
 
         <div class="row">
             <div class="label">
                 {ta.pam.groupName}
             </div>
-            <Options ariaLabel={ta.pam.groupName} {options} bind:value={groupName}/>
+            <Options ariaLabel={ta.pam.groupName} {options} bind:value={groupName} />
         </div>
 
         <div class="row">
             <div class="label">
                 {ta.clients.forceMfa}
             </div>
-            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa}/>
+            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa} />
         </div>
 
         <div class="row">
@@ -101,8 +101,8 @@
                 {ta.pam.hostLocalPwdOnly}
             </div>
             <InputCheckbox
-                    ariaLabel={ta.pam.hostLocalPwdOnly}
-                    bind:checked={host.local_password_only}
+                ariaLabel={ta.pam.hostLocalPwdOnly}
+                bind:checked={host.local_password_only}
             />
         </div>
         {#if host.local_password_only}

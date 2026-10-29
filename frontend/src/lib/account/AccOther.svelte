@@ -1,21 +1,21 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import {fade} from 'svelte/transition';
+    import { fade } from 'svelte/transition';
     import Input from '#lib/form/Input.svelte';
-    import {useI18n} from '#state/i18n.svelte.js';
+    import { useI18n } from '#state/i18n.svelte.js';
     import type {
         UserAttrValueRequest,
         UserAttrValuesUpdateRequest,
         UserResponse,
     } from '#api/types/user.ts';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {fetchGet, fetchPut} from '#api/fetch.ts';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
     import type {
         UserEditableAttrResponse,
         UserEditableAttrsResponse,
     } from '#api/types/user_attrs.ts';
-    import {onMount} from 'svelte';
-    import {parseJsonValue, stringifyJsonValue} from '#utils/jsonValue.ts';
+    import { onMount } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
 
     let {
         user = $bindable(),
@@ -38,7 +38,7 @@
 
     async function fetchAttrs() {
         let res = await fetchGet<UserEditableAttrsResponse>(
-                `/auth/v1/users/${user.id}/attr/editable`,
+            `/auth/v1/users/${user.id}/attr/editable`,
         );
         if (res.body) {
             attrs = res.body.values.map(v => {
@@ -56,14 +56,14 @@
         let userKeys = attrs.map(a => a.name);
         let payload: UserAttrValuesUpdateRequest = {
             values: attrs
-                    .filter(a => (a.value && a.value.trim()) || userKeys.includes(a.name))
-                    .map(a => {
-                        let v: UserAttrValueRequest = {
-                            key: a.name,
-                            value: parseJsonValue(a.value),
-                        };
-                        return v;
-                    }),
+                .filter(a => (a.value && a.value.trim()) || userKeys.includes(a.name))
+                .map(a => {
+                    let v: UserAttrValueRequest = {
+                        key: a.name,
+                        value: parseJsonValue(a.value),
+                    };
+                    return v;
+                }),
         };
 
         let res = await fetchPut(`/auth/v1/users/${user.id}/attr`, payload);
@@ -84,14 +84,14 @@
     <div>
         {#each attrs as a (a.name)}
             <Input
-                    bind:value={a.value}
-                    autocomplete="off"
-                    label={a.name}
-                    placeholder={a.default_value?.toString()
+                bind:value={a.value}
+                autocomplete="off"
+                label={a.name}
+                placeholder={a.default_value?.toString()
                     ? a.default_value?.toString()
                     : a.desc || ''}
-                    width="100%"
-                    onEnter={onSubmit}
+                width="100%"
+                onEnter={onSubmit}
             />
         {/each}
     </div>
@@ -106,7 +106,7 @@
 
             {#if success}
                 <div class="success" transition:fade>
-                    <IconCheck/>
+                    <IconCheck />
                 </div>
             {/if}
         </div>

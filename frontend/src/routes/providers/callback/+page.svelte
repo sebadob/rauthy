@@ -1,27 +1,27 @@
 <script lang="ts">
-    import {getProviderToken, getVerifierUpstreamFromStorage} from '#utils/helpers.ts';
-    import {onMount} from 'svelte';
+    import { getProviderToken, getVerifierUpstreamFromStorage } from '#utils/helpers.ts';
+    import { onMount } from 'svelte';
     import WebauthnRequest from '#lib/WebauthnRequest.svelte';
     import LangSelector from '#lib/LangSelector.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useParam} from '#state/param.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
-    import type {WebauthnAdditionalData} from '#mfa/webauthn/types.ts';
-    import {fetchGet, fetchPost, type IResponse} from '#api/fetch.ts';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
+    import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
     import type {
         ActiveOtp,
         OtpLoginResponse,
         WebauthnLoginResponse,
     } from '#api/types/authorize.ts';
-    import type {ProviderCallbackRequest} from '#api/types/auth_provider.ts';
-    import {IS_DEV} from '#utils/constants.ts';
-    import type {ToSAwaitLoginResponse, ToSLatestResponse} from '#api/types/tos.ts';
+    import type { ProviderCallbackRequest } from '#api/types/auth_provider.ts';
+    import { IS_DEV } from '#utils/constants.ts';
+    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
     import TosAccept from '#lib/TosAccept.svelte';
     import ContentCenter from '#lib/ContentCenter.svelte';
-    import type {MfaPurpose} from '#api/types/mfa.ts';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
     import OtpRequest from '#lib/OtpRequest.svelte';
-    import type {OtpAdditionalData} from '#mfa/otp/types.ts';
+    import type { OtpAdditionalData } from '#mfa/otp/types.ts';
 
     let t = useI18n();
     let clientMfaForce = $state(false);
@@ -70,16 +70,16 @@
             url = '/auth/v1/dev/providers_callback';
         }
         let res = await fetchPost<
-                undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
         >(url, payload);
 
         await handleAuthRes(res);
     });
 
     async function handleAuthRes(
-            res?: IResponse<
-                    undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-            >,
+        res?: IResponse<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >,
     ) {
         if (!res) {
             return;
@@ -93,7 +93,7 @@
             error = '';
             let body = res.body;
             if (body && 'code' in body) {
-                mfaPurpose = {Login: body.code as string};
+                mfaPurpose = { Login: body.code as string };
                 if ('active_otps' in body) {
                     activeOtps = body.active_otps;
                     mfaKind = 'otp';
@@ -102,7 +102,7 @@
                 }
             } else {
                 console.error(
-                        'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
                 );
             }
         } else if (res.status === 204) {
@@ -180,13 +180,13 @@
 <ContentCenter>
     {#if mfaPurpose}
         {#if mfaKind == 'webauthn'}
-            <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError}/>
+            <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {:else if mfaKind == 'otp' && activeOtps}
             <OtpRequest
-                    {activeOtps}
-                    purpose={mfaPurpose}
-                    onSuccess={onMfaSuccess}
-                    onError={onMfaError}
+                {activeOtps}
+                purpose={mfaPurpose}
+                onSuccess={onMfaSuccess}
+                onError={onMfaError}
             />
         {/if}
     {:else if clientMfaForce}
@@ -202,11 +202,11 @@
         </div>
     {:else if tos}
         <TosAccept
-                {tos}
-                forceAccept={tosForceAccept}
-                {tosAcceptCode}
-                onToSAccept={handleAuthRes}
-                {onToSCancel}
+            {tos}
+            forceAccept={tosForceAccept}
+            {tosAcceptCode}
+            onToSAccept={handleAuthRes}
+            {onToSCancel}
         />
     {:else if error}
         <div class="err">
@@ -215,8 +215,8 @@
     {/if}
 </ContentCenter>
 
-<ThemeSwitch absolute/>
-<LangSelector absolute/>
+<ThemeSwitch absolute />
+<LangSelector absolute />
 
 <style>
     .btn {

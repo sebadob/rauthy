@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {page} from '$app/state';
-    import type {Snippet} from 'svelte';
+    import { page } from '$app/state';
+    import type { Snippet } from 'svelte';
     import A from '#lib/A.svelte';
-    import {useTrigger} from '#state/callback.svelte.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let {
         ref = $bindable(),
@@ -19,9 +19,9 @@
     let tr = useTrigger();
 
     let current = $derived(
-            highlightWithParams
-                    ? `${page.route.id}${page.url.search}`.startsWith(href)
-                    : page.route.id === href.split('?')[0],
+        highlightWithParams
+            ? `${page.route.id}${page.url.search}`.startsWith(href)
+            : page.route.id === href.split('?')[0],
     );
 
     function onclick() {

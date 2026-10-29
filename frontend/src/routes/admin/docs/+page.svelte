@@ -6,4 +6,4 @@
     <title>Rauthy Documentation</title>
 </svelte:head>
 
-<Documentation/>
+<Documentation />

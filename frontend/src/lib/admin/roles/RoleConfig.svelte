@@ -2,15 +2,15 @@
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {fetchPut} from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchPut } from '#api/fetch.ts';
     import Form from '#lib/form/Form.svelte';
     import LabeledValue from '#lib/LabeledValue.svelte';
-    import type {RoleRequest, RoleResponse} from '#api/types/roles.ts';
-    import {PATTERN_ROLE_SCOPE} from '#utils/patterns.ts';
-    import {untrack} from 'svelte';
-    import {parseJsonValue, stringifyJsonValue} from '#utils/jsonValue.ts';
+    import type { RoleRequest, RoleResponse } from '#api/types/roles.ts';
+    import { PATTERN_ROLE_SCOPE } from '#utils/patterns.ts';
+    import { untrack } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
     import InputArea from '#lib/form/InputArea.svelte';
 
     let {
@@ -72,14 +72,14 @@
     </LabeledValue>
 
     <Input
-            bind:value={name}
-            autocomplete="off"
-            label={ta.roles.name}
-            placeholder={ta.roles.name}
-            disabled={isRauthyAdmin}
-            width="14.5rem"
-            required
-            pattern={PATTERN_ROLE_SCOPE}
+        bind:value={name}
+        autocomplete="off"
+        label={ta.roles.name}
+        placeholder={ta.roles.name}
+        disabled={isRauthyAdmin}
+        width="14.5rem"
+        required
+        pattern={PATTERN_ROLE_SCOPE}
     />
 
     {#if isRauthyAdmin}
@@ -87,10 +87,10 @@
     {:else}
         <div class="meta">
             <InputArea
-                    label={ta.common.jsonMeta}
-                    placeholder={ta.common.jsonMeta}
-                    rows={15}
-                    bind:value={jsonMeta}
+                label={ta.common.jsonMeta}
+                placeholder={ta.common.jsonMeta}
+                rows={15}
+                bind:value={jsonMeta}
             />
         </div>
 
@@ -100,7 +100,7 @@
             </Button>
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {/if}
         </div>
     {/if}

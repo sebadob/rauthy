@@ -1,4 +1,4 @@
-import type {UserValuesRequest} from '#api/types/user.ts';
+import type { UserValuesRequest } from '#api/types/user.ts';
 
 export interface NewUserRegistrationRequest {
     /// Validation: `email`

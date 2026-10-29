@@ -1,22 +1,22 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { onMount } from 'svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
-    import {fetchGet} from '#api/fetch.ts';
+    import { fetchGet } from '#api/fetch.ts';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
     } from '#api/types/user_attrs.ts';
-    import type {ScopeResponse} from '#api/types/scopes.ts';
+    import type { ScopeResponse } from '#api/types/scopes.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
-    import {useParam} from '#state/param.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
     import ScopeDetails from '#lib/admin/scopes/ScopeDetails.svelte';
     import ScopeAddNew from './ScopeAddNew.svelte';
-    import {isDefaultScope} from '#utils/helpers.ts';
-    import {useTrigger} from '#state/callback.svelte.ts';
+    import { isDefaultScope } from '#utils/helpers.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -81,7 +81,7 @@
         let up = direction === 'up';
         if (option === orderOptions[0]) {
             scopes.sort((a, b) =>
-                    up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+                up ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
             );
         } else if (option === orderOptions[1]) {
             scopes.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
@@ -100,26 +100,26 @@
 </script>
 
 <NavSub
-        paddingTop="2.35rem"
-        buttonTilesAriaControls="scopes"
-        width="min(20rem, 100dvw)"
-        thresholdNavSub={700}
+    paddingTop="2.35rem"
+    buttonTilesAriaControls="scopes"
+    width="min(20rem, 100dvw)"
+    thresholdNavSub={700}
 >
     <ButtonAddModal
-            bind:ref={refAddNew}
-            level={scopes.length === 0 ? 1 : 2}
-            bind:closeModal
-            alignRight
+        bind:ref={refAddNew}
+        level={scopes.length === 0 ? 1 : 2}
+        bind:closeModal
+        alignRight
     >
-        <ScopeAddNew onSave={onAddNew} {scopes}/>
+        <ScopeAddNew onSave={onAddNew} {scopes} />
     </ButtonAddModal>
     <OrderSearchBar
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            searchWidth="min(19.5rem, 100dvw - .5rem)"
+        {searchOptions}
+        bind:searchOption
+        bind:value={searchValue}
+        {orderOptions}
+        {onChangeOrder}
+        searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
@@ -147,7 +147,7 @@
 
     <div id="scopes">
         {#if scope}
-            <ScopeDetails {attrs} {scope} {scopes} {onSave}/>
+            <ScopeDetails {attrs} {scope} {scopes} {onSave} />
         {/if}
     </div>
 </ContentAdmin>

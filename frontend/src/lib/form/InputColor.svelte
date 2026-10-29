@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {genKey} from '#utils/helpers.ts';
+    import { genKey } from '#utils/helpers.ts';
 
     let {
         name,
@@ -17,14 +17,14 @@
 </script>
 
 <input
-        type="color"
-        {id}
-        {name}
-        title={label}
-        aria-label={label}
-        bind:value
-        {disabled}
-        aria-disabled={disabled}
+    type="color"
+    {id}
+    {name}
+    title={label}
+    aria-label={label}
+    bind:value
+    {disabled}
+    aria-disabled={disabled}
 />
 
 <style>

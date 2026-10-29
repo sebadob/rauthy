@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type {PamGroupHostsCountResponse, PamGroupResponse} from '#api/types/pam.ts';
+    import type { PamGroupHostsCountResponse, PamGroupResponse } from '#api/types/pam.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import IconInfo from '#icons/IconInfo.svelte';
-    import {slide} from 'svelte/transition';
+    import { slide } from 'svelte/transition';
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {fetchDelete, fetchGet} from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { fetchDelete, fetchGet } from '#api/fetch.ts';
 
     let {
         group,
@@ -22,7 +22,7 @@
     let showInfo = $state(false);
     let hostsCount = $state(0);
     let canBeDeleted = $derived(
-            group.typ === 'generic' ||
+        group.typ === 'generic' ||
             group.typ === 'local' ||
             (group.typ === 'host' && hostsCount === 0),
     );
@@ -69,7 +69,7 @@
     {group.typ}
     <Button invisible onclick={() => (showInfo = !showInfo)}>
         <div class="info" data-selected={showInfo}>
-            <IconInfo width="1.25rem"/>
+            <IconInfo width="1.25rem" />
         </div>
     </Button>
 </LabeledValue>

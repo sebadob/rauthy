@@ -1,11 +1,11 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import { onMount } from 'svelte';
     import Button from '#lib/button/Button.svelte';
-    import {fetchGet, fetchPost} from '#api/fetch.ts';
-    import type {JWKSCerts, JWKSPublicKeyCerts} from '#api/types/oidc.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
+    import type { JWKSCerts, JWKSPublicKeyCerts } from '#api/types/oidc.ts';
     import Expandable from '#lib/Expandable.svelte';
     import LabeledValue from '#lib/LabeledValue.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import IconCheck from '#icons/IconCheck.svelte';
 
     let ta = useI18nAdmin();
@@ -104,7 +104,7 @@
     </Button>
 
     {#if success}
-        <IconCheck/>
+        <IconCheck />
     {/if}
 </div>
 

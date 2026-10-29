@@ -1,12 +1,12 @@
 <script lang="ts">
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Tabs from '#lib/tabs/Tabs.svelte';
-    import type {RoleResponse} from '#api/types/roles.ts';
-    import type {GroupResponse} from '#api/types/groups.ts';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
     import UserInfo from '#lib/admin/users/UserInfo.svelte';
-    import {fetchGet} from '#api/fetch.ts';
-    import type {UserResponse} from '#api/types/user.ts';
+    import { fetchGet } from '#api/fetch.ts';
+    import type { UserResponse } from '#api/types/user.ts';
     import UserAttr from '#lib/admin/users/UserAttr.svelte';
     import UserAddToGroups from './UserAddToGroups.svelte';
     import UserPassword from './UserPassword.svelte';
@@ -14,10 +14,10 @@
     import Devices from '#lib/devices/Devices.svelte';
     import UserForceLogout from './UserForceLogout.svelte';
     import UserDelete from '#lib/admin/users/UserDelete.svelte';
-    import type {AuthProviderTemplate} from '#api/templates/AuthProvider.ts';
-    import {useTrigger} from '#state/callback.svelte.ts';
-    import type {UserValuesConfig} from '#api/templates/UserValuesConfig.ts';
-    import {useSession} from '#state/session.svelte.ts';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         userValuesConfig,
@@ -54,9 +54,9 @@
     const TAB_DELETE = t.common.delete;
 
     let tabs = $derived(
-            isGroupAdmin
-                    ? [TAB_INFO, TAB_PASSWORD, TAB_MFA, TAB_LOGOUT]
-                    : [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE],
+        isGroupAdmin
+            ? [TAB_INFO, TAB_PASSWORD, TAB_MFA, TAB_LOGOUT]
+            : [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE],
     );
     let selected = $state(TAB_INFO);
 
@@ -109,36 +109,36 @@
         {err}
     </div>
 {:else if notManaged}
-    <UserAddToGroups {userId} {groups} onAdded={onSaveLocal}/>
+    <UserAddToGroups {userId} {groups} onAdded={onSaveLocal} />
 {:else}
     <div class="flex">
-        <Tabs {tabs} bind:selected bind:focusFirst/>
+        <Tabs {tabs} bind:selected bind:focusFirst />
     </div>
 {/if}
 
 {#if user && !err}
     {#if selected === TAB_INFO}
         <UserInfo
-                bind:user
-                config={userValuesConfig}
-                {providers}
-                {roles}
-                {groups}
-                {isGroupAdmin}
-                onSave={onSaveLocal}
+            bind:user
+            config={userValuesConfig}
+            {providers}
+            {roles}
+            {groups}
+            {isGroupAdmin}
+            onSave={onSaveLocal}
         />
     {:else if selected === TAB_ATTR}
-        <UserAttr {user} {onSave}/>
+        <UserAttr {user} {onSave} />
     {:else if selected === TAB_PASSWORD}
-        <UserPassword {user} {onSave}/>
+        <UserPassword {user} {onSave} />
     {:else if selected === TAB_MFA}
-        <UserMfa {user} {onSave}/>
+        <UserMfa {user} {onSave} />
     {:else if selected === TAB_DEVICES}
-        <Devices {userId}/>
+        <Devices {userId} />
     {:else if selected === TAB_LOGOUT}
-        <UserForceLogout {userId}/>
+        <UserForceLogout {userId} />
     {:else if selected === TAB_DELETE}
-        <UserDelete {userId} {onSave}/>
+        <UserDelete {userId} {onSave} />
     {/if}
 {/if}
 

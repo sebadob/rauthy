@@ -6,4 +6,4 @@
     <title>Rauthy Events</title>
 </svelte:head>
 
-<EventsArchive/>
+<EventsArchive />

@@ -1,10 +1,10 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import {isDefaultScope} from '#utils/helpers.ts';
-    import type {ScopeResponse} from '#api/types/scopes.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {fetchDelete} from '#api/fetch.ts';
+    import { isDefaultScope } from '#utils/helpers.ts';
+    import type { ScopeResponse } from '#api/types/scopes.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchDelete } from '#api/fetch.ts';
 
     let {
         scope,

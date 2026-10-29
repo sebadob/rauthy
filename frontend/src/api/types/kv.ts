@@ -1,4 +1,4 @@
-import type {JsonValue} from '#utils/jsonValue.ts';
+import type { JsonValue } from '#utils/jsonValue.ts';
 
 export interface KVNamespaceRequest {
     /// Validation: PATTERN_GROUP

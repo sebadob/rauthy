@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type {Snippet} from 'svelte';
+    import type { Snippet } from 'svelte';
     import Main from '#lib/Main.svelte';
     import Button from '#lib/button/Button.svelte';
     import NavSide from '#lib/nav/NavSide.svelte';
-    import {useSession} from '#state/session.svelte.ts';
-    import {fetchGet} from '#api/fetch.ts';
+    import { useSession } from '#state/session.svelte.ts';
+    import { fetchGet } from '#api/fetch.ts';
     import Events from '#lib/admin/events/Events.svelte';
-    import {initI18nAdmin, useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { initI18nAdmin, useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         children,
@@ -49,7 +49,7 @@
     }
 </script>
 
-<svelte:window bind:innerWidth/>
+<svelte:window bind:innerWidth />
 
 <svelte:head>
     <title>Rauthy Admin</title>
@@ -62,7 +62,7 @@
                 {@html ta.error.noAdmin}
             </div>
             <Button onclick={() => (window.location.href = '/auth/v1/account')}
-            >{ta.common.account}</Button
+                >{ta.common.account}</Button
             >
         </div>
     </div>
@@ -76,14 +76,14 @@
         </div>
     </div>
 {:else if isAdmin}
-    <NavSide/>
+    <NavSide />
     <Main>
         <div class="content">
             {@render children()}
         </div>
         {#if innerWidth && innerWidth > 1024}
             <div class="events">
-                <Events/>
+                <Events />
             </div>
         {/if}
     </Main>

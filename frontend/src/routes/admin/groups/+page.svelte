@@ -6,4 +6,4 @@
     <title>Rauthy Groups</title>
 </svelte:head>
 
-<Groups/>
+<Groups />

@@ -1,16 +1,16 @@
 <script lang="ts">
-    import {formatDateFromTs} from '#utils/helpers.ts';
-    import type {SessionResponse} from '#api/types/session.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import type { SessionResponse } from '#api/types/session.ts';
     import CheckIcon from '#lib/CheckIcon.svelte';
     import Expandable from '#lib/Expandable.svelte';
     import Tooltip from '#lib/Tooltip.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import Button from '#lib/button/Button.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import IconTrash from '#icons/IconTrash.svelte';
-    import {fetchDelete} from '#api/fetch.ts';
-    import {useSession} from '#state/session.svelte.ts';
+    import { fetchDelete } from '#api/fetch.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         session,
@@ -80,7 +80,7 @@
                         <Button invisible onclick={deleteSession}>
                             <Tooltip text={t.common.delete}>
                                 <div class="trash">
-                                    <IconTrash width="1.2rem"/>
+                                    <IconTrash width="1.2rem" />
                                 </div>
                             </Tooltip>
                         </Button>
@@ -115,7 +115,7 @@
             </LabeledValue>
 
             <LabeledValue label="MFA">
-                <CheckIcon checked={session.is_mfa}/>
+                <CheckIcon checked={session.is_mfa} />
             </LabeledValue>
 
             {#if isAdmin}

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {PATTERN_URI} from '#utils/patterns.ts';
+    import { PATTERN_URI } from '#utils/patterns.ts';
     import Input from '#lib/form/Input.svelte';
 
     let {
@@ -20,45 +20,45 @@
 </script>
 
 <Input
-        bind:value={issuer}
-        autocomplete="off"
-        label="Issuer URL"
-        placeholder="Issuer URL"
-        required
-        pattern={PATTERN_URI}
-        width={inputWidth}
-        {disabled}
+    bind:value={issuer}
+    autocomplete="off"
+    label="Issuer URL"
+    placeholder="Issuer URL"
+    required
+    pattern={PATTERN_URI}
+    width={inputWidth}
+    {disabled}
 />
 <Input
-        typ="url"
-        bind:value={authorizationEndpoint}
-        autocomplete="off"
-        label="Authorization Endpoint"
-        placeholder="Authorization Endpoint"
-        required
-        pattern={PATTERN_URI}
-        width={inputWidth}
-        {disabled}
+    typ="url"
+    bind:value={authorizationEndpoint}
+    autocomplete="off"
+    label="Authorization Endpoint"
+    placeholder="Authorization Endpoint"
+    required
+    pattern={PATTERN_URI}
+    width={inputWidth}
+    {disabled}
 />
 <Input
-        typ="url"
-        bind:value={tokenEndpoint}
-        autocomplete="off"
-        label="Token Endpoint"
-        placeholder="Token Endpoint"
-        required
-        pattern={PATTERN_URI}
-        width={inputWidth}
-        {disabled}
+    typ="url"
+    bind:value={tokenEndpoint}
+    autocomplete="off"
+    label="Token Endpoint"
+    placeholder="Token Endpoint"
+    required
+    pattern={PATTERN_URI}
+    width={inputWidth}
+    {disabled}
 />
 <Input
-        typ="url"
-        bind:value={userinfoEndpoint}
-        autocomplete="off"
-        label="Userinfo Endpoint"
-        placeholder="Userinfo Endpoint"
-        required
-        pattern={PATTERN_URI}
-        width={inputWidth}
-        {disabled}
+    typ="url"
+    bind:value={userinfoEndpoint}
+    autocomplete="off"
+    label="Userinfo Endpoint"
+    placeholder="Userinfo Endpoint"
+    required
+    pattern={PATTERN_URI}
+    width={inputWidth}
+    {disabled}
 />

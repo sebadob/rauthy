@@ -6,4 +6,4 @@
     <title>Rauthy Blacklist</title>
 </svelte:head>
 
-<Blacklist/>
+<Blacklist />

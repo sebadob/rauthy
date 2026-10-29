@@ -1,5 +1,5 @@
-import type {MfaPurpose} from '#api/types/mfa.ts';
-import type {OtpResponse} from '#api/types/otp.ts';
+import type { MfaPurpose } from '#api/types/mfa.ts';
+import type { OtpResponse } from '#api/types/otp.ts';
 
 export type OtpAdditionalData = undefined | OtpLoginFinishResponse | OtpServiceReq;
 

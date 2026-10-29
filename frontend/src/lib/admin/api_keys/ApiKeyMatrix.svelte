@@ -224,16 +224,16 @@
         <div class="row">
             {@render btnGroup(row[0])}
             <div class="center">
-                <InputCheckbox ariaLabel={`${row[0]}: create`} bind:checked={matrix[i][1]}/>
+                <InputCheckbox ariaLabel={`${row[0]}: create`} bind:checked={matrix[i][1]} />
             </div>
             <div class="center">
-                <InputCheckbox ariaLabel={`${row[0]}: read`} bind:checked={matrix[i][2]}/>
+                <InputCheckbox ariaLabel={`${row[0]}: read`} bind:checked={matrix[i][2]} />
             </div>
             <div class="center">
-                <InputCheckbox ariaLabel={`${row[0]}: update`} bind:checked={matrix[i][3]}/>
+                <InputCheckbox ariaLabel={`${row[0]}: update`} bind:checked={matrix[i][3]} />
             </div>
             <div class="center">
-                <InputCheckbox ariaLabel={`${row[0]}: delete`} bind:checked={matrix[i][4]}/>
+                <InputCheckbox ariaLabel={`${row[0]}: delete`} bind:checked={matrix[i][4]} />
             </div>
         </div>
     {/each}

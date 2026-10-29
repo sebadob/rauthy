@@ -1,15 +1,15 @@
 <script lang="ts">
-    import type {DeviceRequest, DeviceResponse} from '#api/types/device.ts';
-    import {formatDateFromTs} from '#utils/helpers.ts';
+    import type { DeviceRequest, DeviceResponse } from '#api/types/device.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
     import IconStop from '#icons/IconStop.svelte';
     import Input from '#lib/form/Input.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {untrack} from 'svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { untrack } from 'svelte';
     import Expandable from '#lib/Expandable.svelte';
-    import {PATTERN_CLIENT_NAME} from '#utils/patterns.ts';
+    import { PATTERN_CLIENT_NAME } from '#utils/patterns.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {fetchDelete, fetchPut} from '#api/fetch.ts';
+    import { fetchDelete, fetchPut } from '#api/fetch.ts';
 
     let {
         device = $bindable(),
@@ -67,14 +67,14 @@
 
             <div class="row">
                 <Input
-                        bind:value={name}
-                        autocomplete="off"
-                        width="17rem"
-                        label={t.account.deviceName}
-                        placeholder={t.account.deviceName}
-                        onEnter={onSaveName}
-                        pattern={PATTERN_CLIENT_NAME}
-                        required
+                    bind:value={name}
+                    autocomplete="off"
+                    width="17rem"
+                    label={t.account.deviceName}
+                    placeholder={t.account.deviceName}
+                    onEnter={onSaveName}
+                    pattern={PATTERN_CLIENT_NAME}
+                    required
                 />
                 {#if name !== device.name}
                     <div class="saveButton">
@@ -101,7 +101,7 @@
                     {#snippet button()}
                         <Button ariaLabel={t.common.delete} invisible onclick={onRevokeRefresh}>
                             <div title={t.common.delete}>
-                                <IconStop/>
+                                <IconStop />
                             </div>
                         </Button>
                     {/snippet}

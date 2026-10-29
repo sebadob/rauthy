@@ -1,4 +1,4 @@
-import type {PamGroupResponse} from '#api/types/pam.ts';
+import type { PamGroupResponse } from '#api/types/pam.ts';
 
 export interface PamGroupsSorted {
     host: PamGroupResponse[];

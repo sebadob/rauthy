@@ -2,9 +2,9 @@
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {fetchGet, fetchPut} from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
     import Form from '#lib/form/Form.svelte';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import {
@@ -23,17 +23,17 @@
         type ScimClientRequestResponse,
         type UpdateClientRequest,
     } from '#api/types/clients.ts';
-    import type {JwkKeyPairAlg} from '#api/types/oidc.ts';
+    import type { JwkKeyPairAlg } from '#api/types/oidc.ts';
     import InputTags from '#lib/form/InputTags.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import SelectList from '#lib/select_list/SelectList.svelte';
-    import type {SelectItem} from '#lib/select_list/props.ts';
-    import {slide} from 'svelte/transition';
+    import type { SelectItem } from '#lib/select_list/props.ts';
+    import { slide } from 'svelte/transition';
     import Options from '#lib/Options.svelte';
     import InputPassword from '#lib/form/InputPassword.svelte';
     import InputArea from '#lib/form/InputArea.svelte';
-    import {parseJsonValue, stringifyJsonValue} from '#utils/jsonValue.ts';
-    import {untrack} from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
+    import { untrack } from 'svelte';
     import {
         invalidPostLogoutRedirectUrisMsg,
         invalidRedirectUrisMsg,
@@ -66,24 +66,24 @@
     let uri: string = $state(client.client_uri || '');
     let contacts: string[] = $state(client.contacts ? Array.from(client.contacts) : []);
     let origins: string[] = $state(
-            client.allowed_origins ? Array.from(client.allowed_origins) : [],
+        client.allowed_origins ? Array.from(client.allowed_origins) : [],
     );
     let redirectURIs: string[] = $state(Array.from(client.redirect_uris));
     let postLogoutRedirectURIs: string[] = $state(
-            client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : [],
+        client.post_logout_redirect_uris ? Array.from(client.post_logout_redirect_uris) : [],
     );
     // A client stored before the stricter validation may still contain an invalid (post-logout)
     // redirect URI, which must be replaced before the client can be saved.
     let redirectURIsErr = $derived(
-            invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri) || '',
+        invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri) || '',
     );
     let postLogoutRedirectURIsErr = $derived(
-            invalidPostLogoutRedirectUrisMsg(postLogoutRedirectURIs, ta.validation.redirectUri) || '',
+        invalidPostLogoutRedirectUrisMsg(postLogoutRedirectURIs, ta.validation.redirectUri) || '',
     );
     let backchannel_logout_uri: string = $state(client.backchannel_logout_uri || '');
     let restrict_group_prefix: string = $state(client.restrict_group_prefix || '');
     let allowedResources: string[] = $state(
-            client.allowed_resources ? Array.from(client.allowed_resources) : [],
+        client.allowed_resources ? Array.from(client.allowed_resources) : [],
     );
     let defaultAud: string[] = $state(client.default_aud ? Array.from(client.default_aud) : []);
 
@@ -111,26 +111,26 @@
     let authCodeLifetime: string = $state(client.auth_code_lifetime.toString());
 
     let scopes: SelectItem[] = $state(
-            untrack(() =>
-                    scopesAll.map(name => {
-                        let i: SelectItem = {
-                            name,
-                            selected: client.scopes.includes(name) || false,
-                        };
-                        return i;
-                    }),
-            ),
+        untrack(() =>
+            scopesAll.map(name => {
+                let i: SelectItem = {
+                    name,
+                    selected: client.scopes.includes(name) || false,
+                };
+                return i;
+            }),
+        ),
     );
     let defaultScopes: SelectItem[] = $state(
-            untrack(() =>
-                    scopesAll.map(name => {
-                        let i: SelectItem = {
-                            name,
-                            selected: client.default_scopes.includes(name) || false,
-                        };
-                        return i;
-                    }),
-            ),
+        untrack(() =>
+            scopesAll.map(name => {
+                let i: SelectItem = {
+                    name,
+                    selected: client.default_scopes.includes(name) || false,
+                };
+                return i;
+            }),
+        ),
     );
     let challenges = $state({
         plain: client.challenges?.includes('plain') || false,
@@ -157,8 +157,8 @@
             defaultAud = client.default_aud ? Array.from(client.default_aud) : [];
             redirectURIs = Array.from(client.redirect_uris);
             postLogoutRedirectURIs = client.post_logout_redirect_uris
-                    ? Array.from(client.post_logout_redirect_uris)
-                    : [];
+                ? Array.from(client.post_logout_redirect_uris)
+                : [];
 
             flows.authorizationCode = client.flows_enabled.includes('authorization_code');
             flows.clientCredentials = client.flows_enabled.includes('client_credentials');
@@ -237,7 +237,7 @@
             allowed_origins: origins.length > 0 ? origins : undefined,
             redirect_uris: redirectURIs,
             post_logout_redirect_uris:
-                    postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
+                postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
 
             flows_enabled: [],
             access_token_alg: accessTokenAlg,
@@ -296,9 +296,9 @@
                 bearer_token: scim.bearer_token.trim(),
                 sync_groups: scim.sync_groups,
                 group_sync_prefix:
-                        scim.sync_groups && scim.group_sync_prefix?.length
-                                ? scim.group_sync_prefix
-                                : undefined,
+                    scim.sync_groups && scim.group_sync_prefix?.length
+                        ? scim.group_sync_prefix
+                        : undefined,
             };
         }
 
@@ -325,25 +325,25 @@
 
         <p class="desc">{ta.clients.descName}</p>
         <Input
-                bind:value={name}
-                autocomplete="off"
-                label={ta.clients.name}
-                placeholder={ta.clients.name}
-                width={inputWidth}
-                pattern={PATTERN_CLIENT_NAME}
+            bind:value={name}
+            autocomplete="off"
+            label={ta.clients.name}
+            placeholder={ta.clients.name}
+            width={inputWidth}
+            pattern={PATTERN_CLIENT_NAME}
         />
 
         <p class="desc">{ta.clients.descClientUri}</p>
         <Input
-                typ="url"
-                bind:value={uri}
-                autocomplete="off"
-                label="URI"
-                placeholder="URI"
-                width={inputWidth}
-                pattern={PATTERN_CLIENT_URI}
+            typ="url"
+            bind:value={uri}
+            autocomplete="off"
+            label="URI"
+            placeholder="URI"
+            width={inputWidth}
+            pattern={PATTERN_CLIENT_URI}
         />
-        <InputTags bind:values={contacts} label={ta.common.contact} pattern={PATTERN_CONTACT}/>
+        <InputTags bind:values={contacts} label={ta.common.contact} pattern={PATTERN_CONTACT} />
 
         <div style:height=".5rem"></div>
 
@@ -360,12 +360,12 @@
         </InputCheckbox>
         <p style:margin-bottom="-.25rem">{ta.clients.descGroupPrefix}</p>
         <Input
-                bind:value={restrict_group_prefix}
-                autocomplete="off"
-                label={ta.clients.groupLoginPrefix}
-                placeholder={ta.clients.groupLoginPrefix}
-                width={inputWidth}
-                pattern={PATTERN_GROUP}
+            bind:value={restrict_group_prefix}
+            autocomplete="off"
+            label={ta.clients.groupLoginPrefix}
+            placeholder={ta.clients.groupLoginPrefix}
+            width={inputWidth}
+            pattern={PATTERN_GROUP}
         />
 
         <p class="mb-0"><b>Authentication Flows</b></p>
@@ -373,8 +373,8 @@
             authorization_code
         </InputCheckbox>
         <InputCheckbox
-                ariaLabel="urn:ietf:params:oauth:grant-type:device_code"
-                bind:checked={flows.deviceCode}
+            ariaLabel="urn:ietf:params:oauth:grant-type:device_code"
+            bind:checked={flows.deviceCode}
         >
             device_code
         </InputCheckbox>
@@ -391,8 +391,8 @@
             refresh_token
         </InputCheckbox>
         <InputCheckbox
-                ariaLabel="urn:ietf:params:oauth:grant-type:token-exchange"
-                bind:checked={flows.tokenExchange}
+            ariaLabel="urn:ietf:params:oauth:grant-type:token-exchange"
+            bind:checked={flows.tokenExchange}
         >
             token_exchange
         </InputCheckbox>
@@ -414,20 +414,20 @@
         <p class="mb-0"><b>Origin</b></p>
         <p class="desc">{ta.clients.descOrigin}</p>
         <InputTags
-                bind:values={origins}
-                label="Allowed Origins"
-                errMsg={ta.validation.origin}
-                pattern={PATTERN_ORIGIN}
+            bind:values={origins}
+            label="Allowed Origins"
+            errMsg={ta.validation.origin}
+            pattern={PATTERN_ORIGIN}
         />
 
         <p class="desc">{@html ta.clients.descUri}</p>
         <InputTags
-                bind:values={redirectURIs}
-                label="Redirect URIs"
-                errMsg={ta.validation.uri}
-                required={flows.authorizationCode}
-                pattern={PATTERN_CLIENT_URI}
-                validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
+            bind:values={redirectURIs}
+            label="Redirect URIs"
+            errMsg={ta.validation.uri}
+            required={flows.authorizationCode}
+            pattern={PATTERN_CLIENT_URI}
+            validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
         />
         {#if redirectURIsErr}
             <div class="err" transition:slide={{ duration: 150 }}>
@@ -435,11 +435,11 @@
             </div>
         {/if}
         <InputTags
-                bind:values={postLogoutRedirectURIs}
-                label="Post Logout Redirect URIs"
-                errMsg={ta.validation.uri}
-                pattern={PATTERN_CLIENT_URI}
-                validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
+            bind:values={postLogoutRedirectURIs}
+            label="Post Logout Redirect URIs"
+            errMsg={ta.validation.uri}
+            pattern={PATTERN_CLIENT_URI}
+            validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
         />
         {#if postLogoutRedirectURIsErr}
             <div class="err" transition:slide={{ duration: 150 }}>
@@ -451,17 +451,17 @@
         <p class="mb-0"><b>Resource Indicators</b></p>
         <p class="desc">{ta.clients.descAllowedResources}</p>
         <InputTags
-                bind:values={allowedResources}
-                label={ta.clients.allowedResources}
-                errMsg={ta.validation.uri}
-                pattern={PATTERN_RESOURCE}
+            bind:values={allowedResources}
+            label={ta.clients.allowedResources}
+            errMsg={ta.validation.uri}
+            pattern={PATTERN_RESOURCE}
         />
         <p class="desc">{ta.clients.descDefaultAud}</p>
         <InputTags
-                bind:values={defaultAud}
-                label={ta.clients.defaultAud}
-                errMsg={ta.validation.uri}
-                pattern={PATTERN_RESOURCE}
+            bind:values={defaultAud}
+            label={ta.clients.defaultAud}
+            errMsg={ta.validation.uri}
+            pattern={PATTERN_RESOURCE}
         />
 
         <div style:height=".5rem"></div>
@@ -478,15 +478,15 @@
         <p class="mb-0"><b>Tokens</b></p>
         <p>{ta.clients.tokenLifetime.p1}</p>
         <Input
-                typ="number"
-                bind:value={tokenLifetime}
-                autocomplete="off"
-                label="Token Lifetime"
-                placeholder="Token Lifetime"
-                width={inputWidth}
-                min="10"
-                max="86400"
-                errMsg="10 <= Token Lifetime <= 86400"
+            typ="number"
+            bind:value={tokenLifetime}
+            autocomplete="off"
+            label="Token Lifetime"
+            placeholder="Token Lifetime"
+            width={inputWidth}
+            min="10"
+            max="86400"
+            errMsg="10 <= Token Lifetime <= 86400"
         />
 
         <div style:height=".5rem"></div>
@@ -494,33 +494,33 @@
         <p>{ta.clients.tokenLifetime.p3}</p>
         <LabeledValue label="Access Token Algorithm">
             <Options
-                    ariaLabel="Access Token Algorithm"
-                    options={optionsAlgs}
-                    bind:value={accessTokenAlg}
-                    borderless
+                ariaLabel="Access Token Algorithm"
+                options={optionsAlgs}
+                bind:value={accessTokenAlg}
+                borderless
             />
         </LabeledValue>
         <LabeledValue label="ID Token Algorithm">
             <Options
-                    ariaLabel="ID Token Algorithm"
-                    options={optionsAlgs}
-                    bind:value={idTokenAlg}
-                    borderless
+                ariaLabel="ID Token Algorithm"
+                options={optionsAlgs}
+                bind:value={idTokenAlg}
+                borderless
             />
         </LabeledValue>
 
         <div style:height=".5rem"></div>
         <p>{ta.clients.descAuthCode}</p>
         <Input
-                typ="number"
-                bind:value={authCodeLifetime}
-                autocomplete="off"
-                label="Auth Code Lifetime"
-                placeholder="Auth Code Lifetime"
-                width={inputWidth}
-                min="10"
-                max="300"
-                errMsg="10 <= Auth Code Lifetime <= 300"
+            typ="number"
+            bind:value={authCodeLifetime}
+            autocomplete="off"
+            label="Auth Code Lifetime"
+            placeholder="Auth Code Lifetime"
+            width={inputWidth}
+            min="10"
+            max="300"
+            errMsg="10 <= Auth Code Lifetime <= 300"
         />
 
         <div style:height=".5rem"></div>
@@ -528,10 +528,10 @@
         <p class="desc">{ta.clients.claimsDesc}</p>
         <div class="claims">
             <InputArea
-                    label={ta.clients.claims}
-                    placeholder={ta.clients.claims}
-                    rows={10}
-                    bind:value={jsonClaims}
+                label={ta.clients.claims}
+                placeholder={ta.clients.claims}
+                rows={10}
+                bind:value={jsonClaims}
             />
         </div>
         <InputCheckbox ariaLabel={ta.clients.claimsAtRoot} bind:checked={claimsAtRoot}>
@@ -541,9 +541,9 @@
             <p class="warn">
                 {ta.clients.claimsAtRootWarning}
                 <a
-                        href="https://www.iana.org/assignments/jwt/jwt.xhtml"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                    target="_blank"
+                    rel="noopener noreferrer"
                 >
                     IANA JWT Claims Registry
                 </a>
@@ -553,32 +553,32 @@
         <p class="mb-0"><b>Backchannel Logout</b></p>
         <p class="desc">
             {@html ta.clients.backchannelLogout.replace(
-                    '{{ OIDC_BCL }}',
-                    '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank">OpenID Connect Back-Channel Logout</a>',
+                '{{ OIDC_BCL }}',
+                '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank">OpenID Connect Back-Channel Logout</a>',
             )}
         </p>
         <Input
-                typ="url"
-                bind:value={backchannel_logout_uri}
-                autocomplete="off"
-                label="Backchannel Logout URI"
-                placeholder="Backchannel Logout URI"
-                width={inputWidth}
-                pattern={PATTERN_URI}
-                disabled={client.id === 'rauthy'}
+            typ="url"
+            bind:value={backchannel_logout_uri}
+            autocomplete="off"
+            label="Backchannel Logout URI"
+            placeholder="Backchannel Logout URI"
+            width={inputWidth}
+            pattern={PATTERN_URI}
+            disabled={client.id === 'rauthy'}
         />
 
         <p class="mb-0"><b>SCIM</b></p>
         <p class="desc" style:margin-bottom=".5rem">
             {@html ta.clients.scim.desc.replace(
-                    '{{ SCIM_LINK }}',
-                    '<a href="https://www.rfc-editor.org/rfc/rfc7644" target="_blank">SCIM v2</a>',
+                '{{ SCIM_LINK }}',
+                '<a href="https://www.rfc-editor.org/rfc/rfc7644" target="_blank">SCIM v2</a>',
             )}
         </p>
         <InputCheckbox
-                ariaLabel={ta.clients.scim.enable}
-                disabled={client.id === 'rauthy'}
-                bind:checked={scimEnabled}
+            ariaLabel={ta.clients.scim.enable}
+            disabled={client.id === 'rauthy'}
+            bind:checked={scimEnabled}
         >
             {ta.clients.scim.enable}
         </InputCheckbox>
@@ -597,31 +597,31 @@
                     {@html ta.clients.scim.baseUri}
                 </p>
                 <Input
-                        typ="url"
-                        bind:value={scim.base_uri}
-                        autocomplete="off"
-                        label="SCIM Base URI"
-                        placeholder="SCIM Base URI"
-                        width={inputWidth}
-                        pattern={PATTERN_CLIENT_URI}
-                        required={scimEnabled}
+                    typ="url"
+                    bind:value={scim.base_uri}
+                    autocomplete="off"
+                    label="SCIM Base URI"
+                    placeholder="SCIM Base URI"
+                    width={inputWidth}
+                    pattern={PATTERN_CLIENT_URI}
+                    required={scimEnabled}
                 />
                 <InputPassword
-                        bind:value={scim.bearer_token}
-                        autocomplete="off"
-                        label="Bearer Token"
-                        placeholder="Bearer Token"
-                        width={inputWidth}
-                        pattern={PATTERN_URI}
-                        maxLength={2048}
-                        required={scimEnabled}
+                    bind:value={scim.bearer_token}
+                    autocomplete="off"
+                    label="Bearer Token"
+                    placeholder="Bearer Token"
+                    width={inputWidth}
+                    pattern={PATTERN_URI}
+                    maxLength={2048}
+                    required={scimEnabled}
                 />
 
                 <div style:height=".5rem"></div>
                 <InputCheckbox
-                        ariaLabel={ta.clients.scim.groupSync}
-                        disabled={client.id === 'rauthy'}
-                        bind:checked={scim.sync_groups}
+                    ariaLabel={ta.clients.scim.groupSync}
+                    disabled={client.id === 'rauthy'}
+                    bind:checked={scim.sync_groups}
                 >
                     {ta.clients.scim.groupSync}
                 </InputCheckbox>
@@ -631,12 +631,12 @@
                             {@html ta.clients.scim.groupSyncPrefixDesc}
                         </p>
                         <Input
-                                bind:value={scim.group_sync_prefix}
-                                autocomplete="off"
-                                label={ta.clients.scim.groupSyncPrefix}
-                                placeholder={ta.clients.scim.groupSyncPrefix}
-                                width={inputWidth}
-                                pattern={PATTERN_GROUP}
+                            bind:value={scim.group_sync_prefix}
+                            autocomplete="off"
+                            label={ta.clients.scim.groupSyncPrefix}
+                            placeholder={ta.clients.scim.groupSyncPrefix}
+                            width={inputWidth}
+                            pattern={PATTERN_GROUP}
                         />
                     </div>
                 {/if}
@@ -649,7 +649,7 @@
             </Button>
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {/if}
         </div>
 

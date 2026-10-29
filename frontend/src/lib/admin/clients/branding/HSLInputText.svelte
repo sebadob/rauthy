@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {PATTERN_CSS_VALUE_LOOSE} from '#utils/patterns.ts';
+    import { PATTERN_CSS_VALUE_LOOSE } from '#utils/patterns.ts';
     import Input from '#lib/form/Input.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         label,
@@ -18,19 +18,19 @@
 
 <div class="container" style:--color={value}>
     <Input
-            {label}
-            placeholder={label}
-            errMsg={ta.validation.css}
-            width="17.5rem"
-            bind:value
-            required
-            pattern={PATTERN_CSS_VALUE_LOOSE}
+        {label}
+        placeholder={label}
+        errMsg={ta.validation.css}
+        width="17.5rem"
+        bind:value
+        required
+        pattern={PATTERN_CSS_VALUE_LOOSE}
     />
     <div role="none" class="mask" onclick={() => ref?.click()}>
         <div class="colorWrapper">
             <div class="color"></div>
         </div>
-        <input bind:this={ref} type="color" bind:value/>
+        <input bind:this={ref} type="color" bind:value />
     </div>
 </div>
 

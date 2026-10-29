@@ -2,19 +2,19 @@
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {fetchPut} from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchPut } from '#api/fetch.ts';
     import Form from '#lib/form/Form.svelte';
     import type {
         UserAttrConfigRequest,
         UserAttrConfigValueResponse,
     } from '#api/types/user_attrs.ts';
-    import {PATTERN_ATTR, PATTERN_ATTR_DESC} from '#utils/patterns.ts';
+    import { PATTERN_ATTR, PATTERN_ATTR_DESC } from '#utils/patterns.ts';
     import CheckIcon from '#lib/CheckIcon.svelte';
-    import {slide} from 'svelte/transition';
-    import {untrack} from 'svelte';
-    import {parseJsonValue, stringifyJsonValue} from '#utils/jsonValue.ts';
+    import { slide } from 'svelte/transition';
+    import { untrack } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
 
     let {
         attr,
@@ -89,42 +89,42 @@
 
 <Form action={`/auth/v1/users/attr/${attr.name}`} {onSubmit}>
     <Input
-            bind:value={name}
-            autocomplete="off"
-            label={ta.attrs.name}
-            placeholder={ta.attrs.name}
-            required
-            pattern={PATTERN_ATTR}
-            {width}
+        bind:value={name}
+        autocomplete="off"
+        label={ta.attrs.name}
+        placeholder={ta.attrs.name}
+        required
+        pattern={PATTERN_ATTR}
+        {width}
     />
     <Input
-            bind:value={desc}
-            autocomplete="off"
-            label={ta.attrs.desc}
-            placeholder={ta.attrs.desc}
-            pattern={PATTERN_ATTR_DESC}
-            {width}
+        bind:value={desc}
+        autocomplete="off"
+        label={ta.attrs.desc}
+        placeholder={ta.attrs.desc}
+        pattern={PATTERN_ATTR_DESC}
+        {width}
     />
     <Input
-            bind:value={defaultValue}
-            autocomplete="off"
-            label={ta.attrs.defaultValue}
-            placeholder={ta.attrs.defaultValue}
-            {width}
+        bind:value={defaultValue}
+        autocomplete="off"
+        label={ta.attrs.defaultValue}
+        placeholder={ta.attrs.defaultValue}
+        {width}
     />
 
     <div class="editableRow">
         <div class="flex gap-05">
             {ta.attrs.userEditable}
-            <CheckIcon checked={userEditable}/>
+            <CheckIcon checked={userEditable} />
         </div>
 
         {#if !userEditable}
             <div class="editable">
                 <Button
-                        ariaLabel={ta.attrs.makeEditable}
-                        level={showMakeEditable ? 3 : 2}
-                        onclick={() => (showMakeEditable = !showMakeEditable)}
+                    ariaLabel={ta.attrs.makeEditable}
+                    level={showMakeEditable ? 3 : 2}
+                    onclick={() => (showMakeEditable = !showMakeEditable)}
                 >
                     {ta.attrs.makeEditable}
                 </Button>
@@ -141,9 +141,9 @@
                     <p class="err">{ta.attrs.makeEditableP3}</p>
 
                     <Button
-                            ariaLabel={ta.attrs.makeEditable}
-                            level={-1}
-                            onclick={submitMakeEditable}
+                        ariaLabel={ta.attrs.makeEditable}
+                        level={-1}
+                        onclick={submitMakeEditable}
                     >
                         {ta.attrs.makeEditable}
                     </Button>
@@ -158,7 +158,7 @@
         </Button>
 
         {#if success}
-            <IconCheck/>
+            <IconCheck />
         {/if}
     </div>
 

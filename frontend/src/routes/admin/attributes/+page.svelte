@@ -6,4 +6,4 @@
     <title>Rauthy Attributes</title>
 </svelte:head>
 
-<Attributes/>
+<Attributes />

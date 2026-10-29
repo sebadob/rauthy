@@ -2,19 +2,19 @@
     import IconEnvelope from '#icons/IconEnvelope.svelte';
     import Button from '#lib/button/Button.svelte';
     import Modal from '#lib/Modal.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Options from '#lib/Options.svelte';
     import EditorInteractive from '#lib/text_edit/EditorInteractive.svelte';
-    import type {GroupResponse} from '#api/types/groups.ts';
-    import type {RoleResponse} from '#api/types/roles.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import type { RoleResponse } from '#api/types/roles.ts';
     import Input from '#lib/form/Input.svelte';
-    import type {EmailJobRequest} from '#api/types/email.ts';
+    import type { EmailJobRequest } from '#api/types/email.ts';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from '#utils/form.ts';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
-    import {fetchPost} from '#api/fetch.ts';
+    import { fetchPost } from '#api/fetch.ts';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {useSession} from '#state/session.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         groups,
@@ -33,7 +33,7 @@
     // admin UI without the full `rauthy_admin` role.
     let isGroupAdmin = $derived(!session.isAdmin());
     let availableGroups = $derived(
-            isGroupAdmin ? groups.filter(g => session.managesGroup(g.name)) : groups,
+        isGroupAdmin ? groups.filter(g => session.managesGroup(g.name)) : groups,
     );
 
     let showModal = $state(false);
@@ -58,10 +58,10 @@
 
     let isFilterNone = $derived(filter === ta.email.filterType[0]);
     let isFilterGroup = $derived(
-            filter === ta.email.filterType[1] || filter === ta.email.filterType[2],
+        filter === ta.email.filterType[1] || filter === ta.email.filterType[2],
     );
     let isFilterRole = $derived(
-            filter === ta.email.filterType[3] || filter === ta.email.filterType[4],
+        filter === ta.email.filterType[3] || filter === ta.email.filterType[4],
     );
 
     $effect(() => {
@@ -135,7 +135,7 @@
 </script>
 
 <Button ariaLabel={ta.email.sendMail} onclick={() => (showModal = true)} invisible>
-    <IconEnvelope/>
+    <IconEnvelope />
 </Button>
 
 <Modal bind:showModal bind:closeModal>
@@ -147,10 +147,10 @@
 
             {#if scheduled}
                 <InputDateTimeCombo
-                        bind:value={schedDate}
-                        bind:timeValue={schedTime}
-                        min={fmtDateInput()}
-                        withTime
+                    bind:value={schedDate}
+                    bind:timeValue={schedTime}
+                    min={fmtDateInput()}
+                    withTime
                 />
             {/if}
         </div>
@@ -165,37 +165,37 @@
                 <!-- a group admin is locked to "In Group" for a group it manages -->
                 <div class="ms-05">{ta.email.filterType[1]}:</div>
                 <Options
-                        ariaLabel={ta.email.userFilter}
-                        options={availableGroups.map(g => g.name)}
-                        bind:value={group}
-                        borderless
-                        withSearch={availableGroups.length > 7}
+                    ariaLabel={ta.email.userFilter}
+                    options={availableGroups.map(g => g.name)}
+                    bind:value={group}
+                    borderless
+                    withSearch={availableGroups.length > 7}
                 />
             {:else}
                 <Options
-                        ariaLabel={ta.email.userFilter}
-                        options={ta.email.filterType}
-                        bind:value={filter}
-                        borderless
+                    ariaLabel={ta.email.userFilter}
+                    options={ta.email.filterType}
+                    bind:value={filter}
+                    borderless
                 />
 
                 {#if filter !== ta.email.filterType[0]}
                     <div class="ms-05">:</div>
                     {#if isFilterGroup}
                         <Options
-                                ariaLabel={ta.email.userFilter}
-                                options={groups.map(g => g.name)}
-                                bind:value={group}
-                                borderless
-                                withSearch={groups.length > 7}
+                            ariaLabel={ta.email.userFilter}
+                            options={groups.map(g => g.name)}
+                            bind:value={group}
+                            borderless
+                            withSearch={groups.length > 7}
                         />
                     {:else if isFilterRole}
                         <Options
-                                ariaLabel={ta.email.userFilter}
-                                options={roles.map(g => g.name)}
-                                bind:value={role}
-                                borderless
-                                withSearch={roles.length > 7}
+                            ariaLabel={ta.email.userFilter}
+                            options={roles.map(g => g.name)}
+                            bind:value={role}
+                            borderless
+                            withSearch={roles.length > 7}
                         />
                     {/if}
                 {/if}
@@ -205,18 +205,18 @@
 
     <div class="editor">
         <Input
-                label={ta.email.subject}
-                placeholder={ta.email.subject}
-                bind:value={subject}
-                width="min(40rem, 90dvw)"
-                maxLength={1024}
-                required
+            label={ta.email.subject}
+            placeholder={ta.email.subject}
+            bind:value={subject}
+            width="min(40rem, 90dvw)"
+            maxLength={1024}
+            required
         />
         <EditorInteractive
-                bind:mode={editorMode}
-                bind:contentRaw={bodyRaw}
-                bind:sanitizedValue={body}
-                height="min(60dvh, 40rem)"
+            bind:mode={editorMode}
+            bind:contentRaw={bodyRaw}
+            bind:sanitizedValue={body}
+            height="min(60dvh, 40rem)"
         />
     </div>
 
@@ -240,7 +240,7 @@
             <Button onclick={submit} isDisabled={!(body || bodyRaw) || !subject}>Send</Button>
 
             {#if success}
-                <IconCheck/>
+                <IconCheck />
             {:else if error}
                 <span class="err">
                     {error}

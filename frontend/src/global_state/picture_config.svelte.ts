@@ -1,6 +1,6 @@
-import {fetchGet} from '#api/fetch.ts';
-import {isBrowser} from '#utils/helpers.ts';
-import type {UserPictureConfig} from '#api/types/user.ts';
+import { fetchGet } from '#api/fetch.ts';
+import { isBrowser } from '#utils/helpers.ts';
+import type { UserPictureConfig } from '#api/types/user.ts';
 
 let _config: undefined | UserPictureConfig = $state();
 let isFetching = false;
@@ -9,14 +9,14 @@ export function usePictureConfig() {
     if (!isFetching && !_config && isBrowser()) {
         isFetching = true;
         fetchGet<UserPictureConfig>('/auth/v1/users/picture_config')
-                .then(res => {
-                    _config = res.body;
-                    isFetching = false;
-                })
-                .catch(err => {
-                    console.error('cannot fetch picture_config', err);
-                    isFetching = false;
-                });
+            .then(res => {
+                _config = res.body;
+                isFetching = false;
+            })
+            .catch(err => {
+                console.error('cannot fetch picture_config', err);
+                isFetching = false;
+            });
     }
 
     return {

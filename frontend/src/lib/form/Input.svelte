@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {slide} from 'svelte/transition';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import type {FullAutoFill} from 'svelte/elements';
-    import {genKey} from '#utils/helpers.ts';
+    import { slide } from 'svelte/transition';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import type { FullAutoFill } from 'svelte/elements';
+    import { genKey } from '#utils/helpers.ts';
 
     let {
         ref = $bindable(),
@@ -142,40 +142,40 @@
         </label>
     </div>
     <input
-            bind:this={ref}
-            type={typ}
-            {id}
-            {name}
-            title={errMsg}
-            aria-label={label || placeholder}
-            bind:value
-            {autocomplete}
-            {placeholder}
-            aria-placeholder={placeholder}
-            {disabled}
-            aria-disabled={disabled}
-            minlength={minLength || undefined}
-            maxlength={maxLength || undefined}
-            min={min || undefined}
-            max={max || undefined}
-            {step}
-            required={required || undefined}
-            aria-required={required || false}
-            aria-invalid={isError}
-            pattern={pattern || undefined}
-            class:invalid={isError}
-            {oninput}
-            {oninvalid}
-            {onblur}
-            {onkeydown}
-            onsubmit={onSubmit}
+        bind:this={ref}
+        type={typ}
+        {id}
+        {name}
+        title={errMsg}
+        aria-label={label || placeholder}
+        bind:value
+        {autocomplete}
+        {placeholder}
+        aria-placeholder={placeholder}
+        {disabled}
+        aria-disabled={disabled}
+        minlength={minLength || undefined}
+        maxlength={maxLength || undefined}
+        min={min || undefined}
+        max={max || undefined}
+        {step}
+        required={required || undefined}
+        aria-required={required || false}
+        aria-invalid={isError}
+        pattern={pattern || undefined}
+        class:invalid={isError}
+        {oninput}
+        {oninvalid}
+        {onblur}
+        {onkeydown}
+        onsubmit={onSubmit}
     />
     {#if isError}
         <div
-                aria-relevant="all"
-                class="error"
-                class:errWithLabel={!!label}
-                transition:slide={{ duration: 150 }}
+            aria-relevant="all"
+            class="error"
+            class:errWithLabel={!!label}
+            transition:slide={{ duration: 150 }}
         >
             {errMsg || t.common.invalidInput}
         </div>

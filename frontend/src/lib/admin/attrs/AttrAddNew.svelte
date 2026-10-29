@@ -1,11 +1,11 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
-    import {PATTERN_ATTR, PATTERN_ATTR_DESC} from '#utils/patterns.ts';
+    import { PATTERN_ATTR, PATTERN_ATTR_DESC } from '#utils/patterns.ts';
     import Form from '#lib/form/Form.svelte';
-    import {fetchPost} from '#api/fetch.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import type {
         UserAttrConfigEntity,
         UserAttrConfigRequest,
@@ -58,20 +58,20 @@
 <div class="container">
     <Form action="/auth/v1/users/attr" {onSubmit}>
         <Input
-                bind:ref
-                bind:value={name}
-                autocomplete="off"
-                label={ta.attrs.name}
-                placeholder={ta.attrs.name}
-                required
-                pattern={PATTERN_ATTR}
+            bind:ref
+            bind:value={name}
+            autocomplete="off"
+            label={ta.attrs.name}
+            placeholder={ta.attrs.name}
+            required
+            pattern={PATTERN_ATTR}
         />
         <Input
-                bind:value={desc}
-                autocomplete="off"
-                label={ta.attrs.desc}
-                placeholder={ta.attrs.desc}
-                pattern={PATTERN_ATTR_DESC}
+            bind:value={desc}
+            autocomplete="off"
+            label={ta.attrs.desc}
+            placeholder={ta.attrs.desc}
+            pattern={PATTERN_ATTR_DESC}
         />
 
         <Button type="submit">

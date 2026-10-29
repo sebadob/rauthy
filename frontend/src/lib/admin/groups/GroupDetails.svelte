@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Tabs from '#lib/tabs/Tabs.svelte';
-    import type {GroupResponse} from '#api/types/groups.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
     import GroupConfig from '#lib/admin/groups/GroupConfig.svelte';
     import GroupDelete from '#lib/admin/groups/GroupDelete.svelte';
 
@@ -34,11 +34,11 @@
 </script>
 
 <div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst/>
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if selected === ta.nav.config}
-    <GroupConfig {group} {groups} {onSave}/>
+    <GroupConfig {group} {groups} {onSave} />
 {:else if selected === t.common.delete}
-    <GroupDelete {group} {onSave}/>
+    <GroupDelete {group} {onSave} />
 {/if}

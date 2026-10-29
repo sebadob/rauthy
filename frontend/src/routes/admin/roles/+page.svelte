@@ -6,4 +6,4 @@
     <title>Rauthy Roles</title>
 </svelte:head>
 
-<Roles/>
+<Roles />

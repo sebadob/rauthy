@@ -1,19 +1,19 @@
 <script lang="ts">
-    import {onMount, untrack} from 'svelte';
-    import {redirectToLogin} from '#utils/helpers.ts';
+    import { onMount, untrack } from 'svelte';
+    import { redirectToLogin } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
     import Pagination from '#lib/pagination/Pagination.svelte';
     import SessionRow from './SessionRow.svelte';
-    import type {SessionResponse} from '#api/types/session.ts';
+    import type { SessionResponse } from '#api/types/session.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
-    import {fetchDelete, fetchGet} from '#api/fetch.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {useSession} from '#state/session.svelte.ts';
+    import { fetchDelete, fetchGet } from '#api/fetch.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
     import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
-    import {PAGE_SIZE_DEFAULT, type PageSize} from '#lib/pagination/props.ts';
-    import {fetchSearchServer, type SearchParamsIdxSession} from '#utils/search.ts';
-    import {useTrigger} from '#state/callback.svelte.ts';
+    import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
+    import { fetchSearchServer, type SearchParamsIdxSession } from '#utils/search.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -73,7 +73,7 @@
                 sessionsFiltered = sessions.filter(s => s.id.toLowerCase().includes(search));
             } else if (searchOption === searchOptions[2]) {
                 sessionsFiltered = sessions.filter(s =>
-                        s.remote_ip?.toLowerCase().includes(search),
+                    s.remote_ip?.toLowerCase().includes(search),
                 );
             }
         }
@@ -154,7 +154,7 @@
             });
         } else if (option === orderOptions[4]) {
             sessions.sort((a, b) =>
-                    up ? a.state.localeCompare(b.state) : b.state.localeCompare(a.state),
+                up ? a.state.localeCompare(b.state) : b.state.localeCompare(a.state),
             );
         } else if (option === orderOptions[5]) {
             sessions.sort((a, b) => {
@@ -194,14 +194,14 @@
 <ContentAdmin>
     <div class="top">
         <OrderSearchBar
-                bind:ref={refOpts}
-                bind:value={searchValue}
-                {searchOptions}
-                bind:searchOption
-                {orderOptions}
-                {onChangeOrder}
-                searchWidth="min(25rem, calc(100dvw - 1rem))"
-                firstDirReverse
+            bind:ref={refOpts}
+            bind:value={searchValue}
+            {searchOptions}
+            bind:searchOption
+            {orderOptions}
+            {onChangeOrder}
+            searchWidth="min(25rem, calc(100dvw - 1rem))"
+            firstDirReverse
         />
         {#if isAdmin}
             <div class="btn">
@@ -221,26 +221,26 @@
     <div id="sessions">
         {#if firstFetchHeaders}
             {#each sessions as session (session.id)}
-                <SessionRow {session} {now} {onDeleted}/>
+                <SessionRow {session} {now} {onDeleted} />
             {/each}
         {:else}
             {#each sessionsPaginated as session (session.id)}
-                <SessionRow {session} {now} {onDeleted}/>
+                <SessionRow {session} {now} {onDeleted} />
             {/each}
         {/if}
     </div>
 
     {#if firstFetchHeaders}
         <PaginationServerSide
-                bind:pageSize={sspPageSize}
-                sspFetch={fetchSessions}
-                itemsLength={sessions.length}
-                {firstFetchHeaders}
+            bind:pageSize={sspPageSize}
+            sspFetch={fetchSessions}
+            itemsLength={sessions.length}
+            {firstFetchHeaders}
         />
     {:else if useServerSide}
-        <Pagination bind:items={sessions} bind:itemsPaginated={sessionsPaginated}/>
+        <Pagination bind:items={sessions} bind:itemsPaginated={sessionsPaginated} />
     {:else}
-        <Pagination bind:items={sessionsFiltered} bind:itemsPaginated={sessionsPaginated}/>
+        <Pagination bind:items={sessionsFiltered} bind:itemsPaginated={sessionsPaginated} />
     {/if}
 </ContentAdmin>
 

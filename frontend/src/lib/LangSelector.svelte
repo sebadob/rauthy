@@ -1,12 +1,12 @@
 <script lang="ts">
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {untrack} from 'svelte';
-    import {getCookie} from '#utils/helpers.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { untrack } from 'svelte';
+    import { getCookie } from '#utils/helpers.ts';
     import Options from '#lib/Options.svelte';
-    import {fetchPost} from '#api/fetch.ts';
-    import {page} from '$app/state';
-    import type {Language} from '#api/types/i18n.ts';
-    import {useI18nConfig} from '#state/i18n_config.svelte.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import { page } from '$app/state';
+    import type { Language } from '#api/types/i18n.ts';
+    import { useI18nConfig } from '#state/i18n_config.svelte.ts';
 
     let {
         absolute,
@@ -27,7 +27,7 @@
     let selected = $state(initial);
 
     let languages: undefined | Language[] = $derived(
-            page.route.id?.includes('/admin') ? useI18nConfig().admin() : useI18nConfig().common(),
+        page.route.id?.includes('/admin') ? useI18nConfig().admin() : useI18nConfig().common(),
     );
 
     $effect(() => {
@@ -64,11 +64,11 @@
 {#if languages}
     <div class:absolute>
         <Options
-                ariaLabel={t.common.selectI18n}
-                options={languages}
-                {borderless}
-                bind:value={selected}
-                anchored={openTop}
+            ariaLabel={t.common.selectI18n}
+            options={languages}
+            {borderless}
+            bind:value={selected}
+            anchored={openTop}
         />
     </div>
 {/if}

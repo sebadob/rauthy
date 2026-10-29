@@ -6,4 +6,4 @@
     <title>Rauthy Sessions</title>
 </svelte:head>
 
-<Sessions/>
+<Sessions />

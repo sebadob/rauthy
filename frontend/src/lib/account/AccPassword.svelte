@@ -1,21 +1,21 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import {fade} from 'svelte/transition';
+    import { fade } from 'svelte/transition';
     import AccModPwd from '#lib/account/AccModPwd.svelte';
     import WebauthnRequest from '#lib/WebauthnRequest.svelte';
     import CheckIcon from '#lib/CheckIcon.svelte';
-    import {useI18n} from '#state/i18n.svelte.js';
-    import type {UpdateUserSelfRequest, UserResponse} from '#api/types/user.ts';
-    import type {AuthProviderTemplate} from '#api/templates/AuthProvider.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { UpdateUserSelfRequest, UserResponse } from '#api/types/user.ts';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import IconCheck from '#icons/IconCheck.svelte';
-    import type {PropsPassword} from './props.ts';
-    import {fetchGet, fetchPost, fetchPut} from '#api/fetch.ts';
-    import type {WebauthnAdditionalData} from '#mfa/webauthn/types.js';
-    import type {PasskeyResponse} from '#api/types/webauthn.ts';
-    import {onMount} from 'svelte';
-    import type {RequestResetRequest} from '#api/types/authorize.ts';
-    import {fetchSolvePow} from '#utils/pow.ts';
-    import type {MfaPurpose} from '#api/types/mfa.js';
+    import type { PropsPassword } from './props.ts';
+    import { fetchGet, fetchPost, fetchPut } from '#api/fetch.ts';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.js';
+    import type { PasskeyResponse } from '#api/types/webauthn.ts';
+    import { onMount } from 'svelte';
+    import type { RequestResetRequest } from '#api/types/authorize.ts';
+    import { fetchSolvePow } from '#utils/pow.ts';
+    import type { MfaPurpose } from '#api/types/mfa.js';
 
     let {
         user = $bindable(),
@@ -159,9 +159,9 @@
 <div class="container">
     {#if mfaPurpose}
         <WebauthnRequest
-                purpose={mfaPurpose}
-                onSuccess={onWebauthnSuccess}
-                onError={onWebauthnError}
+            purpose={mfaPurpose}
+            onSuccess={onWebauthnSuccess}
+            onError={onWebauthnError}
         />
     {/if}
 
@@ -172,7 +172,7 @@
             <div style:height=".3rem"></div>
             <p>{t.account.federatedConvertPassword2}</p>
             {#if success}
-                <CheckIcon checked/>
+                <CheckIcon checked />
             {:else}
                 <Button level={2} onclick={requestPasswordReset}>
                     {t.account.passwordReset}
@@ -195,10 +195,10 @@
     {#if accType === 'password' || accType === 'federated_password' || convertAccount}
         <div>
             <AccModPwd
-                    bind:passwords
-                    bind:isValid={isPwdValid}
-                    {inputWidth}
-                    hideCurrentPassword={!(accType === 'password' && passkeys.length < 1)}
+                bind:passwords
+                bind:isValid={isPwdValid}
+                {inputWidth}
+                hideCurrentPassword={!(accType === 'password' && passkeys.length < 1)}
             />
 
             <div class="save">
@@ -207,7 +207,7 @@
                 </Button>
                 {#if success}
                     <div class="success" transition:fade>
-                        <IconCheck/>
+                        <IconCheck />
                     </div>
                 {:else if err}
                     <div class="err" transition:fade>

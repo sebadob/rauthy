@@ -4,9 +4,9 @@
         getVerifierFromStorage,
         saveCsrfToken,
     } from '#utils/helpers.js';
-    import {onMount} from 'svelte';
-    import {CLIENT_ID, REDIRECT_URI_SUCCESS, REDIRECT_URI_SUCCESS_ACC} from '#utils/constants.js';
-    import {useParam} from '#state/param.svelte.ts';
+    import { onMount } from 'svelte';
+    import { CLIENT_ID, REDIRECT_URI_SUCCESS, REDIRECT_URI_SUCCESS_ACC } from '#utils/constants.js';
+    import { useParam } from '#state/param.svelte.ts';
 
     let err = $state('');
 

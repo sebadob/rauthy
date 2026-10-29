@@ -1,19 +1,19 @@
 <script lang="ts">
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {fetchGet, fetchPost} from '#api/fetch.js';
-    import {onMount} from 'svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.js';
+    import { onMount } from 'svelte';
     import Button from '#lib/button/Button.svelte';
     import Modal from '#lib/Modal.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import type {ToSRequest, ToSResponse, ToSUserAcceptResponse} from '#api/types/tos.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import type { ToSRequest, ToSResponse, ToSUserAcceptResponse } from '#api/types/tos.ts';
     import SearchBar from '#lib/search_bar/SearchBar.svelte';
-    import {fetchSearchServer} from '#utils/search.ts';
-    import type {UserResponseSimple} from '#api/types/user.ts';
+    import { fetchSearchServer } from '#utils/search.ts';
+    import type { UserResponseSimple } from '#api/types/user.ts';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
-    import {slide} from 'svelte/transition';
+    import { slide } from 'svelte/transition';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import {fmtDateInput, fmtTimeInput} from '#utils/form.ts';
-    import {formatDateFromTs, formatUtcTsFromDateInput} from '#utils/helpers.ts';
+    import { fmtDateInput, fmtTimeInput } from '#utils/form.ts';
+    import { formatDateFromTs, formatUtcTsFromDateInput } from '#utils/helpers.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import Options from '#lib/Options.svelte';
     import EditorInteractive from '#lib/text_edit/EditorInteractive.svelte';
@@ -178,17 +178,17 @@
 
 <div class="flex gap-05 flex-wrap mh-10">
     <Button
-            ariaLabel={ta.tos.addNewToS}
-            level={isModalOpen ? 2 : 1}
-            onclick={() => (showModalAddNew = true)}
+        ariaLabel={ta.tos.addNewToS}
+        level={isModalOpen ? 2 : 1}
+        onclick={() => (showModalAddNew = true)}
     >
         {ta.tos.addNewToS}
     </Button>
     {#if selectedIdx > -1 && tos.length > 0}
         <Button
-                ariaLabel={ta.tos.addNewToSFromCurrent}
-                level={isModalOpen ? 2 : 1}
-                onclick={() => {
+            ariaLabel={ta.tos.addNewToSFromCurrent}
+            level={isModalOpen ? 2 : 1}
+            onclick={() => {
                 newToSContentRaw = tos[selectedIdx].content;
                 showModalAddNew = true;
             }}
@@ -198,9 +198,9 @@
     {/if}
     {#if tos.length > 0}
         <Button
-                ariaLabel={ta.tos.checkStatus}
-                level={isModalOpen ? 3 : 2}
-                onclick={() => (showModalStatus = true)}
+            ariaLabel={ta.tos.checkStatus}
+            level={isModalOpen ? 3 : 2}
+            onclick={() => (showModalStatus = true)}
         >
             {ta.tos.checkStatus}
         </Button>
@@ -215,7 +215,7 @@
 
         <div>
             {#if selectedTsLabel && selectOpts.length > 1}
-                <Options ariaLabel="Select ToS" options={selectOpts} bind:value={selectedTsLabel}/>
+                <Options ariaLabel="Select ToS" options={selectOpts} bind:value={selectedTsLabel} />
             {/if}
 
             <LabeledValue label={ta.tos.added} title={ta.tos.added}>
@@ -231,7 +231,7 @@
 
         <div class="html-render">
             {#if active.is_html}
-                <MarkdownRenderer markdown={active.content}/>
+                <MarkdownRenderer markdown={active.content} />
             {:else}
                 {active.content}
             {/if}
@@ -251,11 +251,11 @@
             {#if optUntil}
                 <div transition:slide={{ duration: 150 }}>
                     <InputDateTimeCombo
-                            min={fmtDateInput()}
-                            timeMin={fmtTimeInput()}
-                            withTime
-                            bind:value={optUntilDate}
-                            bind:timeValue={optUntilTime}
+                        min={fmtDateInput()}
+                        timeMin={fmtTimeInput()}
+                        withTime
+                        bind:value={optUntilDate}
+                        bind:timeValue={optUntilTime}
                     />
 
                     <p>
@@ -267,9 +267,9 @@
 
         <div class="editor">
             <EditorInteractive
-                    bind:mode={editorMode}
-                    bind:contentRaw={newToSContentRaw}
-                    height="max(calc(100dvh - 20rem), 30rem)"
+                bind:mode={editorMode}
+                bind:contentRaw={newToSContentRaw}
+                height="max(calc(100dvh - 20rem), 30rem)"
             />
         </div>
 
@@ -278,9 +278,9 @@
         </div>
 
         <Button
-                ariaLabel={t.common.save}
-                onclick={saveToS}
-                isDisabled={newToSContentRaw.trim().length === 0}
+            ariaLabel={t.common.save}
+            onclick={saveToS}
+            isDisabled={newToSContentRaw.trim().length === 0}
         >
             {t.common.save}
         </Button>
@@ -301,7 +301,7 @@
         <h3>{ta.tos.checkStatus}</h3>
 
         <div class="userSearch">
-            <SearchBar bind:ref={refSearch} placeholder="E-Mail" bind:value={searchValue}/>
+            <SearchBar bind:ref={refSearch} placeholder="E-Mail" bind:value={searchValue} />
             <div class="searchOpts">
                 {#each searchOptions as opt}
                     <Button level={3} onclick={() => selectOpt(opt)}>

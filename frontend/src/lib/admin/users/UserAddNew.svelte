@@ -1,28 +1,28 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
-    import {PATTERN_USER_NAME} from '#utils/patterns.ts';
+    import { PATTERN_USER_NAME } from '#utils/patterns.ts';
     import Form from '#lib/form/Form.svelte';
-    import {fetchPost} from '#api/fetch.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import type {Language} from '#api/types/i18n.ts';
-    import type {NewUserRequest, UserResponse} from '#api/types/user.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import type { Language } from '#api/types/i18n.ts';
+    import type { NewUserRequest, UserResponse } from '#api/types/user.ts';
     import Options from '#lib/Options.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from '#utils/form.ts';
-    import {slide} from 'svelte/transition';
-    import type {RoleResponse} from '#api/types/roles.ts';
-    import type {GroupResponse} from '#api/types/groups.ts';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import { slide } from 'svelte/transition';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
     import SelectList from '#lib/select_list/SelectList.svelte';
-    import type {SelectItem} from '#lib/select_list/props.ts';
-    import {untrack} from 'svelte';
+    import type { SelectItem } from '#lib/select_list/props.ts';
+    import { untrack } from 'svelte';
     import LabeledValue from '#lib/LabeledValue.svelte';
-    import {useI18nConfig} from '#state/i18n_config.svelte.ts';
-    import type {UserValuesConfig} from '#api/templates/UserValuesConfig.ts';
+    import { useI18nConfig } from '#state/i18n_config.svelte.ts';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
     import TZSelect from '#lib/TZSelect.svelte';
-    import {useSession} from '#state/session.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         config,
@@ -54,36 +54,36 @@
     let givenName = $state('');
     let familyName = $state('');
     let languages = $derived(
-            useI18nConfig()
-                    .common()
-                    ?.map(l => l as string),
+        useI18nConfig()
+            .common()
+            ?.map(l => l as string),
     );
     let language: Language = $state('en');
     let tz = $state('UTC');
 
     let rolesItems: SelectItem[] = $state(
-            untrack(() =>
-                    roles.map(r => {
-                        let i: SelectItem = {
-                            name: r.name,
-                            selected: false,
-                        };
-                        return i;
-                    }),
-            ),
+        untrack(() =>
+            roles.map(r => {
+                let i: SelectItem = {
+                    name: r.name,
+                    selected: false,
+                };
+                return i;
+            }),
+        ),
     );
     let groupsItems: SelectItem[] = $state(
-            untrack(() =>
-                    groups
-                            .filter(g => session.isAdmin() || session.managesGroup(g.name))
-                            .map(g => {
-                                let i: SelectItem = {
-                                    name: g.name,
-                                    selected: false,
-                                };
-                                return i;
-                            }),
-            ),
+        untrack(() =>
+            groups
+                .filter(g => session.isAdmin() || session.managesGroup(g.name))
+                .map(g => {
+                    let i: SelectItem = {
+                        name: g.name,
+                        selected: false,
+                    };
+                    return i;
+                }),
+        ),
     );
 
     let expires = $state(false);
@@ -124,40 +124,40 @@
 <div class="container">
     <Form action="/auth/v1/users" {onSubmit}>
         <Input
-                typ="email"
-                bind:ref
-                bind:value={email}
-                autocomplete="off"
-                label="E-Mail"
-                placeholder="E-Mail"
-                required
+            typ="email"
+            bind:ref
+            bind:value={email}
+            autocomplete="off"
+            label="E-Mail"
+            placeholder="E-Mail"
+            required
         />
         <Input
-                bind:value={givenName}
-                autocomplete="off"
-                label={t.account.givenName}
-                placeholder={t.account.givenName}
-                required={config?.given_name === 'required'}
-                pattern={PATTERN_USER_NAME}
+            bind:value={givenName}
+            autocomplete="off"
+            label={t.account.givenName}
+            placeholder={t.account.givenName}
+            required={config?.given_name === 'required'}
+            pattern={PATTERN_USER_NAME}
         />
         <Input
-                bind:value={familyName}
-                autocomplete="off"
-                label={t.account.familyName}
-                placeholder={t.account.familyName}
-                required={config?.family_name === 'required'}
-                pattern={PATTERN_USER_NAME}
+            bind:value={familyName}
+            autocomplete="off"
+            label={t.account.familyName}
+            placeholder={t.account.familyName}
+            required={config?.family_name === 'required'}
+            pattern={PATTERN_USER_NAME}
         />
 
-        <TZSelect bind:value={tz}/>
+        <TZSelect bind:value={tz} />
         {#if languages}
             <div style:margin-left="0.25rem">
                 <LabeledValue label={ta.common.language}>
                     <Options
-                            ariaLabel={t.common.selectI18n}
-                            options={languages}
-                            bind:value={language}
-                            borderless
+                        ariaLabel={t.common.selectI18n}
+                        options={languages}
+                        bind:value={language}
+                        borderless
                     />
                 </LabeledValue>
             </div>
@@ -178,12 +178,12 @@
         {#if expires}
             <div transition:slide={{ duration: 150 }}>
                 <InputDateTimeCombo
-                        label={t.account.accessExp}
-                        bind:value={expDate}
-                        bind:timeValue={expTime}
-                        withTime
-                        min={fmtDateInput()}
-                        required
+                    label={t.account.accessExp}
+                    bind:value={expDate}
+                    bind:timeValue={expTime}
+                    withTime
+                    min={fmtDateInput()}
+                    required
                 />
             </div>
         {/if}

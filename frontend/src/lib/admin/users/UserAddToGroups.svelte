@@ -1,14 +1,14 @@
 <script lang="ts">
-    import {fetchPatch} from '#api/fetch.ts';
-    import type {GroupResponse} from '#api/types/groups.ts';
-    import type {PatchOp} from '#api/types/generic.ts';
-    import type {SelectItem} from '#lib/select_list/props.ts';
+    import { fetchPatch } from '#api/fetch.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import type { PatchOp } from '#api/types/generic.ts';
+    import type { SelectItem } from '#lib/select_list/props.ts';
     import SelectList from '#lib/select_list/SelectList.svelte';
     import Button from '#lib/button/Button.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {useSession} from '#state/session.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         userId,
@@ -34,7 +34,7 @@
     let managed = $derived(session.managedGroups(groups.map(g => g.name)));
     let items: SelectItem[] = $state([]);
     $effect(() => {
-        items = managed.map(name => ({name, selected: false}));
+        items = managed.map(name => ({ name, selected: false }));
     });
 
     let anySelected = $derived(items.some(i => i.selected));
@@ -50,7 +50,7 @@
         // it only sends the in-scope ones it wants to add. The backend merges these with the
         // memberships outside the admin's scope instead of replacing the whole set.
         let payload: PatchOp = {
-            put: [{key: 'groups', value: selected}],
+            put: [{ key: 'groups', value: selected }],
             del: [],
         };
         let res = await fetchPatch(`/auth/v1/users/${userId}`, payload);
@@ -76,7 +76,7 @@
             {ta.users.groupAdmin.addToGroups}
         </Button>
         {#if success}
-            <IconCheck/>
+            <IconCheck />
         {/if}
     </div>
 

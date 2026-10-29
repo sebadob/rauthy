@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type {IParam} from '#state/param.svelte.ts';
-    import {fetchGet, fetchPost} from '#api/fetch.ts';
-    import type {KVAccessRequest, KVAccessResponse} from '#api/types/kv.ts';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import type { IParam } from '#state/param.svelte.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
+    import type { KVAccessRequest, KVAccessResponse } from '#api/types/kv.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Button from '#lib/button/Button.svelte';
     import Modal from '#lib/Modal.svelte';
     import Form from '#lib/form/Form.svelte';
@@ -11,7 +11,7 @@
     import KVAccessDetails from '#lib/admin/kv/KVAccessDetails.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import Input from '#lib/form/Input.svelte';
-    import {PATTERN_GROUP} from '#utils/patterns.ts';
+    import { PATTERN_GROUP } from '#utils/patterns.ts';
     import KVAccessHelp from './KVAccessHelp.svelte';
 
     let {
@@ -90,12 +90,12 @@
             </InputCheckbox>
 
             <Input
-                    bind:ref
-                    name="name"
-                    label={ta.common.name}
-                    placeholder={ta.common.name}
-                    value=""
-                    pattern={PATTERN_GROUP}
+                bind:ref
+                name="name"
+                label={ta.common.name}
+                placeholder={ta.common.name}
+                value=""
+                pattern={PATTERN_GROUP}
             />
 
             <div class="btns">
@@ -109,7 +109,7 @@
         </Form>
     </Modal>
 
-    <KVAccessHelp/>
+    <KVAccessHelp />
 
     <div class="keys">
         {#if keys.length === 0}
@@ -129,7 +129,7 @@
                         </div>
                     {/snippet}
                     {#snippet details()}
-                        <KVAccessDetails bind:key={keys[i]} {urlAccess} {onDelete}/>
+                        <KVAccessDetails bind:key={keys[i]} {urlAccess} {onDelete} />
                     {/snippet}
                 </Expandable>
             {/each}

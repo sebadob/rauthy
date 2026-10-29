@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import type {Snippet} from 'svelte';
+    import type { Snippet } from 'svelte';
 
     let {
         selected,

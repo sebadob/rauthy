@@ -1,9 +1,9 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {fetchDelete} from '#api/fetch.ts';
-    import type {UserAttrConfigValueResponse} from '#api/types/user_attrs.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchDelete } from '#api/fetch.ts';
+    import type { UserAttrConfigValueResponse } from '#api/types/user_attrs.ts';
 
     let {
         attr,

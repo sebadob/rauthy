@@ -1,13 +1,13 @@
 <script lang="ts">
-    import type {UserResponse} from '#api/types/user.ts';
-    import {fetchDelete, fetchGet} from '#api/fetch.ts';
-    import type {PasskeyResponse} from '#api/types/webauthn.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import type { UserResponse } from '#api/types/user.ts';
+    import { fetchDelete, fetchGet } from '#api/fetch.ts';
+    import type { PasskeyResponse } from '#api/types/webauthn.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import UserPasskey from '#lib/UserPasskey.svelte';
-    import type {OtpResponse} from '#api/types/otp.ts';
+    import type { OtpResponse } from '#api/types/otp.ts';
     import Template from '#lib/Template.svelte';
-    import {TPL_IS_OTP_ENABLED} from '#utils/constants.ts';
-    import {deleteOtp} from '#mfa/otp/mod.ts';
+    import { TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
+    import { deleteOtp } from '#mfa/otp/mod.ts';
     import UserOtp from '#lib/UserOtp.svelte';
 
     let {
@@ -49,8 +49,8 @@
         let isLastKey = passkeys.length === 1;
 
         let res = await fetchDelete(
-                `/auth/v1/users/${user.id}/webauthn/delete/${encodeURIComponent(name)}`,
-                {},
+            `/auth/v1/users/${user.id}/webauthn/delete/${encodeURIComponent(name)}`,
+            {},
         );
         if (res.status === 200) {
             await fetchPasskeys();
@@ -84,7 +84,7 @@
     }
 </script>
 
-<Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled}/>
+<Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
 {#if isOtpEnabled}
     <b>{ta.users.mfa.webauthn.title}</b>
@@ -97,7 +97,7 @@
 
     <div class="keysContainer">
         {#each passkeys as passkey (passkey.name)}
-            <UserPasskey {passkey} showDelete {onDelete}/>
+            <UserPasskey {passkey} showDelete {onDelete} />
         {/each}
     </div>
 {/if}
@@ -110,7 +110,7 @@
 
     <div class="keysContainer">
         {#each otps as otp}
-            <UserOtp {otp} showInactive={true} onDelete={onDeleteOtp}/>
+            <UserOtp {otp} showInactive={true} onDelete={onDeleteOtp} />
         {/each}
     </div>
 {/if}

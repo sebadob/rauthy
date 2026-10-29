@@ -1,8 +1,8 @@
 <script lang="ts">
-    import {useI18n} from '#state/i18n.svelte.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Tabs from '#lib/tabs/Tabs.svelte';
-    import type {RoleResponse} from '#api/types/roles.ts';
+    import type { RoleResponse } from '#api/types/roles.ts';
     import RoleConfig from '#lib/admin/roles/RoleConfig.svelte';
     import RoleDelete from '#lib/admin/roles/RoleDelete.svelte';
 
@@ -34,11 +34,11 @@
 </script>
 
 <div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst/>
+    <Tabs {tabs} bind:selected bind:focusFirst />
 </div>
 
 {#if selected === ta.nav.config}
-    <RoleConfig {role} {roles} {onSave}/>
+    <RoleConfig {role} {roles} {onSave} />
 {:else if selected === t.common.delete}
-    <RoleDelete {role} {onSave}/>
+    <RoleDelete {role} {onSave} />
 {/if}

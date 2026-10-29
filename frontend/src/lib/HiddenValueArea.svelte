@@ -3,8 +3,8 @@
     import IconEye from '#icons/IconEye.svelte';
     import IconEyeSlash from '#icons/IconEyeSlash.svelte';
     import Button from '#lib/button/Button.svelte';
-    import {onMount} from 'svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { onMount } from 'svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         ariaLabel = '',
@@ -59,32 +59,32 @@
             <Button ariaLabel={show ? t.common.hide : t.common.show} invisible onclick={toggle}>
                 {#if show}
                     <div title={t.common.hide}>
-                        <IconEye/>
+                        <IconEye />
                     </div>
                 {:else}
                     <div title={t.common.show}>
-                        <IconEyeSlash/>
+                        <IconEyeSlash />
                     </div>
                 {/if}
             </Button>
 
             <Button ariaLabel={t.common.copyToClip} invisible onclick={copyToClip}>
                 <div title={t.common.copyToClip}>
-                    <IconClipboard/>
+                    <IconClipboard />
                 </div>
             </Button>
         </div>
     </div>
 
     <textarea
-            aria-label={ariaLabel}
-            style:width
-            style:padding-right="3.25rem"
-            disabled
-            bind:value={text}
-            {rows}
-            {cols}
-            {...rest}
+        aria-label={ariaLabel}
+        style:width
+        style:padding-right="3.25rem"
+        disabled
+        bind:value={text}
+        {rows}
+        {cols}
+        {...rest}
     ></textarea>
 </div>
 

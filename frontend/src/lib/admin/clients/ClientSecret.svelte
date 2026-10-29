@@ -1,14 +1,14 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import {fetchPost, fetchPut} from '#api/fetch.ts';
+    import { fetchPost, fetchPut } from '#api/fetch.ts';
     import type {
         ClientResponse,
         ClientSecretRequest,
         ClientSecretResponse,
     } from '#api/types/clients.ts';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import InputPassword from '#lib/form/InputPassword.svelte';
-    import {slide} from 'svelte/transition';
+    import { slide } from 'svelte/transition';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import Input from '#lib/form/Input.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
@@ -62,8 +62,8 @@
             cache_current_hours: cacheSecret ? Number.parseInt(cacheCurrentHours) : undefined,
         };
         let res = await fetchPut<ClientSecretResponse>(
-                `/auth/v1/clients/${client.id}/secret`,
-                payload,
+            `/auth/v1/clients/${client.id}/secret`,
+            payload,
         );
         if (res.body) {
             if (res.body.secret) {
@@ -86,12 +86,12 @@
 
     {#if secret}
         <InputPassword
-                bind:value={secret}
-                autocomplete="off"
-                label="Client Secret"
-                placeholder="Client Secret"
-                disabled
-                showCopy
+            bind:value={secret}
+            autocomplete="off"
+            label="Client Secret"
+            placeholder="Client Secret"
+            disabled
+            showCopy
         />
 
         {#if showConfirm}
@@ -106,14 +106,14 @@
                 {#if cacheSecret}
                     <div transition:slide={{ duration: 150 }}>
                         <Input
-                                typ="number"
-                                label={ta.clients.secret.cacheDuration}
-                                placeholder={ta.clients.secret.cacheDuration}
-                                bind:value={cacheCurrentHours}
-                                bind:isError={isInputErr}
-                                min="1"
-                                max="24"
-                                width="13rem"
+                            typ="number"
+                            label={ta.clients.secret.cacheDuration}
+                            placeholder={ta.clients.secret.cacheDuration}
+                            bind:value={cacheCurrentHours}
+                            bind:isError={isInputErr}
+                            min="1"
+                            max="24"
+                            width="13rem"
                         />
                     </div>
                 {/if}
@@ -123,7 +123,7 @@
                         {ta.clients.secret.generate}
                     </Button>
                     {#if success}
-                        <IconCheck/>
+                        <IconCheck />
                     {/if}
                 </div>
             </div>

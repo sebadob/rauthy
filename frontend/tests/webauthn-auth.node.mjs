@@ -29,7 +29,7 @@ before(async () => {
         resolve: {
             alias: Object.fromEntries(
                 Object.entries(loaded.config.alias).map(
-                    /** @param {[string, any]} entry */ (entry) => [entry[0], resolve(entry[1])],
+                    /** @param {[string, any]} entry */ entry => [entry[0], resolve(entry[1])],
                 ),
             ),
         },

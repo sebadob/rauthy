@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type {Snippet} from 'svelte';
-    import type {SelectItem} from '#lib/select_list/props.ts';
+    import type { Snippet } from 'svelte';
+    import type { SelectItem } from '#lib/select_list/props.ts';
     import Button from '#lib/button/Button.svelte';
     import IconEdit from '#icons/IconEdit.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Modal from '#lib/Modal.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
-    import {useI18n} from '#state/i18n.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         items = $bindable(),
@@ -31,17 +31,17 @@
 
     let compact = $derived(innerWidth && innerWidth < 800);
     let joined = $derived(
-            items
-                    .filter(i => i.selected)
-                    .map(i => i.name)
-                    .join(', '),
+        items
+            .filter(i => i.selected)
+            .map(i => i.name)
+            .join(', '),
     );
     let anySelected = $derived(items.find(i => i.selected));
     // when every entry is locked there is nothing to edit, so hide the edit button
     let readonly = $derived(items.length > 0 && items.every(i => disabledItems.includes(i.name)));
 </script>
 
-<svelte:window bind:innerWidth/>
+<svelte:window bind:innerWidth />
 
 <div class="container" style:max-width={maxWidth}>
     <div class="items">
@@ -55,7 +55,7 @@
             <div class="edit">
                 <Button invisible onclick={() => (showModal = true)}>
                     <div title={ta.common.edit}>
-                        <IconEdit width="1.2rem"/>
+                        <IconEdit width="1.2rem" />
                     </div>
                 </Button>
             </div>
@@ -66,9 +66,9 @@
                 <div class="compact">
                     {#each items as item (item.name)}
                         <InputCheckbox
-                                ariaLabel={item.name}
-                                bind:checked={item.selected}
-                                disabled={disabledItems.includes(item.name)}
+                            ariaLabel={item.name}
+                            bind:checked={item.selected}
+                            disabled={disabledItems.includes(item.name)}
                         >
                             {item.name}
                         </InputCheckbox>
@@ -80,9 +80,9 @@
                         {#each items as item (item.name)}
                             {#if !item.selected}
                                 <InputCheckbox
-                                        ariaLabel={item.name}
-                                        bind:checked={item.selected}
-                                        disabled={disabledItems.includes(item.name)}
+                                    ariaLabel={item.name}
+                                    bind:checked={item.selected}
+                                    disabled={disabledItems.includes(item.name)}
                                 >
                                     {item.name}
                                 </InputCheckbox>
@@ -93,9 +93,9 @@
                         {#each items as item (item.name)}
                             {#if item.selected}
                                 <InputCheckbox
-                                        ariaLabel={item.name}
-                                        bind:checked={item.selected}
-                                        disabled={disabledItems.includes(item.name)}
+                                    ariaLabel={item.name}
+                                    bind:checked={item.selected}
+                                    disabled={disabledItems.includes(item.name)}
                                 >
                                     {item.name}
                                 </InputCheckbox>

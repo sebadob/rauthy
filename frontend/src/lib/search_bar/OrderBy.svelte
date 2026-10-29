@@ -4,8 +4,8 @@
     import Button from '#lib/button/Button.svelte';
     import Tooltip from '#lib/Tooltip.svelte';
     import Options from '#lib/Options.svelte';
-    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
-    import {untrack} from 'svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { untrack } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -34,33 +34,33 @@
 <div class="container">
     <Tooltip text={ta.search.orderBy}>
         <Options
-                bind:ref
-                ariaLabel={ta.search.orderBy}
-                {options}
-                bind:value={selected}
-                {borderless}
+            bind:ref
+            ariaLabel={ta.search.orderBy}
+            {options}
+            bind:value={selected}
+            {borderless}
         />
     </Tooltip>
 
     <div class="btn">
         {#if direction === 'up'}
             <Button
-                    ariaLabel={ta.search.orderChangeToDesc}
-                    invisible
-                    onclick={() => (direction = 'down')}
+                ariaLabel={ta.search.orderChangeToDesc}
+                invisible
+                onclick={() => (direction = 'down')}
             >
                 <Tooltip text={ta.search.orderChangeToDesc}>
-                    <IconBarsArrowUp/>
+                    <IconBarsArrowUp />
                 </Tooltip>
             </Button>
         {:else}
             <Button
-                    ariaLabel={ta.search.orderChangeToAsc}
-                    invisible
-                    onclick={() => (direction = 'up')}
+                ariaLabel={ta.search.orderChangeToAsc}
+                invisible
+                onclick={() => (direction = 'up')}
             >
                 <Tooltip text={ta.search.orderChangeToAsc}>
-                    <IconBarsArrowDown/>
+                    <IconBarsArrowDown />
                 </Tooltip>
             </Button>
         {/if}
