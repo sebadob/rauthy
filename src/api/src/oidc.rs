@@ -21,6 +21,7 @@ use rauthy_common::compression::{compress_br_dyn, compress_gzip_dyn};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
 };
+use rauthy_common::language::Language;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
@@ -45,7 +46,6 @@ use rauthy_data::entity::well_known::WellKnown;
 use rauthy_data::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
 };
-use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::forward_auth::auth_header;

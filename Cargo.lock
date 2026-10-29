@@ -4960,6 +4960,7 @@ dependencies = [
 name = "rauthy-common"
 version = "0.37.2"
 dependencies = [
+ "accept-language",
  "actix-web",
  "ammonia",
  "argon2",
@@ -4981,9 +4982,11 @@ dependencies = [
  "reqwest 0.13.5",
  "ring",
  "serde",
+ "strum",
  "tokio",
  "tokio-util",
  "tracing",
+ "utoipa",
  "zeroize",
 ]
 
@@ -5160,6 +5163,39 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "validator",
+ "zeroize",
+]
+
+[[package]]
+name = "rauthy-i18n"
+version = "0.37.2"
+dependencies = [
+ "actix-web",
+ "ammonia",
+ "argon2",
+ "async-compression",
+ "base64 0.23.1",
+ "bincode-next",
+ "chrono",
+ "cidr",
+ "flume",
+ "gethostname",
+ "openssl",
+ "openssl-sys",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "rand 0.10.3",
+ "rand_core 0.10.1",
+ "rauthy-common",
+ "rauthy-error",
+ "regex",
+ "reqwest 0.13.5",
+ "ring",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tracing",
  "zeroize",
 ]
 

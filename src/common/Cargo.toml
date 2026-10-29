@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 rauthy-error = { path = "../error" }
 
+accept-language = { workspace = true }
 actix-web = { workspace = true }
 ammonia = { workspace = true }
 argon2 = { workspace = true }
@@ -27,9 +28,11 @@ regex = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
+strum = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
+utoipa = { workspace = true }
 zeroize = { workspace = true }
 
 [build-dependencies]

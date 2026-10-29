@@ -1,10 +1,10 @@
-use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, HttpResponseBuilder};
 use askama::Template;
 use rauthy_api_types::generic::PasswordPolicyResponse;
 use rauthy_common::constants::HEADER_HTML;
+use rauthy_common::language::Language;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};

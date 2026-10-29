@@ -1,4 +1,4 @@
-use crate::language::Language;
+use rauthy_common::language::Language;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]

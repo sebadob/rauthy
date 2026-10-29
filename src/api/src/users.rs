@@ -13,6 +13,7 @@ use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
     PWD_RESET_COOKIE, TEXT_TURTLE,
 };
+use rauthy_common::language::Language;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::email::email_registered_already::send_email_registered_already;
@@ -52,7 +53,6 @@ use rauthy_data::html::HtmlCached;
 use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
 use rauthy_data::ipgeo::get_location;
-use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue, VarsUserValuesConfig};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
@@ -2213,7 +2213,7 @@ pub async fn get_user_webid(id: web::Path<String>) -> Result<HttpResponse, Error
             Some(user.given_name)
         },
         family_name: user.family_name,
-        language: user.language.into(),
+        language: user.language,
     };
 
     WebId::try_into_turtle(resp)

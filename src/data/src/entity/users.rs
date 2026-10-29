@@ -22,7 +22,6 @@ use crate::entity::webauthn::auth_req::WebauthnServiceReq;
 use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
-use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use argon2::PasswordHash;
@@ -41,6 +40,7 @@ use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
 };
 use rauthy_common::is_hiqlite;
+use rauthy_common::language::Language;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
 use rauthy_common::utils::{new_store_id, real_ip_from_req};
 use rauthy_derive::FromPgRow;
@@ -1074,7 +1074,7 @@ LIMIT $2"#;
 
         let roles = u.get_roles();
         let groups = Some(u.get_groups());
-        let language = Some(rauthy_api_types::generic::Language::from(u.language));
+        let language = Some(u.language);
 
         let (user_values, preferred_username) = if let Some(uv) = UserValues::find(&u.id).await? {
             (
@@ -1135,9 +1135,7 @@ LIMIT $2"#;
                 "given_name" => upd_req.given_name = put.value.as_str().map(String::from),
                 "family_name" => upd_req.family_name = put.value.as_str().map(String::from),
                 "language" => {
-                    let lang = rauthy_api_types::generic::Language::from(Language::from(
-                        put.value.as_str().unwrap_or_default(),
-                    ));
+                    let lang = Language::from(put.value.as_str().unwrap_or_default());
                     upd_req.language = Some(lang)
                 }
                 "roles" => {
@@ -1263,7 +1261,7 @@ LIMIT $2"#;
         user.family_name = upd_user.family_name;
 
         if let Some(lang) = upd_user.language {
-            user.language = lang.into();
+            user.language = lang;
         }
 
         if let Some(password) = &upd_user.password {
@@ -1811,7 +1809,7 @@ impl User {
             email_verified: false,
             given_name: new_user.given_name.unwrap_or_default(),
             family_name: new_user.family_name,
-            language: new_user.language.into(),
+            language: new_user.language,
             roles,
             groups,
             user_expires: new_user.user_expires,
@@ -1898,7 +1896,7 @@ impl User {
                 Some(self.given_name)
             },
             family_name: self.family_name,
-            language: self.language.into(),
+            language: self.language,
             roles,
             groups,
             enabled: self.enabled,

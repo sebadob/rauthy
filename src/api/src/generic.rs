@@ -14,6 +14,7 @@ use rauthy_common::constants::{
     APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
     PWD_CSRF_HEADER, RAUTHY_VERSION,
 };
+use rauthy_common::language::Language;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::database::{Cache, DB};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
@@ -26,7 +27,6 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::ipgeo;
-use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::{encryption, suspicious_request_block};
@@ -42,10 +42,16 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = RauthyConfig::get().vars.i18n.filter_lang_common
         .iter()
         .map(|v| {
-                if !["de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
-                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}");
+            #[allow(clippy::unnecessary_fallible_conversions)]
+            match Language::try_from(v.as_ref()) {
+                Ok(l) => l,
+                Err(_) => {
+                    panic!(
+                        "Invalid config for `i18n.filter_lang_common`.\nAllowed values: {:?}\nfound: {}",
+                        Language::as_iter(), v
+                    );
                 }
-                Language::from(v.as_ref()).into()
+            }
         })
         .collect::<Vec<_>>();
 
@@ -55,12 +61,17 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .filter_lang_admin
         .iter()
         .map(|v| {
-            if !["de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
-                panic!(
-                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}",
-                );
+            #[allow(clippy::unnecessary_fallible_conversions)]
+            match Language::try_from(v.as_ref()) {
+                Ok(l) => l,
+                Err(_) => {
+                    panic!(
+                        "Invalid config for `i18n.filter_lang_admin`\nAllowed values: {:?}\nfound: {}",
+                        Language::as_iter(),
+                        v
+                    );
+                }
             }
-            Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
 
