@@ -32,7 +32,7 @@ jobs:
           rustc --version
       - name: Verify Cargo cache paths
         run: |
-          set -euo pipefail
+          set -eu
           
           if [ "$CARGO_HOME" != "/usr/local/cargo" ]; then
             echo "unexpected CARGO_HOME: '$CARGO_HOME' (expected '/usr/local/cargo')"
