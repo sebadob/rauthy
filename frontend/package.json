@@ -19,8 +19,8 @@
     "devDependencies": {
         "@internationalized/date": "^3.5.5",
         "@playwright/test": "^1.25.0",
-        "@sveltejs/adapter-static": "^3.0.0",
-        "@sveltejs/kit": "^2.52.2",
+        "@sveltejs/adapter-static": "^4.0.0",
+        "@sveltejs/kit": "^3.1.0",
         "@sveltejs/vite-plugin-svelte": "^7.1.2",
         "@swc/core": "^1.11.4",
         "@types/node": "^25.9.0",
