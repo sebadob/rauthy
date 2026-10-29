@@ -331,6 +331,12 @@ pub struct JwtRefreshClaims<'a> {
     /// `default` for backwards compatibility with tokens issued by an older version.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resource: Option<&'a str>,
+    /// Issued by a grant without a consent step (password, device code) and carried through
+    /// rotation: the refresh is not checked against the user's consent grant. `false` for
+    /// tokens issued by an older version, which are checked unless they carry a signed `did`
+    /// (device code tokens).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub consent_exempt: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -401,8 +407,8 @@ impl JwtAmrValue {
 #[cfg(test)]
 mod tests {
     use super::{
-        ActClaim, Audience, JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtTokenType,
-        validate_no_reserved_collision,
+        ActClaim, Audience, JwtAccessClaims, JwtCommonClaims, JwtIdClaims, JwtRefreshClaims,
+        JwtTokenType, validate_no_reserved_collision,
     };
     use serde_json::json;
     use std::borrow::Cow;
@@ -677,5 +683,35 @@ mod tests {
             v.get("act").is_none(),
             "a token issued without an `actor_token` must not carry `act`"
         );
+    }
+
+    #[test]
+    fn refresh_consent_exempt_claim() {
+        let claims = |consent_exempt| JwtRefreshClaims {
+            common: JwtCommonClaims {
+                typ: JwtTokenType::Refresh,
+                sub: None,
+                scope: None,
+                ..common()
+            },
+            uid: "user-id",
+            auth_time: Some(1_700_000_000),
+            resource: None,
+            consent_exempt,
+        };
+
+        // only serialized when set
+        let v = serde_json::to_value(claims(false)).unwrap();
+        assert!(v.get("consent_exempt").is_none());
+        let v = serde_json::to_value(claims(true)).unwrap();
+        assert_eq!(v["consent_exempt"], json!(true));
+
+        // round trip, a token without the claim (older version) is not exempt
+        let json = serde_json::to_string(&claims(true)).unwrap();
+        let parsed: JwtRefreshClaims = serde_json::from_str(&json).unwrap();
+        assert!(parsed.consent_exempt);
+        let json = serde_json::to_string(&claims(false)).unwrap();
+        let parsed: JwtRefreshClaims = serde_json::from_str(&json).unwrap();
+        assert!(!parsed.consent_exempt);
     }
 }

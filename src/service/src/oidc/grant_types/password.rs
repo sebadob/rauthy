@@ -1,4 +1,6 @@
-use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, TokenSet};
+use crate::token_set::{
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, DpopFingerprint, TokenSet,
+};
 use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
@@ -136,6 +138,8 @@ pub async fn grant_type_password(
                 None,
                 AuthCodeFlow::No,
                 DeviceCodeFlow::No,
+                // no consent step
+                ConsentCheck::Exempt,
             )
             .await?;
 
