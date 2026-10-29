@@ -72,6 +72,20 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         });
     }
 
+    // RFC 8707: a `resource` on the token request may only narrow (here: match) the
+    // resource bound at the device authorization request, never widen or introduce a new one.
+    if let Some(requested) = payload.resource.as_deref()
+        && code.resource.as_deref() != Some(requested)
+    {
+        warn!("token request `resource` was not granted at the device authorization request");
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidTarget,
+            error_description: Some(Cow::from(
+                "the requested `resource` was not granted at the device authorization request",
+            )),
+        });
+    }
+
     debug!("device oidc code poll request is valid");
     let mut error = OAuth2ErrorTypeResponse::AuthorizationPending;
     let mut error_description = Cow::default();
@@ -218,8 +232,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             code.nonce.map(TokenNonce),
             code.scopes.map(TokenScopes::new),
             None,
-            // resource indicators are not supported for the device flow yet
-            None,
+            code.resource,
             AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),
         )
