@@ -11,11 +11,11 @@ import {
     PROVIDER_TOKEN,
     REDIRECT_URI,
 } from './constants.js';
-import { decode, encode } from 'base64-arraybuffer';
-import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
-import type { EventLevel } from '$api/types/events.ts';
-import { generateNonce, generatePKCE } from '$utils/pkce';
-import { fetchGet } from '$api/fetch';
+import {decode, encode} from 'base64-arraybuffer';
+import type {PasswordPolicyResponse} from '#api/types/password_policy.ts';
+import type {EventLevel} from '#api/types/events.ts';
+import {generateNonce, generatePKCE} from '#utils/pkce.ts';
+import {fetchGet} from '#api/fetch.ts';
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`;
@@ -27,12 +27,12 @@ export function isBrowser() {
 
 export function isDefaultScope(name: string) {
     return (
-        name === 'openid' ||
-        name === 'profile' ||
-        name === 'email' ||
-        name === 'groups' ||
-        name === 'address' ||
-        name === 'phone'
+            name === 'openid' ||
+            name === 'profile' ||
+            name === 'email' ||
+            name === 'groups' ||
+            name === 'address' ||
+            name === 'phone'
     );
 }
 
@@ -60,8 +60,8 @@ export const redirectToLogin = (state?: string) => {
             let nonce = generateNonce() || genKey(64);
             const s = state || 'admin';
             const redirect_uri = `${window.location.origin}${REDIRECT_URI}`
-                .replaceAll(':', '%3A')
-                .replaceAll('/', '%2F');
+                    .replaceAll(':', '%3A')
+                    .replaceAll('/', '%2F');
             window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code&code_challenge=${pkce.challenge}&code_challenge_method=S256&scope=openid+profile+email&nonce=${nonce}&state=${s}`;
         }
     });
@@ -268,10 +268,10 @@ export const generatePassword = (policy: PasswordPolicyResponse) => {
 
         // If not all types are included, start fresh and try again -> most random approach
         if (
-            lowerCaseIncluded < lowerCaseNeeded ||
-            upperCaseIncluded < upperCaseNeeded ||
-            specialIncluded < specialNeeded ||
-            digitIncluded < digitNeeded
+                lowerCaseIncluded < lowerCaseNeeded ||
+                upperCaseIncluded < upperCaseNeeded ||
+                specialIncluded < specialNeeded ||
+                digitIncluded < digitNeeded
         ) {
             continue;
         }

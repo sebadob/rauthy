@@ -1,19 +1,19 @@
 <script lang="ts">
-    import type { KVAccessRequest, KVAccessResponse } from '$api/types/kv';
-    import Form from '$lib/form/Form.svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import InputPassword from '$lib/form/InputPassword.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { slide } from 'svelte/transition';
-    import { untrack } from 'svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import HiddenValueArea from '$lib/HiddenValueArea.svelte';
+    import type {KVAccessRequest, KVAccessResponse} from '#api/types/kv.ts';
+    import Form from '#lib/form/Form.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import {PATTERN_GROUP} from '#utils/patterns.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import {slide} from 'svelte/transition';
+    import {untrack} from 'svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import {fetchDelete, fetchPost, fetchPut} from '#api/fetch.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import HiddenValueArea from '#lib/HiddenValueArea.svelte';
 
     let {
         key = $bindable(),
@@ -35,7 +35,7 @@
 
     let bearer = $derived(`${key.id}$${key.secret}`);
     let curl = $derived(
-        `curl -s -H 'Authorization: Bearer ${bearer}' ${window.location.origin}/auth/v1/kv/test | jq`,
+            `curl -s -H 'Authorization: Bearer ${bearer}' ${window.location.origin}/auth/v1/kv/test | jq`,
     );
 
     async function deleteKey() {
@@ -88,24 +88,24 @@
     </InputCheckbox>
 
     <Input
-        label={ta.common.name}
-        placeholder={ta.common.name}
-        bind:value={name}
-        pattern={PATTERN_GROUP}
+            label={ta.common.name}
+            placeholder={ta.common.name}
+            bind:value={name}
+            pattern={PATTERN_GROUP}
     />
     <div class="save" transition:slide={{ duration: 150 }}>
         <Button type="submit">{t.common.save}</Button>
         {#if success}
-            <IconCheck />
+            <IconCheck/>
         {/if}
     </div>
 </Form>
 
-<InputPassword ariaLabel="Secret" label="Secret" value={key.secret} disabled />
+<InputPassword ariaLabel="Secret" label="Secret" value={key.secret} disabled/>
 <div class="flex gap-05">
     <Button level={2} onclick={generateSecret}>Generate New</Button>
     {#if successSecret}
-        <IconCheck />
+        <IconCheck/>
     {/if}
 </div>
 
@@ -114,13 +114,13 @@
         <p>{@html ta.kv.accessTestDesc}</p>
 
         <InputPassword
-            ariaLabel="Authorization Bearer"
-            label="Authorization Bearer"
-            value={bearer}
-            disabled
-            showCopy
+                ariaLabel="Authorization Bearer"
+                label="Authorization Bearer"
+                value={bearer}
+                disabled
+                showCopy
         />
-        <HiddenValueArea ariaLabel="curl test-command" rows={5} value={curl} width="100%" />
+        <HiddenValueArea ariaLabel="curl test-command" rows={5} value={curl} width="100%"/>
     </div>
 {/if}
 

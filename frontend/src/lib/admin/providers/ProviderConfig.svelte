@@ -1,19 +1,20 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
     import ProviderLogo from '../../ProviderLogo.svelte';
-    import type { ProviderRequest, ProviderResponse } from '$api/types/auth_provider.ts';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import Form from '$lib5/form/Form.svelte';
-    import { fetchDelete, fetchPut } from '$api/fetch';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import InputFile from '$lib5/form/InputFile.svelte';
-    import { genKey } from '$utils/helpers';
-    import ProviderConfigURLs from '$lib/admin/providers/blocks/ProviderConfigURLs.svelte';
-    import ProviderConfigClientInfo from '$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
-    import { slide } from 'svelte/transition';
+    import type {ProviderRequest, ProviderResponse} from '#api/types/auth_provider.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import {fetchDelete, fetchPut} from '#api/fetch.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import InputFile from '#lib/form/InputFile.svelte';
+    import {genKey} from '#utils/helpers.ts';
+    import ProviderConfigURLs from '#lib/admin/providers/blocks/ProviderConfigURLs.svelte';
+    import ProviderConfigClientInfo
+        from '#lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
+    import {slide} from 'svelte/transition';
 
     let {
         provider = $bindable(),
@@ -64,8 +65,8 @@
         err = '';
 
         if (
-            provider.client_secret &&
-            !(provider.client_secret_basic || provider.client_secret_post)
+                provider.client_secret &&
+                !(provider.client_secret_basic || provider.client_secret_post)
         ) {
             err = ta.providers.config.errNoAuthMethod;
             return;
@@ -133,8 +134,8 @@
         </div>
         <div class="checkbox">
             <InputCheckbox
-                ariaLabel={ta.providers.config.autoLink}
-                bind:checked={provider.auto_link}
+                    ariaLabel={ta.providers.config.autoLink}
+                    bind:checked={provider.auto_link}
             >
                 {ta.providers.config.autoLink}
             </InputCheckbox>
@@ -147,11 +148,11 @@
         </div>
 
         <ProviderConfigURLs
-            bind:issuer={provider.issuer}
-            bind:authorizationEndpoint={provider.authorization_endpoint}
-            bind:tokenEndpoint={provider.token_endpoint}
-            bind:userinfoEndpoint={provider.userinfo_endpoint}
-            {inputWidth}
+                bind:issuer={provider.issuer}
+                bind:authorizationEndpoint={provider.authorization_endpoint}
+                bind:tokenEndpoint={provider.token_endpoint}
+                bind:userinfoEndpoint={provider.userinfo_endpoint}
+                {inputWidth}
         />
 
         <div class="checkbox">
@@ -159,31 +160,31 @@
         </div>
 
         <ProviderConfigClientInfo
-            bind:scope={provider.scope}
-            bind:name={provider.name}
-            bind:clientId={provider.client_id}
-            bind:clientSecret={provider.client_secret}
-            bind:clientSecretBasic={provider.client_secret_basic}
-            bind:clientSecretPost={provider.client_secret_post}
-            bind:adminClaimPath={provider.admin_claim_path}
-            bind:adminClaimValue={provider.admin_claim_value}
-            bind:mfaClaimPath={provider.mfa_claim_path}
-            bind:mfaClaimValue={provider.mfa_claim_value}
-            usePKCE={provider.use_pkce}
-            {inputWidth}
+                bind:scope={provider.scope}
+                bind:name={provider.name}
+                bind:clientId={provider.client_id}
+                bind:clientSecret={provider.client_secret}
+                bind:clientSecretBasic={provider.client_secret_basic}
+                bind:clientSecretPost={provider.client_secret_post}
+                bind:adminClaimPath={provider.admin_claim_path}
+                bind:adminClaimValue={provider.admin_claim_value}
+                bind:mfaClaimPath={provider.mfa_claim_path}
+                bind:mfaClaimValue={provider.mfa_claim_value}
+                usePKCE={provider.use_pkce}
+                {inputWidth}
         />
 
         <div class="logo">
             {#key logoKey}
                 <div>
-                    <ProviderLogo providerId={provider.id} onDelete={onLogoDelete} />
+                    <ProviderLogo providerId={provider.id} onDelete={onLogoDelete}/>
                 </div>
             {/key}
             <InputFile
-                method="PUT"
-                url={urlImg}
-                fileName="logo"
-                onSuccess={() => (logoKey = genKey())}
+                    method="PUT"
+                    url={urlImg}
+                    fileName="logo"
+                    onSuccess={() => (logoKey = genKey())}
             />
         </div>
 
@@ -193,7 +194,7 @@
             </Button>
 
             {#if success}
-                <IconCheck />
+                <IconCheck/>
             {/if}
 
             {#if err}

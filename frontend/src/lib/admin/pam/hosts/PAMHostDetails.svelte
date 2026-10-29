@@ -4,23 +4,23 @@
         PamHostDetailsResponse,
         PamHostSimpleResponse,
         PamHostUpdateRequest,
-    } from '$api/types/pam';
-    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import { PATTERN_LINUX_HOSTNAME } from '$utils/patterns';
-    import Input from '$lib/form/Input.svelte';
-    import Options from '$lib/Options.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import InputTags from '$lib/form/InputTags.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { slide } from 'svelte/transition';
-    import { useI18n } from '$state/i18n.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import PAMHostSecret from '$lib/admin/pam/hosts/PAMHostSecret.svelte';
-    import { untrack } from 'svelte';
+    } from '#api/types/pam.ts';
+    import {fetchDelete, fetchGet, fetchPut} from '#api/fetch.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import {PATTERN_LINUX_HOSTNAME} from '#utils/patterns.ts';
+    import Input from '#lib/form/Input.svelte';
+    import Options from '#lib/Options.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import InputTags from '#lib/form/InputTags.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {slide} from 'svelte/transition';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import PAMHostSecret from '#lib/admin/pam/hosts/PAMHostSecret.svelte';
+    import {untrack} from 'svelte';
 
     let {
         hostSimple,
@@ -122,31 +122,31 @@
         {host.id}
     </LabeledValue>
 
-    <PAMHostSecret hostId={host.id} />
+    <PAMHostSecret hostId={host.id}/>
 
     <Form action={url} {onSubmit}>
         <Input
-            label="Hostname"
-            placeholder="Hostname"
-            bind:value={host.hostname}
-            required
-            pattern={PATTERN_LINUX_HOSTNAME}
-            maxLength={61}
-            width="min(23rem, calc(100dvw - .5rem))"
+                label="Hostname"
+                placeholder="Hostname"
+                bind:value={host.hostname}
+                required
+                pattern={PATTERN_LINUX_HOSTNAME}
+                maxLength={61}
+                width="min(23rem, calc(100dvw - .5rem))"
         />
 
         <div class="row">
             <div class="label">
                 {ta.pam.groupName}
             </div>
-            <Options ariaLabel={ta.pam.groupName} options={groupNames} bind:value={groupName} />
+            <Options ariaLabel={ta.pam.groupName} options={groupNames} bind:value={groupName}/>
         </div>
 
         <div class="row">
             <div class="label">
                 {ta.clients.forceMfa}
             </div>
-            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa} />
+            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa}/>
         </div>
 
         <div class="row">
@@ -154,8 +154,8 @@
                 {ta.pam.hostLocalPwdOnly}
             </div>
             <InputCheckbox
-                ariaLabel={ta.pam.hostLocalPwdOnly}
-                bind:checked={host.local_password_only}
+                    ariaLabel={ta.pam.hostLocalPwdOnly}
+                    bind:checked={host.local_password_only}
             />
         </div>
         {#if host.local_password_only}
@@ -166,14 +166,14 @@
             </div>
         {/if}
 
-        <InputTags label={ta.pam.ipAddresses} bind:values={host.ips} width={widthAreas} />
+        <InputTags label={ta.pam.ipAddresses} bind:values={host.ips} width={widthAreas}/>
         <InputTags
-            label={ta.pam.hostAliases}
-            bind:values={host.aliases}
-            pattern={PATTERN_LINUX_HOSTNAME}
-            width={widthAreas}
+                label={ta.pam.hostAliases}
+                bind:values={host.aliases}
+                pattern={PATTERN_LINUX_HOSTNAME}
+                width={widthAreas}
         />
-        <InputArea label={ta.pam.notes} bind:value={host.notes} width={widthAreas} />
+        <InputArea label={ta.pam.notes} bind:value={host.notes} width={widthAreas}/>
 
         <div class="flex gap-05">
             <Button type="submit">
@@ -184,7 +184,7 @@
             </Button>
 
             {#if success}
-                <IconCheck />
+                <IconCheck/>
             {/if}
         </div>
 

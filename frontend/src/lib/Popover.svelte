@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { genKey } from '$utils/helpers';
+    import type {Snippet} from 'svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {genKey} from '#utils/helpers.ts';
 
     let {
         ref = $bindable(),
@@ -100,34 +100,34 @@
 
 <div>
     <Button
-        bind:ref
-        role={roleButton}
-        id={idButton}
-        {ariaLabel}
-        ariaControls={idPopover}
-        popovertarget={idPopover}
-        {onclick}
-        invisible={btnInvisible}
-        isDisabled={btnDisabled}
-        {onTab}
-        {onLeft}
-        {onRight}
-        {onUp}
-        {onDown}
+            bind:ref
+            role={roleButton}
+            id={idButton}
+            {ariaLabel}
+            ariaControls={idPopover}
+            popovertarget={idPopover}
+            {onclick}
+            invisible={btnInvisible}
+            isDisabled={btnDisabled}
+            {onTab}
+            {onLeft}
+            {onRight}
+            {onUp}
+            {onDown}
     >
         {@render button()}
     </Button>
 
     <div
-        bind:this={refPopover}
-        id={idPopover}
-        aria-label={ariaLabel}
-        aria-labelledby={idButton}
-        aria-expanded={isOpen}
-        class="popover"
-        class:anchored
-        popover="auto"
-        {ontoggle}
+            bind:this={refPopover}
+            id={idPopover}
+            aria-label={ariaLabel}
+            aria-labelledby={idButton}
+            aria-expanded={isOpen}
+            class="popover"
+            class:anchored
+            popover="auto"
+            {ontoggle}
     >
         <div class="inner fade-in">
             {#if lazy}

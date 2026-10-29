@@ -1,35 +1,35 @@
 <script lang="ts">
-    import { normalizeClientUri, redirectToLogout } from '$utils/helpers';
-    import AccInfo from '$lib5/account/AccInfo.svelte';
-    import AccEdit from '$lib5/account/AccEdit.svelte';
+    import {normalizeClientUri, redirectToLogout} from '#utils/helpers.ts';
+    import AccInfo from '#lib/account/AccInfo.svelte';
+    import AccEdit from '#lib/account/AccEdit.svelte';
     import AccMFA from './AccMFA.svelte';
     import AccPassword from './AccPassword.svelte';
     import AccWebId from './AccWebId.svelte';
-    import AccDevices from '$lib5/account/AccDevices.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { UserResponse } from '$api/types/user.ts';
-    import { TPL_AUTH_PROVIDERS, TPL_USER_VALUES_CONFIG } from '$utils/constants';
-    import Template from '$lib5/Template.svelte';
-    import type { AuthProvidersTemplate } from '$api/templates/AuthProvider.ts';
-    import { onMount } from 'svelte';
-    import { useParam } from '$state/param.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import Devices from '$lib5/devices/Devices.svelte';
-    import type { WebIdResponse } from '$api/types/web_id.ts';
-    import IconLogout from '$icons/IconLogout.svelte';
-    import IconUserGroup from '$icons/IconUserGroup.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import A from '$lib5/A.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import { useSession } from '$state/session.svelte';
-    import AccOther from '$lib/account/AccOther.svelte';
-    import AccPAM from '$lib/account/AccPAM.svelte';
-    import type { PamUserResponse } from '$api/types/pam';
-    import { fetchGet, fetchPost } from '$api/fetch';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import IconHome from '$icons/IconHome.svelte';
-    import IconArrowLeft from '$icons/IconArrowLeft.svelte';
+    import AccDevices from '#lib/account/AccDevices.svelte';
+    import {useI18n} from '#state/i18n.svelte.js';
+    import type {UserResponse} from '#api/types/user.ts';
+    import {TPL_AUTH_PROVIDERS, TPL_USER_VALUES_CONFIG} from '#utils/constants.ts';
+    import Template from '#lib/Template.svelte';
+    import type {AuthProvidersTemplate} from '#api/templates/AuthProvider.ts';
+    import {onMount} from 'svelte';
+    import {useParam} from '#state/param.svelte.ts';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import Devices from '#lib/devices/Devices.svelte';
+    import type {WebIdResponse} from '#api/types/web_id.ts';
+    import IconLogout from '#icons/IconLogout.svelte';
+    import IconUserGroup from '#icons/IconUserGroup.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import A from '#lib/A.svelte';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
+    import {useSession} from '#state/session.svelte.ts';
+    import AccOther from '#lib/account/AccOther.svelte';
+    import AccPAM from '#lib/account/AccPAM.svelte';
+    import type {PamUserResponse} from '#api/types/pam.ts';
+    import {fetchGet, fetchPost} from '#api/fetch.ts';
+    import type {UserValuesConfig} from '#api/templates/UserValuesConfig.ts';
+    import IconHome from '#icons/IconHome.svelte';
+    import IconArrowLeft from '#icons/IconArrowLeft.svelte';
 
     let {
         user = $bindable(),
@@ -107,17 +107,17 @@
         }
 
         if (
-            (config.birthdate === 'required' && !user.user_values.birthdate) ||
-            (config.city === 'required' && !user.user_values.city) ||
-            (config.country === 'required' && !user.user_values.country) ||
-            (config.given_name === 'required' && !user.given_name) ||
-            (config.family_name === 'required' && !user.family_name) ||
-            (config.phone === 'required' && !user.user_values.phone) ||
-            (config.preferred_username.preferred_username === 'required' &&
-                !user.user_values.preferred_username) ||
-            (config.street === 'required' && !user.user_values.street) ||
-            (config.tz === 'required' && !user.user_values.tz) ||
-            (config.zip === 'required' && !user.user_values.zip)
+                (config.birthdate === 'required' && !user.user_values.birthdate) ||
+                (config.city === 'required' && !user.user_values.city) ||
+                (config.country === 'required' && !user.user_values.country) ||
+                (config.given_name === 'required' && !user.given_name) ||
+                (config.family_name === 'required' && !user.family_name) ||
+                (config.phone === 'required' && !user.user_values.phone) ||
+                (config.preferred_username.preferred_username === 'required' &&
+                        !user.user_values.preferred_username) ||
+                (config.street === 'required' && !user.user_values.street) ||
+                (config.tz === 'required' && !user.user_values.tz) ||
+                (config.zip === 'required' && !user.user_values.zip)
         ) {
             selected = t.account.navEdit;
         }
@@ -149,10 +149,10 @@
     }
 </script>
 
-<svelte:window bind:innerWidth />
+<svelte:window bind:innerWidth/>
 
-<Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
-<Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_USER_VALUES_CONFIG} bind:value={config}/>
 
 {#snippet header()}
     <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
@@ -163,7 +163,7 @@
         <div class="adminLink">
             <A href="/auth/v1/admin/users" hideUnderline>
                 <div title={t.account.navBackToAdmin} class="flex gap-05">
-                    <IconUserGroup />
+                    <IconUserGroup/>
                     {t.account.navBackToAdmin}
                 </div>
             </A>
@@ -176,8 +176,8 @@
         <div class="redirectHome" data-absolute={position === 'absolute'}>
             <Button onclick={() => (window.location.href = redirectUriValidated)} invisible>
                 <div class="flex gap-05">
-                    <IconArrowLeft />
-                    <IconHome />
+                    <IconArrowLeft/>
+                    <IconHome/>
                 </div>
             </Button>
         </div>
@@ -188,12 +188,12 @@
      row, matching the order and position of the same controls in the Admin UI nav so an
      admin switching back and forth does not see them jump around -->
 {#snippet bottomControls()}
-    <ThemeSwitch />
-    <LangSelector openTop borderless />
+    <ThemeSwitch/>
+    <LangSelector openTop borderless/>
     {@render adminLink()}
     <Button level={-3} onclick={redirectToLogout}>
         <div title={t.account.navLogout} class="flex gap-05">
-            <IconLogout />
+            <IconLogout/>
             {t.account.navLogout}
         </div>
     </Button>
@@ -207,34 +207,34 @@
         </div>
 
         <div class="container containerPhone">
-            <Tabs tabs={tabsCompact} bind:selected />
+            <Tabs tabs={tabsCompact} bind:selected/>
 
             <div class="innerPhone">
                 {#if selected === t.account.navInfo}
                     <AccInfo
-                        bind:user
-                        {pamUser}
-                        {providers}
-                        {authProvider}
-                        viewModePhone
-                        {webIdData}
+                            bind:user
+                            {pamUser}
+                            {providers}
+                            {authProvider}
+                            viewModePhone
+                            {webIdData}
                     />
                 {:else if selected === 'PAM' && pamUser}
-                    <AccPAM bind:pamUser />
+                    <AccPAM bind:pamUser/>
                 {:else if selected === t.account.navEdit}
-                    <AccEdit {config} bind:user viewModePhone />
+                    <AccEdit {config} bind:user viewModePhone/>
                 {:else if selected === t.common.password}
-                    <AccPassword {user} {authProvider} viewModePhone />
+                    <AccPassword {user} {authProvider} viewModePhone/>
                 {:else if selected === t.account.navMfa}
-                    <AccMFA bind:user />
+                    <AccMFA bind:user/>
                 {:else if selected === 'WebID'}
                     {#if webIdData}
-                        <AccWebId bind:webIdData />
+                        <AccWebId bind:webIdData/>
                     {/if}
                 {:else if selected === t.account.other}
-                    <AccOther {user} />
+                    <AccOther {user}/>
                 {:else if selected === t.account.devices}
-                    <Devices userId={user.id} />
+                    <Devices userId={user.id}/>
                 {/if}
             </div>
         </div>
@@ -250,32 +250,32 @@
         <div class="wide">
             {#if !viewModeWideCompact}
                 <div class="info">
-                    <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
+                    <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider}/>
                 </div>
             {/if}
 
             <div class="container">
-                <Tabs tabs={viewModeWideCompact ? tabsCompact : tabsWide} bind:selected center />
+                <Tabs tabs={viewModeWideCompact ? tabsCompact : tabsWide} bind:selected center/>
 
                 <div class="inner">
                     {#if selected === t.account.navInfo}
-                        <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
+                        <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider}/>
                     {:else if selected === 'PAM' && pamUser}
-                        <AccPAM bind:pamUser />
+                        <AccPAM bind:pamUser/>
                     {:else if selected === t.account.navEdit}
-                        <AccEdit {config} bind:user />
+                        <AccEdit {config} bind:user/>
                     {:else if selected === t.common.password}
-                        <AccPassword {user} {authProvider} />
+                        <AccPassword {user} {authProvider}/>
                     {:else if selected === t.account.navMfa}
-                        <AccMFA bind:user />
+                        <AccMFA bind:user/>
                     {:else if selected === 'WebID'}
                         {#if webIdData}
-                            <AccWebId bind:webIdData />
+                            <AccWebId bind:webIdData/>
                         {/if}
                     {:else if selected === t.account.other}
-                        <AccOther {user} />
+                        <AccOther {user}/>
                     {:else if selected === t.account.devices}
-                        <AccDevices />
+                        <AccDevices/>
                     {/if}
                 </div>
             </div>

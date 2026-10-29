@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import { untrack } from 'svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {untrack} from 'svelte';
 
     let {
         tabs,
@@ -57,11 +57,11 @@
 <div bind:this={ref} class="tabs" class:center style:border-radius={borderRadius} style:width>
     {#each tabs as tab, i}
         <Button
-            ariaCurrent={tab === selected ? 'step' : undefined}
-            invisible
-            onclick={() => (selected = tab)}
-            onLeft={() => onLeft(i)}
-            onRight={() => onRight(i)}
+                ariaCurrent={tab === selected ? 'step' : undefined}
+                invisible
+                onclick={() => (selected = tab)}
+                onLeft={() => onLeft(i)}
+                onRight={() => onRight(i)}
         >
             <span class="font-label tab" data-selected={tab === selected}>
                 {tab}

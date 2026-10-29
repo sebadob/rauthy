@@ -1,5 +1,5 @@
-import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
-import type { OtpResponse } from '$api/types/otp';
+import {fetchDelete, fetchPost, fetchPut} from '#api/fetch.ts';
+import type {OtpResponse} from '#api/types/otp.ts';
 import type {
     OtpActivateRequest,
     OtpActivateResponse,
@@ -8,13 +8,13 @@ import type {
     OtpDeleteRequest,
     OtpDeleteResponse,
     OtpKind,
-} from '$mfa/otp/types.ts';
+} from '#mfa/otp/types.ts';
 
 export async function postOtp(
-    userId: string,
-    kind: OtpKind,
-    name: undefined | string,
-    mfaModTokenId: string,
+        userId: string,
+        kind: OtpKind,
+        name: undefined | string,
+        mfaModTokenId: string,
 ): Promise<OtpCreateResponse> {
     let payload: OtpCreateRequest = {
         otp_name: name?.trim(),
@@ -31,17 +31,17 @@ export async function postOtp(
     if (!res.body) {
         let error = 'Did not receive a valid otp body';
         console.error(error);
-        return { error };
+        return {error};
     }
 
-    return { data: res.body };
+    return {data: res.body};
 }
 
 export async function putOtp(
-    userId: string,
-    id: string,
-    code: string,
-    mfaModTokenId: string,
+        userId: string,
+        id: string,
+        code: string,
+        mfaModTokenId: string,
 ): Promise<OtpActivateResponse> {
     let payload: OtpActivateRequest = {
         otp_id: id,
@@ -59,9 +59,9 @@ export async function putOtp(
 }
 
 export async function deleteOtp(
-    userId: string,
-    id: string,
-    mfaModTokenId?: string,
+        userId: string,
+        id: string,
+        mfaModTokenId?: string,
 ): Promise<OtpDeleteResponse> {
     let payload: OtpDeleteRequest = {
         otp_id: id,

@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Input from '$lib/form/Input.svelte';
-    import type { UserValuesPreferredUsername } from '$api/templates/UserValuesConfig';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import { fetchPut } from '$api/fetch';
-    import type { PreferredUsernameRequest } from '$api/types/user';
-    import { slide } from 'svelte/transition';
-    import Tooltip from '$lib/Tooltip.svelte';
-    import IconInfo from '$icons/IconInfo.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import Form from '$lib/form/Form.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import type {UserValuesPreferredUsername} from '#api/templates/UserValuesConfig.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import {fetchPut} from '#api/fetch.ts';
+    import type {PreferredUsernameRequest} from '#api/types/user.ts';
+    import {slide} from 'svelte/transition';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import IconInfo from '#icons/IconInfo.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Form from '#lib/form/Form.svelte';
 
     let {
         userId,
@@ -99,9 +99,9 @@
             <div class="btn">
                 {#if canEdit}
                     <Button
-                        ariaLabel={t.common.edit}
-                        level={required && !preferred_username ? -1 : 3}
-                        onclick={() => (showModal = true)}
+                            ariaLabel={t.common.edit}
+                            level={required && !preferred_username ? -1 : 3}
+                            onclick={() => (showModal = true)}
                     >
                         {t.common.edit}
                     </Button>
@@ -110,22 +110,22 @@
                         <h3>{t.account.preferredUsername.preferredUsername}</h3>
 
                         <Form
-                            action={`/auth/v1/users/${userId}/self/preferred_username`}
-                            {onSubmit}
+                                action={`/auth/v1/users/${userId}/self/preferred_username`}
+                                {onSubmit}
                         >
                             <Input
-                                bind:ref
-                                name="preferred_username"
-                                autocomplete="off"
-                                label={t.account.preferredUsername.preferredUsername}
-                                placeholder={t.account.preferredUsername.preferredUsername}
-                                bind:value={username}
-                                {required}
-                                isError={nameExists}
-                                errMsg={nameExists ? t.account.preferredUsername.notAvailable : ''}
-                                pattern={config.pattern_html}
-                                width="15rem"
-                                onInput={() => (nameExists = false)}
+                                    bind:ref
+                                    name="preferred_username"
+                                    autocomplete="off"
+                                    label={t.account.preferredUsername.preferredUsername}
+                                    placeholder={t.account.preferredUsername.preferredUsername}
+                                    bind:value={username}
+                                    {required}
+                                    isError={nameExists}
+                                    errMsg={nameExists ? t.account.preferredUsername.notAvailable : ''}
+                                    pattern={config.pattern_html}
+                                    width="15rem"
+                                    onInput={() => (nameExists = false)}
                             />
 
                             <div class="desc">
@@ -139,8 +139,8 @@
 
                             {#if config.immutable && isAdmin}
                                 <InputCheckbox
-                                    ariaLabel={t.account.preferredUsername.forceOverwrite}
-                                    bind:checked={forceOverwrite}
+                                        ariaLabel={t.account.preferredUsername.forceOverwrite}
+                                        bind:checked={forceOverwrite}
                                 >
                                     {t.account.preferredUsername.forceOverwrite}
                                 </InputCheckbox>
@@ -167,7 +167,7 @@
                 {:else}
                     <Tooltip text={t.account.preferredUsername.immutableInfo}>
                         <div class="immutableInfo">
-                            <IconInfo width="1.2rem" />
+                            <IconInfo width="1.2rem"/>
                         </div>
                     </Tooltip>
                 {/if}

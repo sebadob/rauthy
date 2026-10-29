@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { fade } from 'svelte/transition';
-    import { type Snippet, untrack } from 'svelte';
-    import Loading from '$lib5/Loading.svelte';
+    import {fade} from 'svelte/transition';
+    import {type Snippet, untrack} from 'svelte';
+    import Loading from '#lib/Loading.svelte';
 
     let {
         type = 'button',
@@ -135,29 +135,29 @@
 </script>
 
 <button
-    bind:this={ref}
-    name={ariaLabel}
-    {role}
-    {type}
-    {id}
-    aria-label={ariaLabel}
-    aria-controls={ariaControls}
-    aria-current={ariaCurrent}
-    class={cls}
-    class:invisibleOutline
-    style:width
-    data-isloading={isLoading}
-    {onclick}
-    {onkeydown}
-    {disabled}
-    aria-disabled={disabled}
-    {popovertarget}
-    {popovertargetaction}
-    {...rest}
+        bind:this={ref}
+        name={ariaLabel}
+        {role}
+        {type}
+        {id}
+        aria-label={ariaLabel}
+        aria-controls={ariaControls}
+        aria-current={ariaCurrent}
+        class={cls}
+        class:invisibleOutline
+        style:width
+        data-isloading={isLoading}
+        {onclick}
+        {onkeydown}
+        {disabled}
+        aria-disabled={disabled}
+        {popovertarget}
+        {popovertargetaction}
+        {...rest}
 >
     {#if isLoading}
         <div class="load">
-            <Loading background={false} color={loadingColor()} />
+            <Loading background={false} color={loadingColor()}/>
         </div>
     {:else if showText}
         <div in:fade class="children font-label">

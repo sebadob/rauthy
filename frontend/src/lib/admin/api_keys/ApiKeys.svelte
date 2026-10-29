@@ -1,17 +1,17 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { fetchGet } from '$api/fetch';
-    import type { ApiKeyResponse, ApiKeysResponse } from '$api/types/api_keys.ts';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import { useParam } from '$state/param.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import ApiKeyDetails from '$lib5/admin/api_keys/ApiKeyDetails.svelte';
-    import ApiKeyAddNew from '$lib5/admin/api_keys/ApiKeyAddNew.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import {onMount} from 'svelte';
+    import {fetchGet} from '#api/fetch.ts';
+    import type {ApiKeyResponse, ApiKeysResponse} from '#api/types/api_keys.ts';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import {useParam} from '#state/param.svelte.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import ApiKeyDetails from '#lib/admin/api_keys/ApiKeyDetails.svelte';
+    import ApiKeyAddNew from '#lib/admin/api_keys/ApiKeyAddNew.svelte';
+    import {useTrigger} from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -75,26 +75,26 @@
 {err}
 
 <NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="keys"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
+        paddingTop="2.35rem"
+        buttonTilesAriaControls="keys"
+        width="min(20rem, 100dvw)"
+        thresholdNavSub={700}
 >
     <ButtonAddModal
-        bind:ref={refAddNew}
-        level={keys.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
+            bind:ref={refAddNew}
+            level={keys.length === 0 ? 1 : 2}
+            bind:closeModal
+            alignRight
     >
-        <ApiKeyAddNew {keys} onSave={onNewKey} />
+        <ApiKeyAddNew {keys} onSave={onNewKey}/>
     </ButtonAddModal>
     <OrderSearchBar
-        {searchOptions}
-        bind:searchOption
-        bind:value={searchValue}
-        {orderOptions}
-        {onChangeOrder}
-        searchWidth="min(19.5rem, 100dvw - .5rem)"
+            {searchOptions}
+            bind:searchOption
+            bind:value={searchValue}
+            {orderOptions}
+            {onChangeOrder}
+            searchWidth="min(19.5rem, 100dvw - .5rem)"
     />
 
     {#snippet buttonTiles()}
@@ -111,7 +111,7 @@
 <ContentAdmin>
     <div id="keys" aria-label={ta.common.details}>
         {#if key}
-            <ApiKeyDetails bind:key onSave={fetchApiKeys} />
+            <ApiKeyDetails bind:key onSave={fetchApiKeys}/>
         {/if}
     </div>
 </ContentAdmin>

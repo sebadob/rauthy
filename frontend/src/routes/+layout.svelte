@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { onMount, type Snippet } from 'svelte';
-    import { initLang } from '$state/language.svelte';
-    import { initI18n } from '$state/i18n.svelte';
+    import {onMount, type Snippet} from 'svelte';
+    import {initLang} from '#state/language.svelte.ts';
+    import {initI18n} from '#state/i18n.svelte.ts';
 
     import '../css/global.css';
+    import {fetchSolvePow} from "#utils/pow.ts";
 
     initLang();
     initI18n();
@@ -24,6 +25,8 @@
         cookiesEnabled = navigator.cookieEnabled;
         isSecureContext = window.crypto?.subtle !== undefined;
     });
+
+
 </script>
 
 <noscript>
@@ -44,7 +47,7 @@
     <div>
         <h1>Cookies disabled</h1>
         <p>
-            You need to enable Cookies.<br />
+            You need to enable Cookies.<br/>
             Without them, a safe interaction with Rauthy is not possible.
         </p>
     </div>

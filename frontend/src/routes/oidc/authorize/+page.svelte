@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { formatDateFromTs, normalizeClientUri, saveCsrfToken } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
+    import {formatDateFromTs, normalizeClientUri, saveCsrfToken} from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
     import {
         IS_DEV,
         TPL_AUTH_PROVIDERS,
@@ -16,18 +16,18 @@
         TPL_LOGIN_ACTION,
         TPL_PASSKEY_REG_TYPE,
         TPL_ATPROTO_ID,
-    } from '$utils/constants.js';
-    import IconHome from '$icons/IconHome.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Template from '$lib5/Template.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
-    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
-    import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
+    } from '#utils/constants.js';
+    import IconHome from '#icons/IconHome.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Template from '#lib/Template.svelte';
+    import {useParam} from '#state/param.svelte.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import type {AuthProviderTemplate} from '#api/templates/AuthProvider.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import type {WebauthnAdditionalData} from '#mfa/webauthn/types.ts';
+    import {fetchGet, fetchPost, type IResponse} from '#api/fetch.ts';
     import type {
         ActiveOtp,
         CodeChallengeMethod,
@@ -36,24 +36,24 @@
         OtpLoginResponse,
         RequestResetRequest,
         WebauthnLoginResponse,
-    } from '$api/types/authorize.ts';
-    import Form from '$lib5/form/Form.svelte';
-    import ButtonAuthProvider from '$lib5/ButtonAuthProvider.svelte';
-    import { onMount } from 'svelte';
-    import type { SessionInfoResponse } from '$api/types/session.ts';
-    import ClientLogo from '$lib5/ClientLogo.svelte';
-    import type { ProviderLoginRequest } from '$api/types/auth_provider.ts';
-    import { fetchSolvePow } from '$utils/pow';
-    import { PATTERN_ATPROTO_ID } from '$utils/patterns';
-    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
-    import TosAccept from '$lib/TosAccept.svelte';
-    import { execProviderLogin } from '$utils/login';
-    import Modal from '$lib/Modal.svelte';
-    import Loading from '$lib/Loading.svelte';
-    import OtpRequest from '$lib5/OtpRequest.svelte';
-    import type { MfaPurpose } from '$api/types/mfa';
-    import type { OtpAdditionalData } from '$mfa/otp/types';
-    import IconKey from '$icons/IconKey.svelte';
+    } from '#api/types/authorize.ts';
+    import Form from '#lib/form/Form.svelte';
+    import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
+    import {onMount} from 'svelte';
+    import type {SessionInfoResponse} from '#api/types/session.ts';
+    import ClientLogo from '#lib/ClientLogo.svelte';
+    import type {ProviderLoginRequest} from '#api/types/auth_provider.ts';
+    import {fetchSolvePow} from '#utils/pow.ts';
+    import {PATTERN_ATPROTO_ID} from '#utils/patterns.ts';
+    import type {ToSAwaitLoginResponse, ToSLatestResponse} from '#api/types/tos.ts';
+    import TosAccept from '#lib/TosAccept.svelte';
+    import {execProviderLogin} from '#utils/login.ts';
+    import Modal from '#lib/Modal.svelte';
+    import Loading from '#lib/Loading.svelte';
+    import OtpRequest from '#lib/OtpRequest.svelte';
+    import type {MfaPurpose} from '#api/types/mfa.ts';
+    import type {OtpAdditionalData} from '#mfa/otp/types.ts';
+    import IconKey from '#icons/IconKey.svelte';
 
     const inputWidth = '18rem';
 
@@ -79,7 +79,7 @@
     let stateParam = useParam('state').get();
     let challenge = useParam('code_challenge').get();
     let challengeMethod: CodeChallengeMethod = useParam(
-        'code_challenge_method',
+            'code_challenge_method',
     ).get() as CodeChallengeMethod;
     // RFC 8707 resource indicator forwarded into the login request
     let resource = useParam('resource').get();
@@ -117,7 +117,7 @@
     let email = $state(useParam('login_hint').get() || '');
     let password = $state('');
     let showPasswordInput = $derived(
-        needsPassword && existingMfaUser !== email && !showReset && !isAtproto,
+            needsPassword && existingMfaUser !== email && !showReset && !isAtproto,
     );
 
     let tos: undefined | ToSLatestResponse = $state();
@@ -128,11 +128,11 @@
 
     $effect(() => {
         if (
-            'Refresh' === loginAction &&
-            clientId &&
-            clientId.length > 0 &&
-            redirectUri &&
-            redirectUri.length > 0
+                'Refresh' === loginAction &&
+                clientId &&
+                clientId.length > 0 &&
+                redirectUri &&
+                redirectUri.length > 0
         ) {
             onRefresh();
         }
@@ -257,9 +257,9 @@
             fwda,
         };
         if (
-            challenge &&
-            challengeMethod &&
-            (challengeMethod === 'plain' || challengeMethod === 'S256')
+                challenge &&
+                challengeMethod &&
+                (challengeMethod === 'plain' || challengeMethod === 'S256')
         ) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
@@ -269,8 +269,8 @@
         }
 
         let res = await fetchPost<undefined | WebauthnLoginResponse | OtpLoginResponse>(
-            '/auth/v1/oidc/authorize/refresh',
-            payload,
+                '/auth/v1/oidc/authorize/refresh',
+                payload,
         );
         await handleAuthRes(res);
     }
@@ -281,9 +281,9 @@
     }
 
     async function onSubmit(
-        form?: HTMLFormElement,
-        params?: URLSearchParams,
-        residentKeyToken?: string,
+            form?: HTMLFormElement,
+            params?: URLSearchParams,
+            residentKeyToken?: string,
     ) {
         if (isAtproto) {
             return providerLogin(atprotoId);
@@ -316,9 +316,9 @@
             fwda,
         };
         if (
-            challenge &&
-            challengeMethod &&
-            (challengeMethod === 'plain' || challengeMethod === 'S256')
+                challenge &&
+                challengeMethod &&
+                (challengeMethod === 'plain' || challengeMethod === 'S256')
         ) {
             payload.code_challenge = challenge;
             payload.code_challenge_method = challengeMethod;
@@ -347,15 +347,15 @@
         }
 
         let res = await fetchPost<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+                undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
         >(url, payload, 'json', 'noRedirect');
         await handleAuthRes(res);
     }
 
     async function handleAuthRes(
-        res?: IResponse<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-        >,
+            res?: IResponse<
+                    undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+            >,
     ) {
         isLoading = false;
         isAutoRefreshing = false;
@@ -378,7 +378,7 @@
             err = '';
             let body = res.body;
             if (body && 'code' in body) {
-                mfaPurpose = { Login: body.code as string };
+                mfaPurpose = {Login: body.code as string};
                 if ('active_otps' in body) {
                     activeOtps = body.active_otps;
                     mfaKind = 'otp';
@@ -387,7 +387,7 @@
                 }
             } else {
                 console.error(
-                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                        'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
                 );
             }
         } else if (res.status === 205) {
@@ -495,7 +495,7 @@
             pkce_challenge: '',
             pow: '',
             fwda,
-            ...(isAtproto && { handle: atprotoHandle }),
+            ...(isAtproto && {handle: atprotoHandle}),
         };
         execProviderLogin(payload).then(errMsg => {
             err = errMsg || '';
@@ -514,9 +514,9 @@
 
     function onMfaError(error: string) {
         let isAttErr =
-            error.includes('certification level') ||
-            error.includes('key protection') ||
-            error.includes('attachment hint');
+                error.includes('certification level') ||
+                error.includes('key protection') ||
+                error.includes('attachment hint');
         if (isAttErr) {
             console.error(error);
             err = t.account.passkeys.missingAttestation;
@@ -558,7 +558,7 @@
         isLoading = true;
         let pow = (await fetchSolvePow()) || '';
 
-        let payload: RequestResetRequest = { email, pow };
+        let payload: RequestResetRequest = {email, pow};
         // We don't want a redirect for Rauthy directly. Instead, leave it blank,
         // so that the UI after a successful reset will use a relative redirect to
         // the Account dashboard instead.
@@ -585,21 +585,21 @@
     <title>Login: {clientName || clientId}</title>
 </svelte:head>
 
-<Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
-<Template id={TPL_ATPROTO_ID} bind:value={atprotoId} />
-<Template id={TPL_CLIENT_NAME} bind:value={clientName} />
-<Template id={TPL_CLIENT_URL} bind:value={clientUri} />
-<Template id={TPL_CLIENT_FAVICON_UPDATED} {clientId} bind:value={clientFaviconUpdated} />
-<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
-<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
-<Template id={TPL_LOGIN_ACTION} bind:value={loginAction} />
-<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
-<Template id={TPL_PASSKEY_REG_TYPE} bind:value={passkeyRegType} />
+<Template id={TPL_AUTH_PROVIDERS} bind:value={providers}/>
+<Template id={TPL_ATPROTO_ID} bind:value={atprotoId}/>
+<Template id={TPL_CLIENT_NAME} bind:value={clientName}/>
+<Template id={TPL_CLIENT_URL} bind:value={clientUri}/>
+<Template id={TPL_CLIENT_FAVICON_UPDATED} {clientId} bind:value={clientFaviconUpdated}/>
+<Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated}/>
+<Template id={TPL_CSRF_TOKEN} bind:value={csrfToken}/>
+<Template id={TPL_LOGIN_ACTION} bind:value={loginAction}/>
+<Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen}/>
+<Template id={TPL_PASSKEY_REG_TYPE} bind:value={passkeyRegType}/>
 
 <Main>
     {#if isAutoRefreshing}
         <div class="loadingGlobal">
-            <Loading global />
+            <Loading global/>
         </div>
     {/if}
     <div class="outer">
@@ -608,13 +608,13 @@
                 <div class="head">
                     {#if clientId}
                         <ClientLogo
-                            {clientId}
-                            updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}
+                                {clientId}
+                                updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}
                         />
                     {/if}
                     {#if clientUriNormalized}
                         <a class="home" href={clientUriNormalized} aria-label="Client Home Page">
-                            <IconHome color="hsla(var(--text) / .9)" />
+                            <IconHome color="hsla(var(--text) / .9)"/>
                         </a>
                     {/if}
                 </div>
@@ -632,16 +632,16 @@
                     -->
                     {#if mfaKind == 'webauthn'}
                         <WebauthnRequest
-                            purpose={mfaPurpose}
-                            onSuccess={onMfaSuccess}
-                            onError={onMfaError}
+                                purpose={mfaPurpose}
+                                onSuccess={onMfaSuccess}
+                                onError={onMfaError}
                         />
                     {:else if mfaKind == 'otp' && activeOtps}
                         <OtpRequest
-                            {activeOtps}
-                            purpose={mfaPurpose}
-                            onSuccess={onMfaSuccess}
-                            onError={onMfaError}
+                                {activeOtps}
+                                purpose={mfaPurpose}
+                                onSuccess={onMfaSuccess}
+                                onError={onMfaError}
                         />
                     {/if}
                 {/if}
@@ -651,52 +651,52 @@
                         <div class:emailMinHeight={!showPasswordInput}>
                             {#if isAtproto}
                                 <Input
-                                    name="handle"
-                                    bind:value={atprotoHandle}
-                                    label="Handle / DID"
-                                    placeholder="Handle / DID"
-                                    pattern={PATTERN_ATPROTO_ID}
-                                    disabled={tooManyRequests}
-                                    width={inputWidth}
-                                    required
+                                        name="handle"
+                                        bind:value={atprotoHandle}
+                                        label="Handle / DID"
+                                        placeholder="Handle / DID"
+                                        pattern={PATTERN_ATPROTO_ID}
+                                        disabled={tooManyRequests}
+                                        width={inputWidth}
+                                        required
                                 />
                             {:else}
                                 <Input
-                                    typ="email"
-                                    name="email"
-                                    bind:value={email}
-                                    autocomplete="email"
-                                    label={t.common.email}
-                                    placeholder={t.common.email}
-                                    errMsg={t.authorize.validEmail}
-                                    disabled={tooManyRequests || clientMfaForce || isLoading}
-                                    onInput={onEmailInput}
-                                    width={inputWidth}
-                                    required
+                                        typ="email"
+                                        name="email"
+                                        bind:value={email}
+                                        autocomplete="email"
+                                        label={t.common.email}
+                                        placeholder={t.common.email}
+                                        errMsg={t.authorize.validEmail}
+                                        disabled={tooManyRequests || clientMfaForce || isLoading}
+                                        onInput={onEmailInput}
+                                        width={inputWidth}
+                                        required
                                 />
                             {/if}
                         </div>
 
                         {#if showPasswordInput}
                             <InputPassword
-                                bind:ref={refPassword}
-                                name="password"
-                                bind:value={password}
-                                autocomplete="current-password"
-                                label={t.common.password}
-                                placeholder={t.common.password}
-                                maxLength={256}
-                                disabled={tooManyRequests || clientMfaForce || isLoading}
-                                width={inputWidth}
-                                required
+                                    bind:ref={refPassword}
+                                    name="password"
+                                    bind:value={password}
+                                    autocomplete="current-password"
+                                    label={t.common.password}
+                                    placeholder={t.common.password}
+                                    maxLength={256}
+                                    disabled={tooManyRequests || clientMfaForce || isLoading}
+                                    width={inputWidth}
+                                    required
                             />
 
                             {#if showResetRequest && !tooManyRequests}
                                 <div class="forgotten">
                                     <Button
-                                        ariaLabel={t.authorize.passwordForgotten}
-                                        invisible
-                                        onclick={handleShowReset}
+                                            ariaLabel={t.authorize.passwordForgotten}
+                                            invisible
+                                            onclick={handleShowReset}
                                     >
                                         {t.authorize.passwordForgotten}
                                     </Button>
@@ -704,15 +704,15 @@
                             {/if}
                         {:else}
                             <!-- This only exists to help password managers to trigger an auto-fill  -->
-                            <input type="password" hidden aria-hidden="true" style:display="none" />
+                            <input type="password" hidden aria-hidden="true" style:display="none"/>
                         {/if}
 
                         {#if !tooManyRequests && !clientMfaForce}
                             {#if showReset && !isAtproto}
                                 <div class="btn flex-col">
                                     <Button
-                                        ariaLabel={t.authorize.passwordRequest}
-                                        onclick={requestReset}
+                                            ariaLabel={t.authorize.passwordRequest}
+                                            onclick={requestReset}
                                     >
                                         {t.authorize.passwordRequest}
                                     </Button>
@@ -720,11 +720,11 @@
                             {:else}
                                 <div class="btn flex-col">
                                     <Button
-                                        type="submit"
-                                        ariaLabel={t.authorize.login}
-                                        onclick={() => onSubmit()}
-                                        isDisabled={email.length === 0}
-                                        {isLoading}
+                                            type="submit"
+                                            ariaLabel={t.authorize.login}
+                                            onclick={() => onSubmit()}
+                                            isDisabled={email.length === 0}
+                                            {isLoading}
                                     >
                                         {t.authorize.login}
                                     </Button>
@@ -732,9 +732,9 @@
                                 {#if isAtproto}
                                     <div class="btn flex-col">
                                         <Button
-                                            ariaLabel={t.common.cancel}
-                                            level={2}
-                                            onclick={toggleAtproto}
+                                                ariaLabel={t.common.cancel}
+                                                level={2}
+                                                onclick={toggleAtproto}
                                         >
                                             {t.common.cancel}
                                         </Button>
@@ -747,9 +747,9 @@
                     {#if isRegOpen && !showResetRequest && !tooManyRequests && !isAtproto}
                         {#if clientUri}
                             <a
-                                class="reg"
-                                href="/auth/v1/users/register?redirect_uri={clientUri}"
-                                target="_blank"
+                                    class="reg"
+                                    href="/auth/v1/users/register?redirect_uri={clientUri}"
+                                    target="_blank"
                             >
                                 {t.authorize.signUp}
                             </a>
@@ -781,8 +781,8 @@
                 {#if clientMfaForce}
                     <div class="btn flex-col">
                         <Button
-                            ariaLabel="Account"
-                            onclick={() => (window.location.href = '/auth/v1/account')}
+                                ariaLabel="Account"
+                                onclick={() => (window.location.href = '/auth/v1/account')}
                         >
                             Account
                         </Button>
@@ -790,7 +790,7 @@
                 {/if}
 
                 {#if tos}
-                    <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
+                    <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel}/>
                 {/if}
 
                 {#if !showReset && !clientMfaForce && !isAtproto && hasLoginAlternatives}
@@ -807,13 +807,13 @@
                         {#if isPasskeyDiscoverable}
                             <div class="btn flex-col">
                                 <Button
-                                    level={2}
-                                    ariaLabel={t.authorize.login}
-                                    onclick={onPasskeyDiscover}
-                                    {isLoading}
+                                        level={2}
+                                        ariaLabel={t.authorize.login}
+                                        onclick={onPasskeyDiscover}
+                                        {isLoading}
                                 >
                                     <div class="flex gap-05">
-                                        <IconKey width="1.2rem" />
+                                        <IconKey width="1.2rem"/>
                                         Passkey
                                     </div>
                                 </Button>
@@ -822,12 +822,12 @@
 
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider
-                                ariaLabel={`Login: ${provider.name}`}
-                                {provider}
-                                onclick={isProviderAtProto(provider.id)
+                                    ariaLabel={`Login: ${provider.name}`}
+                                    {provider}
+                                    onclick={isProviderAtProto(provider.id)
                                     ? toggleAtproto
                                     : providerLogin}
-                                {isLoading}
+                                    {isLoading}
                             />
                         {/each}
                     </div>
@@ -841,8 +841,8 @@
                 </Modal>
             </div>
 
-            <ThemeSwitch absolute />
-            <LangSelector absolute borderless />
+            <ThemeSwitch absolute/>
+            <LangSelector absolute borderless/>
         </ContentCenter>
     </div>
 </Main>

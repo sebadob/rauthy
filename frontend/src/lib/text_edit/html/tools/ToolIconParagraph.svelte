@@ -1,7 +1,7 @@
 <script lang="ts">
-    import ToolbarIconHtml from '$lib/text_edit/html/tools/ToolbarIconHtml.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Icon3BarsLeft from '$icons/editor/Icon3BarsLeft.svelte';
+    import ToolbarIconHtml from '#lib/text_edit/html/tools/ToolbarIconHtml.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import Icon3BarsLeft from '#icons/editor/Icon3BarsLeft.svelte';
 
     let {
         ref,
@@ -29,5 +29,5 @@
 </script>
 
 <ToolbarIconHtml {ref} title={ta.editor.paragraph} {onClickCustom}>
-    <Icon3BarsLeft width={iconSize} />
+    <Icon3BarsLeft width={iconSize}/>
 </ToolbarIconHtml>

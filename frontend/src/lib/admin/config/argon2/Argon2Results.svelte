@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { PasswordHashTime } from '$api/types/password_hashing.ts';
+    import type {PasswordHashTime} from '#api/types/password_hashing.ts';
 
     let {
         res,

@@ -1,5 +1,5 @@
-import { fetchPost } from '$api/fetch';
-import type { MfaPurpose } from '$api/types/mfa';
+import {fetchPost} from '#api/fetch.ts';
+import type {MfaPurpose} from '#api/types/mfa.ts';
 import type {
     OtpAdditionalData,
     OtpAuthFinishRequest,
@@ -12,8 +12,8 @@ import type {
 } from './types';
 
 export async function otpAuthStart(
-    otpId: string,
-    purpose: MfaPurpose,
+        otpId: string,
+        purpose: MfaPurpose,
 ): Promise<OtpAuthStartResult> {
     let payloadStart: OtpAuthStartRequest = {
         otp_id: otpId,
@@ -29,10 +29,10 @@ export async function otpAuthStart(
     if (!res.body) {
         let error = 'Did not receive a valid otp body';
         console.error(error);
-        return { error };
+        return {error};
     }
 
-    return { data: res.body };
+    return {data: res.body};
 }
 
 export async function otpAuthResend(code: string): Promise<OtpAuthResendResult> {

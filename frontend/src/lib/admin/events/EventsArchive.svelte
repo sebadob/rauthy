@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { EVENT_LEVELS, EVENT_TYPES } from '$utils/constants';
-    import Event from '$lib5/admin/events/Event.svelte';
-    import type { EventLevel, EventResponse, EventsRequest, EventType } from '$api/types/events.ts';
-    import { fetchPost } from '$api/fetch';
-    import Options from '$lib5/Options.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import {EVENT_LEVELS, EVENT_TYPES} from '#utils/constants.ts';
+    import Event from '#lib/admin/events/Event.svelte';
+    import type {EventLevel, EventResponse, EventsRequest, EventType} from '#api/types/events.ts';
+    import {fetchPost} from '#api/fetch.ts';
+    import Options from '#lib/Options.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import {fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime} from '#utils/form.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import {useTrigger} from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -44,8 +44,8 @@
             eventsFiltered = events.filter(e => e.ip?.includes(search));
         } else if (searchOption === searchOptions[1]) {
             eventsFiltered = events.filter(
-                e =>
-                    e.typ?.toLowerCase().includes(search) || e.text?.toLowerCase().includes(search),
+                    e =>
+                            e.typ?.toLowerCase().includes(search) || e.text?.toLowerCase().includes(search),
             );
         }
     });
@@ -81,7 +81,7 @@
             events.sort((a, b) => (up ? a.timestamp - b.timestamp : b.timestamp - a.timestamp));
         } else if (option === orderOptions[1]) {
             events.sort((a, b) =>
-                up ? a.level.localeCompare(b.level) : b.level.localeCompare(a.level),
+                    up ? a.level.localeCompare(b.level) : b.level.localeCompare(a.level),
             );
         } else if (option === orderOptions[2]) {
             events.sort((a, b) => (up ? a.typ.localeCompare(b.typ) : b.typ.localeCompare(a.typ)));
@@ -92,44 +92,44 @@
 <ContentAdmin>
     <div id="archive">
         <OrderSearchBar
-            bind:ref={refOpts}
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            firstDirReverse
+                bind:ref={refOpts}
+                {searchOptions}
+                bind:searchOption
+                bind:value={searchValue}
+                {orderOptions}
+                {onChangeOrder}
+                firstDirReverse
         />
         <div class="row">
             <InputDateTimeCombo
-                label={ta.common.from}
-                bind:value={fromDate}
-                bind:timeValue={fromTime}
-                withTime
+                    label={ta.common.from}
+                    bind:value={fromDate}
+                    bind:timeValue={fromTime}
+                    withTime
             />
             <InputDateTimeCombo
-                label={ta.common.until}
-                bind:value={untilDate}
-                bind:timeValue={untilTime}
-                withTime
-                withDelete
+                    label={ta.common.until}
+                    bind:value={untilDate}
+                    bind:timeValue={untilTime}
+                    withTime
+                    withDelete
             />
         </div>
         <div class="filters">
             <div class="level">
                 <Options
-                    ariaLabel={ta.events.eventLevel}
-                    options={EVENT_LEVELS}
-                    bind:value={level}
-                    borderless
+                        ariaLabel={ta.events.eventLevel}
+                        options={EVENT_LEVELS}
+                        bind:value={level}
+                        borderless
                 />
             </div>
             <div class="typ">
                 <Options
-                    ariaLabel={ta.events.eventType}
-                    options={EVENT_TYPES}
-                    bind:value={typ}
-                    borderless
+                        ariaLabel={ta.events.eventType}
+                        options={EVENT_TYPES}
+                        bind:value={typ}
+                        borderless
                 />
             </div>
         </div>
@@ -139,7 +139,7 @@
         {:else}
             <div class="eventsList">
                 {#each eventsFiltered as event (event.id)}
-                    <Event {event} inline />
+                    <Event {event} inline/>
                 {/each}
             </div>
         {/if}

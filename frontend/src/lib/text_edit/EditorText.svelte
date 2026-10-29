@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import type {Snippet} from 'svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
 
     let {
         content = $bindable(''),
@@ -41,18 +41,18 @@
     {@render children?.()}
 
     <div
-        bind:this={ref}
-        id="editor"
-        role="textbox"
-        tabindex="0"
-        class="edit"
-        contenteditable="plaintext-only"
-        bind:innerText={content}
-        onkeyup={onKeyUp}
-        onmouseup={onMoueUp}
-        onfocus={onFocus}
-        onfocusout={onFocusOut}
-        onscroll={onScroll}
+            bind:this={ref}
+            id="editor"
+            role="textbox"
+            tabindex="0"
+            class="edit"
+            contenteditable="plaintext-only"
+            bind:innerText={content}
+            onkeyup={onKeyUp}
+            onmouseup={onMoueUp}
+            onfocus={onFocus}
+            onfocusout={onFocusOut}
+            onscroll={onScroll}
     ></div>
 
     {#if appendCustomText}

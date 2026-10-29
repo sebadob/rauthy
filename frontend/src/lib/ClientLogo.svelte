@@ -1,5 +1,5 @@
 <script lang="ts">
-    import RauthyLogo from '$lib/RauthyLogo.svelte';
+    import RauthyLogo from '#lib/RauthyLogo.svelte';
 
     let {
         clientId,
@@ -11,17 +11,17 @@
 
     let showDefault = $state(false);
     let src = $derived(
-        updated
-            ? `/auth/v1/clients/${clientId}/logo?updated=${updated}`
-            : `/auth/v1/clients/${clientId}/logo`,
+            updated
+                    ? `/auth/v1/clients/${clientId}/logo?updated=${updated}`
+                    : `/auth/v1/clients/${clientId}/logo`,
     );
 </script>
 
 <div class="logo" class:default={showDefault}>
     {#if showDefault}
-        <RauthyLogo width="100%" />
+        <RauthyLogo width="100%"/>
     {:else}
-        <img {src} alt="Client Logo" onerror={() => (showDefault = true)} />
+        <img {src} alt="Client Logo" onerror={() => (showDefault = true)}/>
     {/if}
 </div>
 

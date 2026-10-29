@@ -1,14 +1,14 @@
 <script lang="ts">
-    import AccMain from '$lib5/account/AccMain.svelte';
-    import { redirectToLogin } from '$utils/helpers';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { type UserResponse } from '$api/types/user';
-    import { fetchGet } from '$api/fetch';
-    import type { WebIdResponse } from '$api/types/web_id.ts';
-    import { useSession } from '$state/session.svelte';
-    import type { SessionInfoResponse } from '$api/types/session.ts';
+    import AccMain from '#lib/account/AccMain.svelte';
+    import {redirectToLogin} from '#utils/helpers.ts';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {type UserResponse} from '#api/types/user.ts';
+    import {fetchGet} from '#api/fetch.ts';
+    import type {WebIdResponse} from '#api/types/web_id.ts';
+    import {useSession} from '#state/session.svelte.ts';
+    import type {SessionInfoResponse} from '#api/types/session.ts';
 
     let t = useI18n();
     let session = useSession('account');
@@ -67,7 +67,7 @@
 <Main>
     <ContentCenter>
         {#if isReady && session && user}
-            <AccMain bind:user bind:webIdData />
+            <AccMain bind:user bind:webIdData/>
         {/if}
     </ContentCenter>
 </Main>

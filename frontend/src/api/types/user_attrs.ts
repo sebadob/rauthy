@@ -1,4 +1,4 @@
-import type { JsonValue } from '$utils/jsonValue';
+import type {JsonValue} from '#utils/jsonValue.ts';
 
 export type UserAttrConfigTyp = 'email';
 

@@ -1,10 +1,10 @@
 <script lang="ts">
-    import IconChevronRight from '$icons/IconChevronRight.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { untrack } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Options from '$lib5/Options.svelte';
-    import type { PageSize } from '$lib5/pagination/props.ts';
+    import IconChevronRight from '#icons/IconChevronRight.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {untrack} from 'svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Options from '#lib/Options.svelte';
+    import type {PageSize} from '#lib/pagination/props.ts';
 
     const options: PageSize[] = [5, 10, 20, 30, 50, 100];
 
@@ -100,8 +100,8 @@
         <ul>
             {#each pageLinks as no}
                 <li
-                    aria-label={`${t.pagination.gotoPage} ${no}`}
-                    aria-current={page === no ? 'step' : undefined}
+                        aria-label={`${t.pagination.gotoPage} ${no}`}
+                        aria-current={page === no ? 'step' : undefined}
                 >
                     <Button invisible onclick={() => goto(no)} onLeft={goLeft} onRight={goRight}>
                         <div class="link noselect">
@@ -122,11 +122,11 @@
             </div>
             <div>
                 <Options
-                    ariaLabel={t.pagination.showCount}
-                    bind:value={pageSize}
-                    {options}
-                    offsetTop="-14rem"
-                    borderless
+                        ariaLabel={t.pagination.showCount}
+                        bind:value={pageSize}
+                        {options}
+                        offsetTop="-14rem"
+                        borderless
                 />
             </div>
         </div>
@@ -138,7 +138,7 @@
     <div class="flex">
         <Button onclick={goLeft} invisible isDisabled={page === 1}>
             <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
-                <IconChevronRight width={iconSize} />
+                <IconChevronRight width={iconSize}/>
             </div>
         </Button>
 
@@ -146,11 +146,11 @@
 
         <Button onclick={goRight} invisible isDisabled={page === itemsArr.length}>
             <div
-                class="iconRight"
-                aria-label={t.pagination.gotoPageNext}
-                data-disabled={page === itemsArr.length}
+                    class="iconRight"
+                    aria-label={t.pagination.gotoPageNext}
+                    data-disabled={page === itemsArr.length}
             >
-                <IconChevronRight width={iconSize} />
+                <IconChevronRight width={iconSize}/>
             </div>
         </Button>
     </div>

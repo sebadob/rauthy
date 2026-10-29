@@ -1,14 +1,14 @@
 <script lang="ts">
-    import { slide } from 'svelte/transition';
-    import { dayToString, fmtDateInput, getWeeksInMonth, type Day } from '$utils/form';
-    import { onMount, untrack } from 'svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { CalendarDate, getDayOfWeek, parseDate } from '@internationalized/date';
-    import Popover from '$lib5/Popover.svelte';
-    import Options from '$lib5/Options.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import IconCalendar from '$icons/IconCalendar.svelte';
-    import type { PropsInputDate } from '$lib5/form/props.ts';
+    import {slide} from 'svelte/transition';
+    import {dayToString, fmtDateInput, getWeeksInMonth, type Day} from '#utils/form.ts';
+    import {onMount, untrack} from 'svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {CalendarDate, getDayOfWeek, parseDate} from '@internationalized/date';
+    import Popover from '#lib/Popover.svelte';
+    import Options from '#lib/Options.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import IconCalendar from '#icons/IconCalendar.svelte';
+    import type {PropsInputDate} from '#lib/form/props.ts';
 
     let {
         id,
@@ -153,16 +153,16 @@
 
         switch (direction) {
             case 'left':
-                after = before.subtract({ days: 1 });
+                after = before.subtract({days: 1});
                 break;
             case 'right':
-                after = before.add({ days: 1 });
+                after = before.add({days: 1});
                 break;
             case 'up':
-                after = before.subtract({ weeks: 1 });
+                after = before.subtract({weeks: 1});
                 break;
             case 'down':
-                after = before.add({ weeks: 1 });
+                after = before.add({weeks: 1});
                 break;
         }
 
@@ -228,67 +228,67 @@
 
     <div class="flex">
         <input
-            bind:this={refInput}
-            type="date"
-            {id}
-            {name}
-            title={label}
-            aria-label={label}
-            bind:value
-            {disabled}
-            aria-disabled={disabled}
-            {required}
-            aria-required={required || false}
-            aria-invalid={isErr}
-            {min}
-            {max}
-            step="any"
-            {oninvalid}
-            onkeydown={onKeyDownInput}
-            onblur={() => reportValidity()}
+                bind:this={refInput}
+                type="date"
+                {id}
+                {name}
+                title={label}
+                aria-label={label}
+                bind:value
+                {disabled}
+                aria-disabled={disabled}
+                {required}
+                aria-required={required || false}
+                aria-invalid={isErr}
+                {min}
+                {max}
+                step="any"
+                {oninvalid}
+                onkeydown={onKeyDownInput}
+                onblur={() => reportValidity()}
         />
 
         <div class="relative">
             <div class="absolute patch"></div>
             <div class="absolute indicator">
                 <Popover
-                    ariaLabel="Show Popover Example"
-                    offsetLeft="-7.4rem"
-                    offsetTop={openTop ? '-16rem' : '.1rem'}
-                    bind:close
-                    {onToggle}
-                    btnInvisible
-                    lazy
+                        ariaLabel="Show Popover Example"
+                        offsetLeft="-7.4rem"
+                        offsetTop={openTop ? '-16rem' : '.1rem'}
+                        bind:close
+                        {onToggle}
+                        btnInvisible
+                        lazy
                 >
                     {#snippet button()}
                         <div title={label} class="pointer">
-                            <IconCalendar color="hsl(var(--text)" width="1.2rem" />
+                            <IconCalendar color="hsl(var(--text)" width="1.2rem"/>
                         </div>
                     {/snippet}
                     <div class="popup">
                         <div class="flex space-between">
                             <div>
                                 <Options
-                                    bind:ref={refMonth}
-                                    ariaLabel={t.common.month}
-                                    options={t.common.months}
-                                    bind:value={month}
-                                    maxHeight="13rem"
-                                    borderless
-                                    onRight={() => refYear?.focus()}
-                                    onDown={setToFirstOfMonth}
+                                        bind:ref={refMonth}
+                                        ariaLabel={t.common.month}
+                                        options={t.common.months}
+                                        bind:value={month}
+                                        maxHeight="13rem"
+                                        borderless
+                                        onRight={() => refYear?.focus()}
+                                        onDown={setToFirstOfMonth}
                                 />
                             </div>
                             <div>
                                 <Options
-                                    bind:ref={refYear}
-                                    ariaLabel={t.common.year}
-                                    options={yearOptions}
-                                    bind:value={year}
-                                    maxHeight="13rem"
-                                    borderless
-                                    onLeft={() => refMonth?.focus()}
-                                    onDown={setToFirstOfMonth}
+                                        bind:ref={refYear}
+                                        ariaLabel={t.common.year}
+                                        options={yearOptions}
+                                        bind:value={year}
+                                        maxHeight="13rem"
+                                        borderless
+                                        onLeft={() => refMonth?.focus()}
+                                        onDown={setToFirstOfMonth}
                                 />
                             </div>
                         </div>
@@ -309,20 +309,20 @@
                                         {@const dataActive = isDataActive(day)}
                                         <div class="day">
                                             <Button
-                                                onclick={ev => onClick(ev, datetime)}
-                                                isDisabled={!dataActive}
-                                                invisible
-                                                onLeft={() => onKeyDownCalendar('left', datetime)}
-                                                onRight={() => onKeyDownCalendar('right', datetime)}
-                                                onUp={() => onKeyDownCalendar('up', datetime)}
-                                                onDown={() => onKeyDownCalendar('down', datetime)}
+                                                    onclick={ev => onClick(ev, datetime)}
+                                                    isDisabled={!dataActive}
+                                                    invisible
+                                                    onLeft={() => onKeyDownCalendar('left', datetime)}
+                                                    onRight={() => onKeyDownCalendar('right', datetime)}
+                                                    onUp={() => onKeyDownCalendar('up', datetime)}
+                                                    onDown={() => onKeyDownCalendar('down', datetime)}
                                             >
                                                 <time
-                                                    data-today={datetime === todayStr}
-                                                    data-active={dataActive}
-                                                    data-selected={datetime === value}
-                                                    data-weekend={day.isWeekend}
-                                                    {datetime}
+                                                        data-today={datetime === todayStr}
+                                                        data-active={dataActive}
+                                                        data-selected={datetime === value}
+                                                        data-weekend={day.isWeekend}
+                                                        {datetime}
                                                 >
                                                     {day.day}
                                                 </time>

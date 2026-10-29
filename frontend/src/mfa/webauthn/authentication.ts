@@ -1,13 +1,13 @@
-import { arrBufToBase64UrlSafe, promiseTimeout } from '$utils/helpers';
-import { fetchPost } from '$api/fetch';
+import {arrBufToBase64UrlSafe, promiseTimeout} from '#utils/helpers.ts';
+import {fetchPost} from '#api/fetch.ts';
 import type {
     WebauthnAdditionalData,
     WebauthnAuthFinishRequest,
     WebauthnAuthStartRequest,
     WebauthnAuthStartResponse,
-} from '$mfa/webauthn/types.ts';
-import { base64UrlSafeToArrBuf } from './utils';
-import type { MfaPurpose } from '$api/types/mfa.js';
+} from '#mfa/webauthn/types.ts';
+import {base64UrlSafeToArrBuf} from './utils';
+import type {MfaPurpose} from '#api/types/mfa.js';
 
 export interface WebauthnAuthResult {
     error?: string;
@@ -15,15 +15,15 @@ export interface WebauthnAuthResult {
 }
 
 export async function webauthnAuth(
-    purpose: MfaPurpose,
-    errorI18nInvalidKey: string,
-    errorI18nTimeout: string,
-    resetUserId?: string,
+        purpose: MfaPurpose,
+        errorI18nInvalidKey: string,
+        errorI18nTimeout: string,
+        resetUserId?: string,
 ): Promise<WebauthnAuthResult> {
     let startUri = '/auth/v1/users/webauthn_start';
     if (purpose === 'PasswordReset') {
         if (!resetUserId) {
-            return { error: 'Missing user context for password reset' };
+            return {error: 'Missing user context for password reset'};
         }
         startUri = `/auth/v1/users/${encodeURIComponent(resetUserId)}/webauthn/auth/start`;
     }
@@ -41,7 +41,7 @@ export async function webauthnAuth(
     if (!res.body) {
         let error = 'Did not receive a valid webauthn body';
         console.error(error);
-        return { error };
+        return {error};
     }
 
     let resp = res.body;
@@ -102,9 +102,9 @@ export async function webauthnAuth(
                 signature: arrBufToBase64UrlSafe(credential.response.signature),
                 // @ts-ignore the `response.userHandle` actually exists
                 userHandle: credential.response.userHandle
-                    ? // @ts-ignore the `response.userHandle` actually exists
-                      arrBufToBase64UrlSafe(credential.response.userHandle)
-                    : undefined,
+                        ? // @ts-ignore the `response.userHandle` actually exists
+                        arrBufToBase64UrlSafe(credential.response.userHandle)
+                        : undefined,
             },
             // @ts-ignore the `response.getClientExtensionResults()` actually exists
             extensions: credential.getClientExtensionResults(),
@@ -114,8 +114,8 @@ export async function webauthnAuth(
 
     // finish the ceremony
     let resFinish = await fetchPost<WebauthnAdditionalData>(
-        `/auth/v1/users/webauthn_finish`,
-        payloadFinish,
+            `/auth/v1/users/webauthn_finish`,
+            payloadFinish,
     );
     // 202 -> normal success
     // 205 -> Webauthn success during login, but needs user values updates

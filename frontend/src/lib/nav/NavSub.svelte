@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
-    import { genKey } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
+    import type {Snippet} from 'svelte';
+    import {genKey} from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         width = 'min(25rem, 100dvw)',
@@ -26,8 +26,8 @@
     $inspect(thresholdNavSub).with(() => {
         if (thresholdNavSub > collapseButtonThreshold) {
             console.warn(
-                'thresholdNavMain must be lower than or equal to collapseButtonThreshold: ',
-                collapseButtonThreshold,
+                    'thresholdNavMain must be lower than or equal to collapseButtonThreshold: ',
+                    collapseButtonThreshold,
             );
         }
     });
@@ -65,24 +65,24 @@
     }
 </script>
 
-<svelte:window bind:innerWidth />
+<svelte:window bind:innerWidth/>
 
 <div class="navSub">
     {#snippet btn()}
         <Button ariaControls={id} invisible onclick={toggle}>
             <svg
-                aria-expanded={!collapsed}
-                class="btn"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width={2}
-                width="1.5rem"
-                opacity={0.9}
+                    aria-expanded={!collapsed}
+                    class="btn"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width={2}
+                    width="1.5rem"
+                    opacity={0.9}
             >
                 <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
                 />
             </svg>
         </Button>
@@ -95,14 +95,14 @@
     {/if}
 
     <nav
-        {id}
-        aria-hidden={collapsed}
-        data-collapsed={collapsed}
-        style:width={collapsed ? 0 : width}
-        style:min-width={collapsed ? 0 : width}
-        {onclick}
-        {onmouseenter}
-        {onmouseleave}
+            {id}
+            aria-hidden={collapsed}
+            data-collapsed={collapsed}
+            style:width={collapsed ? 0 : width}
+            style:min-width={collapsed ? 0 : width}
+            {onclick}
+            {onmouseenter}
+            {onmouseleave}
     >
         {#if showIcon && !(collapsed || shouldCollapse)}
             <div class="absolute">

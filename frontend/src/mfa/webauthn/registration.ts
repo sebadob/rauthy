@@ -1,6 +1,6 @@
-import { arrBufToBase64UrlSafe, base64UrlSafeToArrBuf } from './utils';
-import type { WebauthnRegFinishRequest, WebauthnRegStartRequest } from '$mfa/webauthn/types.ts';
-import { getCsrfToken, promiseTimeout } from '$utils/helpers';
+import {arrBufToBase64UrlSafe, base64UrlSafeToArrBuf} from './utils';
+import type {WebauthnRegFinishRequest, WebauthnRegStartRequest} from '#mfa/webauthn/types.ts';
+import {getCsrfToken, promiseTimeout} from '#utils/helpers.ts';
 
 export interface WebauthnRegResult {
     error?: string;
@@ -8,14 +8,14 @@ export interface WebauthnRegResult {
 }
 
 export async function webauthnReg(
-    userId: string,
-    passkeyName: string,
-    errorI18nInvalidKey: string,
-    errorI18nTimeout: string,
-    magicLinkId?: string,
-    pwdCsrfToken?: string,
-    mfaModTokenId?: string,
-    allowRk?: boolean,
+        userId: string,
+        passkeyName: string,
+        errorI18nInvalidKey: string,
+        errorI18nTimeout: string,
+        magicLinkId?: string,
+        pwdCsrfToken?: string,
+        mfaModTokenId?: string,
+        allowRk?: boolean,
 ): Promise<WebauthnRegResult> {
     let payloadStart: WebauthnRegStartRequest = {
         passkey_name: passkeyName.trim(),
@@ -52,7 +52,7 @@ export async function webauthnReg(
     if (!options.publicKey) {
         let error = 'no publicKey in options from the backend';
         console.error(error, options);
-        return { error };
+        return {error};
     }
 
     // the navigator credentials engine needs some values as array buffers
@@ -116,7 +116,7 @@ export async function webauthnReg(
         body: JSON.stringify(payloadFinish),
     });
     if (resFinish.status === 201) {
-        return { location: resFinish.headers.get('location') || undefined };
+        return {location: resFinish.headers.get('location') || undefined};
     } else if (resFinish.status === 406) {
         let body = await resFinish.json();
         return {

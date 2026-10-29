@@ -1,11 +1,11 @@
 <script lang="ts">
-    import type { FullAutoFill } from 'svelte/elements';
-    import IconClipboard from '$icons/IconClipboard.svelte';
-    import IconEyeSlash from '$icons/IconEyeSlash.svelte';
-    import IconEye from '$icons/IconEye.svelte';
-    import { slide } from 'svelte/transition';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib5/button/Button.svelte';
+    import type {FullAutoFill} from 'svelte/elements';
+    import IconClipboard from '#icons/IconClipboard.svelte';
+    import IconEyeSlash from '#icons/IconEyeSlash.svelte';
+    import IconEye from '#icons/IconEye.svelte';
+    import {slide} from 'svelte/transition';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         ref = $bindable(),
@@ -119,26 +119,26 @@
     </div>
     <div class="input-row">
         <input
-            bind:this={ref}
-            {type}
-            {id}
-            {name}
-            title={errMsg}
-            aria-label={ariaLabel}
-            style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
-            bind:value
-            {autocomplete}
-            placeholder={placeholder || label}
-            {disabled}
-            required={required || undefined}
-            aria-required={required || false}
-            maxlength={maxLength || undefined}
-            pattern={pattern || undefined}
-            class:invalid={isError}
-            {oninput}
-            {oninvalid}
-            {onblur}
-            {onkeydown}
+                bind:this={ref}
+                {type}
+                {id}
+                {name}
+                title={errMsg}
+                aria-label={ariaLabel}
+                style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
+                bind:value
+                {autocomplete}
+                placeholder={placeholder || label}
+                {disabled}
+                required={required || undefined}
+                aria-required={required || false}
+                maxlength={maxLength || undefined}
+                pattern={pattern || undefined}
+                class:invalid={isError}
+                {oninput}
+                {oninvalid}
+                {onblur}
+                {onkeydown}
         />
 
         <div class="rel">
@@ -146,7 +146,7 @@
                 <div class="btn clip">
                     <Button ariaLabel={t.common.copyToClip} invisible onclick={copy}>
                         <div title={t.common.copyToClip}>
-                            <IconClipboard />
+                            <IconClipboard/>
                         </div>
                     </Button>
                 </div>
@@ -156,13 +156,13 @@
                 {#if type === 'password'}
                     <Button ariaLabel={t.common.show} invisible onclick={toggleView}>
                         <div title={t.common.show}>
-                            <IconEyeSlash />
+                            <IconEyeSlash/>
                         </div>
                     </Button>
                 {:else}
                     <Button ariaLabel={t.common.hide} invisible onclick={toggleView}>
                         <div title={t.common.hide}>
-                            <IconEye />
+                            <IconEye/>
                         </div>
                     </Button>
                 {/if}

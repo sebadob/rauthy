@@ -1,4 +1,4 @@
-import { goto } from '$app/navigation';
+import {goto} from '$app/navigation';
 
 // Record<> or Map<> do not work reactively in this case
 let _signals: any = $state({});
@@ -6,7 +6,7 @@ let _signals: any = $state({});
 // ugly syntax in useParam()), to make pre-rendering work properly
 // -> `window` is not available on the server
 let _params: undefined | URLSearchParams =
-    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : undefined;
+        typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : undefined;
 
 export const updateParams = (paramsNew: URLSearchParams) => {
     for (let [key, value] of paramsNew.entries()) {

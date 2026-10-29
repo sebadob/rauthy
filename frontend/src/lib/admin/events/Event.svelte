@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { eventColor, formatDateFromTs } from '$utils/helpers';
-    import { onMount } from 'svelte';
-    import type { EventResponse } from '$api/types/events.ts';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import A from '$lib5/A.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Tooltip from '$lib5/Tooltip.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import {eventColor, formatDateFromTs} from '#utils/helpers.ts';
+    import {onMount} from 'svelte';
+    import type {EventResponse} from '#api/types/events.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import A from '#lib/A.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
 
     // populated fields for different events:
     // - invalid_login: failed logins count as data, ip
@@ -62,12 +62,12 @@
 </script>
 
 <div
-    role="contentinfo"
-    aria-label={`Event Level: ${event.level}}`}
-    class="event"
-    class:highlight
-    class:inline
-    style:border-left={`2px solid ${eventColor(event.level)}`}
+        role="contentinfo"
+        aria-label={`Event Level: ${event.level}}`}
+        class="event"
+        class:highlight
+        class:inline
+        style:border-left={`2px solid ${eventColor(event.level)}`}
 >
     <div aria-label="Timestamp" class="ts">
         {formatDateFromTs(event.timestamp / 1000)}

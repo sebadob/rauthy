@@ -1,8 +1,8 @@
 <script lang="ts">
-    import IconTrash from '$icons/IconTrash.svelte';
-    import IconBackspace from '$icons/IconBackspace.svelte';
-    import ToolbarIconHtml from '$lib/text_edit/html/tools/ToolbarIconHtml.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import IconBackspace from '#icons/IconBackspace.svelte';
+    import ToolbarIconHtml from '#lib/text_edit/html/tools/ToolbarIconHtml.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
 
     let {
         ref,
@@ -95,5 +95,5 @@
 </script>
 
 <ToolbarIconHtml {ref} title={ta.editor.removeFmt} {onClickCustom}>
-    <IconBackspace width={iconSize} />
+    <IconBackspace width={iconSize}/>
 </ToolbarIconHtml>

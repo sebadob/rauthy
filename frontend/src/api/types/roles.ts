@@ -1,4 +1,4 @@
-import type { JsonValue } from '$utils/jsonValue';
+import type {JsonValue} from '#utils/jsonValue.ts';
 
 export interface RoleRequest {
     /// Validation: PATTERN_ROLE_SCOPE

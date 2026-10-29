@@ -1,19 +1,19 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Input from '$lib/form/Input.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import Form from '#lib/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Input from '#lib/form/Input.svelte';
     import type {
         PamUnlinkedEmailsResponse,
         PamUserCreateRequest,
         PamUserResponse,
-    } from '$api/types/pam';
-    import { PATTERN_LINUX_USERNAME } from '$utils/patterns';
-    import Options from '$lib/Options.svelte';
-    import { fetchGet, fetchPost } from '$api/fetch';
-    import { onMount } from 'svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
+    } from '#api/types/pam.ts';
+    import {PATTERN_LINUX_USERNAME} from '#utils/patterns.ts';
+    import Options from '#lib/Options.svelte';
+    import {fetchGet, fetchPost} from '#api/fetch.ts';
+    import {onMount} from 'svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
 
     let {
         onCreate,
@@ -72,24 +72,24 @@
 
     <Form action="/auth/v1/pam/users" {onSubmit}>
         <Input
-            bind:ref
-            label={ta.common.name}
-            placeholder={ta.common.name}
-            bind:value={user.username}
-            required
-            pattern={PATTERN_LINUX_USERNAME}
-            width="min(22rem, 100%)"
+                bind:ref
+                label={ta.common.name}
+                placeholder={ta.common.name}
+                bind:value={user.username}
+                required
+                pattern={PATTERN_LINUX_USERNAME}
+                width="min(22rem, 100%)"
         />
 
         <LabeledValue label={ta.pam.userEmail}>
             <div class="flex">
                 <Options
-                    ariaLabel={ta.pam.userEmail}
-                    {options}
-                    bind:value={user.email}
-                    borderless
-                    withSearch
-                    maxHeight="20rem"
+                        ariaLabel={ta.pam.userEmail}
+                        {options}
+                        bind:value={user.email}
+                        borderless
+                        withSearch
+                        maxHeight="20rem"
                 />
                 <span class="req">*</span>
             </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
-    import EditorMarkdown from '$lib/text_edit/md/EditorMarkdown.svelte';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
+    import EditorMarkdown from '#lib/text_edit/md/EditorMarkdown.svelte';
 
     let {
         content = $bindable(''),
@@ -11,23 +11,23 @@
     } = $props();
 
     let innerWidth: undefined | number = $state(
-        typeof window !== 'undefined' ? window.innerWidth : undefined,
+            typeof window !== 'undefined' ? window.innerWidth : undefined,
     );
     let previewEmbedded = $derived(!!(innerWidth && innerWidth < 1440));
 </script>
 
-<svelte:window bind:innerWidth />
+<svelte:window bind:innerWidth/>
 
 <div class="container" style:height>
     <div class="edit">
         <div class="editor">
-            <EditorMarkdown bind:markdown={content} withPreview={previewEmbedded} />
+            <EditorMarkdown bind:markdown={content} withPreview={previewEmbedded}/>
         </div>
 
         {#if !previewEmbedded}
             <div class="render">
                 <i>Preview</i>
-                <MarkdownRenderer />
+                <MarkdownRenderer/>
             </div>
         {/if}
     </div>

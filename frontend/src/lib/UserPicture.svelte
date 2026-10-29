@@ -1,12 +1,12 @@
 <script lang="ts">
-    import IconUpload from '$icons/IconUpload.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { genKey, getCsrfToken } from '$utils/helpers';
-    import type { ErrorResponse } from '$api/types/error.ts';
-    import IconStop from '$icons/IconStop.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { fetchDelete } from '$api/fetch';
-    import { usePictureConfig } from '$state/picture_config.svelte';
+    import IconUpload from '#icons/IconUpload.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {genKey, getCsrfToken} from '#utils/helpers.ts';
+    import type {ErrorResponse} from '#api/types/error.ts';
+    import IconStop from '#icons/IconStop.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {fetchDelete} from '#api/fetch.ts';
+    import {usePictureConfig} from '#state/picture_config.svelte.ts';
 
     let {
         userId,
@@ -196,13 +196,13 @@
         </span>
     {:else}
         <img
-            src={`/auth/v1/users/${userId}/picture/${pictureId}`}
-            loading="lazy"
-            class="absolute"
-            aria-label="Avatar"
-            alt=""
-            width="100%"
-            {onerror}
+                src={`/auth/v1/users/${userId}/picture/${pictureId}`}
+                loading="lazy"
+                class="absolute"
+                aria-label="Avatar"
+                alt=""
+                width="100%"
+                {onerror}
         />
     {/if}
 {/snippet}
@@ -210,34 +210,34 @@
 <div class="container">
     {#if config?.upload_allowed && !disableUpload}
         <form
-            class="avatar"
-            aria-dropeffect="move"
-            aria-label="Upload"
-            style:background-color={color}
-            style:width
-            {onmouseenter}
-            {onmouseleave}
+                class="avatar"
+                aria-dropeffect="move"
+                aria-label="Upload"
+                style:background-color={color}
+                style:width
+                {onmouseenter}
+                {onmouseleave}
         >
             <label
-                for={id}
-                aria-controls={id}
-                aria-disabled={isUploading}
-                style:width
-                data-show={!isUploading && showUpload}
+                    for={id}
+                    aria-controls={id}
+                    aria-disabled={isUploading}
+                    style:width
+                    data-show={!isUploading && showUpload}
             >
-                <IconUpload {width} />
+                <IconUpload {width}/>
             </label>
             <input
-                tabindex="0"
-                {id}
-                type="file"
-                disabled={isUploading}
-                aria-label="Upload Picture"
-                aria-disabled={isUploading}
-                onfocusin={() => (showUpload = true)}
-                onfocusout={() => (showUpload = false)}
-                {accept}
-                bind:files
+                    tabindex="0"
+                    {id}
+                    type="file"
+                    disabled={isUploading}
+                    aria-label="Upload Picture"
+                    aria-disabled={isUploading}
+                    onfocusin={() => (showUpload = true)}
+                    onfocusout={() => (showUpload = false)}
+                    {accept}
+                    bind:files
             />
 
             {#if errFileSize}
@@ -254,7 +254,7 @@
                 <div class="delete">
                     <Button bind:ref={refDel} invisible onclick={deletePicture}>
                         <div title={t.common.delete}>
-                            <IconStop />
+                            <IconStop/>
                         </div>
                     </Button>
                 </div>

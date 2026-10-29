@@ -1,9 +1,9 @@
 <script lang="ts">
-    import Popover from '$lib5/Popover.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import SearchBar from '$lib5/search_bar/SearchBar.svelte';
-    import IconChevronDown from '$icons/IconChevronDown.svelte';
-    import { untrack } from 'svelte';
+    import Popover from '#lib/Popover.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import IconChevronDown from '#icons/IconChevronDown.svelte';
+    import {untrack} from 'svelte';
 
     let {
         ref = $bindable(),
@@ -61,7 +61,7 @@
 
         if (typeof value === 'string') {
             return options.filter(opt =>
-                (opt as string).toLowerCase().includes(searchValue.toLowerCase()),
+                    (opt as string).toLowerCase().includes(searchValue.toLowerCase()),
             );
         }
 
@@ -106,7 +106,7 @@
     function focusCurrElem() {
         if (refOptions) {
             let button = refOptions.getElementsByTagName('button')[selected];
-            button?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            button?.scrollIntoView({behavior: 'smooth', block: 'center'});
             button?.focus();
         } else {
             console.error('refOptions is undefined');
@@ -167,35 +167,35 @@
 </script>
 
 <Popover
-    bind:ref
-    ariaLabel={ariaLabel || value?.toString() || 'Options'}
-    roleButton="combobox"
-    btnInvisible
-    bind:close
-    {offsetTop}
-    {offsetLeft}
-    {anchored}
-    {onToggle}
-    {onLeft}
-    {onRight}
-    {onUp}
-    {onDown}
+        bind:ref
+        ariaLabel={ariaLabel || value?.toString() || 'Options'}
+        roleButton="combobox"
+        btnInvisible
+        bind:close
+        {offsetTop}
+        {offsetLeft}
+        {anchored}
+        {onToggle}
+        {onLeft}
+        {onRight}
+        {onUp}
+        {onDown}
 >
     {#snippet button()}
         <div class="btn" data-border={!borderless}>
             <div class="btnText" title={ariaLabel}>
                 {value}
             </div>
-            <IconChevronDown width=".8rem" />
+            <IconChevronDown width=".8rem"/>
         </div>
     {/snippet}
 
     <div role="listbox" tabindex="0" class="popover" style:max-height={maxHeight} {onkeydown}>
         {#if withSearch}
             <SearchBar
-                bind:value={searchValue}
-                bind:focus={focusSearch}
-                onFocus={() => (selected = -1)}
+                    bind:value={searchValue}
+                    bind:focus={focusSearch}
+                    onFocus={() => (selected = -1)}
             />
         {/if}
 
@@ -203,9 +203,9 @@
             {#each optionsFiltered as option, i}
                 <Button invisible invisibleOutline onclick={ev => select(ev, option)}>
                     <div
-                        class="optPopover"
-                        aria-selected={value === option}
-                        data-focus={selected === i}
+                            class="optPopover"
+                            aria-selected={value === option}
+                            data-focus={selected === i}
                     >
                         {option}
                     </div>
@@ -213,7 +213,7 @@
             {/each}
         </div>
     </div>
-    <input type="hidden" {name} aria-hidden="true" bind:value />
+    <input type="hidden" {name} aria-hidden="true" bind:value/>
 </Popover>
 
 <style>

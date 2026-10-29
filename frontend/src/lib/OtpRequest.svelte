@@ -1,20 +1,20 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { onMount } from 'svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {onMount} from 'svelte';
     import Loading from './Loading.svelte';
-    import type { MfaPurpose } from '$api/types/mfa';
+    import type {MfaPurpose} from '#api/types/mfa.ts';
     import type {
         OtpAdditionalData,
         OtpAuthFinishResult,
         OtpAuthStartResult,
-    } from '$mfa/otp/types';
-    import { otpAuthFinish, otpAuthResend, otpAuthStart } from '$mfa/otp/authentication';
-    import { TPL_OTP_LENGTH } from '$utils/constants';
+    } from '#mfa/otp/types.ts';
+    import {otpAuthFinish, otpAuthResend, otpAuthStart} from '#mfa/otp/authentication.ts';
+    import {TPL_OTP_LENGTH} from '#utils/constants.ts';
     import Template from './Template.svelte';
     import Form from './form/Form.svelte';
     import Button from './button/Button.svelte';
-    import type { ActiveOtp } from '$api/types/authorize';
-    import type { OtpResponse } from '$api/types/otp';
+    import type {ActiveOtp} from '#api/types/authorize.ts';
+    import type {OtpResponse} from '#api/types/otp.ts';
     import InputOtp from './form/InputOtp.svelte';
     import Modal from './Modal.svelte';
 
@@ -136,6 +136,7 @@
 
     let otpTimeoutSecs: undefined | number = $state();
     let interval: number | undefined = $state();
+
     function calcTimeoutSecs() {
         let timeoutSecs = 0;
         if (otpStartRes?.data) {
@@ -157,7 +158,7 @@
     }
 </script>
 
-<Template id={TPL_OTP_LENGTH} bind:value={otpSize} />
+<Template id={TPL_OTP_LENGTH} bind:value={otpSize}/>
 
 {#if purpose}
     <Modal bind:showModal bind:closeModal onClose={onModalClose}>
@@ -168,7 +169,7 @@
 
             <div>
                 {#if !otpStartRes}
-                    <Loading />
+                    <Loading/>
                 {/if}
             </div>
 
@@ -181,9 +182,9 @@
                     <Form action="" onSubmit={onLoginOtpSubmit}>
                         <div class="spacing">
                             <InputOtp
-                                bind:ref={refInput}
-                                bind:isError={isInputError}
-                                bind:value={otpValue}
+                                    bind:ref={refInput}
+                                    bind:isError={isInputError}
+                                    bind:value={otpValue}
                             />
                         </div>
                         <div class="btns">

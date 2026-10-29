@@ -1,10 +1,10 @@
 <script lang="ts">
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import A from '$lib/A.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import A from '#lib/A.svelte';
 
     let t = useI18n();
 </script>
@@ -23,8 +23,8 @@
             <A href="/auth/v1/account">Account</A>
         </div>
 
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
+        <ThemeSwitch absolute/>
+        <LangSelector absolute/>
     </ContentCenter>
 </Main>
 

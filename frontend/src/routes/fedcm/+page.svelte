@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import CheckIcon from '$lib5/CheckIcon.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { PATTERN_URI } from '$utils/patterns';
-    import Form from '$lib5/form/Form.svelte';
-    import { genKey } from '$utils/helpers';
+    import {onMount} from 'svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import CheckIcon from '#lib/CheckIcon.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import {PATTERN_URI} from '#utils/patterns.ts';
+    import Form from '#lib/form/Form.svelte';
+    import {genKey} from '#utils/helpers.ts';
 
     let isSupported = $state(false);
     let isLoggedIn = $state(false);
@@ -31,9 +31,9 @@
 
         // @ts-ignore
         if (
-            window['IdentityProvider' as any] && // Is FedCM available?
-            // @ts-ignore
-            IdentityProvider.register != undefined // Is the IdP Registration API available?
+                window['IdentityProvider' as any] && // Is FedCM available?
+                // @ts-ignore
+                IdentityProvider.register != undefined // Is the IdP Registration API available?
         ) {
             console.log('FedCM is supported');
             isSupported = true;
@@ -86,11 +86,11 @@
             <div class="row">
                 <div><b>FedCM supported:</b></div>
                 <div class="check">
-                    <CheckIcon checked={isSupported} />
+                    <CheckIcon checked={isSupported}/>
                 </div>
             </div>
             {#if !isSupported}
-                <br />-> enable idp registration:<br />
+                <br/>-> enable idp registration:<br/>
                 <code>chrome://flags/#fedcm-idp-registration</code>
             {/if}
 
@@ -102,19 +102,19 @@
                 <Form action="" onSubmit={login}>
                     <p>
                         <Input
-                            bind:value={clientId}
-                            autocomplete="off"
-                            label="Client ID"
-                            placeholder="Client ID"
-                            required
-                            pattern={PATTERN_URI}
+                                bind:value={clientId}
+                                autocomplete="off"
+                                label="Client ID"
+                                placeholder="Client ID"
+                                required
+                                pattern={PATTERN_URI}
                         />
                         <Input
-                            bind:value={configUrl}
-                            autocomplete="off"
-                            label="Config URL"
-                            placeholder="Config URL"
-                            pattern={PATTERN_URI}
+                                bind:value={configUrl}
+                                autocomplete="off"
+                                label="Config URL"
+                                placeholder="Config URL"
+                                pattern={PATTERN_URI}
                         />
                         <Button type="submit">Login</Button>
                     </p>
@@ -123,7 +123,7 @@
                 <div class="row">
                     <b>Logged In:</b>
                     <div class="check">
-                        <CheckIcon checked={isLoggedIn} />
+                        <CheckIcon checked={isLoggedIn}/>
                     </div>
                 </div>
             {/if}

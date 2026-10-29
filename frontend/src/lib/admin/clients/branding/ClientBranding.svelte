@@ -1,19 +1,19 @@
 <script lang="ts">
-    import type { ClientResponse } from '$api/types/clients.ts';
-    import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
-    import type { ThemeRequestResponse } from '$api/types/themes.ts';
-    import Form from '$lib5/form/Form.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import { PATTERN_CSS_VALUE_LOOSE } from '$utils/patterns';
-    import BrandingMode from '$lib5/admin/clients/branding/BrandingMode.svelte';
-    import BrandingPreviewWrapper from '$lib5/admin/clients/branding/BrandingPreviewWrapper.svelte';
-    import { genKey } from '$utils/helpers';
-    import InputFile from '$lib5/form/InputFile.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import IconTrash from '$icons/IconTrash.svelte';
+    import type {ClientResponse} from '#api/types/clients.ts';
+    import {fetchDelete, fetchPost, fetchPut} from '#api/fetch.ts';
+    import type {ThemeRequestResponse} from '#api/types/themes.ts';
+    import Form from '#lib/form/Form.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import Input from '#lib/form/Input.svelte';
+    import {PATTERN_CSS_VALUE_LOOSE} from '#utils/patterns.ts';
+    import BrandingMode from '#lib/admin/clients/branding/BrandingMode.svelte';
+    import BrandingPreviewWrapper from '#lib/admin/clients/branding/BrandingPreviewWrapper.svelte';
+    import {genKey} from '#utils/helpers.ts';
+    import InputFile from '#lib/form/InputFile.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import IconTrash from '#icons/IconTrash.svelte';
 
     let {
         client,
@@ -126,40 +126,40 @@
                 <p>{@html ta.clients.branding.descVariables}</p>
 
                 <Input
-                    label="--border-radius"
-                    placeholder="--border-radius"
-                    errMsg={ta.validation.css}
-                    width={inputWidth}
-                    bind:value={theme.border_radius}
-                    required
-                    pattern={PATTERN_CSS_VALUE_LOOSE}
+                        label="--border-radius"
+                        placeholder="--border-radius"
+                        errMsg={ta.validation.css}
+                        width={inputWidth}
+                        bind:value={theme.border_radius}
+                        required
+                        pattern={PATTERN_CSS_VALUE_LOOSE}
                 />
 
                 <h1>Light Theme</h1>
-                <BrandingMode bind:values={theme.light} />
+                <BrandingMode bind:values={theme.light}/>
 
-                <br />
+                <br/>
                 <h1>Dark Theme</h1>
-                <BrandingMode bind:values={theme.dark} />
+                <BrandingMode bind:values={theme.dark}/>
             </div>
             <div class="preview">
                 {#key logoKey}
-                    <BrandingPreviewWrapper {logoUrl} {theme} />
+                    <BrandingPreviewWrapper {logoUrl} {theme}/>
                 {/key}
 
-                <hr />
+                <hr/>
 
                 <p>Logo Upload</p>
                 <div class="logo">
                     <InputFile
-                        method="PUT"
-                        url={`/auth/v1/clients/${client.id}/logo`}
-                        fileName="logo"
-                        width="100%"
-                        onSuccess={onUploadSuccess}
+                            method="PUT"
+                            url={`/auth/v1/clients/${client.id}/logo`}
+                            fileName="logo"
+                            width="100%"
+                            onSuccess={onUploadSuccess}
                     />
                     <Button ariaLabel={t.common.delete} invisible onclick={onLogoDelete}>
-                        <IconTrash width="1.25rem" />
+                        <IconTrash width="1.25rem"/>
                     </Button>
                 </div>
 
@@ -167,22 +167,22 @@
                 <div class="favicon">
                     {#key faviconKey}
                         <img
-                            class:loaded={faviconLoaded}
-                            src={faviconUrl}
-                            alt={ta.clients.branding.faviconPreviewAlt}
-                            onload={() => (faviconLoaded = true)}
-                            onerror={() => (faviconLoaded = false)}
+                                class:loaded={faviconLoaded}
+                                src={faviconUrl}
+                                alt={ta.clients.branding.faviconPreviewAlt}
+                                onload={() => (faviconLoaded = true)}
+                                onerror={() => (faviconLoaded = false)}
                         />
                     {/key}
                     <InputFile
-                        method="PUT"
-                        url={`/auth/v1/clients/${client.id}/favicon`}
-                        fileName="favicon"
-                        width="100%"
-                        onSuccess={onFaviconUploadSuccess}
+                            method="PUT"
+                            url={`/auth/v1/clients/${client.id}/favicon`}
+                            fileName="favicon"
+                            width="100%"
+                            onSuccess={onFaviconUploadSuccess}
                     />
                     <Button ariaLabel={t.common.delete} invisible onclick={onFaviconDelete}>
-                        <IconTrash width="1.25rem" />
+                        <IconTrash width="1.25rem"/>
                     </Button>
                 </div>
 
@@ -195,7 +195,7 @@
                     </Button>
 
                     {#if success}
-                        <IconCheck />
+                        <IconCheck/>
                     {/if}
                 </div>
 

@@ -1,10 +1,10 @@
 <script lang="ts">
     import ApiKeyConfig from './ApiKeyConfig.svelte';
     import ApiKeySecret from './ApiKeySecret.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import type { ApiKeyResponse } from '$api/types/api_keys.ts';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ApiKeyDelete from '$lib5/admin/api_keys/ApiKeyDelete.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import type {ApiKeyResponse} from '#api/types/api_keys.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import ApiKeyDelete from '#lib/admin/api_keys/ApiKeyDelete.svelte';
 
     let {
         key = $bindable(),
@@ -29,14 +29,14 @@
 
 <div>
     <div class="flex">
-        <Tabs {tabs} bind:selected bind:focusFirst />
+        <Tabs {tabs} bind:selected bind:focusFirst/>
     </div>
 
     {#if selected === ta.tabs.config}
-        <ApiKeyConfig bind:key {onSave} />
+        <ApiKeyConfig bind:key {onSave}/>
     {:else if selected === 'Secret'}
-        <ApiKeySecret {key} />
+        <ApiKeySecret {key}/>
     {:else if selected === ta.tabs.delete}
-        <ApiKeyDelete {key} {onSave} />
+        <ApiKeyDelete {key} {onSave}/>
     {/if}
 </div>

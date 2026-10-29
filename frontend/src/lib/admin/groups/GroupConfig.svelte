@@ -1,17 +1,17 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { fetchPut } from '$api/fetch';
-    import Form from '$lib5/form/Form.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import type { GroupResponse, GroupRequest } from '$api/types/groups.ts';
-    import { PATTERN_GROUP } from '$utils/patterns';
-    import { untrack } from 'svelte';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
-    import InputArea from '$lib/form/InputArea.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import {fetchPut} from '#api/fetch.ts';
+    import Form from '#lib/form/Form.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import type {GroupResponse, GroupRequest} from '#api/types/groups.ts';
+    import {PATTERN_GROUP} from '#utils/patterns.ts';
+    import {untrack} from 'svelte';
+    import {parseJsonValue, stringifyJsonValue} from '#utils/jsonValue.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
 
     let {
         group,
@@ -70,20 +70,20 @@
     </LabeledValue>
 
     <Input
-        bind:value={name}
-        autocomplete="off"
-        label={ta.groups.name}
-        placeholder={ta.groups.name}
-        width="14.5rem"
-        required
-        pattern={PATTERN_GROUP}
+            bind:value={name}
+            autocomplete="off"
+            label={ta.groups.name}
+            placeholder={ta.groups.name}
+            width="14.5rem"
+            required
+            pattern={PATTERN_GROUP}
     />
     <div class="meta">
         <InputArea
-            label={ta.common.jsonMeta}
-            placeholder={ta.common.jsonMeta}
-            rows={15}
-            bind:value={jsonMeta}
+                label={ta.common.jsonMeta}
+                placeholder={ta.common.jsonMeta}
+                rows={15}
+                bind:value={jsonMeta}
         />
     </div>
 
@@ -93,7 +93,7 @@
         </Button>
 
         {#if success}
-            <IconCheck />
+            <IconCheck/>
         {/if}
     </div>
 

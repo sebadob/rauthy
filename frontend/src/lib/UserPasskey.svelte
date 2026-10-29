@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type { PasskeyResponse } from '$api/types/webauthn.ts';
-    import { formatDateFromTs } from '$utils/helpers';
-    import IconFingerprint from '$icons/IconFingerprint.svelte';
-    import Tooltip from '$lib5/Tooltip.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import IconKey from '$icons/IconKey.svelte';
-    import IconCheckBadge from '$icons/IconCheckBadge.svelte';
+    import type {PasskeyResponse} from '#api/types/webauthn.ts';
+    import {formatDateFromTs} from '#utils/helpers.ts';
+    import IconFingerprint from '#icons/IconFingerprint.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import IconKey from '#icons/IconKey.svelte';
+    import IconCheckBadge from '#icons/IconCheckBadge.svelte';
 
     let {
         passkey,
@@ -32,21 +32,21 @@
             {#if passkey.user_verified}
                 <Tooltip text={t.account.userVerifiedTooltip}>
                     <div style:margin-bottom="-.25rem">
-                        <IconFingerprint width="1rem" color="hsl(var(--accent))" />
+                        <IconFingerprint width="1rem" color="hsl(var(--accent))"/>
                     </div>
                 </Tooltip>
             {/if}
             {#if passkey.resident_key}
                 <Tooltip text={t.account.residentKeyTooltip}>
                     <div style:margin-bottom="-.25rem">
-                        <IconKey width="1rem" color="hsl(var(--accent))" />
+                        <IconKey width="1rem" color="hsl(var(--accent))"/>
                     </div>
                 </Tooltip>
             {/if}
             {#if passkey.aaguid}
                 <Tooltip text={`${t.account.aaguidTooltip}: ${passkey.description}`}>
                     <div style:margin-bottom="-.25rem">
-                        <IconCheckBadge width="1rem" color="hsl(var(--accent))" />
+                        <IconCheckBadge width="1rem" color="hsl(var(--accent))"/>
                     </div>
                 </Tooltip>
             {/if}

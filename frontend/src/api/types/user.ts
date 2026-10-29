@@ -1,5 +1,5 @@
-import type { Language } from './i18n';
-import type { JsonValue } from '$utils/jsonValue';
+import type {Language} from './i18n';
+import type {JsonValue} from '#utils/jsonValue.ts';
 
 export interface UserPictureConfig {
     upload_allowed: boolean;
@@ -94,7 +94,7 @@ export interface UserAttrValuesUpdateRequest {
 }
 
 export type UserAccountTypeResponse =
-    'new' | 'password' | 'passkey' | 'federated' | 'federated_passkey' | 'federated_password';
+        'new' | 'password' | 'passkey' | 'federated' | 'federated_passkey' | 'federated_password';
 
 export interface UserResponseSimple {
     id: string;

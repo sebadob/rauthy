@@ -1,6 +1,6 @@
 <script lang="ts">
-    import OrderBy from '$lib5/search_bar/OrderBy.svelte';
-    import SearchBar from '$lib5/search_bar/SearchBar.svelte';
+    import OrderBy from '#lib/search_bar/OrderBy.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
 
     let {
         ref = $bindable(),
@@ -37,21 +37,21 @@
 
 <div class="container">
     <OrderBy
-        bind:ref
-        options={orderOptions}
-        onChange={onChangeOrder}
-        {borderless}
-        {firstDirReverse}
+            bind:ref
+            options={orderOptions}
+            onChange={onChangeOrder}
+            {borderless}
+            {firstDirReverse}
     />
     <SearchBar
-        bind:value
-        {datalist}
-        options={searchOptions}
-        bind:option={searchOption}
-        {pattern}
-        width={searchWidth}
-        {borderless}
-        {onSearch}
+            bind:value
+            {datalist}
+            options={searchOptions}
+            bind:option={searchOption}
+            {pattern}
+            width={searchWidth}
+            {borderless}
+            {onSearch}
     />
 </div>
 

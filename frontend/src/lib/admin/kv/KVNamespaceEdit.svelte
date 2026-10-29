@@ -1,14 +1,14 @@
 <script lang="ts">
-    import type { IParam } from '$state/param.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
-    import { fetchGet, fetchPut } from '$api/fetch';
-    import type { KVNamespaceRequest, KVNamespaceResponse } from '$api/types/kv';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
+    import type {IParam} from '#state/param.svelte.ts';
+    import Form from '#lib/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Input from '#lib/form/Input.svelte';
+    import {PATTERN_GROUP} from '#utils/patterns.ts';
+    import {fetchGet, fetchPut} from '#api/fetch.ts';
+    import type {KVNamespaceRequest, KVNamespaceResponse} from '#api/types/kv.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
 
     let {
         ns,
@@ -65,7 +65,7 @@
 <div class="container">
     {#if namespace}
         <Form action={url} {onSubmit}>
-            <Input pattern={PATTERN_GROUP} bind:value={namespace.name} />
+            <Input pattern={PATTERN_GROUP} bind:value={namespace.name}/>
             <InputCheckbox ariaLabel="Public Access" bind:checked={namespace.public}>
                 Public Access
             </InputCheckbox>
@@ -75,7 +75,7 @@
                     {t.common.save}
                 </Button>
                 {#if success}
-                    <IconCheck />
+                    <IconCheck/>
                 {/if}
             </div>
         </Form>

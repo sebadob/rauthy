@@ -1,22 +1,22 @@
 <script lang="ts">
-    import type { KVNamespaceResponse, KVValueRequest, KVValueResponse } from '$api/types/kv';
-    import Button from '$lib/button/Button.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import SearchBar from '$lib/search_bar/SearchBar.svelte';
-    import { fetchDelete, fetchGet, fetchPost, fetchPut } from '$api/fetch';
-    import Modal from '$lib/Modal.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import { PATTERN_KV_KEY } from '$utils/patterns';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import { slide } from 'svelte/transition';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
-    import IconKey from '$icons/IconKey.svelte';
-    import IconEdit from '$icons/IconEdit.svelte';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import IconLink from '$icons/editor/IconLink.svelte';
+    import type {KVNamespaceResponse, KVValueRequest, KVValueResponse} from '#api/types/kv.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import {fetchDelete, fetchGet, fetchPost, fetchPut} from '#api/fetch.ts';
+    import Modal from '#lib/Modal.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import Form from '#lib/form/Form.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import {PATTERN_KV_KEY} from '#utils/patterns.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import {slide} from 'svelte/transition';
+    import {parseJsonValue, stringifyJsonValue} from '#utils/jsonValue.ts';
+    import IconKey from '#icons/IconKey.svelte';
+    import IconEdit from '#icons/IconEdit.svelte';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import IconLink from '#icons/editor/IconLink.svelte';
 
     let {
         ns,
@@ -222,7 +222,7 @@
 {/snippet}
 
 <div class="btnsLim">
-    <Input typ="number" bind:value={limit} label="Limit" min="1" max="4294967295" width="7rem" />
+    <Input typ="number" bind:value={limit} label="Limit" min="1" max="4294967295" width="7rem"/>
     <div class="btns">
         <Button level={2} onclick={fetchAll}>{ta.kv.loadAllValues}</Button>
         <Button onclick={() => (showModalAdd = true)}>{ta.kv.addNewValue}</Button>
@@ -230,24 +230,24 @@
             <div class="modal">
                 <Form action={urlValues} onSubmit={onSubmitAdd}>
                     <Input
-                        bind:ref={refInput}
-                        name="key"
-                        label={ta.kv.key}
-                        placeholder={ta.kv.key}
-                        pattern={PATTERN_KV_KEY}
-                        required
+                            bind:ref={refInput}
+                            name="key"
+                            label={ta.kv.key}
+                            placeholder={ta.kv.key}
+                            pattern={PATTERN_KV_KEY}
+                            required
                     />
                     <InputArea
-                        name="value"
-                        label={ta.kv.value}
-                        placeholder={ta.kv.value}
-                        rows={15}
-                        required
+                            name="value"
+                            label={ta.kv.value}
+                            placeholder={ta.kv.value}
+                            rows={15}
+                            required
                     />
                     <InputCheckbox
-                        ariaLabel={ta.kv.storeEncrypted}
-                        name="encrypted"
-                        bind:checked={encryptNew}
+                            ariaLabel={ta.kv.storeEncrypted}
+                            name="encrypted"
+                            bind:checked={encryptNew}
                     >
                         {ta.kv.storeEncrypted}
                     </InputCheckbox>
@@ -271,7 +271,7 @@
     </div>
 </div>
 
-<SearchBar bind:value={search} />
+<SearchBar bind:value={search}/>
 
 {@render error()}
 
@@ -284,21 +284,21 @@
             <div class="flex gap-05">
                 {#if entry.encrypted}
                     <div title={ta.kv.storeEncrypted} style:margin-bottom="-.4rem">
-                        <IconKey width="1.1rem" />
+                        <IconKey width="1.1rem"/>
                     </div>
                 {/if}
                 {#if ns.public}
                     <Button invisible onclick={() => openPubLink(entry.key)}>
                         <div title="Public Access Link" style:margin-bottom="-.5rem">
-                            <IconLink width="1.1rem" />
+                            <IconLink width="1.1rem"/>
                         </div>
                     </Button>
                 {/if}
                 <Button ariaLabel={ta.common.edit} invisible onclick={() => editEntry(entry)}>
-                    <IconEdit width="1.25rem" />
+                    <IconEdit width="1.25rem"/>
                 </Button>
                 <Button ariaLabel={t.common.delete} invisible onclick={() => deleteEntry(entry)}>
-                    <IconTrash width="1.25rem" />
+                    <IconTrash width="1.25rem"/>
                 </Button>
             </div>
         </div>
@@ -324,9 +324,9 @@
     {/if}
 
     <Modal
-        bind:showModal={showModalEdit}
-        bind:closeModal={closeModalEdit}
-        onClose={() => (entrySelected = undefined)}
+            bind:showModal={showModalEdit}
+            bind:closeModal={closeModalEdit}
+            onClose={() => (entrySelected = undefined)}
     >
         <div class="modal">
             {#if entrySelected}
@@ -335,18 +335,18 @@
                         {entrySelected.key}
                     </h3>
                     <InputArea
-                        bind:ref={refArea}
-                        name="value"
-                        label={ta.kv.value}
-                        placeholder={ta.kv.value}
-                        rows={15}
-                        value={stringifyJsonValue(entrySelected.value)}
-                        required
+                            bind:ref={refArea}
+                            name="value"
+                            label={ta.kv.value}
+                            placeholder={ta.kv.value}
+                            rows={15}
+                            value={stringifyJsonValue(entrySelected.value)}
+                            required
                     />
                     <InputCheckbox
-                        name="encrypted"
-                        ariaLabel={ta.kv.storeEncrypted}
-                        checked={!!entrySelected.encrypted}
+                            name="encrypted"
+                            ariaLabel={ta.kv.storeEncrypted}
+                            checked={!!entrySelected.encrypted}
                     >
                         {ta.kv.storeEncrypted}
                     </InputCheckbox>
@@ -367,9 +367,9 @@
         </div>
     </Modal>
     <Modal
-        bind:showModal={showModalDelete}
-        bind:closeModal={closeModalDelete}
-        onClose={() => (entrySelected = undefined)}
+            bind:showModal={showModalDelete}
+            bind:closeModal={closeModalDelete}
+            onClose={() => (entrySelected = undefined)}
     >
         <div class="modal">
             {#if entrySelected}

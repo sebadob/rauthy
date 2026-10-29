@@ -1,29 +1,29 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { fetchGet } from '$api/fetch';
-    import type { UserResponse, UserResponseSimple } from '$api/types/user.ts';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import type { GroupResponse } from '$api/types/groups.ts';
-    import type { RoleResponse } from '$api/types/roles.ts';
-    import Pagination from '$lib5/pagination/Pagination.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import { useParam } from '$state/param.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import UserAddNew from '$lib5/admin/users/UserAddNew.svelte';
-    import UserDetails from '$lib5/admin/users/UserDetails.svelte';
-    import PaginationServerSide from '$lib5/pagination/PaginationServerSide.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from '$lib5/pagination/props';
-    import { fetchSearchServer, type SearchParamsIdxUser } from '$utils/search';
-    import UserPicture from '$lib/UserPicture.svelte';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
-    import { useTrigger } from '$state/callback.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import Button from '$lib/button/Button.svelte';
-    import IconEnvelope from '$icons/IconEnvelope.svelte';
-    import SendMail from '$lib/SendMail.svelte';
-    import EmailJobs from '$lib/EmailJobs.svelte';
+    import {onMount} from 'svelte';
+    import {fetchGet} from '#api/fetch.ts';
+    import type {UserResponse, UserResponseSimple} from '#api/types/user.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import type {GroupResponse} from '#api/types/groups.ts';
+    import type {RoleResponse} from '#api/types/roles.ts';
+    import Pagination from '#lib/pagination/Pagination.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import {useParam} from '#state/param.svelte.ts';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import UserAddNew from '#lib/admin/users/UserAddNew.svelte';
+    import UserDetails from '#lib/admin/users/UserDetails.svelte';
+    import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
+    import {PAGE_SIZE_DEFAULT, type PageSize} from '#lib/pagination/props.ts';
+    import {fetchSearchServer, type SearchParamsIdxUser} from '#utils/search.ts';
+    import UserPicture from '#lib/UserPicture.svelte';
+    import type {AuthProviderTemplate} from '#api/templates/AuthProvider.ts';
+    import {useTrigger} from '#state/callback.svelte.ts';
+    import type {UserValuesConfig} from '#api/templates/UserValuesConfig.ts';
+    import Button from '#lib/button/Button.svelte';
+    import IconEnvelope from '#icons/IconEnvelope.svelte';
+    import SendMail from '#lib/SendMail.svelte';
+    import EmailJobs from '#lib/EmailJobs.svelte';
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -189,7 +189,7 @@
         // ['E-Mail', 'ID', 'Created', 'Last Login']
         if (option === orderOptions[0]) {
             users.sort((a, b) =>
-                up ? a.email.localeCompare(b.email) : b.email.localeCompare(a.email),
+                    up ? a.email.localeCompare(b.email) : b.email.localeCompare(a.email),
             );
         } else if (option === orderOptions[1]) {
             users.sort((a, b) => (up ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
@@ -226,21 +226,21 @@
 
 {#snippet navTile(user: UserResponseSimple)}
     <NavButtonTile
-        onclick={() => {
+            onclick={() => {
             uid.set(user.id);
             tr.trigger('navSubSub');
         }}
-        selected={uid.get() === user.id}
-        pictureLeft
+            selected={uid.get() === user.id}
+            pictureLeft
     >
         <div class="navBtn">
             <div class="picture">
                 <UserPicture
-                    fallbackCharacters={fallbackCharacters(user)}
-                    userId={user.id}
-                    pictureId={user.picture_id}
-                    size="small"
-                    disableUpload
+                        fallbackCharacters={fallbackCharacters(user)}
+                        userId={user.id}
+                        pictureId={user.picture_id}
+                        size="small"
+                        disableUpload
                 />
             </div>
             <div class="tile">
@@ -257,31 +257,31 @@
 {/snippet}
 
 <NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="users"
-    width="min(23rem, 100dvw)"
-    thresholdNavSub={700}
+        paddingTop="2.35rem"
+        buttonTilesAriaControls="users"
+        width="min(23rem, 100dvw)"
+        thresholdNavSub={700}
 >
     <div class="topBtns">
-        <SendMail {groups} {roles} />
-        <EmailJobs />
+        <SendMail {groups} {roles}/>
+        <EmailJobs/>
         <ButtonAddModal
-            bind:ref={refAddNew}
-            level={roles.length === 0 ? 1 : 2}
-            bind:closeModal
-            alignRight
+                bind:ref={refAddNew}
+                level={roles.length === 0 ? 1 : 2}
+                bind:closeModal
+                alignRight
         >
-            <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups} />
+            <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups}/>
         </ButtonAddModal>
     </div>
 
     <OrderSearchBar
-        bind:value={searchValue}
-        {searchOptions}
-        bind:searchOption
-        {orderOptions}
-        {onChangeOrder}
-        searchWidth="min(23rem, calc(100dvw - .5rem))"
+            bind:value={searchValue}
+            {searchOptions}
+            bind:searchOption
+            {orderOptions}
+            {onChangeOrder}
+            searchWidth="min(23rem, calc(100dvw - .5rem))"
     />
 
     {#snippet buttonTiles()}
@@ -299,16 +299,16 @@
 
         {#if firstFetchHeaders}
             <PaginationServerSide
-                bind:pageSize={sspPageSize}
-                sspFetch={fetchUsers}
-                idxTotalCount="x-user-count"
-                itemsLength={users.length}
-                {firstFetchHeaders}
+                    bind:pageSize={sspPageSize}
+                    sspFetch={fetchUsers}
+                    idxTotalCount="x-user-count"
+                    itemsLength={users.length}
+                    {firstFetchHeaders}
             />
         {:else if useServerSide}
-            <Pagination bind:items={users} bind:itemsPaginated={usersPaginated} />
+            <Pagination bind:items={users} bind:itemsPaginated={usersPaginated}/>
         {:else}
-            <Pagination bind:items={usersFiltered} bind:itemsPaginated={usersPaginated} />
+            <Pagination bind:items={usersFiltered} bind:itemsPaginated={usersPaginated}/>
         {/if}
     {/snippet}
 </NavSub>
@@ -322,7 +322,7 @@
 
     <div id="users">
         {#if userId && userValuesConfig}
-            <UserDetails {userValuesConfig} {userId} {providers} {roles} {groups} {onSave} />
+            <UserDetails {userValuesConfig} {userId} {providers} {roles} {groups} {onSave}/>
         {/if}
     </div>
 </ContentAdmin>

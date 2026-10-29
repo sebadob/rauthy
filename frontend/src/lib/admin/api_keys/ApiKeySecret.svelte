@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import { slide } from 'svelte/transition';
-    import HiddenValueArea from '$lib5/HiddenValueArea.svelte';
-    import type { ApiKeyResponse } from '$api/types/api_keys.ts';
-    import { fetchPut } from '$api/fetch';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {slide} from 'svelte/transition';
+    import HiddenValueArea from '#lib/HiddenValueArea.svelte';
+    import type {ApiKeyResponse} from '#api/types/api_keys.ts';
+    import {fetchPut} from '#api/fetch.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
 
     let {
         key,
@@ -53,13 +53,13 @@
 {#if secret}
     <div transition:slide={{ duration: 150 }} class="secret font-mono">
         <InputPassword
-            autocomplete="off"
-            value={secret}
-            label="API Key"
-            placeholder="API Key"
-            disabled
-            showCopy
-            width="min(25rem, calc(100dvw - .5rem))"
+                autocomplete="off"
+                value={secret}
+                label="API Key"
+                placeholder="API Key"
+                disabled
+                showCopy
+                width="min(25rem, calc(100dvw - .5rem))"
         />
     </div>
 
@@ -73,14 +73,14 @@
     <div transition:slide={{ duration: 150 }}>
         <p>{@html ta.api_key.generate4}</p>
         {#key curlPretty}
-            <HiddenValueArea ariaLabel="curl text command with jq" rows={5} value={curlPretty} />
+            <HiddenValueArea ariaLabel="curl text command with jq" rows={5} value={curlPretty}/>
         {/key}
     </div>
 
     <div transition:slide={{ duration: 150 }}>
         <p>{@html ta.api_key.generate5}</p>
         {#key curlPretty}
-            <HiddenValueArea ariaLabel="curl text command simple" rows={5} value={curl} />
+            <HiddenValueArea ariaLabel="curl text command simple" rows={5} value={curl}/>
         {/key}
     </div>
 {/if}

@@ -1,17 +1,17 @@
 <script lang="ts">
-    import Button from '$lib/button/Button.svelte';
-    import IconCircleStack from '$icons/IconCircleStack.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import type { EmailJobResponse } from '$api/types/email';
-    import { fetchGet, fetchPost } from '$api/fetch';
-    import { formatDateFromTs } from '$utils/helpers';
-    import IconClock from '$icons/IconClock.svelte';
-    import Expandable from '$lib/Expandable.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import IconStop from '$icons/IconStop.svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import IconCircleStack from '#icons/IconCircleStack.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import Modal from '#lib/Modal.svelte';
+    import type {EmailJobResponse} from '#api/types/email.ts';
+    import {fetchGet, fetchPost} from '#api/fetch.ts';
+    import {formatDateFromTs} from '#utils/helpers.ts';
+    import IconClock from '#icons/IconClock.svelte';
+    import Expandable from '#lib/Expandable.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import IconStop from '#icons/IconStop.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
 
     let ta = useI18nAdmin();
 
@@ -50,7 +50,7 @@
 </script>
 
 <Button onclick={() => (showModal = true)} invisible>
-    <IconCircleStack />
+    <IconCircleStack/>
 </Button>
 
 <Modal bind:showModal bind:closeModal>
@@ -70,11 +70,11 @@
                                 <div>{formatDateFromTs(job.id)}</div>
                                 <div class="flex gap-05">
                                     {#if job.status === 'Finished'}
-                                        <IconCheck />
+                                        <IconCheck/>
                                     {:else if job.status === 'Open'}
-                                        <IconClock />
+                                        <IconClock/>
                                     {:else if job.status === 'Canceled'}
-                                        <IconStop />
+                                        <IconStop/>
                                     {/if}
                                     {job.status}
                                     {#if job.status !== 'Open'}
@@ -83,11 +83,11 @@
                                 </div>
                                 {#if job.status === 'Open'}
                                     <Button
-                                        ariaLabel={ta.email.cancelJob}
-                                        invisible
-                                        onclick={() => cancelJob(job)}
+                                            ariaLabel={ta.email.cancelJob}
+                                            invisible
+                                            onclick={() => cancelJob(job)}
                                     >
-                                        <IconStop />
+                                        <IconStop/>
                                     </Button>
                                 {/if}
                             </div>
@@ -135,7 +135,7 @@
                             {#if job.content_type === 'text'}
                                 {job.body}
                             {:else if job.content_type === 'markdown'}
-                                <MarkdownRenderer markdown={job.body} />
+                                <MarkdownRenderer markdown={job.body}/>
                             {:else}
                                 {@html job.body}
                             {/if}

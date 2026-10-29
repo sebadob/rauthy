@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Options from '$lib/Options.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { onMount } from 'svelte';
-    import { fetchTimezones } from '$utils/helpers';
+    import Options from '#lib/Options.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {onMount} from 'svelte';
+    import {fetchTimezones} from '#utils/helpers.ts';
 
     let {
         value = $bindable('UTC'),
@@ -26,7 +26,7 @@
         {t.common.timezone}
     </div>
     <div class="opts">
-        <Options ariaLabel={t.common.timezone} {options} bind:value withSearch />
+        <Options ariaLabel={t.common.timezone} {options} bind:value withSearch/>
     </div>
 </div>
 

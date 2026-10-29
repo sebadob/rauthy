@@ -1,6 +1,6 @@
-import { fetchGet } from '$api/fetch';
-import { isBrowser } from '$utils/helpers';
-import type { I18nConfigResponse, Language } from '$api/types/i18n.ts';
+import {fetchGet} from '#api/fetch.ts';
+import {isBrowser} from '#utils/helpers.ts';
+import type {I18nConfigResponse, Language} from '#api/types/i18n.ts';
 
 let _config: undefined | I18nConfigResponse = $state();
 

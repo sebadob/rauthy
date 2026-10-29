@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type { IParam } from '$state/param.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { fetchDelete } from '$api/fetch';
+    import type {IParam} from '#state/param.svelte.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {fetchDelete} from '#api/fetch.ts';
 
     let {
         ns,

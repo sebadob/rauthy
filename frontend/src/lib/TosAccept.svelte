@@ -3,15 +3,15 @@
         ToSAwaitLoginResponse,
         ToSLatestResponse,
         ToSUserAcceptRequest,
-    } from '$api/types/tos';
-    import Modal from '$lib/Modal.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { fetchPost, type IResponse } from '$api/fetch';
-    import { onMount } from 'svelte';
-    import { formatDateFromTs } from '$utils/helpers';
-    import type { WebauthnLoginResponse } from '$api/types/authorize';
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
+    } from '#api/types/tos.ts';
+    import Modal from '#lib/Modal.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {fetchPost, type IResponse} from '#api/fetch.ts';
+    import {onMount} from 'svelte';
+    import {formatDateFromTs} from '#utils/helpers.ts';
+    import type {WebauthnLoginResponse} from '#api/types/authorize.ts';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
 
     let {
         tos,
@@ -25,7 +25,7 @@
         tosAcceptCode?: string;
         forceAccept?: boolean;
         onToSAccept: (
-            res?: IResponse<undefined | ToSAwaitLoginResponse | WebauthnLoginResponse>,
+                res?: IResponse<undefined | ToSAwaitLoginResponse | WebauthnLoginResponse>,
         ) => Promise<void>;
         onToSCancel?: () => void;
         skipRequest?: boolean;
@@ -42,7 +42,7 @@
         now = new Date().getTime() / 1000;
     }, 1000);
     let acceptOptional = $derived(
-        !(forceAccept || tos.opt_until === undefined || tos.opt_until <= now - 3),
+            !(forceAccept || tos.opt_until === undefined || tos.opt_until <= now - 3),
     );
 
     let tosRead = $state(false);
@@ -125,7 +125,7 @@
         <h1>{t.tos.tos}</h1>
         <div bind:this={refToS} class="tosContent html-render" onscrollend={onScrollEndToS}>
             {#if tos.is_html}
-                <MarkdownRenderer markdown={tos.content} />
+                <MarkdownRenderer markdown={tos.content}/>
             {:else}
                 {tos.content}
             {/if}

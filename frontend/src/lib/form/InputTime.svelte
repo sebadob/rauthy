@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { slide } from 'svelte/transition';
-    import Options from '$lib5/Options.svelte';
-    import Popover from '$lib5/Popover.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { untrack } from 'svelte';
-    import { fmtTimeInput } from '$utils/form';
-    import IconClock from '$icons/IconClock.svelte';
+    import {slide} from 'svelte/transition';
+    import Options from '#lib/Options.svelte';
+    import Popover from '#lib/Popover.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {untrack} from 'svelte';
+    import {fmtTimeInput} from '#utils/form.ts';
+    import IconClock from '#icons/IconClock.svelte';
 
     let {
         id,
@@ -51,13 +51,13 @@
 
     $inspect(min, max).with(() => {
         if (
-            min.length !== 5 ||
-            min.charAt(2) !== ':' ||
-            max.length !== 5 ||
-            max.charAt(2) !== ':'
+                min.length !== 5 ||
+                min.charAt(2) !== ':' ||
+                max.length !== 5 ||
+                max.charAt(2) !== ':'
         ) {
             console.error(
-                'min and max values for InputTime must be in the format of 00:00 - 23:59',
+                    'min and max values for InputTime must be in the format of 00:00 - 23:59',
             );
         }
     });
@@ -200,10 +200,10 @@
         let intMinute = Number.parseInt(minute);
 
         if (
-            intHour < hourMin ||
-            intHour > hourMax ||
-            intMinute < minuteMin ||
-            intMinute > minuteMax
+                intHour < hourMin ||
+                intHour > hourMax ||
+                intMinute < minuteMin ||
+                intMinute > minuteMax
         ) {
             refInput?.setCustomValidity(errMsg);
         }
@@ -214,9 +214,9 @@
 
 <div style:width>
     <div
-        aria-live="assertive"
-        class="label"
-        style:height={noEmptyLabelHeight ? 'inherit' : '1.75rem'}
+            aria-live="assertive"
+            class="label"
+            style:height={noEmptyLabelHeight ? 'inherit' : '1.75rem'}
     >
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
@@ -225,65 +225,65 @@
 
     <div class="flex">
         <input
-            bind:this={refInput}
-            type="text"
-            {id}
-            {name}
-            title={errMsg}
-            aria-label={ariaLabel || label}
-            bind:value
-            {disabled}
-            aria-disabled={disabled}
-            {required}
-            aria-required={required || false}
-            aria-invalid={isErr}
-            minlength="5"
-            maxlength="5"
-            {oninput}
-            {oninvalid}
-            {onkeydown}
-            onfocus={() => refInput?.select()}
-            onblur={() => reportValidity()}
+                bind:this={refInput}
+                type="text"
+                {id}
+                {name}
+                title={errMsg}
+                aria-label={ariaLabel || label}
+                bind:value
+                {disabled}
+                aria-disabled={disabled}
+                {required}
+                aria-required={required || false}
+                aria-invalid={isErr}
+                minlength="5"
+                maxlength="5"
+                {oninput}
+                {oninvalid}
+                {onkeydown}
+                onfocus={() => refInput?.select()}
+                onblur={() => reportValidity()}
         />
 
         <div class="relative">
             <div class="absolute indicator">
                 <Popover
-                    ariaLabel="Show Popover Example"
-                    offsetLeft="-3.8rem"
-                    offsetTop={openTop ? '-5rem' : '-.1rem'}
-                    bind:close
-                    {onToggle}
-                    btnInvisible
+                        ariaLabel="Show Popover Example"
+                        offsetLeft="-3.8rem"
+                        offsetTop={openTop ? '-5rem' : '-.1rem'}
+                        bind:close
+                        {onToggle}
+                        btnInvisible
                 >
                     {#snippet button()}
                         <div title={label} class="pointer">
-                            <IconClock color="hsl(var(--text)" width="1.2rem" />
+                            <IconClock color="hsl(var(--text)" width="1.2rem"/>
                         </div>
                     {/snippet}
                     <div class="popup">
                         <div class="flex space-between">
                             <div>
                                 <Options
-                                    bind:ref={refHours}
-                                    ariaLabel={t.common.hours}
-                                    options={optionHour}
-                                    bind:value={hour}
-                                    maxHeight="13rem"
-                                    borderless
-                                    onRight={() => refMinutes?.focus()}
+                                        bind:ref={refHours}
+                                        ariaLabel={t.common.hours}
+                                        options={optionHour}
+                                        bind:value={hour}
+                                        maxHeight="13rem"
+                                        borderless
+                                        onRight={() => refMinutes?.focus()}
                                 />
                             </div>
                             <div class="colon">:</div>
                             <div>
                                 <Options
-                                    bind:ref={refMinutes}
-                                    ariaLabel={t.common.minutes}
-                                    options={optionMinute}
-                                    bind:value={minute}
-                                    maxHeight="13rem"
-                                    borderless
-                                    onLeft={() => refHours?.focus()}
+                                        bind:ref={refMinutes}
+                                        ariaLabel={t.common.minutes}
+                                        options={optionMinute}
+                                        bind:value={minute}
+                                        maxHeight="13rem"
+                                        borderless
+                                        onLeft={() => refHours?.focus()}
                                 />
                             </div>
                         </div>

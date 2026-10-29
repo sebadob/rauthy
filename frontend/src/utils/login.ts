@@ -1,9 +1,9 @@
-import type { ProviderLoginRequest } from '$api/types/auth_provider';
-import { generatePKCE } from '$utils/pkce';
-import { fetchSolvePow } from '$utils/pow';
-import { fetchPost } from '$api/fetch';
-import { saveProviderToken } from '$utils/helpers';
-import { PKCE_VERIFIER_UPSTREAM } from '$utils/constants';
+import type {ProviderLoginRequest} from '#api/types/auth_provider.ts';
+import {generatePKCE} from '#utils/pkce.ts';
+import {fetchSolvePow} from '#utils/pow.ts';
+import {fetchPost} from '#api/fetch.ts';
+import {saveProviderToken} from '#utils/helpers.ts';
+import {PKCE_VERIFIER_UPSTREAM} from '#utils/constants.ts';
 
 /**
  * The payload does not need to contain `pkce_challenge` and `pow`, as they will be

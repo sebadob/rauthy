@@ -1,4 +1,4 @@
-import { fetchGet, type IResponse } from '$api/fetch';
+import {fetchGet, type IResponse} from '#api/fetch.ts';
 
 export type SearchParamsType = 'user' | 'session';
 export type SearchParamsIdxUser = 'id' | 'email';

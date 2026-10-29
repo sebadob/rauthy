@@ -1,11 +1,11 @@
 <script lang="ts">
-    import IconChevronRight from '$icons/IconChevronRight.svelte';
-    import { genKey } from '$utils/helpers';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { slide } from 'svelte/transition';
+    import IconChevronRight from '#icons/IconChevronRight.svelte';
+    import {genKey} from '#utils/helpers.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import {slide} from 'svelte/transition';
 
-    import type { Snippet } from 'svelte';
+    import type {Snippet} from 'svelte';
 
     let t = useI18n();
 
@@ -31,13 +31,13 @@
 <div class="container" aria-expanded={expand}>
     <div class="header">
         <Button
-            ariaLabel={t.common.expandContent}
-            ariaControls={idDetails}
-            invisible
-            onclick={ev => toggle(ev)}
+                ariaLabel={t.common.expandContent}
+                ariaControls={idDetails}
+                invisible
+                onclick={ev => toggle(ev)}
         >
             <div class="chevron">
-                <IconChevronRight />
+                <IconChevronRight/>
             </div>
         </Button>
 
@@ -47,11 +47,11 @@
     </div>
 
     <div
-        id={idDetails}
-        class="details"
-        aria-label={t.common.details}
-        aria-labelledby={idSummary}
-        aria-hidden={!expand}
+            id={idDetails}
+            class="details"
+            aria-label={t.common.details}
+            aria-labelledby={idSummary}
+            aria-hidden={!expand}
     >
         {#if expand}
             <div transition:slide={{ duration: 150 }}>

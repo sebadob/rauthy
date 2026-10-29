@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { after, before, test } from 'node:test';
 import { chromium } from '@playwright/test';
 
+/** @type {any} */
 let browser;
+/** @type {any} */
 let html;
 before(async () => {
     assert.ok(
@@ -50,15 +52,19 @@ for (const scenario of [
                 include_special: 1,
             },
         };
+        /** @type {any} */
         let challengeCode;
+        /** @type {any} */
         let mfaCode;
+        /** @type {any} */
         let createdCredId;
         let startRejected = false;
         let finishRejected = false;
         let putRejected = false;
+        /** @type {string[]} */
         const requests = [];
         const documentPath = '/auth/v1/users/reset-user/reset/reset';
-        await context.route('**/*', async route => {
+        await context.route('**/*', /** @param {any} route */ async route => {
             const request = route.request();
             const url = new URL(request.url());
             if (url.origin !== 'http://localhost') return route.abort();
@@ -94,6 +100,7 @@ for (const scenario of [
                     });
                 }
                 challengeCode = crypto.randomUUID();
+                /** @type {any} */
                 const publicKey = {
                     challenge: btoa(crypto.randomUUID()),
                     rpId: 'localhost',
@@ -162,14 +169,19 @@ for (const scenario of [
             await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
             await page.evaluate(() => {
                 const password = `${crypto.randomUUID()}aA1!`;
-                for (const input of document.querySelectorAll('input[type=password]')) {
+                for (const elem of document.querySelectorAll('input[type=password]')) {
+                    /** @type {any} */
+                    const input = elem;
                     input.value = password;
                     input.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             });
         } else {
             createdCredId = await page.evaluate(
-                async ({ createCredential, residentKey }) => {
+                /** @param {{createCredential: boolean, residentKey: ResidentKeyRequirement}} p */ async ({
+                    createCredential,
+                    residentKey,
+                }) => {
                     let credentialId;
                     if (createCredential) {
                         const credential = await navigator.credentials.create({
@@ -188,10 +200,12 @@ for (const scenario of [
                                 },
                             },
                         });
-                        credentialId = credential.id;
+                        credentialId = credential?.id;
                     }
                     const password = `${crypto.randomUUID()}aA1!`;
-                    for (const input of document.querySelectorAll('input[type=password]')) {
+                    for (const elem of document.querySelectorAll('input[type=password]')) {
+                        /** @type {any} */
+                        const input = elem;
                         input.value = password;
                         input.dispatchEvent(new Event('input', { bubbles: true }));
                     }

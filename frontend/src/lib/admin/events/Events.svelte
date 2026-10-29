@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Event from '$lib5/admin/events/Event.svelte';
+    import Event from '#lib/admin/events/Event.svelte';
     import EventsLegend from './EventsLegend.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { EVENT_LEVELS } from '$utils/constants';
-    import { isBrowser } from '$utils/helpers';
-    import type { EventLevel, EventResponse } from '$api/types/events.ts';
-    import Options from '$lib5/Options.svelte';
-    import { onDestroy } from 'svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { fetchPost } from '$api/fetch';
-    import { useTrigger } from '$state/callback.svelte';
-    import { useSession } from '$state/session.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {EVENT_LEVELS} from '#utils/constants.ts';
+    import {isBrowser} from '#utils/helpers.ts';
+    import type {EventLevel, EventResponse} from '#api/types/events.ts';
+    import Options from '#lib/Options.svelte';
+    import {onDestroy} from 'svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import {fetchPost} from '#api/fetch.ts';
+    import {useTrigger} from '#state/callback.svelte.ts';
+    import {useSession} from '#state/session.svelte.ts';
 
     const latest = 50;
 
@@ -30,9 +30,9 @@
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
     let level: EventLevel = $state(
-        isBrowser()
-            ? (localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel) || 'info'
-            : 'info',
+            isBrowser()
+                    ? (localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel) || 'info'
+                    : 'info',
     );
     let levelBefore = '';
 
@@ -60,22 +60,22 @@
                 break;
             case 'notice':
                 eventsFiltered = events.filter(
-                    evt =>
-                        evt.typ === 'Test' ||
-                        evt.level === 'notice' ||
-                        evt.level === 'warning' ||
-                        evt.level === 'critical',
+                        evt =>
+                                evt.typ === 'Test' ||
+                                evt.level === 'notice' ||
+                                evt.level === 'warning' ||
+                                evt.level === 'critical',
                 );
                 break;
             case 'warning':
                 eventsFiltered = events.filter(
-                    evt =>
-                        evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical',
+                        evt =>
+                                evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical',
                 );
                 break;
             case 'critical':
                 eventsFiltered = events.filter(
-                    evt => evt.typ === 'Test' || evt.level === 'critical',
+                        evt => evt.typ === 'Test' || evt.level === 'critical',
                 );
                 break;
         }
@@ -93,7 +93,7 @@
         }
 
         es = new EventSource(
-            `/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`,
+                `/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`,
         );
 
         es.onopen = () => {
@@ -117,7 +117,7 @@
     }
 </script>
 
-<svelte:window bind:innerWidth />
+<svelte:window bind:innerWidth/>
 
 <div id="events" class:wide class:narrow={!wide}>
     <div class="upper">
@@ -125,10 +125,10 @@
             <div class="flex gap-10">
                 <b>Events</b>
                 <Options
-                    ariaLabel={ta.events.eventLevel}
-                    options={EVENT_LEVELS}
-                    bind:value={level}
-                    borderless
+                        ariaLabel={ta.events.eventLevel}
+                        options={EVENT_LEVELS}
+                        bind:value={level}
+                        borderless
                 />
             </div>
 
@@ -139,12 +139,12 @@
 
         <div aria-live="polite" aria-relevant="additions" class="data">
             {#each eventsFiltered as event (event.id)}
-                <Event {event} />
+                <Event {event}/>
             {/each}
         </div>
     </div>
 
-    <EventsLegend {wide} />
+    <EventsLegend {wide}/>
 </div>
 
 <style>

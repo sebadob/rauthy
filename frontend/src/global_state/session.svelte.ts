@@ -1,6 +1,6 @@
-import { fetchGet } from '$api/fetch';
-import type { SessionInfoResponse } from '$api/types/session';
-import { isBrowser, redirectToLogin } from '$utils/helpers';
+import {fetchGet} from '#api/fetch.ts';
+import type {SessionInfoResponse} from '#api/types/session.ts';
+import {isBrowser, redirectToLogin} from '#utils/helpers.ts';
 
 // Delegated group-admin role grammar. A role named exactly `rauthy_admin`
 // is a full Rauthy admin. A role `rauthy_admin:<prefix>` makes the holder a group admin:
@@ -21,9 +21,9 @@ interface GroupMatcher {
 
 function parseRoles(roles: string | undefined): string[] {
     return (roles ?? '')
-        .split(',')
-        .map(r => r.trim())
-        .filter(r => r.length > 0);
+            .split(',')
+            .map(r => r.trim())
+            .filter(r => r.length > 0);
 }
 
 function rolesAreAdmin(roles: string | undefined): boolean {
@@ -41,13 +41,13 @@ function rolesAreAnyAdmin(roles: string | undefined): boolean {
 
 function groupMatchers(roles: string | undefined): GroupMatcher[] {
     return parseRoles(roles)
-        .filter(r => r.startsWith(GROUP_ADMIN_PREFIX))
-        .map(r => {
-            const rest = r.slice(GROUP_ADMIN_PREFIX.length);
-            return rest.endsWith('*')
-                ? { prefix: rest.slice(0, -1), glob: true }
-                : { prefix: rest, glob: false };
-        });
+            .filter(r => r.startsWith(GROUP_ADMIN_PREFIX))
+            .map(r => {
+                const rest = r.slice(GROUP_ADMIN_PREFIX.length);
+                return rest.endsWith('*')
+                        ? {prefix: rest.slice(0, -1), glob: true}
+                        : {prefix: rest, glob: false};
+            });
 }
 
 // a `rauthy_admin:<prefix>[*]` role manages the given group `name`; empty names never match,
@@ -70,13 +70,13 @@ let _session: undefined | SessionInfoResponse = $state();
 export function useSession(redirectState: 'admin' | 'account') {
     if (!_session && isBrowser()) {
         fetchGet<SessionInfoResponse>('/auth/v1/oidc/sessioninfo', 'json', 'noRedirect').then(
-            res => {
-                if (res.status === 401) {
-                    redirectToLogin(redirectState);
-                }
-                _session = res.body;
-                // TODO should we maybe start an interval for keep-alive?
-            },
+                res => {
+                    if (res.status === 401) {
+                        redirectToLogin(redirectState);
+                    }
+                    _session = res.body;
+                    // TODO should we maybe start an interval for keep-alive?
+                },
         );
     }
 

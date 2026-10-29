@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { slide } from 'svelte/transition';
-    import { useI18n } from '$state/i18n.svelte';
-    import type { FullAutoFill } from 'svelte/elements';
-    import { PATTERN_OTP_CODE } from '$utils/patterns';
-    import Template from '$lib5/Template.svelte';
-    import { TPL_OTP_LENGTH } from '$utils/constants';
+    import {slide} from 'svelte/transition';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import type {FullAutoFill} from 'svelte/elements';
+    import {PATTERN_OTP_CODE} from '#utils/patterns.ts';
+    import Template from '#lib/Template.svelte';
+    import {TPL_OTP_LENGTH} from '#utils/constants.ts';
 
     let t = useI18n();
     let otpSize = $state(8);
@@ -77,7 +77,7 @@
     }
 </script>
 
-<Template id={TPL_OTP_LENGTH} bind:value={otpSize} />
+<Template id={TPL_OTP_LENGTH} bind:value={otpSize}/>
 
 <div>
     <div aria-live="assertive" class="label">
@@ -86,33 +86,33 @@
         </label>
     </div>
     <input
-        bind:this={ref}
-        type={typ}
-        {id}
-        {name}
-        title={errMsg}
-        aria-label={label || placeholder}
-        bind:value
-        {autocomplete}
-        {placeholder}
-        aria-placeholder={placeholder}
-        minlength="6"
-        maxlength="8"
-        required={true}
-        aria-required={true}
-        aria-invalid={isError}
-        pattern={PATTERN_OTP_CODE}
-        class:invalid={isError}
-        {oninput}
-        {oninvalid}
-        {onblur}
+            bind:this={ref}
+            type={typ}
+            {id}
+            {name}
+            title={errMsg}
+            aria-label={label || placeholder}
+            bind:value
+            {autocomplete}
+            {placeholder}
+            aria-placeholder={placeholder}
+            minlength="6"
+            maxlength="8"
+            required={true}
+            aria-required={true}
+            aria-invalid={isError}
+            pattern={PATTERN_OTP_CODE}
+            class:invalid={isError}
+            {oninput}
+            {oninvalid}
+            {onblur}
     />
     {#if isError}
         <div
-            aria-relevant="all"
-            class="error"
-            class:errWithLabel={!!label}
-            transition:slide={{ duration: 150 }}
+                aria-relevant="all"
+                class="error"
+                class:errWithLabel={!!label}
+                transition:slide={{ duration: 150 }}
         >
             {errMsg || t.common.invalidInput}
         </div>

@@ -1,19 +1,19 @@
 <script lang="ts">
-    import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
-    import { onMount } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { generatePassword } from '$utils/helpers';
-    import type { UserResponse } from '$api/types/user.ts';
-    import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import Form from '$lib5/form/Form.svelte';
-    import { fetchGet, fetchPatch, fetchPost, fetchPut } from '$api/fetch';
-    import type { RequestResetRequest } from '$api/types/authorize.ts';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import type { PatchOp } from '$api/types/generic';
-    import { fetchSolvePow } from '$utils/pow';
+    import PasswordPolicy from '#lib/PasswordPolicy.svelte';
+    import {onMount} from 'svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {generatePassword} from '#utils/helpers.ts';
+    import type {UserResponse} from '#api/types/user.ts';
+    import type {PasswordPolicyResponse} from '#api/types/password_policy.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import {fetchGet, fetchPatch, fetchPost, fetchPut} from '#api/fetch.ts';
+    import type {RequestResetRequest} from '#api/types/authorize.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import type {PatchOp} from '#api/types/generic.ts';
+    import {fetchSolvePow} from '#utils/pow.ts';
 
     let {
         user,
@@ -94,7 +94,7 @@
         }
 
         let payload: PatchOp = {
-            put: [{ key: 'password', value: pwdNew }],
+            put: [{key: 'password', value: pwdNew}],
             del: [],
         };
 
@@ -153,30 +153,30 @@
     <div style:margin-top=".5rem"></div>
 
     {#if policy}
-        <PasswordPolicy password={pwdNew} bind:accepted {policy} />
+        <PasswordPolicy password={pwdNew} bind:accepted {policy}/>
     {/if}
 
     <Form action={`/auth/v1/users/${user.id}`} onSubmit={savePwd}>
         <InputPassword
-            bind:value={pwdNew}
-            autocomplete="off"
-            label={t.account.passwordNew}
-            placeholder={t.account.passwordNew}
-            {showCopy}
-            bind:reportValidity={reportValidityNew}
-            required
-            maxLength={policy?.length_max || 256}
-            width={inputWidth}
+                bind:value={pwdNew}
+                autocomplete="off"
+                label={t.account.passwordNew}
+                placeholder={t.account.passwordNew}
+                {showCopy}
+                bind:reportValidity={reportValidityNew}
+                required
+                maxLength={policy?.length_max || 256}
+                width={inputWidth}
         />
         <InputPassword
-            bind:value={pwdVerify}
-            autocomplete="off"
-            label={t.account.passwordConfirm}
-            placeholder={t.account.passwordConfirm}
-            bind:reportValidity={reportValidityConfirm}
-            required
-            maxLength={policy?.length_max || 256}
-            width={inputWidth}
+                bind:value={pwdVerify}
+                autocomplete="off"
+                label={t.account.passwordConfirm}
+                placeholder={t.account.passwordConfirm}
+                bind:reportValidity={reportValidityConfirm}
+                required
+                maxLength={policy?.length_max || 256}
+                width={inputWidth}
         />
 
         <Button level={2} onclick={generate}>
@@ -196,7 +196,7 @@
             </Button>
 
             {#if success}
-                <IconCheck />
+                <IconCheck/>
             {/if}
         </div>
     </Form>

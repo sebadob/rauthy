@@ -1,13 +1,13 @@
 <script lang="ts">
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import NavLinkSub from '$lib5/nav/NavLinkSub.svelte';
-    import type { Snippet } from 'svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import NavLinkSub from '#lib/nav/NavLinkSub.svelte';
+    import type {Snippet} from 'svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {useTrigger} from '#state/callback.svelte.ts';
 
-    let { children }: { children: Snippet } = $props();
+    let {children}: { children: Snippet } = $props();
 
     let t = useI18n();
     let ta = useI18nAdmin();

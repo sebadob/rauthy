@@ -1,15 +1,15 @@
 <script lang="ts">
-    import type { PamSshAuthKeyRequest, PamSshAuthKeyResponse } from '$api/types/pam';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import { fetchDelete, fetchPost } from '$api/fetch';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import { formatDateFromTs } from '$utils/helpers';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import Tooltip from '$lib/Tooltip.svelte';
+    import type {PamSshAuthKeyRequest, PamSshAuthKeyResponse} from '#api/types/pam.ts';
+    import Button from '#lib/button/Button.svelte';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import Modal from '#lib/Modal.svelte';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import {fetchDelete, fetchPost} from '#api/fetch.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import {formatDateFromTs} from '#utils/helpers.ts';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
 
     let {
         authorizedKeys,
@@ -92,14 +92,14 @@
             <h3>{t.account.pam.addSshKey}</h3>
             <Form action="/auth/v1/pam/users/self/authorized_keys" {onSubmit}>
                 <InputArea
-                    name="key"
-                    label={t.account.pam.addSshKey}
-                    placeholder="ssh-... <key> <comment>"
-                    rows={10}
-                    maxLength={8192}
-                    required
-                    fontMono
-                    width="min(60rem, 90dvw)"
+                        name="key"
+                        label={t.account.pam.addSshKey}
+                        placeholder="ssh-... <key> <comment>"
+                        rows={10}
+                        maxLength={8192}
+                        required
+                        fontMono
+                        width="min(60rem, 90dvw)"
                 />
 
                 <Button type="submit">{t.common.save}</Button>
@@ -135,7 +135,7 @@
                     <div class="del">
                         <Tooltip text={t.common.delete} xOffset={-64}>
                             <Button onclick={() => deleteKey(key.ts_added)} invisible>
-                                <IconTrash />
+                                <IconTrash/>
                             </Button>
                         </Tooltip>
                     </div>

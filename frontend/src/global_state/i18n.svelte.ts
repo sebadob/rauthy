@@ -1,17 +1,17 @@
-import { useLang } from '$state/language.svelte';
-import { type I18n } from '../i18n/common/interface';
-import { I18nEn } from '../i18n/common/en';
-import { I18nEs } from '../i18n/common/es';
-import { I18nDe } from '../i18n/common/de';
-import { I18nFr } from '../i18n/common/fr';
-import { I18nJa } from '../i18n/common/ja';
-import { I18nKo } from '../i18n/common/ko';
-import { I18nNb } from '../i18n/common/nb';
-import { I18nRu } from '../i18n/common/ru';
-import { I18nNl } from '../i18n/common/nl';
-import { I18nPt } from '../i18n/common/pt';
-import { I18nUk } from '../i18n/common/uk';
-import { I18nZh } from '../i18n/common/zh';
+import {useLang} from '#state/language.svelte.ts';
+import {type I18n} from '../i18n/common/interface';
+import {I18nEn} from '../i18n/common/en';
+import {I18nEs} from '../i18n/common/es';
+import {I18nDe} from '../i18n/common/de';
+import {I18nFr} from '../i18n/common/fr';
+import {I18nJa} from '../i18n/common/ja';
+import {I18nKo} from '../i18n/common/ko';
+import {I18nNb} from '../i18n/common/nb';
+import {I18nRu} from '../i18n/common/ru';
+import {I18nNl} from '../i18n/common/nl';
+import {I18nPt} from '../i18n/common/pt';
+import {I18nUk} from '../i18n/common/uk';
+import {I18nZh} from '../i18n/common/zh';
 
 // This hack makes typescript happy and is fine as long as
 // we `initI18n()` as the very first thing in +layout

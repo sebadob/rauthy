@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import Button from '$lib/button/Button.svelte';
+    import {genKey} from '#utils/helpers.ts';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         providerId,
@@ -16,15 +16,15 @@
 
 <div class="container">
     <img
-        src={`/auth/v1/providers/${providerId}/img?${genKey()}}`}
-        width={20}
-        height={20}
-        alt="-"
-        onload={() => (exists = true)}
+            src={`/auth/v1/providers/${providerId}/img?${genKey()}}`}
+            width={20}
+            height={20}
+            alt="-"
+            onload={() => (exists = true)}
     />
     {#if exists}
         <Button invisible onclick={onDelete}>
-            <IconTrash />
+            <IconTrash/>
         </Button>
     {/if}
 </div>

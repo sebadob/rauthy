@@ -1,24 +1,24 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
     import {
         PATTERN_CLIENT_ID_NEW,
         PATTERN_CLIENT_NAME,
         PATTERN_CLIENT_URI,
-    } from '$utils/patterns';
-    import Form from '$lib5/form/Form.svelte';
-    import { fetchPost } from '$api/fetch';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import type { ClientResponse, NewClientRequest } from '$api/types/clients.ts';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import InputTags from '$lib5/form/InputTags.svelte';
+    } from '#utils/patterns.ts';
+    import Form from '#lib/form/Form.svelte';
+    import {fetchPost} from '#api/fetch.ts';
+    import {useI18n} from '#state/i18n.svelte.ts';
+    import {useI18nAdmin} from '#state/i18n_admin.svelte.ts';
+    import type {ClientResponse, NewClientRequest} from '#api/types/clients.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import InputTags from '#lib/form/InputTags.svelte';
     import {
         invalidPostLogoutRedirectUrisMsg,
         invalidRedirectUrisMsg,
         postLogoutRedirectUriShapeErrorMsg,
         redirectUriShapeErrorMsg,
-    } from '$utils/redirectUri';
+    } from '#utils/redirectUri.ts';
 
     let {
         clients,
@@ -52,8 +52,8 @@
             return;
         }
         let redirectURIsErr =
-            invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri) ||
-            invalidPostLogoutRedirectUrisMsg(postLogoutRedirectURIs, ta.validation.redirectUri);
+                invalidRedirectUrisMsg(redirectURIs, ta.validation.redirectUri) ||
+                invalidPostLogoutRedirectUrisMsg(postLogoutRedirectURIs, ta.validation.redirectUri);
         if (redirectURIsErr) {
             err = redirectURIsErr;
             return;
@@ -66,7 +66,7 @@
             confidential,
             redirect_uris: redirectURIs,
             post_logout_redirect_uris:
-                postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
+                    postLogoutRedirectURIs.length > 0 ? postLogoutRedirectURIs : undefined,
         };
         let res = await fetchPost<ClientResponse>(form.action, payload);
         if (res.body) {
@@ -80,20 +80,20 @@
 <div class="container">
     <Form action="/auth/v1/clients" {onSubmit}>
         <Input
-            bind:ref
-            bind:value={id}
-            autocomplete="off"
-            label="Client ID"
-            placeholder="Client ID"
-            required
-            pattern={PATTERN_CLIENT_ID_NEW}
+                bind:ref
+                bind:value={id}
+                autocomplete="off"
+                label="Client ID"
+                placeholder="Client ID"
+                required
+                pattern={PATTERN_CLIENT_ID_NEW}
         />
         <Input
-            bind:value={name}
-            autocomplete="off"
-            label={ta.clients.name}
-            placeholder={ta.clients.name}
-            pattern={PATTERN_CLIENT_NAME}
+                bind:value={name}
+                autocomplete="off"
+                label={ta.clients.name}
+                placeholder={ta.clients.name}
+                pattern={PATTERN_CLIENT_NAME}
         />
 
         <InputCheckbox ariaLabel={ta.clients.confidential} bind:checked={confidential}>
@@ -102,20 +102,20 @@
 
         <p>{@html ta.clients.descUri}</p>
         <InputTags
-            typ="url"
-            bind:values={redirectURIs}
-            label="Redirect URIs"
-            errMsg={ta.validation.uri}
-            pattern={PATTERN_CLIENT_URI}
-            validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
+                typ="url"
+                bind:values={redirectURIs}
+                label="Redirect URIs"
+                errMsg={ta.validation.uri}
+                pattern={PATTERN_CLIENT_URI}
+                validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
         />
         <InputTags
-            typ="url"
-            bind:values={postLogoutRedirectURIs}
-            label="Post Logout Redirect URIs"
-            errMsg={ta.validation.uri}
-            pattern={PATTERN_CLIENT_URI}
-            validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
+                typ="url"
+                bind:values={postLogoutRedirectURIs}
+                label="Post Logout Redirect URIs"
+                errMsg={ta.validation.uri}
+                pattern={PATTERN_CLIENT_URI}
+                validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
         />
 
         <Button type="submit">

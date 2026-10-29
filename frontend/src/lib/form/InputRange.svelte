@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
+    import {genKey} from '#utils/helpers.ts';
 
     let {
         name,
@@ -60,19 +60,19 @@
 <div>
     <div class="flex">
         <input
-            type="range"
-            {id}
-            {name}
-            style:width={widthRange}
-            style:--bg-slider={styleBg}
-            title={label}
-            aria-label={label}
-            bind:value
-            {disabled}
-            aria-disabled={disabled}
-            {min}
-            {max}
-            {step}
+                type="range"
+                {id}
+                {name}
+                style:width={widthRange}
+                style:--bg-slider={styleBg}
+                title={label}
+                aria-label={label}
+                bind:value
+                {disabled}
+                aria-disabled={disabled}
+                {min}
+                {max}
+                {step}
         />
         <div class="value font-mono">{value}</div>
     </div>

@@ -1,24 +1,24 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import { fade } from 'svelte/transition';
-    import Input from '$lib5/form/Input.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { UpdateUserSelfRequest, UserResponse } from '$api/types/user.ts';
-    import Form from '$lib5/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import {fade} from 'svelte/transition';
+    import Input from '#lib/form/Input.svelte';
+    import {useI18n} from '#state/i18n.svelte.js';
+    import type {UpdateUserSelfRequest, UserResponse} from '#api/types/user.ts';
+    import Form from '#lib/form/Form.svelte';
     import {
         PATTERN_ALNUM,
         PATTERN_CITY,
         PATTERN_PHONE,
         PATTERN_STREET,
         PATTERN_USER_NAME,
-    } from '$utils/patterns';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import { onMount } from 'svelte';
-    import TZSelect from '$lib/TZSelect.svelte';
-    import PreferredUsername from '$lib/PreferredUsername.svelte';
+    } from '#utils/patterns.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import {fetchDelete, fetchGet, fetchPut} from '#api/fetch.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import type {UserValuesConfig} from '#api/templates/UserValuesConfig.ts';
+    import {onMount} from 'svelte';
+    import TZSelect from '#lib/TZSelect.svelte';
+    import PreferredUsername from '#lib/PreferredUsername.svelte';
 
     let {
         config,
@@ -144,115 +144,115 @@
             <div class="formInner">
                 <div>
                     <Input
-                        typ="email"
-                        name="email"
-                        label={t.common.email}
-                        placeholder={t.common.email}
-                        value={user.email}
-                        required
+                            typ="email"
+                            name="email"
+                            label={t.common.email}
+                            placeholder={t.common.email}
+                            value={user.email}
+                            required
                     />
                     {#if config.given_name !== 'hidden'}
                         <Input
-                            name="given_name"
-                            autocomplete="given-name"
-                            label={t.account.givenName}
-                            placeholder={t.account.givenName}
-                            value={user.given_name}
-                            required={config.given_name === 'required'}
-                            maxLength={32}
-                            pattern={PATTERN_USER_NAME}
+                                name="given_name"
+                                autocomplete="given-name"
+                                label={t.account.givenName}
+                                placeholder={t.account.givenName}
+                                value={user.given_name}
+                                required={config.given_name === 'required'}
+                                maxLength={32}
+                                pattern={PATTERN_USER_NAME}
                         />
                     {/if}
                     {#if config.family_name !== 'hidden'}
                         <Input
-                            name="family_name"
-                            autocomplete="family-name"
-                            label={t.account.familyName}
-                            placeholder={t.account.familyName}
-                            value={user.family_name}
-                            required={config.family_name === 'required'}
-                            maxLength={32}
-                            pattern={PATTERN_USER_NAME}
+                                name="family_name"
+                                autocomplete="family-name"
+                                label={t.account.familyName}
+                                placeholder={t.account.familyName}
+                                value={user.family_name}
+                                required={config.family_name === 'required'}
+                                maxLength={32}
+                                pattern={PATTERN_USER_NAME}
                         />
                     {/if}
                     {#if config.birthdate !== 'hidden'}
                         <InputDateTimeCombo
-                            name="birthdate"
-                            label={t.account.birthdate}
-                            bind:value={user.user_values.birthdate}
-                            required={config.birthdate === 'required'}
-                            withDelete
-                            openTop
+                                name="birthdate"
+                                label={t.account.birthdate}
+                                bind:value={user.user_values.birthdate}
+                                required={config.birthdate === 'required'}
+                                withDelete
+                                openTop
                         />
                     {/if}
                     {#if config.tz !== 'hidden'}
-                        <TZSelect bind:value={user.user_values.tz} />
+                        <TZSelect bind:value={user.user_values.tz}/>
                     {/if}
                     <PreferredUsername
-                        userId={user.id}
-                        bind:preferred_username={user.user_values.preferred_username}
-                        config={config.preferred_username}
+                            userId={user.id}
+                            bind:preferred_username={user.user_values.preferred_username}
+                            config={config.preferred_username}
                     />
                 </div>
                 <div>
                     {#if config.street !== 'hidden'}
                         <Input
-                            name="street"
-                            autocomplete="street-address"
-                            label={t.account.street}
-                            placeholder={t.account.street}
-                            value={user.user_values.street}
-                            required={config.street === 'required'}
-                            maxLength={48}
-                            pattern={PATTERN_STREET}
+                                name="street"
+                                autocomplete="street-address"
+                                label={t.account.street}
+                                placeholder={t.account.street}
+                                value={user.user_values.street}
+                                required={config.street === 'required'}
+                                maxLength={48}
+                                pattern={PATTERN_STREET}
                         />
                     {/if}
                     {#if config.zip !== 'hidden'}
                         <Input
-                            name="zip"
-                            autocomplete="postal-code"
-                            label={t.account.zip}
-                            placeholder={t.account.zip}
-                            value={user.user_values.zip}
-                            required={config.zip === 'required'}
-                            maxLength={24}
-                            pattern={PATTERN_ALNUM}
+                                name="zip"
+                                autocomplete="postal-code"
+                                label={t.account.zip}
+                                placeholder={t.account.zip}
+                                value={user.user_values.zip}
+                                required={config.zip === 'required'}
+                                maxLength={24}
+                                pattern={PATTERN_ALNUM}
                         />
                     {/if}
                     {#if config.city !== 'hidden'}
                         <Input
-                            name="city"
-                            autocomplete="address-level2"
-                            label={t.account.city}
-                            placeholder={t.account.city}
-                            value={user.user_values.city}
-                            required={config.city === 'required'}
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
+                                name="city"
+                                autocomplete="address-level2"
+                                label={t.account.city}
+                                placeholder={t.account.city}
+                                value={user.user_values.city}
+                                required={config.city === 'required'}
+                                maxLength={48}
+                                pattern={PATTERN_CITY}
                         />
                     {/if}
                     {#if config.country !== 'hidden'}
                         <Input
-                            name="country"
-                            autocomplete="country"
-                            label={t.account.country}
-                            placeholder={t.account.country}
-                            value={user.user_values.country}
-                            required={config.country === 'required'}
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
+                                name="country"
+                                autocomplete="country"
+                                label={t.account.country}
+                                placeholder={t.account.country}
+                                value={user.user_values.country}
+                                required={config.country === 'required'}
+                                maxLength={48}
+                                pattern={PATTERN_CITY}
                         />
                     {/if}
                     {#if config.phone !== 'hidden'}
                         <Input
-                            name="phone"
-                            autocomplete="tel"
-                            label={t.account.phone}
-                            placeholder={t.account.phone}
-                            value={user.user_values.phone}
-                            required={config.phone === 'required'}
-                            maxLength={32}
-                            pattern={PATTERN_PHONE}
+                                name="phone"
+                                autocomplete="tel"
+                                label={t.account.phone}
+                                placeholder={t.account.phone}
+                                value={user.user_values.phone}
+                                required={config.phone === 'required'}
+                                maxLength={32}
+                                pattern={PATTERN_PHONE}
                         />
                     {/if}
                 </div>
@@ -274,7 +274,7 @@
 
                 {#if success}
                     <div class="success" transition:fade>
-                        <IconCheck />
+                        <IconCheck/>
                     </div>
                 {/if}
             </div>
@@ -297,15 +297,15 @@
             </p>
 
             <Input
-                label={t.common.delete.toUpperCase()}
-                placeholder={t.common.delete.toUpperCase()}
-                bind:value={deleteConfirmValue}
-                width="15rem"
+                    label={t.common.delete.toUpperCase()}
+                    placeholder={t.common.delete.toUpperCase()}
+                    bind:value={deleteConfirmValue}
+                    width="15rem"
             />
             <Button
-                level={deleteConfirmValue !== t.common.delete.toUpperCase() ? -3 : -1}
-                onclick={onSubmitDelete}
-                isDisabled={deleteConfirmValue !== t.common.delete.toUpperCase()}
+                    level={deleteConfirmValue !== t.common.delete.toUpperCase() ? -3 : -1}
+                    onclick={onSubmitDelete}
+                    isDisabled={deleteConfirmValue !== t.common.delete.toUpperCase()}
             >
                 {t.common.delete}
             </Button>
