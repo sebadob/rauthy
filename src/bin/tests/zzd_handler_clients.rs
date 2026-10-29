@@ -69,36 +69,17 @@ fn template_value<'a>(html: &'a str, id: &str) -> &'a str {
         .unwrap_or_else(|| panic!("template {id} missing from authorize HTML"))
 }
 
-/// GETs the client, rebuilds the full `UpdateClientRequest` (so we don't depend
-/// on `JwkKeyPairAlg` being `Clone`), overrides `flows_enabled` + `claims`, PUTs
-/// it back and returns the response.
-async fn put_client_claims(
-    auth_headers: &reqwest::header::HeaderMap,
-    id: &str,
-    flows_enabled: Vec<GrantType>,
-    claims: Option<Value>,
-    claims_at_root: bool,
-) -> Result<ClientResponse, Box<dyn Error>> {
-    let backend_url = get_backend_url();
-    let client = reqwest::Client::new();
-    let url_id = format!("{}/clients/{}", backend_url, id);
-
-    let c = client
-        .get(&url_id)
-        .headers(auth_headers.clone())
-        .send()
-        .await?
-        .json::<ClientResponse>()
-        .await?;
-
-    let req = UpdateClientRequest {
+/// Rebuilds the full `UpdateClientRequest` from a GET response (so we don't depend on
+/// `JwkKeyPairAlg` being `Clone`).
+fn update_request(c: ClientResponse) -> UpdateClientRequest {
+    UpdateClientRequest {
         name: c.name,
         confidential: c.confidential,
         redirect_uris: c.redirect_uris,
         post_logout_redirect_uris: c.post_logout_redirect_uris,
         allowed_origins: c.allowed_origins,
         enabled: c.enabled,
-        flows_enabled,
+        flows_enabled: c.flows_enabled,
         access_token_alg: c.access_token_alg,
         id_token_alg: c.id_token_alg,
         auth_code_lifetime: c.auth_code_lifetime,
@@ -111,14 +92,51 @@ async fn put_client_claims(
         contacts: c.contacts,
         backchannel_logout_uri: c.backchannel_logout_uri,
         restrict_group_prefix: c.restrict_group_prefix,
+        claims: c.claims,
+        claims_at_root: c.claims_at_root,
+        allowed_resources: c.allowed_resources,
+        default_aud: c.default_aud,
+        consent: c.consent,
+        scim: None,
+    }
+}
+
+async fn get_client(
+    auth_headers: &reqwest::header::HeaderMap,
+    id: &str,
+) -> Result<ClientResponse, Box<dyn Error>> {
+    let res = reqwest::Client::new()
+        .get(format!("{}/clients/{}", get_backend_url(), id))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    Ok(res.json::<ClientResponse>().await?)
+}
+
+/// GETs the client, overrides `flows_enabled` + `claims`, PUTs it back and returns the
+/// response.
+async fn put_client_claims(
+    auth_headers: &reqwest::header::HeaderMap,
+    id: &str,
+    flows_enabled: Vec<GrantType>,
+    claims: Option<Value>,
+    claims_at_root: bool,
+) -> Result<ClientResponse, Box<dyn Error>> {
+    let url_id = format!("{}/clients/{}", get_backend_url(), id);
+    let c = get_client(auth_headers, id).await?;
+
+    let req = UpdateClientRequest {
+        flows_enabled,
         claims,
         claims_at_root,
         allowed_resources: None,
         default_aud: None,
-        scim: None,
+        consent: None,
+        ..update_request(c)
     };
 
-    let res = client
+    let res = reqwest::Client::new()
         .put(&url_id)
         .headers(auth_headers.clone())
         .json(&req)
@@ -171,6 +189,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         confidential: true,
         redirect_uris: vec!["http://test.client.io/callback".to_string()],
         post_logout_redirect_uris: Some(vec!["http://test.client.io/logout".to_string()]),
+        consent: None,
     };
     let res = reqwest::Client::new()
         .post(&url)
@@ -207,6 +226,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         confidential: true,
         redirect_uris: vec!["http://test.client.io/callback".to_string()],
         post_logout_redirect_uris: None,
+        consent: None,
     };
     let res = reqwest::Client::new()
         .post(&url)
@@ -225,6 +245,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
             confidential: false,
             redirect_uris: vec![bad_uri.to_string()],
             post_logout_redirect_uris: None,
+            consent: None,
         };
         let res = reqwest::Client::new()
             .post(&url)
@@ -249,6 +270,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
                 "http://test.client.io/logout".to_string(),
                 bad_uri.to_string(),
             ]),
+            consent: None,
         };
         let res = reqwest::Client::new()
             .post(&url)
@@ -305,6 +327,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        consent: None,
         scim: None,
     };
 
@@ -421,6 +444,156 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test]
+async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
+    let auth_headers = get_auth_headers().await?;
+    let backend_url = get_backend_url();
+    let http = reqwest::Client::new();
+    let id = "consent-round-trip";
+    let url_id = format!("{backend_url}/clients/{id}");
+    let source = "https://consent.example.com/api?v=1";
+
+    // Allow a rerun after an interrupted test.
+    let _ = http
+        .delete(&url_id)
+        .headers(auth_headers.clone())
+        .send()
+        .await;
+
+    // an invalid consent source rejects the create
+    let new_client = |consent: &str| NewClientRequest {
+        id: id.to_string(),
+        secret: None,
+        name: Some("Consent Round Trip".to_string()),
+        confidential: false,
+        redirect_uris: vec!["http://test.client.io/callback".to_string()],
+        post_logout_redirect_uris: None,
+        consent: Some(consent.to_string()),
+    };
+    let res = http
+        .post(format!("{backend_url}/clients"))
+        .headers(auth_headers.clone())
+        .json(&new_client("http://consent.example.com"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 400);
+    let res = http
+        .get(&url_id)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 404);
+
+    // create with a consent source
+    let new_client = new_client(source);
+    let res = http
+        .post(format!("{backend_url}/clients"))
+        .headers(auth_headers.clone())
+        .json(&new_client)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(
+        res.json::<ClientResponse>().await?.consent.as_deref(),
+        Some(source)
+    );
+    let client = get_client(&auth_headers, id).await?;
+    assert_eq!(client.consent.as_deref(), Some(source));
+
+    // update to `local`
+    let req = UpdateClientRequest {
+        consent: Some("local".to_string()),
+        ..update_request(client)
+    };
+    let res = http
+        .put(&url_id)
+        .headers(auth_headers.clone())
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(
+        res.json::<ClientResponse>().await?.consent.as_deref(),
+        Some("local")
+    );
+    let client = get_client(&auth_headers, id).await?;
+    assert_eq!(client.consent.as_deref(), Some("local"));
+
+    // invalid values are rejected and leave the stored value alone
+    for invalid in [
+        "http://consent.example.com",
+        "https://consent.example.com/api?lang=en",
+        "remote",
+    ] {
+        let req = UpdateClientRequest {
+            consent: Some(invalid.to_string()),
+            ..update_request(get_client(&auth_headers, id).await?)
+        };
+        let res = http
+            .put(&url_id)
+            .headers(auth_headers.clone())
+            .json(&req)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 400, "{invalid}");
+    }
+    let client = get_client(&auth_headers, id).await?;
+    assert_eq!(client.consent.as_deref(), Some("local"));
+
+    // an empty value unsets it
+    let req = UpdateClientRequest {
+        consent: Some(String::new()),
+        ..update_request(client)
+    };
+    let res = http
+        .put(&url_id)
+        .headers(auth_headers.clone())
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<ClientResponse>().await?.consent, None);
+    assert_eq!(get_client(&auth_headers, id).await?.consent, None);
+
+    // so does a missing one
+    let req = UpdateClientRequest {
+        consent: Some("local".to_string()),
+        ..update_request(get_client(&auth_headers, id).await?)
+    };
+    let res = http
+        .put(&url_id)
+        .headers(auth_headers.clone())
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let req = UpdateClientRequest {
+        consent: None,
+        ..update_request(get_client(&auth_headers, id).await?)
+    };
+    assert_eq!(
+        get_client(&auth_headers, id).await?.consent.as_deref(),
+        Some("local")
+    );
+    let res = http
+        .put(&url_id)
+        .headers(auth_headers.clone())
+        .json(&req)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(get_client(&auth_headers, id).await?.consent, None);
+
+    let res = http
+        .delete(&url_id)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Error>> {
     const LOGO: &[u8] = include_bytes!("../../../assets/logo/rauthy_dark_small.png");
     const FAVICON: &[u8] = include_bytes!("../../../assets/logo/rauthy_light_small.png");
@@ -459,6 +632,7 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
         confidential: false,
         redirect_uris: vec!["http://favicon.client.io/callback".to_string()],
         post_logout_redirect_uris: None,
+        consent: None,
     };
     let res = client
         .post(&clients_url)
@@ -757,6 +931,7 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
         confidential: true,
         redirect_uris: vec!["http://claims.client.io/callback".to_string()],
         post_logout_redirect_uris: None,
+        consent: None,
     };
     let res = client
         .post(&url)

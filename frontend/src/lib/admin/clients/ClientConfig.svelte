@@ -10,6 +10,7 @@
     import {
         PATTERN_CLIENT_NAME,
         PATTERN_CLIENT_URI,
+        PATTERN_CONSENT_URL,
         PATTERN_CONTACT,
         PATTERN_GROUP,
         PATTERN_ORIGIN,
@@ -87,6 +88,16 @@
     );
     let defaultAud: string[] = $state(client.default_aud ? Array.from(client.default_aud) : []);
 
+    // `local` and unset behave the same, both are shown as built-in
+    const consentUrl = 'URL';
+    let consentOptions = $derived([ta.clients.consent.builtIn, consentUrl]);
+    let consentMode: string = $state(
+        untrack(() => (isConsentUrl(client.consent) ? consentUrl : ta.clients.consent.builtIn)),
+    );
+    let consentSourceUrl: string = $state(
+        untrack(() => (isConsentUrl(client.consent) ? client.consent || '' : '')),
+    );
+
     let scimEnabled = $state(client.scim !== undefined);
     let scim: ScimClientRequestResponse = $state({
         base_uri: client.scim?.base_uri || '',
@@ -155,6 +166,8 @@
             origins = client.allowed_origins ? Array.from(client.allowed_origins) : [];
             allowedResources = client.allowed_resources ? Array.from(client.allowed_resources) : [];
             defaultAud = client.default_aud ? Array.from(client.default_aud) : [];
+            consentMode = isConsentUrl(client.consent) ? consentUrl : ta.clients.consent.builtIn;
+            consentSourceUrl = isConsentUrl(client.consent) ? client.consent || '' : '';
             redirectURIs = Array.from(client.redirect_uris);
             postLogoutRedirectURIs = client.post_logout_redirect_uris
                 ? Array.from(client.post_logout_redirect_uris)
@@ -202,6 +215,10 @@
             fetchClientDetails();
         }
     });
+
+    function isConsentUrl(consent?: string) {
+        return !!consent && consent !== 'local';
+    }
 
     async function fetchClientDetails() {
         let res = await fetchGet<ClientResponse>(`/auth/v1/clients/${client.id}`);
@@ -258,6 +275,7 @@
             claims_at_root: claimsAtRoot,
             allowed_resources: allowedResources.length > 0 ? allowedResources : undefined,
             default_aud: defaultAud.length > 0 ? defaultAud : undefined,
+            consent: consentMode === consentUrl ? consentSourceUrl.trim() || undefined : undefined,
         };
 
         if (flows.authorizationCode) {
@@ -463,6 +481,33 @@
             errMsg={ta.validation.uri}
             pattern={PATTERN_RESOURCE}
         />
+
+        <div style:height=".5rem"></div>
+        <p class="mb-0"><b>Consent</b></p>
+        <p class="desc">{ta.clients.consent.desc}</p>
+        <LabeledValue label={ta.clients.consent.source}>
+            <Options
+                ariaLabel={ta.clients.consent.source}
+                options={consentOptions}
+                bind:value={consentMode}
+                borderless
+            />
+        </LabeledValue>
+        {#if consentMode === consentUrl}
+            <div transition:slide={{ duration: 150 }}>
+                <Input
+                    typ="url"
+                    bind:value={consentSourceUrl}
+                    autocomplete="off"
+                    label={ta.clients.consent.source}
+                    placeholder="https://"
+                    width={inputWidth}
+                    maxLength={1024}
+                    pattern={PATTERN_CONSENT_URL}
+                    required
+                />
+            </div>
+        {/if}
 
         <div style:height=".5rem"></div>
         <p class="mb-0"><b>Scopes</b></p>

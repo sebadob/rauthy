@@ -41,4 +41,9 @@ export const PATTERN_URI = "^[a-zA-Z0-9,.:\\/_\\-&?=~#!$'\\(\\)*+%@]*$";
 // Like PATTERN_URI but without `#`: an RFC 8707 resource indicator must be an absolute URI
 // without a fragment (RFC 8707 §2). Matches the backend `RE_RESOURCE`.
 export const PATTERN_RESOURCE = "^[a-zA-Z0-9,.:\\/_\\-&?=~!$'\\(\\)*+%@]*$";
+// A client consent source URL, mirrors the backend `validate_consent_source_url`: like
+// PATTERN_RESOURCE, but https only, no userinfo (`@` before the first `/` or `?`) and no `lang`
+// query key, which Rauthy appends on each fetch. Use it together with `maxLength=1024`.
+export const PATTERN_CONSENT_URL =
+    "^(?![^?]*\\?(?:[^&]*&)*lang(?:[=&]|$))https:\\/\\/[a-zA-Z0-9,.:_\\-&=~!$'\\(\\)*+%]+(?:[\\/?][a-zA-Z0-9,.:\\/_\\-&?=~!$'\\(\\)*+%@]*)?$";
 export const PATTERN_USER_NAME = "^[\\p{L}\\p{M}\\p{N}\\p{Zs}'.\\-]{1,32}$";

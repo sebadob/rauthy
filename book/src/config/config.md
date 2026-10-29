@@ -864,14 +864,90 @@ backup_keep_for_local = '3d'
 # of all nodes, independent of `consent.enable`. Mixed versions in one
 # cluster and a rollback are not supported, see the CHANGELOG.
 #
-# Set to `true` to enable user consent for clients. This feature is
-# still in progress. Currently, it only makes a client deletion also
+# Set to `true` to enable user consent for clients. Without it,
+# `[[consent.sources]]` are ignored (with a warning at startup).
+# This feature is still in progress. Currently, it only makes a client deletion also
 # delete all legacy refresh tokens (issued before refresh tokens were
 # bound to a client) of all users.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
 #enable = false
+
+# Lifetime in seconds of cached consent content fetched from a
+# remote consent source (see `[[consent.sources]]` below and the
+# per-client consent source in the Admin UI). Must be at least 1.
+# A failed fetch is cached as well, for `min(content_cache_ttl, 60)`
+# seconds, so an unavailable source is not requested on every
+# login.
+#
+# default: 3600
+# overwritten by: CONSENT_CONTENT_CACHE_TTL
+#content_cache_ttl = 3600
+
+# Remote consent sources that resolve to a loopback, private,
+# link-local or otherwise non-public address are rejected by
+# default, like ephemeral client documents. Consent sources are
+# configured by an admin, so this is independent of
+# `ephemeral_clients.danger_allow_private_addresses`. Set to `true`
+# when your consent service runs on an internal address.
+#
+# Consent source fetches follow redirects only to https, with the
+# same address checks, never use system proxies and time out after
+# 3 seconds.
+#
+# default: false
+# overwritten by: CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES
+#danger_allow_private_addresses = false
+
+#[[consent.sources]]
+# The consent source per RFC 8707 resource indicator. A login
+# that requests this `resource` shows the consent content from
+# this source, with precedence over the client's own consent
+# source. Ephemeral clients may request any `resource` listed
+# here, even without
+# `ephemeral_clients.danger_allow_unvalidated_resource`.
+# When at least one source is configured, ephemeral clients
+# must request a `resource`.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different resources. Each `resource` may only exist
+# once.
+#
+# The resource indicator, an absolute URI without a fragment.
+# It is matched verbatim against the requested `resource` and
+# must only contain the characters allowed there:
+# [a-zA-Z0-9,.:/_\-&?=~!$'()*+%@]
+#resource = 'https://api.example.com'
+# Either `local` for the built-in consent content (the requested
+# scopes), or an `https://` URL. Rauthy fetches
+# `GET <url>?lang=<BCP47 language>` (the URL itself must not
+# contain a `lang` query parameter) and expects:
+# {
+#   "name": "Example API",
+#   "scopes": {
+#     "data.read": {
+#       "title": "Read your data",
+#       "description": "...",
+#       "warning": false
+#     }
+#   },
+#   "intro": "...",
+#   "terms_url": "https://example.com/terms"
+# }
+# The response for the user's language is shown, the `lang=en`
+# one if that is unavailable.
+# The version of the consent content is the hash of the English
+# (`lang=en`) response: any change to it requires a new consent
+# from everyone. Translations don't affect it, so keep them in
+# sync with `en`.
+# If the `lang=en` response is unavailable or invalid, the
+# built-in content is shown instead and the login continues.
+#source = 'local'
+# The name of the resource shown on the consent screen. It wins
+# over the `name` of a remote consent document, which is only
+# used for a client's own consent source from the Admin UI.
+#name = 'Example API'
 
 [cred_stuff_detection]
 ## This section contains values for the credential stuffing

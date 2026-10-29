@@ -73,6 +73,15 @@ impl Language {
             Language::ZhHans => "zh-Hans",
         }
     }
+
+    /// The bare BCP 47 language tag, without a region, e.g. for the `lang` query of a remote
+    /// consent source.
+    pub fn as_bcp47(&self) -> &'static str {
+        match self {
+            Language::ZhHans => "zh-Hans",
+            lang => lang.as_str(),
+        }
+    }
 }
 
 impl Display for Language {
