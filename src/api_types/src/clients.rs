@@ -261,8 +261,8 @@ pub struct ClientSecretRequest {
     /// `Plain` secret only applies to an empty database), the same way e.g. auth providers are
     /// provisioned with their `client_secret` via the API.
     ///
-    /// Validation: length of at least `SECRET_LEN_CLIENTS` (64) characters
-    #[validate(length(min = 64))]
+    /// Validation: length of exactly `SECRET_LEN_CLIENTS` (64) characters
+    #[validate(length(min = 64, max = 64))]
     pub secret: Option<String>,
 }
 

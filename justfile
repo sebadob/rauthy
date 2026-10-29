@@ -158,7 +158,7 @@ clippy:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo clippy
+    cargo clippy --all-targets
 
 # fetch the FIDO MDS dataset from the live metadata service into the embedded asset
 fido-mds-prep source="https://mds.fidoalliance.org/" out="assets/fido_mds/dataset.bin":
@@ -500,7 +500,7 @@ is-clean:
     npm run check
     cd ..
 
-    cargo clippy -- -D warnings
+    cargo clippy --all-targets -- -D warnings
     cargo fmt --check
 
     # make sure everything has been committed

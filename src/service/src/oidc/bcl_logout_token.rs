@@ -388,8 +388,7 @@ mod tests {
         let mut buf = Vec::with_capacity(256);
 
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
         assert_eq!(lt.typ.unwrap().as_str(), "logout+jwt");
         assert_eq!(lt.aud, aud);
         assert_eq!(lt.sub.unwrap(), sub);
@@ -402,8 +401,7 @@ mod tests {
 
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
         assert_eq!(lt.sid.unwrap(), sid);
         assert!(lt.sub.is_none());
 
@@ -413,16 +411,14 @@ mod tests {
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
 
         let token = LogoutToken::new(iss, aud, None, Some(sid), lifetime)
             .into_token_with_kp(&kp_512)
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
 
         // no sub + sid - expect failure
         let token = LogoutToken::new(iss, aud, None, None, lifetime)
@@ -430,7 +426,7 @@ mod tests {
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
+        lt.validate_claims_with(header, lifetime, skew)
             .expect_err("empty sub and sid");
     }
 }

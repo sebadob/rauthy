@@ -28,7 +28,6 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
-    let len_orig = users.len();
 
     // post a new user
     let new_user = NewUserRequest {
@@ -52,6 +51,9 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         user_expires: None,
         tz: None,
     };
+    // make sure Alfred does not exist
+    assert!(!users.iter().any(|u| u.email == new_user.email));
+
     let res = reqwest::Client::new()
         .post(&url)
         .headers(auth_headers.clone())
@@ -128,7 +130,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
-    assert_eq!(users.len(), len_orig);
+    assert!(!users.iter().any(|u| u.id == alfred.id));
 
     Ok(())
 }

@@ -9,17 +9,23 @@ on:
       - ready_for_review
 
 env:
-  CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: "always"
+  CARGO_INCREMENTAL: "0"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
 
 jobs:
   check:
     if: github.event.pull_request.draft == false
-    name: Check Code Style
+    name: Check Code Style + Test
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/sebadob/rauthy-builder:20260519
     steps:
       - uses: actions/checkout@v4
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+
       - name: Setup && build UI
         run: |
           just build-wasm
@@ -32,7 +38,8 @@ jobs:
       - name: Code Format Backend
         run: cargo fmt --check
       - name: Code Style Backend
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
       - name: Code Format UI
         working-directory: ./frontend
         run: npm run format-check
@@ -41,7 +48,18 @@ jobs:
         run: npm run check
       - name: Frontend Contract Tests
         working-directory: ./frontend
-        run: npm run test:webauthn
         # The Chromium reset-page test (npm run test:password-reset) is not
         # wired here: it needs a browser binary plus the already-built
         # frontend. Run it locally after `just build-ui`.
+        run: npm run test:webauthn
+
+      - name: Integration Tests against Hiqlite
+        # We are running integration tests inside the same job to benefit from the already cached
+        # and built assets without requiring a more complicated setup. All of this will only run
+        # for merge requests ready to review anyway. Only running Hiqlite (for now) because it's a
+        # simpler setup.
+        run: just test-hiqlite
+
+      - name: Show sccache statistics
+        shell: bash
+        run: sccache --show-stats
