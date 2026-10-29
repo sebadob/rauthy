@@ -180,7 +180,9 @@ pub async fn session_headers_for_client(
         .send()
         .await
         .unwrap();
-    assert_eq!(res.status(), 200);
+    if res.status() != 200 {
+        panic!("Error getting session headers: {res:?}");
+    }
 
     let ts = res.json::<TokenSet>().await.unwrap();
 
