@@ -39,6 +39,12 @@ jobs:
             exit 1
           fi
           mkdir -p /usr/local/cargo/registry /usr/local/cargo/git
+
+      - name: Calculate Cargo cache key
+        id: cargo-key
+        shell: bash
+        run: |
+          echo "lock_hash=$(sha256sum Cargo.lock | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
       - name: Cache cargo
         uses: actions/cache@v5
         with:
@@ -46,9 +52,10 @@ jobs:
             /usr/local/cargo/registry
             /usr/local/cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ env.BUILDER_TAG }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ env.BUILDER_TAG }}-${{ steps.cargo-key.outputs.lock_hash }}
           restore-keys: |
             ${{ runner.os }}-cargo-${{ env.BUILDER_TAG }}-
+
       - name: Setup && build UI
         run: |
           just build-wasm
@@ -62,6 +69,7 @@ jobs:
         run: cargo fmt --check
       - name: Code Style Backend
         run: cargo clippy --all-targets -- -D warnings
+
       - name: Code Format UI
         working-directory: ./frontend
         run: npm run format-check
@@ -74,6 +82,7 @@ jobs:
         # wired here: it needs a browser binary plus the already-built
         # frontend. Run it locally after `just build-ui`.
         run: npm run test:webauthn
+
       - name: Integration Tests against Hiqlite
         # We are running integration tests inside the same job to benefit from the already cached
         # and built assets without requiring a more complicated setup. All of this will only run
