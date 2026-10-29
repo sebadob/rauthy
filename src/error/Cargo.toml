@@ -36,3 +36,6 @@ tokio-postgres = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
+
+[dev-dependencies]
+bincode-next = { workspace = true }

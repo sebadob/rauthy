@@ -69,6 +69,7 @@ fn base_update() -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        consent: None,
         scim: None,
     }
 }
@@ -90,6 +91,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
         confidential: true,
         redirect_uris: vec!["http://localhost/callback".to_string()],
         post_logout_redirect_uris: None,
+        consent: None,
     };
     let res = http
         .post(format!("{backend_url}/clients"))
@@ -205,6 +207,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         confidential: false,
         redirect_uris: vec![redirect_uri.clone()],
         post_logout_redirect_uris: None,
+        consent: None,
     };
     let res = http
         .post(format!("{backend_url}/clients"))
@@ -238,6 +241,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         claims_at_root: false,
         allowed_resources: Some(vec![RES_REFRESH.to_string()]),
         default_aud: None,
+        consent: None,
         scim: None,
     };
     let res = http
@@ -456,6 +460,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         confidential: false,
         redirect_uris: vec!["http://localhost/callback".to_string()],
         post_logout_redirect_uris: None,
+        consent: None,
     };
     let res = http
         .post(format!("{backend_url}/clients"))

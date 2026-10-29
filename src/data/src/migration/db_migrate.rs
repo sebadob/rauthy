@@ -1,4 +1,4 @@
-use crate::database::DB;
+use crate::database::{DB, PgClient};
 use crate::entity::api_keys::ApiKeyEntity;
 use crate::entity::auth_providers::AuthProvider;
 use crate::entity::clients::Client;
@@ -730,7 +730,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     // Do not change the order - tables below have FKs to clients
     // CLIENTS
     debug!("Migrating table: clients");
-    let before = DB::pg_query_map_with(&cl, "SELECT * FROM clients", &[], 2).await?;
+    let before = pg_clients(&cl).await?;
     inserts::clients(before).await?;
 
     // CLIENTS DYN
@@ -1056,6 +1056,29 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     Ok(())
 }
 
+/// `clients.consent` may not exist yet in the source DB, it is read as `NULL` then.
+async fn pg_clients(cl: &PgClient) -> Result<Vec<Client>, ErrorResponse> {
+    let has_consent: bool = DB::pg_query_rows_with(
+        cl,
+        r#"
+SELECT EXISTS (
+    SELECT 1 FROM pg_attribute
+    WHERE attrelid = to_regclass('clients') AND attname = 'consent' AND NOT attisdropped
+)"#,
+        &[],
+        1,
+    )
+    .await?
+    .first()
+    .is_some_and(|row| row.get(0));
+    let stmt = if has_consent {
+        "SELECT * FROM clients"
+    } else {
+        "SELECT *, NULL::VARCHAR AS consent FROM clients"
+    };
+    DB::pg_query_map_with(cl, stmt, &[], 2).await
+}
+
 /// Makes sure that the given version matches the current app version in major and feature level.
 /// Will panic if they don't match.
 fn check_feature_version_migrate(version: semver::Version) {
@@ -1066,5 +1089,94 @@ fn check_feature_version_migrate(version: semver::Version) {
             "MIGRATE_DB_FROM can only be used within the same major and minor version. \
             Only a difference in patch level is allowed"
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A Postgres source on an older patch level has no `clients.consent` yet.
+    /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
+    #[tokio::test]
+    #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
+    async fn test_pg_clients_without_consent() {
+        use deadpool_postgres::{Config, Runtime};
+        use tokio_postgres::NoTls;
+
+        let url = std::env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let schema = format!("migrate_test_{}_{nanos}", std::process::id());
+        let cfg = Config {
+            url: Some(url),
+            ..Default::default()
+        };
+        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+        let cl = pool.get().await.unwrap();
+        cl.batch_execute(&format!(
+            r#"
+CREATE SCHEMA {schema};
+SET search_path TO {schema};
+CREATE TABLE clients
+(
+    id                        VARCHAR NOT NULL PRIMARY KEY,
+    name                      VARCHAR,
+    enabled                   BOOLEAN NOT NULL,
+    confidential              BOOLEAN NOT NULL,
+    secret                    BYTEA,
+    secret_kid                VARCHAR,
+    redirect_uris             VARCHAR NOT NULL,
+    post_logout_redirect_uris VARCHAR,
+    allowed_origins           VARCHAR,
+    flows_enabled             VARCHAR NOT NULL,
+    access_token_alg          VARCHAR NOT NULL,
+    id_token_alg              VARCHAR NOT NULL,
+    auth_code_lifetime        INTEGER NOT NULL,
+    access_token_lifetime     INTEGER NOT NULL,
+    scopes                    VARCHAR NOT NULL,
+    default_scopes            VARCHAR NOT NULL,
+    challenge                 VARCHAR,
+    force_mfa                 BOOLEAN NOT NULL,
+    client_uri                VARCHAR,
+    contacts                  VARCHAR,
+    backchannel_logout_uri    VARCHAR,
+    restrict_group_prefix     VARCHAR,
+    claims                    BYTEA,
+    claims_at_root            BOOLEAN NOT NULL,
+    allowed_resources         VARCHAR,
+    default_aud               VARCHAR,
+    created_micros            BIGINT
+);
+INSERT INTO clients (id, enabled, confidential, redirect_uris, flows_enabled,
+                     access_token_alg, id_token_alg, auth_code_lifetime,
+                     access_token_lifetime, scopes, default_scopes, force_mfa,
+                     claims_at_root)
+VALUES ('c1', true, false, 'https://a', 'authorization_code', 'EdDSA', 'EdDSA',
+        60, 1800, 'openid', 'openid', false, false);"#
+        ))
+        .await
+        .unwrap();
+
+        let clients = pg_clients(&cl).await.unwrap();
+        assert_eq!(clients.len(), 1);
+        assert_eq!(clients[0].id, "c1");
+        assert_eq!(clients[0].consent, None);
+
+        cl.batch_execute(
+            "ALTER TABLE clients ADD consent VARCHAR; UPDATE clients SET consent = 'local'",
+        )
+        .await
+        .unwrap();
+        // a real migration runs once, statements prepared above must not be reused here
+        cl.statement_cache.clear();
+        let clients = pg_clients(&cl).await.unwrap();
+        assert_eq!(clients[0].consent.as_deref(), Some("local"));
+
+        cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+            .await
+            .unwrap();
     }
 }

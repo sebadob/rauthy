@@ -74,6 +74,7 @@ pub async fn update_client(
         .default_aud
         .map(|a| a.join(","))
         .filter(|a| !a.is_empty());
+    client.consent = Client::validate_consent(client_req.consent)?;
 
     client.save().await?;
 
