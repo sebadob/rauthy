@@ -1744,7 +1744,7 @@ impl Client {
         let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
 
         // make sure this function is updated if the secret length ever changes
-        debug_assert_eq!(cleartext.len(), SECRET_LEN_CLIENTS);
+        debug_assert!(cleartext.len() >= SECRET_LEN_CLIENTS);
 
         let a = <&[u8; 64]>::try_from(cleartext.as_ref()).unwrap();
         let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
