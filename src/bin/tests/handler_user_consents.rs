@@ -1,6 +1,6 @@
 use crate::common::{
-    CLIENT_ID, PASSWORD, USERNAME, get_auth_headers, get_backend_url, password_token_set, refresh,
-    session_headers_with,
+    CLIENT_ID, PASSWORD, USERNAME, decode_claims, get_auth_headers, get_backend_url,
+    password_token_set, refresh, session_headers_with,
 };
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::Language;
@@ -28,6 +28,12 @@ async fn assert_refresh_not_found(client: &Client, refresh_token: String) {
     assert_eq!(res.status(), 404);
     let body = res.text().await.unwrap();
     assert!(body.contains("Refresh Token not found"), "{body}");
+}
+
+/// The password grant has no consent step, its refresh tokens are exempt from the consent check.
+fn assert_consent_exempt(ts: &TokenSet) {
+    let claims = decode_claims(ts.refresh_token.as_deref().unwrap());
+    assert_eq!(claims["consent_exempt"], json!(true), "{claims}");
 }
 
 #[tokio::test]
@@ -161,11 +167,14 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
 
     // --- revocation drops the refresh tokens of the user for the client
     let ts = password_token_set(&client, EMAIL, PWD).await;
+    assert_consent_exempt(&ts);
 
     time::sleep(Duration::from_secs(2)).await;
     let res = refresh(&client, ts.refresh_token.unwrap()).await;
     assert_eq!(res.status(), 200);
     let ts = res.json::<TokenSet>().await?;
+    // the rotation keeps the exemption
+    assert_consent_exempt(&ts);
 
     // another user's refresh token for the same client
     let other = password_token_set(&client, USERNAME, PASSWORD).await;

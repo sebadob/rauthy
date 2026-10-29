@@ -1,4 +1,6 @@
-use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet};
+use crate::token_set::{
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet,
+};
 use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
@@ -235,6 +237,8 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             code.resource,
             AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),
+            // no consent step
+            ConsentCheck::Exempt,
         )
         .await
         {

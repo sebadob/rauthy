@@ -896,9 +896,32 @@ rate_limit_db_burst = 200000
 #
 # Set to `true` to enable user consent for clients. Without it,
 # `[[consent.sources]]` are ignored (with a warning at startup).
-# This feature is still in progress. Currently, it only makes a client deletion also
-# delete all legacy refresh tokens (issued before refresh tokens were
-# bound to a client) of all users.
+# This feature is still in progress. When enabled, the authorization
+# code exchange and refresh tokens require the user's consent grant
+# for the client, and a client deletion also deletes all legacy
+# refresh tokens (issued before refresh tokens were bound to a client)
+# of all users.
+#
+# CAUTION: Do not enable this yet. Consent grants are only written by
+# the consent screen at the authorization step, which does not exist
+# yet. Until then, every `authorization_code` login, including
+# Rauthy's own UI, fails, and every FedCM login answers `401` with
+# `WWW-Authenticate: consent-required` (with a warning at startup).
+#
+# When you enable it:
+# - There is no backfill of consent grants: a refresh with a refresh
+#   token from the `authorization_code` flow, for which the user has
+#   no grant, deletes that refresh token and revokes the access token
+#   issued with it. Those users log in again. Turning
+#   `consent.enable` off afterwards does not bring the deleted
+#   refresh tokens back.
+# - Password and device code refresh tokens are exempt via a
+#   `consent_exempt` claim. Password refresh tokens issued, and
+#   device code refresh tokens rotated, by a version before that
+#   claim existed do not carry it and are deleted on refresh as
+#   well, those users log in again.
+# - Token exchange (RFC 8693) is exempt from the consent check: it
+#   is an explicit trust an admin configures on the client.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
@@ -937,8 +960,11 @@ rate_limit_db_burst = 200000
 # source. Ephemeral clients may request any `resource` listed
 # here, even without
 # `ephemeral_clients.danger_allow_unvalidated_resource`.
-# When at least one source is configured, ephemeral clients
-# must request a `resource`.
+# When at least one source is configured, a `resource` is
+# required for ephemeral clients. Today only a refresh enforces
+# this: a refresh token of an ephemeral client without a
+# `resource` fails with `invalid_grant`. The login answers with
+# `consent_required` once the consent screen exists.
 #
 # NOTE: This is an array value, and you can specify it multiple
 # times for different resources. Each `resource` may only exist

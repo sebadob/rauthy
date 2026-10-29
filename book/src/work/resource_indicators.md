@@ -103,8 +103,10 @@ name = 'Example API'
 A `resource` listed there is valid for ephemeral clients without their own `allowed_resources`,
 even without `danger_allow_unvalidated_resource`. Ephemeral clients have no stored configuration,
 so their consent comes from this registry or the built-in source. Once at least one source is
-configured, an ephemeral client must request a `resource`, otherwise the login is answered with
-`consent_required`.
+configured, a `resource` is required for ephemeral clients. Only its presence is checked, whether it
+is allowed is decided as described above. Today only a refresh enforces this: a refresh token of an
+ephemeral client without a `resource` fails with `invalid_grant`. The login answers with
+`consent_required` once the consent screen exists.
 
 The registry `name` is shown on the consent screen and wins over the `name` of a remote consent
 document. The remote `name` is only used for a client's own consent source from the Admin UI.

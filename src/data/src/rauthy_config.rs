@@ -237,6 +237,15 @@ impl RauthyConfig {
                 slf.vars.consent.sources.len()
             );
         }
+        if slf.vars.consent.enable {
+            warn!(
+                "`consent.enable` is `true`, but this release has no consent screen yet: every \
+                `authorization_code` login, the Admin UI included, fails and every FedCM login \
+                answers `401` with `WWW-Authenticate: consent-required` until it lands, because \
+                no consent grant can be given. A refresh token without a grant is deleted on \
+                refresh and its access token revoked; turning `consent.enable` off does not bring it back"
+            );
+        }
         if slf.vars.consent.danger_allow_private_addresses {
             warn!("`consent.danger_allow_private_addresses` is enabled");
         }
