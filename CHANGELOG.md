@@ -2,6 +2,21 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### Upgrade: full restart of all nodes
+
+This release binds refresh tokens to their client and adds user consent (`[consent]`). It needs a
+full restart of all nodes, independent of `consent.enable`.
+
+- If you run a HA cluster, you **MUST** stop all nodes with the old version before you start the
+  new one. Do **NOT** do a **ROLLING RELEASE**. Mixed versions in one cluster are not supported.
+- A rollback to an older version after the upgrade is not supported. **CREATE A BACKUP BEFORE YOU
+  UPGRADE!**
+- There is no backfill of consent grants for existing users. As long as `consent.enable` is
+  `false` (the default), nothing changes for existing logins and refresh tokens. See the
+  `[consent]` section in the config reference before you enable it.
+
 ### Changes
 
 #### Externally Provisioned Client Secrets
@@ -23,6 +38,11 @@ locations in this case. A click provides a fresh user activation, and the App re
 authorization code. Http(s) redirects are unchanged and remain automatic.
 
 [#1827](https://github.com/sebadob/rauthy/pull/1827)
+
+#### Concurrent User Deletes
+
+When the same user is deleted by two requests at the same time, the one that loses the race now
+gets a `404` instead of succeeding a second time.
 
 ## v0.37.2
 

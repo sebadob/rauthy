@@ -143,10 +143,11 @@ pub async fn post_logout_handle(
 
     if let Some(user) = user {
         if token_revoke {
-            RefreshToken::invalidate_for_user(&user.id).await?;
-            if token_revoke_device_tokens {
-                RefreshTokenDevice::invalidate_all_for_user(&user.id).await?;
-            }
+            RefreshTokenDevice::invalidate_with_refresh_tokens_for_user(
+                &user.id,
+                token_revoke_device_tokens,
+            )
+            .await?;
             IssuedToken::revoke_for_user(&user.id, token_revoke_device_tokens).await?;
         }
         Session::invalidate_for_user(&user.id).await?;

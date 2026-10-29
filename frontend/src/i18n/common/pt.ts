@@ -152,6 +152,20 @@ export const I18nPt: I18n = {
             notAvailable: 'Este nome não está disponível.',
             preferredUsername: 'Nome de utilizador preferido',
         },
+        privacy: {
+            clientId: 'Client ID',
+            connectedApps: 'Aplicações ligadas',
+            connectedAppsDesc: 'Aplicações às quais deu consentimento para aceder à sua conta.',
+            granted: 'Concedido',
+            noConnectedApps: 'Ainda não foi concedido acesso a nenhuma aplicação.',
+            privacy: 'Privacidade',
+            resource: 'Recurso',
+            revoke: 'Revogar acesso',
+            revokeDesc:
+                'A revogação remove o consentimento e a aplicação deixa de poder renovar o seu acesso. Os Access Tokens emitidos com os Refresh Tokens eliminados são revogados no userinfo e na introspection. As aplicações que validam os seus tokens por si próprias podem continuar a aceitá-los até expirarem. A aplicação terá de pedir novamente o seu consentimento.',
+            scopes: 'Scopes',
+            updated: 'Atualizado',
+        },
         providerLink: 'Federar conta',
         providerLinkDesc: `Pode associar esta conta a um dos seguintes fornecedores de início de
             sessão.\nDepois de ativar esta função, será redirecionado para a página de início de sessão

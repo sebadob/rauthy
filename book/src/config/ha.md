@@ -26,6 +26,13 @@ seconds.
 <b>Makre sure to adjust your container config.</b>
 ```
 
+```admonish caution
+Some releases cannot be rolled out node by node. Always read the [CHANGELOG](https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md) before an
+upgrade. When it asks for a full restart, like the release that adds `[consent]`, stop all nodes
+with the old version before you start the new one. Mixed versions in one cluster and a rollback
+are not supported for such a release.
+```
+
 ## Configuration
 
 Earlier versions of Rauthy have been using [redhac](https://github.com/sebadob/redhac) for the HA

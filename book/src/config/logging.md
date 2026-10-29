@@ -305,6 +305,8 @@ enum EventType {
   LoginNewLocation,
   TokenIssued,
   CredentialStuffing,
+  EmailSendError,
+  ConsentRevoked,
 }
 ```
 
@@ -495,6 +497,13 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user consent
+# for a client has been revoked, either by the user
+# themselves or by an admin.
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_CONSENT_REVOKED
+level_consent_revoked = 'warning'
 # The level for the generated Event after a SCIM
 # update task ultimately failed after exceeding
 # all retries.

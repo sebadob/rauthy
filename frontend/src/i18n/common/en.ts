@@ -150,6 +150,20 @@ export const I18nEn: I18n = {
             notAvailable: 'This name is not available.',
             preferredUsername: 'Preferred Username',
         },
+        privacy: {
+            clientId: 'Client ID',
+            connectedApps: 'Connected Apps',
+            connectedAppsDesc: 'Applications you have given consent to access your account.',
+            granted: 'Granted',
+            noConnectedApps: 'No application has been granted access yet.',
+            privacy: 'Privacy',
+            resource: 'Resource',
+            revoke: 'Revoke Access',
+            revokeDesc:
+                'Revoking removes the consent and the application can no longer renew its access. Access tokens issued with the deleted refresh tokens are revoked at userinfo and introspection. Applications that validate their tokens themselves can still accept them until they expire. The application has to ask for your consent again.',
+            scopes: 'Scopes',
+            updated: 'Updated',
+        },
         providerLink: 'Federate Account',
         providerLinkDesc: `You can link this account to one of the following login providers.\nAfter 
             activating this function, you will be redirected to the login page of the chosen one.\n
