@@ -9,9 +9,10 @@ on:
       - ready_for_review
 
 env:
-  # set the same version as container.image
-  BUILDER_TAG: "20260519"
-  CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: "always"
+  CARGO_INCREMENTAL: "0"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
 
 jobs:
   check:
@@ -19,42 +20,16 @@ jobs:
     name: Check Code Style + Test
     runs-on: ubuntu-latest
     container:
-      # set the same version as `BUILDER_TAG`
       image: ghcr.io/sebadob/rauthy-builder:20260519
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect Cargo paths
-        run: |
-          echo "HOME=$HOME"
-          echo "CARGO_HOME=${CARGO_HOME:-default}"
-          cargo metadata --no-deps --format-version 1 >/dev/null
-          cargo --version
-          rustc --version
-      - name: Verify Cargo cache paths
-        run: |
-          set -eu
-          
-          if [ "$CARGO_HOME" != "/usr/local/cargo" ]; then
-            echo "unexpected CARGO_HOME: '$CARGO_HOME' (expected '/usr/local/cargo')"
-            exit 1
-          fi
-          mkdir -p /usr/local/cargo/registry /usr/local/cargo/git
-
-      - name: Calculate Cargo cache key
-        id: cargo-key
+      - name: set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: enable sccache
         shell: bash
         run: |
-          echo "lock_hash=$(sha256sum Cargo.lock | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-      - name: Cache cargo
-        uses: actions/cache@v5
-        with:
-          path: |
-            /usr/local/cargo/registry
-            /usr/local/cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ env.BUILDER_TAG }}-${{ steps.cargo-key.outputs.lock_hash }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ env.BUILDER_TAG }}-
+          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
 
       - name: Setup && build UI
         run: |
@@ -89,3 +64,7 @@ jobs:
         # for merge requests ready to review anyway. Only running Hiqlite (for now) because it's a
         # simpler setup.
         run: just test-hiqlite
+
+      - name: Show sccache statistics
+        shell: bash
+        run: sccache --show-stats
