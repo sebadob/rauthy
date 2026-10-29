@@ -9,6 +9,7 @@ on:
       - ready_for_review
 
 env:
+  BUILDER_TAG: "20260519"
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -17,9 +18,26 @@ jobs:
     name: Check Code Style + Test
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/sebadob/rauthy-builder:20260519
+      image: ghcr.io/sebadob/rauthy-builder:${{ env.BUILDER_TAG }}
     steps:
       - uses: actions/checkout@v4
+      - name: Inspect Cargo paths
+        run: |
+          echo "HOME=$HOME"
+          echo "CARGO_HOME=${CARGO_HOME:-default}"
+          cargo metadata --no-deps --format-version 1 >/dev/null
+          cargo --version
+          rustc --version
+      - name: Cache cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            /usr/local/cargo/registry
+            /usr/local/cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ env.BUILDER_TAG }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ env.BUILDER_TAG }}-
       - name: Setup && build UI
         run: |
           just build-wasm
@@ -32,7 +50,7 @@ jobs:
       - name: Code Format Backend
         run: cargo fmt --check
       - name: Code Style Backend
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
       - name: Code Format UI
         working-directory: ./frontend
         run: npm run format-check
