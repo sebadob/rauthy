@@ -107,9 +107,9 @@ $18, $19, $20, $21, $22, $23)"#;
                 }
             };
 
-            if plain.len() < SECRET_LEN_CLIENTS {
+            if plain.len() != SECRET_LEN_CLIENTS {
                 panic!(
-                    "Given client secret too short. Expected (at least) {SECRET_LEN_CLIENTS} characters."
+                    "Given client secret too short. Expected exactly {SECRET_LEN_CLIENTS} characters."
                 );
             }
 

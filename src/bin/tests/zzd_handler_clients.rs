@@ -691,7 +691,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
 
     // apply an externally provisioned secret
     let external_secret =
-        "External4Secret4Value4With4More4Than4644Characters4And4Even4More4Chars0".to_string();
+        "2AwTN5qqXkO51gbJmJAGcxIoicF63eMb4MZRu8U9GoxwnU20w5TTruxf75vOSyHr".to_string();
     let payload = ClientSecretRequest {
         cache_current_hours: None,
         secret: Some(external_secret.clone()),

@@ -41,9 +41,13 @@ jobs:
         run: npm run check
       - name: Frontend Contract Tests
         working-directory: ./frontend
-        run: npm run test:webauthn
         # The Chromium reset-page test (npm run test:password-reset) is not
         # wired here: it needs a browser binary plus the already-built
         # frontend. Run it locally after `just build-ui`.
+        run: npm run test:webauthn
       - name: Integration Tests against Hiqlite
+        # We are running integration tests inside the same job to benefit from the already cached
+        # and built assets without requiring a more complicated setup. All of this will only run
+        # for merge requests ready to review anyway. Only running Hiqlite (for now) because it's a
+        # simpler setup.
         run: just test-hiqlite
