@@ -67,6 +67,11 @@ export let I18nAdminPt: I18nAdmin = {
         confidential: 'Confidencial',
         confidentialNoSecret: 'Este é um Client não confidencial e, por isso, não tem secret.',
         config: 'Configuração do Client',
+        consent: {
+            builtIn: 'Integrado',
+            desc: `De onde vem o conteúdo do ecrã de consentimento, quando 'consent.enable' está definido. Integrado mostra os Scopes pedidos. Um URL tem de servir o conteúdo do consentimento como JSON. Uma entrada em '[[consent.sources]]' para o recurso pedido tem precedência.`,
+            source: 'Origem do consentimento',
+        },
         delete1: 'Tem a certeza de que pretende eliminar este Client?',
         descAuthCode: `A validade dos auth codes pode ser ajustada para aumentar a segurança. Os auth codes
             só podem ser usados uma vez e, por predefinição, são válidos durante 60 segundos. Quanto mais curta a

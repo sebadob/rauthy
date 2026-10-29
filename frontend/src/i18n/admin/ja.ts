@@ -64,6 +64,11 @@ export let I18nAdminJa: I18nAdmin = {
         confidentialNoSecret:
             'これはコンフィデンシャルではない Client のため、Secret はありません。',
         config: 'Client の設定',
+        consent: {
+            builtIn: '組み込み',
+            desc: `'consent.enable' が設定されているときに、同意画面の内容をどこから取得するか。組み込みは要求された Scope を表示します。URL の場合、同意の内容を JSON で返す必要があります。要求されたリソースに対する '[[consent.sources]]' のエントリーが優先されます。`,
+            source: '同意の取得元',
+        },
         delete1: 'この Client を削除してもよろしいですか？',
         descAuthCode:
             '安全性を高めるため、Auth Code の有効期間を調整できます。Auth Code は一度しか使えず、既定では 60 秒間有効です。Client がログインの手続きを十分速く行える範囲で、有効期間は短いほど良いです。',

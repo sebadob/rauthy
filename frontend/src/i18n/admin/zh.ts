@@ -63,6 +63,11 @@ export let I18nAdminZh: I18nAdmin = {
         confidential: '机密',
         confidentialNoSecret: '这是一个非机密客户端，因此没有密钥。',
         config: '客户端配置',
+        consent: {
+            builtIn: '内置',
+            desc: `设置 'consent.enable' 时同意页面内容的来源。内置显示请求的 scopes。URL 必须以 JSON 形式提供同意内容。针对所请求资源的 '[[consent.sources]]' 条目优先。`,
+            source: '同意来源',
+        },
         delete1: '您确定要删除此客户端吗？',
         descAuthCode: `可以调整认证码的有效性以提高安全性。认证码
             只能使用一次，默认有效时间为60秒。只要客户端能够足够快地执行登录过程，

@@ -4,6 +4,7 @@ use rauthy_common::regex::{
     RE_ATTR, RE_CLIENT_URI, RE_CODE_CHALLENGE_METHOD, RE_CONTACT, RE_GROUPS, RE_LINUX_HOSTNAME,
     RE_ORIGIN, RE_RESOURCE, RE_ROLES_SCOPES,
 };
+use rauthy_common::validation::validate_consent_source_url;
 use std::borrow::Cow;
 use std::str::FromStr;
 use validator::ValidationError;
@@ -132,6 +133,19 @@ pub fn validate_resource_or_empty(value: &str) -> Result<(), ValidationError> {
     }
 }
 
+/// Client consent source: `local`, a URL accepted by [`validate_consent_source_url`] (https,
+/// no userinfo, fragment or `lang` query key, at most 1024 bytes), or empty for "unset"
+/// (stored as `NULL`).
+#[inline]
+pub fn validate_consent_source(value: &str) -> Result<(), ValidationError> {
+    if value.is_empty() || value == "local" {
+        return Ok(());
+    }
+    validate_consent_source_url(value)
+        .map(|_| ())
+        .map_err(|err| ValidationError::new("consent_source").with_message(Cow::Owned(err)))
+}
+
 /// Grant-type validation for ephemeral (CIMD) client documents. Strict by default: an
 /// advertised grant type Rauthy does not support is rejected. An operator can opt into
 /// accepting such a document by enabling `ephemeral_clients.ignore_unknown_auth_flows`,
@@ -192,6 +206,45 @@ pub fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn consent_source_validation() {
+        for v in ["", "local", "https://consent.example.com/api?v=1"] {
+            assert!(validate_consent_source(v).is_ok(), "{v}");
+        }
+        for v in [
+            "Local",
+            "https://",
+            "http://consent.example.com",
+            "https://consent.example.com/#x",
+            "https://consent.example.com/a b",
+        ] {
+            assert!(validate_consent_source(v).is_err(), "{v}");
+        }
+    }
+
+    #[test]
+    fn consent_source_validation_matches_the_runtime_grammar() {
+        // rejected by `ConsentSource::parse` at runtime, so the API must reject them as well
+        for v in [
+            "https://u:p@consent.example.com/api",
+            "https://u@consent.example.com/api",
+            "https://consent.example.com/api?lang=en",
+            "https://consent.example.com/api?v=1&lang=",
+        ] {
+            assert!(validate_consent_source(v).is_err(), "{v}");
+        }
+    }
+
+    #[test]
+    fn consent_source_max_len() {
+        let prefix = "https://consent.example.com/";
+        let max = format!("{prefix}{}", "a".repeat(1024 - prefix.len()));
+        assert_eq!(max.len(), 1024);
+        assert!(validate_consent_source(&max).is_ok());
+        let too_long = format!("{max}a");
+        assert!(validate_consent_source(&too_long).is_err());
+    }
 
     #[test]
     fn resource_or_empty() {
