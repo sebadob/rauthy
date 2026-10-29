@@ -1,6 +1,7 @@
+use crate::oidc::consent_grant;
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
-    TokenSet,
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce,
+    TokenScopes, TokenSet,
 };
 use actix_web::HttpRequest;
 use actix_web::http::header::{
@@ -178,6 +179,8 @@ pub async fn grant_type_authorization_code(
         (None, granted) => granted.map(String::from),
     };
 
+    consent_grant::check_code_exchange(&code.user_id, &client.id, code.resource.as_deref()).await?;
+
     let user = User::find(code.user_id.clone()).await?;
     user.check_enabled()?;
     user.check_expired()?;
@@ -193,6 +196,8 @@ pub async fn grant_type_authorization_code(
         resource,
         AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
+        // a revoke after the check above: the refresh token is only inserted with the grant
+        ConsentCheck::Required,
     )
     .await?;
 

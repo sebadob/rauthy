@@ -89,8 +89,27 @@ impl RefreshToken {
     }
 }
 
+/// Whether [`RefreshToken::create`] requires the user's consent grant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RefreshTokenGrant<'a> {
+    Unchecked,
+    /// The token is only inserted while the grant of the user for the client and this RFC 8707
+    /// `resource` exists, see [`RefreshToken::create`].
+    Required {
+        resource: Option<&'a str>,
+    },
+}
+
 // CRUD
 impl RefreshToken {
+    /// With [`RefreshTokenGrant::Required`], the row is only inserted while the user's consent
+    /// grant exists, checked in the insert itself, else this fails with `invalid_grant`. A grant
+    /// revoked before the insert keeps it out. A revoke after the insert deletes it, since it
+    /// deletes the grant and then the refresh tokens of the client in one transaction: on
+    /// hiqlite, both are single raft log entries applied in order. On Postgres, the insert holds
+    /// a key share lock on the grant row, so a revoke that deleted the grant first makes it find
+    /// no row, and a revoke that comes after waits for the insert to commit, and its later
+    /// refresh token delete sees the new row.
     #[allow(clippy::too_many_arguments)]
     pub async fn create(
         id: String,
@@ -105,8 +124,10 @@ impl RefreshToken {
         session_id: Option<String>,
         access_token_jti: Option<String>,
         client: &Client,
+        grant: RefreshTokenGrant<'_>,
     ) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let RefreshTokenGrant::Required { resource } = grant else {
+            let sql = r#"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
 client_created_micros)
@@ -115,13 +136,61 @@ ON CONFLICT(id) DO UPDATE
 SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8,
     client_id = $9, client_created_micros = $10"#;
 
-        if is_hiqlite() {
+            if is_hiqlite() {
+                DB::hql()
+                    .execute(
+                        sql,
+                        params!(
+                            id,
+                            user_id,
+                            nbf,
+                            exp,
+                            scope,
+                            is_mfa,
+                            session_id,
+                            access_token_jti,
+                            client.id.as_str(),
+                            client.created_micros
+                        ),
+                    )
+                    .await?;
+            } else {
+                DB::pg_execute(
+                    sql,
+                    &[
+                        &id,
+                        &user_id,
+                        &nbf,
+                        &exp,
+                        &scope,
+                        &is_mfa,
+                        &session_id,
+                        &access_token_jti,
+                        &client.id,
+                        &client.created_micros,
+                    ],
+                )
+                .await?;
+            }
+            return Ok(());
+        };
+
+        // `''` is the `user_consents.resource` of a grant without a resource
+        let resource = resource.unwrap_or_default();
+        let rows = if is_hiqlite() {
             DB::hql()
                 .execute(
-                    sql,
+                    r#"
+INSERT INTO refresh_tokens
+(id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
+client_created_micros)
+SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+WHERE EXISTS (
+    SELECT 1 FROM user_consents WHERE user_id = $11 AND client_id = $12 AND resource = $13
+)"#,
                     params!(
                         id,
-                        user_id,
+                        user_id.as_str(),
                         nbf,
                         exp,
                         scope,
@@ -129,13 +198,24 @@ SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_
                         session_id,
                         access_token_jti,
                         client.id.as_str(),
-                        client.created_micros
+                        client.created_micros,
+                        user_id.as_str(),
+                        client.id.as_str(),
+                        resource
                     ),
                 )
-                .await?;
+                .await?
         } else {
             DB::pg_execute(
-                sql,
+                r#"
+INSERT INTO refresh_tokens
+(id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
+client_created_micros)
+SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+WHERE EXISTS (
+    SELECT 1 FROM user_consents WHERE user_id = $11 AND client_id = $12 AND resource = $13
+    FOR KEY SHARE
+)"#,
                 &[
                     &id,
                     &user_id,
@@ -147,11 +227,20 @@ SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_
                     &access_token_jti,
                     &client.id,
                     &client.created_micros,
+                    &user_id,
+                    &client.id,
+                    &resource,
                 ],
             )
-            .await?;
-        }
+            .await? as usize
+        };
 
+        if rows == 0 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidGrant,
+                "no consent grant for this client",
+            ));
+        }
         Ok(())
     }
 

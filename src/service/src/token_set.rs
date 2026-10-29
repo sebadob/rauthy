@@ -6,7 +6,7 @@ use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
-use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens::{RefreshToken, RefreshTokenGrant};
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::scopes::Scope;
 use rauthy_data::entity::user_attr::UserAttrValueEntity;
@@ -84,6 +84,16 @@ impl AtHash {
 pub enum AuthCodeFlow {
     Yes,
     No,
+}
+
+/// Whether the issued refresh token requires the user's consent grant (with `consent.enable`):
+/// it is only written while the grant exists, and a refresh of it is checked against the grant.
+/// `Exempt` for grants without a consent step (password, device code), carried through rotation
+/// in the refresh token claims.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ConsentCheck {
+    Required,
+    Exempt,
 }
 
 #[derive(Debug, Clone)]
@@ -505,6 +515,7 @@ impl TokenSet {
         sid: Option<SessionId>,
         resource: Option<&str>,
         jti: AccessTokenJti,
+        consent_check: ConsentCheck,
     ) -> Result<String, ErrorResponse> {
         let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
             Some(device_id)
@@ -554,6 +565,7 @@ impl TokenSet {
                 // Could be changed with v1.0.0 maybe.
                 auth_time: Some(auth_time.get()),
                 resource,
+                consent_exempt: consent_check == ConsentCheck::Exempt,
             };
 
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
@@ -586,6 +598,11 @@ impl TokenSet {
                 sid.map(|s| s.0),
                 Some(jti.0),
                 client,
+                if consent_check == ConsentCheck::Required && config.vars.consent.enable {
+                    RefreshTokenGrant::Required { resource }
+                } else {
+                    RefreshTokenGrant::Unchecked
+                },
             )
             .await?;
         }
@@ -720,6 +737,7 @@ impl TokenSet {
         resource: Option<String>,
         auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
+        consent_check: ConsentCheck,
     ) -> Result<Self, ErrorResponse> {
         let scopes = scopes.map(|s| s.0);
         let scope = match scopes.as_deref() {
@@ -844,6 +862,7 @@ impl TokenSet {
                     sid,
                     resource.as_deref(),
                     jti,
+                    consent_check,
                 )
                 .await?,
             )

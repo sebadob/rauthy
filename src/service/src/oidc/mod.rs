@@ -15,6 +15,7 @@ use rauthy_data::entity::browser_id::BrowserId;
 pub mod auth_providers;
 pub mod authorize;
 pub mod bcl_logout_token;
+pub mod consent_grant;
 mod grant_types;
 pub mod helpers;
 pub mod logout;

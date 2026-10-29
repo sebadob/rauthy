@@ -237,6 +237,13 @@ impl RauthyConfig {
                 slf.vars.consent.sources.len()
             );
         }
+        if slf.vars.consent.enable {
+            warn!(
+                "`consent.enable` is `true`, but there is no consent screen yet: no consent grant \
+                can be given, so every `authorization_code` login, the Admin UI included, and \
+                every FedCM login fails"
+            );
+        }
         if slf.vars.consent.danger_allow_private_addresses {
             warn!("`consent.danger_allow_private_addresses` is enabled");
         }

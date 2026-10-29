@@ -1223,7 +1223,7 @@ impl Client {
         self.validate_consent_resource_with(resource, &RauthyConfig::get().vars.consent)
     }
 
-    fn validate_consent_resource_with(
+    pub fn validate_consent_resource_with(
         &self,
         resource: Option<&str>,
         vars: &VarsConsent,

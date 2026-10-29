@@ -1,6 +1,6 @@
 use crate::common::{
     PASSWORD, USERNAME, code_state_from_headers, cookie_csrf_headers_from_res_direct,
-    get_auth_headers, get_backend_url, get_solved_pow,
+    decode_claims, get_auth_headers, get_backend_url, get_solved_pow,
 };
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
@@ -623,6 +623,141 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         decode_aud(&ts.access_token),
         serde_json::json!([ID_DEVICE, RES_A])
     );
+
+    Ok(())
+}
+
+const ID_DEVICE_ROTATION: &str = "device_refresh_test";
+
+/// The device code grant has no consent step: its refresh tokens are exempt from the consent
+/// check, and stay exempt through the rotation, which drops the `did`.
+fn assert_consent_exempt(refresh_token: &str, did: bool) {
+    let claims = decode_claims(refresh_token);
+    assert_eq!(
+        claims["consent_exempt"],
+        serde_json::json!(true),
+        "{claims}"
+    );
+    assert_eq!(claims.get("did").is_some(), did, "{claims}");
+}
+
+/// A device refresh token is kept until its replacement exists, then consumed. Without its
+/// device, the refresh fails and leaves no replacement.
+#[tokio::test]
+async fn test_device_refresh_rotation() -> Result<(), Box<dyn Error>> {
+    let auth_headers = get_auth_headers().await?;
+    let backend_url = get_backend_url();
+    let url_token = format!("{backend_url}/oidc/token");
+    let http = reqwest::Client::new();
+    // the poll interval of the test config, which a device must respect before redeeming
+    let poll_interval = Duration::from_secs(5);
+
+    let new_client = NewClientRequest {
+        id: ID_DEVICE_ROTATION.to_string(),
+        secret: None,
+        name: Some("Device Refresh Test".to_string()),
+        confidential: false,
+        redirect_uris: vec!["http://localhost/callback".to_string()],
+        post_logout_redirect_uris: None,
+        consent: None,
+    };
+    let res = http
+        .post(format!("{backend_url}/clients"))
+        .headers(auth_headers.clone())
+        .json(&new_client)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let mut upd = base_update();
+    upd.name = Some("Device Refresh Test".to_string());
+    upd.confidential = false;
+    upd.flows_enabled = vec![GrantType::DeviceCode, GrantType::RefreshToken];
+    let res = http
+        .put(format!("{backend_url}/clients/{ID_DEVICE_ROTATION}"))
+        .headers(auth_headers.clone())
+        .json(&upd)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let device_token_set = async || -> Result<TokenSet, Box<dyn Error>> {
+        let device_code = device_code_accepted(&http, &[("client_id", ID_DEVICE_ROTATION)]).await?;
+        tokio::time::sleep(poll_interval).await;
+        let res = http
+            .post(&url_token)
+            .form(&TokenRequest {
+                grant_type: GrantType::DeviceCode,
+                client_id: Some(ID_DEVICE_ROTATION.to_string()),
+                device_code: Some(device_code),
+                ..Default::default()
+            })
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+        Ok(res.json::<TokenSet>().await?)
+    };
+    let refresh = async |refresh_token: &str| {
+        http.post(&url_token)
+            .form(&TokenRequest {
+                grant_type: GrantType::RefreshToken,
+                client_id: Some(ID_DEVICE_ROTATION.to_string()),
+                refresh_token: Some(refresh_token.to_string()),
+                ..Default::default()
+            })
+            .send()
+            .await
+            .unwrap()
+    };
+
+    // --- one rotation
+    let device_rt = device_token_set().await?.refresh_token.unwrap();
+    assert_consent_exempt(&device_rt, true);
+
+    let res = refresh(&device_rt).await;
+    assert_eq!(res.status(), 200);
+    let rotated_rt = res.json::<TokenSet>().await?.refresh_token.unwrap();
+    // a regular refresh token now, still exempt
+    assert_consent_exempt(&rotated_rt, false);
+
+    // the source is consumed: a replay fails on the missing row
+    let res = refresh(&device_rt).await;
+    assert_eq!(res.status(), 404);
+    let body = res.text().await?;
+    assert!(body.contains("Device Refresh Token not found"), "{body}");
+
+    // the replacement keeps rotating
+    let res = refresh(&rotated_rt).await;
+    assert_eq!(res.status(), 200);
+    assert_consent_exempt(&res.json::<TokenSet>().await?.refresh_token.unwrap(), false);
+
+    // --- the device and its refresh tokens are deleted between issue and refresh
+    let device_rt = device_token_set().await?.refresh_token.unwrap();
+    let claims = decode_claims(&device_rt);
+    let device_id = claims["did"].as_str().unwrap();
+    let user_id = claims["uid"].as_str().unwrap();
+
+    let res = http
+        .delete(format!("{backend_url}/users/{user_id}/devices"))
+        .headers(auth_headers.clone())
+        .json(&serde_json::json!({ "device_id": device_id }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // the refresh fails, and leaves no replacement to use
+    let res = refresh(&device_rt).await;
+    assert_eq!(res.status(), 404);
+    let body = res.text().await?;
+    assert!(body.contains("Device Refresh Token not found"), "{body}");
+    assert!(serde_json::from_str::<TokenSet>(&body).is_err());
+
+    let res = http
+        .delete(format!("{backend_url}/clients/{ID_DEVICE_ROTATION}"))
+        .headers(auth_headers)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
 
     Ok(())
 }
