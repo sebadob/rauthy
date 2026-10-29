@@ -1,8 +1,8 @@
 <script lang="ts">
     import { page } from '$app/state';
     import type { Snippet } from 'svelte';
-    import A from '$lib5/A.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import A from '#lib/A.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let {
         ref = $bindable(),

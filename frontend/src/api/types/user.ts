@@ -1,5 +1,5 @@
 import type { Language } from './i18n';
-import type { JsonValue } from '$utils/jsonValue';
+import type { JsonValue } from '#utils/jsonValue.ts';
 
 export interface UserPictureConfig {
     upload_allowed: boolean;

@@ -12,10 +12,10 @@ import {
     REDIRECT_URI,
 } from './constants.js';
 import { decode, encode } from 'base64-arraybuffer';
-import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
-import type { EventLevel } from '$api/types/events.ts';
-import { generateNonce, generatePKCE } from '$utils/pkce';
-import { fetchGet } from '$api/fetch';
+import type { PasswordPolicyResponse } from '#api/types/password_policy.ts';
+import type { EventLevel } from '#api/types/events.ts';
+import { generateNonce, generatePKCE } from '#utils/pkce.ts';
+import { fetchGet } from '#api/fetch.ts';
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`;

@@ -1,15 +1,15 @@
 <script lang="ts">
-    import type { PamSshAuthKeyRequest, PamSshAuthKeyResponse } from '$api/types/pam';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import { fetchDelete, fetchPost } from '$api/fetch';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import { formatDateFromTs } from '$utils/helpers';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import Tooltip from '$lib/Tooltip.svelte';
+    import type { PamSshAuthKeyRequest, PamSshAuthKeyResponse } from '#api/types/pam.ts';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Modal from '#lib/Modal.svelte';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import { fetchDelete, fetchPost } from '#api/fetch.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
 
     let {
         authorizedKeys,

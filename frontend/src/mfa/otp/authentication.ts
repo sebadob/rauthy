@@ -1,5 +1,5 @@
-import { fetchPost } from '$api/fetch';
-import type { MfaPurpose } from '$api/types/mfa';
+import { fetchPost } from '#api/fetch.ts';
+import type { MfaPurpose } from '#api/types/mfa.ts';
 import type {
     OtpAdditionalData,
     OtpAuthFinishRequest,

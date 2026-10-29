@@ -1,12 +1,12 @@
 <script lang="ts">
-    import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
+    import PasswordPolicy from '#lib/PasswordPolicy.svelte';
     import { onMount } from 'svelte';
-    import { generatePassword } from '$utils/helpers';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
-    import { fetchGet } from '$api/fetch';
+    import { generatePassword } from '#utils/helpers.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { PasswordPolicyResponse } from '#api/types/password_policy.ts';
+    import { fetchGet } from '#api/fetch.ts';
     import type { PropsPassword } from './props.ts';
 
     let {

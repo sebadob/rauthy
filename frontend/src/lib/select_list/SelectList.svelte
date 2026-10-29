@@ -1,12 +1,12 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import type { SelectItem } from '$lib5/select_list/props.ts';
-    import Button from '$lib5/button/Button.svelte';
-    import IconEdit from '$icons/IconEdit.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Modal from '$lib5/Modal.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import type { SelectItem } from '#lib/select_list/props.ts';
+    import Button from '#lib/button/Button.svelte';
+    import IconEdit from '#icons/IconEdit.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Modal from '#lib/Modal.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         items = $bindable(),

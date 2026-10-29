@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type { PamGroupHostsCountResponse, PamGroupResponse } from '$api/types/pam';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import IconInfo from '$icons/IconInfo.svelte';
+    import type { PamGroupHostsCountResponse, PamGroupResponse } from '#api/types/pam.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import IconInfo from '#icons/IconInfo.svelte';
     import { slide } from 'svelte/transition';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { fetchDelete, fetchGet } from '$api/fetch';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { fetchDelete, fetchGet } from '#api/fetch.ts';
 
     let {
         group,

@@ -1,5 +1,5 @@
 // @ts-ignore
-import { IS_DEV } from '$utils/constants.js';
+import { IS_DEV } from '#utils/constants.js';
 
 const langDefault = 'en';
 const themeDefault =
@@ -12,7 +12,7 @@ const themeDefault =
  * We can use it to fix "error" popping up because of for instance invalid CSS
  * values inside `app.html`, which will be used in production for SSR.
  *
- * @type {import('@sveltejs/kit').Handle}
+ * @type {import('@sveltejs/kit/hooks').Handle}
  */
 export async function handle({ event, resolve }) {
     let path = event.url.pathname;

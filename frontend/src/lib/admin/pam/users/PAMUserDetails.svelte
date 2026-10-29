@@ -4,18 +4,18 @@
         PamUserDetailsResponse,
         PamUserResponse,
         PamUserUpdateRequest,
-    } from '$api/types/pam';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
-    import Input from '$lib/form/Input.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import type { PamGroupsSorted } from '$lib/admin/pam/types';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import PamAuthorizedKeys from '$lib/PamAuthorizedKeys.svelte';
+    } from '#api/types/pam.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { fetchDelete, fetchGet, fetchPut } from '#api/fetch.ts';
+    import Input from '#lib/form/Input.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import type { PamGroupsSorted } from '#lib/admin/pam/types.js';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import PamAuthorizedKeys from '#lib/PamAuthorizedKeys.svelte';
 
     let {
         user = $bindable(),

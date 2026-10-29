@@ -1,17 +1,17 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import { fetchPost, fetchPut } from '$api/fetch';
+    import Button from '#lib/button/Button.svelte';
+    import { fetchPost, fetchPut } from '#api/fetch.ts';
     import type {
         ClientResponse,
         ClientSecretRequest,
         ClientSecretResponse,
-    } from '$api/types/clients.ts';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
+    } from '#api/types/clients.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
     import { slide } from 'svelte/transition';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
 
     let {
         client,

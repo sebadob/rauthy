@@ -1,20 +1,20 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { fetchPut } from '$api/fetch';
-    import Form from '$lib5/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchPut } from '#api/fetch.ts';
+    import Form from '#lib/form/Form.svelte';
     import type {
         UserAttrConfigRequest,
         UserAttrConfigValueResponse,
-    } from '$api/types/user_attrs.ts';
-    import { PATTERN_ATTR, PATTERN_ATTR_DESC } from '$utils/patterns';
-    import CheckIcon from '$lib/CheckIcon.svelte';
+    } from '#api/types/user_attrs.ts';
+    import { PATTERN_ATTR, PATTERN_ATTR_DESC } from '#utils/patterns.ts';
+    import CheckIcon from '#lib/CheckIcon.svelte';
     import { slide } from 'svelte/transition';
     import { untrack } from 'svelte';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
 
     let {
         attr,

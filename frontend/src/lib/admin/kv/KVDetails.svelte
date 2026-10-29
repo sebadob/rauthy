@@ -1,22 +1,22 @@
 <script lang="ts">
-    import type { KVNamespaceResponse, KVValueRequest, KVValueResponse } from '$api/types/kv';
-    import Button from '$lib/button/Button.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import SearchBar from '$lib/search_bar/SearchBar.svelte';
-    import { fetchDelete, fetchGet, fetchPost, fetchPut } from '$api/fetch';
-    import Modal from '$lib/Modal.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import { PATTERN_KV_KEY } from '$utils/patterns';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+    import type { KVNamespaceResponse, KVValueRequest, KVValueResponse } from '#api/types/kv.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import { fetchDelete, fetchGet, fetchPost, fetchPut } from '#api/fetch.ts';
+    import Modal from '#lib/Modal.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Form from '#lib/form/Form.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import { PATTERN_KV_KEY } from '#utils/patterns.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import { slide } from 'svelte/transition';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
-    import IconKey from '$icons/IconKey.svelte';
-    import IconEdit from '$icons/IconEdit.svelte';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import IconLink from '$icons/editor/IconLink.svelte';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
+    import IconKey from '#icons/IconKey.svelte';
+    import IconEdit from '#icons/IconEdit.svelte';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import IconLink from '#icons/editor/IconLink.svelte';
 
     let {
         ns,

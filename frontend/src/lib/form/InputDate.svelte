@@ -1,14 +1,14 @@
 <script lang="ts">
     import { slide } from 'svelte/transition';
-    import { dayToString, fmtDateInput, getWeeksInMonth, type Day } from '$utils/form';
+    import { dayToString, fmtDateInput, getWeeksInMonth, type Day } from '#utils/form.ts';
     import { onMount, untrack } from 'svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import { CalendarDate, getDayOfWeek, parseDate } from '@internationalized/date';
-    import Popover from '$lib5/Popover.svelte';
-    import Options from '$lib5/Options.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import IconCalendar from '$icons/IconCalendar.svelte';
-    import type { PropsInputDate } from '$lib5/form/props.ts';
+    import Popover from '#lib/Popover.svelte';
+    import Options from '#lib/Options.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import IconCalendar from '#icons/IconCalendar.svelte';
+    import type { PropsInputDate } from '#lib/form/props.ts';
 
     let {
         id,

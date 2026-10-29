@@ -1,6 +1,6 @@
 <script lang="ts">
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
-    import EditorMarkdown from '$lib/text_edit/md/EditorMarkdown.svelte';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
+    import EditorMarkdown from '#lib/text_edit/md/EditorMarkdown.svelte';
 
     let {
         content = $bindable(''),

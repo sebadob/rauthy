@@ -41,8 +41,4 @@ onmessage = ev => {
     });
 };
 
-onclose = () => {
-    console.log('Closing Markdown Worker');
-};
-
 console.log('Markdown Worker started');

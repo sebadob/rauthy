@@ -1,9 +1,10 @@
 <script lang="ts">
     import { onMount, type Snippet } from 'svelte';
-    import { initLang } from '$state/language.svelte';
-    import { initI18n } from '$state/i18n.svelte';
+    import { initLang } from '#state/language.svelte.ts';
+    import { initI18n } from '#state/i18n.svelte.ts';
 
     import '../css/global.css';
+    import { fetchSolvePow } from '#utils/pow.ts';
 
     initLang();
     initI18n();

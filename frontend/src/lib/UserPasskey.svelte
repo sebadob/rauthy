@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type { PasskeyResponse } from '$api/types/webauthn.ts';
-    import { formatDateFromTs } from '$utils/helpers';
-    import IconFingerprint from '$icons/IconFingerprint.svelte';
-    import Tooltip from '$lib5/Tooltip.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import IconKey from '$icons/IconKey.svelte';
-    import IconCheckBadge from '$icons/IconCheckBadge.svelte';
+    import type { PasskeyResponse } from '#api/types/webauthn.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import IconFingerprint from '#icons/IconFingerprint.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import IconKey from '#icons/IconKey.svelte';
+    import IconCheckBadge from '#icons/IconCheckBadge.svelte';
 
     let {
         passkey,

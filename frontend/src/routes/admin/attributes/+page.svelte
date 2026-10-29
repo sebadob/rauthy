@@ -1,5 +1,5 @@
 <script>
-    import Attributes from '$lib5/admin/attrs/Attributes.svelte';
+    import Attributes from '#lib/admin/attrs/Attributes.svelte';
 </script>
 
 <svelte:head>

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useMarkdownWorker } from '$lib/text_edit/useWorker.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
 
     let {
         content,

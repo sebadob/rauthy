@@ -1,5 +1,5 @@
 import type { JwkKeyPairAlg } from './oidc';
-import type { JsonValue } from '$utils/jsonValue';
+import type { JsonValue } from '#utils/jsonValue.ts';
 
 export const AuthFlowDeviceCode = 'urn:ietf:params:oauth:grant-type:device_code';
 export const AuthFlowTokenExchange = 'urn:ietf:params:oauth:grant-type:token-exchange';

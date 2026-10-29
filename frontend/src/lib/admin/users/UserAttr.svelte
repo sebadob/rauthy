@@ -1,23 +1,23 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
     import type {
         UserAttrValueRequest,
         UserAttrValuesUpdateRequest,
         UserResponse,
-    } from '$api/types/user.ts';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { fetchGet, fetchPut } from '$api/fetch';
+    } from '#api/types/user.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
         UserAttrValueResponse,
         UserAttrValuesResponse,
-    } from '$api/types/user_attrs.ts';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
+    } from '#api/types/user_attrs.ts';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
 
     let {
         user,

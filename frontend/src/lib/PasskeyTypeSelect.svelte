@@ -1,9 +1,9 @@
 <script lang="ts">
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import Options from '$lib/Options.svelte';
-    import Template from '$lib5/Template.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { TPL_PASSKEY_REG_TYPE } from '$utils/constants';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import Options from '#lib/Options.svelte';
+    import Template from '#lib/Template.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { TPL_PASSKEY_REG_TYPE } from '#utils/constants.ts';
 
     let {
         residentKey = $bindable(false),

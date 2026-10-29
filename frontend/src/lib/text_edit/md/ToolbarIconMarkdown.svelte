@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Button from '$lib/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         ref,

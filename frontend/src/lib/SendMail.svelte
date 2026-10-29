@@ -1,20 +1,20 @@
 <script lang="ts">
-    import IconEnvelope from '$icons/IconEnvelope.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Options from '$lib/Options.svelte';
-    import EditorInteractive from '$lib/text_edit/EditorInteractive.svelte';
-    import type { GroupResponse } from '$api/types/groups';
-    import type { RoleResponse } from '$api/types/roles';
-    import Input from '$lib/form/Input.svelte';
-    import type { EmailJobRequest } from '$api/types/email';
-    import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import { fetchPost } from '$api/fetch';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { useSession } from '$state/session.svelte';
+    import IconEnvelope from '#icons/IconEnvelope.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Options from '#lib/Options.svelte';
+    import EditorInteractive from '#lib/text_edit/EditorInteractive.svelte';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import Input from '#lib/form/Input.svelte';
+    import type { EmailJobRequest } from '#api/types/email.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import { fetchPost } from '#api/fetch.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         groups,

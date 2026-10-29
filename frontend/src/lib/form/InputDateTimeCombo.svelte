@@ -1,11 +1,11 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import InputDate from '$lib5/form/InputDate.svelte';
-    import IconStop from '$icons/IconStop.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import type { PropsInputDateCombo } from '$lib5/form/props.ts';
-    import { fmtDateInput, fmtTimeInput } from '$utils/form';
-    import InputTime from '$lib5/form/InputTime.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import InputDate from '#lib/form/InputDate.svelte';
+    import IconStop from '#icons/IconStop.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import type { PropsInputDateCombo } from '#lib/form/props.ts';
+    import { fmtDateInput, fmtTimeInput } from '#utils/form.ts';
+    import InputTime from '#lib/form/InputTime.svelte';
 
     let {
         id,

@@ -1,4 +1,4 @@
-import { isBrowser } from '$utils/helpers';
+import { isBrowser } from '#utils/helpers.ts';
 
 export interface PKCE {
     challenge: string;

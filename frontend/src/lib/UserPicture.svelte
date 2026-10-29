@@ -1,12 +1,12 @@
 <script lang="ts">
-    import IconUpload from '$icons/IconUpload.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { genKey, getCsrfToken } from '$utils/helpers';
-    import type { ErrorResponse } from '$api/types/error.ts';
-    import IconStop from '$icons/IconStop.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { fetchDelete } from '$api/fetch';
-    import { usePictureConfig } from '$state/picture_config.svelte';
+    import IconUpload from '#icons/IconUpload.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { genKey, getCsrfToken } from '#utils/helpers.ts';
+    import type { ErrorResponse } from '#api/types/error.ts';
+    import IconStop from '#icons/IconStop.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { fetchDelete } from '#api/fetch.ts';
+    import { usePictureConfig } from '#state/picture_config.svelte.ts';
 
     let {
         userId,

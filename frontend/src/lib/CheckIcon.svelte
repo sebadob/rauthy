@@ -1,6 +1,6 @@
 <script>
-    import IconCheck from '$icons/IconCheck.svelte';
-    import IconStop from '$icons/IconStop.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import IconStop from '#icons/IconStop.svelte';
 
     let { checked = $bindable() } = $props();
 </script>

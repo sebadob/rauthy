@@ -1,15 +1,35 @@
+import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import wasm from 'vite-plugin-wasm';
 // import fs from 'fs';
 
 const backend = 'http://127.0.0.1:8080';
 
-/** @type {import('vite').UserConfig} */
-const config = {
-    build: {
-        target: 'esnext',
-    },
-    plugins: [wasm(), sveltekit()],
+/** @type {import('vite').UserConfig} */ const config = {
+    build: { target: 'esnext' },
+    plugins: [
+        wasm(),
+        sveltekit({
+            compilerOptions: { runes: true },
+            // CAUTION: The order of the arguments is important - paths must come before adapter
+            paths: { base: '/auth/v1' },
+            adapter: adapter({
+                pages: '../templates/html',
+                assets: '../static/v1',
+                precompress: true,
+                strict: true,
+            }),
+            csp: {
+                directives: {
+                    'default-src': ['none'],
+                    'connect-src': ['self'],
+                    'script-src': ['self', 'wasm-unsafe-eval'],
+                    'style-src': ['self', 'unsafe-inline'],
+                    'img-src': ['self'],
+                },
+            },
+        }),
+    ],
     server: {
         // If you want to run with dev TLS certificates, for instance when you use a remote host, uncomment the following
         // lines. Do not forget to adjust the `PUB_URL` in `rauthy.cfg` accordingly to allow the `redirect_uri`, for instance:
@@ -21,7 +41,6 @@ const config = {
         proxy: {
             '/.well-known/': backend,
             '/auth/v1/dev': backend,
-            '/auth/v1/_app': backend,
             '/auth/v1/book/': backend,
             '/auth/v1/api_keys': backend,
             '/auth/v1/auth_check_admin': backend,

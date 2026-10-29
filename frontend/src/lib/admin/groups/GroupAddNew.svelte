@@ -1,14 +1,14 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
-    import Form from '$lib5/form/Form.svelte';
-    import { fetchPost } from '$api/fetch';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import type { GroupResponse, GroupRequest } from '$api/types/groups.ts';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import { parseJsonValue } from '$utils/jsonValue';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { PATTERN_GROUP } from '#utils/patterns.ts';
+    import Form from '#lib/form/Form.svelte';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import type { GroupResponse, GroupRequest } from '#api/types/groups.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import { parseJsonValue } from '#utils/jsonValue.ts';
 
     let {
         groups,

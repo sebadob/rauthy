@@ -1,10 +1,10 @@
 <script lang="ts">
-    import IconClipboard from '$icons/IconClipboard.svelte';
-    import IconEye from '$icons/IconEye.svelte';
-    import IconEyeSlash from '$icons/IconEyeSlash.svelte';
-    import Button from '$lib5/button/Button.svelte';
+    import IconClipboard from '#icons/IconClipboard.svelte';
+    import IconEye from '#icons/IconEye.svelte';
+    import IconEyeSlash from '#icons/IconEyeSlash.svelte';
+    import Button from '#lib/button/Button.svelte';
     import { onMount } from 'svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         ariaLabel = '',

@@ -1,10 +1,10 @@
 <script lang="ts">
-    import Loading from '$lib5/Loading.svelte';
-    import { webauthnAuth, type WebauthnAuthResult } from '$mfa/webauthn/authentication';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
+    import Loading from '#lib/Loading.svelte';
+    import { webauthnAuth, type WebauthnAuthResult } from '#mfa/webauthn/authentication.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
     import { onMount } from 'svelte';
-    import type { MfaPurpose } from '$api/types/mfa';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
 
     let {
         purpose,

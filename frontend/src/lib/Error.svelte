@@ -1,12 +1,12 @@
 <script lang="ts">
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import Template from '$lib5/Template.svelte';
-    import { TPL_ERROR_TEXT, TPL_STATUS_CODE } from '$utils/constants';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import Expandable from '$lib5/Expandable.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import Template from '#lib/Template.svelte';
+    import { TPL_ERROR_TEXT, TPL_STATUS_CODE } from '#utils/constants.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import Expandable from '#lib/Expandable.svelte';
 
     let t = useI18n();
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let ta = useI18nAdmin();
 </script>

@@ -1,11 +1,11 @@
 <script lang="ts">
-    import Modal from '$lib/Modal.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { fetchPost, fetchPut } from '$api/fetch';
-    import type { PamHostSecretResponse } from '$api/types/pam';
-    import HiddenValueArea from '$lib/HiddenValueArea.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { fetchPost, fetchPut } from '#api/fetch.ts';
+    import type { PamHostSecretResponse } from '#api/types/pam.ts';
+    import HiddenValueArea from '#lib/HiddenValueArea.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         hostId,

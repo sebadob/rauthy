@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Input from '$lib/form/Input.svelte';
-    import type { UserValuesPreferredUsername } from '$api/templates/UserValuesConfig';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import { fetchPut } from '$api/fetch';
-    import type { PreferredUsernameRequest } from '$api/types/user';
+    import Input from '#lib/form/Input.svelte';
+    import type { UserValuesPreferredUsername } from '#api/templates/UserValuesConfig.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import { fetchPut } from '#api/fetch.ts';
+    import type { PreferredUsernameRequest } from '#api/types/user.ts';
     import { slide } from 'svelte/transition';
-    import Tooltip from '$lib/Tooltip.svelte';
-    import IconInfo from '$icons/IconInfo.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import Form from '$lib/form/Form.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import IconInfo from '#icons/IconInfo.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Form from '#lib/form/Form.svelte';
 
     let {
         userId,

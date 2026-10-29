@@ -1,27 +1,27 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import { formatDateFromTs, formatUtcTsFromDateInput } from '$utils/helpers.js';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput } from '$utils/form';
-    import IconStop from '$icons/IconStop.svelte';
-    import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { formatDateFromTs, formatUtcTsFromDateInput } from '#utils/helpers.js';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput } from '#utils/form.ts';
+    import IconStop from '#icons/IconStop.svelte';
+    import { fetchDelete, fetchGet, fetchPost } from '#api/fetch.ts';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
     import type {
         BlacklistedIp,
         BlacklistResponse,
         IpBlacklistRequest,
-    } from '$api/types/blacklist.ts';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import Form from '$lib5/form/Form.svelte';
-    import Tooltip from '$lib5/Tooltip.svelte';
-    import Pagination from '$lib5/pagination/Pagination.svelte';
-    import { useTrigger } from '$state/callback.svelte';
-    import { useSession } from '$state/session.svelte';
+    } from '#api/types/blacklist.ts';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import Pagination from '#lib/pagination/Pagination.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let t = useI18n();
     let ta = useI18nAdmin();

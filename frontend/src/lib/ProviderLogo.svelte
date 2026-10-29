@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import Button from '$lib/button/Button.svelte';
+    import { genKey } from '#utils/helpers.ts';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         providerId,

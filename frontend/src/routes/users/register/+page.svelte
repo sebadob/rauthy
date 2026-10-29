@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
     import {
         IS_DEV,
         PKCE_VERIFIER,
@@ -7,39 +7,39 @@
         TPL_AUTH_PROVIDERS,
         TPL_RESTRICTED_EMAIL_DOMAIN,
         TPL_USER_VALUES_CONFIG,
-    } from '$utils/constants';
-    import Input from '$lib5/form/Input.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Template from '$lib5/Template.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import Form from '$lib5/form/Form.svelte';
+    } from '#utils/constants.ts';
+    import Input from '#lib/form/Input.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Template from '#lib/Template.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import Form from '#lib/form/Form.svelte';
     import {
         PATTERN_ALNUM,
         PATTERN_CITY,
         PATTERN_PHONE,
         PATTERN_STREET,
         PATTERN_USER_NAME,
-    } from '$utils/patterns';
-    import type { NewUserRegistrationRequest } from '$api/types/register.ts';
-    import { fetchGet, fetchPost } from '$api/fetch';
-    import type { ToSLatestResponse } from '$api/types/tos';
-    import { fetchSolvePow } from '$utils/pow';
-    import TosAccept from '$lib/TosAccept.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
-    import TZSelect from '$lib/TZSelect.svelte';
-    import type { UserValuesRequest } from '$api/types/user';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
-    import ButtonAuthProvider from '$lib/ButtonAuthProvider.svelte';
-    import { generateNonce, generatePKCE } from '$utils/pkce';
-    import type { ProviderLoginRequest } from '$api/types/auth_provider';
-    import { execProviderLogin } from '$utils/login';
-    import { genKey, saveCsrfToken } from '$utils/helpers';
-    import type { SessionInfoResponse } from '$api/types/session';
+    } from '#utils/patterns.ts';
+    import type { NewUserRegistrationRequest } from '#api/types/register.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
+    import type { ToSLatestResponse } from '#api/types/tos.ts';
+    import { fetchSolvePow } from '#utils/pow.ts';
+    import TosAccept from '#lib/TosAccept.svelte';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import TZSelect from '#lib/TZSelect.svelte';
+    import type { UserValuesRequest } from '#api/types/user.ts';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
+    import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
+    import { generateNonce, generatePKCE } from '#utils/pkce.ts';
+    import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
+    import { execProviderLogin } from '#utils/login.ts';
+    import { genKey, saveCsrfToken } from '#utils/helpers.ts';
+    import type { SessionInfoResponse } from '#api/types/session.ts';
 
     let t = useI18n();
 

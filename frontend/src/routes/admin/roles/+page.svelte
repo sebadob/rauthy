@@ -1,5 +1,5 @@
 <script>
-    import Roles from '$lib5/admin/roles/Roles.svelte';
+    import Roles from '#lib/admin/roles/Roles.svelte';
 </script>
 
 <svelte:head>

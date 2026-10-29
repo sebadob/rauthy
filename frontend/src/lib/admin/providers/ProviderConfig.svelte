@@ -1,18 +1,18 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
     import ProviderLogo from '../../ProviderLogo.svelte';
-    import type { ProviderRequest, ProviderResponse } from '$api/types/auth_provider.ts';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import Form from '$lib5/form/Form.svelte';
-    import { fetchDelete, fetchPut } from '$api/fetch';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import InputFile from '$lib5/form/InputFile.svelte';
-    import { genKey } from '$utils/helpers';
-    import ProviderConfigURLs from '$lib/admin/providers/blocks/ProviderConfigURLs.svelte';
-    import ProviderConfigClientInfo from '$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
+    import type { ProviderRequest, ProviderResponse } from '#api/types/auth_provider.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import { fetchDelete, fetchPut } from '#api/fetch.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import InputFile from '#lib/form/InputFile.svelte';
+    import { genKey } from '#utils/helpers.ts';
+    import ProviderConfigURLs from '#lib/admin/providers/blocks/ProviderConfigURLs.svelte';
+    import ProviderConfigClientInfo from '#lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
     import { slide } from 'svelte/transition';
 
     let {

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
+    import Button from '#lib/button/Button.svelte';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
 
     let {
         ariaLabel,

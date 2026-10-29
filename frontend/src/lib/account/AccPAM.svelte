@@ -1,18 +1,18 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import { fetchGet, fetchPost } from '$api/fetch';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
     import type {
         PamHostAccessResponse,
         PamPasswordResponse,
         PamUserResponse,
-    } from '$api/types/pam';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import InputPassword from '$lib/form/InputPassword.svelte';
+    } from '#api/types/pam.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import InputPassword from '#lib/form/InputPassword.svelte';
     import { slide } from 'svelte/transition';
     import { onMount } from 'svelte';
-    import SearchBar from '$lib/search_bar/SearchBar.svelte';
-    import PamAuthorizedKeys from '$lib/PamAuthorizedKeys.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import PamAuthorizedKeys from '#lib/PamAuthorizedKeys.svelte';
 
     let {
         pamUser = $bindable(),
