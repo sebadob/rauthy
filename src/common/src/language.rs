@@ -8,7 +8,6 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 use tracing::debug;
 
-// Note: Updating this enum will require an update on the LANGUAGES constant for the frontend too
 #[derive(
     Debug,
     Default,
