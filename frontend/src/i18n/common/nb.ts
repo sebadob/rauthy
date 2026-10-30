@@ -150,6 +150,21 @@ export const I18nNb: I18n = {
             notAvailable: 'This name is not available.',
             preferredUsername: 'Preferred Username',
         },
+        privacy: {
+            clientId: 'Klient-ID',
+            connectedApps: 'Tilkoblede apper',
+            connectedAppsDesc:
+                'Applikasjoner du har gitt samtykke til å få tilgang til kontoen din.',
+            granted: 'Gitt',
+            noConnectedApps: 'Ingen applikasjon har fått tilgang ennå.',
+            privacy: 'Personvern',
+            resource: 'Ressurs',
+            revoke: 'Trekk tilbake tilgang',
+            revokeDesc:
+                'Tilbaketrekking fjerner samtykket, og applikasjonen kan ikke lenger fornye tilgangen sin. Tilgangstokener som ble utstedt med de slettede oppdateringstokenene, trekkes tilbake ved userinfo og introspeksjon. Applikasjoner som validerer tokenene sine selv, kan fortsatt godta dem til de utløper. Applikasjonen må be om samtykket ditt på nytt.',
+            scopes: 'Scopes',
+            updated: 'Oppdatert',
+        },
         providerLink: 'Koble konto',
         providerLinkDesc: `Denne kontoen kan kobles til en av følgende innloggingsleverandører. 
             Etter aktivering blir du videresendt til leverandørens innloggingsside. Ved vellykket 

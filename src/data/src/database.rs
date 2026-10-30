@@ -486,3 +486,68 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
         ]
     }
 }
+
+/// Starts a single hiqlite node with all migrations for the tests of this crate, once per test
+/// binary, and sets the database type to hiqlite. The node runs on a runtime of its own, so that
+/// it outlives the runtime of the test that started it.
+#[cfg(test)]
+pub(crate) fn init_test_hiqlite() {
+    static INIT: std::sync::Once = std::sync::Once::new();
+
+    INIT.call_once(|| {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            rt.block_on(async move {
+                let _ = rauthy_common::DB_TYPE.set(rauthy_common::DbType::Hiqlite);
+
+                let free_port = || {
+                    std::net::TcpListener::bind("127.0.0.1:0")
+                        .unwrap()
+                        .local_addr()
+                        .unwrap()
+                        .port()
+                };
+                let nanos = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos();
+                let data_dir = env::temp_dir()
+                    .join(format!("rauthy_data_test_{}_{nanos}", std::process::id()))
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+                let config = hiqlite::NodeConfig {
+                    node_id: 1,
+                    nodes: vec![hiqlite::Node {
+                        id: 1,
+                        addr_raft: format!("127.0.0.1:{}", free_port()),
+                        addr_api: format!("127.0.0.1:{}", free_port()),
+                    }],
+                    listen_addr_api: "127.0.0.1".into(),
+                    listen_addr_raft: "127.0.0.1".into(),
+                    data_dir: data_dir.into(),
+                    cache_storage_disk: false,
+                    secret_raft: "test_secret_raft_1234".to_string(),
+                    secret_api: "test_secret_api_12345".to_string(),
+                    enc_keys: cryptr::EncKeys::generate().unwrap(),
+                    ..Default::default()
+                };
+
+                let client = hiqlite::start_node_with_cache::<Cache>(config)
+                    .await
+                    .unwrap();
+                client.wait_until_healthy_db().await;
+                client.migrate::<MigrationsHiqlite>().await.unwrap();
+                let _ = HIQLITE_CLIENT.set(client);
+                tx.send(()).unwrap();
+
+                std::future::pending::<()>().await;
+            });
+        });
+        rx.recv().unwrap();
+    });
+}

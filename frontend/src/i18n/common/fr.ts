@@ -153,6 +153,20 @@ export const I18nFr: I18n = {
             notAvailable: `Ce nom n'est pas disponible.`,
             preferredUsername: `Nom d'utilisateur préféré`,
         },
+        privacy: {
+            clientId: 'ID client',
+            connectedApps: 'Applications connectées',
+            connectedAppsDesc: 'Applications auxquelles vous avez autorisé l’accès à votre compte.',
+            granted: 'Accordé',
+            noConnectedApps: 'Aucune application n’a encore reçu d’accès.',
+            privacy: 'Confidentialité',
+            resource: 'Ressource',
+            revoke: 'Révoquer l’accès',
+            revokeDesc:
+                'La révocation supprime le consentement et l’application ne peut plus renouveler son accès. Les jetons d’accès émis avec les jetons de rafraîchissement supprimés sont révoqués pour userinfo et l’introspection. Les applications qui valident elles-mêmes leurs jetons peuvent encore les accepter jusqu’à leur expiration. L’application devra de nouveau demander votre consentement.',
+            scopes: 'Scopes',
+            updated: 'Mis à jour',
+        },
         providerLink: 'Compte fédéré',
         providerLinkDesc: `Vous pouvez lier ce compte à l’un des fournisseurs d’authentification suivants.\n
             Après avoir activé cette fonction, vous serez redirigé vers la page de connexion du fournisseur choisi.\n

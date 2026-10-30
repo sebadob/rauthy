@@ -438,6 +438,14 @@ kubectl -n rauthy get pod -w
 
 You can now proceed with the [First Start](first_start.md) steps.
 
+```admonish caution
+Before you upgrade an existing deployment, read the
+[CHANGELOG](https://github.com/sebadob/rauthy/blob/main/CHANGELOG.md). A StatefulSet does a rolling update by
+default. When a release asks for a full restart, like the release that adds `[consent]`, scale the
+StatefulSet down to `0` before you change the image, and scale it up again afterwards. Mixed
+versions in one cluster and a rollback are not supported for such a release.
+```
+
 ## Production Setup
 
 ### Config
