@@ -46,8 +46,11 @@ pub struct ApiKey<'a> {
     pub expires: &'a str,
     pub generate1: &'a str,
     pub generate2: Cow<'a, str>,
+    /// inserted as html
     pub generate3: Cow<'a, str>,
+    /// inserted as html
     pub generate4: &'a str,
+    /// inserted as html
     pub generate5: &'a str,
     pub key_name: &'a str,
     pub limited_validity: &'a str,
@@ -61,6 +64,7 @@ pub struct Attrs<'a> {
     pub desc: &'a str,
     pub make_editable: &'a str,
     pub make_editable_p1: &'a str,
+    /// inserted as html
     pub make_editable_p2: Cow<'a, str>,
     pub make_editable_p3: Cow<'a, str>,
     pub name: &'a str,
@@ -104,6 +108,7 @@ pub struct Clients<'a> {
     pub desc_pkce: Cow<'a, str>,
     #[serde(rename = "descPKCEEnforce")]
     pub desc_pkce_enforce: Cow<'a, str>,
+    /// inserted as html
     pub desc_uri: Cow<'a, str>,
     #[serde(rename = "errConfidentialPKCE")]
     pub err_confidential_pkce: Cow<'a, str>,
@@ -121,6 +126,7 @@ pub struct Clients<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct ClientsBranding<'a> {
     pub desc_hsl: Cow<'a, str>,
+    /// inserted as html
     pub desc_full_css: Cow<'a, str>,
     pub desc_variables: Cow<'a, str>,
     pub favicon_preview_alt: &'a str,
@@ -147,6 +153,7 @@ pub struct ClientsScim<'a> {
 pub struct ClientsScopes<'a> {
     pub allowed: &'a str,
     pub default: &'a str,
+    /// inserted as html
     pub desc: Cow<'a, str>,
 }
 
@@ -233,15 +240,23 @@ pub struct DocsHashing<'a> {
     pub login_time_head: &'a str,
     pub login_time1: Cow<'a, str>,
     pub login_time2: Cow<'a, str>,
+    /// inserted as html
     pub m_cost1: Cow<'a, str>,
+    /// inserted as html
     pub m_cost2: Cow<'a, str>,
+    /// inserted as html
     pub m_cost3: &'a str,
+    /// inserted as html
     pub p_cost1: Cow<'a, str>,
+    /// inserted as html
     pub p_cost2: Cow<'a, str>,
+    /// inserted as html
     pub t_cost1: Cow<'a, str>,
+    /// inserted as html
     pub t_cost2: Cow<'a, str>,
     pub utility_head: &'a str,
     pub utility1: Cow<'a, str>,
+    /// inserted as html
     pub utility2: Cow<'a, str>,
     pub time: &'a str,
     pub target_time: &'a str,
@@ -275,6 +290,7 @@ pub struct Editor<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct Email<'a> {
     pub cancel_job: &'a str,
+    /// MUST be in the order: 'none', 'in_group', 'not_in_group', 'has_role', 'has_not_role'
     pub filter_type: Vec<&'a str>,
     pub immediate: &'a str,
     pub jobs: &'a str,
@@ -289,7 +305,9 @@ pub struct Email<'a> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Error<'a> {
+    /// inserted as html
     pub needs_admin_role: Cow<'a, str>,
+    /// inserted as html
     pub no_admin: Cow<'a, str>,
 }
 
@@ -322,6 +340,7 @@ pub struct Jwks<'a> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Kv<'a> {
+    /// inserted as html
     pub access_test_desc: Cow<'a, str>,
     pub add_new_key: &'a str,
     pub add_new_ns: &'a str,
@@ -329,11 +348,13 @@ pub struct Kv<'a> {
     pub del_confirm: &'a str,
     pub del_ns_msg: &'a str,
     pub encrypted_desc: Cow<'a, str>,
+    /// MUST contain `{{ key }}` to be replaced with the key to delete
     pub delete_confirm_msg: &'a str,
     pub help: KvHelp<'a>,
     pub key: &'a str,
     pub load_all_values: &'a str,
     pub store_encrypted: &'a str,
+    /// MUT be in order: data, access, edit, delete
     pub tabs: Vec<&'a str>,
     pub test_cmd: &'a str,
     pub value: &'a str,
@@ -343,9 +364,18 @@ pub struct Kv<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct KvHelp<'a> {
     pub help: &'a str,
+    /// MUST be in order:
+    /// - test access key
+    /// - show all keys
+    /// - show all keys + values
+    /// - set a key + value
+    /// - get the value for a key
+    /// - delete a key + value
     pub ops: Vec<&'a str>,
     pub p1: Cow<'a, str>,
+    /// inserted as html
     pub p2: Cow<'a, str>,
+    /// inserted as html
     pub p3: Cow<'a, str>,
 }
 
@@ -432,6 +462,7 @@ pub struct ProvidersConfig<'a> {
     pub auto_link_desc2: Cow<'a, str>,
     pub client_name: &'a str,
     pub cust_root_ca: &'a str,
+    /// inserted as html
     pub desc_auth_method: Cow<'a, str>,
     pub desc_client_id: &'a str,
     pub desc_client_name: &'a str,
@@ -454,10 +485,15 @@ pub struct ProvidersConfig<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct ProvidersJsonPath<'a> {
     pub p1: &'a str,
+    /// inserted as html
     pub p2: Cow<'a, str>,
+    /// inserted as html
     pub p3: &'a str,
+    /// inserted as html
     pub p4: &'a str,
+    /// inserted as html
     pub p5: Cow<'a, str>,
+    /// inserted as html
     pub p6: Cow<'a, str>,
 }
 
@@ -474,6 +510,7 @@ pub struct ProvidersDelete<'a> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Roles<'a> {
+    /// inserted as html
     pub admin_no_mod: &'a str,
     pub delete1: &'a str,
     pub name: &'a str,
@@ -618,7 +655,9 @@ pub struct ValidationRedirectUri<'a> {
     pub comma: &'a str,
     pub control_char: &'a str,
     pub fragment: &'a str,
+    /// `{{ KEY }}` is replaced with the reserved query parameter
     pub reserved_key: Cow<'a, str>,
+    /// like `reserved_key`, for a post-logout redirect URI
     pub reserved_key_logout: Cow<'a, str>,
 }
 

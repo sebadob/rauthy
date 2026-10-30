@@ -198,6 +198,7 @@ pub struct Authorize<'a> {
     pub invalid_key_used: &'a str,
     pub login: &'a str,
     pub mfa_ack: &'a str,
+    pub mfa_open_app: &'a str,
     pub navigate_to_account: &'a str,
     pub needs_user_update: Cow<'a, str>,
     pub or_login_with: &'a str,
@@ -426,7 +427,7 @@ mod tests {
     fn round_trip_is_identical_to_original() {
         let original: serde_json::Value =
             serde_json::from_str(EN_COMMON).expect("en_common.json must parse to a Value");
-        let i18n: I18nCommon = serde_json::from_str(EN_COMMON).expect("en_common.json must parse");
+        let i18n: Common = serde_json::from_str(EN_COMMON).expect("en_common.json must parse");
         let reserialized: serde_json::Value = serde_json::to_value(&i18n).expect("serialize back");
 
         // Semantic (order-insensitive) equality of the two JSON trees. Because serde
@@ -443,7 +444,7 @@ mod tests {
         // directly follows an `_`; digits are left untouched. These keys all end in a
         // digit, so this pins down exactly how they convert and guards against a
         // future change to the naming convention silently breaking them.
-        let i18n: I18nCommon = serde_json::from_str(EN_COMMON).expect("en_common.json must parse");
+        let i18n: Common = serde_json::from_str(EN_COMMON).expect("en_common.json must parse");
         let v: serde_json::Value = serde_json::to_value(&i18n).expect("serialize back");
 
         let expected_paths: &[&str] = &[
