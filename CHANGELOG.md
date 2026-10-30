@@ -13,6 +13,17 @@ bootstrap `Plain` secret cannot do, since the bootstrap only runs on an empty da
 `secret` is not given, the behavior is unchanged and a new random secret is generated, so existing
 callers (like the Admin UI) are not affected.
 
+#### Open Native Apps after MFA Login
+
+When a client uses a custom scheme `redirect_uri` for a native App (RFC 8252), like
+`myapp://callback`, and the login requires a Passkey, the browser silently blocked the final
+redirect to the App: external protocols require a user activation, which the Passkey ceremony
+consumed. The MFA *Acknowledged* page now shows an *Open the App to continue* link for non-http
+locations in this case. A click provides a fresh user activation, and the App receives the
+authorization code. Http(s) redirects are unchanged and remain automatic.
+
+[#1827](https://github.com/sebadob/rauthy/pull/1827)
+
 ## v0.37.2
 
 ### Security
