@@ -1,21 +1,37 @@
 // Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
 
-use crate::admin::I18nAdmin;
-use crate::common::I18nCommon;
+use ahash::{HashMap, HashMapExt};
 use rauthy_common::language::Language;
+use std::str::FromStr;
+use std::sync::LazyLock;
+
+pub use crate::admin::I18nAdmin;
+pub use crate::common::I18nCommon;
 
 pub mod admin;
 pub mod common;
 pub mod languages;
 
-pub fn build_all() {
-    let mut admin = Vec::with_capacity(16);
-    let mut common = Vec::with_capacity(16);
+pub static I18N_ADMIN_HASHES: LazyLock<HashMap<Language, &'static str>> =
+    LazyLock::new(|| parse_compile_time_hashes(include_str!("../i18n_hashes/admin")));
 
+pub static I18N_COMMON_HASHES: LazyLock<HashMap<Language, &'static str>> =
+    LazyLock::new(|| parse_compile_time_hashes(include_str!("../i18n_hashes/common")));
+
+pub fn build_all_admin() -> Vec<(Language, I18nAdmin<'static>)> {
+    let mut admin = Vec::with_capacity(16);
     for lang in Language::as_iter() {
         admin.push((lang, I18nAdmin::from(&lang)));
+    }
+    admin
+}
+
+pub fn build_all_common() -> Vec<(Language, I18nCommon<'static>)> {
+    let mut common = Vec::with_capacity(16);
+    for lang in Language::as_iter() {
         common.push((lang, I18nCommon::from(&lang)));
     }
+    common
 }
 
 impl From<&Language> for I18nCommon<'_> {
@@ -56,12 +72,29 @@ impl From<&Language> for I18nAdmin<'_> {
     }
 }
 
+fn parse_compile_time_hashes(input: &'static str) -> HashMap<Language, &'static str> {
+    let mut map = HashMap::with_capacity(16);
+    for line in input.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        let (key, _) = line.split_once('_').unwrap();
+        let lang = Language::from_str(key).unwrap();
+        map.insert(lang, line);
+    }
+    map
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_i18n_ui_build_all() {
-        build_all();
+        build_all_admin();
+        build_all_common();
+
+        I18N_ADMIN_HASHES.get(&Language::De).unwrap();
+        I18N_COMMON_HASHES.get(&Language::De).unwrap();
     }
 }

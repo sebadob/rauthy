@@ -16,6 +16,7 @@ use tracing::debug;
     Copy,
     PartialEq,
     Eq,
+    Hash,
     Serialize,
     Deserialize,
     strum::EnumIter,

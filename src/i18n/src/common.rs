@@ -1,6 +1,6 @@
-use std::borrow::Cow;
-
+use rauthy_common::content_hash::content_hash;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 /// Translations for all user-facing parts of the UI. The Admin UI makes use of them as well instead
 /// of defining duplicates.
@@ -396,6 +396,12 @@ pub struct UserRevoke<'a> {
     pub title: &'a str,
     pub desc1: &'a str,
     pub desc2: &'a str,
+}
+
+impl I18nCommon<'_> {
+    pub fn content_hash(&self) -> String {
+        content_hash(serde_json::to_string(self).unwrap())
+    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
-use std::borrow::Cow;
-
+use rauthy_common::content_hash::content_hash;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 /// Translations specific to only the Admin UI.
 #[derive(Debug, Serialize, Deserialize)]
@@ -659,6 +659,12 @@ pub struct ValidationRedirectUri<'a> {
     pub reserved_key: Cow<'a, str>,
     /// like `reserved_key`, for a post-logout redirect URI
     pub reserved_key_logout: Cow<'a, str>,
+}
+
+impl I18nAdmin<'_> {
+    pub fn content_hash(&self) -> String {
+        content_hash(serde_json::to_string(self).unwrap())
+    }
 }
 
 #[cfg(test)]

@@ -52,6 +52,7 @@ atrium-identity = "0.1.4"
 atrium-oauth = "0.1.2"
 base64 = "0.23"
 bincode-next = { version = "3.1.1", features = ["derive", "serde"] }
+blake2 = "0.11"
 bytes = "1.11.1"
 chacha20poly1305 = { version = "0.11", features = ["rand_core", "zeroize"] }
 chrono = { version = "0.4", default-features = false, features = [
