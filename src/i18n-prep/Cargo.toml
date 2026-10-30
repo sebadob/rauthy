@@ -6,9 +6,11 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-rauthy-i18n = { path = "../i18n", features = ["i18n-prep"] }
+rauthy-i18n = { path = "../i18n", features = ["__i18n-prep"] }
 
 async-compression = { workspace = true }
+blake2 = { workspace = true }
+hex = { workspace = true }
 phf_codegen = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

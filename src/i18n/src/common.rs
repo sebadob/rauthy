@@ -403,7 +403,7 @@ impl I18nCommon<'_> {
         content_hash(serde_json::to_string(self).unwrap())
     }
 
-    #[cfg(not(feature = "i18n-prep"))]
+    #[cfg(not(feature = "__i18n-prep"))]
     pub fn get_hash(key: &str) -> Option<&'static str> {
         crate::maps::HASHES_COMMON.get(key).map(|v| *v)
     }

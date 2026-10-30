@@ -6,7 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [features]
-i18n-prep = []
+__i18n-prep = []
 
 [dependencies]
 rauthy-common = { path = "../common" }

@@ -4869,6 +4869,7 @@ dependencies = [
  "rauthy-data",
  "rauthy-error",
  "rauthy-handlers",
+ "rauthy-i18n-prep",
  "rauthy-jwt",
  "rauthy-middlewares",
  "rauthy-schedulers",
@@ -5142,6 +5143,8 @@ name = "rauthy-i18n-prep"
 version = "0.37.2"
 dependencies = [
  "async-compression",
+ "blake2",
+ "hex",
  "phf_codegen",
  "rauthy-i18n",
  "serde_json",
