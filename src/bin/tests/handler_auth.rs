@@ -149,6 +149,7 @@ async fn wildcard_redirect_client(client_id: &str) -> Result<String, Box<dyn Err
             confidential: false,
             redirect_uris: vec![format!("{wildcard}*")],
             post_logout_redirect_uris: None,
+            consent: None,
         })
         .send()
         .await?;
@@ -601,6 +602,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        consent: None,
         scim: None,
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);

@@ -33,6 +33,7 @@ use crate::entity::theme::ThemeCssFull;
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use crate::entity::user_consents::UserConsent;
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
@@ -239,10 +240,10 @@ INSERT INTO clients
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
 access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
 backchannel_logout_uri, restrict_group_prefix, claims, claims_at_root, allowed_resources,
-default_aud, created_micros)
+default_aud, created_micros, consent)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-$22, $23, $24, $25, $26, $27)"#;
+$22, $23, $24, $25, $26, $27, $28)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -278,7 +279,8 @@ $22, $23, $24, $25, $26, $27)"#;
                         b.claims_at_root,
                         b.allowed_resources,
                         b.default_aud,
-                        b.created_micros
+                        b.created_micros,
+                        b.consent
                     ),
                 )
                 .await?;
@@ -316,6 +318,7 @@ $22, $23, $24, $25, $26, $27)"#;
                     &b.allowed_resources,
                     &b.default_aud,
                     &b.created_micros,
+                    &b.consent,
                 ],
             )
             .await?;
@@ -1786,6 +1789,54 @@ pub async fn user_attr_values(data_before: Vec<UserAttrValueEntity>) -> Result<(
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
             DB::pg_execute(sql_2, &[&b.user_id, &b.key, &b.value]).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn user_consents(data_before: Vec<UserConsent>) -> Result<(), ErrorResponse> {
+    let sql_1 = "DELETE FROM user_consents";
+    let sql_2 = r#"
+INSERT INTO user_consents
+(user_id, client_id, resource, scopes, content_hash, created, updated, ip)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+
+    if is_hiqlite() {
+        DB::hql().execute(sql_1, params!()).await?;
+        for b in data_before {
+            DB::hql()
+                .execute(
+                    sql_2,
+                    params!(
+                        b.user_id,
+                        b.client_id,
+                        b.resource,
+                        b.scopes,
+                        b.content_hash,
+                        b.created,
+                        b.updated,
+                        b.ip
+                    ),
+                )
+                .await?;
+        }
+    } else {
+        DB::pg_execute(sql_1, &[]).await?;
+        for b in data_before {
+            DB::pg_execute(
+                sql_2,
+                &[
+                    &b.user_id,
+                    &b.client_id,
+                    &b.resource,
+                    &b.scopes,
+                    &b.content_hash,
+                    &b.created,
+                    &b.updated,
+                    &b.ip,
+                ],
+            )
+            .await?;
         }
     }
     Ok(())

@@ -75,6 +75,10 @@ pub static API_KEY_LENGTH: usize = 64;
 pub static DEVICE_KEY_LENGTH: u8 = 64;
 /// Max serialized length of a client's custom `claims` JSON object.
 pub const CLIENT_CLAIMS_MAX_LEN: usize = 1024;
+/// Max length in bytes of a single RFC 8707 `resource` indicator.
+pub const RESOURCE_MAX_LEN: usize = 1024;
+/// Max length in bytes of a consent source URL.
+pub const CONSENT_SOURCE_MAX_LEN: usize = 1024;
 pub static EVENTS_LATEST_LIMIT: u16 = 100;
 pub const UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS: u16 = 300;
 pub const CACHE_TTL_APP: Option<i64> = Some(43200);

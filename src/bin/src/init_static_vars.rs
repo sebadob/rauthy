@@ -78,6 +78,9 @@ pub async fn trigger() {
     if vars.ephemeral_clients.enable {
         rauthy_data::http_client::init_ephemeral_fetcher();
     }
+    if vars.consent.enable {
+        rauthy_data::http_client::init_consent_fetcher();
+    }
 
     // constants
     let _ = *APP_START;

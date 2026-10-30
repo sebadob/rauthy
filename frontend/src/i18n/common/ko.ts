@@ -144,6 +144,20 @@ export const I18nKo: I18n = {
             notAvailable: 'This name is not available.',
             preferredUsername: 'Preferred Username',
         },
+        privacy: {
+            clientId: '클라이언트 ID',
+            connectedApps: '연결된 앱',
+            connectedAppsDesc: '계정 접근에 동의한 애플리케이션입니다.',
+            granted: '허용일',
+            noConnectedApps: '아직 접근 권한을 받은 애플리케이션이 없습니다.',
+            privacy: '개인정보',
+            resource: '리소스',
+            revoke: '접근 권한 취소',
+            revokeDesc:
+                '취소하면 동의가 삭제되고 애플리케이션은 더 이상 접근 권한을 갱신할 수 없습니다. 삭제된 리프레시 토큰과 함께 발급된 액세스 토큰은 userinfo와 인트로스펙션에서 취소됩니다. 토큰을 직접 검증하는 애플리케이션은 만료될 때까지 이를 계속 받아들일 수 있습니다. 애플리케이션은 다시 동의를 요청해야 합니다.',
+            scopes: '스코프',
+            updated: '업데이트',
+        },
         providerLink: '계정 연결',
         providerLinkDesc: `이 계정은 다음 로그인 공급자 중 하나에 연결할 수 있습니다.\n 프로세스를 활성화하면 
             선택한 공급자의 로그인 페이지로 리디렉션이 트리거됩니다. 로그인에 성공하고 이메일 주소가 일치하면 이 

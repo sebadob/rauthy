@@ -139,6 +139,20 @@ export const I18nZh: I18n = {
             notAvailable: '此名称不可用。',
             preferredUsername: '首选用户名',
         },
+        privacy: {
+            clientId: '客户端 ID',
+            connectedApps: '已连接的应用',
+            connectedAppsDesc: '您已同意访问您账户的应用。',
+            granted: '授权时间',
+            noConnectedApps: '尚未有应用获得访问权限。',
+            privacy: '隐私',
+            resource: '资源',
+            revoke: '撤销访问',
+            revokeDesc:
+                '撤销将删除该同意，应用将无法再续期其访问权限。随已删除的刷新令牌签发的访问令牌会在 userinfo 和令牌内省中被撤销。自行验证令牌的应用在令牌过期前仍可能接受它们。应用需要重新请求您的同意。',
+            scopes: 'Scopes',
+            updated: '更新时间',
+        },
         providerLink: '联合账户',
         providerLinkDesc: `您可以将此账户连接到下列登陆提供者之一。\n
             激活此功能后，您将被重定向至所选提供者的登陆页面。在成功登陆后，如果电子邮件匹配，您的账户将被连接。`,

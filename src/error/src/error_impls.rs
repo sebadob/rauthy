@@ -59,6 +59,7 @@ impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
             ErrorResponseType::BadRequest
+            | ErrorResponseType::ConsentRequired
             | ErrorResponseType::InvalidClientMetadata
             | ErrorResponseType::InvalidGrant
             | ErrorResponseType::InvalidTarget
@@ -593,5 +594,23 @@ impl From<ring::error::Unspecified> for ErrorResponse {
             ErrorResponseType::BadRequest,
             format!("ring::error::Unspecified: {value:?}"),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// OIDC Core §3.1.2.6: `consent_required` is an authorization error response, a 400 like the
+    /// other OAuth error codes.
+    #[test]
+    fn test_consent_required_status() {
+        let err = ErrorResponse::new(ErrorResponseType::ConsentRequired, "consent required");
+        assert_eq!(err.status_code(), StatusCode::BAD_REQUEST);
+        assert_eq!(err.error_response().status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            serde_json::to_value(&err.error).unwrap(),
+            serde_json::json!("consent_required")
+        );
     }
 }

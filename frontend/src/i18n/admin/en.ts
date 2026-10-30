@@ -63,6 +63,11 @@ export let I18nAdminEn: I18nAdmin = {
         confidential: 'Confidential',
         confidentialNoSecret: 'This is a non-confidential client and therefore has not secret.',
         config: 'Client Configuration',
+        consent: {
+            builtIn: 'Built-in',
+            desc: `Where the content of the consent screen comes from, when 'consent.enable' is set. Built-in shows the requested scopes. A URL must serve the consent content as JSON. A '[[consent.sources]]' entry for the requested resource takes precedence.`,
+            source: 'Consent Source',
+        },
         delete1: 'Are you sure you want to delete this client?',
         descAuthCode: `The validity for auth codes can be adjusted for increased security. Auth codes
             can be used only once and are valid for 60 seconds by default. The shorter the validity, the

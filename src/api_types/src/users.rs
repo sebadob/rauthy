@@ -1,10 +1,11 @@
-use crate::cust_validation::{validate_vec_groups, validate_vec_roles};
+use crate::cust_validation::{validate_resource_or_empty, validate_vec_groups, validate_vec_roles};
 use crate::generic::Language;
 use crate::oidc::AddressClaim;
 use hiqlite::macros::FromRow;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_NAME,
-    RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_STREET, RE_URI, RE_USER_NAME,
+    RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_ID,
+    RE_CLIENT_NAME, RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_STREET, RE_URI,
+    RE_USER_NAME,
 };
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -12,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::str::FromStr;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 #[derive(Serialize, ToSchema)]
@@ -301,6 +302,30 @@ pub struct UserAttrValuesUpdateRequest {
     pub values: Vec<UserAttrValueRequest>,
 }
 
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
+pub struct UserConsentDeleteParams {
+    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
+    #[validate(regex(
+        path = "*RE_CLIENT_ID",
+        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
+    ))]
+    pub client_id: String,
+    /// Empty for a consent without a resource
+    ///
+    /// Validation: empty or `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`, at most 1024 bytes
+    #[validate(custom(function = "validate_resource_or_empty"))]
+    pub resource: String,
+}
+
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
+pub struct UserConsentsParams {
+    /// Only return consents for this resource, empty for consents without a resource
+    ///
+    /// Validation: empty or `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`, at most 1024 bytes
+    #[validate(custom(function = "validate_resource_or_empty"))]
+    pub resource: Option<String>,
+}
+
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct UserRevokeParams {
     /// Validation: IpAddr
@@ -579,6 +604,29 @@ pub struct UserAttrValueResponse {
 #[cfg_attr(debug_assertions, derive(Deserialize))]
 pub struct UserAttrValuesResponse {
     pub values: Vec<UserAttrValueResponse>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct UserConsentDeleteResponse {
+    /// `false` if there was no consent to delete
+    pub consent_deleted: bool,
+    pub refresh_tokens_deleted: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct UserConsentResponse {
+    pub client_id: String,
+    /// `None` if the client does not exist (anymore), is ephemeral, or has no name
+    pub client_name: Option<String>,
+    /// Empty for a consent without a resource
+    pub resource: String,
+    pub scopes: Vec<String>,
+    /// Unix timestamp in seconds
+    pub created: i64,
+    /// Unix timestamp in seconds
+    pub updated: i64,
 }
 
 #[derive(Serialize, ToSchema)]

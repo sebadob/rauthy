@@ -84,6 +84,45 @@ good reason. It can lead to an easy privilege escalation, because an ephemeral c
 mint tokens for an arbitrary audience.
 ```
 
+### Consent sources
+
+With `consent.enable`, each login resolves a consent source. A `[[consent.sources]]` entry for the
+requested `resource` wins, then the client's own consent source from the Admin UI, then the
+built-in `local` one:
+
+```toml
+[consent]
+enable = true
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'https://consent.example.com/api'
+name = 'Example API'
+```
+
+A `resource` listed there is valid for ephemeral clients without their own `allowed_resources`,
+even without `danger_allow_unvalidated_resource`. Ephemeral clients have no stored configuration,
+so their consent comes from this registry or the built-in source. Once at least one source is
+configured, an ephemeral client must request a `resource`, otherwise the login is answered with
+`consent_required`.
+
+The registry `name` is shown on the consent screen and wins over the `name` of a remote consent
+document. The remote `name` is only used for a client's own consent source from the Admin UI.
+
+A remote source is fetched via `GET <url>?lang=<BCP47 language>` with the same SSRF protection as
+ephemeral client documents, but with its own connection limit and a 3 second timeout, so a slow
+consent source cannot hold up ephemeral client lookups. Non-public addresses are only allowed with
+`consent.danger_allow_private_addresses`, independent of the ephemeral client setting. The content
+is cached for `consent.content_cache_ttl` seconds.
+
+The consent screen shows the response for the user's language, or the `lang=en` one if that is
+unavailable. The version of the consent content is the hash of the English (`lang=en`) response:
+any change to it requires a new consent from everyone. Translations don't affect it, so keep them
+in sync with `en`. If the `lang=en` response is unavailable or returns an invalid document, the
+built-in content is used instead and the login continues. A failed fetch is cached for
+`min(content_cache_ttl, 60)` seconds per language, so an unavailable source is not requested on
+every login.
+
 ## Introspection
 
 The token introspection endpoint (`POST /oidc/introspect`) reflects the restricted `aud`

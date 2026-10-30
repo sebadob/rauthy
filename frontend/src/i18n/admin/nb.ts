@@ -66,6 +66,11 @@ export let I18nAdminNb: I18nAdmin = {
         confidential: 'Følsomt',
         confidentialNoSecret: 'Dette er ikke en følsom klient, og har derfor ingen hemmelighet.',
         config: 'Klient konfigurasjon',
+        consent: {
+            builtIn: 'Innebygd',
+            desc: `Hvor innholdet i samtykkesiden kommer fra, når 'consent.enable' er satt. Innebygd viser de forespurte scopes. En URL må levere samtykkeinnholdet som JSON. En '[[consent.sources]]'-oppføring for den forespurte ressursen har forrang.`,
+            source: 'Samtykkekilde',
+        },
         delete1: 'Skal denne klienten slettes?',
         descAuthCode: `Gyldigheten til Auth kodene kan justeres for å oppnå ekstra sikkerhet.
             Auth kodene kan kun brukes en gang og er normalt gyldige i 60 sekunder. Jo kortere, jo bedre
