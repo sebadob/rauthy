@@ -193,6 +193,7 @@ export const I18nNl: I18n = {
         invalidKeyUsed: 'Ongeldige sleutel',
         login: 'Inloggen',
         mfaAck: 'Bevestigd',
+        mfaOpenApp: 'Open de app om verder te gaan',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Sommige informatie voor dit account ontbreekt. U moet deze waarden
             bijwerken voordat u kunt doorgaan met inloggen.`,
