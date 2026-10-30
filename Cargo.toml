@@ -46,10 +46,10 @@ argon2 = { version = "0.6", features = ["parallel", "zeroize"] }
 askama = "0.16"
 async-trait = "0.1.74"
 async-compression = { version = "0.4.41", features = ["brotli", "gzip", "tokio"] }
-atrium-api = "0.25.3"
-atrium-common = "0.1.2"
-atrium-identity = "0.1.4"
-atrium-oauth = "0.1.2"
+atrium-api = "0.26"
+atrium-common = "0.1.4"
+atrium-identity = "0.2"
+atrium-oauth = "0.2"
 base64 = "0.23"
 bincode-next = { version = "3.1.1", features = ["derive", "serde"] }
 bytes = "1.11.1"
@@ -95,7 +95,7 @@ mime_guess = "2"
 num_cpus = "1"
 openssl = { version = "0.10.79", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
-oxiri = "0.2.2"
+oxiri = "0.3.1"
 percent-encoding = "2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
@@ -118,7 +118,7 @@ ruma-client = { version = "0.20", features = [
 ] }
 rusqlite = "0.40.1"
 rust-embed = "8.5.0"
-rustls = { version = "0.23.37", default-features = false, features = [
+rustls = { version = "0.23.46", default-features = false, features = [
     "logging", "std", "tls12", "ring"
 ] }
 rustls-pki-types = "1.4.1"
@@ -150,10 +150,10 @@ tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7.10", features = ["with-chrono-0_4"] }
 tokio-postgres-rustls = { version = "0.14", features = [] }
 tokio-util = { version = "0.7.18", features = ["rt"] }
-utoipa = { version = "5", features = [
+utoipa = { version = "6", features = [
     "actix_extras", "chrono", "openapi_extensions"
 ] }
-utoipa-swagger-ui = { version = "9.0.0", features = ["actix-web", "vendored"] }
+utoipa-swagger-ui = { version = "10.0.2", features = ["actix-web", "vendored"] }
 uuid = { version = "1.24.0", features = ["v4"] }
 validator = { version = "0.21", features = ["derive"] }
 wasm-bindgen = "0.2.105"

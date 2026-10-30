@@ -36,4 +36,3 @@ tokio-postgres = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
-oxiri = { workspace = true }
