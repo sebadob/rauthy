@@ -283,8 +283,8 @@ impl From<rauthy_api_types::users::WebId> for WebId {
 #[cfg(test)]
 mod tests {
     use crate::entity::webids::WebId;
-    use rauthy_api_types::generic::Language;
     use rauthy_api_types::users::WebIdResponse;
+    use rauthy_common::language::Language;
     use rstest::rstest;
 
     // Tests the validation for a String that comes from the UI account page in the end.

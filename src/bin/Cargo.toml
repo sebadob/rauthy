@@ -73,3 +73,6 @@ pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
 ring = { workspace = true }
 tokio-test = "*"
+
+[build-dependencies]
+rauthy-i18n-prep = { path = "../i18n-prep" }

@@ -9,6 +9,7 @@ use rauthy_api_types::{
     sessions::*, themes::*, tos::*, users::*,
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
+use rauthy_common::language::Language;
 use rauthy_data::ListenScheme;
 use rauthy_data::entity;
 use rauthy_data::entity::auth_providers::AuthProviderTemplate;

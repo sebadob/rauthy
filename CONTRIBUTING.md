@@ -322,7 +322,8 @@ time of writing). Basically in the block beginning with `templates: VarsTemplate
 #### Adding a new Language
 
 In the frontend, as mentioned before, just take a look at `frontend/src/i18n`. In the backend, the
-compiler is your best friend. If you update the `Language` enum in  `src/data/src/language.rs` with
+compiler is your best friend. If you update the `Language` enum in  `src/common/src/language.rs`
+with
 a new value, the compiler will yell at you about all the locations that need an update. The code was
 written in a way that everywhere where you might need it, it will do a `match` on the `Language`
 `enum`. This way, you cannot forget to update anything.
@@ -385,8 +386,8 @@ the backend automatically.
 
 ### Password Reset UI Checks
 
-From `frontend/`, run `npm run test:webauthn` for the endpoint-routing checks
-(CI runs this too). After generating the WASM modules with `just build-wasm`
+From `frontend/`, run `npm run test:webauthn` for the endpoint-routing checks (CI runs this too).
+After generating the WASM modules with `just build-wasm`
 from the repository root, run `npm run test:password-reset` for the built reset
 page in Chromium. Install Playwright's Chromium or set
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an existing binary.

@@ -1,5 +1,5 @@
-use crate::language::Language;
 use crate::rauthy_config::{RauthyConfig, VarsTemplate};
+use rauthy_common::language::Language;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]

@@ -1,9 +1,9 @@
 use crate::common::{get_auth_headers, get_backend_url, session_headers_with};
 use pretty_assertions::assert_eq;
-use rauthy_api_types::generic::Language;
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_api_types::roles::RoleRequest;
 use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
+use rauthy_common::language::Language;
 use reqwest::Client;
 use reqwest::header::HeaderMap;
 use std::error::Error;

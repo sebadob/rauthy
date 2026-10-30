@@ -52,6 +52,7 @@ atrium-identity = "0.2"
 atrium-oauth = "0.2"
 base64 = "0.23"
 bincode-next = { version = "3.1.1", features = ["derive", "serde"] }
+blake2 = "0.11"
 bytes = "1.11.1"
 chacha20poly1305 = { version = "0.11", features = ["rand_core", "zeroize"] }
 chrono = { version = "0.4", default-features = false, features = [
@@ -97,6 +98,8 @@ openssl = { version = "0.10.79", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
 oxiri = "0.3.1"
 percent-encoding = "2"
+phf = { version = "0.14.0", features = [] }
+phf_codegen = { version = "0.14.0", features = [] }
 postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
 pulldown-cmark = "0.13"
