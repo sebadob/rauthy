@@ -425,16 +425,6 @@ impl From<TurtleError> for ErrorResponse {
     }
 }
 
-impl From<oxiri::IriParseError> for ErrorResponse {
-    fn from(value: oxiri::IriParseError) -> Self {
-        debug!("oxiri::IriParseError: {value:?}");
-        ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!("Invalid iri given: {value:?}"),
-        )
-    }
-}
-
 impl From<CryptrError> for ErrorResponse {
     fn from(value: CryptrError) -> Self {
         debug!("CryptrError: {value:?}");
