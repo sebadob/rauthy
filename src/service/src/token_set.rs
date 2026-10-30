@@ -78,6 +78,15 @@ pub enum AuthCodeFlow {
     No,
 }
 
+/// Whether a refresh of the issued refresh token is checked against the user's consent grant
+/// (with `consent.enable`). `Exempt` for grants without a consent step (password, device code),
+/// carried through rotation in the refresh token claims.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ConsentCheck {
+    Required,
+    Exempt,
+}
+
 #[derive(Debug, Clone)]
 pub struct AuthTime(i64);
 
@@ -489,6 +498,7 @@ impl TokenSet {
         sid: Option<SessionId>,
         resource: Option<&str>,
         jti: AccessTokenJti,
+        consent_check: ConsentCheck,
     ) -> Result<String, ErrorResponse> {
         let did = if let DeviceCodeFlow::Yes(device_id) = device_code_flow {
             Some(device_id)
@@ -538,6 +548,7 @@ impl TokenSet {
                 // Could be changed with v1.0.0 maybe.
                 auth_time: Some(auth_time.get()),
                 resource,
+                consent_exempt: consent_check == ConsentCheck::Exempt,
             };
 
             let kp = JwkKeyPair::find_latest(JwkKeyPairAlg::default()).await?;
@@ -703,6 +714,7 @@ impl TokenSet {
         resource: Option<String>,
         auth_code_flow: AuthCodeFlow,
         device_code_flow: DeviceCodeFlow,
+        consent_check: ConsentCheck,
     ) -> Result<Self, ErrorResponse> {
         let scopes = scopes.map(|s| s.0);
         let scope = match scopes.as_deref() {
@@ -830,6 +842,7 @@ impl TokenSet {
                     sid,
                     resource.as_deref(),
                     jti,
+                    consent_check,
                 )
                 .await?,
             )

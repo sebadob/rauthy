@@ -165,6 +165,16 @@ pub struct NewClientRequest {
     /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
+    /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
+    /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
+    /// precedence over this value, which in turn takes precedence over `local`. `None` or an
+    /// empty value falls back to `local`.
+    ///
+    /// Validation: `^(|local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
+    /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch
+    #[serde(default)]
+    #[validate(custom(function = "validate_consent_source"))]
+    pub consent: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -245,6 +255,16 @@ pub struct UpdateClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
     #[validate(custom(function = "validate_vec_resource"))]
     pub default_aud: Option<Vec<String>>,
+    /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
+    /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
+    /// precedence over this value, which in turn takes precedence over `local`. `None` or an
+    /// empty value falls back to `local`.
+    ///
+    /// Validation: `^(|local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
+    /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch
+    #[serde(default)]
+    #[validate(custom(function = "validate_consent_source"))]
+    pub consent: Option<String>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -333,6 +353,8 @@ pub struct ClientResponse {
     pub allowed_resources: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_aud: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub consent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimClientRequestResponse>,
 }

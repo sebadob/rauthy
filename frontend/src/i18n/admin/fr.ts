@@ -70,6 +70,11 @@ export let I18nAdminFr: I18nAdmin = {
         confidential: 'Confidentiel',
         confidentialNoSecret: 'Ce client n’est pas confidentiel et ne possède donc aucun secret.',
         config: 'Configuration du client',
+        consent: {
+            builtIn: 'Intégré',
+            desc: `Origine du contenu de l'écran de consentement, lorsque 'consent.enable' est activé. Intégré affiche les scopes demandés. Une URL doit fournir le contenu du consentement en JSON. Une entrée '[[consent.sources]]' pour la ressource demandée est prioritaire.`,
+            source: 'Source du consentement',
+        },
         delete1: 'Êtes-vous sûr de vouloir supprimer ce client ?',
         descAuthCode: `La validité des codes d'authentification peut être ajustée pour une sécurité renforcée.
             Les codes d'authentification ne peuvent être utilisés qu'une seule fois et sont valides pendant 60 secondes

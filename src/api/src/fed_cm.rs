@@ -16,10 +16,15 @@ use rauthy_data::entity::fed_cm::{
     FedCMTokenResponse, WebIdentity,
 };
 use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::user_consents::UserConsent;
 use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_service::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenSet};
+use rauthy_service::oidc::consent_grant;
+use rauthy_service::token_set::{
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, TokenNonce, TokenSet,
+};
+use std::future::Future;
 use tracing::{debug, error, warn};
 use validator::Validate;
 
@@ -287,6 +292,16 @@ pub async fn post_fed_cm_token(
         ));
     }
 
+    // FedCM has no consent step: with `consent.enable`, the user must have consented to the
+    // client already, at an authorization request without a `resource`
+    require_consent(
+        RauthyConfig::get().vars.consent.enable,
+        &user.id,
+        &client.id,
+        UserConsent::find,
+    )
+    .await?;
+
     // We are good - issue a TokenSet
     let ts = TokenSet::from_user(
         &user,
@@ -299,8 +314,15 @@ pub async fn post_fed_cm_token(
         None,
         AuthCodeFlow::No,
         DeviceCodeFlow::No,
+        // the refresh token is never handed out -> fail closed should that ever change
+        ConsentCheck::Required,
     )
     .await?;
+    // the grant may have been revoked after the check above, but before the new refresh token
+    // existed, so the revocation could not remove it
+    consent_grant::fence_code_exchange(&user.id, &client.id, None, ts.refresh_token.as_deref())
+        .await
+        .map_err(consent_required)?;
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_CREDENTIALS)
@@ -343,6 +365,44 @@ fn is_fed_cm_enabled() -> Result<(), ErrorResponse> {
             ErrorResponseType::Internal,
             "The FedCM API is disabled on this instance",
         ))
+    }
+}
+
+/// With `enable` (`consent.enable`), the user must have a consent grant for the client without a
+/// `resource`: FedCM has no consent step. Without one, the assertion is denied like the other
+/// denials of this API, with `401` and `WWW-Authenticate`.
+async fn require_consent<'a, F, Fut>(
+    enable: bool,
+    user_id: &'a str,
+    client_id: &'a str,
+    find: F,
+) -> Result<(), ErrorResponse>
+where
+    F: FnOnce(&'a str, &'a str, &'a str) -> Fut,
+    Fut: Future<Output = Result<Option<UserConsent>, ErrorResponse>>,
+{
+    if !enable {
+        return Ok(());
+    }
+    if find(user_id, client_id, "").await?.is_none() {
+        warn!("no consent grant for the FedCM client");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("consent-required".to_string()),
+            "no consent grant for this client",
+        ));
+    }
+    Ok(())
+}
+
+/// `invalid_grant` from a missing consent grant as a FedCM denial, see [`require_consent`].
+fn consent_required(err: ErrorResponse) -> ErrorResponse {
+    if err.error == ErrorResponseType::InvalidGrant {
+        ErrorResponse::new(
+            ErrorResponseType::WWWAuthenticate("consent-required".to_string()),
+            err.message,
+        )
+    } else {
+        err
     }
 }
 
@@ -454,5 +514,87 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
                 )
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::ResponseError;
+    use std::cell::RefCell;
+
+    fn grant() -> UserConsent {
+        UserConsent {
+            user_id: "u1".to_string(),
+            client_id: "c1".to_string(),
+            resource: String::new(),
+            scopes: "openid".to_string(),
+            content_hash: "hash".to_string(),
+            created: 1,
+            updated: 1,
+            ip: "127.0.0.1".to_string(),
+        }
+    }
+
+    fn assert_consent_required(err: ErrorResponse) {
+        assert_eq!(
+            err.error,
+            ErrorResponseType::WWWAuthenticate("consent-required".to_string())
+        );
+        assert_eq!(err.status_code(), 401);
+    }
+
+    /// FedCM has no consent step: with `consent.enable`, the grant for (user, client, '') must
+    /// exist, else the assertion is denied with `401` and `WWW-Authenticate`.
+    #[tokio::test]
+    async fn test_require_consent() {
+        let lookups = RefCell::new(Vec::new());
+        let find = |found: Option<UserConsent>| {
+            let lookups = &lookups;
+            move |u: &str, c: &str, r: &str| {
+                lookups
+                    .borrow_mut()
+                    .push((u.to_string(), c.to_string(), r.to_string()));
+                async move { Ok(found) }
+            }
+        };
+
+        // without `consent.enable`, nothing is looked up
+        require_consent(false, "u1", "c1", find(None))
+            .await
+            .unwrap();
+        assert!(lookups.borrow().is_empty());
+
+        // no grant
+        let err = require_consent(true, "u1", "c1", find(None))
+            .await
+            .unwrap_err();
+        assert_consent_required(err);
+
+        // a grant for (user, client, '')
+        require_consent(true, "u1", "c1", find(Some(grant())))
+            .await
+            .unwrap();
+        let key = ("u1".to_string(), "c1".to_string(), String::new());
+        assert_eq!(*lookups.borrow(), vec![key.clone(), key]);
+
+        // a failed lookup is reported as is
+        let err = require_consent(true, "u1", "c1", |_, _, _| async {
+            Err(ErrorResponse::new(ErrorResponseType::Database, "down"))
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Database);
+    }
+
+    /// The fence after the issuance denies a revoked grant like [`require_consent`].
+    #[test]
+    fn test_consent_required() {
+        assert_consent_required(consent_required(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "no consent grant for this client",
+        )));
+        let err = consent_required(ErrorResponse::new(ErrorResponseType::Database, "down"));
+        assert_eq!(err.error, ErrorResponseType::Database);
     }
 }

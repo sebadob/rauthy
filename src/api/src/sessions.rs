@@ -126,10 +126,11 @@ pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, Er
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     Session::invalidate_all().await?;
-    RefreshToken::invalidate_all().await?;
+    // device tokens first, see `RefreshTokenDevice::invalidate_with_refresh_tokens_for_user`
     if RauthyConfig::get().vars.access.token_revoke_device_tokens {
         RefreshTokenDevice::invalidate_all().await?;
     }
+    RefreshToken::invalidate_all().await?;
     IssuedToken::revoke_all().await?;
 
     // This task should run async in the background, as it could take quite a long time to finish.
@@ -176,15 +177,10 @@ pub async fn delete_sessions_for_user(
     principal.validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())?;
 
     Session::invalidate_for_user(&user.id).await?;
-    RefreshToken::invalidate_for_user(&user.id).await?;
-    if RauthyConfig::get().vars.access.token_revoke_device_tokens {
-        RefreshTokenDevice::invalidate_all_for_user(&user.id).await?;
-    }
-    IssuedToken::revoke_for_user(
-        &user.id,
-        RauthyConfig::get().vars.access.token_revoke_device_tokens,
-    )
-    .await?;
+    let revoke_device_tokens = RauthyConfig::get().vars.access.token_revoke_device_tokens;
+    RefreshTokenDevice::invalidate_with_refresh_tokens_for_user(&user.id, revoke_device_tokens)
+        .await?;
+    IssuedToken::revoke_for_user(&user.id, revoke_device_tokens).await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Event::force_logout(user.email).send().await?;

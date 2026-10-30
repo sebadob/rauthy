@@ -38,6 +38,7 @@ fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: Some(vec![TARGET.to_string()]),
         default_aud: None,
+        consent: None,
         scim: None,
     }
 }
@@ -84,6 +85,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         confidential: true,
         redirect_uris: vec!["http://localhost/callback".to_string()],
         post_logout_redirect_uris: None,
+        consent: None,
     };
     let res = client
         .post(format!("{backend_url}/clients"))

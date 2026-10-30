@@ -1,6 +1,7 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::email::mailer_callback::EMailCallback;
+use crate::entity::consent_sources::ConsentSource;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::fido_mds::masks::{AttachmentHintMask, KeyProtectionMask, MdsCertLevel};
@@ -11,11 +12,12 @@ use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
 use rauthy_common::logging::LogLevelAccess;
-use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME};
+use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME, RE_RESOURCE};
 use regex::Regex;
 use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
+use std::collections::{BTreeMap, btree_map};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -228,6 +230,25 @@ impl RauthyConfig {
         if slf.vars.dev.dev_mode {
             warn!("You started with DEV Mode enabled. Do NOT use this in production!");
         }
+        if !slf.vars.consent.enable && !slf.vars.consent.sources.is_empty() {
+            warn!(
+                "{} `[[consent.sources]]` configured, but `consent.enable` is `false` - they \
+                are ignored",
+                slf.vars.consent.sources.len()
+            );
+        }
+        if slf.vars.consent.enable {
+            warn!(
+                "`consent.enable` is `true`, but this release has no consent screen yet: every \
+                `authorization_code` login, the Admin UI included, fails and every FedCM login \
+                answers `401` with `WWW-Authenticate: consent-required` until it lands, because \
+                no consent grant can be given. A refresh token without a grant is deleted on \
+                refresh and its access token revoked; turning `consent.enable` off does not bring it back"
+            );
+        }
+        if slf.vars.consent.danger_allow_private_addresses {
+            warn!("`consent.danger_allow_private_addresses` is enabled");
+        }
     }
 
     pub fn init_static(self) {
@@ -357,7 +378,12 @@ impl Default for Vars {
                 generated_secrets_file: String::new().into(),
                 generated_secrets_ttl: Duration::from_secs(600),
             },
-            consent: VarsConsent { enable: false },
+            consent: VarsConsent {
+                enable: false,
+                content_cache_ttl: 3600,
+                danger_allow_private_addresses: false,
+                sources: BTreeMap::default(),
+            },
             cred_stuff_detect: VarsCredStuff {
                 blacklist_duration: Duration::from_secs(24 * 3600),
                 blacklist_threshold: 15,
@@ -508,6 +534,7 @@ impl Default for Vars {
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
+                level_consent_revoked: EventLevel::Warning,
                 level_scim_task_failed: EventLevel::Critical,
                 level_email_send_error: EventLevel::Critical,
                 level_suspicious_request: EventLevel::Notice,
@@ -1837,6 +1864,58 @@ impl Vars {
         if let Some(v) = t_bool(&mut table, "consent", "enable", "CONSENT_ENABLE") {
             self.consent.enable = v;
         }
+        if let Some(v) = t_u32(
+            &mut table,
+            "consent",
+            "content_cache_ttl",
+            "CONSENT_CONTENT_CACHE_TTL",
+        ) {
+            if v == 0 {
+                panic!("`consent.content_cache_ttl` must be at least 1");
+            }
+            self.consent.content_cache_ttl = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "consent",
+            "danger_allow_private_addresses",
+            "CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES",
+        ) {
+            self.consent.danger_allow_private_addresses = v;
+        }
+
+        if let Some(value) = table.remove("sources") {
+            let Value::Array(arr) = value else {
+                panic!("{}", err_t("sources", "consent", "Array"));
+            };
+            for entry in arr {
+                let Value::Table(mut table) = entry else {
+                    panic!("{}", err_t("<entry>", "consent.sources", "Table"));
+                };
+
+                let resource = t_str(&mut table, "consent.sources", "resource", "")
+                    .expect("`resource` is mandatory for `[[consent.sources]]`");
+                let source = t_str(&mut table, "consent.sources", "source", "")
+                    .expect("`source` is mandatory for `[[consent.sources]]`");
+                let name = t_str(&mut table, "consent.sources", "name", "")
+                    .expect("`name` is mandatory for `[[consent.sources]]`");
+                check_table_empty(table, "consent.sources");
+
+                let entry = match VarsConsentSource::new(resource, &source, name) {
+                    Ok(entry) => entry,
+                    Err(err) => panic!("Invalid `[[consent.sources]]`: {err}"),
+                };
+                match self.consent.sources.entry(entry.resource.clone()) {
+                    btree_map::Entry::Vacant(slot) => {
+                        slot.insert(entry);
+                    }
+                    btree_map::Entry::Occupied(slot) => panic!(
+                        "Invalid `[[consent.sources]]`: duplicate `resource` '{}'",
+                        slot.key()
+                    ),
+                }
+            }
+        }
 
         check_table_empty(table, "consent");
     }
@@ -2758,6 +2837,15 @@ impl Vars {
         ) {
             self.events.level_user_login_revoke =
                 EventLevel::from_str(&v).expect("Cannot parse EventLevel for user_login_revoke");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_consent_revoked",
+            "EVENT_LEVEL_CONSENT_REVOKED",
+        ) {
+            self.events.level_consent_revoked =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for consent_revoked");
         }
         if let Some(v) = t_str(
             &mut table,
@@ -4289,6 +4377,66 @@ pub struct VarsBootstrap {
 #[derive(Debug)]
 pub struct VarsConsent {
     pub enable: bool,
+    /// At least 1.
+    pub content_cache_ttl: u32,
+    /// Allows remote consent sources on non-public addresses. Independent of
+    /// `ephemeral_clients.danger_allow_private_addresses`.
+    pub danger_allow_private_addresses: bool,
+    /// `[[consent.sources]]` registry, keyed by `resource`.
+    pub sources: BTreeMap<String, VarsConsentSource>,
+}
+
+impl VarsConsent {
+    /// The registry entry for `resource`, if any.
+    pub fn source_for(&self, resource: &str) -> Option<&VarsConsentSource> {
+        self.sources.get(resource)
+    }
+
+    /// `true` if `resource` is listed in `[[consent.sources]]` and `consent.enable` is set.
+    pub fn is_registered(&self, resource: &str) -> bool {
+        self.enable && self.sources.contains_key(resource)
+    }
+
+    /// `true` if an ephemeral client must request a `resource`: `consent.enable` is set and
+    /// `[[consent.sources]]` is not empty.
+    pub fn requires_resource(&self) -> bool {
+        self.enable && !self.sources.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VarsConsentSource {
+    pub resource: String,
+    pub source: ConsentSource,
+    pub name: String,
+}
+
+impl VarsConsentSource {
+    pub fn new(resource: String, source: &str, name: String) -> Result<Self, String> {
+        // RFC 8707 §2: absolute URI without a fragment. Matched verbatim against the request
+        // `resource`, so it must also pass the same `RE_RESOURCE` validation.
+        match reqwest::Url::parse(&resource) {
+            Ok(url) if url.fragment().is_none() && RE_RESOURCE.is_match(&resource) => {}
+            _ => {
+                return Err(format!(
+                    "`resource` '{resource}' must be an absolute URI without a fragment, \
+                    matching `{}`",
+                    RE_RESOURCE.as_str()
+                ));
+            }
+        }
+        let source = ConsentSource::parse(source)
+            .map_err(|err| format!("`source` for '{resource}': {err}"))?;
+        if name.trim().is_empty() {
+            return Err(format!("`name` for '{resource}' must not be empty"));
+        }
+
+        Ok(Self {
+            resource,
+            source,
+            name,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -4517,6 +4665,7 @@ pub struct VarsEvents {
     pub level_backchannel_logout_failed: EventLevel,
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,
+    pub level_consent_revoked: EventLevel,
     pub level_scim_task_failed: EventLevel,
     pub level_email_send_error: EventLevel,
     pub level_suspicious_request: EventLevel,
@@ -5178,6 +5327,186 @@ mod tests {
         let mut table: toml::Table = toml::from_str("[consent]\nenable = true").unwrap();
         vars.parse_consent(&mut table);
         assert!(vars.consent.enable);
+    }
+
+    fn parse_consent(toml_src: &str) -> Vars {
+        let mut table: toml::Table = toml::from_str(toml_src).unwrap();
+        let mut vars = Vars::default();
+        vars.parse_consent(&mut table);
+        vars
+    }
+
+    #[test]
+    fn consent_sources() {
+        let vars = parse_consent("[consent]\nenable = true");
+        assert_eq!(vars.consent.content_cache_ttl, 3600);
+        assert!(vars.consent.sources.is_empty());
+        assert!(!vars.consent.requires_resource());
+
+        let vars = parse_consent(
+            r#"
+[consent]
+enable = true
+content_cache_ttl = 600
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'Example API'
+
+[[consent.sources]]
+resource = 'urn:example:data'
+source = 'https://consent.example.com/data'
+name = 'Data'
+"#,
+        );
+        assert_eq!(vars.consent.content_cache_ttl, 600);
+        assert_eq!(
+            vars.consent.sources.values().cloned().collect::<Vec<_>>(),
+            vec![
+                VarsConsentSource {
+                    resource: "https://api.example.com".to_string(),
+                    source: ConsentSource::Local,
+                    name: "Example API".to_string(),
+                },
+                VarsConsentSource {
+                    resource: "urn:example:data".to_string(),
+                    source: ConsentSource::Remote {
+                        url: reqwest::Url::parse("https://consent.example.com/data").unwrap()
+                    },
+                    name: "Data".to_string(),
+                },
+            ]
+        );
+        assert_eq!(
+            vars.consent.source_for("urn:example:data").unwrap().name,
+            "Data"
+        );
+        assert!(
+            vars.consent
+                .source_for("https://other.example.com")
+                .is_none()
+        );
+        assert!(vars.consent.is_registered("urn:example:data"));
+        assert!(!vars.consent.is_registered("https://other.example.com"));
+        assert!(vars.consent.requires_resource());
+
+        // without `consent.enable` nothing is registered and no `resource` is required
+        let vars = parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'Example API'
+"#,
+        );
+        assert!(!vars.consent.is_registered("https://api.example.com"));
+        assert!(!vars.consent.requires_resource());
+    }
+
+    #[test]
+    fn consent_source_entry_validation() {
+        let entry = |resource: &str, source: &str, name: &str| {
+            VarsConsentSource::new(resource.to_string(), source, name.to_string())
+        };
+        assert!(entry("https://api.example.com", "local", "API").is_ok());
+
+        // resource: absolute URI, no fragment
+        assert!(entry("api.example.com", "local", "API").is_err());
+        assert!(entry("/api", "local", "API").is_err());
+        assert!(entry("https://api.example.com/#x", "local", "API").is_err());
+        // source: `local` or https URL
+        assert!(entry("https://api.example.com", "remote", "API").is_err());
+        assert!(
+            entry(
+                "https://api.example.com",
+                "http://consent.example.com",
+                "API"
+            )
+            .is_err()
+        );
+        // resource: must also match `RE_RESOURCE`, like the request `resource`
+        assert!(entry("https://api.example.com/a b", "local", "API").is_err());
+        assert!(entry("https://api.example.com/ä", "local", "API").is_err());
+        assert!(entry("https://api.example.com/[x]", "local", "API").is_err());
+        // source: no `lang` query key, Rauthy appends it
+        assert!(
+            entry(
+                "https://api.example.com",
+                "https://consent.example.com/api?lang=en",
+                "API"
+            )
+            .is_err()
+        );
+        assert!(
+            entry(
+                "https://api.example.com",
+                "https://consent.example.com/api?v=1",
+                "API"
+            )
+            .is_ok()
+        );
+        // name: non-empty
+        assert!(entry("https://api.example.com", "local", " ").is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "duplicate `resource` 'https://api.example.com'")]
+    fn consent_sources_duplicate_panics() {
+        parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'A'
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'B'
+"#,
+        );
+    }
+
+    #[test]
+    fn consent_danger_allow_private_addresses() {
+        let vars = parse_consent("[consent]\nenable = true");
+        assert!(!vars.consent.danger_allow_private_addresses);
+        let vars = parse_consent("[consent]\ndanger_allow_private_addresses = true");
+        assert!(vars.consent.danger_allow_private_addresses);
+        assert!(!vars.ephemeral_clients.danger_allow_private_addresses);
+    }
+
+    #[test]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1")]
+    fn consent_content_cache_ttl_zero_panics() {
+        parse_consent("[consent]\ncontent_cache_ttl = 0");
+    }
+
+    #[test]
+    #[should_panic(expected = "`name` is mandatory")]
+    fn consent_sources_missing_name_panics() {
+        parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+"#,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Unknown data in section: 'consent.sources'")]
+    fn consent_sources_unknown_key_panics() {
+        parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'A'
+url = 'https://consent.example.com'
+"#,
+        );
     }
 
     #[test]

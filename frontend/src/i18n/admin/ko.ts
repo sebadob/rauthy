@@ -62,6 +62,11 @@ export let I18nAdminKo: I18nAdmin = {
         confidential: '기밀',
         confidentialNoSecret: '이 클라이언트는 기밀이 아닌 클라이언트이므로 Secret이 없습니다.',
         config: '클라이언트 설정',
+        consent: {
+            builtIn: '내장',
+            desc: `'consent.enable'이 설정된 경우 동의 화면의 내용을 가져오는 위치입니다. 내장은 요청된 스코프를 표시합니다. URL은 동의 내용을 JSON으로 제공해야 합니다. 요청된 리소스에 대한 '[[consent.sources]]' 항목이 우선합니다.`,
+            source: '동의 소스',
+        },
         delete1: '이 클라이언트를 삭제하시겠습니까?',
         descAuthCode: `보안을 강화하기 위해 인증 코드의 유효 기간을 조정할 수 있습니다. 인증 코드는
             한 번만 사용할 수 있으며 기본적으로 60초 동안 유효합니다. 클라이언트가 로그인 절차를

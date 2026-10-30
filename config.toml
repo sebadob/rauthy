@@ -890,14 +890,120 @@ rate_limit_db_burst = 200000
 #HQL_DANGER_RAFT_STATE_RESET=true
 
 [consent]
-# Set to `true` to enable user consent for clients. This feature is
-# still in progress. Currently, it only makes a client deletion also
-# delete all legacy refresh tokens (issued before refresh tokens were
-# bound to a client) of all users.
+# Upgrading to the release that adds `[consent]` needs a full restart
+# of all nodes, independent of `consent.enable`. Mixed versions in one
+# cluster and a rollback are not supported, see the CHANGELOG.
+#
+# Set to `true` to enable user consent for clients. Without it,
+# `[[consent.sources]]` are ignored (with a warning at startup).
+# This feature is still in progress. When enabled, the authorization
+# code exchange and refresh tokens require the user's consent grant
+# for the client, and a client deletion also deletes all legacy
+# refresh tokens (issued before refresh tokens were bound to a client)
+# of all users.
+#
+# CAUTION: Do not enable this yet. Consent grants are only written by
+# the consent screen at the authorization step, which does not exist
+# yet. Until then, every `authorization_code` login, including
+# Rauthy's own UI, fails, and every FedCM login answers `401` with
+# `WWW-Authenticate: consent-required` (with a warning at startup).
+#
+# When you enable it:
+# - There is no backfill of consent grants: a refresh with a refresh
+#   token from the `authorization_code` flow, for which the user has
+#   no grant, deletes that refresh token and revokes the access token
+#   issued with it. Those users log in again. Turning
+#   `consent.enable` off afterwards does not bring the deleted
+#   refresh tokens back.
+# - Password and device code refresh tokens are exempt via a
+#   `consent_exempt` claim. Password refresh tokens issued, and
+#   device code refresh tokens rotated, by a version before that
+#   claim existed do not carry it and are deleted on refresh as
+#   well, those users log in again.
+# - Token exchange (RFC 8693) is exempt from the consent check: it
+#   is an explicit trust an admin configures on the client.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
 #enable = false
+
+# Lifetime in seconds of cached consent content fetched from a
+# remote consent source (see `[[consent.sources]]` below and the
+# per-client consent source in the Admin UI). Must be at least 1.
+# A failed fetch is cached as well, for `min(content_cache_ttl, 60)`
+# seconds, so an unavailable source is not requested on every
+# login.
+#
+# default: 3600
+# overwritten by: CONSENT_CONTENT_CACHE_TTL
+#content_cache_ttl = 3600
+
+# Remote consent sources that resolve to a loopback, private,
+# link-local or otherwise non-public address are rejected by
+# default, like ephemeral client documents. Consent sources are
+# configured by an admin, so this is independent of
+# `ephemeral_clients.danger_allow_private_addresses`. Set to `true`
+# when your consent service runs on an internal address.
+#
+# Consent source fetches follow redirects only to https, with the
+# same address checks, never use system proxies and time out after
+# 3 seconds.
+#
+# default: false
+# overwritten by: CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES
+#danger_allow_private_addresses = false
+
+#[[consent.sources]]
+# The consent source per RFC 8707 resource indicator. A login
+# that requests this `resource` shows the consent content from
+# this source, with precedence over the client's own consent
+# source. Ephemeral clients may request any `resource` listed
+# here, even without
+# `ephemeral_clients.danger_allow_unvalidated_resource`.
+# When at least one source is configured, a `resource` is
+# required for ephemeral clients. Today only a refresh enforces
+# this: a refresh token of an ephemeral client without a
+# `resource` fails with `invalid_grant`. The login answers with
+# `consent_required` once the consent screen exists.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different resources. Each `resource` may only exist
+# once.
+#
+# The resource indicator, an absolute URI without a fragment.
+# It is matched verbatim against the requested `resource` and
+# must only contain the characters allowed there:
+# [a-zA-Z0-9,.:/_\-&?=~!$'()*+%@]
+#resource = 'https://api.example.com'
+# Either `local` for the built-in consent content (the requested
+# scopes), or an `https://` URL. Rauthy fetches
+# `GET <url>?lang=<BCP47 language>` (the URL itself must not
+# contain a `lang` query parameter) and expects:
+# {
+#   "name": "Example API",
+#   "scopes": {
+#     "data.read": {
+#       "title": "Read your data",
+#       "description": "...",
+#       "warning": false
+#     }
+#   },
+#   "intro": "...",
+#   "terms_url": "https://example.com/terms"
+# }
+# The response for the user's language is shown, the `lang=en`
+# one if that is unavailable.
+# The version of the consent content is the hash of the English
+# (`lang=en`) response: any change to it requires a new consent
+# from everyone. Translations don't affect it, so keep them in
+# sync with `en`.
+# If the `lang=en` response is unavailable or invalid, the
+# built-in content is shown instead and the login continues.
+#source = 'local'
+# The name of the resource shown on the consent screen. It wins
+# over the `name` of a remote consent document, which is only
+# used for a client's own consent source from the Admin UI.
+#name = 'Example API'
 
 [cred_stuff_detection]
 ## This section contains values for the credential stuffing
@@ -1842,6 +1948,13 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user consent
+# for a client has been revoked, either by the user
+# themselves or by an admin.
+#
+# default: warning
+# overwritten by: EVENT_LEVEL_CONSENT_REVOKED
+level_consent_revoked = 'warning'
 # The level for the generated Event after a SCIM
 # update task ultimately failed after exceeding
 # all retries.

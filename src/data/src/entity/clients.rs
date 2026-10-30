@@ -2,11 +2,14 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::ProviderMfaLogin;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
+use crate::entity::consent_sources::ConsentSource;
 use crate::entity::jwk::JwkKeyPairAlg;
+use crate::entity::refresh_tokens::PgDeletedJtis;
 use crate::entity::scopes::Scope;
+use crate::entity::user_consents::SQL_CONSENT_DELETE_BY_CLIENT;
 use crate::entity::users::User;
 use crate::http_client::fetch_bounded;
-use crate::rauthy_config::{RauthyConfig, VarsEphemeralClients};
+use crate::rauthy_config::{RauthyConfig, VarsConsent, VarsEphemeralClients};
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -49,8 +52,8 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
-    claims_at_root = $23, allowed_resources = $24, default_aud = $25
-WHERE id = $26"#;
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26
+WHERE id = $27"#;
 
 /**
 # OIDC Client
@@ -105,6 +108,11 @@ pub struct Client {
     /// Micros, because a client may be deleted and recreated within the same second.
     /// `None` for clients created before this field existed.
     pub created_micros: Option<i64>,
+    /// Consent source: `local` or an `https://` URL, at most 1024 bytes. A
+    /// `[[consent.sources]]` entry for the requested `resource` takes precedence over this
+    /// value. `None` or an invalid value falls back to `local`, see [`Client::consent_source`].
+    #[serde(default)]
+    pub consent: Option<String>,
 }
 
 impl Debug for Client {
@@ -117,7 +125,7 @@ impl Debug for Client {
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
         client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
         claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
-        created_micros: {:?} }}",
+        created_micros: {:?}, consent: {:?} }}",
             self.id,
             self.name,
             self.enabled,
@@ -143,6 +151,7 @@ impl Debug for Client {
             self.allowed_resources,
             self.default_aud,
             self.created_micros,
+            self.consent,
         )
     }
 }
@@ -172,9 +181,9 @@ INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redire
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
-default_aud, created_micros)
+default_aud, created_micros, consent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23, $24, $25)"#;
+$18, $19, $20, $21, $22, $23, $24, $25, $26)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -205,7 +214,8 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
                         &client.restrict_group_prefix,
                         &client.allowed_resources,
                         &client.default_aud,
-                        client.created_micros
+                        client.created_micros,
+                        &client.consent
                     ),
                 )
                 .await?;
@@ -238,6 +248,7 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
                     &client.allowed_resources,
                     &client.default_aud,
                     &client.created_micros,
+                    &client.consent,
                 ],
             )
             .await?;
@@ -377,8 +388,9 @@ VALUES ($1, $2, $3, $4)"#;
         client.into_dynamic_client_response(client_dyn, true)
     }
 
-    /// Deletes the client with its refresh tokens, with `consent.enable` also all legacy refresh
-    /// tokens (`client_id` NULL) of all users.
+    /// Deletes the client with its refresh tokens and user consents, with `consent.enable` also
+    /// all legacy refresh tokens (`client_id` NULL) of all users, and revokes the access tokens
+    /// of the deleted refresh tokens.
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
         #[cfg(debug_assertions)]
         if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
@@ -393,40 +405,36 @@ VALUES ($1, $2, $3, $4)"#;
 
         let drop_legacy = RauthyConfig::get().vars.consent.enable;
         if is_hiqlite() {
-            // `refresh_tokens.client_id` has no FK, device refresh tokens cascade.
-            let mut stmts = vec![(
-                "DELETE FROM refresh_tokens WHERE client_id = $1",
-                params!(self.id.as_str()),
-            )];
-            // Legacy tokens (`client_id` NULL) cannot be attributed and would be accepted by a
-            // recreated client with the same id, so with `consent.enable` all of them go.
-            if drop_legacy {
-                stmts.push((
-                    "DELETE FROM refresh_tokens WHERE client_id IS NULL",
-                    params!(),
-                ));
-            }
-            stmts.push((
-                "DELETE FROM clients WHERE id = $1",
-                params!(self.id.as_str()),
-            ));
+            let stmts = hql_delete_statements(drop_legacy)
+                .into_iter()
+                .map(|(sql, binds_id)| {
+                    if binds_id {
+                        (sql, params!(self.id.as_str()))
+                    } else {
+                        (sql, params!())
+                    }
+                })
+                .collect::<Vec<_>>();
             for res in DB::hql().txn(stmts).await? {
                 res?;
             }
         } else {
             let mut cl = DB::pg().await?;
-            let txn = cl.transaction().await?;
-            // `refresh_tokens.client_id` has no FK, device refresh tokens cascade.
-            let sql_rt = "DELETE FROM refresh_tokens WHERE client_id = $1";
-            DB::pg_txn_append(&txn, sql_rt, &[&self.id]).await?;
-            // Legacy tokens (`client_id` NULL) cannot be attributed and would be accepted by a
-            // recreated client with the same id, so with `consent.enable` all of them go.
-            if drop_legacy {
-                let sql_rt_legacy = "DELETE FROM refresh_tokens WHERE client_id IS NULL";
-                DB::pg_txn_append(&txn, sql_rt_legacy, &[]).await?;
+            // read committed, like `UserConsent::revoke`, whose lock order this follows
+            let txn = cl
+                .build_transaction()
+                .isolation_level(tokio_postgres::IsolationLevel::ReadCommitted)
+                .start()
+                .await?;
+            let mut jtis = PgDeletedJtis::default();
+            for (sql, binds_id) in pg_delete_statements(drop_legacy) {
+                if binds_id {
+                    jtis.delete(&txn, sql, &[&self.id]).await?;
+                } else {
+                    jtis.delete(&txn, sql, &[]).await?;
+                }
             }
-            let sql = "DELETE FROM clients WHERE id = $1";
-            DB::pg_txn_append(&txn, sql, &[&self.id]).await?;
+            jtis.revoke(&txn).await?;
             txn.commit().await?;
         }
 
@@ -453,9 +461,32 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
+    /// Decodes a cached client. An entry this version cannot decode is `None`, a cache miss, and
+    /// is read from the source again. Fields appended at the end, like `consent`, decode from an
+    /// older entry as long as they have a `#[serde(default)]`.
+    fn decode_cached(bytes: &[u8]) -> Option<Self> {
+        match bincode_next::serde::decode_from_slice::<Self, _>(
+            bytes,
+            bincode_next::config::legacy(),
+        ) {
+            Ok((slf, _)) => Some(slf),
+            Err(err) => {
+                warn!(?err, "Ignoring a cached client that cannot be decoded");
+                None
+            }
+        }
+    }
+
+    async fn find_cached(cache: Cache, key: String) -> Result<Option<Self>, ErrorResponse> {
+        Ok(DB::hql()
+            .get_bytes(cache, key)
+            .await?
+            .and_then(|bytes| Self::decode_cached(&bytes)))
+    }
+
     // Returns a client by id without its secret.
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
+        if let Some(slf) = Self::find_cached(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         };
 
@@ -537,7 +568,7 @@ VALUES ($1, $2, $3, $4)"#;
             return Self::find(id).await;
         }
 
-        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, &id).await? {
+        if let Some(slf) = Self::find_cached(Cache::ClientEphemeral, id.clone()).await? {
             return Ok(slf);
         }
 
@@ -617,6 +648,7 @@ VALUES ($1, $2, $3, $4)"#;
                 self.claims_at_root,
                 allowed_resources,
                 default_aud,
+                &self.consent,
                 &self.id
             ),
         ));
@@ -668,6 +700,7 @@ VALUES ($1, $2, $3, $4)"#;
                 &self.claims_at_root,
                 &allowed_resources,
                 &default_aud,
+                &self.consent,
                 &self.id,
             ],
         )
@@ -720,6 +753,7 @@ VALUES ($1, $2, $3, $4)"#;
                         self.claims_at_root,
                         allowed_resources,
                         default_aud,
+                        &self.consent,
                         self.id.clone()
                     ),
                 )
@@ -753,6 +787,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &self.claims_at_root,
                     &allowed_resources,
                     &default_aud,
+                    &self.consent,
                     &self.id,
                 ],
             )
@@ -1095,10 +1130,27 @@ impl Client {
     /// clients, and ephemeral clients whose document declares no allow-list of its own,
     /// are matched against `dynamic_clients.allowed_resources` /
     /// `ephemeral_clients.allowed_resources` instead, resolved from the live config and
-    /// never stored with the client; ephemeral clients are otherwise only permitted when
+    /// never stored with the client; ephemeral clients are otherwise only permitted for a
+    /// resource from `[[consent.sources]]` (with `consent.enable`), or when
     /// `ephemeral_clients.danger_allow_unvalidated_resource` is enabled. On any failure
     /// an `invalid_target` error (RFC 8707 §2) is returned.
     pub fn validate_resource_request(&self, resource: &str) -> Result<(), ErrorResponse> {
+        let vars = &RauthyConfig::get().vars;
+        self.validate_resource_request_with(
+            resource,
+            &vars.ephemeral_clients.allowed_resources,
+            vars.ephemeral_clients.danger_allow_unvalidated_resource,
+            &vars.consent,
+        )
+    }
+
+    fn validate_resource_request_with(
+        &self,
+        resource: &str,
+        ephemeral_allowed_resources: &[String],
+        danger_allow_unvalidated_resource: bool,
+        consent: &VarsConsent,
+    ) -> Result<(), ErrorResponse> {
         if resource.is_empty() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::InvalidTarget,
@@ -1143,16 +1195,9 @@ impl Client {
             // matched above; for one that declares none the operator's
             // `ephemeral_clients.allowed_resources` is resolved from the live config the
             // same way, without the blunt `danger_allow_unvalidated_resource`.
-            && (RauthyConfig::get()
-                .vars
-                .ephemeral_clients
-                .allowed_resources
-                .iter()
-                .any(|r| r == resource)
-                || RauthyConfig::get()
-                    .vars
-                    .ephemeral_clients
-                    .danger_allow_unvalidated_resource)
+            && (ephemeral_allowed_resources.iter().any(|r| r == resource)
+                || danger_allow_unvalidated_resource
+                || consent.is_registered(resource))
         {
             Ok(())
         } else {
@@ -1161,6 +1206,75 @@ impl Client {
                 "this client has no `allowed_resources` configured for the requested `resource`",
             ))
         }
+    }
+
+    /// Validates a client `consent` value from the API. Empty means unset.
+    pub fn validate_consent(consent: Option<String>) -> Result<Option<String>, ErrorResponse> {
+        let Some(consent) = consent.filter(|c| !c.is_empty()) else {
+            return Ok(None);
+        };
+        ConsentSource::parse(&consent).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("invalid `consent`: {err}"),
+            )
+        })?;
+        Ok(Some(consent))
+    }
+
+    /// The consent source for a login to this client with the optional RFC 8707 `resource`.
+    /// `None` only without `consent.enable`. Precedence: `[[consent.sources]]` entry for the
+    /// `resource`, the client's own `consent`, `Local`.
+    pub fn consent_source(&self, resource: Option<&str>) -> Option<ConsentSource> {
+        self.consent_source_with(resource, &RauthyConfig::get().vars.consent)
+    }
+
+    pub(crate) fn consent_source_with(
+        &self,
+        resource: Option<&str>,
+        vars: &VarsConsent,
+    ) -> Option<ConsentSource> {
+        if !vars.enable {
+            return None;
+        }
+
+        if let Some(entry) = resource.and_then(|r| vars.source_for(r)) {
+            return Some(entry.source.clone());
+        }
+
+        match self.consent.as_deref().map(ConsentSource::parse) {
+            Some(Ok(source)) => Some(source),
+            Some(Err(err)) => {
+                warn!(
+                    "Invalid `consent` for client {}, using `local`: {err}",
+                    self.id
+                );
+                Some(ConsentSource::Local)
+            }
+            None => Some(ConsentSource::Local),
+        }
+    }
+
+    /// With `consent.enable` and a non-empty `[[consent.sources]]`, a `resource` is required
+    /// for an ephemeral client. Only its presence is checked here, whether it is allowed is up
+    /// to [`Client::validate_resource_request`]. Today only the refresh enforces this, as
+    /// `invalid_grant`; the login answers `consent_required` once the consent screen lands.
+    pub fn validate_consent_resource(&self, resource: Option<&str>) -> Result<(), ErrorResponse> {
+        self.validate_consent_resource_with(resource, &RauthyConfig::get().vars.consent)
+    }
+
+    pub fn validate_consent_resource_with(
+        &self,
+        resource: Option<&str>,
+        vars: &VarsConsent,
+    ) -> Result<(), ErrorResponse> {
+        if vars.requires_resource() && self.is_ephemeral() && resource.is_none() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::ConsentRequired,
+                "a `resource` is required for ephemeral clients",
+            ));
+        }
+        Ok(())
     }
 
     #[inline]
@@ -1786,6 +1900,89 @@ impl Client {
     }
 }
 
+/// The device refresh tokens of all devices of the client `$1`
+const SQL_RTD_DELETE_BY_CLIENT: &str = r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#;
+const SQL_RT_DELETE_LEGACY: &str = "DELETE FROM refresh_tokens WHERE client_id IS NULL";
+const SQL_RT_DELETE_BY_CLIENT: &str = "DELETE FROM refresh_tokens WHERE client_id = $1";
+const SQL_CLIENT_DELETE: &str = "DELETE FROM clients WHERE id = $1";
+
+/// [`SQL_RTD_DELETE_BY_CLIENT`] on Postgres, returning the access tokens to revoke
+const SQL_PG_RTD_DELETE_BY_CLIENT_RET: &str = r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+RETURNING access_token_jti"#;
+const SQL_PG_RT_DELETE_LEGACY_RET: &str =
+    "DELETE FROM refresh_tokens WHERE client_id IS NULL RETURNING access_token_jti";
+const SQL_PG_RT_DELETE_BY_CLIENT_RET: &str =
+    "DELETE FROM refresh_tokens WHERE client_id = $1 RETURNING access_token_jti";
+
+/// Revoke the access tokens of the refresh tokens that the statement of the same name without
+/// `IT_REVOKE` deletes. hiqlite's `txn` returns only the number of affected rows of each
+/// statement, not the rows a delete returns, so each runs right before that delete, in the same
+/// transaction, and finds the access tokens with a subselect.
+const SQL_HQL_IT_REVOKE_RTD_BY_CLIENT: &str = r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (
+    SELECT access_token_jti FROM refresh_tokens_devices
+    WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+)"#;
+const SQL_HQL_IT_REVOKE_RT_LEGACY: &str = r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#;
+const SQL_HQL_IT_REVOKE_RT_BY_CLIENT: &str = r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#;
+
+/// The statements of [`Client::delete`] on Postgres in order, each with `true` if it binds the
+/// client id as `$1`. `refresh_tokens.client_id` and `user_consents.client_id` have no FK. Legacy
+/// refresh tokens (`client_id` NULL) cannot be attributed and would be accepted by a recreated
+/// client with the same id, so with `drop_legacy` (`consent.enable`) all of them go.
+///
+/// The tables come in the order a consent revoke (`UserConsent::revoke`) takes their row locks:
+/// user consents, device refresh tokens, legacy refresh tokens, refresh tokens of the client.
+/// With the opposite order, a revoke and a delete of the same client running at the same time
+/// could each wait for a row the other one holds, and Postgres would abort one of them as a
+/// deadlock. The device refresh tokens are deleted explicitly for the same reason, instead of
+/// with the cascade of the client delete at the end.
+///
+/// The refresh token deletes return the `access_token_jti` of their rows, which
+/// [`PgDeletedJtis::revoke`] revokes after these statements, in the same transaction, like the
+/// consent revoke does last. A discard of one of these refresh tokens that runs at the same time
+/// and finds its row deleted leaves the access token to this transaction.
+pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
+    let mut stmts = vec![
+        (SQL_CONSENT_DELETE_BY_CLIENT, true),
+        (SQL_PG_RTD_DELETE_BY_CLIENT_RET, true),
+    ];
+    if drop_legacy {
+        stmts.push((SQL_PG_RT_DELETE_LEGACY_RET, false));
+    }
+    stmts.push((SQL_PG_RT_DELETE_BY_CLIENT_RET, true));
+    stmts.push((SQL_CLIENT_DELETE, true));
+    stmts
+}
+
+/// The statements of [`Client::delete`] on hiqlite: those of [`pg_delete_statements`], with the
+/// access tokens of each refresh token table revoked right before it is deleted. hiqlite applies
+/// the transaction as one raft log entry, so no other write sees a part of it.
+pub(crate) fn hql_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
+    let mut stmts = vec![
+        (SQL_CONSENT_DELETE_BY_CLIENT, true),
+        (SQL_HQL_IT_REVOKE_RTD_BY_CLIENT, true),
+        (SQL_RTD_DELETE_BY_CLIENT, true),
+    ];
+    if drop_legacy {
+        stmts.push((SQL_HQL_IT_REVOKE_RT_LEGACY, false));
+        stmts.push((SQL_RT_DELETE_LEGACY, false));
+    }
+    stmts.push((SQL_HQL_IT_REVOKE_RT_BY_CLIENT, true));
+    stmts.push((SQL_RT_DELETE_BY_CLIENT, true));
+    stmts.push((SQL_CLIENT_DELETE, true));
+    stmts
+}
+
 /// Validates a dynamic-client redirect URI.
 /// Rejects backchannel callbacks for dynamic clients.
 fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
@@ -1957,6 +2154,7 @@ impl Client {
             claims_at_root: self.claims_at_root,
             allowed_resources,
             default_aud,
+            consent: self.consent,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -2048,6 +2246,7 @@ impl Client {
             default_aud: None,
             // never stored, so there is no row that could be deleted and recreated
             created_micros: None,
+            consent: None,
         })
     }
 }
@@ -2092,6 +2291,7 @@ impl Default for Client {
             allowed_resources: None,
             default_aud: None,
             created_micros: None,
+            consent: None,
         }
     }
 }
@@ -2126,6 +2326,8 @@ impl TryFrom<NewClientRequest> for Client {
                 None
             };
 
+        let consent = Self::validate_consent(client.consent)?;
+
         Ok(Self {
             id: client.id,
             secret: client.secret,
@@ -2133,6 +2335,7 @@ impl TryFrom<NewClientRequest> for Client {
             confidential: client.confidential,
             redirect_uris,
             post_logout_redirect_uris,
+            consent,
             ..Default::default()
         })
     }
@@ -2164,6 +2367,7 @@ impl Client {
         self.allowed_resources = current.allowed_resources;
         self.default_aud = current.default_aud;
         self.created_micros = current.created_micros;
+        self.consent = current.consent;
     }
 
     /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one
@@ -2388,8 +2592,10 @@ pub(crate) fn retain_supported_grant_types(grant_types: &mut Vec<String>) {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::rauthy_config::VarsConsentSource;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_validate_no_backchannel_logout_uri() {
@@ -2427,6 +2633,415 @@ pub(crate) mod tests {
         assert!(validate_dyn_client_redirect_uri("").is_err());
     }
     use pretty_assertions::assert_eq;
+
+    /// `Client` as cached by a version without `consent`.
+    #[derive(Serialize)]
+    struct ClientWithoutConsent {
+        id: String,
+        name: Option<String>,
+        enabled: bool,
+        confidential: bool,
+        secret: Option<Vec<u8>>,
+        secret_kid: Option<String>,
+        redirect_uris: String,
+        post_logout_redirect_uris: Option<String>,
+        allowed_origins: Option<String>,
+        flows_enabled: String,
+        access_token_alg: String,
+        id_token_alg: String,
+        auth_code_lifetime: i32,
+        access_token_lifetime: i32,
+        scopes: String,
+        default_scopes: String,
+        challenge: Option<String>,
+        force_mfa: bool,
+        client_uri: Option<String>,
+        contacts: Option<String>,
+        backchannel_logout_uri: Option<String>,
+        restrict_group_prefix: Option<String>,
+        claims: Option<Vec<u8>>,
+        claims_at_root: bool,
+        allowed_resources: Option<String>,
+        default_aud: Option<String>,
+        created_micros: Option<i64>,
+    }
+
+    #[test]
+    fn cached_client_decode() {
+        let old = ClientWithoutConsent {
+            id: "client".to_string(),
+            name: Some("Client".to_string()),
+            enabled: true,
+            confidential: false,
+            secret: None,
+            secret_kid: None,
+            redirect_uris: "https://app.example.com/cb".to_string(),
+            post_logout_redirect_uris: None,
+            allowed_origins: None,
+            flows_enabled: "authorization_code".to_string(),
+            access_token_alg: "EdDSA".to_string(),
+            id_token_alg: "EdDSA".to_string(),
+            auth_code_lifetime: 60,
+            access_token_lifetime: 1800,
+            scopes: "openid".to_string(),
+            default_scopes: "openid".to_string(),
+            challenge: None,
+            force_mfa: false,
+            client_uri: None,
+            contacts: None,
+            backchannel_logout_uri: None,
+            restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
+            created_micros: Some(1),
+        };
+        let bytes =
+            bincode_next::serde::encode_to_vec(&old, bincode_next::config::legacy()).unwrap();
+
+        // bincode ends the struct at the end of the input, `#[serde(default)]` fills `consent`
+        let decoded = Client::decode_cached(&bytes).unwrap();
+        assert_eq!(decoded.id, "client");
+        assert_eq!(decoded.created_micros, Some(1));
+        assert_eq!(decoded.consent, None);
+
+        // an entry cut inside a field does not decode and is a miss instead of an error
+        assert!(
+            bincode_next::serde::decode_from_slice::<Client, _>(
+                &bytes[..10],
+                bincode_next::config::legacy()
+            )
+            .is_err()
+        );
+        assert!(Client::decode_cached(&bytes[..10]).is_none());
+
+        // the current shape decodes
+        let client = Client {
+            id: "client".to_string(),
+            consent: Some("local".to_string()),
+            ..Default::default()
+        };
+        let bytes =
+            bincode_next::serde::encode_to_vec(&client, bincode_next::config::legacy()).unwrap();
+        assert_eq!(Client::decode_cached(&bytes), Some(client));
+    }
+
+    /// All hiqlite migrations, in order.
+    fn sqlite_full_schema() -> rusqlite::Connection {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/hiqlite");
+        let mut files = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .map(|p| {
+                let name = p.file_name().unwrap().to_str().unwrap();
+                let nr: u32 = name.split('_').next().unwrap().parse().unwrap();
+                (nr, p)
+            })
+            .collect::<Vec<_>>();
+        files.sort();
+
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        for (_, path) in files {
+            conn.execute_batch(&std::fs::read_to_string(path).unwrap())
+                .unwrap();
+        }
+        conn
+    }
+
+    /// The hiqlite transaction of `Client::delete` against the full schema: a client recreated
+    /// with the same id inherits neither the user consents nor the refresh tokens of the old one,
+    /// and the access tokens of the deleted refresh tokens are revoked.
+    #[test]
+    fn delete_and_recreate_leaves_no_consent() {
+        for drop_legacy in [false, true] {
+            let mut conn = sqlite_full_schema();
+            conn.execute_batch(
+                r#"
+CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
+UPDATE tu SET id = 'u1', email = 'u1@example.com';
+INSERT INTO users SELECT * FROM tu;
+CREATE TEMP TABLE tc AS SELECT * FROM clients LIMIT 1;
+UPDATE tc SET id = 'c1';
+INSERT INTO clients SELECT * FROM tc;
+UPDATE tc SET id = 'c2';
+INSERT INTO clients SELECT * FROM tc;
+INSERT INTO user_consents
+    (user_id, client_id, resource, scopes, content_hash, created, updated, ip)
+VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
+       ('u1', 'c1', 'https://api.example.com', 'openid', 'h', 1, 1, '127.0.0.1'),
+       ('u1', 'c2', '', 'openid', 'h', 1, 1, '127.0.0.1');
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
+VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1'),
+       ('rt_legacy', 'u1', 1, 2, 'j_legacy', NULL),
+       ('rt_c2', 'u1', 1, 2, 'j_c2', 'c2');
+INSERT INTO devices (id, client_id, user_id, created, access_exp, peer_ip, name)
+VALUES ('d1', 'c1', 'u1', 1, 2, '127.0.0.1', 'd1'),
+       ('d2', 'c2', 'u1', 1, 2, '127.0.0.1', 'd2');
+INSERT INTO refresh_tokens_devices (id, device_id, user_id, nbf, exp, access_token_jti)
+VALUES ('rtd_c1', 'd1', 'u1', 1, 2, 'j_d1'),
+       ('rtd_c2', 'd2', 'u1', 1, 2, 'j_d2');
+INSERT INTO issued_tokens (jti, user_id, exp)
+VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
+       ('j_d1', 'u1', 2), ('j_d2', 'u1', 2);
+"#,
+            )
+            .unwrap();
+
+            let txn = conn.transaction().unwrap();
+            for (sql, binds_id) in hql_delete_statements(drop_legacy) {
+                if binds_id {
+                    txn.execute(sql, ["c1"]).unwrap();
+                } else {
+                    txn.execute(sql, []).unwrap();
+                }
+            }
+            txn.commit().unwrap();
+            conn.execute_batch("UPDATE tc SET id = 'c1'; INSERT INTO clients SELECT * FROM tc;")
+                .unwrap();
+
+            let ids = |sql: &str| -> Vec<String> {
+                let mut stmt = conn.prepare(sql).unwrap();
+                stmt.query_map([], |r| r.get::<_, String>(0))
+                    .unwrap()
+                    .map(|r| r.unwrap())
+                    .collect()
+            };
+            assert_eq!(
+                ids("SELECT client_id FROM user_consents ORDER BY client_id"),
+                vec!["c2".to_string()]
+            );
+            let mut expected_rt = vec!["rt_c2".to_string()];
+            if !drop_legacy {
+                expected_rt.push("rt_legacy".to_string());
+            }
+            assert_eq!(
+                ids("SELECT id FROM refresh_tokens ORDER BY id"),
+                expected_rt,
+                "drop_legacy: {drop_legacy}"
+            );
+            assert_eq!(
+                ids("SELECT id FROM clients WHERE id IN ('c1', 'c2') ORDER BY id"),
+                vec!["c1".to_string(), "c2".to_string()]
+            );
+            assert_eq!(
+                ids("SELECT id FROM refresh_tokens_devices ORDER BY id"),
+                vec!["rtd_c2".to_string()]
+            );
+            // the access tokens of the deleted refresh tokens are revoked, the others are not
+            let mut revoked = vec!["j_c1".to_string(), "j_d1".to_string()];
+            if drop_legacy {
+                revoked.push("j_legacy".to_string());
+            }
+            assert_eq!(
+                ids("SELECT jti FROM issued_tokens WHERE revoked ORDER BY jti"),
+                revoked,
+                "drop_legacy: {drop_legacy}"
+            );
+        }
+    }
+
+    fn consent_vars(enable: bool) -> VarsConsent {
+        VarsConsent {
+            enable,
+            content_cache_ttl: 3600,
+            danger_allow_private_addresses: false,
+            sources: [
+                VarsConsentSource::new(
+                    "https://api.example.com".to_string(),
+                    "https://consent.example.com/api",
+                    "API".to_string(),
+                )
+                .unwrap(),
+                VarsConsentSource::new(
+                    "https://local.example.com".to_string(),
+                    "local",
+                    "Local".to_string(),
+                )
+                .unwrap(),
+            ]
+            .into_iter()
+            .map(|s| (s.resource.clone(), s))
+            .collect(),
+        }
+    }
+
+    #[test]
+    fn consent_source_precedence() {
+        let remote = |url: &str| ConsentSource::Remote {
+            url: reqwest::Url::parse(url).unwrap(),
+        };
+        let client = Client {
+            id: "client".to_string(),
+            consent: Some("https://consent.example.com/client".to_string()),
+            ..Default::default()
+        };
+        let vars = consent_vars(true);
+
+        // registry for the resource
+        assert_eq!(
+            client.consent_source_with(Some("https://api.example.com"), &vars),
+            Some(remote("https://consent.example.com/api"))
+        );
+        assert_eq!(
+            client.consent_source_with(Some("https://local.example.com"), &vars),
+            Some(ConsentSource::Local)
+        );
+        // client column
+        assert_eq!(
+            client.consent_source_with(Some("https://other.example.com"), &vars),
+            Some(remote("https://consent.example.com/client"))
+        );
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(remote("https://consent.example.com/client"))
+        );
+        // default
+        let client = Client::default();
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(ConsentSource::Local)
+        );
+        let client = Client {
+            consent: Some("local".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            client.consent_source_with(Some("https://other.example.com"), &vars),
+            Some(ConsentSource::Local)
+        );
+        // an invalid stored value falls back to `local`
+        let client = Client {
+            consent: Some("http://consent.example.com".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(ConsentSource::Local)
+        );
+
+        // disabled
+        let vars = consent_vars(false);
+        assert_eq!(
+            client.consent_source_with(Some("https://api.example.com"), &vars),
+            None
+        );
+        assert_eq!(Client::default().consent_source_with(None, &vars), None);
+    }
+
+    #[test]
+    fn consent_resource_for_ephemeral_clients() {
+        let eph = Client::try_from_ephemeral(
+            ephemeral_request("https://cimd.example/client"),
+            &ephemeral_vars(&["openid"], &["openid"]),
+        )
+        .unwrap();
+        let client = Client {
+            id: "client".to_string(),
+            ..Default::default()
+        };
+        let vars = consent_vars(true);
+
+        let err = eph.validate_consent_resource_with(None, &vars).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::ConsentRequired);
+        assert!(
+            eph.validate_consent_resource_with(Some("https://api.example.com"), &vars)
+                .is_ok()
+        );
+        assert!(client.validate_consent_resource_with(None, &vars).is_ok());
+
+        let empty = VarsConsent {
+            sources: BTreeMap::default(),
+            ..consent_vars(true)
+        };
+        assert!(eph.validate_consent_resource_with(None, &empty).is_ok());
+        assert!(
+            eph.validate_consent_resource_with(None, &consent_vars(false))
+                .is_ok()
+        );
+
+        assert!(vars.is_registered("https://api.example.com"));
+        assert!(!vars.is_registered("https://other.example.com"));
+        assert!(!consent_vars(false).is_registered("https://api.example.com"));
+    }
+
+    #[test]
+    fn resource_request_consent_registry() {
+        let eph = Client::try_from_ephemeral(
+            ephemeral_request("https://cimd.example/client"),
+            &ephemeral_vars(&["openid"], &["openid"]),
+        )
+        .unwrap();
+        let vars = consent_vars(true);
+        let registered = "https://api.example.com";
+        let other = "https://other.example.com";
+
+        // an ephemeral client without `allowed_resources` may request a registered resource
+        assert!(
+            eph.validate_resource_request_with(registered, &[], false, &vars)
+                .is_ok()
+        );
+        let err = eph
+            .validate_resource_request_with(other, &[], false, &vars)
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::InvalidTarget);
+        // not without `consent.enable`
+        let err = eph
+            .validate_resource_request_with(registered, &[], false, &consent_vars(false))
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::InvalidTarget);
+        // `danger_allow_unvalidated_resource` still allows anything
+        assert!(
+            eph.validate_resource_request_with(other, &[], true, &vars)
+                .is_ok()
+        );
+
+        // the registry does not widen a configured allow-list
+        let eph_allowed = Client {
+            allowed_resources: Some(other.to_string()),
+            ..eph.clone()
+        };
+        let err = eph_allowed
+            .validate_resource_request_with(registered, &[], false, &vars)
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::InvalidTarget);
+        assert!(
+            eph_allowed
+                .validate_resource_request_with(other, &[], false, &vars)
+                .is_ok()
+        );
+
+        // nor applies to static clients
+        let client = Client {
+            id: "client".to_string(),
+            ..Default::default()
+        };
+        let err = client
+            .validate_resource_request_with(registered, &[], false, &vars)
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::InvalidTarget);
+    }
+
+    #[test]
+    fn validate_client_consent() {
+        assert_eq!(Client::validate_consent(None).unwrap(), None);
+        assert_eq!(Client::validate_consent(Some(String::new())).unwrap(), None);
+        assert_eq!(
+            Client::validate_consent(Some("local".to_string())).unwrap(),
+            Some("local".to_string())
+        );
+        assert_eq!(
+            Client::validate_consent(Some("https://consent.example.com".to_string())).unwrap(),
+            Some("https://consent.example.com".to_string())
+        );
+        let err =
+            Client::validate_consent(Some("http://consent.example.com".to_string())).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+        let err = Client::validate_consent(Some("https://consent.example.com?lang=en".to_string()))
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+    }
 
     #[test]
     fn retain_supported_grant_types_strips_unknown() {
@@ -2619,6 +3234,7 @@ pub(crate) mod tests {
             allowed_resources: None,
             default_aud: None,
             created_micros: None,
+            consent: None,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -3083,6 +3699,7 @@ pub(crate) mod tests {
             allowed_resources: None,
             default_aud: None,
             created_micros: None,
+            consent: None,
         }
     }
 
@@ -3240,6 +3857,7 @@ pub(crate) mod tests {
             allowed_resources: Some("https://api.example.com".to_string()),
             default_aud: Some("https://aud.example.com".to_string()),
             created_micros: Some(1),
+            consent: Some("https://consent.example.com/api".to_string()),
         }
     }
 
@@ -3294,6 +3912,7 @@ pub(crate) mod tests {
         assert_eq!(new_client.allowed_resources, current.allowed_resources);
         assert_eq!(new_client.default_aud, current.default_aud);
         assert_eq!(new_client.created_micros, current.created_micros);
+        assert_eq!(new_client.consent, current.consent);
         // still public -> the admin's PKCE setting is kept
         assert_eq!(new_client.challenge, current.challenge);
 

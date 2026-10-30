@@ -150,6 +150,21 @@ export const I18nNl: I18n = {
             notAvailable: 'Deze naam is niet beschikbaar.',
             preferredUsername: 'Gewenste gebruikersnaam',
         },
+        privacy: {
+            clientId: 'Client-ID',
+            connectedApps: 'Verbonden apps',
+            connectedAppsDesc:
+                'Applicaties die u toestemming heeft gegeven om uw account te gebruiken.',
+            granted: 'Verleend',
+            noConnectedApps: 'Er heeft nog geen applicatie toegang gekregen.',
+            privacy: 'Privacy',
+            resource: 'Resource',
+            revoke: 'Toegang intrekken',
+            revokeDesc:
+                'Intrekken verwijdert de toestemming en de applicatie kan haar toegang niet meer vernieuwen. Access tokens die met de verwijderde refresh tokens zijn uitgegeven, worden ingetrokken bij userinfo en introspectie. Applicaties die hun tokens zelf valideren, kunnen ze nog accepteren tot ze verlopen. De applicatie moet opnieuw om uw toestemming vragen.',
+            scopes: 'Scopes',
+            updated: 'Bijgewerkt',
+        },
         providerLink: 'Account koppelen',
         providerLinkDesc: `U kunt dit account koppelen aan een van de volgende inlogproviders.\nNa
             het activeren van deze functie wordt u doorgestuurd naar de inlogpagina van de gekozen\n

@@ -67,6 +67,11 @@ export let I18nAdminNl: I18nAdmin = {
         confidential: 'Vertrouwelijk',
         confidentialNoSecret: 'Dit is een niet-vertrouwelijke client en heeft daarom geen geheim.',
         config: 'Clientconfiguratie',
+        consent: {
+            builtIn: 'Ingebouwd',
+            desc: `Waar de inhoud van het toestemmingsscherm vandaan komt, wanneer 'consent.enable' is ingesteld. Ingebouwd toont de gevraagde scopes. Een URL moet de toestemmingsinhoud als JSON leveren. Een '[[consent.sources]]'-vermelding voor de gevraagde resource heeft voorrang.`,
+            source: 'Toestemmingsbron',
+        },
         delete1: 'Weet u zeker dat u deze client wilt verwijderen?',
         descAuthCode: `De geldigheid van auth-codes kan worden aangepast voor extra beveiliging. Auth-codes
             kunnen slechts eenmaal worden gebruikt en zijn standaard 60 seconden geldig. Hoe korter de geldigheid, hoe

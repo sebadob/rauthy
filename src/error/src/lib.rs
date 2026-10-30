@@ -12,6 +12,10 @@ pub enum ErrorResponseType {
     BadRequest,
     Blocked,
     Connection,
+    /// OIDC Core §3.1.2.6: the authorization requires user consent that cannot be obtained.
+    /// Serialized as the OIDC error code `consent_required`.
+    #[serde(rename = "consent_required")]
+    ConsentRequired,
     CSRFTokenError,
     Database,
     DatabaseIo,
