@@ -19,6 +19,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/macros/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/i18n/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/i18n/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/src/i18n-prep/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/book/book" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/docs" />

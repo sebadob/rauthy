@@ -1,4 +1,3 @@
-use crate::maps::HASHES_ADMIN;
 use rauthy_common::content_hash::content_hash;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -667,8 +666,9 @@ impl I18nAdmin<'_> {
         content_hash(serde_json::to_string(self).unwrap())
     }
 
+    #[cfg(not(feature = "i18n-prep"))]
     pub fn get_hash(key: &str) -> Option<&'static str> {
-        HASHES_ADMIN.get(key).map(|v| *v)
+        crate::maps::HASHES_ADMIN.get(key).map(|v| *v)
     }
 }
 

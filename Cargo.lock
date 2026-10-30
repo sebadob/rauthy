@@ -4891,7 +4891,6 @@ dependencies = [
  "actix-web",
  "actix-web-prom",
  "argon2",
- "async-compression",
  "chrono",
  "chrono-tz",
  "cidr",
@@ -4905,7 +4904,6 @@ dependencies = [
  "num_cpus",
  "openssl",
  "openssl-sys",
- "phf_codegen",
  "pretty_assertions",
  "prometheus",
  "rauthy-api-types",
@@ -4913,7 +4911,6 @@ dependencies = [
  "rauthy-data",
  "rauthy-error",
  "rauthy-handlers",
- "rauthy-i18n",
  "rauthy-jwt",
  "rauthy-middlewares",
  "rauthy-schedulers",
@@ -5181,6 +5178,17 @@ dependencies = [
  "rauthy-error",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "rauthy-i18n-prep"
+version = "0.37.2"
+dependencies = [
+ "async-compression",
+ "phf_codegen",
+ "rauthy-i18n",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

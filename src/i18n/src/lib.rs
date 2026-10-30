@@ -8,6 +8,7 @@ pub use crate::common::I18nCommon;
 pub mod admin;
 pub mod common;
 pub mod languages;
+#[cfg(not(feature = "i18n-prep"))]
 pub(crate) mod maps;
 
 pub fn build_all_admin() -> Vec<(Language, I18nAdmin<'static>)> {
@@ -73,7 +74,9 @@ mod tests {
         build_all_admin();
         build_all_common();
 
+        #[cfg(not(feature = "i18n-prep"))]
         I18nCommon::get_hash(Language::De.as_str()).unwrap();
+        #[cfg(not(feature = "i18n-prep"))]
         I18nAdmin::get_hash(Language::De.as_str()).unwrap();
     }
 }

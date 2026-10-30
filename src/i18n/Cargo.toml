@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+i18n-prep = []
+
 [dependencies]
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
