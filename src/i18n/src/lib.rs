@@ -8,6 +8,7 @@ pub use crate::common::I18nCommon;
 pub mod admin;
 pub mod common;
 pub mod languages;
+pub(crate) mod maps;
 
 pub fn build_all_admin() -> Vec<(Language, I18nAdmin<'static>)> {
     let mut admin = Vec::with_capacity(16);

@@ -1,3 +1,4 @@
+use crate::maps::HASHES_ADMIN;
 use rauthy_common::content_hash::content_hash;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -661,15 +662,13 @@ pub struct ValidationRedirectUri<'a> {
     pub reserved_key_logout: Cow<'a, str>,
 }
 
-include!("../i18n_hashes/admin");
-
 impl I18nAdmin<'_> {
     pub fn content_hash(&self) -> String {
         content_hash(serde_json::to_string(self).unwrap())
     }
 
     pub fn get_hash(key: &str) -> Option<&'static str> {
-        HASHES.get(key).map(|v| *v)
+        HASHES_ADMIN.get(key).map(|v| *v)
     }
 }
 
