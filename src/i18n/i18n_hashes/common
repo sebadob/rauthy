@@ -1,12 +1,23 @@
-de_af4654721db969f5
-en_c0aa62f0c6288549
-es_a7a236d8fe07857c
-fr_f61b3bfe20783e56
-ja_5e8fd9a781866cfb
-ko_04551e5bd984cb8d
-nb_bfb76f3dc565e85a
-nl_0ef6817d8441e229
-pt_9f07183688358c54
-ru_4115c415cec2e5c1
-uk_7ff2f75817ca4c43
-zhhans_04e26d064c702a6a
+static HASHES: ::phf::Map<&'static str, &'static str> = ::phf::Map {
+    key: 16287231350648472473,
+    disps: &[
+        (0, 3),
+        (1, 11),
+        (0, 10),
+        (1, 0),
+    ],
+    entries: &[
+        ("es", "a7a236d8fe07857c"),
+        ("zhhans", "04e26d064c702a6a"),
+        ("fr", "f61b3bfe20783e56"),
+        ("uk", "7ff2f75817ca4c43"),
+        ("pt", "9f07183688358c54"),
+        ("ko", "04551e5bd984cb8d"),
+        ("ru", "4115c415cec2e5c1"),
+        ("en", "c0aa62f0c6288549"),
+        ("nl", "0ef6817d8441e229"),
+        ("ja", "5e8fd9a781866cfb"),
+        ("nb", "bfb76f3dc565e85a"),
+        ("de", "af4654721db969f5"),
+    ],
+};

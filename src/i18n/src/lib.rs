@@ -1,9 +1,6 @@
 // Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
 
-use ahash::{HashMap, HashMapExt};
 use rauthy_common::language::Language;
-use std::str::FromStr;
-use std::sync::LazyLock;
 
 pub use crate::admin::I18nAdmin;
 pub use crate::common::I18nCommon;
@@ -11,12 +8,6 @@ pub use crate::common::I18nCommon;
 pub mod admin;
 pub mod common;
 pub mod languages;
-
-pub static I18N_ADMIN_HASHES: LazyLock<HashMap<Language, &'static str>> =
-    LazyLock::new(|| parse_compile_time_hashes(include_str!("../i18n_hashes/admin")));
-
-pub static I18N_COMMON_HASHES: LazyLock<HashMap<Language, &'static str>> =
-    LazyLock::new(|| parse_compile_time_hashes(include_str!("../i18n_hashes/common")));
 
 pub fn build_all_admin() -> Vec<(Language, I18nAdmin<'static>)> {
     let mut admin = Vec::with_capacity(16);
@@ -72,19 +63,6 @@ impl From<&Language> for I18nAdmin<'_> {
     }
 }
 
-fn parse_compile_time_hashes(input: &'static str) -> HashMap<Language, &'static str> {
-    let mut map = HashMap::with_capacity(16);
-    for line in input.lines() {
-        if line.is_empty() {
-            continue;
-        }
-        let (key, _) = line.split_once('_').unwrap();
-        let lang = Language::from_str(key).unwrap();
-        map.insert(lang, line);
-    }
-    map
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,7 +72,7 @@ mod tests {
         build_all_admin();
         build_all_common();
 
-        I18N_ADMIN_HASHES.get(&Language::De).unwrap();
-        I18N_COMMON_HASHES.get(&Language::De).unwrap();
+        I18nCommon::get_hash(Language::De.as_str()).unwrap();
+        I18nAdmin::get_hash(Language::De.as_str()).unwrap();
     }
 }

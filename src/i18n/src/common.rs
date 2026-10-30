@@ -398,9 +398,15 @@ pub struct UserRevoke<'a> {
     pub desc2: &'a str,
 }
 
+include!("../i18n_hashes/common");
+
 impl I18nCommon<'_> {
     pub fn content_hash(&self) -> String {
         content_hash(serde_json::to_string(self).unwrap())
+    }
+
+    pub fn get_hash(key: &str) -> Option<&'static str> {
+        HASHES.get(key).map(|v| *v)
     }
 }
 

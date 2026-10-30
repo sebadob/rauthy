@@ -661,9 +661,15 @@ pub struct ValidationRedirectUri<'a> {
     pub reserved_key_logout: Cow<'a, str>,
 }
 
+include!("../i18n_hashes/admin");
+
 impl I18nAdmin<'_> {
     pub fn content_hash(&self) -> String {
         content_hash(serde_json::to_string(self).unwrap())
+    }
+
+    pub fn get_hash(key: &str) -> Option<&'static str> {
+        HASHES.get(key).map(|v| *v)
     }
 }
 

@@ -53,7 +53,7 @@ impl Language {
         Self::iter()
     }
 
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         // must return results that work with serde::Deserialize from lowercase
         match self {
             Language::De => "de",
@@ -76,7 +76,7 @@ impl Language {
     /// would mean another variant: a bare `pt` is Brazilian Portuguese to
     /// browsers and CLDR, and `zhhans` is not a valid tag. The frontend only
     /// reads the first two characters back, so this changes nothing else.
-    pub fn html_lang(&self) -> &'static str {
+    pub const fn html_lang(&self) -> &'static str {
         match self {
             Language::De => "de-DE",
             Language::En => "en-US",

@@ -76,4 +76,5 @@ tokio-test = "*"
 
 [build-dependencies]
 rauthy-i18n = { path = "../i18n" }
+phf_codegen = { workspace = true }
 serde_json = { workspace = true }

@@ -4904,6 +4904,7 @@ dependencies = [
  "num_cpus",
  "openssl",
  "openssl-sys",
+ "phf_codegen",
  "pretty_assertions",
  "prometheus",
  "rauthy-api-types",
@@ -5173,7 +5174,7 @@ dependencies = [
 name = "rauthy-i18n"
 version = "0.37.2"
 dependencies = [
- "ahash",
+ "phf 0.14.0",
  "pretty_assertions",
  "rauthy-common",
  "rauthy-error",

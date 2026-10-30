@@ -9,7 +9,7 @@ license.workspace = true
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 
-ahash = { workspace = true }
+phf = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
