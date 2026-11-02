@@ -277,6 +277,7 @@ pub struct Vars {
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
     pub lifetimes: VarsLifetimes,
+    pub ldap: VarsLdap,
     pub logging: VarsLogging,
     pub matrix: VarsMatrix,
     pub mfa: VarsMfa,
@@ -617,6 +618,14 @@ impl Default for Vars {
                 email: VarsOtpEmail {
                     enable: true,
                 },
+            },
+            ldap: VarsLdap {
+                enable: false,
+                listen_address: "0.0.0.0".into(),
+                port: 6360,
+                base_dn: "dc=rauthy,dc=local".into(),
+                cert_path: None,
+                key_path: None,
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -1457,6 +1466,7 @@ impl Vars {
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
+        slf.parse_ldap(&mut table);
         slf.parse_logging(&mut table);
         slf.parse_matrix(&mut table);
         slf.parse_mfa(&mut table);
@@ -3305,6 +3315,30 @@ impl Vars {
         check_table_empty(table, "mfa");
     }
 
+    fn parse_ldap(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "ldap");
+
+        if let Some(v) = t_bool(&mut table, "ldap", "enable", "LDAP_ENABLE") {
+            self.ldap.enable = v;
+        }
+        if let Some(v) = t_str(&mut table, "ldap", "listen_address", "LDAP_LISTEN_ADDRESS") {
+            self.ldap.listen_address = v;
+        }
+        if let Some(v) = t_u16(&mut table, "ldap", "port", "LDAP_PORT") {
+            self.ldap.port = v;
+        }
+        if let Some(v) = t_str(&mut table, "ldap", "base_dn", "LDAP_BASE_DN") {
+            self.ldap.base_dn = v.to_lowercase();
+        }
+        self.ldap.cert_path = t_str(&mut table, "ldap", "cert_path", "LDAP_TLS_CERT");
+        self.ldap.key_path = t_str(&mut table, "ldap", "key_path", "LDAP_TLS_KEY");
+        if self.ldap.cert_path.is_some() != self.ldap.key_path.is_some() {
+            panic!("ldap.cert_path and ldap.key_path must be set together");
+        }
+
+        check_table_empty(table, "ldap");
+    }
+
     fn parse_pam(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "pam");
 
@@ -4684,6 +4718,18 @@ pub struct VarsOtpEmail {
 }
 
 #[derive(Debug)]
+pub struct VarsLdap {
+    pub enable: bool,
+    pub listen_address: String,
+    pub port: u16,
+    /// Always lowercase.
+    pub base_dn: String,
+    /// `None` reuses the `[tls]` certificate.
+    pub cert_path: Option<String>,
+    pub key_path: Option<String>,
+}
+
+#[derive(Debug)]
 pub struct VarsPam {
     pub remote_password_len: u8,
     pub remote_password_ttl: Duration,
@@ -5267,6 +5313,25 @@ mod tests {
     fn test_t_str_vec_rejects_string() {
         let mut table: toml::Table = toml::from_str("domain_blacklist = 'x'").unwrap();
         t_str_vec(&mut table, "user_registration", "domain_blacklist", "");
+    }
+
+    #[test]
+    fn ldap() {
+        let mut vars = Vars::default();
+        vars.parse_ldap(&mut toml::Table::new());
+        assert!(!vars.ldap.enable);
+        assert_eq!(vars.ldap.port, 6360);
+        assert!(vars.ldap.cert_path.is_none());
+
+        let mut table: toml::Table = toml::from_str(
+            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'",
+        )
+        .unwrap();
+        vars.parse_ldap(&mut table);
+        assert!(vars.ldap.enable);
+        assert_eq!(vars.ldap.port, 636);
+        assert_eq!(vars.ldap.base_dn, "dc=example,dc=com");
+        assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
     }
 
     #[test]

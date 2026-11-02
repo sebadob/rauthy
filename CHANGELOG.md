@@ -114,6 +114,16 @@ reconcile = false
 
 [#1847](https://github.com/sebadob/rauthy/issues/1847)
 
+#### Read-only LDAP Server
+
+Rauthy can now serve apps that can only log in with an LDAP bind, like the Jellyfin LDAP plugin,
+with a minimal, read-only LDAPS server. It is disabled by default and configured in the new
+`[ldap]` section. Each LDAP app is a client with the `password` flow enabled and gets its own
+subtree at `cn=<client_id>,ou=clients,<base_dn>`. User binds run the same checks as the `password`
+grant. See the book chapter *LDAP* for details.
+
+[#1851](https://github.com/sebadob/rauthy/issues/1851)
+
 #### Externally Provisioned Client Secrets
 
 `PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is

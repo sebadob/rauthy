@@ -34,6 +34,7 @@ use std::cmp::max;
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
@@ -192,6 +193,17 @@ pub async fn run(
     }
 
     rauthy_schedulers::spawn();
+
+    let ldap = &RauthyConfig::get().vars.ldap;
+    if ldap.enable {
+        let tls = match (&ldap.key_path, &ldap.cert_path) {
+            (Some(key), Some(cert)) => {
+                tls_hot_reload::load_server_config(key.clone(), cert.clone()).await
+            }
+            _ => tls::load_tls().await,
+        };
+        tokio::spawn(rauthy_ldap::run(Arc::new(tls)));
+    }
 
     if RauthyConfig::get().vars.server.metrics_enable {
         server_with_metrics().await?;

@@ -43,6 +43,7 @@
   - [User Logout](work/logout.md)
   - [SCIM](work/scim.md)
   - [Forward Authentication](work/forward_auth.md)
+  - [LDAP](work/ldap.md)
   - [PAM](work/pam.md)
     - [Groups](work/pam_groups.md)
     - [Hosts](work/pam_hosts.md)

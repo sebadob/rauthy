@@ -61,6 +61,7 @@ Unit tests can be run without any issues.
 | `jwt`          | JWT/JWK handling (access tokens, signing keys)                                             |
 | `middlewares`  | actix middleware: `ip_blacklist`, `csrf_protection`, `principal`, `logging`                |
 | `common`       | Shared utilities (base64, `get_rand`, IP extraction, …)                                    |
+| `ldap`         | Read-only LDAPS server (bind / search / Who Am I) on top of `service` + `data`             |
 | `macros`       | Proc macros                                                                                |
 | `notify`       | Slack / Matrix notification sending                                                        |
 | `schedulers`   | Background jobs (expiry cleanup, etc.)                                                     |

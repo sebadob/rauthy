@@ -1,4 +1,3 @@
-use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_common::constants::IDX_LOGIN_TIME;
 use rauthy_data::database::{Cache, DB};
@@ -21,13 +20,13 @@ With every successful login, a new average login time is calculated for how
 long it took for a successful login. If a login failed though, the answer will be delayed by the
 current average for a successful login, to prevent things like username enumeration.
  */
-pub async fn handle_login_delay(
+pub async fn handle_login_delay<T>(
     peer_ip: IpAddr,
     start: Duration,
-    res: Result<HttpResponse, ErrorResponse>,
+    res: Result<T, ErrorResponse>,
     has_password_been_hashed: bool,
     user_failed_logins: Option<i64>,
-) -> Result<HttpResponse, ErrorResponse> {
+) -> Result<T, ErrorResponse> {
     let client = DB::hql();
     let success_time: i64 = client
         .get(Cache::App, IDX_LOGIN_TIME)
@@ -110,10 +109,7 @@ pub async fn handle_login_delay(
     }
 }
 
-async fn build_send_event(
-    peer_ip: &IpAddr,
-    nbf_seconds: u64,
-) -> Result<HttpResponse, ErrorResponse> {
+async fn build_send_event<T>(peer_ip: &IpAddr, nbf_seconds: u64) -> Result<T, ErrorResponse> {
     let nbf = Duration::from_secs(nbf_seconds);
     let not_before = Utc::now().add(nbf);
     let ts = not_before.timestamp();
