@@ -6,7 +6,8 @@ use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_error::ErrorResponse;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use tracing::warn;
 
 pub const OID_WHOAMI: &str = "1.3.6.1.4.1.4203.1.11.3";
 
@@ -197,21 +198,8 @@ pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorR
         })
         .collect();
 
-    let pam: HashMap<String, PamUser> = PamUser::find_all()
-        .await?
-        .into_iter()
-        .map(|p| (p.email.clone(), p))
-        .collect();
-    let pam_names: HashSet<&str> = pam.values().map(|p| p.name.as_str()).collect();
-    let preferred: HashMap<String, String> = UserValues::find_all_preferred_usernames()
-        .await?
-        .into_iter()
-        // a PAM name wins over the same preferred_username of another user, see `resolve_email`
-        .filter(|(_, name)| !pam_names.contains(name.as_str()))
-        .collect();
-
-    let users = User::find_all()
-        .await?
+    let (all, pam, mut uids) = load_uids().await?;
+    let users = all
         .into_iter()
         .filter(|u| {
             u.password.is_some()
@@ -221,10 +209,6 @@ pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorR
         })
         .map(|u| {
             let p = pam.get(&u.email);
-            let uid = p
-                .map(|p| p.name.clone())
-                .or_else(|| preferred.get(&u.id).cloned())
-                .unwrap_or_else(|| u.email.clone());
             DirUser {
                 groups: u.get_groups(),
                 posix: p.map(|p| PosixAttrs {
@@ -233,7 +217,7 @@ pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorR
                     home: p.home_dir(),
                     shell: p.shell.clone(),
                 }),
-                uid,
+                uid: uids.remove(&u.id).unwrap_or_else(|| u.email.clone()),
                 id: u.id,
                 email: u.email,
                 given_name: u.given_name,
@@ -245,21 +229,128 @@ pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorR
     Ok((users, groups))
 }
 
-/// Resolves a bind `uid` to the user's email, in the same order the directory assigns `uid`s:
-/// PAM username, then `preferred_username`, then the email itself.
+/// Resolves a bind `uid` to the user's email with the same `uid`s the directory publishes.
+/// Anything that is not a published `uid` is treated as the email itself.
+///
+/// shortcut: loads all users on every bind, see [load].
 pub async fn resolve_email(uid: &str) -> Result<String, ErrorResponse> {
-    if let Ok(p) = PamUser::find_by_name(uid.to_string()).await {
-        return Ok(p.email);
-    }
-    if let Some(id) = UserValues::find_user_id_by_preferred_username(uid).await? {
-        return Ok(User::find(id).await?.email);
-    }
-    Ok(uid.to_string())
+    let (users, _, uids) = load_uids().await?;
+    let uid_lc = uid.to_lowercase();
+    Ok(users
+        .into_iter()
+        .find(|u| uids.get(&u.id).is_some_and(|v| v.to_lowercase() == uid_lc))
+        .map(|u| u.email)
+        .unwrap_or_else(|| uid.to_string()))
+}
+
+type Uids = (Vec<User>, HashMap<String, PamUser>, HashMap<String, String>);
+
+/// Loads all users, their PAM users by email, and their `uid`s by user ID.
+async fn load_uids() -> Result<Uids, ErrorResponse> {
+    let users = User::find_all().await?;
+    let pam: HashMap<String, PamUser> = PamUser::find_all()
+        .await?
+        .into_iter()
+        .map(|p| (p.email.clone(), p))
+        .collect();
+    let pam_names = pam
+        .iter()
+        .map(|(e, p)| (e.clone(), p.name.clone()))
+        .collect();
+    let preferred = UserValues::find_all_preferred_usernames()
+        .await?
+        .into_iter()
+        .collect();
+    let ids: Vec<(String, String)> = users
+        .iter()
+        .map(|u| (u.id.clone(), u.email.clone()))
+        .collect();
+    let uids = assign_uids(&ids, &pam_names, &preferred);
+    Ok((users, pam, uids))
+}
+
+/// Assigns each `(id, email)` its `uid`: the PAM username, else the `preferred_username`, else
+/// the email. A PAM name wins over the same `preferred_username`. A name that is not unique
+/// case-insensitively, among names of its kind and all emails, falls back to the email, because
+/// `uid` filters are case-insensitive and apps would otherwise pick the wrong user.
+fn assign_uids(
+    users: &[(String, String)],
+    pam_names: &HashMap<String, String>,
+    preferred: &HashMap<String, String>,
+) -> HashMap<String, String> {
+    let emails: HashMap<String, &str> = users
+        .iter()
+        .map(|(id, email)| (email.to_lowercase(), id.as_str()))
+        .collect();
+    let count = |names: &mut dyn Iterator<Item = &String>| {
+        let mut counts: HashMap<String, usize> = HashMap::new();
+        for n in names {
+            *counts.entry(n.to_lowercase()).or_default() += 1;
+        }
+        counts
+    };
+    let pam_count = count(&mut pam_names.values());
+    let pref_count = count(&mut preferred.values());
+    let unique = |id: &str, name: &str, counts: &HashMap<String, usize>| {
+        let lc = name.to_lowercase();
+        counts.get(&lc) == Some(&1) && emails.get(&lc).is_none_or(|owner| *owner == id)
+    };
+
+    users
+        .iter()
+        .map(|(id, email)| {
+            let pam = pam_names.get(email);
+            let pref = preferred.get(id);
+            let uid = pam
+                .filter(|n| unique(id, n, &pam_count))
+                .or_else(|| {
+                    pref.filter(|n| {
+                        !pam_count.contains_key(&n.to_lowercase()) && unique(id, n, &pref_count)
+                    })
+                })
+                .cloned()
+                .unwrap_or_else(|| {
+                    if let Some(name) = pam.or(pref) {
+                        warn!("LDAP uid '{name}' is not unique, using the email of user {id}");
+                    }
+                    email.clone()
+                });
+            (id.clone(), uid)
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn uids() {
+        let s = |v: &str| v.to_string();
+        let users = vec![
+            (s("1"), s("a@x.io")),
+            (s("2"), s("b@x.io")),
+            (s("3"), s("c@x.io")),
+            (s("4"), s("d@x.io")),
+            (s("5"), s("e@x.io")),
+            (s("6"), s("f@x.io")),
+        ];
+        let pam = HashMap::from([(s("a@x.io"), s("alice")), (s("f@x.io"), s("frank"))]);
+        let preferred = HashMap::from([
+            (s("2"), s("Alice")), // loses against the PAM name
+            (s("3"), s("Carol")),
+            (s("4"), s("carol")),  // case-insensitive duplicate, both fall back
+            (s("5"), s("B@x.io")), // another user's email
+            (s("6"), s("eve")),    // the PAM name wins for the same user
+        ]);
+        let uids = assign_uids(&users, &pam, &preferred);
+        assert_eq!(uids["1"], "alice");
+        assert_eq!(uids["2"], "b@x.io");
+        assert_eq!(uids["3"], "c@x.io");
+        assert_eq!(uids["4"], "d@x.io");
+        assert_eq!(uids["5"], "e@x.io");
+        assert_eq!(uids["6"], "frank");
+    }
 
     #[test]
     fn entries() {

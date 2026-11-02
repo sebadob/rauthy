@@ -3330,6 +3330,14 @@ impl Vars {
         if let Some(v) = t_str(&mut table, "ldap", "base_dn", "LDAP_BASE_DN") {
             self.ldap.base_dn = v.to_lowercase();
         }
+        // shortcut: does not handle escaped `,` / `=`, which no sane base DN contains
+        let base_dn_valid = self.ldap.base_dn.split(',').all(|rdn| {
+            rdn.split_once('=')
+                .is_some_and(|(k, v)| !k.trim().is_empty() && !v.trim().is_empty())
+        });
+        if !base_dn_valid {
+            panic!("ldap.base_dn '{}' is not a valid DN", self.ldap.base_dn);
+        }
         self.ldap.cert_path = t_str(&mut table, "ldap", "cert_path", "LDAP_TLS_CERT");
         self.ldap.key_path = t_str(&mut table, "ldap", "key_path", "LDAP_TLS_KEY");
         if self.ldap.cert_path.is_some() != self.ldap.key_path.is_some() {
@@ -5332,6 +5340,13 @@ mod tests {
         assert_eq!(vars.ldap.port, 636);
         assert_eq!(vars.ldap.base_dn, "dc=example,dc=com");
         assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
+    }
+
+    #[test]
+    #[should_panic(expected = "not a valid DN")]
+    fn ldap_invalid_base_dn() {
+        let mut table: toml::Table = toml::from_str("[ldap]\nbase_dn = 'rauthy.local'").unwrap();
+        Vars::default().parse_ldap(&mut table);
     }
 
     #[test]

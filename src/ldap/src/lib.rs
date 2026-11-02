@@ -21,7 +21,7 @@ use rauthy_service::login_delay::handle_login_delay;
 use rauthy_service::password_login::password_login;
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpListener;
 use tokio::time::timeout;
@@ -35,10 +35,17 @@ mod filter;
 
 const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 const IDLE_TIMEOUT: Duration = Duration::from_secs(300);
+// bound sessions are not rechecked, so this caps how long a rotated client secret stays usable
+const MAX_CONN_LIFETIME: Duration = Duration::from_secs(3600);
 
 enum Session {
     Anonymous,
-    Bound { client_id: String, dn: String },
+    Bound {
+        client_id: String,
+        dn: String,
+        /// `None` for a service bind, which may search the whole client subtree
+        user_id: Option<String>,
+    },
 }
 
 /// Runs the LDAPS listener forever. Only call it when `ldap.enable` is set.
@@ -88,8 +95,13 @@ async fn is_blacklisted(ip: IpAddr) -> bool {
 async fn handle_conn<S: AsyncRead + AsyncWrite + Unpin>(stream: S, ip: IpAddr) {
     let mut framed = Framed::new(stream, LdapCodec::default());
     let mut session = Session::Anonymous;
+    let deadline = Instant::now() + MAX_CONN_LIFETIME;
 
-    while let Ok(Some(Ok(msg))) = timeout(IDLE_TIMEOUT, framed.next()).await {
+    loop {
+        let wait = IDLE_TIMEOUT.min(deadline.saturating_duration_since(Instant::now()));
+        let Ok(Some(Ok(msg))) = timeout(wait, framed.next()).await else {
+            break;
+        };
         let responses = match ServerOps::try_from(msg.clone()) {
             Ok(ServerOps::SimpleBind(req)) => {
                 let (res, new_session) = bind(&req, ip).await;
@@ -179,11 +191,12 @@ async fn bind(req: &SimpleBindRequest, ip: IpAddr) -> (LdapMsg, Session) {
     let res = handle_login_delay(ip, start, res, is_user_bind, user_failed_logins).await;
 
     match res {
-        Ok(client_id) => (
+        Ok((client_id, user_id)) => (
             req.gen_success(),
             Session::Bound {
                 client_id,
                 dn: req.dn.clone(),
+                user_id,
             },
         ),
         Err(err) => {
@@ -197,13 +210,13 @@ async fn bind(req: &SimpleBindRequest, ip: IpAddr) -> (LdapMsg, Session) {
     }
 }
 
-/// Runs all bind checks and returns the bound `client_id` on success.
+/// Runs all bind checks and returns the bound `client_id` and, for a user bind, the user ID.
 async fn check_bind(
     bind_dn: Option<BindDn>,
     password: String,
     ip: IpAddr,
     user_failed_logins: &mut Option<i64>,
-) -> Result<String, ErrorResponse> {
+) -> Result<(String, Option<String>), ErrorResponse> {
     let unauthorized = || ErrorResponse::new(ErrorResponseType::Unauthorized, "invalid bind DN");
     let (client_id, uid) = match bind_dn.ok_or_else(unauthorized)? {
         BindDn::Client(id) => (id, None),
@@ -214,20 +227,22 @@ async fn check_bind(
     client.validate_enabled()?;
     client.validate_flow(GrantType::Password)?;
 
-    match uid {
+    let user_id = match uid {
         None => {
             if !client.confidential {
                 return Err(unauthorized());
             }
             client.check_secret(password).await?;
+            None
         }
         Some(uid) => {
             let email = directory::resolve_email(&uid).await?;
-            password_login(&client, email, password, ip, user_failed_logins).await?;
+            let user = password_login(&client, email, password, ip, user_failed_logins).await?;
+            Some(user.id)
         }
-    }
+    };
 
-    Ok(client.id)
+    Ok((client.id, user_id))
 }
 
 async fn search(req: &SearchRequest, session: &Session) -> Vec<LdapMsg> {
@@ -243,11 +258,14 @@ async fn search(req: &SearchRequest, session: &Session) -> Vec<LdapMsg> {
         return res;
     }
 
-    let Session::Bound { client_id, .. } = session else {
+    let Session::Bound {
+        client_id, user_id, ..
+    } = session
+    else {
         return vec![req.gen_error(LdapResultCode::InsufficentAccessRights, "bind first".into())];
     };
 
-    match search_client(req, client_id, base_dn).await {
+    match search_client(req, client_id, user_id.as_deref(), base_dn).await {
         Ok(mut res) => {
             res.push(req.gen_success());
             res
@@ -256,13 +274,17 @@ async fn search(req: &SearchRequest, session: &Session) -> Vec<LdapMsg> {
     }
 }
 
+/// A `user_id` limits the results to that user's own entry, which also hides it as soon as the
+/// user is no longer allowed for the client.
 async fn search_client(
     req: &SearchRequest,
     client_id: &str,
+    user_id: Option<&str>,
     base_dn: &str,
 ) -> Result<Vec<LdapMsg>, (LdapResultCode, String)> {
     let client_base = dn::client_base(client_id, base_dn);
-    let client_base_norm = dn::normalize(&client_base).unwrap_or_default();
+    let client_base_norm = dn::normalize(&client_base)
+        .ok_or((LdapResultCode::Other, "invalid client base DN".into()))?;
     let search_base = dn::normalize(&req.base)
         .ok_or((LdapResultCode::InvalidDNSyntax, "invalid base DN".into()))?;
     if !dn::is_within(&search_base, &client_base_norm) {
@@ -288,9 +310,11 @@ async fn search_client(
 
     let base_depth = dn::depth(&search_base);
     let entries = directory::build(client_id, &client_base, &users, &groups);
-    if !entries
-        .iter()
-        .any(|e| dn::normalize(&e.dn).as_deref() == Some(search_base.as_str()))
+    // user sessions get no `noSuchObject`, it would tell them which other entries exist
+    if user_id.is_none()
+        && !entries
+            .iter()
+            .any(|e| dn::normalize(&e.dn).as_deref() == Some(search_base.as_str()))
     {
         return Err((LdapResultCode::NoSuchObject, String::new()));
     }
@@ -311,7 +335,9 @@ async fn search_client(
                     dn::is_within(&norm, &search_base) && norm != search_base
                 }
             };
-            in_scope && filter::matches(&req.filter, e)
+            in_scope
+                && user_id.is_none_or(|id| e.values("entryUUID").any(|v| v == id))
+                && filter::matches(&req.filter, e)
         })
         .map(|e| req.gen_result_entry(e.into_result(&req.attrs)))
         .collect())

@@ -41,17 +41,23 @@ cn=<group>,ou=groups,cn=<client_id>,ou=clients,<base_dn>   groups
 - **User bind:** a user binds as `uid=<uid>,ou=people,cn=<client_id>,ou=clients,<base_dn>` with
   their password. This runs the same checks as the `password` grant: brute-force prevention and
   login delays, credential stuffing detection, enabled / expired users and the client's group
-  restriction (`restrict_group_prefix`).
+  restriction (`restrict_group_prefix`). A user bind can only search its own entry, the whole
+  directory is only visible to the service bind.
 
-Like the `password` grant, LDAP binds cannot do MFA. Only users with a local password can log in,
+Like the `password` grant, LDAP binds cannot do MFA. A user with MFA or passkeys who also has a
+local password can log in with the password alone. Only users with a local password can log in,
 passkey-only or upstream-provider-only accounts are not part of the directory.
+
+Connections are closed after 5 minutes idle and after 1 hour at most, so a rotated client secret
+applies to open connections within that time.
 
 ## Directory Layout
 
 The layout follows LLDAP, so existing app presets only need a different base DN.
 
 Users (`ou=people`) are all users allowed for the client that have a local password and are enabled
-and not expired:
+and not expired. A PAM username or `preferred_username` that is not unique case-insensitively, or
+that equals another user's email, falls back to the email as `uid`:
 
 | attribute                                   | value                                                    |
 |---------------------------------------------|----------------------------------------------------------|

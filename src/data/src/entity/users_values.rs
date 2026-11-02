@@ -291,27 +291,6 @@ RETURNING *"#;
         Ok(())
     }
 
-    pub async fn find_user_id_by_preferred_username(
-        preferred_username: &str,
-    ) -> Result<Option<String>, ErrorResponse> {
-        let sql = "SELECT id FROM users_values WHERE preferred_username = $1";
-        let id = if is_hiqlite() {
-            DB::hql()
-                .query_raw(sql, params!(preferred_username))
-                .await?
-                .into_iter()
-                .next()
-                .map(|mut r| r.get("id"))
-        } else {
-            DB::pg_query_rows(sql, &[&preferred_username], 1)
-                .await?
-                .into_iter()
-                .next()
-                .map(|r| r.get("id"))
-        };
-        Ok(id)
-    }
-
     /// Returns `(user_id, preferred_username)` for all users that have one set.
     pub async fn find_all_preferred_usernames() -> Result<Vec<(String, String)>, ErrorResponse> {
         let sql =
