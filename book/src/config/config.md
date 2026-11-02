@@ -495,6 +495,18 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
 #generated_secrets_ttl = '10m'
 
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+#reconcile = false
+
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with
 # fixed names inside this folder. If it finds any of them, it will

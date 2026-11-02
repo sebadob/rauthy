@@ -4,6 +4,16 @@
 
 ### Changes
 
+#### Opt-in Bootstrap Reconcile
+
+The new `bootstrap.reconcile` (`BOOTSTRAP_RECONCILE`), `false` by default, re-applies the bootstrap
+`groups.json`, `roles.json`, `scopes.json` and `clients.json` on every start, and not only against an
+empty database. Missing entries are created and changed entries are updated, nothing is deleted.
+This makes it possible to keep a running instance in sync with files from version control. Check
+the [book](https://sebadob.github.io/rauthy/config/bootstrap.html) for the details.
+
+[#1847](https://github.com/sebadob/rauthy/issues/1847)
+
 #### Externally Provisioned Client Secrets
 
 `PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is
