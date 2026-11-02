@@ -5201,7 +5201,6 @@ dependencies = [
  "futures",
  "ldap3_proto",
  "rauthy-api-types",
- "rauthy-common",
  "rauthy-data",
  "rauthy-error",
  "rauthy-service",

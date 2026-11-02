@@ -7,12 +7,35 @@ use ldap3_proto::simple::LdapFilter;
 const DN_ATTRS: [&str; 3] = ["member", "memberof", "uniquemember"];
 
 /// Matches a search filter against an entry. Attribute names and values are case-insensitive.
-/// Unsupported filter types (ordering, approx, extensible) never match.
+/// Unsupported filter types (ordering, approx, extensible) never match, also not when negated.
 pub fn matches(filter: &LdapFilter, entry: &Entry) -> bool {
-    match filter {
-        LdapFilter::And(fs) => fs.iter().all(|f| matches(f, entry)),
-        LdapFilter::Or(fs) => fs.iter().any(|f| matches(f, entry)),
-        LdapFilter::Not(f) => !matches(f, entry),
+    eval(filter, entry).unwrap_or(false)
+}
+
+/// Three-valued evaluation (RFC 4511 4.5.1.7): `None` is Undefined, which `not` keeps.
+fn eval(filter: &LdapFilter, entry: &Entry) -> Option<bool> {
+    let res = match filter {
+        LdapFilter::And(fs) => {
+            let vals: Vec<_> = fs.iter().map(|f| eval(f, entry)).collect();
+            if vals.contains(&Some(false)) {
+                false
+            } else if vals.contains(&None) {
+                return None;
+            } else {
+                true
+            }
+        }
+        LdapFilter::Or(fs) => {
+            let vals: Vec<_> = fs.iter().map(|f| eval(f, entry)).collect();
+            if vals.contains(&Some(true)) {
+                true
+            } else if vals.contains(&None) {
+                return None;
+            } else {
+                false
+            }
+        }
+        LdapFilter::Not(f) => !eval(f, entry)?,
         LdapFilter::Present(attr) => entry.values(attr).next().is_some(),
         LdapFilter::Equality(attr, val) => {
             if DN_ATTRS.contains(&attr.to_lowercase().as_str()) {
@@ -26,8 +49,9 @@ pub fn matches(filter: &LdapFilter, entry: &Entry) -> bool {
         LdapFilter::Substring(attr, sub) => entry
             .values(attr)
             .any(|v| substring(&v.to_lowercase(), sub)),
-        _ => false,
-    }
+        _ => return None,
+    };
+    Some(res)
 }
 
 fn substring(mut rest: &str, sub: &LdapSubstringFilter) -> bool {
@@ -92,5 +116,10 @@ mod tests {
         assert!(!m("(mail=a*xyz*)"));
         assert!(!m("(mail=alice@example.com*m)"));
         assert!(!m("(uid>=a)"));
+        assert!(!m("(!(uid>=a))"));
+        assert!(!m("(&(uid=alice)(!(uid>=a)))"));
+        assert!(m("(|(uid=alice)(uid>=a))"));
+        assert!(!m("(!(|(uid=bob)(uid>=a)))"));
+        assert!(m("(!(&(uid=bob)(uid>=a)))"));
     }
 }

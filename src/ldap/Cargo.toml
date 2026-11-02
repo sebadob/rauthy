@@ -7,7 +7,6 @@ license.workspace = true
 
 [dependencies]
 rauthy-api-types = { path = "../api_types" }
-rauthy-common = { path = "../common" }
 rauthy-data = { path = "../data" }
 rauthy-error = { path = "../error" }
 rauthy-service = { path = "../service" }

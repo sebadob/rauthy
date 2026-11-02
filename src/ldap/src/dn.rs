@@ -114,7 +114,7 @@ pub fn group_dn(name: &str, client_base: &str) -> String {
     format!("cn={},ou=groups,{client_base}", escape(name))
 }
 
-/// Parses a bind DN below `base_dn` (which must be lowercase and unescaped-safe).
+/// Parses a bind DN below `base_dn`.
 pub fn parse_bind(dn: &str, base_dn: &str) -> Option<BindDn> {
     let rdns = parse(dn)?;
     let base = parse(base_dn)?;
