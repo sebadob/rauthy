@@ -410,3 +410,37 @@ of from the config, is that you can then rely on your IDEs auto-completion and s
 features, which do not work in a TOML string. You can check example
 files [here](https://github.com/sebadob/rauthy/tree/main/bootstrap), or take a look at the
 [Rust definitions](https://github.com/sebadob/rauthy/blob/main/src/data/src/migration/bootstrap/types.rs).
+
+### Reconcile on every start
+
+You can re-apply the bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` on
+every start, and not only against an empty database:
+
+```toml
+[bootstrap]
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+reconcile = false
+```
+
+- Missing entries are created, changed entries are updated, nothing is deleted.
+- Clients match by `id`. Groups, roles and scopes match by `id` if given, otherwise by `name`, so
+  only entries with an `id` can be renamed. Renames propagate to users and clients.
+- Client values not covered by the bootstrap format (custom claims, `allowed_resources`,
+  `default_aud`) are kept.
+- Client secrets: `Plain` / `Encrypted` are applied on every start, and the old secret stops
+  working immediately. `"generate"` only creates a secret for a new client and never rotates one.
+  No secret makes the client public.
+- Not reconciled: the default OIDC scopes (`openid`, `profile`, `email`, ...), API keys, users,
+  user attributes and auth providers.
+- Files are parsed and validated first. A client or scope that refers to a scope or user attribute
+  that doesn't exist stops the startup partway through. Fix the file and restart to finish.
+- Only the primary node (`node_id = 1`) reconciles. Changes need a restart.

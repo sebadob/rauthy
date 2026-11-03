@@ -356,6 +356,7 @@ impl Default for Vars {
                 bootstrap_dir: "bootstrap".into(),
                 generated_secrets_file: String::new().into(),
                 generated_secrets_ttl: Duration::from_secs(600),
+                reconcile: false,
             },
             consent: VarsConsent { enable: false },
             cred_stuff_detect: VarsCredStuff {
@@ -1819,6 +1820,9 @@ impl Vars {
             "BOOTSTRAP_GENERATED_SECRETS_TTL",
         ) {
             self.bootstrap.generated_secrets_ttl = v;
+        }
+        if let Some(v) = t_bool(&mut table, "bootstrap", "reconcile", "BOOTSTRAP_RECONCILE") {
+            self.bootstrap.reconcile = v;
         }
 
         check_table_empty(table, "bootstrap");
@@ -4284,6 +4288,7 @@ pub struct VarsBootstrap {
     pub bootstrap_dir: Cow<'static, str>,
     pub generated_secrets_file: Cow<'static, str>,
     pub generated_secrets_ttl: Duration,
+    pub reconcile: bool,
 }
 
 #[derive(Debug)]

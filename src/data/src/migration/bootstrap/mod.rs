@@ -31,16 +31,16 @@ macro_rules! bootstrap_data {
         );
         let Ok(content) = tokio::fs::read(&path).await else {
             tracing::debug!("No file for bootstrapping '{}'", path);
-            return Ok(());
+            return Ok(Default::default());
         };
         if content.is_empty() {
             tracing::debug!("Empty file for bootstrapping '{}'", path);
-            return Ok(());
+            return Ok(Default::default());
         }
         let data = serde_json::from_slice::<Vec<$type>>(&content)?;
         if data.is_empty() {
             tracing::debug!("Empty data for bootstrapping '{}'", path);
-            return Ok(());
+            return Ok(Default::default());
         }
 
         for d in &data {
@@ -78,6 +78,13 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
     };
 
     if !jwks.is_empty() {
+        if crate::rauthy_config::RauthyConfig::get()
+            .vars
+            .bootstrap
+            .reconcile
+        {
+            reconcile().await?;
+        }
         return Ok(());
     }
 
@@ -116,6 +123,42 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
     Ok(())
 }
 
+/// Re-applies the bootstrap groups, roles, scopes and clients against an already initialized
+/// database. Missing entries are created, changed ones updated, nothing is deleted.
+async fn reconcile() -> Result<(), ErrorResponse> {
+    info!("Reconciling bootstrap data");
+
+    // Parse and validate all files before the first write. References between them (client ->
+    // scope, scope -> user attribute) are still checked while applying, like during bootstrap.
+    let groups = groups::load().await?;
+    let roles = roles::load().await?;
+    let scopes = scopes::load().await?;
+    let clients = clients::load().await?;
+
+    groups::reconcile(groups).await?;
+    roles::reconcile(roles).await?;
+    scopes::reconcile(scopes).await?;
+    clients::reconcile(clients).await?;
+
+    Ok(())
+}
+
+/// Finds the existing entry for a bootstrap entry: by `id` if one is given, otherwise by `name`.
+fn find_existing_entry<'a, T>(
+    existing: &'a [T],
+    id: Option<&str>,
+    name: &str,
+    key: impl Fn(&T) -> (&str, &str),
+) -> Option<&'a T> {
+    existing.iter().find(|e| {
+        let (e_id, e_name) = key(e);
+        match id {
+            Some(id) => e_id == id,
+            None => e_name == name,
+        }
+    })
+}
+
 // We want to be able to call this during DEV as well to always be sure that it works.
 #[cold]
 pub async fn bootstrap_additional_data() -> Result<(), ErrorResponse> {
@@ -141,4 +184,34 @@ async fn bootstrap_additional_data_validated() -> Result<(), ErrorResponse> {
     users::bootstrap().await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_existing_entry;
+
+    #[test]
+    fn test_find_existing_entry() {
+        let existing = [("id1", "admin"), ("id2", "user")];
+        fn key<'a>(e: &'a (&str, &str)) -> (&'a str, &'a str) {
+            (e.0, e.1)
+        }
+
+        // by id, also when the name changed -> a rename
+        assert_eq!(
+            find_existing_entry(&existing, Some("id1"), "renamed", key),
+            Some(&("id1", "admin"))
+        );
+        // by name when no id is given
+        assert_eq!(
+            find_existing_entry(&existing, None, "user", key),
+            Some(&("id2", "user"))
+        );
+        // a given id never falls back to the name
+        assert_eq!(
+            find_existing_entry(&existing, Some("id3"), "user", key),
+            None
+        );
+        assert_eq!(find_existing_entry(&existing, None, "missing", key), None);
+    }
 }
