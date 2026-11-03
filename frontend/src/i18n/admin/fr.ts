@@ -60,7 +60,7 @@ export let I18nAdminFr: I18nAdmin = {
         },
         claimsAtRoot: 'Émettre les claims à la racine du jeton',
         claimsAtRootWarning: `Les claims de ce client sont écrits à la racine du jeton au lieu d'être
-            imbriqués sous « custom ». C'est à vous de garantir la correction face aux collisions : si
+            imbriqués sous « custom ». C'est à vous d'éviter les collisions : si
             le nom d'un claim entre en collision avec un claim JWT réservé, l'émission du
             jeton échoue. Les claims personnalisés placés à la racine peuvent aussi casser lors de
             futures évolutions du protocole ou de nouvelles fonctionnalités. Référence :`,
@@ -253,8 +253,8 @@ export let I18nAdminFr: I18nAdmin = {
         },
         openapi:
             "Si vous souhaitez intégrer une application externe et utiliser l'API de Rauthy, consultez",
-        openapiNote: `Dans la configuration par défaut, l'interface Swagger n'est pas active via le lien ci-dessus. Ça 
-            peut être activé via la configuration « server.swagger_ui_enable » et éventuellement 
+        openapiNote: `Dans la configuration par défaut, l'interface Swagger n'est pas active via le lien ci-dessus. Elle
+            peut être activée via la configuration « server.swagger_ui_enable » et éventuellement 
             « server.swagger_ui_public ».`,
         source: 'Le code source est disponible ici',
     },
@@ -444,7 +444,7 @@ export let I18nAdminFr: I18nAdmin = {
                 Un secret client ou un PKCE est requis.`,
             descScope: `Portée que le client doit utiliser lors de la redirection vers la page de connexion.
                 Séparez les valeurs par un espace.`,
-            errNoAuthMethod: `Vous avez fourni un secret client,mais aucune méthode d'authentification client n'est active`,
+            errNoAuthMethod: `Vous avez fourni un secret client, mais aucune méthode d'authentification client n'est active`,
             errConfidential: 'Vous devez au moins utiliser un client confidentiel ou PKCE',
             jsonPath: {
                 p1: `Les valeurs du jeton d'identification après une connexion réussie en amont peuvent être
@@ -486,7 +486,7 @@ export let I18nAdminFr: I18nAdmin = {
     scopes: {
         claimsAtRoot: 'Émettre les claims à la racine du jeton',
         claimsAtRootWarning: `Les attributs associés à cette portée sont écrits à la racine du jeton au
-            lieu d'être imbriqués sous « custom ». C'est à vous de garantir la correction face aux
+            lieu d'être imbriqués sous « custom ». C'est à vous d'éviter les
             collisions : si le nom d'un attribut associé entre en collision avec un claim JWT
             réservé, l'émission du jeton échoue. Les claims personnalisés placés à la racine peuvent
             aussi casser lors de futures évolutions du protocole ou de nouvelles fonctionnalités.
