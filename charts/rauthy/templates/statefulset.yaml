@@ -1,0 +1,169 @@
+# The headless service is used for the Raft Cluster setup, so Nodes 
+# can connect to each other without any load balancer in between.
+# {{ .Values.blah }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rauthy.fullname" . }}-headless
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  sessionAffinity: None
+  selector:
+    {{- include "rauthy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: hiqlite-raft
+      protocol: TCP
+      port: 8100
+      targetPort: hiqlite-raft
+    - name: hiqlite-api
+      protocol: TCP
+      port: 8200
+      targetPort: hiqlite-api
+---
+# The PDB is only necessary for a HA deployment. You can take it out for a single instance.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "rauthy.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "rauthy.selectorLabels" . | nindent 6 }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "rauthy.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "rauthy.fullname" . }}-headless
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rauthy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rauthy.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rauthy
+              topologyKey: "kubernetes.io/hostname"
+      serviceAccountName: {{ include "rauthy.serviceAccountName" . }}
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+          ports:
+            # Hiqlite internal ports
+            - name: hiqlite-raft
+              protocol: TCP
+              containerPort: {{ .Values.service.hiqliteRaftPort }}
+            - name: hiqlite-api
+              protocol: TCP
+              containerPort: {{ .Values.service.hiqliteAPIPort }}
+            {{- with .Values.service.httpPort }}
+            - name: http
+              protocol: TCP
+              containerPort: {{ . }}
+            {{- end }}
+            {{- with .Values.service.httpsPort }}
+            - name: https
+              protocol: TCP
+              containerPort: {{ . }}
+            {{- end }}
+          env:
+            {{- if .Values.localTestMode }}
+            - name: LOCAL_TEST
+              value: "true"
+            {{- end }}
+            {{- with .Values.bootstrapConfig }}
+            - name: BOOTSTRAP_ADMIN_EMAIL
+              value: "{{ .adminEmail }}"
+            - name: BOOTSTRAP_ADMIN_PASSWORD_PLAIN
+              value: "{{ .adminPassword }}"
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              # You may need to adjust this, if you decide to start in https only
+              # mode or use another port
+              {{- if .Values.service.httpsPort }}
+              scheme: HTTPS
+              port: https
+              {{- else }}
+              scheme: HTTP
+              port: http
+              {{- end }}
+              path: /auth/v1/health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              # adjust if you change the Raft API port
+              port: hiqlite-api
+              path: /ping
+            initialDelaySeconds: 5
+            periodSeconds: 1
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: {{ include "rauthy.fullname" . }}-data
+              mountPath: /app/data
+              readOnly: false
+            - name: config
+              mountPath: /app/config.toml
+              readOnly: true
+              subPath: config.toml
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ include "rauthy.configSecretName" . }}
+        
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ include "rauthy.fullname" . }}-data
+      spec: 
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 128Mi
