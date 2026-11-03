@@ -62,7 +62,7 @@ export const I18nFr: I18n = {
             ce mot de passe.\nVous ne pourrez alors pas vous connecter sur n'importe quel appareil sans avoir
             préalablement saisi votre mot de passe au moins une fois.`,
         accTypePasskeyText3: 'Voulez-vous convertir votre compte et ajouter un mot de passe ?',
-        accessExp: 'Expire l’accès',
+        accessExp: 'Expiration de l’accès',
         accessRenew: 'Accès renouvelable jusqu’au',
         accessRenewDelete: 'Supprimer la possibilité de renouvellement',
         birthdate: 'Date de naissance',
@@ -173,7 +173,7 @@ export const I18nFr: I18n = {
             Après avoir activé cette fonction, vous serez redirigé vers la page de connexion du fournisseur choisi.\n
             Après une connexion réussie et si l’adresse e-mail correspond, votre compte sera lié.`,
         providerUnlink: 'Dissocier la fédération',
-        providerUnlinkDesc: `Vous ne pouvez dissocier ce compte du fournisseur d’accès\n
+        providerUnlinkDesc: `Vous ne pouvez dissocier ce compte du fournisseur d’authentification\n
             que si vous avez configuré au moins un mot de passe ou une clé d’accès.`,
         regDate: `Date d'inscription`,
         regIp: `Adresse IP d'inscription`,

@@ -71,15 +71,15 @@ export let I18nAdminFr: I18nAdmin = {
         confidentialNoSecret: 'Ce client n’est pas confidentiel et ne possède donc aucun secret.',
         config: 'Configuration du client',
         delete1: 'Êtes-vous sûr de vouloir supprimer ce client ?',
-        descAuthCode: `La validité des codes d'authentification peut être ajustée pour une sécurité renforcée.
-            Les codes d'authentification ne peuvent être utilisés qu'une seule fois et sont valides pendant 60 secondes
+        descAuthCode: `La validité des codes d'autorisation peut être ajustée pour une sécurité renforcée.
+            Les codes d'autorisation ne peuvent être utilisés qu'une seule fois et sont valides pendant 60 secondes
             par défaut. Plus la validité est courte, mieux c'est, à condition que le client puisse se connecter
             suffisamment rapidement.`,
         descClientUri: `Informations concernant l'URI et les contacts de ce client, à afficher sur la page de connexion.`,
         descName: `Le nom du client peut être modifié sans incidence sur sa configuration. Il est uniquement affiché sur
             la page de connexion.`,
         descGroupPrefix: `La connexion à ce client peut être restreinte par un préfixe de groupe optionnel. Seuls les
-            utilisateurs appartenant à ce groupe seront autorisés à se connecter.`,
+            utilisateurs appartenant à un groupe correspondant seront autorisés à se connecter.`,
         descOrigin: `Origines externes autorisées supplémentaires ; généralement nécessaires uniquement si ce client
             doit effectuer des requêtes à Rauthy directement depuis le navigateur, notamment pour les applications
             monopages (SPA).`,
@@ -240,8 +240,8 @@ export let I18nAdminFr: I18nAdmin = {
                 choisie s’il est vide. <code>p_cost</code> est également facultatif ; s’il est vide, Rauthy utilisera
                 tous les threads disponibles.`,
 
-            time: 'Heure',
-            targetTime: 'Heure cible',
+            time: 'Durée',
+            targetTime: 'Durée cible',
             tune: `Important : Ces valeurs doivent être optimisées sur l'architecture finale !`,
             pDetails: `Pour une introduction détaillée à Argon2ID, de nombreuses ressources sont disponibles en ligne.
                 Ce guide ne donne qu'un bref aperçu des valeurs. Trois d'entre elles doivent être configurées :`,
@@ -277,7 +277,7 @@ export let I18nAdminFr: I18nAdmin = {
     },
     email: {
         cancelJob: 'Annuler la tâche',
-        filterType: ['Aucun', 'Dans le groupe', 'Hors du groupe', 'A un rôle', `N'a pas de rôle`],
+        filterType: ['Aucun', 'Dans le groupe', 'Hors du groupe', 'A le rôle', `N'a pas le rôle`],
         immediate: 'Immédiat',
         jobs: `Tâches d'envoi d'e-mails`,
         scheduled: 'Envoi programmé',
@@ -419,7 +419,7 @@ export let I18nAdminFr: I18nAdmin = {
     passwordPolicy: {
         configDesc: 'Politique relative aux nouveaux mots de passe.',
         resetSet0: `La valeur 0 désactive l'exigence.`,
-        validForDays: 'Durée de validité',
+        validForDays: 'Durée de validité (jours)',
         validityNew: 'Validité pour les nouveaux mots de passe.',
     },
     providers: {
@@ -515,7 +515,7 @@ export let I18nAdminFr: I18nAdmin = {
     tos: {
         accepted: 'Accepté',
         addNewToS: 'Nouvelles CGU',
-        addNewToSFromCurrent: 'Nouvelles CGU sélectionnées',
+        addNewToSFromCurrent: 'Nouvelles CGU à partir de la version sélectionnée',
         added: 'Ajouté',
         checkStatus: `Vérifier le statut de l'utilisateur`,
         immutable: `ATTENTION : Une fois ajoutées, les nouvelles Conditions d'utilisation sont immuables et ne peuvent
@@ -572,9 +572,9 @@ export let I18nAdminFr: I18nAdmin = {
         },
         pkOnly1: 'Il s’agit d’un compte utilisant uniquement une clé d’accès.',
         pkOnly2: `Cet utilisateur utilise la connexion sans mot de passe et n'a défini aucun mot de passe.`,
-        pkOnly3: `Si cet utilisateur a perdu tous ses identifiants, son compte peut être entièrement réinitialisé et un
+        pkOnly3: `Si cet utilisateur a perdu toutes ses clés d'accès, son compte peut être entièrement réinitialisé et un
             nouvel e-mail de réinitialisation de mot de passe peut lui être envoyé. Pour ce faire, accédez à l'onglet
-            'MFA' et supprimez tous les identifiants existants.`,
+            'MFA' et supprimez toutes les clés d'accès existantes.`,
         pwdNoInit: `L'utilisateur n'a pas encore effectué la réinitialisation initiale de son mot de passe.`,
         pwdSendEmailBtn: 'Envoyer un e-mail de réinitialisation',
         pwdSendEmailDesc: `Vous pouvez envoyer un nouvel e-mail de réinitialisation si l'utilisateur n'en a pas reçu.`,
