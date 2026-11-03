@@ -4,7 +4,7 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::groups::Group;
 use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
-use rauthy_data::entity::users_values::UserValues;
+use rauthy_data::entity::users_values::{UidCandidate, UserValues};
 use rauthy_error::ErrorResponse;
 use std::collections::HashMap;
 use tracing::warn;
@@ -184,7 +184,7 @@ pub fn build(
 /// restriction.
 ///
 /// shortcut: loads all users on every search, fine for small directories; add caching or
-/// paging if large directories need it.
+/// paging if large directories need it. Binds use targeted queries, see [resolve_email].
 pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorResponse> {
     let groups: Vec<String> = Group::find_all()
         .await?
@@ -231,16 +231,41 @@ pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorR
 
 /// Resolves a bind `uid` to the user's email with the same `uid`s the directory publishes.
 /// Anything that is not a published `uid` is treated as the email itself.
-///
-/// shortcut: loads all users on every bind, see [load].
 pub async fn resolve_email(uid: &str) -> Result<String, ErrorResponse> {
-    let (users, _, uids) = load_uids().await?;
     let uid_lc = uid.to_lowercase();
-    Ok(users
-        .into_iter()
-        .find(|u| uids.get(&u.id).is_some_and(|v| v.to_lowercase() == uid_lc))
-        .map(|u| u.email)
-        .unwrap_or_else(|| uid.to_string()))
+    let mut rows = UserValues::find_uid_candidates(&uid_lc).await?;
+    // a candidate's `uid` also depends on the users that share one of its other names
+    let names: Vec<String> = rows
+        .iter()
+        .flat_map(|(_, _, pam, pref)| [pam, pref])
+        .flatten()
+        .map(|n| n.to_lowercase())
+        .filter(|n| *n != uid_lc)
+        .collect();
+    for name in names {
+        rows.extend(UserValues::find_uid_candidates(&name).await?);
+    }
+    Ok(uid_owner(&uid_lc, rows).unwrap_or_else(|| uid.to_string()))
+}
+
+/// Returns the email of the user in `rows` whose `uid` is `uid_lc`. `rows` must contain every
+/// user that shares a name or email with a user named `uid_lc`.
+fn uid_owner(uid_lc: &str, mut rows: Vec<UidCandidate>) -> Option<String> {
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    rows.dedup_by(|a, b| a.0 == b.0);
+    let ids: Vec<(String, String)> = rows.iter().map(|r| (r.0.clone(), r.1.clone())).collect();
+    let pam_names = rows
+        .iter()
+        .filter_map(|r| Some((r.1.clone(), r.2.clone()?)))
+        .collect();
+    let preferred = rows
+        .iter()
+        .filter_map(|r| Some((r.0.clone(), r.3.clone()?)))
+        .collect();
+    let uids = assign_uids(&ids, &pam_names, &preferred);
+    rows.into_iter()
+        .find(|r| uids[&r.0].to_lowercase() == uid_lc)
+        .map(|r| r.1)
 }
 
 type Uids = (Vec<User>, HashMap<String, PamUser>, HashMap<String, String>);
@@ -350,6 +375,29 @@ mod tests {
         assert_eq!(uids["4"], "d@x.io");
         assert_eq!(uids["5"], "e@x.io");
         assert_eq!(uids["6"], "frank");
+
+        let rows: Vec<UidCandidate> = users
+            .iter()
+            .map(|(id, email)| {
+                (
+                    id.clone(),
+                    email.clone(),
+                    pam.get(email).cloned(),
+                    preferred.get(id).cloned(),
+                )
+            })
+            .collect();
+        let owner = |uid: &str| uid_owner(uid, rows.clone());
+        assert_eq!(owner("alice").as_deref(), Some("a@x.io"));
+        assert_eq!(owner("frank").as_deref(), Some("f@x.io"));
+        assert_eq!(owner("b@x.io").as_deref(), Some("b@x.io"));
+        assert_eq!(owner("carol"), None);
+        assert_eq!(owner("eve"), None);
+        // only the rows the queries return for `alice`: the users named or emailed `alice`
+        assert_eq!(
+            uid_owner("alice", vec![rows[0].clone(), rows[1].clone()]).as_deref(),
+            Some("a@x.io")
+        );
     }
 
     #[test]

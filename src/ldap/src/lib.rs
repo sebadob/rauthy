@@ -5,12 +5,14 @@
 
 #![forbid(unsafe_code)]
 
+use crate::directory::Entry;
 use crate::dn::BindDn;
 use futures::{SinkExt, StreamExt};
 use ldap3_proto::LdapCodec;
 use ldap3_proto::proto::{LdapBindResponse, LdapExtendedResponse, LdapOp, LdapResult};
 use ldap3_proto::simple::{
-    LdapMsg, LdapResultCode, LdapSearchScope, SearchRequest, ServerOps, SimpleBindRequest,
+    LdapFilter, LdapMsg, LdapResultCode, LdapSearchScope, SearchRequest, ServerOps,
+    SimpleBindRequest,
 };
 use rauthy_api_types::oidc::GrantType;
 use rauthy_data::entity::clients::Client;
@@ -283,16 +285,7 @@ async fn search_client(
     base_dn: &str,
 ) -> Result<Vec<LdapMsg>, (LdapResultCode, String)> {
     let client_base = dn::client_base(client_id, base_dn);
-    let client_base_norm = dn::normalize(&client_base)
-        .ok_or((LdapResultCode::Other, "invalid client base DN".into()))?;
-    let search_base = dn::normalize(&req.base)
-        .ok_or((LdapResultCode::InvalidDNSyntax, "invalid base DN".into()))?;
-    if !dn::is_within(&search_base, &client_base_norm) {
-        return Err((
-            LdapResultCode::InsufficentAccessRights,
-            format!("searches are limited to {client_base}"),
-        ));
-    }
+    let search_base = search_base(&req.base, &client_base)?;
 
     let client = Client::find(client_id.to_string())
         .await
@@ -308,37 +301,170 @@ async fn search_client(
         (LdapResultCode::Other, "internal error".into())
     })?;
 
-    let base_depth = dn::depth(&search_base);
     let entries = directory::build(client_id, &client_base, &users, &groups);
+    Ok(visible(
+        entries,
+        &search_base,
+        req.scope.clone(),
+        user_id,
+        &req.filter,
+    )?
+    .into_iter()
+    .map(|e| req.gen_result_entry(e.into_result(&req.attrs)))
+    .collect())
+}
+
+/// Normalizes the requested search `base` and refuses any base outside `client_base`.
+fn search_base(base: &str, client_base: &str) -> Result<String, (LdapResultCode, String)> {
+    let client_base_norm = dn::normalize(client_base)
+        .ok_or((LdapResultCode::Other, "invalid client base DN".into()))?;
+    let search_base =
+        dn::normalize(base).ok_or((LdapResultCode::InvalidDNSyntax, "invalid base DN".into()))?;
+    if !dn::is_within(&search_base, &client_base_norm) {
+        return Err((
+            LdapResultCode::InsufficentAccessRights,
+            format!("searches are limited to {client_base}"),
+        ));
+    }
+    Ok(search_base)
+}
+
+/// Keeps the entries in `scope` of the normalized `search_base` that match `filter`. A `user_id`
+/// limits them to that user's own entry.
+fn visible(
+    entries: Vec<Entry>,
+    search_base: &str,
+    scope: LdapSearchScope,
+    user_id: Option<&str>,
+    filter: &LdapFilter,
+) -> Result<Vec<Entry>, (LdapResultCode, String)> {
     // user sessions get no `noSuchObject`, it would tell them which other entries exist
     if user_id.is_none()
         && !entries
             .iter()
-            .any(|e| dn::normalize(&e.dn).as_deref() == Some(search_base.as_str()))
+            .any(|e| dn::normalize(&e.dn).as_deref() == Some(search_base))
     {
         return Err((LdapResultCode::NoSuchObject, String::new()));
     }
 
+    let base_depth = dn::depth(search_base);
     Ok(entries
         .into_iter()
         .filter(|e| {
             let Some(norm) = dn::normalize(&e.dn) else {
                 return false;
             };
-            let in_scope = match req.scope {
+            let in_scope = match scope {
                 LdapSearchScope::Base => norm == search_base,
                 LdapSearchScope::OneLevel => {
-                    dn::is_within(&norm, &search_base) && dn::depth(&norm) == base_depth + 1
+                    dn::is_within(&norm, search_base) && dn::depth(&norm) == base_depth + 1
                 }
-                LdapSearchScope::Subtree => dn::is_within(&norm, &search_base),
+                LdapSearchScope::Subtree => dn::is_within(&norm, search_base),
                 LdapSearchScope::Children => {
-                    dn::is_within(&norm, &search_base) && norm != search_base
+                    dn::is_within(&norm, search_base) && norm != search_base
                 }
             };
             in_scope
                 && user_id.is_none_or(|id| e.values("entryUUID").any(|v| v == id))
-                && filter::matches(&req.filter, e)
+                && filter::matches(filter, e)
         })
-        .map(|e| req.gen_result_entry(e.into_result(&req.attrs)))
         .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::directory::DirUser;
+
+    const BASE: &str = "cn=app,ou=clients,dc=x";
+
+    fn entries() -> Vec<Entry> {
+        let user = |id: &str, uid: &str| DirUser {
+            id: id.into(),
+            uid: uid.into(),
+            email: format!("{uid}@x.io"),
+            given_name: uid.into(),
+            family_name: None,
+            groups: vec!["admins".into()],
+            posix: None,
+        };
+        let users = [user("id1", "alice"), user("id2", "bob")];
+        directory::build("app", BASE, &users, &["admins".into()])
+    }
+
+    fn dns(
+        base: &str,
+        scope: LdapSearchScope,
+        user_id: Option<&str>,
+    ) -> Result<Vec<String>, LdapResultCode> {
+        let search_base = search_base(base, BASE).map_err(|(c, _)| c)?;
+        let all = LdapFilter::Present("objectClass".into());
+        visible(entries(), &search_base, scope, user_id, &all)
+            .map(|es| es.into_iter().map(|e| e.dn).collect())
+            .map_err(|(c, _)| c)
+    }
+
+    #[test]
+    fn search_boundary() {
+        let alice = "uid=alice,ou=people,cn=app,ou=clients,dc=x";
+        let bob = "uid=bob,ou=people,cn=app,ou=clients,dc=x";
+
+        // service sessions see the whole subtree
+        assert_eq!(dns(BASE, LdapSearchScope::Subtree, None).unwrap().len(), 6);
+        assert_eq!(
+            dns(BASE, LdapSearchScope::Base, None).unwrap(),
+            vec![BASE.to_string()]
+        );
+        assert_eq!(
+            dns(
+                "ou=people,cn=app,ou=clients,dc=x",
+                LdapSearchScope::OneLevel,
+                None
+            )
+            .unwrap(),
+            vec![alice, bob]
+        );
+        assert_eq!(dns(BASE, LdapSearchScope::OneLevel, None).unwrap().len(), 2);
+        assert_eq!(dns(BASE, LdapSearchScope::Children, None).unwrap().len(), 5);
+        assert_eq!(
+            dns(
+                "uid=nobody,ou=people,cn=app,ou=clients,dc=x",
+                LdapSearchScope::Base,
+                None
+            ),
+            Err(LdapResultCode::NoSuchObject)
+        );
+
+        // user sessions only ever see their own entry
+        assert_eq!(
+            dns(BASE, LdapSearchScope::Subtree, Some("id1")).unwrap(),
+            vec![alice]
+        );
+        assert!(
+            dns(bob, LdapSearchScope::Base, Some("id1"))
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            dns(
+                "uid=nobody,ou=people,cn=app,ou=clients,dc=x",
+                LdapSearchScope::Base,
+                Some("id1")
+            )
+            .unwrap()
+            .is_empty()
+        );
+
+        // nothing outside the client's subtree
+        for base in ["ou=clients,dc=x", "cn=other,ou=clients,dc=x", "dc=x"] {
+            assert_eq!(
+                dns(base, LdapSearchScope::Subtree, None),
+                Err(LdapResultCode::InsufficentAccessRights)
+            );
+        }
+        assert_eq!(
+            dns("not a dn", LdapSearchScope::Subtree, None),
+            Err(LdapResultCode::InvalidDNSyntax)
+        );
+    }
 }
