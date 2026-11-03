@@ -119,6 +119,13 @@ pub async fn grant_type_authorization_code(
         warn!(err);
         return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
     }
+    if !code.is_for_client(&client) {
+        warn!("The Authorization Code was issued for a deleted client");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "'auth_code' could not be found inside the cache",
+        ));
+    }
     if code.exp < Utc::now().timestamp() {
         warn!("The Authorization Code has expired");
         return Err(ErrorResponse::new(

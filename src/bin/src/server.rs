@@ -253,6 +253,9 @@ async fn server_with_metrics() -> std::io::Result<()> {
         // no endpoint means it will not expose one, only collect data
         .exclude("/favicon.ico")
         .exclude("/metrics")
+        // Requests that match no route (scans) as one label value, not
+        // one series per path.
+        .mask_unmatched_patterns("UNKNOWN")
         .build()
         .unwrap();
 

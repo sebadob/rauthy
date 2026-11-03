@@ -1,5 +1,5 @@
 <script>
-    import Users from '$lib5/admin/users/Users.svelte';
+    import Users from '#lib/admin/users/Users.svelte';
 </script>
 
 <svelte:head>

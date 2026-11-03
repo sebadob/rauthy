@@ -1,5 +1,5 @@
 <script lang="ts">
-    import PasswordPolicy from '$lib5/admin/config/PasswordPolicy.svelte';
+    import PasswordPolicy from '#lib/admin/config/PasswordPolicy.svelte';
 </script>
 
 <svelte:head>

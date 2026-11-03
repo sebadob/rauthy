@@ -4,9 +4,9 @@
         AccessRight,
         ApiKeyAccess,
         ApiKeyResponse,
-    } from '$api/types/api_keys.ts';
-    import Button from '$lib5/button/Button.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
+    } from '#api/types/api_keys.ts';
+    import Button from '#lib/button/Button.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
 
     let {
         key,

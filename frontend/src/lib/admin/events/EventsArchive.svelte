@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { EVENT_LEVELS, EVENT_TYPES } from '$utils/constants';
-    import Event from '$lib5/admin/events/Event.svelte';
-    import type { EventLevel, EventResponse, EventsRequest, EventType } from '$api/types/events.ts';
-    import { fetchPost } from '$api/fetch';
-    import Options from '$lib5/Options.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { EVENT_LEVELS, EVENT_TYPES } from '#utils/constants.ts';
+    import Event from '#lib/admin/events/Event.svelte';
+    import type { EventLevel, EventResponse, EventsRequest, EventType } from '#api/types/events.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import Options from '#lib/Options.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 

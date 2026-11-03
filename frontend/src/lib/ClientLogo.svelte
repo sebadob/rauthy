@@ -1,5 +1,5 @@
 <script lang="ts">
-    import RauthyLogo from '$lib/RauthyLogo.svelte';
+    import RauthyLogo from '#lib/RauthyLogo.svelte';
 
     let {
         clientId,

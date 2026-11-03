@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import type { RoleResponse } from '$api/types/roles.ts';
-    import RoleConfig from '$lib5/admin/roles/RoleConfig.svelte';
-    import RoleDelete from '$lib5/admin/roles/RoleDelete.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import RoleConfig from '#lib/admin/roles/RoleConfig.svelte';
+    import RoleDelete from '#lib/admin/roles/RoleDelete.svelte';
 
     let {
         role,

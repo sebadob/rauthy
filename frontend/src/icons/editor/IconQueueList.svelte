@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { IconProps } from '$icons/props';
+    import type { IconProps } from '#icons/props.ts';
 
     let { opacity = 0.9, width = '1.5rem', color = 'currentColor' }: IconProps = $props();
 </script>

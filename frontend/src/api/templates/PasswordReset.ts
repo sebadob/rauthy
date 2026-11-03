@@ -1,4 +1,4 @@
-import type { PasswordPolicyResponse } from '$api/types/password_policy';
+import type { PasswordPolicyResponse } from '#api/types/password_policy.ts';
 
 export interface PasswordResetTemplate {
     csrf_token: string;

@@ -1,18 +1,18 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import { fetchGet } from '$api/fetch';
-    import { useParam } from '$state/param.svelte';
-    import type { ScopeResponse } from '$api/types/scopes.ts';
-    import type { ClientResponse } from '$api/types/clients.ts';
-    import ClientAddNew from '$lib5/admin/clients/ClientAddNew.svelte';
-    import ClientDetails from '$lib5/admin/clients/ClientDetails.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import { useParam } from '#state/param.svelte.ts';
+    import type { ScopeResponse } from '#api/types/scopes.ts';
+    import type { ClientResponse } from '#api/types/clients.ts';
+    import ClientAddNew from '#lib/admin/clients/ClientAddNew.svelte';
+    import ClientDetails from '#lib/admin/clients/ClientDetails.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();

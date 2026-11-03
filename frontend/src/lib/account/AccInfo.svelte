@@ -1,25 +1,25 @@
 <script lang="ts">
-    import CheckIcon from '$lib5/CheckIcon.svelte';
-    import { buildWebIdUri, formatDateFromTs, saveProviderToken } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
-    import Modal from '$lib5/Modal.svelte';
-    import { PKCE_VERIFIER_UPSTREAM, TPL_IS_OTP_ENABLED } from '$utils/constants';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { UserResponse } from '$api/types/user.ts';
+    import CheckIcon from '#lib/CheckIcon.svelte';
+    import { buildWebIdUri, formatDateFromTs, saveProviderToken } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import { PKCE_VERIFIER_UPSTREAM, TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { UserResponse } from '#api/types/user.ts';
     import type {
         AuthProvidersTemplate,
         AuthProviderTemplate,
-    } from '$api/templates/AuthProvider.ts';
-    import type { WebIdResponse } from '$api/types/web_id.ts';
-    import type { ProviderLoginRequest } from '$api/types/auth_provider.ts';
-    import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
+    } from '#api/templates/AuthProvider.ts';
+    import type { WebIdResponse } from '#api/types/web_id.ts';
+    import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
+    import { fetchDelete, fetchGet, fetchPost } from '#api/fetch.ts';
     import ButtonAuthProvider from '../ButtonAuthProvider.svelte';
-    import UserPicture from '$lib/UserPicture.svelte';
-    import { fetchSolvePow } from '$utils/pow';
-    import { generatePKCE } from '$utils/pkce';
-    import type { PamUserResponse } from '$api/types/pam';
-    import Template from '$lib5/Template.svelte';
-    import type { OtpResponse } from '$api/types/otp';
+    import UserPicture from '#lib/UserPicture.svelte';
+    import { fetchSolvePow } from '#utils/pow.ts';
+    import { generatePKCE } from '#utils/pkce.ts';
+    import type { PamUserResponse } from '#api/types/pam.ts';
+    import Template from '#lib/Template.svelte';
+    import type { OtpResponse } from '#api/types/otp.ts';
 
     let {
         user = $bindable(),

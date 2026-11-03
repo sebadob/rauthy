@@ -1,5 +1,29 @@
 # Changelog
 
+## UNRELEASED
+
+### Changes
+
+#### Externally Provisioned Client Secrets
+
+`PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is
+stored (encrypted with the active `ENC_KEY`) instead of generating a new random secret. This makes
+continuous declarative provisioning of clients against a running instance possible, which the
+bootstrap `Plain` secret cannot do, since the bootstrap only runs on an empty database. When
+`secret` is not given, the behavior is unchanged and a new random secret is generated, so existing
+callers (like the Admin UI) are not affected.
+
+#### Open Native Apps after MFA Login
+
+When a client uses a custom scheme `redirect_uri` for a native App (RFC 8252), like
+`myapp://callback`, and the login requires a Passkey, the browser silently blocked the final
+redirect to the App: external protocols require a user activation, which the Passkey ceremony
+consumed. The MFA *Acknowledged* page now shows an *Open the App to continue* link for non-http
+locations in this case. A click provides a fresh user activation, and the App receives the
+authorization code. Http(s) redirects are unchanged and remain automatic.
+
+[#1827](https://github.com/sebadob/rauthy/pull/1827)
+
 ## v0.37.2
 
 ### Security
@@ -16,6 +40,8 @@
   endpoint does is issuing `authorization_code`s (which is the most secure flow of all of them
   anyway), this is more a "keep it clean" fix.
   [#1807](https://github.com/sebadob/rauthy/pull/1807)
+- Fixed the possibility of an unauthenticated DoS. A security advisory will be released in the
+  upcoming week.
 
 ### Changes
 
@@ -83,7 +109,9 @@ name_order_reverse = true
 
 The following new translations for the UI are available:
 
+- `es`
 - `ja`
+- `pt`
 
 [#1786](https://github.com/sebadob/rauthy/pull/1786)
 

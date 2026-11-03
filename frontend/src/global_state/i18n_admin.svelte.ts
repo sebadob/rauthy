@@ -1,4 +1,4 @@
-import { useLang } from '$state/language.svelte';
+import { useLang } from '#state/language.svelte.ts';
 import type { I18nAdmin } from '../i18n/admin/interface.ts';
 import { I18nAdminDe } from '../i18n/admin/de';
 import { I18nAdminEn } from '../i18n/admin/en';

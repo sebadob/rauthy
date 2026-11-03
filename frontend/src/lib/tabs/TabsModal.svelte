@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Tabs from '$lib5/tabs/Tabs.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
     import { untrack } from 'svelte';
 
     let {

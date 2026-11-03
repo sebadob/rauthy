@@ -1,8 +1,8 @@
 <script lang="ts">
-    import IconChevronRight from '$icons/IconChevronRight.svelte';
-    import { genKey } from '$utils/helpers';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib5/button/Button.svelte';
+    import IconChevronRight from '#icons/IconChevronRight.svelte';
+    import { genKey } from '#utils/helpers.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
     import { slide } from 'svelte/transition';
 
     import type { Snippet } from 'svelte';

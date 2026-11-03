@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { elementsInRangeNoBrHr } from '$lib/text_edit/html/utils';
-    import Button from '$lib/button/Button.svelte';
+    import { elementsInRangeNoBrHr } from '#lib/text_edit/html/utils.js';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         // ref of the contenteditable div

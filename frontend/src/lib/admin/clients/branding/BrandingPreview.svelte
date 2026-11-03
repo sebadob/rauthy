@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type { ThemeCss } from '$api/types/themes.ts';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import RauthyLogo from '$lib/RauthyLogo.svelte';
+    import type { ThemeCss } from '#api/types/themes.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import RauthyLogo from '#lib/RauthyLogo.svelte';
 
     let {
         logoUrl,
@@ -78,14 +78,17 @@
                 </div>
 
                 <div>
-                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
                     <br />
-                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
                     <br />
-                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
                 </div>
             </div>
 

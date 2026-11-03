@@ -195,6 +195,7 @@ export const I18nFr: I18n = {
         invalidKeyUsed: 'Clé invalide',
         login: 'Connexion',
         mfaAck: 'Confirmé',
+        mfaOpenApp: "Ouvrez l'application pour continuer",
         navigateToAccount: 'Tableau de bord du compte',
         needsUserUpdate: `Certaines informations pour ce compte sont manquantes. Vous devez mettre à jour ces
             valeurs avant de pouvoir poursuivre la connexion.`,

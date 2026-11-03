@@ -1,4 +1,4 @@
-import { useLang } from '$state/language.svelte';
+import { useLang } from '#state/language.svelte.ts';
 import { type I18n } from '../i18n/common/interface';
 import { I18nEn } from '../i18n/common/en';
 import { I18nEs } from '../i18n/common/es';

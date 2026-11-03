@@ -46,6 +46,7 @@ pub enum Language {
     Pt,
     Ru,
     Uk,
+    #[serde(alias = "zh")]
     ZhHans,
 }
 

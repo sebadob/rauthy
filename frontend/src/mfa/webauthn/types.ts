@@ -1,4 +1,4 @@
-import type { MfaPurpose } from '$api/types/mfa';
+import type { MfaPurpose } from '#api/types/mfa.ts';
 
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 

@@ -1,4 +1,4 @@
-import type { CodeChallengeMethod } from '$api/types/authorize.ts';
+import type { CodeChallengeMethod } from '#api/types/authorize.ts';
 
 export type AuthProviderType = 'auto' | 'custom' | 'github' | 'google' | 'oidc';
 

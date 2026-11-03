@@ -19,8 +19,9 @@
     "devDependencies": {
         "@internationalized/date": "^3.5.5",
         "@playwright/test": "^1.25.0",
-        "@sveltejs/adapter-static": "^3.0.0",
-        "@sveltejs/kit": "^2.52.2",
+        "@sveltejs/adapter-static": "^4.0.0",
+        "@sveltejs/kit": "^3.1.0",
+        "@sveltejs/load-config": "^0.2.3",
         "@sveltejs/vite-plugin-svelte": "^7.1.2",
         "@swc/core": "^1.11.4",
         "@types/node": "^25.9.0",
@@ -30,12 +31,22 @@
         "eslint-plugin-svelte": "^3.0.2",
         "prettier": "^3.1.0",
         "prettier-plugin-svelte": "^3.2.6",
-        "svelte": "^5.55.7",
-        "svelte-check": "^4.3.4",
-        "typescript": "^5.5.0",
+        "svelte": "^5.57.1",
+        "svelte-check": "^4.7.7",
+        "typescript": "^6.0.0",
         "vite": "^8.0.16",
-        "vite-plugin-top-level-await": "^1.5.0",
+        "vite-plugin-top-level-await": "^1.6.0",
         "vite-plugin-wasm": "^3.4.1"
     },
-    "type": "module"
+    "type": "module",
+    "imports": {
+        "#lib": "./src/lib/index.js",
+        "#lib/*": "./src/lib/*",
+        "#api/*": "./src/api/*",
+        "#icons/*": "./src/icons/*",
+        "#mfa/*": "./src/mfa/*",
+        "#state/*": "./src/global_state/*",
+        "#types/*": "./src/types/*",
+        "#utils/*": "./src/utils/*"
+    }
 }

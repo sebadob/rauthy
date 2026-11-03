@@ -196,6 +196,7 @@ export const I18nEs: I18n = {
         invalidKeyUsed: 'Clave no válida',
         login: 'Iniciar sesión',
         mfaAck: 'Confirmado',
+        mfaOpenApp: 'Abre la aplicación para continuar',
         navigateToAccount: 'Panel de la cuenta',
         needsUserUpdate: `Falta información en esta cuenta. Debe actualizar estos datos antes de
             continuar con el inicio de sesión.`,

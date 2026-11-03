@@ -1,17 +1,17 @@
 <script lang="ts">
-    import Button from '$lib/button/Button.svelte';
-    import IconCircleStack from '$icons/IconCircleStack.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import type { EmailJobResponse } from '$api/types/email';
-    import { fetchGet, fetchPost } from '$api/fetch';
-    import { formatDateFromTs } from '$utils/helpers';
-    import IconClock from '$icons/IconClock.svelte';
-    import Expandable from '$lib/Expandable.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import IconStop from '$icons/IconStop.svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import IconCircleStack from '#icons/IconCircleStack.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Modal from '#lib/Modal.svelte';
+    import type { EmailJobResponse } from '#api/types/email.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import IconClock from '#icons/IconClock.svelte';
+    import Expandable from '#lib/Expandable.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import IconStop from '#icons/IconStop.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
 
     let ta = useI18nAdmin();
 

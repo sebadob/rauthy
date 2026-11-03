@@ -1,10 +1,10 @@
 <script lang="ts">
-    import IconBarsArrowDown from '$icons/IconBarsArrowDown.svelte';
-    import IconBarsArrowUp from '$icons/IconBarsArrowUp.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Tooltip from '$lib5/Tooltip.svelte';
-    import Options from '$lib5/Options.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import IconBarsArrowDown from '#icons/IconBarsArrowDown.svelte';
+    import IconBarsArrowUp from '#icons/IconBarsArrowUp.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import Options from '#lib/Options.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { untrack } from 'svelte';
 
     let {

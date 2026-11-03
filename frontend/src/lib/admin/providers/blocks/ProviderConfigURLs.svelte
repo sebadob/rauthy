@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { PATTERN_URI } from '$utils/patterns';
-    import Input from '$lib/form/Input.svelte';
+    import { PATTERN_URI } from '#utils/patterns.ts';
+    import Input from '#lib/form/Input.svelte';
 
     let {
         issuer = $bindable(),

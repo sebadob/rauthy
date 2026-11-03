@@ -1,10 +1,10 @@
 <script lang="ts">
-    import IconChevronRight from '$icons/IconChevronRight.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import IconChevronRight from '#icons/IconChevronRight.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import { untrack } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Options from '$lib5/Options.svelte';
-    import type { PageSize } from '$lib5/pagination/props.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Options from '#lib/Options.svelte';
+    import type { PageSize } from '#lib/pagination/props.ts';
 
     const options: PageSize[] = [5, 10, 20, 30, 50, 100];
 

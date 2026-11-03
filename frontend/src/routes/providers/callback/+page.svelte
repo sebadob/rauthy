@@ -1,27 +1,27 @@
 <script lang="ts">
-    import { getProviderToken, getVerifierUpstreamFromStorage } from '$utils/helpers';
+    import { getProviderToken, getVerifierUpstreamFromStorage } from '#utils/helpers.ts';
     import { onMount } from 'svelte';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
-    import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
+    import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
     import type {
         ActiveOtp,
         OtpLoginResponse,
         WebauthnLoginResponse,
-    } from '$api/types/authorize.ts';
-    import type { ProviderCallbackRequest } from '$api/types/auth_provider.ts';
-    import { IS_DEV } from '$utils/constants';
-    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
-    import TosAccept from '$lib/TosAccept.svelte';
-    import ContentCenter from '$lib/ContentCenter.svelte';
-    import type { MfaPurpose } from '$api/types/mfa';
-    import OtpRequest from '$lib5/OtpRequest.svelte';
-    import type { OtpAdditionalData } from '$mfa/otp/types';
+    } from '#api/types/authorize.ts';
+    import type { ProviderCallbackRequest } from '#api/types/auth_provider.ts';
+    import { IS_DEV } from '#utils/constants.ts';
+    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
+    import TosAccept from '#lib/TosAccept.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
+    import OtpRequest from '#lib/OtpRequest.svelte';
+    import type { OtpAdditionalData } from '#mfa/otp/types.ts';
 
     let t = useI18n();
     let clientMfaForce = $state(false);

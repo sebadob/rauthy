@@ -1,5 +1,5 @@
-import { type ErrorResponse } from '$api/types/error';
-import { getCsrfToken } from '$utils/helpers';
+import { type ErrorResponse } from '#api/types/error.ts';
+import { getCsrfToken } from '#utils/helpers.ts';
 
 export interface IResponse<T> {
     body: undefined | T;

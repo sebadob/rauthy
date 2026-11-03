@@ -191,6 +191,7 @@ export const I18nEn: I18n = {
         invalidKeyUsed: 'Invalid Key',
         login: 'Login',
         mfaAck: 'Acknowledged',
+        mfaOpenApp: 'Open the App to continue',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,

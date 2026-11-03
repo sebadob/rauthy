@@ -1,12 +1,12 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Main from '$lib5/Main.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import NavSide from '$lib5/nav/NavSide.svelte';
-    import { useSession } from '$state/session.svelte';
-    import { fetchGet } from '$api/fetch';
-    import Events from '$lib5/admin/events/Events.svelte';
-    import { initI18nAdmin, useI18nAdmin } from '$state/i18n_admin.svelte';
+    import Main from '#lib/Main.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import NavSide from '#lib/nav/NavSide.svelte';
+    import { useSession } from '#state/session.svelte.ts';
+    import { fetchGet } from '#api/fetch.ts';
+    import Events from '#lib/admin/events/Events.svelte';
+    import { initI18nAdmin, useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         children,

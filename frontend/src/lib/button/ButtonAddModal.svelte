@@ -1,8 +1,8 @@
 <script lang="ts">
     import { type Snippet, untrack } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Modal from '$lib5/Modal.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         alignRight,

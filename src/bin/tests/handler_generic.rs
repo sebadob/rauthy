@@ -58,6 +58,13 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
     assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
     // RFC 9207
     assert!(content.authorization_response_iss_parameter_supported);
+    // public and ephemeral (CIMD) clients authenticate with PKCE only
+    assert!(
+        content
+            .token_endpoint_auth_methods_supported
+            .iter()
+            .any(|m| m == "none")
+    );
     // don't test the rest for now as it might change soon again
 
     Ok(())

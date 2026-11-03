@@ -2,6 +2,8 @@ use crate::database::{Cache, DB};
 use crate::entity::clients::Client;
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
+#[cfg(debug_assertions)]
+use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -10,11 +12,14 @@ use std::ops::Add;
 use std::time::Duration;
 use utoipa::ToSchema;
 
+/// `AuthCode` as cached by v0.37, before `client_created_micros` existed.
 #[derive(Deserialize)]
-struct AuthCodeOld {
+#[cfg_attr(test, derive(Serialize))]
+struct AuthCodeV037 {
     id: String,
     exp: i64,
     client_id: String,
+    redirect_uri: String,
     user_id: String,
     session_id: Option<String>,
     challenge: Option<String>,
@@ -22,6 +27,7 @@ struct AuthCodeOld {
     nonce: Option<String>,
     scopes: Vec<String>,
     resource: Option<String>,
+    state: Option<Vec<u8>>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -51,6 +57,9 @@ pub struct AuthCode {
     /// We will not save the state during normal logins, because it does not make any sense. We will
     /// not get anything from the client we could compare it to.
     pub state: Option<Vec<u8>>,
+    /// `Client::created_micros` of `client_id` when the code was issued. Last on purpose: bincode
+    /// ignores trailing bytes, so older versions can still decode a code with this field.
+    pub client_created_micros: Option<i64>,
 }
 
 impl Debug for AuthCode {
@@ -78,13 +87,6 @@ impl AuthCode {
 
     // Claims an Authorization code from the cache
     pub async fn find_remove(id: String) -> Result<Option<Self>, ErrorResponse> {
-        #[cfg(debug_assertions)]
-        if !rauthy_common::constants::RAUTHY_VERSION.starts_with("0.37.") {
-            todo!("Cleanup AuthCode::find_remove() and remove AuthCodeOld");
-        }
-
-        // TODO this versioning is only necessary during the 0.37 release.
-        //  Remove it afterwards.
         let Some(bytes) = DB::hql().get_remove_bytes(Cache::AuthCode, id).await? else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
@@ -92,42 +94,43 @@ impl AuthCode {
             ));
         };
 
-        match bincode_next::serde::decode_from_slice::<Self, _>(
-            &bytes,
-            bincode_next::config::legacy(),
-        ) {
-            Ok((slf, _)) => Ok(Some(slf)),
-            Err(_) => {
-                // This might be an old auth code during a migration.
-                let Ok((code_old, _)) = bincode_next::serde::decode_from_slice::<AuthCodeOld, _>(
-                    &bytes,
-                    bincode_next::config::legacy(),
-                ) else {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::NotFound,
-                        "auth_code not found",
-                    ));
-                };
-
-                Ok(Some(Self {
-                    id: code_old.id,
-                    exp: code_old.exp,
-                    client_id: code_old.client_id,
-                    // This is not an Option on purpose to prevent another migration being necessary
-                    redirect_uri: String::default(),
-                    user_id: code_old.user_id,
-                    session_id: code_old.session_id,
-                    challenge: code_old.challenge,
-                    challenge_method: code_old.challenge_method,
-                    nonce: code_old.nonce,
-                    scopes: code_old.scopes,
-                    resource: code_old.resource,
-                    state: None,
-                }))
-            }
-        }
+        Self::decode(&bytes)
+            .map(Some)
+            .ok_or_else(|| ErrorResponse::new(ErrorResponseType::NotFound, "auth_code not found"))
 
         // Ok(DB::hql().get_remove(Cache::AuthCode, id).await?)
+    }
+
+    /// Decodes a cached code, falling back to the v0.37 layout. Such codes only match clients
+    /// created before `Client::created_micros` existed.
+    fn decode(bytes: &[u8]) -> Option<Self> {
+        #[cfg(debug_assertions)]
+        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
+            todo!("Remove AuthCodeV037");
+        }
+
+        let config = bincode_next::config::legacy();
+        if let Ok((slf, _)) = bincode_next::serde::decode_from_slice::<Self, _>(bytes, config) {
+            return Some(slf);
+        }
+
+        let (code, _) =
+            bincode_next::serde::decode_from_slice::<AuthCodeV037, _>(bytes, config).ok()?;
+        Some(Self {
+            id: code.id,
+            exp: code.exp,
+            client_id: code.client_id,
+            redirect_uri: code.redirect_uri,
+            user_id: code.user_id,
+            session_id: code.session_id,
+            challenge: code.challenge,
+            challenge_method: code.challenge_method,
+            nonce: code.nonce,
+            scopes: code.scopes,
+            resource: code.resource,
+            state: code.state,
+            client_created_micros: None,
+        })
     }
 
     // Saves an Authorization Code
@@ -202,6 +205,7 @@ impl AuthCode {
     pub fn new(
         user_id: String,
         client_id: String,
+        client_created_micros: Option<i64>,
         redirect_uri: String,
         session_id: Option<String>,
         challenge: Option<String>,
@@ -222,6 +226,7 @@ impl AuthCode {
             id,
             exp,
             client_id,
+            client_created_micros,
             redirect_uri,
             user_id,
             session_id,
@@ -232,6 +237,12 @@ impl AuthCode {
             resource,
             state,
         }
+    }
+
+    /// `false` if `client` was deleted and recreated since the code was issued.
+    #[inline]
+    pub fn is_for_client(&self, client: &Client) -> bool {
+        self.client_id == client.id && self.client_created_micros == client.created_micros
     }
 
     /// CAUTION: DO NOT use this reset in any other case than after accepting updated ToS!
@@ -432,6 +443,7 @@ mod tests {
             id: "c0de".to_string(),
             exp: 0,
             client_id: client.id.clone(),
+            client_created_micros: client.created_micros,
             redirect_uri: uri.to_string(),
             user_id: "user".to_string(),
             session_id: None,
@@ -517,5 +529,103 @@ mod tests {
                 ("iss".to_string(), ISSUER.to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn test_auth_code_is_for_client() {
+        let code = AuthCode {
+            id: "c0de".to_string(),
+            exp: 0,
+            client_id: "client_1".to_string(),
+            client_created_micros: Some(1),
+            redirect_uri: "https://client.example.com/cb".to_string(),
+            user_id: "user_1".to_string(),
+            session_id: None,
+            challenge: None,
+            challenge_method: None,
+            nonce: None,
+            scopes: Vec::new(),
+            resource: None,
+            state: None,
+        };
+
+        let client = |id: &str, created_micros| Client {
+            id: id.to_string(),
+            created_micros,
+            ..Default::default()
+        };
+        assert!(code.is_for_client(&client("client_1", Some(1))));
+        assert!(!code.is_for_client(&client("client_1", Some(2))));
+        assert!(!code.is_for_client(&client("client_1", None)));
+        assert!(!code.is_for_client(&client("client_2", Some(1))));
+    }
+
+    fn encode<T: Serialize>(value: &T) -> Vec<u8> {
+        bincode_next::serde::encode_to_vec(value, bincode_next::config::legacy()).unwrap()
+    }
+
+    fn code_with_client_created(client_created_micros: Option<i64>) -> AuthCode {
+        AuthCode {
+            id: "c0de".to_string(),
+            exp: 1,
+            client_id: "client_1".to_string(),
+            redirect_uri: "https://client.example.com/cb".to_string(),
+            user_id: "user_1".to_string(),
+            session_id: Some("sid".to_string()),
+            challenge: None,
+            challenge_method: None,
+            nonce: None,
+            scopes: vec!["openid".to_string()],
+            resource: None,
+            state: Some(vec![1, 2]),
+            client_created_micros,
+        }
+    }
+
+    #[test]
+    fn test_auth_code_decode_current() {
+        let code = AuthCode::decode(&encode(&code_with_client_created(Some(1)))).unwrap();
+        assert_eq!(code.client_created_micros, Some(1));
+        assert_eq!(code.redirect_uri, "https://client.example.com/cb");
+        assert_eq!(code.state, Some(vec![1, 2]));
+    }
+
+    #[test]
+    fn test_auth_code_decode_v037() {
+        let old = AuthCodeV037 {
+            id: "c0de".to_string(),
+            exp: 1,
+            client_id: "client_1".to_string(),
+            redirect_uri: "https://client.example.com/cb".to_string(),
+            user_id: "user_1".to_string(),
+            session_id: Some("sid".to_string()),
+            challenge: None,
+            challenge_method: None,
+            nonce: None,
+            scopes: vec!["openid".to_string()],
+            resource: None,
+            state: Some(vec![1, 2]),
+        };
+        let code = AuthCode::decode(&encode(&old)).unwrap();
+        assert_eq!(code.client_created_micros, None);
+        assert_eq!(code.redirect_uri, "https://client.example.com/cb");
+        assert_eq!(code.user_id, "user_1");
+        assert_eq!(code.state, Some(vec![1, 2]));
+        assert!(code.is_for_client(&Client {
+            id: "client_1".to_string(),
+            ..Default::default()
+        }));
+    }
+
+    #[test]
+    fn test_auth_code_readable_by_older_versions() {
+        let bytes = encode(&code_with_client_created(Some(1)));
+        let (old, _) = bincode_next::serde::decode_from_slice::<AuthCodeV037, _>(
+            &bytes,
+            bincode_next::config::legacy(),
+        )
+        .unwrap();
+        assert_eq!(old.redirect_uri, "https://client.example.com/cb");
+        assert_eq!(old.state, Some(vec![1, 2]));
     }
 }

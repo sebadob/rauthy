@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
-    import InputRange from '$lib5/form/InputRange.svelte';
-    import InputColor from '$lib5/form/InputColor.svelte';
+    import { genKey } from '#utils/helpers.ts';
+    import InputRange from '#lib/form/InputRange.svelte';
+    import InputColor from '#lib/form/InputColor.svelte';
 
     let {
         label,

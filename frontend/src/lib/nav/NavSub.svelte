@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { genKey } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
+    import { genKey } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         width = 'min(25rem, 100dvw)',

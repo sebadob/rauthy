@@ -1,24 +1,28 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import { useTrigger } from '$state/callback.svelte';
-    import NavSub from '$lib/nav/NavSub.svelte';
-    import SearchBar from '$lib/search_bar/SearchBar.svelte';
-    import Tabs from '$lib/tabs/Tabs.svelte';
-    import { fetchGet } from '$api/fetch';
-    import type { PamGroupResponse, PamHostSimpleResponse, PamUserResponse } from '$api/types/pam';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import type {
+        PamGroupResponse,
+        PamHostSimpleResponse,
+        PamUserResponse,
+    } from '#api/types/pam.ts';
     import { onMount } from 'svelte';
-    import NavButtonTile from '$lib/nav/NavButtonTile.svelte';
-    import PAMGroupDetails from '$lib/admin/pam/groups/PAMGroupDetails.svelte';
-    import PamHostAdd from '$lib/admin/pam/hosts/PAMHostAdd.svelte';
-    import PAMHostDetails from '$lib/admin/pam/hosts/PAMHostDetails.svelte';
-    import PAMGroupAdd from '$lib/admin/pam/groups/PAMGroupAdd.svelte';
-    import PAMUserAdd from '$lib/admin/pam/users/PAMUserAdd.svelte';
-    import UserPicture from '$lib/UserPicture.svelte';
-    import PAMUserDetails from '$lib/admin/pam/users/PAMUserDetails.svelte';
-    import type { PamGroupsSorted } from '$lib/admin/pam/types';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import PAMGroupDetails from '#lib/admin/pam/groups/PAMGroupDetails.svelte';
+    import PamHostAdd from '#lib/admin/pam/hosts/PAMHostAdd.svelte';
+    import PAMHostDetails from '#lib/admin/pam/hosts/PAMHostDetails.svelte';
+    import PAMGroupAdd from '#lib/admin/pam/groups/PAMGroupAdd.svelte';
+    import PAMUserAdd from '#lib/admin/pam/users/PAMUserAdd.svelte';
+    import UserPicture from '#lib/UserPicture.svelte';
+    import PAMUserDetails from '#lib/admin/pam/users/PAMUserDetails.svelte';
+    import type { PamGroupsSorted } from '#lib/admin/pam/types.js';
 
     let ta = useI18nAdmin();
 

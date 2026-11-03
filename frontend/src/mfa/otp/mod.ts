@@ -1,5 +1,5 @@
-import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
-import type { OtpResponse } from '$api/types/otp';
+import { fetchDelete, fetchPost, fetchPut } from '#api/fetch.ts';
+import type { OtpResponse } from '#api/types/otp.ts';
 import type {
     OtpActivateRequest,
     OtpActivateResponse,
@@ -8,7 +8,7 @@ import type {
     OtpDeleteRequest,
     OtpDeleteResponse,
     OtpKind,
-} from '$mfa/otp/types.ts';
+} from '#mfa/otp/types.ts';
 
 export async function postOtp(
     userId: string,

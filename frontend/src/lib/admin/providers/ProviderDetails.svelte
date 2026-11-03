@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type { ProviderResponse } from '$api/types/auth_provider.ts';
+    import type { ProviderResponse } from '#api/types/auth_provider.ts';
     import ProviderConfig from './ProviderConfig.svelte';
     import ProviderDelete from './ProviderDelete.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         provider = $bindable(),

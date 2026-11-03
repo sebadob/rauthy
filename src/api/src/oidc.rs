@@ -638,17 +638,35 @@ pub async fn post_device_auth(
         }
     }
 
+    // RFC 8707: validated like on `/oidc/authorize` and bound to the device code
+    if let Some(resource) = payload.resource.as_deref()
+        && let Err(err) = client.validate_resource_request(resource)
+    {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidTarget,
+            error_description: Some(err.message),
+        });
+    }
+
     // we are good - create the code
-    let code =
-        match DeviceAuthCode::new(scopes, client.id, payload.client_secret, payload.nonce).await {
-            Ok(code) => code,
-            Err(err) => {
-                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                    error: OAuth2ErrorTypeResponse::InvalidRequest,
-                    error_description: Some(err.message),
-                });
-            }
-        };
+    let code = match DeviceAuthCode::new(
+        scopes,
+        client.id,
+        client.created_micros,
+        payload.client_secret,
+        payload.nonce,
+        payload.resource,
+    )
+    .await
+    {
+        Ok(code) => code,
+        Err(err) => {
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(err.message),
+            });
+        }
+    };
 
     let user_code = code.user_code();
     let verification_uri = code.verification_uri();

@@ -1,16 +1,16 @@
 <script lang="ts">
-    import Event from '$lib5/admin/events/Event.svelte';
+    import Event from '#lib/admin/events/Event.svelte';
     import EventsLegend from './EventsLegend.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { EVENT_LEVELS } from '$utils/constants';
-    import { isBrowser } from '$utils/helpers';
-    import type { EventLevel, EventResponse } from '$api/types/events.ts';
-    import Options from '$lib5/Options.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { EVENT_LEVELS } from '#utils/constants.ts';
+    import { isBrowser } from '#utils/helpers.ts';
+    import type { EventLevel, EventResponse } from '#api/types/events.ts';
+    import Options from '#lib/Options.svelte';
     import { onDestroy } from 'svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { fetchPost } from '$api/fetch';
-    import { useTrigger } from '$state/callback.svelte';
-    import { useSession } from '$state/session.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     const latest = 50;
 

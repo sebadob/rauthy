@@ -52,31 +52,50 @@ WHERE id IN (
     SELECT DISTINCT user_id
     FROM magic_links
     WHERE exp < $1 AND used = false)
-AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL"#;
+AND password IS NULL AND webauthn_user_id IS NULL AND auth_provider_id IS NULL
+RETURNING id, email"#;
 
     let res = if is_hiqlite() {
-        DB::hql().execute(sql, params!(exp)).await.map_err(|err| {
-            ErrorResponse::new(
+        match DB::hql().execute_returning(sql, params!(exp)).await {
+            Ok(rows) => {
+                let mut deleted = Vec::with_capacity(rows.len());
+                for row in rows {
+                    let mut row = row?;
+                    deleted.push((row.get::<String>("id"), row.get::<String>("email")));
+                }
+                Ok(deleted)
+            }
+            Err(err) => Err(ErrorResponse::new(
                 ErrorResponseType::Database,
                 format!("Error during Magic Link Cleanup: {err}"),
-            )
-        })
+            )),
+        }
     } else {
-        DB::pg_execute(sql, &[&exp]).await.map_err(|err| {
-            ErrorResponse::new(
-                ErrorResponseType::Database,
-                format!("Error during Magic Link Cleanup: {err}"),
-            )
-        })
+        DB::pg_query_rows(sql, &[&exp], 0)
+            .await
+            .map(|rows| {
+                rows.iter()
+                    .map(|row| (row.get::<_, String>("id"), row.get::<_, String>("email")))
+                    .collect::<Vec<_>>()
+            })
+            .map_err(|err| {
+                ErrorResponse::new(
+                    ErrorResponseType::Database,
+                    format!("Error during Magic Link Cleanup: {err}"),
+                )
+            })
     };
 
     match res {
-        Ok(rows_affected) => {
-            if rows_affected > 0 {
+        Ok(deleted) => {
+            if !deleted.is_empty() {
                 info!(
-                    "Cleaned up {rows_affected} users which did not use their initial password reset magic link"
+                    "Cleaned up {} users which did not use their initial password reset magic link",
+                    deleted.len()
                 );
-                for _ in 0..rows_affected {
+                // The rows are gone, but `User::find*()` would keep serving them from the cache.
+                for (id, email) in &deleted {
+                    User::invalidate_cache(id, email).await?;
                     User::count_dec().await?;
                 }
 

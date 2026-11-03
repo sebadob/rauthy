@@ -1,6 +1,6 @@
 <script lang="ts">
-    import OrderBy from '$lib5/search_bar/OrderBy.svelte';
-    import SearchBar from '$lib5/search_bar/SearchBar.svelte';
+    import OrderBy from '#lib/search_bar/OrderBy.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
 
     let {
         ref = $bindable(),

@@ -1,10 +1,10 @@
 <script lang="ts">
     import { slide } from 'svelte/transition';
-    import { useI18n } from '$state/i18n.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import type { FullAutoFill } from 'svelte/elements';
-    import { PATTERN_OTP_CODE } from '$utils/patterns';
-    import Template from '$lib5/Template.svelte';
-    import { TPL_OTP_LENGTH } from '$utils/constants';
+    import { PATTERN_OTP_CODE } from '#utils/patterns.ts';
+    import Template from '#lib/Template.svelte';
+    import { TPL_OTP_LENGTH } from '#utils/constants.ts';
 
     let t = useI18n();
     let otpSize = $state(8);

@@ -1,14 +1,14 @@
 <script lang="ts">
-    import type { UserResponse } from '$api/types/user.ts';
-    import { fetchDelete, fetchGet } from '$api/fetch';
-    import type { PasskeyResponse } from '$api/types/webauthn.ts';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import UserPasskey from '$lib5/UserPasskey.svelte';
-    import type { OtpResponse } from '$api/types/otp';
-    import Template from '$lib5/Template.svelte';
-    import { TPL_IS_OTP_ENABLED } from '$utils/constants';
-    import { deleteOtp } from '$mfa/otp/mod';
-    import UserOtp from '$lib5/UserOtp.svelte';
+    import type { UserResponse } from '#api/types/user.ts';
+    import { fetchDelete, fetchGet } from '#api/fetch.ts';
+    import type { PasskeyResponse } from '#api/types/webauthn.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import UserPasskey from '#lib/UserPasskey.svelte';
+    import type { OtpResponse } from '#api/types/otp.ts';
+    import Template from '#lib/Template.svelte';
+    import { TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
+    import { deleteOtp } from '#mfa/otp/mod.ts';
+    import UserOtp from '#lib/UserOtp.svelte';
 
     let {
         user,

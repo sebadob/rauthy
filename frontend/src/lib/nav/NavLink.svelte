@@ -1,7 +1,7 @@
 <script lang="ts">
-    import A from '$lib5/A.svelte';
+    import A from '#lib/A.svelte';
     import type { Snippet } from 'svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let {
         compact,

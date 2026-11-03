@@ -1,11 +1,11 @@
 <script lang="ts">
     import type { FullAutoFill } from 'svelte/elements';
-    import IconClipboard from '$icons/IconClipboard.svelte';
-    import IconEyeSlash from '$icons/IconEyeSlash.svelte';
-    import IconEye from '$icons/IconEye.svelte';
+    import IconClipboard from '#icons/IconClipboard.svelte';
+    import IconEyeSlash from '#icons/IconEyeSlash.svelte';
+    import IconEye from '#icons/IconEye.svelte';
     import { slide } from 'svelte/transition';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib5/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         ref = $bindable(),
