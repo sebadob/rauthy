@@ -73,6 +73,9 @@ authorization code. Http(s) redirects are unchanged and remain automatic.
   auto-submit that runs once the code has the expected length also re-ran on other changes. It now
   only runs when the code itself changes to a complete value, so each action sends a single request
   and the manual submit is unaffected.
+- An invalid `lifetimes.jwk_autorotate_cron` or `geo.maxmind_update_cron`, or one without a future
+  occurrence, made its scheduler silently die after boot. Rauthy now refuses to start instead.
+  [#1857](https://github.com/sebadob/rauthy/pull/1857)
 
 ## v0.37.2
 
