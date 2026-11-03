@@ -24,11 +24,11 @@ export let I18nAdminFr: I18nAdmin = {
         makeEditable: 'Rendre modifiable',
         makeEditableP1:
             'Vous pouvez convertir cet attribut et le rendre modifiable par les utilisateurs eux-mêmes.',
-        makeEditableP2: `<b>ATTENTION :</b> Ceci ne peut jamais être modifié !
+        makeEditableP2: `<b>ATTENTION :</b> Cette opération est irréversible !
             Toutes les données saisies directement par un utilisateur sont toujours non fiables
             et ne DOIVENT JAMAIS être utilisées pour une quelconque forme d'authentification ou d'autorisation !`,
-        makeEditableP3: `Un attribut ne peut pas être rendu modifiable car il a autorisé des saisies non fiables par le
-            passé, quelle que soit la durée de cette autorisation.`,
+        makeEditableP3: `Un attribut modifiable ne peut pas redevenir non modifiable, car il a autorisé des saisies
+            non fiables par le passé, quelle que soit la durée de cette autorisation.`,
         name: `Nom de l'attribut`,
         userEditable: `Modifiable par l'utilisateur`,
     },
@@ -400,7 +400,7 @@ export let I18nAdminFr: I18nAdmin = {
         hostLocalPwdOnly: 'Connexion par mot de passe local',
         hostLocalPwdOnlyInfo: `Lorsque l'option Connexion par mot de passe local est activée, elle remplace l'option
             Forcer l'authentification multifacteur pour les connexions locales.
-            Par conséquent, aucun mot de passe ne sera jamais demandé (localement) lors des connexions,
+            En parallèle, aucune clé d'accès ne sera jamais demandée (localement) lors des connexions,
             même si l'utilisateur est protégé par l'authentification multifacteur.
             Cette option ne doit être activée qu'en cas de réelle nécessité,
             par exemple si les utilisateurs protégés par l'authentification multifacteur doivent pouvoir

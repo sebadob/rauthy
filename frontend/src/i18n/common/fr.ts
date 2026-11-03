@@ -70,11 +70,11 @@ export const I18nFr: I18n = {
         city: 'Ville',
         changePassword: 'Changer le mot de passe',
         convertAccount: 'Convertir le compte',
-        convertAccountP1: `Vous pouvez convertir votre compte en un compte à mot de passe uniquement.\n
-            Cette conversion supprime votre mot de passe et vous ne pouvez et ne devez vous connecter qu'avec vos mots
-            de passe enregistrés.\n
-            Veuillez noter que seuls les mots de passe avec vérification utilisateur supplémentaire seront acceptés.\n
-            Si vos mots de passe prennent en charge cette vérification, vous trouverez un petit symbole derrière le nom
+        convertAccountP1: `Vous pouvez convertir votre compte en un compte à clé d'accès uniquement.\n
+            Cette conversion supprime votre mot de passe et vous ne pouvez et ne devez vous connecter qu'avec vos clés
+            d'accès enregistrées.\n
+            Veuillez noter que seules les clés d'accès avec vérification utilisateur supplémentaire seront acceptées.\n
+            Si vos clés d'accès prennent en charge cette vérification, vous trouverez un petit symbole derrière le nom
             de la clé sur la page 'MFA'.`,
         country: 'Pays',
         deleteAccount: {
@@ -340,8 +340,8 @@ export const I18nFr: I18n = {
         newAccDesc1:
             'Vous avez le choix entre deux types de compte : sans mot de passe ou avec mot de passe traditionnel',
         newAccDesc2: `Le compte sans mot de passe est toujours préféré,\n
-            car il fournit un moyen de une sécurité renforcée.
-            Vous aurez besoin d'au moins un mot de passe (Yubikey, Apple Touch ID, Windows Hello, ...)\n
+            car il offre une sécurité renforcée.
+            Vous aurez besoin d'au moins une clé d'accès (Yubikey, Apple Touch ID, Windows Hello, ...)\n
             pour créer un tel compte. Votre appareil doit adopter la norme FIDO2.\n
             Pour plus d'informations à ce sujet, vous pouvez suivre ce lien : `,
         newAccount: 'Nouveau compte',
@@ -355,7 +355,7 @@ export const I18nFr: I18n = {
         success1: 'Le mot de passe a été mis à jour avec succès.',
         success2: 'Vous serez redirigé dans {{ secs }} secondes.',
         success3: `Si vous n'êtes pas redirigé, veuillez cliquer ici :`,
-        successPasskey1: 'Votre nouveau mot de passe a été enregistré avec succès.',
+        successPasskey1: `Votre nouvelle clé d'accès a été enregistrée avec succès.`,
         successPasskey2: `Veuillez vous connecter à votre compte et enregistrer une deuxième clé\n
             de sauvegarde dès que possible. Avec un compte avec clé d'accès uniquement,\n
             vous ne pourrez pas utiliser une réinitialisation de mot de passe par e-mail\n
