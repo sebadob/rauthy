@@ -298,11 +298,19 @@ async fn load_uids() -> Result<Uids, ErrorResponse> {
 /// the email. A PAM name wins over the same `preferred_username`. A name that is not unique
 /// case-insensitively, among names of its kind and all emails, falls back to the email, because
 /// `uid` filters are case-insensitive and apps would otherwise pick the wrong user.
+/// Non-ASCII names are ignored, because the bind lookup folds case in SQL, which only folds ASCII.
 fn assign_uids(
     users: &[(String, String)],
     pam_names: &HashMap<String, String>,
     preferred: &HashMap<String, String>,
 ) -> HashMap<String, String> {
+    let ascii = |m: &HashMap<String, String>| -> HashMap<String, String> {
+        m.iter()
+            .filter(|(_, n)| n.is_ascii())
+            .map(|(k, n)| (k.clone(), n.clone()))
+            .collect()
+    };
+    let (pam_names, preferred) = (&ascii(pam_names), &ascii(preferred));
     let emails: HashMap<String, &str> = users
         .iter()
         .map(|(id, email)| (email.to_lowercase(), id.as_str()))
@@ -359,6 +367,9 @@ mod tests {
             (s("4"), s("d@x.io")),
             (s("5"), s("e@x.io")),
             (s("6"), s("f@x.io")),
+            (s("7"), s("g@x.io")),
+            (s("8"), s("h@x.io")),
+            (s("9"), s("i@x.io")),
         ];
         let pam = HashMap::from([(s("a@x.io"), s("alice")), (s("f@x.io"), s("frank"))]);
         let preferred = HashMap::from([
@@ -367,6 +378,9 @@ mod tests {
             (s("4"), s("carol")),  // case-insensitive duplicate, both fall back
             (s("5"), s("B@x.io")), // another user's email
             (s("6"), s("eve")),    // the PAM name wins for the same user
+            (s("7"), s("\u{212A}im")), // non-ASCII, ignored, so `kim` stays unique
+            (s("8"), s("Ärger")),  // non-ASCII, ignored
+            (s("9"), s("kim")),
         ]);
         let uids = assign_uids(&users, &pam, &preferred);
         assert_eq!(uids["1"], "alice");
@@ -375,6 +389,9 @@ mod tests {
         assert_eq!(uids["4"], "d@x.io");
         assert_eq!(uids["5"], "e@x.io");
         assert_eq!(uids["6"], "frank");
+        assert_eq!(uids["7"], "g@x.io");
+        assert_eq!(uids["8"], "h@x.io");
+        assert_eq!(uids["9"], "kim");
 
         let rows: Vec<UidCandidate> = users
             .iter()
@@ -393,6 +410,8 @@ mod tests {
         assert_eq!(owner("b@x.io").as_deref(), Some("b@x.io"));
         assert_eq!(owner("carol"), None);
         assert_eq!(owner("eve"), None);
+        assert_eq!(owner("kim").as_deref(), Some("i@x.io"));
+        assert_eq!(owner("ärger"), None);
         // only the rows the queries return for `alice`: the users named or emailed `alice`
         assert_eq!(
             uid_owner("alice", vec![rows[0].clone(), rows[1].clone()]).as_deref(),
