@@ -196,6 +196,7 @@ export const I18nEn: I18n = {
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: 'or login with',
+        passkey: 'Passkey',
         passkeyNotDiscovered: `Passkeys not added as a Resident Key can't be found this way. Enter
             your E-Mail instead.`,
         password: 'Password',

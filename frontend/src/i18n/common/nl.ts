@@ -198,6 +198,7 @@ export const I18nNl: I18n = {
         needsUserUpdate: `Sommige informatie voor dit account ontbreekt. U moet deze waarden
             bijwerken voordat u kunt doorgaan met inloggen.`,
         orLoginWith: 'of inloggen met',
+        passkey: 'Passkey',
         passkeyNotDiscovered: `Passkeys die niet als Resident Key zijn toegevoegd, kunnen op deze
             manier niet gevonden worden. Voer in plaats daarvan je e-mailadres in.`,
         password: 'Wachtwoord',

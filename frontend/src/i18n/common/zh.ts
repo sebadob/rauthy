@@ -182,6 +182,7 @@ export const I18nZh: I18n = {
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: '或使用其他方式登录：',
+        passkey: 'Passkey',
         passkeyNotDiscovered:
             '未作为 Resident Key 添加的 Passkey 无法通过此方式找到。请改为输入电子邮件地址。',
         password: '密码',
