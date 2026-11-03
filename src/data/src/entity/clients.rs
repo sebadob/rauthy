@@ -24,7 +24,7 @@ use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::constants::{CACHE_TTL_APP, SECRET_LEN_CLIENTS};
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_common::utils::{csv_remove, get_rand, real_ip_from_req};
 use rauthy_common::validation::validate_redirect_uri;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -566,11 +566,18 @@ VALUES ($1, $2, $3, $4)"#;
         let like = format!("%{scope_name}%");
         let sql = "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1";
 
-        let clients = if is_hiqlite() {
+        let mut clients: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             DB::pg_query(sql, &[&like], 0).await?
         };
+        // LIKE matches substrings - keep only real members
+        clients.retain(|c| {
+            c.scopes
+                .split(',')
+                .chain(c.default_scopes.split(','))
+                .any(|s| s == scope_name)
+        });
 
         Ok(clients)
     }
@@ -981,45 +988,9 @@ impl Client {
         self.is_flow_enabled(GrantType::RefreshToken)
     }
 
-    // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
     pub fn delete_scope(&mut self, scope: &str) {
-        // find the scope via index in the string
-        // first entry: delete scope + ',' if it exists
-        // last entry: delete scope + ',' in front if it exists
-        // middle: delete scope + ',' in front if it exists
-        // --> 2 cases: first entry or else
-        if let Some(i) = self.scopes.find(scope) {
-            if i == 0 {
-                // the scope is the first entry
-                if self.scopes.len() > scope.len() {
-                    let s = format!("{scope},");
-                    self.scopes = self.scopes.replace(&s, "");
-                } else {
-                    self.scopes = String::default();
-                }
-            } else {
-                // the scope is at the end or in the middle
-                let s = format!(",{scope}");
-                self.scopes = self.scopes.replace(&s, "");
-            }
-        }
-
-        // check if the to-be-deleted scope is in the default scopes
-        if let Some(i) = self.default_scopes.find(scope) {
-            if i == 0 {
-                // the scope is the first entry
-                if self.default_scopes.len() > scope.len() {
-                    let s = format!("{scope},");
-                    self.default_scopes = self.default_scopes.replace(&s, "");
-                } else {
-                    self.default_scopes = String::default();
-                }
-            } else {
-                // the scope is at the end or in the middle
-                let s = format!(",{scope}");
-                self.default_scopes = self.default_scopes.replace(&s, "");
-            }
-        }
+        self.scopes = csv_remove(&self.scopes, scope);
+        self.default_scopes = csv_remove(&self.default_scopes, scope);
     }
 
     /// Generates a new random 64 character long client secret and returns the cleartext and
@@ -3207,6 +3178,23 @@ pub(crate) mod tests {
         client.delete_scope("groups");
         assert_eq!(&client.scopes, "openid");
         assert_eq!(&client.default_scopes, "openid");
+    }
+
+    #[test]
+    fn test_delete_client_scope_substring() {
+        let mut client = Client {
+            scopes: "openid,profile,email,pro".to_string(),
+            default_scopes: "openid,pro,profile".to_string(),
+            ..Default::default()
+        };
+
+        client.delete_scope("pro");
+        assert_eq!(&client.scopes, "openid,profile,email");
+        assert_eq!(&client.default_scopes, "openid,profile");
+
+        // not a member -> unchanged
+        client.delete_scope("mail");
+        assert_eq!(&client.scopes, "openid,profile,email");
     }
 
     /// The stored client as an admin left it: every admin-set / internal field differs from

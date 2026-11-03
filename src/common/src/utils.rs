@@ -266,10 +266,51 @@ where
     Ok(bytes)
 }
 
+/// Removes `item` from a comma-separated list, comparing whole entries only.
+pub fn csv_remove(list: &str, item: &str) -> String {
+    list.split(',')
+        .filter(|e| e.trim() != item)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// Renames every entry equal to `old` in a comma-separated list to `new`, comparing whole
+/// entries only.
+pub fn csv_rename(list: &str, old: &str, new: &str) -> String {
+    list.split(',')
+        .map(|e| if e.trim() == old { new } else { e })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_csv_remove_rename_whole_entries() {
+        assert_eq!(
+            csv_remove("openid,profile,email,pro", "pro"),
+            "openid,profile,email"
+        );
+        assert_eq!(csv_remove("x,admin2,y", "admin"), "x,admin2,y");
+        assert_eq!(csv_remove("devops,dev", "dev"), "devops");
+        assert_eq!(csv_remove("dev", "dev"), "");
+        assert_eq!(csv_remove("", "dev"), "");
+        assert_eq!(csv_remove("city_code,city", "city"), "city_code");
+
+        assert_eq!(csv_rename("devops,dev", "dev", "qa"), "devops,qa");
+        assert_eq!(
+            csv_rename("openid,email,mail", "mail", "contact"),
+            "openid,email,contact"
+        );
+        assert_eq!(
+            csv_rename("given_name,family_name,name", "name", "nick"),
+            "given_name,family_name,nick"
+        );
+        assert_eq!(csv_rename("a,b", "c", "d"), "a,b");
+    }
 
     #[test]
     fn test_get_rand() {

@@ -42,7 +42,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
-use rauthy_common::utils::{new_store_id, real_ip_from_req};
+use rauthy_common::utils::{csv_remove, new_store_id, real_ip_from_req};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -483,12 +483,14 @@ LIMIT $3"#;
         let like = format!("%{group_name}%");
         let sql = "SELECT * FROM users WHERE groups LIKE $1";
 
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
             DB::pg_query(sql, &[&like], count).await?
         };
+        // LIKE matches substrings - keep only real members
+        res.retain(|u| u.groups_iter().any(|g| g == group_name));
 
         Ok(res)
     }
@@ -498,12 +500,14 @@ LIMIT $3"#;
         let like = format!("%{role_name}%");
         let sql = "SELECT * FROM users WHERE roles LIKE $1";
 
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
             DB::pg_query(sql, &[&like], count).await?
         };
+        // LIKE matches substrings - keep only real members
+        res.retain(|u| u.roles_iter().any(|r| r == role_name));
 
         Ok(res)
     }
@@ -1724,57 +1728,13 @@ impl User {
     }
 
     pub fn delete_group(&mut self, group: &str) {
-        if self.groups.is_none() {
-            return;
-        }
-        let old_groups = self.groups.as_ref().unwrap();
-
-        let i_opt = old_groups.find(group);
-        if i_opt.is_none() {
-            return;
-        }
-
-        let i = i_opt.unwrap();
-        if i == 0 {
-            // the group is the first entry
-            if old_groups.len() > group.len() {
-                let g = format!("{group},");
-                self.groups = Some(old_groups.replace(&g, ""));
-            } else {
-                self.groups = None;
-            }
-        } else {
-            // the role is at the end or in the middle
-            let g = format!(",{group}");
-            self.groups = Some(old_groups.replace(&g, ""));
+        if let Some(groups) = &self.groups {
+            self.groups = Some(csv_remove(groups, group)).filter(|g| !g.is_empty());
         }
     }
 
     pub fn delete_role(&mut self, role: &str) {
-        // find the role via index in the string
-        // first entry: delete role + ',' if it exists
-        // last entry: delete role + ',' in front if it exists
-        // middle: delete role + ',' in front if it exists
-        // --> 2 cases: first entry or else
-        let i_opt = self.roles.find(role);
-        if i_opt.is_none() {
-            return;
-        }
-
-        let i = i_opt.unwrap();
-        if i == 0 {
-            // the role is the first entry
-            if self.roles.len() > role.len() {
-                let r = format!("{role},");
-                self.roles = self.roles.replace(&r, "");
-            } else {
-                self.roles = String::from("");
-            }
-        } else {
-            // the role is at the end or in the middle
-            let r = format!(",{role}");
-            self.roles = self.roles.replace(&r, "");
-        }
+        self.roles = csv_remove(&self.roles, role);
     }
 
     pub fn email_recipient_name(&self) -> String {
