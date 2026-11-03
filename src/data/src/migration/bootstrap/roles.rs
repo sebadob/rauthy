@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::roles::Role as RoleEntity;
 use crate::migration::bootstrap::types::Role;
-use crate::migration::bootstrap::{bootstrap_data, find_existing};
+use crate::migration::bootstrap::{bootstrap_data, find_existing_entry};
 use hiqlite::macros::params;
 use rauthy_common::constants::IDX_ROLES;
 use rauthy_common::is_hiqlite;
@@ -14,7 +14,7 @@ pub async fn load() -> Result<Vec<Role>, ErrorResponse> {
 }
 
 pub async fn bootstrap() -> Result<(), ErrorResponse> {
-    let roles = bootstrap_data!(Role, "roles");
+    let roles = load().await?;
 
     let len = roles.len();
     for role in roles {
@@ -29,10 +29,11 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 /// Creates missing and renames changed roles. Never deletes anything.
 pub async fn reconcile(roles: Vec<Role>) -> Result<(), ErrorResponse> {
     let existing = RoleEntity::find_all().await?;
-    let (mut created, mut updated) = (0, 0);
+    let mut created = 0;
+    let mut updated = 0;
 
     for role in roles {
-        match find_existing(&existing, role.id.as_deref(), &role.name, |e| {
+        match find_existing_entry(&existing, role.id.as_deref(), &role.name, |e| {
             (&e.id, &e.name)
         }) {
             Some(e) if e.name == role.name => {}

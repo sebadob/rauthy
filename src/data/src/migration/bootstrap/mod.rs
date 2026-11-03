@@ -144,7 +144,7 @@ async fn reconcile() -> Result<(), ErrorResponse> {
 }
 
 /// Finds the existing entry for a bootstrap entry: by `id` if one is given, otherwise by `name`.
-fn find_existing<'a, T>(
+fn find_existing_entry<'a, T>(
     existing: &'a [T],
     id: Option<&str>,
     name: &str,
@@ -188,10 +188,10 @@ async fn bootstrap_additional_data_validated() -> Result<(), ErrorResponse> {
 
 #[cfg(test)]
 mod tests {
-    use super::find_existing;
+    use super::find_existing_entry;
 
     #[test]
-    fn test_find_existing() {
+    fn test_find_existing_entry() {
         let existing = [("id1", "admin"), ("id2", "user")];
         fn key<'a>(e: &'a (&str, &str)) -> (&'a str, &'a str) {
             (e.0, e.1)
@@ -199,16 +199,19 @@ mod tests {
 
         // by id, also when the name changed -> a rename
         assert_eq!(
-            find_existing(&existing, Some("id1"), "renamed", key),
+            find_existing_entry(&existing, Some("id1"), "renamed", key),
             Some(&("id1", "admin"))
         );
         // by name when no id is given
         assert_eq!(
-            find_existing(&existing, None, "user", key),
+            find_existing_entry(&existing, None, "user", key),
             Some(&("id2", "user"))
         );
         // a given id never falls back to the name
-        assert_eq!(find_existing(&existing, Some("id3"), "user", key), None);
-        assert_eq!(find_existing(&existing, None, "missing", key), None);
+        assert_eq!(
+            find_existing_entry(&existing, Some("id3"), "user", key),
+            None
+        );
+        assert_eq!(find_existing_entry(&existing, None, "missing", key), None);
     }
 }

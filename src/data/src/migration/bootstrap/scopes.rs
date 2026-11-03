@@ -2,7 +2,7 @@ use crate::database::DB;
 use crate::entity::scopes::Scope as ScopeEntity;
 use crate::entity::user_attr::UserAttrConfigEntity;
 use crate::migration::bootstrap::types::Scope;
-use crate::migration::bootstrap::{bootstrap_data, find_existing};
+use crate::migration::bootstrap::{bootstrap_data, find_existing_entry};
 use hiqlite::macros::params;
 use rauthy_api_types::scopes::ScopeRequest;
 use rauthy_common::is_hiqlite;
@@ -15,7 +15,7 @@ pub async fn load() -> Result<Vec<Scope>, ErrorResponse> {
 }
 
 pub async fn bootstrap() -> Result<(), ErrorResponse> {
-    let scopes = bootstrap_data!(Scope, "scopes");
+    let scopes = load().await?;
     let len = scopes.len();
     let attr_names = attr_names().await?;
 
@@ -32,10 +32,11 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 pub async fn reconcile(scopes: Vec<Scope>) -> Result<(), ErrorResponse> {
     let existing = ScopeEntity::find_all().await?;
     let attr_names = attr_names().await?;
-    let (mut created, mut updated) = (0, 0);
+    let mut created = 0;
+    let mut updated = 0;
 
     for scope in scopes {
-        let Some(e) = find_existing(&existing, scope.id.as_deref(), &scope.name, |e| {
+        let Some(e) = find_existing_entry(&existing, scope.id.as_deref(), &scope.name, |e| {
             (&e.id, &e.name)
         }) else {
             insert(&attr_names, scope).await?;

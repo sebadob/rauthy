@@ -413,8 +413,23 @@ files [here](https://github.com/sebadob/rauthy/tree/main/bootstrap), or take a l
 
 ### Reconcile on every start
 
-With `reconcile = true` (`BOOTSTRAP_RECONCILE`, default `false`), `groups.json`, `roles.json`,
-`scopes.json` and `clients.json` are re-applied on every start, not only against an empty database.
+You can re-apply the bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` on
+every start, and not only against an empty database:
+
+```toml
+[bootstrap]
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+reconcile = false
+```
 
 - Missing entries are created, changed entries are updated, nothing is deleted.
 - Clients match by `id`. Groups, roles and scopes match by `id` if given, otherwise by `name`, so

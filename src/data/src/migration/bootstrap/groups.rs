@@ -1,7 +1,7 @@
 use crate::database::{Cache, DB};
 use crate::entity::groups::Group as GroupEntity;
 use crate::migration::bootstrap::types::Group;
-use crate::migration::bootstrap::{bootstrap_data, find_existing};
+use crate::migration::bootstrap::{bootstrap_data, find_existing_entry};
 use hiqlite::macros::params;
 use rauthy_common::constants::IDX_GROUPS;
 use rauthy_common::is_hiqlite;
@@ -14,7 +14,7 @@ pub async fn load() -> Result<Vec<Group>, ErrorResponse> {
 }
 
 pub async fn bootstrap() -> Result<(), ErrorResponse> {
-    let groups = bootstrap_data!(Group, "groups");
+    let groups = load().await?;
 
     let len = groups.len();
     for group in groups {
@@ -29,10 +29,11 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 /// Creates missing and renames changed groups. Never deletes anything.
 pub async fn reconcile(groups: Vec<Group>) -> Result<(), ErrorResponse> {
     let existing = GroupEntity::find_all().await?;
-    let (mut created, mut updated) = (0, 0);
+    let mut created = 0;
+    let mut updated = 0;
 
     for group in groups {
-        match find_existing(&existing, group.id.as_deref(), &group.name, |e| {
+        match find_existing_entry(&existing, group.id.as_deref(), &group.name, |e| {
             (&e.id, &e.name)
         }) {
             Some(e) if e.name == group.name => {}

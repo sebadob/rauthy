@@ -1,5 +1,5 @@
 use crate::database::DB;
-use crate::entity::clients::Client as ClientEntity;
+use crate::entity::clients::{Client as ClientEntity, SQL_INSERT};
 use crate::entity::clients_scim::ClientScim;
 use crate::entity::scopes::Scope;
 use crate::migration::bootstrap::bootstrap_data;
@@ -17,6 +17,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::base64_decode;
 use rauthy_common::validation::validate_redirect_uri;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::collections::HashMap;
 use tracing::info;
 use zeroize::Zeroize;
 
@@ -59,7 +60,7 @@ pub async fn load() -> Result<Vec<Client>, ErrorResponse> {
 }
 
 pub async fn bootstrap() -> Result<(), ErrorResponse> {
-    let clients = bootstrap_data!(Client, "clients");
+    let clients = load().await?;
     let scopes = scope_names().await?;
 
     let len = clients.len();
@@ -77,11 +78,14 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
 /// Creates missing and updates changed clients. Never deletes anything.
 pub async fn reconcile(clients: Vec<Client>) -> Result<(), ErrorResponse> {
     let existing = ClientEntity::find_all().await?;
+    let existing: HashMap<&str, &ClientEntity> =
+        existing.iter().map(|e| (e.id.as_str(), e)).collect();
     let scopes = scope_names().await?;
-    let (mut created, mut updated) = (0, 0);
+    let mut created = 0;
+    let mut updated = 0;
 
     for client in clients {
-        match existing.iter().find(|e| e.id == client.id) {
+        match existing.get(client.id.as_str()).copied() {
             Some(e) => {
                 let entity = to_entity(&client, &scopes, Some(e)).await?;
                 if &entity != e {
@@ -308,18 +312,10 @@ async fn to_entity(
 }
 
 async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
-    let sql = r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23)"#;
-
     if is_hiqlite() {
         DB::hql()
             .execute(
-                sql,
+                SQL_INSERT,
                 params!(
                     &c.id,
                     c.name.clone(),
@@ -343,13 +339,15 @@ $18, $19, $20, $21, $22, $23)"#;
                     c.contacts.clone(),
                     c.backchannel_logout_uri.clone(),
                     c.restrict_group_prefix.clone(),
+                    c.allowed_resources.clone(),
+                    c.default_aud.clone(),
                     c.created_micros
                 ),
             )
             .await?;
     } else {
         DB::pg_execute(
-            sql,
+            SQL_INSERT,
             &[
                 &c.id,
                 &c.name,
@@ -373,6 +371,8 @@ $18, $19, $20, $21, $22, $23)"#;
                 &c.contacts,
                 &c.backchannel_logout_uri,
                 &c.restrict_group_prefix,
+                &c.allowed_resources,
+                &c.default_aud,
                 &c.created_micros,
             ],
         )
