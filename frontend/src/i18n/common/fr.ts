@@ -123,7 +123,7 @@ export const I18nFr: I18n = {
         passkeys: {
             missingAttestation: `La clé d'accès ne respecte pas les normes de sécurité requises.`,
             type: `Type de clé d'accès`,
-            types: ['Default', 'Resident Key'],
+            types: ['Par défaut', 'Resident Key'],
             rkWarning: `ATTENTION : même si une Resident Key permet une connexion directe sans
                 saisir l'adresse e-mail, elle occupe un emplacement de stockage supplémentaire pour
                 chaque application. Assurez-vous qu'il reste assez d'espace. Pour transformer une
@@ -278,7 +278,7 @@ export const I18nFr: I18n = {
             registerNew: 'Enregistrer une nouvelle clé',
             docLinkText: `la documentation sur les clés d'accès`,
             unsupportedText:
-                'Your browser does not support Webauthn credentials and must be updated.',
+                'Votre navigateur ne prend pas en charge les identifiants WebAuthn et doit être mis à jour.',
         },
         otp: {
             title: 'Code à usage unique (OTP)',
@@ -286,11 +286,11 @@ export const I18nFr: I18n = {
             activationCode: 'Entrez le code à usage unique qui vous a été envoyé par e-mail',
             code: 'Code à usage unique',
             registerNew: 'Enregistrer un nouveau code à usage unique',
-            resendOtp: 'Resend Code',
+            resendOtp: 'Renvoyer le code',
             sessionExpiresIn: 'La session de code à usage unique expire dans :',
             sessionExpired: 'La session de code à usage unique a expiré.',
         },
-        requestCanceled: 'Request was canceled',
+        requestCanceled: 'La demande a été annulée',
         errorReg: `Erreur lors du démarrage du processus d'enregistrement`,
         lastUsed: 'Dernière utilisation',
         noKey: 'Aucune clé de sécurité enregistrée pour cet emplacement',

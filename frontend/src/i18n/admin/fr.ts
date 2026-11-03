@@ -94,10 +94,10 @@ export let I18nAdminFr: I18nAdmin = {
         forceMfa: 'Forcer l’authentification multifacteur',
         groupLoginPrefix: 'Préfixe du groupe de connexion',
         name: 'Nom du client',
-        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
-            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
-            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
-            client side. You can use the 'amr' claim to do this.`,
+        passwordFlowMfaWarn: `ATTENTION : « Forcer l’authentification multifacteur » et le flux
+            « password » sont activés en même temps. Rauthy ne peut PAS imposer la MFA via ce flux
+            d'authentification, car cela enfreindrait la RFC OIDC. Si la MFA est strictement requise,
+            vous devez donc la valider côté client. Vous pouvez utiliser le claim « amr » pour cela.`,
         scim: {
             baseUri: `L'URI de base SCIM est celle à partir de laquelle les sous-routes comme
                 <code>{base_uri}/Users/{id}</base_uri></code> peuvent être correctement dérivées.`,
@@ -217,7 +217,7 @@ export let I18nAdminFr: I18nAdmin = {
                 total d'utilisateurs, mais se situe généralement entre 32 et 96 Mo.`,
             mCost3: 'La valeur minimale autorisée de <code>m_cost</code> est de <code>32768</code>.',
 
-            pCost1: `La valeur <code>p_cost</code> définit le niveau de <b>parallelism</b> pour le hachage.
+            pCost1: `La valeur <code>p_cost</code> définit le niveau de <b>parallélisme</b> pour le hachage.
                 Cette valeur atteint généralement un maximum d'environ 8,
                 ce qui correspond à la valeur par défaut pour Rauthy.`,
             pCost2: `La règle générale est la suivante :<br>Définissez <code>p_cost</code> à deux fois le nombre de
