@@ -109,12 +109,11 @@ async function fetchWithoutBody<T>(
     typ: 'json' | 'form',
     redirect: 'handle401' | 'noRedirect',
 ): Promise<IResponse<T>> {
-    let res = await fetch(uri, {
-        method,
-        headers: buildHeaders(method, typ),
-        redirect: 'manual',
-    });
-    return await handleResponse(res, redirect);
+    return fetchHandled(
+        uri,
+        { method, headers: buildHeaders(method, typ), redirect: 'manual' },
+        redirect,
+    );
 }
 
 async function fetchWithBody<T>(
@@ -131,13 +130,36 @@ async function fetchWithBody<T>(
         body = formDataFromObj(payload);
     }
 
-    let res = await fetch(uri, {
-        method,
-        headers: buildHeaders(method, typ),
-        redirect: 'manual',
-        body,
-    });
-    return handleResponse(res, redirect);
+    return fetchHandled(
+        uri,
+        { method, headers: buildHeaders(method, typ), redirect: 'manual', body },
+        redirect,
+    );
+}
+
+// Any rejection (offline, DNS, aborted, unreadable body) ends up as `error`, so callers only ever
+// need their existing `if (res.error)` branch.
+async function fetchHandled<T>(
+    uri: string,
+    init: RequestInit,
+    redirect: 'handle401' | 'noRedirect',
+): Promise<IResponse<T>> {
+    try {
+        let res = await fetch(uri, init);
+        return await handleResponse(res, redirect);
+    } catch (e) {
+        return {
+            body: undefined,
+            text: undefined,
+            error: errorResponse('Connection', String(e)),
+            status: 0,
+            headers: new Headers(),
+        };
+    }
+}
+
+function errorResponse(error: string, message: string): ErrorResponse {
+    return { timestamp: Math.floor(Date.now() / 1000), error, message };
 }
 
 export function formDataFromObj(obj: Object) {
@@ -183,7 +205,13 @@ export async function handleResponse<T>(
             resp.text = await res.text();
         }
     } else if (res.status !== 405) {
-        resp.error = await res.json();
+        // a reverse proxy (502/413/...) or an opaque redirect does not answer with Rauthy's JSON
+        let text = await res.text();
+        try {
+            resp.error = JSON.parse(text);
+        } catch {
+            resp.error = errorResponse('Internal', res.statusText || `HTTP ${res.status}`);
+        }
     }
 
     return resp;
@@ -209,12 +237,9 @@ export async function uploadFile<T>(
     const formData = new FormData();
     formData.append(name, file);
 
-    const res = await fetch(url, {
-        method: method,
-        headers: {
-            'x-csrf-token': getCsrfToken(),
-        },
-        body: formData,
-    });
-    return handleResponse(res, 'handle401');
+    return fetchHandled(
+        url,
+        { method, headers: { 'x-csrf-token': getCsrfToken() }, body: formData },
+        'handle401',
+    );
 }
