@@ -6773,9 +6773,9 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tls-hot-reload"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5daf2f78f6cf41fc4d2d0f515d7f750ca534632a3ee480063686cded0f9e2a95"
+checksum = "38af2c8ef0e069da0bd19d6f6433ebc7200b4207d2cc2a6e7704fc9ddfab3108"
 dependencies = [
  "arc-swap",
  "notify",

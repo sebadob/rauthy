@@ -11,7 +11,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::str::FromStr;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use webauthn_rs::prelude::{Credential, Uuid, WebauthnError};
 use webauthn_rs_proto::{CreationChallengeResponse, ExtnState};
 
@@ -231,15 +231,23 @@ pub async fn reg_finish(
             };
 
             let is_rk = {
-                debug!(
-                    "Webauthn reg finish cred.extensions.cred_props: {:?}",
-                    cred.extensions.cred_props
-                );
-                match cred.extensions.cred_props {
-                    ExtnState::NotRequested | ExtnState::Ignored => None,
+                let props = match cred.extensions.cred_props {
                     ExtnState::Set(props) => props.rk,
                     ExtnState::Unsolicited(props) => props.rk,
                     ExtnState::Unsigned(props) => props.rk,
+                    ExtnState::NotRequested | ExtnState::Ignored => None,
+                };
+                match props {
+                    Some(v) => Some(v),
+                    None => {
+                        // If the authenticator did not send any cred props, we fall back to other
+                        // possibly known values. This improves compatibility for e.g. MacOS.
+                        let fallback = payload.allow_rk_hint.unwrap_or(
+                            RauthyConfig::get().vars.webauthn.passkey_reg_type_str()
+                                == "resident_key",
+                        );
+                        Some(fallback)
+                    }
                 }
             };
 
