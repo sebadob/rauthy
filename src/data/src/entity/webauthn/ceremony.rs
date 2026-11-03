@@ -101,7 +101,7 @@ impl RegistrationState {
         // the resident-key preference; neither choice requires attestation or residency.
         if let Some(selection) = ccr.public_key.authenticator_selection.as_mut() {
             selection.resident_key = Some(if allow_rk {
-                ResidentKeyRequirement::Preferred
+                ResidentKeyRequirement::Required
             } else {
                 ResidentKeyRequirement::Discouraged
             });
@@ -307,7 +307,7 @@ mod tests {
         assert_eq!(
             selection.resident_key,
             Some(if allow_rk {
-                ResidentKeyRequirement::Preferred
+                ResidentKeyRequirement::Required
             } else {
                 ResidentKeyRequirement::Discouraged
             })

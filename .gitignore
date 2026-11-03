@@ -8,6 +8,7 @@ rauthy-client/examples/*/.idea
 .vscode
 .helix
 .lapce
+.DS_store
 .env
 .test_pid
 /data
