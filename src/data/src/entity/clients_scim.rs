@@ -754,10 +754,12 @@ impl ClientScim {
         groups_local: &[Group],
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
-        let mut last_created_ts = retry_failed_user_ts.unwrap_or(0);
+        // Only the ts is persisted for retries; an empty id re-syncs every user created in that
+        // same second, which is idempotent and never skips one.
+        let mut last_created = (retry_failed_user_ts.unwrap_or(0), String::new());
 
         match self
-            .sync_users_exec(&mut last_created_ts, groups_local, groups_remote)
+            .sync_users_exec(&mut last_created, groups_local, groups_remote)
             .await
         {
             Ok(_) => Ok(()),
@@ -765,7 +767,7 @@ impl ClientScim {
                 let err = format!("Error during sync users: {err}");
                 error!(err);
 
-                FailedScimTask::upsert(&ScimAction::UsersSync(last_created_ts), &self.client_id)
+                FailedScimTask::upsert(&ScimAction::UsersSync(last_created.0), &self.client_id)
                     .await?;
 
                 Err(ErrorResponse::new(ErrorResponseType::Scim, err))
@@ -775,8 +777,8 @@ impl ClientScim {
 
     pub async fn sync_users_exec(
         &self,
-        // specify for retrying a `failed_scim_task` to resume work
-        last_created_ts: &mut i64,
+        // (created_at, id) of the last synced user; specify for retrying a `failed_scim_task`
+        last_created: &mut (i64, String),
         groups_local: &[Group],
         groups_remote: &mut HashMap<String, ScimGroup>,
     ) -> Result<(), ErrorResponse> {
@@ -785,7 +787,7 @@ impl ClientScim {
         let limit = 100;
         let mut users;
         loop {
-            users = User::find_for_scim_sync(*last_created_ts, limit).await?;
+            users = User::find_for_scim_sync(last_created.0, &last_created.1, limit).await?;
             debug!(users_count = users.len(), "Users count for SCIM update");
             if users.is_empty() {
                 break;
@@ -794,7 +796,7 @@ impl ClientScim {
 
             for (user, values) in users {
                 debug_assert_eq!(user.id, values.id);
-                let created = user.created_at;
+                let cursor = (user.created_at, user.id.clone());
 
                 let is_no_prefix_match = if let Some(prefix) = &self.group_sync_prefix {
                     !user.groups.as_deref().unwrap_or_default().contains(prefix)
@@ -817,7 +819,7 @@ impl ClientScim {
                     .await
                 } {
                     Ok(_) => {
-                        *last_created_ts = created;
+                        *last_created = cursor;
                     }
                     Err(err) => {
                         error!(
@@ -825,7 +827,7 @@ impl ClientScim {
                             ?err.message, "Error during sync users for SCIM client",
                         );
                         FailedScimTask::upsert(
-                            &ScimAction::UsersSync(*last_created_ts),
+                            &ScimAction::UsersSync(last_created.0),
                             &self.client_id,
                         )
                         .await?;
