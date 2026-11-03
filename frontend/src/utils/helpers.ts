@@ -240,8 +240,8 @@ function randomIndex(max: number) {
 
 // Returns '' if the policy's required counts cannot fit into `length_max`.
 export const generatePassword = (policy: PasswordPolicyResponse) => {
-    // unset defaults to 1 of each class, -1 means disabled
-    const need = (n?: number) => (n ? Math.max(n, 0) : 1);
+    // unset or <= 0 means not required, same as the backend's `unwrap_or(0)`
+    const need = (n?: number) => Math.max(n ?? 0, 0);
     const classes: [string, number][] = [
         [PWD_LOWER, need(policy.include_lower_case)],
         [PWD_UPPER, need(policy.include_upper_case)],

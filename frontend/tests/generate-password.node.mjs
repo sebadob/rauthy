@@ -73,12 +73,21 @@ test('required counts above length_min raise the length', () => {
     assert.ok(counts(pwd).lower >= 32);
 });
 
-test('disabled classes (-1) are not required', () => {
-    // 1 lower + 1 upper (defaults) + 8 digits fill all 10 slots, so no special char may appear
-    const c = counts(
-        generatePassword({ length_min: 8, length_max: 10, include_special: -1, include_digits: 8 }),
+test('unset and disabled (-1) classes are not required', () => {
+    // the required class alone fills all 10 slots, so no other class may appear
+    const lower = counts(
+        generatePassword({ length_min: 8, length_max: 10, include_lower_case: 10 }),
     );
-    assert.deepEqual(c, { lower: 1, upper: 1, digit: 8, special: 0 });
+    assert.deepEqual(lower, { lower: 10, upper: 0, digit: 0, special: 0 });
+    const digit = counts(
+        generatePassword({
+            length_min: 8,
+            length_max: 10,
+            include_special: -1,
+            include_digits: 10,
+        }),
+    );
+    assert.deepEqual(digit, { lower: 0, upper: 0, digit: 10, special: 0 });
 });
 
 test('impossible policy returns immediately instead of looping', () => {
