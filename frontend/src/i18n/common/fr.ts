@@ -121,18 +121,17 @@ export const I18nFr: I18n = {
             validFor: 'Mot de passe valide pendant {{ secs }} secondes',
         },
         passkeys: {
-            missingAttestation: 'The Passkey does not match the required security standards.',
-            type: 'Passkey Type',
+            missingAttestation: `La clé d'accès ne respecte pas les normes de sécurité requises.`,
+            type: `Type de clé d'accès`,
             types: ['Default', 'Resident Key'],
             rkWarning: `ATTENTION : même si une Resident Key permet une connexion directe sans
                 saisir l'adresse e-mail, elle occupe un emplacement de stockage supplémentaire pour
                 chaque application. Assurez-vous qu'il reste assez d'espace. Pour transformer une
-                Passkey existante en Resident Key, supprimez-la d'abord, puis ajoutez-la à nouveau.`,
+                clé d'accès existante en Resident Key, supprimez-la d'abord, puis ajoutez-la à nouveau.`,
             // [Default, Resident Key]
             typesDesc: [
-                `Vous devez saisir votre adresse e-mail avant de vous connecter avec cette Passkey.`,
-                `Fonctionne avec le bouton « Clé d'accès » de la page de connexion, sans saisir votre
-                    adresse e-mail.`,
+                `Vous devez saisir votre adresse e-mail avant de vous connecter avec cette clé d'accès.`,
+                `Fonctionne avec le bouton « Clé d'accès » de la page de connexion, sans saisir votre                    adresse e-mail.`,
             ],
         },
         passwordConfirm: 'Confirmer le mot de passe',
@@ -184,9 +183,9 @@ export const I18nFr: I18n = {
         userEnabled: 'Utilisateur activé',
         userExpiry: `Expiration de l'utilisateur`,
         userVerifiedTooltip: 'Sécurisé par empreinte digitale ou code PIN',
-        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
-            providing an E-Mail.`,
-        aaguidTooltip: 'Certified Passkey',
+        residentKeyTooltip: `Ceci est une Resident Key. Vous pouvez l'utiliser pour une connexion directe
+            sans saisir votre adresse e-mail.`,
+        aaguidTooltip: `Clé d'accès certifiée`,
         webIdDesc: `Vous pouvez configurer les champs à exposer avec votre WebID.\n
             Cette fonctionnalité est utilisée par certains réseaux pour les connexions décentralisées.\n
             Si vous ne savez pas de quoi il s'agit, vous n'en avez probablement pas besoin.`,
@@ -203,7 +202,7 @@ export const I18nFr: I18n = {
         emailBadFormat: `Mauvais format d'e-mail`,
         emailRequired: `L'e-mail est requis`,
         emailSentMsg: 'Si votre e-mail existe, une demande a été envoyée',
-        expectingOtp: `En attente de l'authentification par OTP`,
+        expectingOtp: `En attente de l'authentification par code à usage unique`,
         expectingPasskey: `En attente de l'authentification par clé d'accès`,
         http429: `Trop de tentatives invalides. Verrouillé jusqu'à :`,
         invalidCredentials: 'Identifiants invalides',
@@ -216,7 +215,7 @@ export const I18nFr: I18n = {
             valeurs avant de pouvoir poursuivre la connexion.`,
         orLoginWith: 'ou se connecter avec',
         passkey: `Clé d'accès`,
-        passkeyNotDiscovered: `Les Passkeys qui n'ont pas été ajoutées comme Resident Key ne
+        passkeyNotDiscovered: `Les clés d'accès qui n'ont pas été ajoutées comme Resident Key ne
             peuvent pas être trouvées de cette façon. Saisissez plutôt votre adresse e-mail.`,
         password: 'Mot de passe',
         passwordExpired:
@@ -283,13 +282,13 @@ export const I18nFr: I18n = {
         },
         otp: {
             title: 'Code à usage unique (OTP)',
-            titleEmail: 'Email-based OTP',
+            titleEmail: 'Code à usage unique par e-mail',
             activationCode: 'Entrez le code à usage unique qui vous a été envoyé par e-mail',
             code: 'Code à usage unique',
-            registerNew: 'Register New OTP',
+            registerNew: 'Enregistrer un nouveau code à usage unique',
             resendOtp: 'Resend Code',
-            sessionExpiresIn: 'OTP session will expire in:',
-            sessionExpired: 'OTP session has expired.',
+            sessionExpiresIn: 'La session de code à usage unique expire dans :',
+            sessionExpired: 'La session de code à usage unique a expiré.',
         },
         requestCanceled: 'Request was canceled',
         errorReg: `Erreur lors du démarrage du processus d'enregistrement`,
@@ -304,7 +303,7 @@ export const I18nFr: I18n = {
         register: 'Enregistrer',
         registered: 'Enregistré',
         registeredKeys: 'Clés enregistrées',
-        registeredOtps: 'Code à usage unique enregistrés',
+        registeredOtps: 'Codes à usage unique enregistrés',
         passkeyName: `Nom de la clé d'accès`,
         passkeyNameErr: '2 à 32 caractères non spéciaux',
         passwordInvalid: 'Mot de passe invalide',

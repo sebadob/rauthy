@@ -58,14 +58,14 @@ export let I18nAdminFr: I18nAdmin = {
             faviconPreviewAlt: 'Aperçu du favicon du client',
             faviconUpload: 'Téléverser un favicon',
         },
-        claimsAtRoot: 'Émettre les claims à la racine du token',
-        claimsAtRootWarning: `Les claims de ce client sont écrits à la racine du token au lieu d'être
+        claimsAtRoot: 'Émettre les claims à la racine du jeton',
+        claimsAtRootWarning: `Les claims de ce client sont écrits à la racine du jeton au lieu d'être
             imbriqués sous « custom ». C'est à vous de garantir la correction face aux collisions : si
-            le nom d'un claim entre en collision avec une revendication JWT réservée, l'émission du
-            token échoue. Les claims personnalisés placés à la racine peuvent aussi casser lors de
+            le nom d'un claim entre en collision avec un claim JWT réservé, l'émission du
+            jeton échoue. Les claims personnalisés placés à la racine peuvent aussi casser lors de
             futures évolutions du protocole ou de nouvelles fonctionnalités. Référence :`,
-        claims: 'Custom claims (client_credentials)',
-        claimsDesc: `Un objet JSON émis dans les tokens client_credentials, imbriqué sous le claim
+        claims: 'Claims personnalisés (client_credentials)',
+        claimsDesc: `Un objet JSON émis dans les jetons client_credentials, imbriqué sous le claim
             custom. Maximum 1024 caractères sérialisés.`,
         confidential: 'Confidentiel',
         confidentialNoSecret: 'Ce client n’est pas confidentiel et ne possède donc aucun secret.',
@@ -442,7 +442,7 @@ export let I18nAdminFr: I18nAdmin = {
             descClientName: 'Nom du client à afficher sur la page de connexion Rauthy.',
             descClientSecret: `Secret client fourni par le fournisseur d'authentification.
                 Un secret client ou un PKCE est requis.`,
-            descScope: `Étendue des droits que le client doit utiliser lors de la redirection vers la page de connexion.
+            descScope: `Portée que le client doit utiliser lors de la redirection vers la page de connexion.
                 Séparez les valeurs par un espace.`,
             errNoAuthMethod: `Vous avez fourni un secret client,mais aucune méthode d'authentification client n'est active`,
             errConfidential: 'Vous devez au moins utiliser un client confidentiel ou PKCE',
@@ -458,16 +458,16 @@ export let I18nAdminFr: I18nAdmin = {
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
             },
             lookup: 'Chercher',
-            pathAdminClaim: `Chemin de revendication d'administration`,
-            pathMfaClaim: 'Chemin de revendication MFA',
+            pathAdminClaim: `Chemin du claim d'administrateur`,
+            pathMfaClaim: 'Chemin du claim MFA',
             rootPemCert: 'Certificat PEM racine',
-            mapMfa: `Si votre fournisseur émet une attestation indiquant que l'utilisateur a utilisé au moins
+            mapMfa: `Si votre fournisseur émet un claim indiquant que l'utilisateur a utilisé au moins
                 l'authentification à deux facteurs (2FA) lors de la connexion,
-                vous pouvez spécifier le chemin d'accès à l'attestation multifacteur (MFA).`,
-            mapUser: `Vous pouvez associer un utilisateur au rôle d'administrateur Rauthy en fonction d'une attestation
-                d'identification en amont.`,
-            valueAdminClaim: `Valeur de l'attestation d'administrateur`,
-            valueMfaClaim: `Valeur de l'attestation multifacteur`,
+                vous pouvez spécifier le chemin d'accès au claim MFA.`,
+            mapUser: `Vous pouvez associer un utilisateur au rôle d'administrateur Rauthy en fonction d'un claim
+                du jeton d'identification en amont.`,
+            valueAdminClaim: `Valeur du claim d'administrateur`,
+            valueMfaClaim: `Valeur du claim MFA`,
         },
         delete: {
             areYouSure: 'Êtes-vous sûr de vouloir supprimer ce fournisseur ?',
@@ -484,21 +484,21 @@ export let I18nAdminFr: I18nAdmin = {
         name: 'Nom du rôle',
     },
     scopes: {
-        claimsAtRoot: 'Émettre les claims à la racine du token',
-        claimsAtRootWarning: `Les attributs associés à cette étendue sont écrits à la racine du token au
+        claimsAtRoot: 'Émettre les claims à la racine du jeton',
+        claimsAtRootWarning: `Les attributs associés à cette portée sont écrits à la racine du jeton au
             lieu d'être imbriqués sous « custom ». C'est à vous de garantir la correction face aux
-            collisions : si le nom d'un attribut associé entre en collision avec une revendication JWT
-            réservée, l'émission du token échoue. Les claims personnalisés placés à la racine peuvent
+            collisions : si le nom d'un attribut associé entre en collision avec un claim JWT
+            réservé, l'émission du jeton échoue. Les claims personnalisés placés à la racine peuvent
             aussi casser lors de futures évolutions du protocole ou de nouvelles fonctionnalités.
             Référence :`,
-        defaultNoMod: `Il s'agit d'une étendue OIDC par défaut. Ces étendues sont immuables.`,
-        delete1: 'Êtes-vous sûr de vouloir supprimer cette étendue ?',
-        deleteDefault: 'Les étendues OIDC par défaut ne peuvent pas être supprimées.',
-        mapping1: 'Vous pouvez associer des étendues personnalisées à des attributs.',
+        defaultNoMod: `Il s'agit d'une portée OIDC par défaut. Ces portées sont immuables.`,
+        delete1: 'Êtes-vous sûr de vouloir supprimer cette portée ?',
+        deleteDefault: 'Les portées OIDC par défaut ne peuvent pas être supprimées.',
+        mapping1: 'Vous pouvez associer des portées personnalisées à des attributs.',
         mapping2: `Tous les attributs supplémentaires configurés peuvent avoir une valeur personnalisée pour chaque
-            utilisateur. Lorsqu'ils sont associés à une étendue, ils peuvent être inclus dans les jetons d'accès et/ou
+            utilisateur. Lorsqu'ils sont associés à une portée, ils peuvent être inclus dans les jetons d'accès et/ou
             d'identification.`,
-        name: `Nom de l'étendue`,
+        name: `Nom de la portée`,
     },
     search: {
         orderBy: 'Trier par...',
@@ -555,12 +555,12 @@ export let I18nAdminFr: I18nAdmin = {
         manualInit: 'Initialisation manuelle',
         mfa: {
             otp: {
-                title: 'One Time Password',
+                title: 'Code à usage unique',
                 mfaDelete1:
-                    'Vous pouvez supprimer les mots de passe à usage unique de cet utilisateur.',
-                mfaDelete2: `Attention ! La suppression d’un mot de passe à usage unique est irréversible ; l’utilisateur doit procéder à une
+                    'Vous pouvez supprimer les codes à usage unique de cet utilisateur.',
+                mfaDelete2: `Attention ! La suppression d’un code à usage unique est irréversible ; l’utilisateur doit procéder à une
             nouvelle inscription complète.`,
-                noMfaOtps: 'Cet utilisateur n’a pas de mot de passe à usage unique',
+                noMfaOtps: 'Cet utilisateur n’a pas de code à usage unique',
             },
             webauthn: {
                 title: 'Clés d’accès',
