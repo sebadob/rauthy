@@ -4141,6 +4141,16 @@ impl Vars {
         if let Err(err) = validate_max_document_bytes(self.ephemeral_clients.max_document_bytes) {
             panic!("{err}");
         }
+
+        if let Err(err) = validate_cron("geo.maxmind_update_cron", &self.geo.maxmind_update_cron) {
+            panic!("{err}");
+        }
+        if let Err(err) = validate_cron(
+            "lifetimes.jwk_autorotate_cron",
+            &self.lifetimes.jwk_autorotate_cron,
+        ) {
+            panic!("{err}");
+        }
         self.validate_ephemeral_clients();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
@@ -4459,6 +4469,17 @@ pub fn validate_max_document_bytes(v: u32) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+/// Schedulers `.unwrap()` the parsed cron and its next occurrence inside a spawned task, where a
+/// panic would only be logged and silently stop the job - so reject such values at startup.
+pub fn validate_cron(key: &str, v: &str) -> Result<(), String> {
+    let schedule = cron::Schedule::from_str(v)
+        .map_err(|err| format!("Invalid cron expression for `{key}`: {err}"))?;
+    if schedule.upcoming(chrono::Utc).next().is_none() {
+        return Err(format!("`{key}` has no future occurrence: {v}"));
+    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -5442,5 +5463,16 @@ default_scopes = ['profile']
     fn validate_ephemeral_default_scopes_is_skipped_when_disabled() {
         eph_vars(false, &["openid"], &["groups"]).validate_ephemeral_clients();
         eph_vars(false, &["openid"], &[]).validate_ephemeral_clients();
+    }
+
+    #[test]
+    fn validate_cron_rejects_unparsable_and_exhausted_schedules() {
+        assert!(validate_cron("lifetimes.jwk_autorotate_cron", "0 30 3 1 * * *").is_ok());
+        // 5-field crontab syntax is not what the `cron` crate expects
+        let err = validate_cron("lifetimes.jwk_autorotate_cron", "30 3 1 * *").unwrap_err();
+        assert!(err.contains("lifetimes.jwk_autorotate_cron"), "{err}");
+        // valid syntax, but the year is in the past -> never fires again
+        let err = validate_cron("geo.maxmind_update_cron", "0 30 3 1 * * 2020").unwrap_err();
+        assert!(err.contains("geo.maxmind_update_cron"), "{err}");
     }
 }

@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 use tokio::time;
-use tracing::info;
+use tracing::{error, info};
 mod app_version;
 mod authorized_keys;
 mod backchannel_logout;
@@ -54,7 +54,13 @@ async fn sleep_schedule_next(schedule: &cron::Schedule) {
     // this 10 sec sleep is done to prevent an overlap with the calculation in some cases
     time::sleep(Duration::from_secs(10)).await;
 
-    let next = schedule.upcoming(chrono::Local).next().unwrap();
+    let Some(next) = schedule.upcoming(chrono::Local).next() else {
+        error!(
+            ?schedule,
+            "cron schedule has no future occurrence - scheduler stops"
+        );
+        return std::future::pending().await;
+    };
     let until = next.signed_duration_since(chrono::Local::now());
 
     // we are adding a future date here --> safe to cast from i64 to u64
