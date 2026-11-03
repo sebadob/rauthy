@@ -62,8 +62,8 @@ export const I18nFr: I18n = {
             ce mot de passe.\nVous ne pourrez alors pas vous connecter sur n'importe quel appareil sans avoir
             préalablement saisi votre mot de passe au moins une fois.`,
         accTypePasskeyText3: 'Voulez-vous convertir votre compte et ajouter un mot de passe ?',
-        accessExp: 'Expiration de l’accès',
-        accessRenew: 'Accès renouvelable jusqu’au',
+        accessExp: `Expiration de l'accès`,
+        accessRenew: `Accès renouvelable jusqu'au`,
         accessRenewDelete: 'Supprimer la possibilité de renouvellement',
         birthdate: 'Date de naissance',
         canModifyFor: 'Les authentifications multifactorielle peuvent être modifiés pour :',
@@ -75,7 +75,7 @@ export const I18nFr: I18n = {
             d'accès enregistrées.\n
             Veuillez noter que seules les clés d'accès avec vérification utilisateur supplémentaire seront acceptées.\n
             Si vos clés d'accès prennent en charge cette vérification, vous trouverez un petit symbole derrière le nom
-            de la clé sur la page 'MFA'.`,
+            de la clé sur la page « MFA ».`,
         country: 'Pays',
         deleteAccount: {
             deleteAccount: 'Supprimer le compte',
@@ -168,12 +168,12 @@ export const I18nFr: I18n = {
             userAgent: 'Agent utilisateur',
         },
         providerLink: 'Compte fédéré',
-        providerLinkDesc: `Vous pouvez lier ce compte à l’un des fournisseurs d’authentification suivants.\n
+        providerLinkDesc: `Vous pouvez lier ce compte à l'un des fournisseurs d'authentification suivants.\n
             Après avoir activé cette fonction, vous serez redirigé vers la page de connexion du fournisseur choisi.\n
-            Après une connexion réussie et si l’adresse e-mail correspond, votre compte sera lié.`,
+            Après une connexion réussie et si l'adresse e-mail correspond, votre compte sera lié.`,
         providerUnlink: 'Dissocier la fédération',
-        providerUnlinkDesc: `Vous ne pouvez dissocier ce compte du fournisseur d’authentification\n
-            que si vous avez configuré au moins un mot de passe ou une clé d’accès.`,
+        providerUnlinkDesc: `Vous ne pouvez dissocier ce compte du fournisseur d'authentification\n
+            que si vous avez configuré au moins un mot de passe ou une clé d'accès.`,
         regDate: `Date d'inscription`,
         regIp: `Adresse IP d'inscription`,
         roles: 'Rôles',
@@ -237,11 +237,11 @@ export const I18nFr: I18n = {
         closeWindow: 'Vous pouvez fermer cette fenêtre maintenant.',
         decline: 'Refuser',
         desc: 'Veuillez saisir le code utilisateur de {{count}} caractères depuis votre appareil.',
-        descScopes: 'L’appareil demande l’accès à :',
+        descScopes: `L'appareil demande l'accès à :`,
         isAccepted: 'La demande a été acceptée.',
         isDeclined: 'La demande a été refusée.',
         submit: 'Envoyer',
-        title: 'Autorisation de l’appareil',
+        title: `Autorisation de l'appareil`,
         userCode: 'Code utilisateur',
         wrongOrExpired: 'Code incorrect ou expiré',
     },
@@ -268,11 +268,11 @@ export const I18nFr: I18n = {
     },
     mfa: {
         webauthn: {
-            title: 'Clé d’accès',
-            p1: `Si vous prévoyez d’utiliser votre clé MFA avec plusieurs systèmes comme Windows et Android,
-                vous devriez l’enregistrer auprès d’Android.`,
-            p2: `Android est la plateforme qui prend le moins en charge les fonctionnalités de l’authentification sans mot
-                de passe. Les clés enregistrées auprès d’Android fonctionnent également ailleurs.
+            title: `Clé d'accès`,
+            p1: `Si vous prévoyez d'utiliser votre clé MFA avec plusieurs systèmes comme Windows et Android,
+                vous devriez l'enregistrer auprès d'Android.`,
+            p2: `Android est la plateforme qui prend le moins en charge les fonctionnalités de l'authentification sans mot
+                de passe. Les clés enregistrées auprès d'Android fonctionnent également ailleurs.
                 Cependant, cela ne s'applique pas dans l'autre sens.`,
             p3: `Pour plus d'informations, consultez`,
             registerNew: 'Enregistrer une nouvelle clé',
@@ -328,7 +328,7 @@ export const I18nFr: I18n = {
         uppercaseMin: 'Nombre minimal de majuscules',
         digitsMin: 'Nombre minimal de chiffres',
         specialMin: 'Nombre minimal de caractères spéciaux',
-        notRecent: 'Ce n’est pas l’un des derniers mots de passe récents',
+        notRecent: `Ce n'est pas l'un des derniers mots de passe récents`,
     },
     passwordReset: {
         accountLogin: 'Connexion au compte',
