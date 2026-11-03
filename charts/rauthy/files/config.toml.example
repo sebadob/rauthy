@@ -1,0 +1,61 @@
+# Example Rauthy config for the Helm chart.
+#
+# This is a MINIMAL config to get you started. For production, work through the
+# full Reference Config in the Rauthy book - every value is documented there:
+#   https://sebadob.github.io/rauthy/config/config.html
+#
+# Provide this file to the chart as `config.content` (inline in your values) or,
+# recommended, as a ConfigMap referenced by `config.existingConfigMap`. It holds
+# only NON-secret configuration: every sensitive value below is set to the
+# literal "$SECRETS" and read from secrets.toml at startup (see
+# files/secrets.toml.example and the `secrets` values block).
+#
+# NOTE: the chart manages the Raft topology for you. You do NOT need to set
+# `cluster.node_id_from` or `cluster.nodes` here - the chart injects
+# HQL_NODE_ID_FROM=k8s and HQL_NODES from the `replicas` value, overriding
+# whatever is in this file.
+
+# Path to the secrets file, resolved inside the container. The chart mounts the
+# secrets Secret at /app/secrets.toml, which matches this default.
+# overwritten by: SECRETS_FILE
+secrets_file = 'secrets.toml'
+
+[bootstrap]
+# Email of the default admin, set when initializing an empty database.
+# overwritten by: BOOTSTRAP_ADMIN_EMAIL
+admin_email = "admin@localhost"
+# Optional: set a known initial admin password instead of the auto-generated
+# one printed in the logs. overwritten by: BOOTSTRAP_ADMIN_PASSWORD_PLAIN
+#password_plain = "123SuperSafe"
+
+[cluster]
+# Raft + Hiqlite-API authentication secrets. REQUIRED, at least 16 chars each,
+# and they should differ. Their real values live in secrets.toml (or come from
+# the HQL_SECRET_RAFT / HQL_SECRET_API env vars).
+# overwritten by: HQL_SECRET_RAFT / HQL_SECRET_API
+secret_raft = "$SECRETS"
+secret_api = "$SECRETS"
+
+[encryption]
+# At least one encryption key (used for DB-stored secrets, cookies, ...). The
+# real values live in secrets.toml. Format per key:
+#   <key_id>/<base64 of exactly 32 random bytes>
+# overwritten by: ENC_KEYS (newline-separated)
+keys = ['$SECRETS']
+# The key_id from `keys` used for new encryptions; also provided via secrets.toml.
+# overwritten by: ENC_KEY_ACTIVE
+key_active = "$SECRETS"
+
+[server]
+# Public URL Rauthy is reachable at. REQUIRED. Should match your ingress host.
+# overwritten by: PUB_URL
+pub_url = "auth.example.com"
+
+[webauthn]
+# Relying-Party ID for Passkeys/WebAuthn. REQUIRED. Usually your bare domain.
+# overwritten by: RP_ID
+rp_id = "auth.example.com"
+# Full origin (scheme + host [+ port]). REQUIRED. overwritten by: RP_ORIGIN
+rp_origin = "https://auth.example.com:443"
+# Display name shown during Passkey registration. overwritten by: RP_NAME
+rp_name = "Rauthy"
