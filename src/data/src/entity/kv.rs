@@ -298,14 +298,13 @@ LIMIT $2
         Ok(res)
     }
 
-    /// Re-encrypts the value and updates the DB. Used for secret migration.
-    pub async fn save_re_encrypted(self) -> Result<(), ErrorResponse> {
+    /// Re-encrypts the value with `new_kid` and updates the DB. Used for secret migration.
+    pub async fn save_re_encrypted(self, new_kid: &str) -> Result<(), ErrorResponse> {
         if self.encrypted != Some(true) {
             return Ok(());
         }
 
-        let dec = EncValue::try_from(self.value)?.into_bytes();
-        let value = EncValue::encrypt(dec.as_ref())?.into_bytes().to_vec();
+        let value = Self::re_encrypt(self.value, new_kid)?;
 
         let sql = "UPDATE kv_values SET value = $1 WHERE ns = $2 AND key = $3";
         if is_hiqlite() {
@@ -321,6 +320,15 @@ LIMIT $2
 }
 
 impl KVValue {
+    fn re_encrypt(value: Vec<u8>, new_kid: &str) -> Result<Vec<u8>, ErrorResponse> {
+        let dec = EncValue::try_from(value)?.decrypt()?;
+        Ok(
+            EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+                .into_bytes()
+                .to_vec(),
+        )
+    }
+
     #[inline]
     pub fn value(&self) -> Result<serde_json::Value, ErrorResponse> {
         let v = if self.encrypted == Some(true) {
@@ -568,5 +576,41 @@ impl From<KVNamespace> for KVNamespaceResponse {
             name: value.ns,
             public: value.public,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::KVValue;
+    use cryptr::{EncKeys, EncValue};
+    use std::sync::Once;
+
+    static INIT_KEYS: Once = Once::new();
+
+    fn init_keys() {
+        INIT_KEYS.call_once(|| {
+            let _ = EncKeys::generate_with_id("test".to_string())
+                .unwrap()
+                .init();
+        });
+    }
+
+    #[test]
+    fn re_encrypt_keeps_value_readable() {
+        init_keys();
+        let json = serde_json::json!({"a": 1});
+        let value = EncValue::encrypt(json.to_string().as_bytes())
+            .unwrap()
+            .into_bytes()
+            .to_vec();
+
+        let kv = KVValue {
+            ns: "ns".to_string(),
+            key: "key".to_string(),
+            encrypted: Some(true),
+            value: KVValue::re_encrypt(value, "test").unwrap(),
+        };
+
+        assert_eq!(kv.value().unwrap(), json);
     }
 }
