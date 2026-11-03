@@ -97,7 +97,7 @@ export let I18nAdminRu: I18nAdmin = {
             client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `Базовый URI SCIM — это URI, от которого могут быть правильно получены подмаршруты, такие как
-                <code>{base_uri}/Users/{id}</base_uri></code>.`,
+                <code>{base_uri}/Users/{id}</code>.`,
             desc: 'Если этот клиент поддерживает {{ SCIM_LINK }}, вы можете активировать это здесь.',
             enable: 'Включить SCIMv2',
             groupSync: 'Синхронизация групп',

@@ -102,7 +102,7 @@ export let I18nAdminDe: I18nAdmin = {
             claim.`,
         scim: {
             baseUri: `Die SCIM base URI muss jene sein, von der Sub-Routen wie 
-                <code>{base_uri}/Users/{id}</base_uri></code> korrekt abgeleitet werden können.`,
+                <code>{base_uri}/Users/{id}</code> korrekt abgeleitet werden können.`,
             desc: 'Sollte dieser client {{ SCIM_LINK }} unterstützen, kann es hier aktiviert werden.',
             enable: 'SCIMv2 aktivieren',
             groupSync: 'Gruppen synchronisieren',

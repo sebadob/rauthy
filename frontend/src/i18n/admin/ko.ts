@@ -90,7 +90,7 @@ export let I18nAdminKo: I18nAdmin = {
             client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 
-                <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,
+                <code>{base_uri}/Users/{id}</code> can be derived correctly.`,
             desc: 'If this client supports {{ SCIM_LINK }}, you can activate it here.',
             enable: 'Enable SCIMv2',
             groupSync: 'Synchronize Groups',

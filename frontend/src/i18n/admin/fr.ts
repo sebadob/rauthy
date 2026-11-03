@@ -45,8 +45,7 @@ export let I18nAdminFr: I18nAdmin = {
         defaultAud: 'Audiences par défaut',
         descAllowedResources: `Indicateurs de ressources RFC 8707 optionnels que ce client peut demander. Une liste vide rejette tout paramètre « resource » avec « invalid_target ».`,
         descDefaultAud: `Audiences toujours ajoutées aux jetons de ce client, indépendamment de tout paramètre « resource ».`,
-        backchannelLogout:
-            `Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l'URI ici.`,
+        backchannelLogout: `Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l'URI ici.`,
         branding: {
             descHsl: `Les valeurs suivantes doivent être fournies au format HSL. Seules les couleurs de base sont
                 fournies. Les canaux alpha et les autres valeurs sont gérés dynamiquement par le thème.`,
@@ -100,7 +99,7 @@ export let I18nAdminFr: I18nAdmin = {
             vous devez donc la valider côté client. Vous pouvez utiliser le claim « amr » pour cela.`,
         scim: {
             baseUri: `L'URI de base SCIM est celle à partir de laquelle les sous-routes comme
-                <code>{base_uri}/Users/{id}</base_uri></code> peuvent être correctement dérivées.`,
+                <code>{base_uri}/Users/{id}</code> peuvent être correctement dérivées.`,
             desc: `Si ce client prend en charge {{ SCIM_LINK }}, vous pouvez l'activer ici.`,
             enable: 'Activer SCIMv2',
             groupSync: 'Synchroniser les groupes',
@@ -556,16 +555,15 @@ export let I18nAdminFr: I18nAdmin = {
         mfa: {
             otp: {
                 title: 'Code à usage unique',
-                mfaDelete1:
-                    'Vous pouvez supprimer les codes à usage unique de cet utilisateur.',
-                mfaDelete2: `Attention ! La suppression d'un code à usage unique est irréversible ; l'utilisateur doit procéder à une
+                mfaDelete1: 'Vous pouvez supprimer les codes à usage unique de cet utilisateur.',
+                mfaDelete2: `Attention ! La suppression d'un code à usage unique est <b>irréversible</b> ; l'utilisateur doit procéder à une
             nouvelle inscription complète.`,
                 noMfaOtps: `Cet utilisateur n'a pas de code à usage unique`,
             },
             webauthn: {
                 title: `Clés d'accès`,
                 mfaDelete1: `Vous pouvez supprimer les clés d'accès de cet utilisateur.`,
-                mfaDelete2: `Attention ! La suppression d'une clé d'accès est irréversible ; l'utilisateur doit procéder à une
+                mfaDelete2: `Attention ! La suppression d'une clé d'accès est <b>irréversible</b> ; l'utilisateur doit procéder à une
             nouvelle inscription complète.`,
                 noMfaKeys: `Cet utilisateur n'a aucune clé d'accès enregistrée.`,
             },
@@ -593,7 +591,7 @@ export let I18nAdminFr: I18nAdmin = {
                 "Une URI de redirection ne doit pas contenir de caractères de contrôle dans le nom d'un paramètre de requête",
             fragment: 'Une URI de redirection ne doit pas contenir de fragment (#)',
             reservedKey:
-                'Une URI de redirection ne doit pas contenir le paramètre de requête « {{ KEY }} », car il est défini par la réponse d\'autorisation',
+                "Une URI de redirection ne doit pas contenir le paramètre de requête « {{ KEY }} », car il est défini par la réponse d'autorisation",
             reservedKeyLogout:
                 'Une URI de redirection après déconnexion ne doit pas contenir le paramètre de requête « {{ KEY }} », car il est défini lors de la déconnexion',
         },
