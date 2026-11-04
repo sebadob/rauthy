@@ -17,18 +17,18 @@
         TPL_PASSKEY_REG_TYPE,
         TPL_ATPROTO_ID,
         TPL_PASSWORD_RESET_LINK_ALWAYS,
-    } from '$utils/constants.js';
-    import IconHome from '$icons/IconHome.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Template from '$lib5/Template.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
-    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
-    import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
+    } from '#utils/constants.js';
+    import IconHome from '#icons/IconHome.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Template from '#lib/Template.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
+    import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
     import type {
         ActiveOtp,
         CodeChallengeMethod,
