@@ -428,15 +428,18 @@ impl User {
         // takes it from the deleted row (RETURNING), hiqlite from a read just before the delete.
         let deleted: Option<Option<String>> = if is_hiqlite() {
             // A picture changed after this read is left behind as an orphan.
-            let row = DB::hql()
+            // No `Row` may live past this statement: it is not `Send`.
+            let (found, picture_id): (bool, Option<String>) = match DB::hql()
                 .query_raw(
                     "SELECT picture_id FROM users WHERE id = $1",
                     params!(&self.id),
                 )
                 .await?
-                .pop();
-            let found = row.is_some();
-            let picture_id = row.and_then(|mut row| row.get("picture_id"));
+                .pop()
+            {
+                Some(mut row) => (true, row.get("picture_id")),
+                None => (false, None),
+            };
             // Revokes the access tokens of the user and of its refresh tokens before the cascade
             // of the user row deletes those.
             let res = DB::hql()
