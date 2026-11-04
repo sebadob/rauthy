@@ -299,6 +299,24 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
+    // 10b. it has no access to the consents of a user, not even of a managed one: it can
+    // neither list them nor revoke one
+    let res = client
+        .get(format!("{backend}/users/{}/consents", member.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+    let res = client
+        .delete(format!(
+            "{backend}/users/{}/consents?client_id=init_client",
+            member.id
+        ))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+
     // 11. the "add an unmanaged user to my groups" flow: a groups-only PATCH that brings the
     // outsider into a managed group is allowed, even though the admin could not see it before.
     // The PATCH only sends the in-scope group; the unmanaged `gaother` membership the admin
