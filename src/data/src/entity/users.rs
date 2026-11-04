@@ -106,6 +106,21 @@ pub(crate) const PG_DELETE_STEPS: [PgDeleteStep; 7] = [
     PgDeleteStep::RevokeUserAccessTokens,
 ];
 
+/// Whether the hiqlite delete of a user that existed before it removed the user, when its
+/// transaction failed (`res` is `Err`) or deleted no user row (`Ok(0)`). Either can come from a
+/// transaction that committed while its result was lost, or from a re-run of a committed one.
+/// `gone` is the answer of a read on the leader after it: a user that is gone was deleted by this
+/// call. Otherwise the original error, or `Ok(false)` for no user row, stands.
+fn hql_delete_recovered(
+    res: Result<usize, ErrorResponse>,
+    gone: bool,
+) -> Result<bool, ErrorResponse> {
+    if gone {
+        return Ok(true);
+    }
+    res.map(|rows| rows > 0)
+}
+
 /// The state of the Postgres transaction of [`User::delete`]
 #[derive(Debug, Default)]
 pub(crate) struct PgDelete {
@@ -409,17 +424,19 @@ impl User {
 
         Session::delete_by_user(&self.id).await?;
 
-        // The `picture_id` of the deleted row, not of `self`, which may be an older copy.
+        // The stored `picture_id`, not the one of `self`, which may be an older copy. Postgres
+        // takes it from the deleted row (RETURNING), hiqlite from a read just before the delete.
         let deleted: Option<Option<String>> = if is_hiqlite() {
             // A picture changed after this read is left behind as an orphan.
-            let picture_id = DB::hql()
+            let row = DB::hql()
                 .query_raw(
                     "SELECT picture_id FROM users WHERE id = $1",
                     params!(&self.id),
                 )
                 .await?
-                .pop()
-                .and_then(|mut row| row.get("picture_id"));
+                .pop();
+            let found = row.is_some();
+            let picture_id = row.and_then(|mut row| row.get("picture_id"));
             // Revokes the access tokens of the user and of its refresh tokens before the cascade
             // of the user row deletes those.
             let res = DB::hql()
@@ -437,12 +454,36 @@ WHERE user_id = $1
                     ),
                     ("DELETE FROM users WHERE id = $1", params!(&self.id)),
                 ])
-                .await?;
-            let mut user_rows = 0;
-            for rows in res {
-                user_rows = rows?;
-            }
-            (user_rows > 0).then_some(picture_id)
+                .await
+                .map_err(ErrorResponse::from)
+                .and_then(|res| {
+                    res.into_iter()
+                        .try_fold(0, |_, rows| rows.map_err(ErrorResponse::from))
+                });
+            let user_deleted = match res {
+                Ok(rows) if rows > 0 => true,
+                // The user was gone before this call: another delete got there first.
+                Ok(_) if !found => false,
+                // Only on this error path, a read on the leader tells whether the user is gone.
+                res => {
+                    let gone = match DB::hql()
+                        .query_consistent("SELECT 1 FROM users WHERE id = $1", params!(&self.id))
+                        .await
+                    {
+                        Ok(rows) => rows.is_empty(),
+                        Err(err) => {
+                            error!(
+                                user_id = self.id,
+                                ?err,
+                                "Error checking whether a failed delete removed the user"
+                            );
+                            false
+                        }
+                    };
+                    hql_delete_recovered(res, gone)?
+                }
+            };
+            user_deleted.then_some(picture_id)
         } else {
             let mut cl = DB::pg().await?;
             let txn = cl
@@ -2553,6 +2594,21 @@ mod tests {
             .into_iter()
             .map(|mut row| row.get("id"))
             .collect()
+    }
+
+    /// A hiqlite delete whose transaction committed but whose result was lost, or whose re-run
+    /// deleted no row, counts as done once the leader no longer has the user. While the user is
+    /// still there, the original error or NotFound stands.
+    #[test]
+    fn test_hql_delete_recovered() {
+        let lost = || ErrorResponse::new(ErrorResponseType::Connection, "lost");
+
+        assert!(hql_delete_recovered(Err(lost()), true).unwrap());
+        assert!(hql_delete_recovered(Ok(0), true).unwrap());
+
+        let err = hql_delete_recovered(Err(lost()), false).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Connection);
+        assert!(!hql_delete_recovered(Ok(0), false).unwrap());
     }
 
     /// A delete through a stale copy of a user another delete already removed returns NotFound
