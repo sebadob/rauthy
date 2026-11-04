@@ -6,7 +6,7 @@ use hiqlite::macros::params;
 use rauthy_api_types::groups::{GroupRequest, GroupResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_GROUPS};
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::new_store_id;
+use rauthy_common::utils::{csv_rename, new_store_id};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -174,12 +174,10 @@ impl Group {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
             for mut user in users {
-                user.groups = Some(
-                    user.groups
-                        .as_ref()
-                        .unwrap()
-                        .replace(&group.name, &new_group.name),
-                );
+                user.groups = user
+                    .groups
+                    .as_deref()
+                    .map(|g| csv_rename(g, &group.name, &new_group.name));
                 user.save_txn_append(&mut txn);
             }
 
