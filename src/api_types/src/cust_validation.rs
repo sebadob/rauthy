@@ -119,16 +119,25 @@ pub fn validate_vec_resource(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
-/// A single RFC 8707 resource indicator of at most [`RESOURCE_MAX_LEN`] bytes, or empty for
-/// "no resource".
+/// A single, non-empty RFC 8707 resource indicator of at most [`RESOURCE_MAX_LEN`] bytes.
 #[inline]
-pub fn validate_resource_or_empty(value: &str) -> Result<(), ValidationError> {
-    if value.is_empty() || (value.len() <= RESOURCE_MAX_LEN && RE_RESOURCE.is_match(value)) {
+pub fn validate_resource(value: &str) -> Result<(), ValidationError> {
+    if value.len() <= RESOURCE_MAX_LEN && RE_RESOURCE.is_match(value) {
         Ok(())
     } else {
         Err(ValidationError::new(
             "^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]{1,1024}$",
         ))
+    }
+}
+
+/// [`validate_resource`], or empty for "no resource".
+#[inline]
+pub fn validate_resource_or_empty(value: &str) -> Result<(), ValidationError> {
+    if value.is_empty() {
+        Ok(())
+    } else {
+        validate_resource(value)
     }
 }
 
@@ -192,6 +201,17 @@ pub fn validate_vec_scopes(value: &[String]) -> Result<(), ValidationError> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn resource() {
+        assert!(validate_resource("").is_err());
+        assert!(validate_resource("https://api.example.com").is_ok());
+        assert!(validate_resource("https://api.example.com#frag").is_err());
+        let prefix = "https://api.example.com/";
+        let max = format!("{prefix}{}", "a".repeat(1024 - prefix.len()));
+        assert!(validate_resource(&max).is_ok());
+        assert!(validate_resource(&format!("{max}a")).is_err());
+    }
 
     #[test]
     fn resource_or_empty() {

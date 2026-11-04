@@ -1229,8 +1229,9 @@ pub async fn delete_user_consent(
     params.validate()?;
 
     let user = User::find(user_id).await?;
-    let admin_email = match principal.user_id() {
-        Ok(id) if id != user.id => Some(User::find(id.to_string()).await?.email),
+    // an API key authorized the request even with a session, see `validate_consent_access`
+    let admin_email = match (&principal.api_key, principal.user_id()) {
+        (None, Ok(id)) if id != user.id => Some(User::find(id.to_string()).await?.email),
         _ => None,
     };
     let revoked_by = match (&principal.api_key, &admin_email) {

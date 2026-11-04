@@ -457,6 +457,40 @@ async fn assert_refresh_not_found(client: &Client, refresh_token: String) {
     assert!(body.contains("Refresh Token not found"), "{body}");
 }
 
+/// The texts of the `ConsentRevoked` events for `email` since `from`, sorted.
+async fn consent_revoked_events(
+    client: &Client,
+    admin: &reqwest::header::HeaderMap,
+    from: i64,
+    email: &str,
+) -> Vec<String> {
+    // the event is sent after the response
+    time::sleep(Duration::from_secs(1)).await;
+    let res = client
+        .post(format!("{}/events", get_backend_url()))
+        .headers(admin.clone())
+        .json(&json!({
+            "from": from,
+            "level": "info",
+            "typ": "ConsentRevoked",
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200);
+    let mut texts = res
+        .json::<Vec<Value>>()
+        .await
+        .unwrap()
+        .iter()
+        .filter_map(|e| e["text"].as_str())
+        .filter(|t| t.contains(&format!("`{email}`")))
+        .map(String::from)
+        .collect::<Vec<_>>();
+    texts.sort();
+    texts
+}
+
 #[tokio::test]
 async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     let admin = get_auth_headers().await?;
@@ -722,6 +756,25 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
     let user = res.json::<UserResponse>().await?;
+    let res = client
+        .put(format!("{backend}/users/{}", user.id))
+        .headers(admin.clone())
+        .json(&UpdateUserRequest {
+            email: user.email.clone(),
+            given_name: user.given_name.clone(),
+            family_name: user.family_name.clone(),
+            language: Some(Language::En),
+            password: Some(PWD.to_string()),
+            roles: user.roles.clone(),
+            groups: user.groups.clone(),
+            enabled: true,
+            email_verified: true,
+            user_expires: None,
+            user_values: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
     let url = format!("{backend}/users/{}/consents", user.id);
     let url_delete = format!("{url}?client_id={CLIENT_ID}");
 
@@ -774,9 +827,36 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
         assert_eq!(res.status(), StatusCode::OK);
     };
 
-    // another access group
+    // the key and an admin session together
+    let get_with_session = async || {
+        client
+            .get(&url)
+            .headers(admin.clone())
+            .header(AUTHORIZATION, &key_header)
+            .send()
+            .await
+            .unwrap()
+            .status()
+    };
+    let delete_with_session = async || {
+        let res = client
+            .delete(&url_delete)
+            .headers(admin.clone())
+            .header(AUTHORIZATION, &key_header)
+            .send()
+            .await
+            .unwrap();
+        (
+            res.status(),
+            res.json::<UserConsentDeleteResponse>().await.ok(),
+        )
+    };
+
+    // another access group, rejected even with an admin session
     assert_eq!(get().await, StatusCode::FORBIDDEN);
     assert_eq!(delete().await, StatusCode::FORBIDDEN);
+    assert_eq!(get_with_session().await, StatusCode::FORBIDDEN);
+    assert_eq!(delete_with_session().await.0, StatusCode::FORBIDDEN);
 
     set_rights(vec![AccessRights::Read]).await;
     assert_eq!(get().await, StatusCode::OK);
@@ -785,6 +865,21 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
     set_rights(vec![AccessRights::Delete]).await;
     assert_eq!(get().await, StatusCode::FORBIDDEN);
     assert_eq!(delete().await, StatusCode::OK);
+
+    // with an admin session as well, the revoke is the key's
+    let ts = password_token_set(&client, &user.email, PWD).await;
+    let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
+    let (status, deleted) = delete_with_session().await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(deleted.unwrap().refresh_tokens_deleted >= 1);
+    assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
+    assert_eq!(
+        consent_revoked_events(&client, &admin, events_from, &user.email).await,
+        vec![format!(
+            "Consent of `{}` for client `{CLIENT_ID}` revoked by API key `{}`",
+            user.email, key.name
+        )]
+    );
 
     let res = client
         .delete(format!("{backend}/api_keys/{}", key.name))
