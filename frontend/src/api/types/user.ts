@@ -102,7 +102,7 @@ export interface UserConsentDeleteResponse {
 export interface UserConsentResponse {
     client_id: string;
     client_name?: string;
-    /// missing for a consent without a resource
+    /// null for a consent without a resource
     resource?: string;
     scopes: string[];
     created: number;

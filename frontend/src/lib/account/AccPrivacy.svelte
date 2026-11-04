@@ -20,6 +20,7 @@
     let t = useI18n();
 
     let err = $state('');
+    let isRevoking = $state(false);
     let consents: UserConsentResponse[] = $state([]);
 
     onMount(() => {
@@ -37,19 +38,27 @@
     }
 
     async function onRevoke(consent: UserConsentResponse) {
+        if (isRevoking) {
+            return;
+        }
+        isRevoking = true;
         err = '';
 
-        let params = new URLSearchParams({ client_id: consent.client_id });
-        if (consent.resource) {
-            params.set('resource', consent.resource);
-        }
-        let res = await fetchDelete<UserConsentDeleteResponse>(
-            `/auth/v1/users/${user.id}/consents?${params}`,
-        );
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            await fetchConsents();
+        try {
+            let params = new URLSearchParams({ client_id: consent.client_id });
+            if (consent.resource) {
+                params.set('resource', consent.resource);
+            }
+            let res = await fetchDelete<UserConsentDeleteResponse>(
+                `/auth/v1/users/${user.id}/consents?${params}`,
+            );
+            if (res.error) {
+                err = res.error.message;
+            } else {
+                await fetchConsents();
+            }
+        } finally {
+            isRevoking = false;
         }
     }
 </script>
@@ -58,7 +67,7 @@
     <h3>{t.account.privacy.connectedApps}</h3>
     <p>{t.account.privacy.connectedAppsDesc}</p>
 
-    {#each consents as consent (`${consent.client_id}/${consent.resource ?? ''}`)}
+    {#each consents as consent (JSON.stringify([consent.client_id, consent.resource ?? null]))}
         <div class="consent">
             <div class="row">
                 <b>{consent.client_name || consent.client_id}</b>
@@ -92,7 +101,7 @@
             <div class="row">
                 <div></div>
                 <div class="revokeBtn" title={t.account.privacy.revokeDesc}>
-                    <Button level={-3} onclick={() => onRevoke(consent)}>
+                    <Button level={-3} isLoading={isRevoking} onclick={() => onRevoke(consent)}>
                         {t.account.privacy.revoke}
                     </Button>
                 </div>
