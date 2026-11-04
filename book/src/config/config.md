@@ -861,9 +861,10 @@ backup_keep_for_local = '3d'
 
 [consent]
 # Set to `true` to enable user consent for clients. This feature is
-# still in progress. Currently, it only makes a client deletion also
-# delete all legacy refresh tokens (issued before refresh tokens were
-# bound to a client) of all users.
+# still in progress. Currently, it makes a client deletion also delete
+# all legacy refresh tokens (issued before refresh tokens were bound to
+# a client) of all users, and a user's consent revoke also delete that
+# user's legacy refresh tokens.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
@@ -1820,7 +1821,7 @@ level_secrets_migrated = 'notice'
 level_user_login_revoke = 'warning'
 # The level for the generated Event after a user consent
 # for a client has been revoked, either by the user
-# themselves or by an admin.
+# themselves, by an admin or through an API key.
 #
 # default: notice
 # overwritten by: EVENT_LEVEL_CONSENT_REVOKED

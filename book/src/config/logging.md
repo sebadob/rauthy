@@ -499,7 +499,7 @@ level_secrets_migrated = 'notice'
 level_user_login_revoke = 'warning'
 # The level for the generated Event after a user consent
 # for a client has been revoked, either by the user
-# themselves or by an admin.
+# themselves, by an admin or through an API key.
 #
 # default: notice
 # overwritten by: EVENT_LEVEL_CONSENT_REVOKED

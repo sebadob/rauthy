@@ -714,8 +714,8 @@ impl Event {
         )
     }
 
-    /// `revoked_by_admin` is the email of the admin who revoked the consent, `None` if the user
-    /// revoked it themselves.
+    /// `revoked_by` names who revoked the consent: the user themselves, an admin by email, or
+    /// an API key by name (see [`ConsentRevokedBy`]).
     pub fn consent_revoked(
         user_email: &str,
         client_id: &str,
@@ -1126,7 +1126,6 @@ impl From<Event> for EventResponse {
     }
 }
 
-/// The text of [`Event::consent_revoked`].
 /// Who revoked a consent, for [`Event::consent_revoked`]
 #[derive(Debug, Clone, Copy)]
 pub enum ConsentRevokedBy<'a> {
@@ -1137,6 +1136,7 @@ pub enum ConsentRevokedBy<'a> {
     ApiKey(&'a str),
 }
 
+/// The text of [`Event::consent_revoked`].
 fn consent_revoked_text(
     user_email: &str,
     client_id: &str,
