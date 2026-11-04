@@ -42,6 +42,15 @@ use tracing::{debug, error, trace, warn};
 use validator::Validate;
 use zeroize::Zeroize;
 
+pub const SQL_INSERT: &str = r#"
+INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
+default_aud, created_micros)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+$18, $19, $20, $21, $22, $23, $24, $25)"#;
+
 static SQL_SAVE: &str = r#"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
@@ -167,19 +176,10 @@ impl Client {
         client.secret_kid = kid;
         client.created_micros = Some(Utc::now().timestamp_micros());
 
-        let sql = r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
-default_aud, created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23, $24, $25)"#;
-
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    sql,
+                    SQL_INSERT,
                     params!(
                         &client.id,
                         &client.name,
@@ -211,7 +211,7 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
                 .await?;
         } else {
             DB::pg_execute(
-                sql,
+                SQL_INSERT,
                 &[
                     &client.id,
                     &client.name,
@@ -262,13 +262,6 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        let sql_1 = r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-$21, $22, $23)"#;
         let sql_2 = r#"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
@@ -278,7 +271,7 @@ VALUES ($1, $2, $3, $4)"#;
             DB::hql()
                 .txn([
                     (
-                        sql_1,
+                        SQL_INSERT,
                         params!(
                             &client.id,
                             &client.name,
@@ -302,6 +295,8 @@ VALUES ($1, $2, $3, $4)"#;
                             &client.contacts,
                             &client.backchannel_logout_uri,
                             &client.restrict_group_prefix,
+                            &client.allowed_resources,
+                            &client.default_aud,
                             client.created_micros
                         ),
                     ),
@@ -322,7 +317,7 @@ VALUES ($1, $2, $3, $4)"#;
 
             DB::pg_txn_append(
                 &txn,
-                sql_1,
+                SQL_INSERT,
                 &[
                     &client.id,
                     &client.name,
@@ -346,6 +341,8 @@ VALUES ($1, $2, $3, $4)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &client.allowed_resources,
+                    &client.default_aud,
                     &client.created_micros,
                 ],
             )

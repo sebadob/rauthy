@@ -436,6 +436,9 @@
                 tooManyRequests = false;
                 err = '';
             }, diff);
+        } else if (res.status === 0 || res.status >= 500) {
+            // network or server error -> not a credentials problem
+            err = res.error?.message || '';
         } else if (!needsPassword) {
             // this will happen always if the user does the first try with a password-only account
             // the good thing about this is, that it is a prevention against autofill passwords from the browser
@@ -814,7 +817,7 @@
                                 >
                                     <div class="flex gap-05">
                                         <IconKey width="1.2rem" />
-                                        Passkey
+                                        {t.authorize.passkey}
                                     </div>
                                 </Button>
                             </div>

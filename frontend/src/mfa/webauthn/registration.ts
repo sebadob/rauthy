@@ -108,6 +108,7 @@ export async function webauthnReg(
             type: credential.type,
         },
         magic_link_id: magicLinkId,
+        allow_rk_hint: allowRk,
     };
 
     let resFinish = await fetch(`/auth/v1/users/${userId}/webauthn/register/finish`, {

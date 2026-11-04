@@ -366,6 +366,10 @@ pub struct WebauthnRegFinishRequest {
     /// Validation: `[a-zA-Z0-9]{64}`
     #[validate(regex(path = "*RE_ALNUM_64", code = "[a-zA-Z0-9]{64}"))]
     pub magic_link_id: Option<String>,
+    /// A hint from the UI if `allow_rk` was set during the start of the ceremony. This helps
+    /// improve compatibility with authenticators that do not send any additional information
+    /// whether they created a resident key.
+    pub allow_rk_hint: Option<bool>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

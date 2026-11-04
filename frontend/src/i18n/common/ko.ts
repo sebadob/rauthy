@@ -189,6 +189,7 @@ export const I18nKo: I18n = {
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: '또는 다음으로 로그인',
+        passkey: 'Passkey',
         passkeyNotDiscovered:
             'Resident Key로 추가되지 않은 Passkey는 이 방법으로 찾을 수 없습니다. 대신 이메일을 입력하세요.',
         password: '비밀번호',

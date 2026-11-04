@@ -4844,7 +4844,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4896,7 +4896,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -4916,7 +4916,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -4947,7 +4947,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5039,7 +5039,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5048,7 +5048,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5084,7 +5084,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5122,7 +5122,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "chrono",
  "ed25519-compact",
@@ -5140,7 +5140,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5156,7 +5156,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5172,7 +5172,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5193,7 +5193,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5223,7 +5223,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.37.2"
+version = "0.37.3-20261026-ios-rk-test"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
@@ -6773,9 +6773,9 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tls-hot-reload"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5daf2f78f6cf41fc4d2d0f515d7f750ca534632a3ee480063686cded0f9e2a95"
+checksum = "38af2c8ef0e069da0bd19d6f6433ebc7200b4207d2cc2a6e7704fc9ddfab3108"
 dependencies = [
  "arc-swap",
  "notify",

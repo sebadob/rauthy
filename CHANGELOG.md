@@ -4,6 +4,29 @@
 
 ### Changes
 
+#### Opt-in Bootstrap Reconcile
+
+The bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` can be re-applied on
+every start, and not only against an empty database. Check the
+[book](https://sebadob.github.io/rauthy/config/bootstrap.html) for the details.
+
+```toml
+[bootstrap]
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+reconcile = false
+```
+
+[#1847](https://github.com/sebadob/rauthy/issues/1847)
+
 #### Externally Provisioned Client Secrets
 
 `PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is

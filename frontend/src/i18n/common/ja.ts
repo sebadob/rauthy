@@ -198,6 +198,7 @@ export const I18nJa: I18n = {
         requestExpired: '依頼の有効期限が切れています',
         signUp: 'ユーザー登録',
         validEmail: '正しいメールアドレスを入力してください',
+        passkey: 'Passkey',
         passkeyNotDiscovered:
             'レジデントキーとして追加されていないパスキーはこの方法では見つけられません。入力 代わりにあなたのメールを送ってください。',
     },
