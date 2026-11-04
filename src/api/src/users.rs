@@ -1240,7 +1240,7 @@ pub async fn delete_user_consent(
     };
 
     let ip = real_ip_from_req(&req)?;
-    let resource = params.resource.as_deref().unwrap_or_default();
+    let resource = params.resource.as_deref();
     let ConsentRevoked {
         consent_deleted,
         refresh_tokens_deleted,
@@ -1248,10 +1248,15 @@ pub async fn delete_user_consent(
 
     // the revoke is committed at this point, a failing event must not turn it into an error
     if (consent_deleted || refresh_tokens_deleted > 0)
-        && let Err(err) =
-            Event::consent_revoked(&user.email, &params.client_id, resource, revoked_by, ip)
-                .send()
-                .await
+        && let Err(err) = Event::consent_revoked(
+            &user.email,
+            &params.client_id,
+            resource.unwrap_or_default(),
+            revoked_by,
+            ip,
+        )
+        .send()
+        .await
     {
         error!(?err, "Cannot send the consent revoked event");
     }

@@ -1,7 +1,5 @@
 use crate::database::DB;
-use crate::entity::refresh_tokens::{
-    SQL_PG_IT_REVOKE_JTIS, SQL_RT_DELETE_BY_USER_CLIENT, SQL_RTD_DELETE_BY_USER_CLIENT,
-};
+use crate::entity::refresh_tokens::{SQL_PG_IT_REVOKE_JTIS, SQL_RTD_DELETE_BY_USER_CLIENT};
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use hiqlite::macros::params;
@@ -34,7 +32,7 @@ pub(crate) const SQL_CONSENT_DELETE_BY_CLIENT: &str =
 
 /// A user's consent to a client, optionally scoped to a single resource. `resource` is empty for
 /// a consent without one.
-#[derive(Debug, Clone, PartialEq, Deserialize, FromPgRow)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, FromPgRow)]
 pub struct UserConsent {
     pub user_id: String,
     pub client_id: String,
@@ -141,19 +139,25 @@ impl UserConsent {
     /// `consent.enable`, legacy refresh tokens of the user without a `client_id` are deleted as
     /// well, because they are valid for any client, like `Client::delete` does. Without it, they
     /// stay, so that a revoke does not sign the user out of every client still on legacy tokens.
+    ///
+    /// `resource` is `None` for a consent without one.
     pub async fn revoke(
         user_id: &str,
         client_id: &str,
-        resource: &str,
+        resource: Option<&str>,
     ) -> Result<ConsentRevoked, ErrorResponse> {
+        let resource = resource_key(resource);
         let drop_legacy = RauthyConfig::get().vars.consent.enable;
         if is_hiqlite() {
-            let stmts: Vec<_> = hql_revoke(drop_legacy)
+            let stmts: Vec<_> = hql_revoke()
                 .iter()
                 .map(|(sql, params)| {
                     let params = match params {
-                        RevokeParams::UserClient => params!(user_id, client_id),
-                        RevokeParams::UserClientResource => params!(user_id, client_id, resource),
+                        RevokeParams::Ids => params!(user_id, client_id),
+                        RevokeParams::Legacy => {
+                            params!(user_id, client_id, drop_legacy)
+                        }
+                        RevokeParams::Resource => params!(user_id, client_id, resource),
                     };
                     (*sql, params)
                 })
@@ -168,6 +172,13 @@ impl UserConsent {
             pg_revoke(&mut cl, drop_legacy, user_id, client_id, resource).await
         }
     }
+}
+
+/// The `resource` column of a consent: `''` stands for "no resource", because the column is part
+/// of the primary key. It never leaves this module: [`UserConsent::into_response`] maps it back
+/// to `None`.
+fn resource_key(resource: Option<&str>) -> &str {
+    resource.unwrap_or_default()
 }
 
 /// The Postgres transaction of [`UserConsent::revoke`]: [`pg_revoke_steps`], then the access
@@ -243,7 +254,8 @@ enum PgRevokeStep {
 /// holds finds it gone and discards the new token. A check that ran before leaves a new token
 /// that is gone after the revoke only if it was committed before a later statement of the revoke
 /// took its snapshot:
-/// - The grant goes first.
+/// - The grant goes first: `user_consents` leads the lock order that `Client::delete` and
+///   `User::delete` share with a revoke (below), so that they serialize instead of deadlocking.
 /// - `refresh_tokens_devices` and, with `consent.enable`, the legacy `refresh_tokens` are sources
 ///   in other rows than the `refresh_tokens` of the client. A refresh that deleted one of them
 ///   first committed its replacement before the later `refresh_tokens` delete took its snapshot,
@@ -377,9 +389,14 @@ RETURNING access_token_jti"#,
     }
 }
 
+/// The parameters a statement of [`hql_revoke`] binds.
 enum RevokeParams {
-    UserClient,
-    UserClientResource,
+    /// `$1` user_id, `$2` client_id
+    Ids,
+    /// `$1` user_id, `$2` client_id, `$3` drop_legacy
+    Legacy,
+    /// `$1` user_id, `$2` client_id, `$3` resource
+    Resource,
 }
 
 #[derive(Clone, Copy)]
@@ -390,44 +407,33 @@ enum RevokeRows {
 }
 
 /// The hiqlite transaction of [`UserConsent::revoke`], with the legacy refresh tokens of the user
-/// (`client_id` NULL) if `drop_legacy`. The access tokens are revoked before the refresh tokens
-/// they are looked up from are deleted. hiqlite applies the transaction as one raft log entry,
-/// so no other write sees a part of it; the order mirrors [`pg_revoke_steps`].
-fn hql_revoke(drop_legacy: bool) -> [(&'static str, RevokeParams); 4] {
-    let (sql_it, sql_rt) = if drop_legacy {
-        (
-            r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti IN (
-    SELECT access_token_jti FROM refresh_tokens
-    WHERE user_id = $1 AND (client_id = $2 OR client_id IS NULL)
-    UNION
-    SELECT access_token_jti FROM refresh_tokens_devices
-    WHERE user_id = $1
-      AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-)"#,
-            "DELETE FROM refresh_tokens WHERE user_id = $1 AND (client_id = $2 OR client_id IS NULL)",
-        )
-    } else {
-        (
-            r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti IN (
-    SELECT access_token_jti FROM refresh_tokens
-    WHERE user_id = $1 AND client_id = $2
-    UNION
-    SELECT access_token_jti FROM refresh_tokens_devices
-    WHERE user_id = $1
-      AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-)"#,
-            SQL_RT_DELETE_BY_USER_CLIENT,
-        )
-    };
+/// (`client_id` NULL) if `drop_legacy`, bound as `$3` ([`RevokeParams::Legacy`]). The
+/// access tokens are revoked before the refresh tokens they are looked up from are deleted.
+/// hiqlite applies the transaction as one raft log entry, so no other write sees a part of it;
+/// the order mirrors [`pg_revoke_steps`].
+fn hql_revoke() -> [(&'static str, RevokeParams); 4] {
     [
-        (SQL_DELETE, RevokeParams::UserClientResource),
-        (sql_it, RevokeParams::UserClient),
-        (SQL_RTD_DELETE_BY_USER_CLIENT, RevokeParams::UserClient),
-        (sql_rt, RevokeParams::UserClient),
+        (SQL_DELETE, RevokeParams::Resource),
+        (
+            r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (
+    SELECT access_token_jti FROM refresh_tokens
+    WHERE user_id = $1 AND (client_id = $2 OR ($3 AND client_id IS NULL))
+    UNION
+    SELECT access_token_jti FROM refresh_tokens_devices
+    WHERE user_id = $1
+      AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
+)"#,
+            RevokeParams::Legacy,
+        ),
+        (SQL_RTD_DELETE_BY_USER_CLIENT, RevokeParams::Ids),
+        (
+            r#"
+DELETE FROM refresh_tokens
+WHERE user_id = $1 AND (client_id = $2 OR ($3 AND client_id IS NULL))"#,
+            RevokeParams::Legacy,
+        ),
     ]
 }
 const HQL_REVOKE_ROWS: [RevokeRows; 4] = [
@@ -515,6 +521,22 @@ mod tests {
             vec!["openid".to_string(), "email".to_string()]
         );
         assert!(consent("c1", "", "", 1, 1).scopes_vec().is_empty());
+    }
+
+    /// `None` is stored as `''`, and `into_response` maps `''` back to `None`.
+    #[test]
+    fn test_resource_key() {
+        assert_eq!(resource_key(None), "");
+        assert_eq!(resource_key(Some(RES)), RES);
+        for resource in [None, Some(RES)] {
+            assert_eq!(
+                consent("c1", resource_key(resource), "openid", 1, 1)
+                    .into_response(None)
+                    .resource
+                    .as_deref(),
+                resource
+            );
+        }
     }
 
     #[test]
@@ -712,14 +734,14 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         conn.execute(SQL_UPSERT, params).unwrap();
 
         assert_eq!(
-            hql_revoke_on(&mut conn, drop_legacy, "u1", "c1", ""),
+            hql_revoke_on(&mut conn, drop_legacy, "u1", "c1", None),
             ConsentRevoked {
                 consent_deleted: true,
                 refresh_tokens_deleted: rt_deleted,
             }
         );
         assert_eq!(
-            hql_revoke_on(&mut conn, drop_legacy, "u1", "c1", ""),
+            hql_revoke_on(&mut conn, drop_legacy, "u1", "c1", None),
             ConsentRevoked {
                 consent_deleted: false,
                 refresh_tokens_deleted: 0,
@@ -755,16 +777,18 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         drop_legacy: bool,
         user_id: &str,
         client_id: &str,
-        resource: &str,
+        resource: Option<&str>,
     ) -> ConsentRevoked {
+        let resource = resource_key(resource);
         let txn = conn.transaction().unwrap();
-        let rows = hql_revoke(drop_legacy)
+        let rows = hql_revoke()
             .iter()
             .map(|(sql, params)| match params {
-                RevokeParams::UserClient => txn.execute(sql, [user_id, client_id]),
-                RevokeParams::UserClientResource => {
-                    txn.execute(sql, [user_id, client_id, resource])
+                RevokeParams::Ids => txn.execute(sql, [user_id, client_id]),
+                RevokeParams::Legacy => {
+                    txn.execute(sql, rusqlite::params![user_id, client_id, drop_legacy])
                 }
+                RevokeParams::Resource => txn.execute(sql, [user_id, client_id, resource]),
             })
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
@@ -834,26 +858,26 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
             assert_eq!(list(&conn, Some(RES)), vec![key("c1", RES)]);
             assert_eq!(list(&conn, Some("")), vec![key("c2", ""), key("c1", "")]);
 
-            let revoke = |conn: &mut rusqlite::Connection, c: &str, r: &str| {
+            let revoke = |conn: &mut rusqlite::Connection, c: &str, r: Option<&str>| {
                 hql_revoke_on(conn, drop_legacy, "u1", c, r)
             };
             // with the refresh token of c1
             assert_eq!(
-                revoke(&mut conn, "c1", RES),
+                revoke(&mut conn, "c1", Some(RES)),
                 ConsentRevoked {
                     consent_deleted: true,
                     refresh_tokens_deleted: 1,
                 }
             );
             // without refresh tokens
-            for (c, r) in [("c1", ""), ("c2", "")] {
+            for c in ["c1", "c2"] {
                 assert_eq!(
-                    revoke(&mut conn, c, r),
+                    revoke(&mut conn, c, None),
                     ConsentRevoked {
                         consent_deleted: true,
                         refresh_tokens_deleted: 0,
                     },
-                    "{c} {r}"
+                    "{c}"
                 );
             }
             assert!(list(&conn, None).is_empty());
