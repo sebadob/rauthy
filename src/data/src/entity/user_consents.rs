@@ -1,10 +1,6 @@
 use crate::database::DB;
 use crate::entity::refresh_tokens::{
-    SQL_HQL_IT_REVOKE_BY_USER_CLIENT, SQL_HQL_IT_REVOKE_BY_USER_CLIENT_OR_LEGACY,
-    SQL_PG_IT_REVOKE_JTIS, SQL_PG_RT_DELETE_BY_USER_CLIENT_RET,
-    SQL_PG_RT_DELETE_LEGACY_BY_USER_RET, SQL_PG_RTD_DELETE_BY_USER_CLIENT_RET,
-    SQL_RT_DELETE_BY_USER_CLIENT, SQL_RT_DELETE_BY_USER_CLIENT_OR_LEGACY,
-    SQL_RTD_DELETE_BY_USER_CLIENT,
+    SQL_PG_IT_REVOKE_JTIS, SQL_RT_DELETE_BY_USER_CLIENT, SQL_RTD_DELETE_BY_USER_CLIENT,
 };
 use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
@@ -20,16 +16,6 @@ use tokio_postgres::IsolationLevel;
 const SQL_FIND: &str = r#"
 SELECT * FROM user_consents
 WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
-/// [`UserConsent::exists_fenced`] on hiqlite
-const SQL_HQL_EXISTS: &str = r#"
-SELECT 1 FROM user_consents
-WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
-/// [`UserConsent::exists_fenced`] on Postgres. `FOR SHARE` waits for a concurrent
-/// [`UserConsent::revoke`] that already deleted the row, and then finds it gone.
-const SQL_PG_EXISTS_FENCED: &str = r#"
-SELECT 1 FROM user_consents
-WHERE user_id = $1 AND client_id = $2 AND resource = $3
-FOR SHARE"#;
 const SQL_FIND_FOR_USER: &str =
     "SELECT * FROM user_consents WHERE user_id = $1 ORDER BY updated DESC";
 const SQL_FIND_FOR_USER_RESOURCE: &str =
@@ -45,10 +31,6 @@ DELETE FROM user_consents
 WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
 pub(crate) const SQL_CONSENT_DELETE_BY_CLIENT: &str =
     "DELETE FROM user_consents WHERE client_id = $1";
-/// [`PgRevokeStep::LockTokens`]
-const SQL_PG_RT_LOCK_BY_USER_CLIENT: &str = r#"
-SELECT 1 FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
-FOR UPDATE"#;
 
 /// A user's consent to a client, optionally scoped to a single resource. `resource` is empty for
 /// a consent without one.
@@ -79,38 +61,6 @@ impl UserConsent {
             DB::pg_query_opt(SQL_FIND, &[&user_id, &client_id, &resource]).await?
         };
         Ok(slf)
-    }
-
-    /// Whether the grant exists, ordered against a concurrent [`Self::revoke`]: once this returns
-    /// `true`, a revoke of the grant that has not committed yet deletes every refresh token that
-    /// was committed before this call. Used by the fence after the code exchange inserted its
-    /// refresh token.
-    ///
-    /// Postgres: the revoke deletes the grant first and holds that row lock until it commits.
-    /// `FOR SHARE` blocks on it, and after the commit finds the row gone. If the revoke has not
-    /// deleted the grant yet, its refresh token delete runs later, in a statement that sees the
-    /// already committed refresh token.
-    /// hiqlite: a leader read after all committed logs were applied. The revoke is one raft log
-    /// entry: either it is applied before the read and the grant is gone, or after the refresh
-    /// token insert and deletes the token.
-    pub async fn exists_fenced(
-        user_id: &str,
-        client_id: &str,
-        resource: &str,
-    ) -> Result<bool, ErrorResponse> {
-        let exists = if is_hiqlite() {
-            !DB::hql()
-                .query_consistent(SQL_HQL_EXISTS, params!(user_id, client_id, resource))
-                .await?
-                .is_empty()
-        } else {
-            let cl = DB::pg().await?;
-            let st = cl.prepare_cached(SQL_PG_EXISTS_FENCED).await?;
-            cl.query_opt(&st, &[&user_id, &client_id, &resource])
-                .await?
-                .is_some()
-        };
-        Ok(exists)
     }
 
     pub async fn find_for_user(
@@ -276,12 +226,11 @@ enum PgRevokeStep {
 
 /// The statements of the Postgres transaction of [`UserConsent::revoke`], in order, run with read
 /// committed. A refresh inserts its replacement for the client into `refresh_tokens` and only
-/// then deletes its source (`delete_checked`); the code exchange inserts its refresh token and
-/// only then checks the grant ([`UserConsent::exists_fenced`]). A check that blocks on a row the
-/// revoke already holds finds it gone and discards the new token. A check that ran before leaves
-/// a new token that is gone after the revoke only if it was committed before a later statement
-/// of the revoke took its snapshot:
-/// - The grant goes first, for the code exchange.
+/// then deletes its source (`delete_checked`). A check that blocks on a row the revoke already
+/// holds finds it gone and discards the new token. A check that ran before leaves a new token
+/// that is gone after the revoke only if it was committed before a later statement of the revoke
+/// took its snapshot:
+/// - The grant goes first.
 /// - `refresh_tokens_devices` and, with `consent.enable`, the legacy `refresh_tokens` are sources
 ///   in other rows than the `refresh_tokens` of the client. A refresh that deleted one of them
 ///   first committed its replacement before the later `refresh_tokens` delete took its snapshot,
@@ -351,24 +300,43 @@ impl PgRevoke {
                 return Ok(());
             }
             PgRevokeStep::LockTokens => {
-                txn.query(SQL_PG_RT_LOCK_BY_USER_CLIENT, &[&user_id, &client_id])
-                    .await?;
+                txn.query(
+                    r#"
+SELECT 1 FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
+FOR UPDATE"#,
+                    &[&user_id, &client_id],
+                )
+                .await?;
                 return Ok(());
             }
             PgRevokeStep::DeviceTokens => {
                 txn.query(
-                    SQL_PG_RTD_DELETE_BY_USER_CLIENT_RET,
+                    r#"
+DELETE FROM refresh_tokens_devices
+WHERE user_id = $1
+  AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
+RETURNING access_token_jti"#,
                     &[&user_id, &client_id],
                 )
                 .await?
             }
             PgRevokeStep::RefreshTokens => {
-                txn.query(SQL_PG_RT_DELETE_BY_USER_CLIENT_RET, &[&user_id, &client_id])
-                    .await?
+                txn.query(
+                    r#"
+DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
+RETURNING access_token_jti"#,
+                    &[&user_id, &client_id],
+                )
+                .await?
             }
             PgRevokeStep::LegacyTokens => {
-                txn.query(SQL_PG_RT_DELETE_LEGACY_BY_USER_RET, &[&user_id])
-                    .await?
+                txn.query(
+                    r#"
+DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id IS NULL
+RETURNING access_token_jti"#,
+                    &[&user_id],
+                )
+                .await?
             }
         };
         self.rt_rows += rows.len();
@@ -415,12 +383,30 @@ enum RevokeRows {
 fn hql_revoke(drop_legacy: bool) -> [(&'static str, RevokeParams); 4] {
     let (sql_it, sql_rt) = if drop_legacy {
         (
-            SQL_HQL_IT_REVOKE_BY_USER_CLIENT_OR_LEGACY,
-            SQL_RT_DELETE_BY_USER_CLIENT_OR_LEGACY,
+            r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (
+    SELECT access_token_jti FROM refresh_tokens
+    WHERE user_id = $1 AND (client_id = $2 OR client_id IS NULL)
+    UNION
+    SELECT access_token_jti FROM refresh_tokens_devices
+    WHERE user_id = $1
+      AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
+)"#,
+            "DELETE FROM refresh_tokens WHERE user_id = $1 AND (client_id = $2 OR client_id IS NULL)",
         )
     } else {
         (
-            SQL_HQL_IT_REVOKE_BY_USER_CLIENT,
+            r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (
+    SELECT access_token_jti FROM refresh_tokens
+    WHERE user_id = $1 AND client_id = $2
+    UNION
+    SELECT access_token_jti FROM refresh_tokens_devices
+    WHERE user_id = $1
+      AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
+)"#,
             SQL_RT_DELETE_BY_USER_CLIENT,
         )
     };
@@ -1176,69 +1162,6 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
             )
             .await,
             vec!["j_legacy", "j_new", "j_src"]
-        );
-
-        monitor
-            .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
-            .await
-            .unwrap();
-    }
-
-    /// A code exchange of c1 runs while the consent is revoked: after the revoke deleted the
-    /// `refresh_tokens` of c1, the exchange inserts its refresh token and the fence re-checks
-    /// the grant with [`SQL_PG_EXISTS_FENCED`], then the revoke commits. The new refresh token
-    /// must not survive the revoke.
-    /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
-    #[tokio::test]
-    #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
-    async fn test_revoke_code_exchange_race_postgres() {
-        let (pool, schema) = pg_race_setup().await;
-        let mut revoker = pg_conn(&pool, &schema).await;
-        let exchange = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
-        let pid: i32 = exchange
-            .query_one("SELECT pg_backend_pid()", &[])
-            .await
-            .unwrap()
-            .get(0);
-
-        let mut fence = None;
-        let txn = revoker.transaction().await.unwrap();
-        pg_revoke_around(txn, false, async || {
-            // `TokenSet::from_user`
-            exchange.execute(INSERT_RT_NEW, &[]).await.unwrap();
-            // `fence_code_exchange`
-            let check = tokio::spawn(async move {
-                let granted = exchange
-                    .query_opt(SQL_PG_EXISTS_FENCED, &[&"u1", &"c1", &""])
-                    .await
-                    .unwrap()
-                    .is_some();
-                (exchange, granted)
-            });
-            pg_wait_blocked_or_done(&monitor, pid, &check).await;
-            fence = Some(check);
-        })
-        .await;
-        let (mut exchange, granted) = fence.unwrap().await.unwrap();
-        // `discard_unless_granted`
-        if !granted {
-            pg_discard(&mut exchange, "rt_new").await.unwrap();
-        }
-
-        assert!(!granted, "the fence must not pass");
-        // without `consent.enable`, the legacy refresh token stays
-        assert_eq!(
-            pg_ids(&monitor, "SELECT id FROM refresh_tokens").await,
-            vec!["rt_legacy"]
-        );
-        assert_eq!(
-            pg_ids(
-                &monitor,
-                "SELECT jti FROM issued_tokens WHERE revoked ORDER BY jti"
-            )
-            .await,
-            vec!["j_new", "j_src"]
         );
 
         monitor

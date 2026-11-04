@@ -16,66 +16,8 @@ DELETE FROM refresh_tokens_devices
 WHERE user_id = $1
   AND device_id IN (SELECT id FROM devices WHERE client_id = $2)"#;
 
-// With `consent.enable`, a consent revoke for `user_id` + `client_id` also covers the legacy
-// refresh tokens of the user without a `client_id`, since those are valid for any client.
-pub(crate) const SQL_RT_DELETE_BY_USER_CLIENT_OR_LEGACY: &str =
-    "DELETE FROM refresh_tokens WHERE user_id = $1 AND (client_id = $2 OR client_id IS NULL)";
-pub(crate) const SQL_PG_RT_DELETE_BY_USER_CLIENT_RET: &str = r#"
-DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
-RETURNING access_token_jti"#;
-/// The legacy refresh tokens of the user (`client_id` NULL), see
-/// [`SQL_RT_DELETE_BY_USER_CLIENT_OR_LEGACY`].
-pub(crate) const SQL_PG_RT_DELETE_LEGACY_BY_USER_RET: &str = r#"
-DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id IS NULL
-RETURNING access_token_jti"#;
-pub(crate) const SQL_PG_RTD_DELETE_BY_USER_CLIENT_RET: &str = r#"
-DELETE FROM refresh_tokens_devices
-WHERE user_id = $1
-  AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-RETURNING access_token_jti"#;
 pub(crate) const SQL_PG_IT_REVOKE_JTIS: &str =
     "UPDATE issued_tokens SET revoked = true WHERE jti = ANY($1)";
-/// Revokes the access tokens of the refresh tokens that the statements above delete. hiqlite's
-/// `txn` returns only the number of affected rows of each statement, not the rows a delete
-/// returns, so this runs first, in the same transaction, and finds them with a subselect.
-pub(crate) const SQL_HQL_IT_REVOKE_BY_USER_CLIENT: &str = r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti IN (
-    SELECT access_token_jti FROM refresh_tokens
-    WHERE user_id = $1 AND client_id = $2
-    UNION
-    SELECT access_token_jti FROM refresh_tokens_devices
-    WHERE user_id = $1
-      AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-)"#;
-/// hiqlite, the first statement of the transaction of the hiqlite `User::delete`: revokes every
-/// access token of the user, and the access tokens of its refresh tokens, which the
-/// `ON DELETE CASCADE` of `refresh_tokens.user_id` and `refresh_tokens_devices.user_id` deletes
-/// with the user row. It runs before the delete, while the refresh token rows still name them.
-/// Like the delete after it, it only matches while the user row still has the `picture_id` `$2`,
-/// so a try whose delete misses commits nothing.
-pub(crate) const SQL_HQL_REVOKE_USER_ACCESS_TOKENS: &str = r#"
-UPDATE issued_tokens SET revoked = true
-WHERE (
-       user_id = $1
-       OR jti IN (
-           SELECT access_token_jti FROM refresh_tokens WHERE user_id = $1
-           UNION
-           SELECT access_token_jti FROM refresh_tokens_devices WHERE user_id = $1
-       )
-   )
-  AND EXISTS (SELECT 1 FROM users WHERE id = $1 AND picture_id IS $2)"#;
-/// [`SQL_HQL_IT_REVOKE_BY_USER_CLIENT`] for [`SQL_RT_DELETE_BY_USER_CLIENT_OR_LEGACY`].
-pub(crate) const SQL_HQL_IT_REVOKE_BY_USER_CLIENT_OR_LEGACY: &str = r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti IN (
-    SELECT access_token_jti FROM refresh_tokens
-    WHERE user_id = $1 AND (client_id = $2 OR client_id IS NULL)
-    UNION
-    SELECT access_token_jti FROM refresh_tokens_devices
-    WHERE user_id = $1
-      AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-)"#;
 
 /// The statements of [`RefreshToken::discard`], run in one transaction by [`discard_txn`].
 pub(crate) const SQL_RT_DISCARD: DiscardSql = DiscardSql {
@@ -87,8 +29,6 @@ WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)"#,
     ],
     pg_delete: "DELETE FROM refresh_tokens WHERE id = $1 RETURNING access_token_jti",
 };
-/// [`PgDiscardStep::RevokeAccessToken`]
-const SQL_PG_IT_REVOKE_JTI: &str = "UPDATE issued_tokens SET revoked = true WHERE jti = $1";
 
 /// The statements that discard a refresh token of one table: [`SQL_RT_DISCARD`], or
 /// [`SQL_RTD_DISCARD`](crate::entity::refresh_tokens_devices::SQL_RTD_DISCARD). All of them are
@@ -482,7 +422,12 @@ impl PgDiscard {
             }
             PgDiscardStep::RevokeAccessToken => {
                 if let Some(jti) = &self.jti {
-                    DB::pg_txn_append(txn, SQL_PG_IT_REVOKE_JTI, &[jti]).await?;
+                    DB::pg_txn_append(
+                        txn,
+                        "UPDATE issued_tokens SET revoked = true WHERE jti = $1",
+                        &[jti],
+                    )
+                    .await?;
                 }
             }
         }

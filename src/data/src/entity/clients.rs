@@ -1785,40 +1785,7 @@ impl Client {
     }
 }
 
-/// The device refresh tokens of all devices of the client `$1`
-const SQL_RTD_DELETE_BY_CLIENT: &str = r#"
-DELETE FROM refresh_tokens_devices
-WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#;
-const SQL_RT_DELETE_LEGACY: &str = "DELETE FROM refresh_tokens WHERE client_id IS NULL";
-const SQL_RT_DELETE_BY_CLIENT: &str = "DELETE FROM refresh_tokens WHERE client_id = $1";
 const SQL_CLIENT_DELETE: &str = "DELETE FROM clients WHERE id = $1";
-
-/// [`SQL_RTD_DELETE_BY_CLIENT`] on Postgres, returning the access tokens to revoke
-const SQL_PG_RTD_DELETE_BY_CLIENT_RET: &str = r#"
-DELETE FROM refresh_tokens_devices
-WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-RETURNING access_token_jti"#;
-const SQL_PG_RT_DELETE_LEGACY_RET: &str =
-    "DELETE FROM refresh_tokens WHERE client_id IS NULL RETURNING access_token_jti";
-const SQL_PG_RT_DELETE_BY_CLIENT_RET: &str =
-    "DELETE FROM refresh_tokens WHERE client_id = $1 RETURNING access_token_jti";
-
-/// Revoke the access tokens of the refresh tokens that the statement of the same name without
-/// `IT_REVOKE` deletes. hiqlite's `txn` returns only the number of affected rows of each
-/// statement, not the rows a delete returns, so each runs right before that delete, in the same
-/// transaction, and finds the access tokens with a subselect.
-const SQL_HQL_IT_REVOKE_RTD_BY_CLIENT: &str = r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti IN (
-    SELECT access_token_jti FROM refresh_tokens_devices
-    WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-)"#;
-const SQL_HQL_IT_REVOKE_RT_LEGACY: &str = r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#;
-const SQL_HQL_IT_REVOKE_RT_BY_CLIENT: &str = r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#;
 
 /// The statements of [`Client::delete`] on Postgres in order, each with `true` if it binds the
 /// client id as `$1`. `refresh_tokens.client_id` and `user_consents.client_id` have no FK. Legacy
@@ -1839,12 +1806,24 @@ WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"
 pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
-        (SQL_PG_RTD_DELETE_BY_CLIENT_RET, true),
+        (
+            r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+RETURNING access_token_jti"#,
+            true,
+        ),
     ];
     if drop_legacy {
-        stmts.push((SQL_PG_RT_DELETE_LEGACY_RET, false));
+        stmts.push((
+            "DELETE FROM refresh_tokens WHERE client_id IS NULL RETURNING access_token_jti",
+            false,
+        ));
     }
-    stmts.push((SQL_PG_RT_DELETE_BY_CLIENT_RET, true));
+    stmts.push((
+        "DELETE FROM refresh_tokens WHERE client_id = $1 RETURNING access_token_jti",
+        true,
+    ));
     stmts.push((SQL_CLIENT_DELETE, true));
     stmts
 }
@@ -1853,17 +1832,41 @@ pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool
 /// access tokens of each refresh token table revoked right before it is deleted. hiqlite applies
 /// the transaction as one raft log entry, so no other write sees a part of it.
 pub(crate) fn hql_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
+    // Each revoke runs before its delete, while the rows still name the access tokens.
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
-        (SQL_HQL_IT_REVOKE_RTD_BY_CLIENT, true),
-        (SQL_RTD_DELETE_BY_CLIENT, true),
+        (
+            r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (
+    SELECT access_token_jti FROM refresh_tokens_devices
+    WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+)"#,
+            true,
+        ),
+        (
+            r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#,
+            true,
+        ),
     ];
     if drop_legacy {
-        stmts.push((SQL_HQL_IT_REVOKE_RT_LEGACY, false));
-        stmts.push((SQL_RT_DELETE_LEGACY, false));
+        stmts.push((
+            r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#,
+            false,
+        ));
+        stmts.push(("DELETE FROM refresh_tokens WHERE client_id IS NULL", false));
     }
-    stmts.push((SQL_HQL_IT_REVOKE_RT_BY_CLIENT, true));
-    stmts.push((SQL_RT_DELETE_BY_CLIENT, true));
+    stmts.push((
+        r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#,
+        true,
+    ));
+    stmts.push(("DELETE FROM refresh_tokens WHERE client_id = $1", true));
     stmts.push((SQL_CLIENT_DELETE, true));
     stmts
 }

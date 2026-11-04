@@ -11,9 +11,7 @@ use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
 use crate::entity::pwd_exp_mails::PasswordExpMail;
-use crate::entity::refresh_tokens::{
-    PgDeletedJtis, RefreshToken, SQL_HQL_REVOKE_USER_ACCESS_TOKENS,
-};
+use crate::entity::refresh_tokens::{PgDeletedJtis, RefreshToken};
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
 use crate::entity::theme::ThemeCssFull;
@@ -56,7 +54,7 @@ use std::ops::Add;
 use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, error, trace};
 
 /// A statement of the Postgres transaction of [`User::delete`], each binding the user id as `$1`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,107 +106,6 @@ pub(crate) const PG_DELETE_STEPS: [PgDeleteStep; 7] = [
     PgDeleteStep::RevokeUserAccessTokens,
 ];
 
-const SQL_PG_DELETE_RET_PICTURE: &str = "DELETE FROM users WHERE id = $1 RETURNING picture_id";
-const SQL_PG_REVOKE_USER_ACCESS_TOKENS: &str =
-    "UPDATE issued_tokens SET revoked = true WHERE user_id = $1";
-
-/// hiqlite: deletes the user row only if its `picture_id` is still the one read before
-const SQL_HQL_DELETE_IF_PICTURE: &str = "DELETE FROM users WHERE id = $1 AND picture_id IS $2";
-/// How many times [`hql_delete`] tries the delete, each try reading the `picture_id` first
-const HQL_DELETE_TRIES: usize = 3;
-
-/// The `picture_id` of the user row, read on the leader: `None` if the user does not exist
-async fn hql_picture_id(id: &str) -> Result<Option<Option<String>>, ErrorResponse> {
-    Ok(DB::hql()
-        .query_consistent("SELECT picture_id FROM users WHERE id = $1", params!(id))
-        .await?
-        .pop()
-        .map(|mut row| row.get("picture_id")))
-}
-
-/// The hiqlite part of [`User::delete`], with the result of [`PgDelete::deleted`]: `Some` with
-/// the `picture_id` of the deleted row, `None` if the user does not exist.
-///
-/// The revoke of the access tokens and the delete of the user row run in one transaction, one
-/// raft log entry, like the Postgres transaction. hiqlite's `txn` returns only the number of
-/// affected rows of each statement, not the rows, so the `picture_id` of the deleted row cannot
-/// come back from it. It is read first instead, and the delete only matches the row while the
-/// `picture_id` is still that one, and so does the revoke. If the delete matches no row, the
-/// user is either gone, deleted by another delete, or got a new picture in between: the try
-/// commits nothing, the user and its tokens stay as they were, and the `picture_id` is read
-/// again. After [`HQL_DELETE_TRIES`] such changes it fails and keeps the user, and the call can
-/// be retried; a user the leader no longer has is `None` then.
-///
-/// `read_picture_id` reads the `picture_id` ([`hql_picture_id`]), and `delete_if_picture` runs
-/// one try ([`hql_delete_if_picture`]). If a try fails, the user is read again: a user that is
-/// gone counts as deleted by this try, whose result was lost.
-///
-/// The closures are `FnMut` returning a future rather than `AsyncFnMut`: with an `AsyncFnMut`
-/// bound the future of [`User::delete`] fails `tokio::spawn`'s `Send` check ("implementation of
-/// `Send` is not general enough").
-async fn hql_delete<R, RFut, D, DFut>(
-    id: &str,
-    mut read_picture_id: R,
-    mut delete_if_picture: D,
-) -> Result<Option<Option<String>>, ErrorResponse>
-where
-    R: FnMut() -> RFut,
-    RFut: Future<Output = Result<Option<Option<String>>, ErrorResponse>>,
-    D: FnMut(Option<String>) -> DFut,
-    DFut: Future<Output = Result<bool, ErrorResponse>>,
-{
-    for _ in 0..HQL_DELETE_TRIES {
-        let Some(picture_id) = read_picture_id().await? else {
-            return Ok(None);
-        };
-        match delete_if_picture(picture_id.clone()).await {
-            Ok(true) => return Ok(Some(picture_id)),
-            Ok(false) => {}
-            // The transaction may have committed with its result lost on the way back: if the
-            // user is gone, take it as deleted by this try, so that the caller still removes
-            // the picture and counts the user down.
-            Err(err) => {
-                return match hql_picture_id(id).await {
-                    Ok(None) => Ok(Some(picture_id)),
-                    Ok(Some(_)) | Err(_) => Err(err),
-                };
-            }
-        }
-    }
-    // The reads above may have come from a replica that had not yet seen another delete of the
-    // user. The leader settles whether the user is still there.
-    if hql_picture_id(id).await?.is_none() {
-        return Ok(None);
-    }
-    warn!(
-        user_id = id,
-        tries = HQL_DELETE_TRIES,
-        "the user row changed during its delete"
-    );
-    Err(ErrorResponse::new(
-        ErrorResponseType::Internal,
-        format!("the user row {id} changed during its delete"),
-    ))
-}
-
-/// One try of [`hql_delete`]: revokes the access tokens of the user and deletes the user row in
-/// one transaction, if the row still has the `picture_id`. `true` if it deleted the row.
-async fn hql_delete_if_picture(
-    id: &str,
-    picture_id: Option<String>,
-) -> Result<bool, ErrorResponse> {
-    let mut res = DB::hql()
-        .txn([
-            (
-                SQL_HQL_REVOKE_USER_ACCESS_TOKENS,
-                params!(id, picture_id.clone()),
-            ),
-            (SQL_HQL_DELETE_IF_PICTURE, params!(id, picture_id)),
-        ])
-        .await?;
-    Ok(res.pop().transpose()?.unwrap_or(0) > 0)
-}
-
 /// The state of the Postgres transaction of [`User::delete`]
 #[derive(Debug, Default)]
 pub(crate) struct PgDelete {
@@ -228,14 +125,20 @@ impl PgDelete {
             PgDeleteStep::Rows(sql) => self.jtis.delete(txn, sql, &[&user_id]).await?,
             PgDeleteStep::User => {
                 self.deleted = txn
-                    .query_opt(SQL_PG_DELETE_RET_PICTURE, &[&user_id])
+                    .query_opt(
+                        "DELETE FROM users WHERE id = $1 RETURNING picture_id",
+                        &[&user_id],
+                    )
                     .await?
                     .map(|row| row.get::<_, Option<String>>(0));
             }
             PgDeleteStep::RevokeAccessTokens => self.jtis.revoke(txn).await?,
             PgDeleteStep::RevokeUserAccessTokens => {
-                txn.execute(SQL_PG_REVOKE_USER_ACCESS_TOKENS, &[&user_id])
-                    .await?;
+                txn.execute(
+                    "UPDATE issued_tokens SET revoked = true WHERE user_id = $1",
+                    &[&user_id],
+                )
+                .await?;
             }
         }
         Ok(())
@@ -508,12 +411,38 @@ impl User {
 
         // The `picture_id` of the deleted row, not of `self`, which may be an older copy.
         let deleted: Option<Option<String>> = if is_hiqlite() {
-            hql_delete(
-                &self.id,
-                || hql_picture_id(&self.id),
-                |picture_id| hql_delete_if_picture(&self.id, picture_id),
-            )
-            .await?
+            // A picture changed after this read is left behind as an orphan.
+            let picture_id = DB::hql()
+                .query_raw(
+                    "SELECT picture_id FROM users WHERE id = $1",
+                    params!(&self.id),
+                )
+                .await?
+                .pop()
+                .and_then(|mut row| row.get("picture_id"));
+            // Revokes the access tokens of the user and of its refresh tokens before the cascade
+            // of the user row deletes those.
+            let res = DB::hql()
+                .txn([
+                    (
+                        r#"
+UPDATE issued_tokens SET revoked = true
+WHERE user_id = $1
+   OR jti IN (
+       SELECT access_token_jti FROM refresh_tokens WHERE user_id = $1
+       UNION
+       SELECT access_token_jti FROM refresh_tokens_devices WHERE user_id = $1
+   )"#,
+                        params!(&self.id),
+                    ),
+                    ("DELETE FROM users WHERE id = $1", params!(&self.id)),
+                ])
+                .await?;
+            let mut user_rows = 0;
+            for rows in res {
+                user_rows = rows?;
+            }
+            (user_rows > 0).then_some(picture_id)
         } else {
             let mut cl = DB::pg().await?;
             let txn = cl
@@ -2685,176 +2614,6 @@ mod tests {
             !pictures.contains(&"del_pic_new".to_string()),
             "{pictures:?}"
         );
-    }
-
-    /// The stubbed read returns a `picture_id` the row no longer has, so every conditional
-    /// delete misses and the tries run out: the delete fails, and the user and its tokens stay
-    /// as they were.
-    #[tokio::test]
-    async fn test_delete_picture_changing_exhausts_tries_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
-        crate::database::init_test_hiqlite();
-        let user = hql_insert_user("del_changing", None).await;
-        hql_insert_tokens("del_changing").await;
-        let mut reads = 0;
-
-        let err = hql_delete(
-            &user.id,
-            || {
-                reads += 1;
-                let pic = format!("del_changing_pic_{reads}");
-                async move { Ok(Some(Some(pic))) }
-            },
-            |picture_id| hql_delete_if_picture(&user.id, picture_id),
-        )
-        .await
-        .unwrap_err();
-
-        assert_eq!(err.error, ErrorResponseType::Internal);
-        assert_eq!(reads, HQL_DELETE_TRIES);
-        assert_eq!(hql_picture_id(&user.id).await.unwrap(), Some(None));
-        // the missed tries committed nothing: no token revoked, no refresh token deleted
-        for jti in [
-            "del_changing_at",
-            "del_changing_rt_at",
-            "del_changing_rtd_at",
-        ] {
-            assert!(!hql_revoked(jti).await, "{jti}");
-        }
-        assert_eq!(hql_refresh_token_ids("del_changing").await.len(), 2);
-        user.delete().await.unwrap();
-    }
-
-    #[test]
-    fn test_hql_delete_tries() {
-        assert_eq!(HQL_DELETE_TRIES, 3);
-    }
-
-    /// A `picture_id` that changed once between the read and the delete costs one more try,
-    /// which reads the new one and deletes the user.
-    #[tokio::test]
-    async fn test_delete_retries_after_stale_picture_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
-        crate::database::init_test_hiqlite();
-        let user = hql_insert_user("del_stale_once", Some("del_stale_once_new")).await;
-        let mut reads = 0;
-
-        let deleted = hql_delete(
-            &user.id,
-            || {
-                reads += 1;
-                let (first, id) = (reads == 1, &user.id);
-                async move {
-                    if first {
-                        Ok(Some(Some("del_stale_once_old".to_string())))
-                    } else {
-                        hql_picture_id(id).await
-                    }
-                }
-            },
-            |picture_id| hql_delete_if_picture(&user.id, picture_id),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(deleted, Some(Some("del_stale_once_new".to_string())));
-        assert_eq!(reads, 2);
-        assert_eq!(hql_picture_id(&user.id).await.unwrap(), None);
-    }
-
-    /// A user another delete removed between the read and the delete is NotFound (`None`) on
-    /// the next read.
-    #[tokio::test]
-    async fn test_delete_user_gone_on_retry_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
-        crate::database::init_test_hiqlite();
-        let mut reads = 0;
-
-        let deleted = hql_delete(
-            "del_gone_retry",
-            || {
-                reads += 1;
-                let first = reads == 1;
-                async move { Ok(first.then(|| Some("del_gone_retry_pic".to_string()))) }
-            },
-            |picture_id| hql_delete_if_picture("del_gone_retry", picture_id),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(deleted, None);
-        assert_eq!(reads, 2);
-    }
-
-    /// A read that keeps returning a row the leader already deleted, as a lagging replica would,
-    /// ends in NotFound (`None`) once the tries are spent, not in an Internal error.
-    #[tokio::test]
-    async fn test_delete_stale_read_of_gone_user_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
-        crate::database::init_test_hiqlite();
-        let mut reads = 0;
-
-        let deleted = hql_delete(
-            "del_stale_gone",
-            || {
-                reads += 1;
-                async { Ok(Some(Some("del_stale_gone_pic".to_string()))) }
-            },
-            |picture_id| hql_delete_if_picture("del_stale_gone", picture_id),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(deleted, None);
-        assert_eq!(reads, HQL_DELETE_TRIES);
-    }
-
-    /// A transaction that committed but whose result was lost counts as the delete of the user:
-    /// the deleted `picture_id` comes back, so that the caller still removes the picture and
-    /// counts the user down.
-    #[tokio::test]
-    async fn test_delete_lost_txn_result_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
-        crate::database::init_test_hiqlite();
-        let user = hql_insert_user("del_lost_ack", Some("del_lost_ack_pic")).await;
-
-        let deleted = hql_delete(
-            &user.id,
-            || hql_picture_id(&user.id),
-            |picture_id| {
-                let id = &user.id;
-                async move {
-                    hql_delete_if_picture(id, picture_id).await?;
-                    Err(ErrorResponse::new(ErrorResponseType::Connection, "lost"))
-                }
-            },
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(deleted, Some(Some("del_lost_ack_pic".to_string())));
-        assert_eq!(hql_picture_id(&user.id).await.unwrap(), None);
-    }
-
-    /// A transaction that failed without deleting the user returns its error and keeps the user.
-    #[tokio::test]
-    async fn test_delete_failed_txn_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
-        crate::database::init_test_hiqlite();
-        let user = hql_insert_user("del_failed_txn", None).await;
-
-        let err = hql_delete(
-            &user.id,
-            || hql_picture_id(&user.id),
-            |_| async { Err(ErrorResponse::new(ErrorResponseType::Connection, "failed")) },
-        )
-        .await
-        .unwrap_err();
-
-        assert_eq!(err.error, ErrorResponseType::Connection);
-        assert_eq!(err.message, "failed");
-        assert_eq!(hql_picture_id(&user.id).await.unwrap(), Some(None));
-        user.delete().await.unwrap();
     }
 
     /// Inserts for the user `{user_id}` an access token `{user_id}_at`, a refresh token
