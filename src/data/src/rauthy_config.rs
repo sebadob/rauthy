@@ -3898,6 +3898,14 @@ impl Vars {
         ) {
             self.user_registration.domain_blacklist = v;
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_registration",
+            "allow_open_redirect",
+            "USER_REG_OPEN_REDIRECT",
+        ) {
+            self.user_registration.allow_open_redirect = v;
+        }
 
         check_table_empty(table, "user_registration");
     }
@@ -5193,6 +5201,17 @@ mod tests {
         let mut table: toml::Table = toml::from_str("[consent]\nenable = true").unwrap();
         vars.parse_consent(&mut table);
         assert!(vars.consent.enable);
+    }
+
+    #[test]
+    fn user_registration_allow_open_redirect() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_registration.allow_open_redirect);
+
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\nallow_open_redirect = true").unwrap();
+        vars.parse_user_registration(&mut table);
+        assert!(vars.user_registration.allow_open_redirect);
     }
 
     #[test]
