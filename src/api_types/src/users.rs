@@ -4,8 +4,8 @@ use crate::oidc::AddressClaim;
 use hiqlite::macros::FromRow;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_ID,
-    RE_CLIENT_NAME, RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_STREET, RE_URI,
-    RE_USER_NAME,
+    RE_CLIENT_NAME, RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_RESOURCE,
+    RE_STREET, RE_URI, RE_USER_NAME,
 };
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -310,11 +310,17 @@ pub struct UserConsentDeleteParams {
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
-    /// Empty for a consent without a resource
+    /// Left out for a consent without a resource
     ///
-    /// Validation: empty or `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`, at most 1024 bytes
-    #[validate(custom(function = "validate_resource_or_empty"))]
-    pub resource: String,
+    /// Validation: `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`, at most 1024 bytes
+    #[validate(
+        length(min = 1, max = 1024),
+        regex(
+            path = "*RE_RESOURCE",
+            code = "^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$"
+        )
+    )]
+    pub resource: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]
@@ -620,8 +626,8 @@ pub struct UserConsentResponse {
     pub client_id: String,
     /// `None` if the client does not exist (anymore), is ephemeral, or has no name
     pub client_name: Option<String>,
-    /// Empty for a consent without a resource
-    pub resource: String,
+    /// `None` for a consent without a resource
+    pub resource: Option<String>,
     pub scopes: Vec<String>,
     /// Unix timestamp in seconds
     pub created: i64,
@@ -825,4 +831,33 @@ pub struct WebauthnLoginFinishResponse {
 pub struct WebauthnLoginResponse {
     pub code: String,
     pub exp: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn consent_delete_params_resource() {
+        let params = |resource: Option<String>| UserConsentDeleteParams {
+            client_id: "client".to_string(),
+            resource,
+        };
+        assert!(params(None).validate().is_ok());
+        assert!(
+            params(Some("https://api.example.com".to_string()))
+                .validate()
+                .is_ok()
+        );
+        assert!(params(Some(String::new())).validate().is_err());
+        assert!(
+            params(Some("https://api.example.com#frag".to_string()))
+                .validate()
+                .is_err()
+        );
+        let prefix = "https://api.example.com/";
+        let max = format!("{prefix}{}", "a".repeat(1024 - prefix.len()));
+        assert!(params(Some(max.clone())).validate().is_ok());
+        assert!(params(Some(format!("{max}a"))).validate().is_err());
+    }
 }

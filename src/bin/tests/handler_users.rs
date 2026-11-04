@@ -526,7 +526,8 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     let url = format!("{backend}/users/{}/consents", user.id);
-    let url_delete = format!("{url}?client_id={CLIENT_ID}&resource=");
+    // without `resource` for a consent without one
+    let url_delete = format!("{url}?client_id={CLIENT_ID}");
 
     // --- authorization
     let res = client.get(&url).send().await?;
@@ -543,7 +544,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 403);
     let res = client
         .delete(format!(
-            "{backend}/users/{admin_id}/consents?client_id={CLIENT_ID}&resource="
+            "{backend}/users/{admin_id}/consents?client_id={CLIENT_ID}"
         ))
         .headers(user_headers.clone())
         .send()
@@ -571,12 +572,12 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 400);
 
-    // --- validation: both params are required, `resource` without a fragment
+    // --- validation: `client_id` is required, `resource` is not empty and has no fragment
     for query in [
-        format!("client_id={CLIENT_ID}"),
-        "resource=".to_string(),
+        format!("client_id={CLIENT_ID}&resource="),
+        "resource=https%3A%2F%2Fapi.example.com".to_string(),
         format!("client_id={CLIENT_ID}&resource=https%3A%2F%2Fapi.example.com%23frag"),
-        "client_id=bad%20id&resource=".to_string(),
+        "client_id=bad%20id".to_string(),
     ] {
         let res = client
             .delete(format!("{url}?{query}"))
@@ -677,7 +678,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     // --- an unknown user
     let res = client
         .delete(format!(
-            "{backend}/users/UnknownUserId1234/consents?client_id={CLIENT_ID}&resource="
+            "{backend}/users/UnknownUserId1234/consents?client_id={CLIENT_ID}"
         ))
         .headers(admin.clone())
         .send()
@@ -688,6 +689,112 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     let res = client
         .delete(format!("{backend}/users/{}", user.id))
         .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
+
+/// An API key with `Users` access reads and revokes the consents of any user, each with its
+/// own access right.
+#[tokio::test]
+async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+
+    let res = client
+        .post(format!("{backend}/users"))
+        .headers(admin.clone())
+        .json(&NewUserRequest {
+            given_name: Some("Consent".to_string()),
+            family_name: Some("ApiKey".to_string()),
+            email: format!("{}@consenttest.io", new_store_id()),
+            preferred_username: None,
+            language: Language::En,
+            roles: vec!["user".to_string()],
+            groups: None,
+            user_expires: None,
+            tz: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user = res.json::<UserResponse>().await?;
+    let url = format!("{backend}/users/{}/consents", user.id);
+    let url_delete = format!("{url}?client_id={CLIENT_ID}");
+
+    let mut key = ApiKeyRequest {
+        name: new_store_id(),
+        exp: None,
+        access: vec![ApiKeyAccess {
+            group: AccessGroup::Clients,
+            access_rights: vec![AccessRights::Read, AccessRights::Delete],
+        }],
+    };
+    let res = client
+        .post(format!("{backend}/api_keys"))
+        .headers(admin.clone())
+        .json(&key)
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let key_header = format!("API-Key {}", res.text().await?);
+    let get = async || {
+        client
+            .get(&url)
+            .header(AUTHORIZATION, &key_header)
+            .send()
+            .await
+            .unwrap()
+            .status()
+    };
+    let delete = async || {
+        client
+            .delete(&url_delete)
+            .header(AUTHORIZATION, &key_header)
+            .send()
+            .await
+            .unwrap()
+            .status()
+    };
+    let mut set_rights = async |rights: Vec<AccessRights>| {
+        key.access = vec![ApiKeyAccess {
+            group: AccessGroup::Users,
+            access_rights: rights,
+        }];
+        let res = client
+            .put(format!("{backend}/api_keys/{}", key.name))
+            .headers(admin.clone())
+            .json(&key)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    };
+
+    // another access group
+    assert_eq!(get().await, StatusCode::FORBIDDEN);
+    assert_eq!(delete().await, StatusCode::FORBIDDEN);
+
+    set_rights(vec![AccessRights::Read]).await;
+    assert_eq!(get().await, StatusCode::OK);
+    assert_eq!(delete().await, StatusCode::FORBIDDEN);
+
+    set_rights(vec![AccessRights::Delete]).await;
+    assert_eq!(get().await, StatusCode::FORBIDDEN);
+    assert_eq!(delete().await, StatusCode::OK);
+
+    let res = client
+        .delete(format!("{backend}/api_keys/{}", key.name))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let res = client
+        .delete(format!("{backend}/users/{}", user.id))
+        .headers(admin)
         .send()
         .await?;
     assert_eq!(res.status(), 204);

@@ -48,7 +48,7 @@ use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
 use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::entity::webauthn::passkey::PasskeyEntity;
 use rauthy_data::entity::webids::WebId;
-use rauthy_data::events::event::Event;
+use rauthy_data::events::event::{ConsentRevokedBy, Event};
 use rauthy_data::html::HtmlCached;
 use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
@@ -1146,6 +1146,11 @@ pub async fn delete_user_device(
 /// GET all consents this user has given to clients
 ///
 /// `resource` filters by resource, an empty value returns consents without a resource.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - the user itself
+/// - an API key with `users: read`
 #[utoipa::path(
     get,
     path = "/users/{id}/consents",
@@ -1165,7 +1170,7 @@ pub async fn get_user_consents(
     Query(params): Query<UserConsentsParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
-    principal.validate_user_or_admin(&user_id)?;
+    validate_consent_access(&principal, &user_id, AccessRights::Read)?;
     params.validate()?;
 
     let consents = UserConsent::find_for_user(&user_id, params.resource.as_deref()).await?;
@@ -1185,7 +1190,7 @@ pub async fn get_user_consents(
 
 /// DELETE a consent and all refresh tokens of this user for the client
 ///
-/// `resource` is required and empty for a consent without a resource. Refresh tokens are revoked
+/// `resource` is left out for a consent without a resource. Refresh tokens are revoked
 /// for the client as a whole, independent of `resource`. With `consent.enable` on, the user's
 /// legacy refresh tokens issued without a `client_id` are deleted as well; with it off, they are
 /// kept. Only the access token of each deleted refresh token, the one issued with its latest
@@ -1194,6 +1199,11 @@ pub async fn get_user_consents(
 /// issued before the revoke can still be exchanged within its lifetime.
 ///
 /// The request is idempotent: `consent_deleted` is `false` when there was no consent to delete.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - the user itself
+/// - an API key with `users: delete`
 #[utoipa::path(
     delete,
     path = "/users/{id}/consents",
@@ -1215,33 +1225,33 @@ pub async fn delete_user_consent(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
-    principal.validate_user_or_admin(&user_id)?;
+    validate_consent_access(&principal, &user_id, AccessRights::Delete)?;
     params.validate()?;
 
     let user = User::find(user_id).await?;
-    let admin_email = if principal.user_id()? == user.id {
-        None
-    } else {
-        Some(User::find(principal.user_id()?.to_string()).await?.email)
+    let admin_email = match principal.user_id() {
+        Ok(id) if id != user.id => Some(User::find(id.to_string()).await?.email),
+        _ => None,
+    };
+    let revoked_by = match (&principal.api_key, &admin_email) {
+        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
+        (None, Some(email)) => ConsentRevokedBy::Admin(email),
+        (None, None) => ConsentRevokedBy::User,
     };
 
     let ip = real_ip_from_req(&req)?;
+    let resource = params.resource.as_deref().unwrap_or_default();
     let ConsentRevoked {
         consent_deleted,
         refresh_tokens_deleted,
-    } = UserConsent::revoke(&user.id, &params.client_id, &params.resource).await?;
+    } = UserConsent::revoke(&user.id, &params.client_id, resource).await?;
 
     // the revoke is committed at this point, a failing event must not turn it into an error
     if (consent_deleted || refresh_tokens_deleted > 0)
-        && let Err(err) = Event::consent_revoked(
-            &user.email,
-            &params.client_id,
-            &params.resource,
-            admin_email.as_deref(),
-            ip,
-        )
-        .send()
-        .await
+        && let Err(err) =
+            Event::consent_revoked(&user.email, &params.client_id, resource, revoked_by, ip)
+                .send()
+                .await
     {
         error!(?err, "Cannot send the consent revoked event");
     }
@@ -1250,6 +1260,21 @@ pub async fn delete_user_consent(
         consent_deleted,
         refresh_tokens_deleted,
     }))
+}
+
+/// An API key with `rights` on users, else the user itself or an admin session. A key without
+/// these rights is rejected even with a valid session.
+fn validate_consent_access(
+    principal: &ReqPrincipal,
+    user_id: &str,
+    rights: AccessRights,
+) -> Result<(), ErrorResponse> {
+    match principal.validate_api_key(AccessGroup::Users, rights) {
+        Err(err) if err.error == ErrorResponseType::Unauthorized => {
+            principal.validate_user_or_admin(user_id)
+        }
+        res => res,
+    }
 }
 
 /// Endpoint for resetting passwords

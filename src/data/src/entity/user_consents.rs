@@ -443,7 +443,7 @@ impl UserConsent {
             scopes: self.scopes_vec(),
             client_id: self.client_id,
             client_name,
-            resource: self.resource,
+            resource: (!self.resource.is_empty()).then_some(self.resource),
             created: self.created,
             updated: self.updated,
             user_agent: self.user_agent,
@@ -522,10 +522,16 @@ mod tests {
         let res = consent("c1", RES, "openid,email", 1, 2).into_response(Some("App".to_string()));
         assert_eq!(res.client_id, "c1");
         assert_eq!(res.client_name.as_deref(), Some("App"));
-        assert_eq!(res.resource, RES);
+        assert_eq!(res.resource.as_deref(), Some(RES));
         assert_eq!(res.scopes, vec!["openid".to_string(), "email".to_string()]);
         assert_eq!((res.created, res.updated), (1, 2));
         assert_eq!(res.user_agent.as_deref(), Some("ua_2"));
+        assert_eq!(
+            consent("c1", "", "openid", 1, 1)
+                .into_response(None)
+                .resource,
+            None
+        );
     }
 
     /// The production SQL against the hiqlite migration.

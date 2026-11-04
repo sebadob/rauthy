@@ -39,10 +39,10 @@
     async function onRevoke(consent: UserConsentResponse) {
         err = '';
 
-        let params = new URLSearchParams({
-            client_id: consent.client_id,
-            resource: consent.resource,
-        });
+        let params = new URLSearchParams({ client_id: consent.client_id });
+        if (consent.resource) {
+            params.set('resource', consent.resource);
+        }
         let res = await fetchDelete<UserConsentDeleteResponse>(
             `/auth/v1/users/${user.id}/consents?${params}`,
         );
@@ -58,7 +58,7 @@
     <h3>{t.account.privacy.connectedApps}</h3>
     <p>{t.account.privacy.connectedAppsDesc}</p>
 
-    {#each consents as consent (`${consent.client_id}/${consent.resource}`)}
+    {#each consents as consent (`${consent.client_id}/${consent.resource ?? ''}`)}
         <div class="consent">
             <div class="row">
                 <b>{consent.client_name || consent.client_id}</b>

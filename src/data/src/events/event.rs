@@ -720,10 +720,10 @@ impl Event {
         user_email: &str,
         client_id: &str,
         resource: &str,
-        revoked_by_admin: Option<&str>,
+        revoked_by: ConsentRevokedBy<'_>,
         ip: IpAddr,
     ) -> Self {
-        let text = consent_revoked_text(user_email, client_id, resource, revoked_by_admin);
+        let text = consent_revoked_text(user_email, client_id, resource, revoked_by);
         Self::new(
             RauthyConfig::get()
                 .vars
@@ -1127,20 +1127,31 @@ impl From<Event> for EventResponse {
 }
 
 /// The text of [`Event::consent_revoked`].
+/// Who revoked a consent, for [`Event::consent_revoked`]
+#[derive(Debug, Clone, Copy)]
+pub enum ConsentRevokedBy<'a> {
+    User,
+    /// The email of the admin
+    Admin(&'a str),
+    /// The name of the API key
+    ApiKey(&'a str),
+}
+
 fn consent_revoked_text(
     user_email: &str,
     client_id: &str,
     resource: &str,
-    revoked_by_admin: Option<&str>,
+    revoked_by: ConsentRevokedBy<'_>,
 ) -> String {
     let target = if resource.is_empty() {
         format!("`{client_id}`")
     } else {
         format!("`{client_id}` / `{resource}`")
     };
-    let by = match revoked_by_admin {
-        Some(admin) => format!("admin `{admin}`"),
-        None => "the user".to_string(),
+    let by = match revoked_by {
+        ConsentRevokedBy::User => "the user".to_string(),
+        ConsentRevokedBy::Admin(admin) => format!("admin `{admin}`"),
+        ConsentRevokedBy::ApiKey(name) => format!("API key `{name}`"),
     };
     format!("Consent of `{user_email}` for client {target} revoked by {by}")
 }
@@ -1168,14 +1179,18 @@ mod tests {
     #[test]
     fn consent_revoked_text_by_target() {
         assert_eq!(
-            consent_revoked_text("u@example.com", "c1", "", None),
+            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::User),
             "Consent of `u@example.com` for client `c1` revoked by the user"
+        );
+        assert_eq!(
+            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::ApiKey("k1")),
+            "Consent of `u@example.com` for client `c1` revoked by API key `k1`"
         );
         let text = consent_revoked_text(
             "u@example.com",
             "c1",
             "https://api.example.com",
-            Some("admin@example.com"),
+            ConsentRevokedBy::Admin("admin@example.com"),
         );
         assert_eq!(
             text,
