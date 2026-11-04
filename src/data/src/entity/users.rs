@@ -106,16 +106,18 @@ pub(crate) const PG_DELETE_STEPS: [PgDeleteStep; 7] = [
     PgDeleteStep::RevokeUserAccessTokens,
 ];
 
-/// Whether the hiqlite delete of a user that existed before it removed the user, when its
-/// transaction failed (`res` is `Err`) or deleted no user row (`Ok(0)`). Either can come from a
-/// transaction that committed while its result was lost, or from a re-run of a committed one.
-/// `gone` is the answer of a read on the leader after it: a user that is gone was deleted by this
-/// call. Otherwise the original error, or `Ok(false)` for no user row, stands.
+/// Whether the hiqlite delete of a user removed the user, when its transaction failed (`res` is
+/// `Err`) or deleted no user row (`Ok(0)`). Either can come from a transaction that committed
+/// while its result was lost, or from a re-run of a committed one. `found` tells whether the read
+/// before the delete saw the user, and `gone` is the answer of a read on the leader after it: a
+/// user that was there before and is gone after was deleted by this call. A user that was gone
+/// before was not, so its original error, or `Ok(false)` for no user row, stands.
 fn hql_delete_recovered(
     res: Result<usize, ErrorResponse>,
+    found: bool,
     gone: bool,
 ) -> Result<bool, ErrorResponse> {
-    if gone {
+    if found && gone {
         return Ok(true);
     }
     res.map(|rows| rows > 0)
@@ -465,25 +467,29 @@ WHERE user_id = $1
                 });
             let user_deleted = match res {
                 Ok(rows) if rows > 0 => true,
-                // The user was gone before this call: another delete got there first.
-                Ok(_) if !found => false,
-                // Only on this error path, a read on the leader tells whether the user is gone.
+                // A user gone before this call was not deleted by it: another delete got there
+                // first. Only for a user that was there, a read on the leader tells whether the
+                // failed or empty delete removed it.
                 res => {
-                    let gone = match DB::hql()
-                        .query_consistent("SELECT 1 FROM users WHERE id = $1", params!(&self.id))
-                        .await
-                    {
-                        Ok(rows) => rows.is_empty(),
-                        Err(err) => {
-                            error!(
-                                user_id = self.id,
-                                ?err,
-                                "Error checking whether a failed delete removed the user"
-                            );
-                            false
-                        }
-                    };
-                    hql_delete_recovered(res, gone)?
+                    let gone = found
+                        && match DB::hql()
+                            .query_consistent(
+                                "SELECT 1 FROM users WHERE id = $1",
+                                params!(&self.id),
+                            )
+                            .await
+                        {
+                            Ok(rows) => rows.is_empty(),
+                            Err(err) => {
+                                error!(
+                                    user_id = self.id,
+                                    ?err,
+                                    "Error checking whether a failed delete removed the user"
+                                );
+                                false
+                            }
+                        };
+                    hql_delete_recovered(res, found, gone)?
                 }
             };
             user_deleted.then_some(picture_id)
@@ -2600,18 +2606,24 @@ mod tests {
     }
 
     /// A hiqlite delete whose transaction committed but whose result was lost, or whose re-run
-    /// deleted no row, counts as done once the leader no longer has the user. While the user is
-    /// still there, the original error or NotFound stands.
+    /// deleted no row, counts as done once the leader no longer has the user, if the user was
+    /// there before it. While the user is still there, or was gone before, the original error or
+    /// NotFound stands.
     #[test]
     fn test_hql_delete_recovered() {
         let lost = || ErrorResponse::new(ErrorResponseType::Connection, "lost");
 
-        assert!(hql_delete_recovered(Err(lost()), true).unwrap());
-        assert!(hql_delete_recovered(Ok(0), true).unwrap());
+        assert!(hql_delete_recovered(Err(lost()), true, true).unwrap());
+        assert!(hql_delete_recovered(Ok(0), true, true).unwrap());
 
-        let err = hql_delete_recovered(Err(lost()), false).unwrap_err();
+        let err = hql_delete_recovered(Err(lost()), true, false).unwrap_err();
         assert_eq!(err.error, ErrorResponseType::Connection);
-        assert!(!hql_delete_recovered(Ok(0), false).unwrap());
+        assert!(!hql_delete_recovered(Ok(0), true, false).unwrap());
+
+        // A user that was gone before the delete was not deleted by it, whatever the leader says.
+        let err = hql_delete_recovered(Err(lost()), false, true).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Connection);
+        assert!(!hql_delete_recovered(Ok(0), false, true).unwrap());
     }
 
     /// A delete through a stale copy of a user another delete already removed returns NotFound
