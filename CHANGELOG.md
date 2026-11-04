@@ -4,6 +4,15 @@
 
 ### Changes
 
+#### Always Show *Password Forgotten*
+
+The 'Password forgotten?' link on the login page only shows up after a failed login. With the new
+`access.password_reset_link_always` (`PASSWORD_RESET_LINK_ALWAYS`) set to `true`, it is visible
+from the start, even before the password input is shown. The default is `false`, which keeps the
+current behavior.
+Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
+via `PASSWORD_RESET_LINK_ALWAYS` until every node is upgraded.
+
 #### Opt-in Bootstrap Reconcile
 
 The bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` can be re-applied on

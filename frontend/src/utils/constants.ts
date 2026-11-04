@@ -60,6 +60,7 @@ export const TPL_LOGIN_ACTION = 'tpl_login_action';
 export const TPL_OTP_LENGTH = 'tpl_otp_length';
 export const TPL_PASSKEY_REG_TYPE = 'tpl_passkey_reg_type';
 export const TPL_PASSWORD_RESET = 'tpl_password_reset';
+export const TPL_PASSWORD_RESET_LINK_ALWAYS = 'tpl_password_reset_link_always';
 export const TPL_STATUS_CODE = 'tpl_status_code';
 export const TPL_RESTRICTED_EMAIL_DOMAIN = 'tpl_restricted_email_domain';
 export const TPL_USER_VALUES_CONFIG = 'tpl_user_values_config';
