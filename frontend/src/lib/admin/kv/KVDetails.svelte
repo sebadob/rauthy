@@ -445,6 +445,6 @@
         margin: 0.5rem 0;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
-        overflow: scroll;
+        overflow: auto;
     }
 </style>

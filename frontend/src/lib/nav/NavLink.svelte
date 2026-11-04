@@ -69,7 +69,13 @@
         flex-direction: column;
         align-items: center;
         font-size: 0.7rem;
-        word-break: break-word;
+    }
+
+    .compact > span {
+        max-width: 100%;
+        white-space: nowrap;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
     }
 
     .compact > span {
