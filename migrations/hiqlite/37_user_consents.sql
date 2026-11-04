@@ -8,7 +8,7 @@ CREATE TABLE user_consents
     client_id    TEXT    NOT NULL,
     resource     TEXT    NOT NULL,
     scopes       TEXT    NOT NULL,
-    content_hash TEXT    NOT NULL,
+    content_hash TEXT,
     created      INTEGER NOT NULL,
     updated      INTEGER NOT NULL,
     ip           TEXT    NOT NULL,

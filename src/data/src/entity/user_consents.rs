@@ -41,7 +41,8 @@ pub struct UserConsent {
     pub resource: String,
     /// comma separated
     pub scopes: String,
-    pub content_hash: String,
+    /// `None` for the built-in local consent
+    pub content_hash: Option<String>,
     pub created: i64,
     pub updated: i64,
     pub ip: String,
@@ -90,7 +91,7 @@ impl UserConsent {
         client_id: &str,
         resource: &str,
         scopes: &[String],
-        content_hash: &str,
+        content_hash: Option<&str>,
         ip: IpAddr,
     ) -> Result<(), ErrorResponse> {
         let scopes = scopes.join(",");
@@ -470,7 +471,7 @@ mod tests {
             client_id: client_id.to_string(),
             resource: resource.to_string(),
             scopes: scopes.to_string(),
-            content_hash: format!("hash_{ts}"),
+            content_hash: Some(format!("hash_{ts}")),
             created,
             updated: ts,
             ip: "127.0.0.1".to_string(),
@@ -563,6 +564,11 @@ mod tests {
             query(SQL_FIND_FOR_USER, &[&"u1"]),
             vec![consent("c2", "", "openid", 3, 3)]
         );
+
+        // the built-in local consent has no content hash
+        let params = rusqlite::params!["u1", "c3", "", "openid", None::<String>, 5, "127.0.0.1"];
+        conn.execute(SQL_UPSERT, params).unwrap();
+        assert_eq!(query(SQL_FIND, &[&"u1", &"c3", &""])[0].content_hash, None);
 
         conn.execute("DELETE FROM users WHERE id = 'u1'", [])
             .unwrap();
@@ -905,6 +911,16 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
         assert_eq!(
             query(SQL_FIND_FOR_USER, &[&"u1"]).await,
             vec![consent("c2", "", "openid", 3, 3)]
+        );
+
+        // the built-in local consent has no content hash
+        let no_hash: Option<&str> = None;
+        let params: [&(dyn ToSql + Sync); 7] =
+            [&"u1", &"c3", &"", &"openid", &no_hash, &5i64, &"127.0.0.1"];
+        cl.execute(SQL_UPSERT, &params).await.unwrap();
+        assert_eq!(
+            query(SQL_FIND, &[&"u1", &"c3", &""]).await[0].content_hash,
+            None
         );
 
         cl.execute("DELETE FROM users WHERE id = 'u1'", &[])
