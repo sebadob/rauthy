@@ -12,6 +12,7 @@ CREATE TABLE user_consents
     created      INTEGER NOT NULL,
     updated      INTEGER NOT NULL,
     ip           TEXT    NOT NULL,
+    user_agent   TEXT,
     CONSTRAINT user_consents_pk
         PRIMARY KEY (user_id, client_id, resource)
 ) STRICT;

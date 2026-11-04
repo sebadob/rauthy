@@ -22,10 +22,10 @@ const SQL_FIND_FOR_USER_RESOURCE: &str =
     "SELECT * FROM user_consents WHERE user_id = $1 AND resource = $2 ORDER BY updated DESC";
 const SQL_UPSERT: &str = r#"
 INSERT INTO user_consents
-(user_id, client_id, resource, scopes, content_hash, created, updated, ip)
-VALUES ($1, $2, $3, $4, $5, $6, $6, $7)
+(user_id, client_id, resource, scopes, content_hash, created, updated, ip, user_agent)
+VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
 ON CONFLICT(user_id, client_id, resource) DO UPDATE
-SET scopes = $4, content_hash = $5, updated = $6, ip = $7"#;
+SET scopes = $4, content_hash = $5, updated = $6, ip = $7, user_agent = $8"#;
 const SQL_DELETE: &str = r#"
 DELETE FROM user_consents
 WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
@@ -46,6 +46,7 @@ pub struct UserConsent {
     pub created: i64,
     pub updated: i64,
     pub ip: String,
+    pub user_agent: Option<String>,
 }
 
 impl UserConsent {
@@ -93,6 +94,7 @@ impl UserConsent {
         scopes: &[String],
         content_hash: Option<&str>,
         ip: IpAddr,
+        user_agent: Option<&str>,
     ) -> Result<(), ErrorResponse> {
         let scopes = scopes.join(",");
         let now = Utc::now().timestamp();
@@ -102,7 +104,16 @@ impl UserConsent {
             DB::hql()
                 .execute(
                     SQL_UPSERT,
-                    params!(user_id, client_id, resource, scopes, content_hash, now, ip),
+                    params!(
+                        user_id,
+                        client_id,
+                        resource,
+                        scopes,
+                        content_hash,
+                        now,
+                        ip,
+                        user_agent
+                    ),
                 )
                 .await?;
         } else {
@@ -116,6 +127,7 @@ impl UserConsent {
                     &content_hash,
                     &now,
                     &ip,
+                    &user_agent,
                 ],
             )
             .await?;
@@ -434,6 +446,7 @@ impl UserConsent {
             resource: self.resource,
             created: self.created,
             updated: self.updated,
+            user_agent: self.user_agent,
         }
     }
 }
@@ -475,6 +488,7 @@ mod tests {
             created,
             updated: ts,
             ip: "127.0.0.1".to_string(),
+            user_agent: Some(format!("ua_{ts}")),
         }
     }
 
@@ -503,6 +517,17 @@ mod tests {
         assert!(consent("c1", "", "", 1, 1).scopes_vec().is_empty());
     }
 
+    #[test]
+    fn test_into_response() {
+        let res = consent("c1", RES, "openid,email", 1, 2).into_response(Some("App".to_string()));
+        assert_eq!(res.client_id, "c1");
+        assert_eq!(res.client_name.as_deref(), Some("App"));
+        assert_eq!(res.resource, RES);
+        assert_eq!(res.scopes, vec!["openid".to_string(), "email".to_string()]);
+        assert_eq!((res.created, res.updated), (1, 2));
+        assert_eq!(res.user_agent.as_deref(), Some("ua_2"));
+    }
+
     /// The production SQL against the hiqlite migration.
     #[test]
     fn test_sql_sqlite() {
@@ -517,9 +542,17 @@ mod tests {
         // u2 holds rows with the same (client_id, resource) keys
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
-                let hash = format!("hash_{ts}");
-                let params =
-                    rusqlite::params![user_id, client_id, resource, scopes, hash, ts, "127.0.0.1"];
+                let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
+                let params = rusqlite::params![
+                    user_id,
+                    client_id,
+                    resource,
+                    scopes,
+                    hash,
+                    ts,
+                    "127.0.0.1",
+                    ua
+                ];
                 conn.execute(SQL_UPSERT, params).unwrap();
             }
         }
@@ -565,10 +598,12 @@ mod tests {
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash
-        let params = rusqlite::params!["u1", "c3", "", "openid", None::<String>, 5, "127.0.0.1"];
+        // the built-in local consent has no content hash, and a user agent may be missing
+        let none = None::<String>;
+        let params = rusqlite::params!["u1", "c3", "", "openid", none, 5, "127.0.0.1", none];
         conn.execute(SQL_UPSERT, params).unwrap();
-        assert_eq!(query(SQL_FIND, &[&"u1", &"c3", &""])[0].content_hash, None);
+        let local = query(SQL_FIND, &[&"u1", &"c3", &""]).remove(0);
+        assert_eq!((local.content_hash, local.user_agent), (None, None));
 
         conn.execute("DELETE FROM users WHERE id = 'u1'", [])
             .unwrap();
@@ -665,9 +700,9 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
 "#,
         )
         .unwrap();
-        let params = rusqlite::params!["u1", "c1", "", "openid", "hash", 1, "127.0.0.1"];
+        let params = rusqlite::params!["u1", "c1", "", "openid", "hash", 1, "127.0.0.1", "ua"];
         conn.execute(SQL_UPSERT, params).unwrap();
-        let params = rusqlite::params!["u1", "c2", "", "openid", "hash", 1, "127.0.0.1"];
+        let params = rusqlite::params!["u1", "c2", "", "openid", "hash", 1, "127.0.0.1", "ua"];
         conn.execute(SQL_UPSERT, params).unwrap();
 
         assert_eq!(
@@ -756,8 +791,16 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
                 ("u1", "c2", "", 3),
                 ("u2", "c1", "", 4),
             ] {
-                let params =
-                    rusqlite::params![user_id, client_id, resource, "openid", "h", ts, "127.0.0.1"];
+                let params = rusqlite::params![
+                    user_id,
+                    client_id,
+                    resource,
+                    "openid",
+                    "h",
+                    ts,
+                    "127.0.0.1",
+                    "ua"
+                ];
                 conn.execute(SQL_UPSERT, params).unwrap();
             }
 
@@ -854,8 +897,8 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
         // u2 holds rows with the same (client_id, resource) keys
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
-                let hash = format!("hash_{ts}");
-                let params: [&(dyn ToSql + Sync); 7] = [
+                let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
+                let params: [&(dyn ToSql + Sync); 8] = [
                     &user_id,
                     &client_id,
                     &resource,
@@ -863,6 +906,7 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
                     &hash,
                     &ts,
                     &"127.0.0.1",
+                    &ua,
                 ];
                 cl.execute(SQL_UPSERT, &params).await.unwrap();
             }
@@ -913,15 +957,21 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash
-        let no_hash: Option<&str> = None;
-        let params: [&(dyn ToSql + Sync); 7] =
-            [&"u1", &"c3", &"", &"openid", &no_hash, &5i64, &"127.0.0.1"];
+        // the built-in local consent has no content hash, and a user agent may be missing
+        let none: Option<&str> = None;
+        let params: [&(dyn ToSql + Sync); 8] = [
+            &"u1",
+            &"c3",
+            &"",
+            &"openid",
+            &none,
+            &5i64,
+            &"127.0.0.1",
+            &none,
+        ];
         cl.execute(SQL_UPSERT, &params).await.unwrap();
-        assert_eq!(
-            query(SQL_FIND, &[&"u1", &"c3", &""]).await[0].content_hash,
-            None
-        );
+        let local = query(SQL_FIND, &[&"u1", &"c3", &""]).await.remove(0);
+        assert_eq!((local.content_hash, local.user_agent), (None, None));
 
         cl.execute("DELETE FROM users WHERE id = 'u1'", &[])
             .await

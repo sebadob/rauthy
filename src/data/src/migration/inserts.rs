@@ -1796,8 +1796,8 @@ pub async fn user_consents(data_before: Vec<UserConsent>) -> Result<(), ErrorRes
     let sql_1 = "DELETE FROM user_consents";
     let sql_2 = r#"
 INSERT INTO user_consents
-(user_id, client_id, resource, scopes, content_hash, created, updated, ip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+(user_id, client_id, resource, scopes, content_hash, created, updated, ip, user_agent)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1813,7 +1813,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                         b.content_hash,
                         b.created,
                         b.updated,
-                        b.ip
+                        b.ip,
+                        b.user_agent
                     ),
                 )
                 .await?;
@@ -1832,6 +1833,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                     &b.created,
                     &b.updated,
                     &b.ip,
+                    &b.user_agent,
                 ],
             )
             .await?;

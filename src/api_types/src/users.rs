@@ -627,6 +627,8 @@ pub struct UserConsentResponse {
     pub created: i64,
     /// Unix timestamp in seconds
     pub updated: i64,
+    /// The user agent of the last consent
+    pub user_agent: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]

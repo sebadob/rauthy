@@ -107,6 +107,7 @@ export interface UserConsentResponse {
     scopes: string[];
     created: number;
     updated: number;
+    user_agent?: string;
 }
 
 export type UserAccountTypeResponse =
