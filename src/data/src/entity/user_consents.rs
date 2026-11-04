@@ -13,7 +13,7 @@ use rauthy_api_types::users::UserConsentResponse;
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::net::IpAddr;
 use tokio_postgres::IsolationLevel;
 
@@ -52,7 +52,7 @@ FOR UPDATE"#;
 
 /// A user's consent to a client, optionally scoped to a single resource. `resource` is empty for
 /// a consent without one.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromPgRow)]
+#[derive(Debug, Clone, PartialEq, Deserialize, FromPgRow)]
 pub struct UserConsent {
     pub user_id: String,
     pub client_id: String,
