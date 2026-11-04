@@ -663,7 +663,18 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     let res = refresh(&client, other.refresh_token.unwrap()).await;
     assert_eq!(res.status(), 200);
 
-    // idempotent, for an admin as well
+    // an admin, then idempotent
+    let ts = password_token_set(&client, EMAIL, PWD).await;
+    let res = client
+        .delete(&url_delete)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let deleted = res.json::<UserConsentDeleteResponse>().await?;
+    assert!(!deleted.consent_deleted);
+    assert!(deleted.refresh_tokens_deleted >= 1);
+    assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
     let res = client
         .delete(&url_delete)
         .headers(admin.clone())
@@ -674,25 +685,15 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     assert!(!deleted.consent_deleted);
     assert_eq!(deleted.refresh_tokens_deleted, 0);
 
-    // one event for the revoke that deleted something, none for the no-op
-    time::sleep(Duration::from_secs(1)).await;
-    let res = client
-        .post(format!("{backend}/events"))
-        .headers(admin.clone())
-        .json(&json!({
-            "from": events_from,
-            "level": "info",
-            "typ": "ConsentRevoked",
-        }))
-        .send()
-        .await?;
-    assert_eq!(res.status(), 200);
-    let events = res.json::<Vec<Value>>().await?;
-    let revoked = events
-        .iter()
-        .filter(|e| e["text"].as_str().is_some_and(|t| t.contains(EMAIL)))
-        .count();
-    assert_eq!(revoked, 1, "{events:?}");
+    // one event for each revoke that deleted something, each naming who revoked, none for the
+    // no-op
+    assert_eq!(
+        consent_revoked_events(&client, &admin, events_from, EMAIL).await,
+        vec![
+            format!("Consent of `{EMAIL}` for client `{CLIENT_ID}` revoked by admin `{USERNAME}`"),
+            format!("Consent of `{EMAIL}` for client `{CLIENT_ID}` revoked by the user"),
+        ]
+    );
 
     // --- a revoke with a `resource` drops the refresh tokens for the client as a whole
     let ts = password_token_set(&client, EMAIL, PWD).await;
