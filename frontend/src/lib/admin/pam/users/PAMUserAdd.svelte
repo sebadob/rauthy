@@ -1,19 +1,19 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Input from '$lib/form/Input.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Form from '#lib/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Input from '#lib/form/Input.svelte';
     import type {
         PamUnlinkedEmailsResponse,
         PamUserCreateRequest,
         PamUserResponse,
-    } from '$api/types/pam';
-    import { PATTERN_LINUX_USERNAME } from '$utils/patterns';
-    import Options from '$lib/Options.svelte';
-    import { fetchGet, fetchPost } from '$api/fetch';
+    } from '#api/types/pam.ts';
+    import { PATTERN_LINUX_USERNAME } from '#utils/patterns.ts';
+    import Options from '#lib/Options.svelte';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
     import { onMount } from 'svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
 
     let {
         onCreate,

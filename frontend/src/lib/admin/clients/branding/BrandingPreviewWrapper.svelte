@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { ThemeRequestResponse } from '$api/types/themes.ts';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import BrandingPreview from '$lib5/admin/clients/branding/BrandingPreview.svelte';
+    import type { ThemeRequestResponse } from '#api/types/themes.ts';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import BrandingPreview from '#lib/admin/clients/branding/BrandingPreview.svelte';
 
     let {
         logoUrl,

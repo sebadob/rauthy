@@ -1,19 +1,19 @@
 <script lang="ts">
-    import Button from '$lib/button/Button.svelte';
-    import { IS_DEV, TPL_CLIENT_LOGO_UPDATED } from '$utils/constants';
-    import Input from '$lib/form/Input.svelte';
-    import LangSelector from '$lib/LangSelector.svelte';
-    import Main from '$lib/Main.svelte';
-    import ContentCenter from '$lib/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import Template from '$lib/Template.svelte';
-    import { useParam } from '$state/param.svelte.js';
-    import ThemeSwitch from '$lib/ThemeSwitch.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import { fetchPost } from '$api/fetch';
-    import ClientLogo from '$lib/ClientLogo.svelte';
-    import { fetchSolvePow } from '$utils/pow';
-    import type { RequestResetRequest } from '$api/types/authorize';
+    import Button from '#lib/button/Button.svelte';
+    import { TPL_CLIENT_LOGO_UPDATED } from '#utils/constants.ts';
+    import Input from '#lib/form/Input.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import Template from '#lib/Template.svelte';
+    import { useParam } from '#state/param.svelte.js';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import ClientLogo from '#lib/ClientLogo.svelte';
+    import { fetchSolvePow } from '#utils/pow.ts';
+    import type { RequestResetRequest } from '#api/types/authorize.ts';
+    import { fetchPost } from '#api/fetch.ts';
 
     let t = useI18n();
 

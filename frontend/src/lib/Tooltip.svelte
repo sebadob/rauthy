@@ -9,7 +9,7 @@
         yOffset = 10,
         text,
         children,
-    } = $props<{
+    }: {
         /** The x offset of the tooltip */
         xOffset?: number;
         /** The y offset of the tooltip */
@@ -17,7 +17,7 @@
         /** The tooltip text content */
         text: string;
         children: Snippet;
-    }>();
+    } = $props();
 
     let title = $state(untrack(() => text));
     let show = $state(false);

@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Tabs from '$lib/tabs/Tabs.svelte';
-    import EditorMarkdownPreview from '$lib/text_edit/md/EditorMarkdownPreview.svelte';
-    import EditorText from '$lib/text_edit/EditorText.svelte';
-    import { useMarkdownWorker } from '$lib/text_edit/useWorker.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import EditorMarkdownPreview from '#lib/text_edit/md/EditorMarkdownPreview.svelte';
+    import EditorText from '#lib/text_edit/EditorText.svelte';
+    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
     import { onDestroy } from 'svelte';
 
     let {

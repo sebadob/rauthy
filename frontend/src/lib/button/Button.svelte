@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
     import { type Snippet, untrack } from 'svelte';
-    import Loading from '$lib5/Loading.svelte';
+    import Loading from '#lib/Loading.svelte';
 
     let {
         type = 'button',

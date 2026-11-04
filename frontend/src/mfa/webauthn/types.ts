@@ -1,4 +1,4 @@
-import type { MfaPurpose } from '$api/types/mfa';
+import type { MfaPurpose } from '#api/types/mfa.ts';
 
 export type WebauthnAdditionalData = undefined | WebauthnLoginFinishResponse | WebauthnServiceReq;
 
@@ -43,6 +43,7 @@ export interface WebauthnRegFinishRequest {
     data: RegisterPublicKeyCredential;
     /// Validation: RE_ALNUM_64
     magic_link_id?: string;
+    allow_rk_hint?: boolean;
 }
 
 // ######################################################################

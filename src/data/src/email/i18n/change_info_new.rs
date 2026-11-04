@@ -16,10 +16,13 @@ impl I18nEmailChangeInfoNew<'_> {
         match lang {
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
+            Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -50,6 +53,17 @@ impl I18nEmailChangeInfoNew<'_> {
         }
     }
 
+    fn build_es() -> Self {
+        Self {
+            subject: "Solicitud de cambio de correo electrónico",
+            header: "Solicitud de cambio de correo electrónico para",
+            click_link: "Haga clic en el enlace de abajo para confirmar su dirección de correo electrónico.",
+            validity: "Por motivos de seguridad, este enlace solo es válido durante un breve período de tiempo.",
+            expires: "El enlace caduca el:",
+            button_text: "Confirmar correo electrónico",
+        }
+    }
+
     fn build_fr() -> Self {
         Self {
             subject: "Demande de modification de l'e-mail",
@@ -58,6 +72,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "Ce lien n'est valable que pendant une courte période pour des raisons de sécurité.",
             expires: "Le lien expire :",
             button_text: "Confirmer l'e-mail",
+        }
+    }
+
+    fn build_ja() -> Self {
+        Self {
+            subject: "メールアドレス変更のご依頼",
+            header: "メールアドレス変更のご依頼 -",
+            click_link: "下のリンクをクリックして、メールアドレスを確認してください。",
+            validity: "このリンクは、安全のため短い時間だけ有効です。",
+            expires: "リンクの有効期限:",
+            button_text: "メールアドレスを確認する",
         }
     }
 
@@ -91,6 +116,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "Deze link is om veiligheidsredenen slechts korte tijd geldig.",
             expires: "Link vervalt:",
             button_text: "E-Mail bevestigen",
+        }
+    }
+
+    fn build_pt() -> Self {
+        Self {
+            subject: "Pedido de alteração de e-mail",
+            header: "Pedido de alteração de e-mail para",
+            click_link: "Clique na ligação abaixo para confirmar o seu endereço de e-mail.",
+            validity: "Por motivos de segurança, esta ligação só é válida durante um curto período de tempo.",
+            expires: "A ligação expira em:",
+            button_text: "Confirmar e-mail",
         }
     }
 

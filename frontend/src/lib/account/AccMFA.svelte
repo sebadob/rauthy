@@ -1,34 +1,33 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
     import { onMount, untrack } from 'svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import { useSession } from '$state/session.svelte.js';
-    import { fetchDelete, fetchGet, fetchPost } from '$api/fetch';
-    import type { PasskeyResponse, WebauthnDeleteRequest } from '$api/types/webauthn.ts';
-    import type { UserResponse } from '$api/types/user.ts';
-    import { PATTERN_USER_NAME } from '$utils/patterns';
-    import { webauthnReg } from '$mfa/webauthn/registration';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import type { WebauthnAdditionalData, WebauthnServiceReq } from '$mfa/webauthn/types.ts';
-    import UserPasskey from '$lib5/UserPasskey.svelte';
-    import type { MfaModTokenResponse, UserMfaTokenRequest } from '$api/types/mfa_mod_token';
-    import Modal from '$lib/Modal.svelte';
-    import InputPassword from '$lib/form/InputPassword.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import IconArrowPathSquare from '$icons/IconArrowPathSquare.svelte';
-    import Template from '$lib5/Template.svelte';
-    import { TPL_OTP_LENGTH, TPL_IS_OTP_ENABLED } from '$utils/constants';
-    import type { OtpResponse } from '$api/types/otp';
-    import { deleteOtp, postOtp, putOtp } from '$mfa/otp/mod';
-    import type { MfaPurpose } from '$api/types/mfa';
-    import type { OtpAdditionalData, OtpKind, OtpServiceReq } from '$mfa/otp/types';
-    import UserOtp from '$lib5/UserOtp.svelte';
-    import OtpRequest from '$lib5/OtpRequest.svelte';
-    import InputOtp from '$lib5/form/InputOtp.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import Options from '$lib/Options.svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import { useSession } from '#state/session.svelte.js';
+    import { fetchDelete, fetchGet, fetchPost } from '#api/fetch.ts';
+    import type { PasskeyResponse, WebauthnDeleteRequest } from '#api/types/webauthn.ts';
+    import type { UserResponse } from '#api/types/user.ts';
+    import { PATTERN_USER_NAME } from '#utils/patterns.ts';
+    import { webauthnReg } from '#mfa/webauthn/registration.ts';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
+    import type { WebauthnAdditionalData, WebauthnServiceReq } from '#mfa/webauthn/types.ts';
+    import UserPasskey from '#lib/UserPasskey.svelte';
+    import type { MfaModTokenResponse, UserMfaTokenRequest } from '#api/types/mfa_mod_token.ts';
+    import Modal from '#lib/Modal.svelte';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import IconArrowPathSquare from '#icons/IconArrowPathSquare.svelte';
+    import Template from '#lib/Template.svelte';
+    import { TPL_OTP_LENGTH, TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
+    import type { OtpResponse } from '#api/types/otp.ts';
+    import { deleteOtp, postOtp, putOtp } from '#mfa/otp/mod.ts';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
+    import type { OtpAdditionalData, OtpKind, OtpServiceReq } from '#mfa/otp/types.ts';
+    import UserOtp from '#lib/UserOtp.svelte';
+    import OtpRequest from '#lib/OtpRequest.svelte';
+    import InputOtp from '#lib/form/InputOtp.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import PasskeyTypeSelect from '#lib/PasskeyTypeSelect.svelte';
 
     let { user = $bindable() }: { user: UserResponse } = $props();
 
@@ -44,7 +43,7 @@
     let err = $state(false);
     let pwdErr = $state('');
     let msg = $state('');
-    let showRegInput = $state(false);
+    let showPasskeyInput = $state(false);
     let showOtpInput = $state(false);
     let showDelete = $state(untrack(() => user.account_type) === 'password');
 
@@ -59,7 +58,7 @@
     let closeModal: undefined | (() => void) = $state();
 
     let passkeys: PasskeyResponse[] = $state([]);
-    let passkeyType = $state(t.account.passkeys.types[0]);
+    let residentKey = $state(false);
     let mfaModToken: undefined | MfaModTokenResponse = $state();
     let mfaModSecs: undefined | number = $state();
     let interval: undefined | number;
@@ -72,6 +71,13 @@
     let otpId: undefined | string = $state();
     let otpValueNew = $state('');
     let hasOtp = $state(false);
+
+    let isUserFederatedOnly = $derived(user.account_type === 'federated');
+
+    type RegType = undefined | 'passkey' | 'otp';
+    // Saves the type of the reg button the user clicked before fetching an MFA mod token, so that
+    // we can show the correct input after a successful fetch.
+    let requestedBeforeTokenFetch: RegType = $state(undefined);
 
     onMount(() => {
         fetchPasskeys();
@@ -154,7 +160,7 @@
         }
     }
 
-    async function handleRegister() {
+    async function handleRegisterPasskey() {
         resetMsgErr();
 
         if (isInputError || !userId) {
@@ -180,8 +186,7 @@
             undefined,
             undefined,
             tokenId,
-            // the 2nd type is the resident key
-            passkeyType === t.account.passkeys.types[1],
+            residentKey,
         );
         if (res.error) {
             console.log(res.error.toLowerCase());
@@ -193,14 +198,14 @@
             }
             err = true;
         } else {
-            showRegInput = false;
+            showPasskeyInput = false;
             passkeyName = '';
             await fetchPasskeys();
             await fetchUser();
         }
     }
 
-    async function handleDelete(name: string) {
+    async function handleDeletePasskey(name: string) {
         if (!mfaModToken) {
             showModal = true;
             return;
@@ -209,7 +214,10 @@
         let payload: WebauthnDeleteRequest = {
             mfa_mod_token_id: mfaModToken.id,
         };
-        let res = await fetchDelete(`/auth/v1/users/${user.id}/webauthn/delete/${name}`, payload);
+        let res = await fetchDelete(
+            `/auth/v1/users/${user.id}/webauthn/delete/${encodeURIComponent(name)}`,
+            payload,
+        );
         if (res.status === 200) {
             await fetchPasskeys();
             await fetchUser();
@@ -218,9 +226,31 @@
         }
     }
 
-    function onRegisterClick() {
+    async function onRegisterPasskeyClick(ty: RegType) {
+        isInputError = false;
+        requestedBeforeTokenFetch = ty;
+
         if (mfaModToken) {
-            showRegInput = true;
+            requestedBeforeTokenFetch = undefined;
+            showPasskeyInput = true;
+        } else if (isUserFederatedOnly) {
+            // A federated user account does neither have a password, nor a passkey. We cannot
+            // request additional authentication to get an MFA mod token, because there is none.
+            // In this special case, the user is allowed to fetch such a token directly. Without it
+            // it would be impossible to go from a federated to a federated_passkey account. You
+            // would always need to add a password beforehand only to be able to authenticate
+            // locally here.
+            //
+            // Note: a "perfect" solution would be to send this user an OTP, even when it's not
+            // registered yet, or maybe a variant of it with some callback link. But this requires
+            // a bigger setup that is not implemented so far for this special case. That could be
+            // improved in the future.
+            await fetchMfaToken({});
+            if (mfaModToken) {
+                showPasskeyInput = true;
+            } else {
+                console.error('Could not fetch MFA mod token for federated user');
+            }
         } else {
             showModal = true;
         }
@@ -248,16 +278,28 @@
         otpKind = 'email';
 
         resetMsgErr();
-        if (isInputError || !userId || !otpKind) {
+        if (!userId || !otpKind) {
             console.error('missing create OTP data', isInputError, userId, otpKind);
             return;
         }
 
         let tokenId = mfaModToken?.id;
         if (!tokenId) {
-            showModal = true;
-            return;
+            requestedBeforeTokenFetch = 'otp';
+            if (isUserFederatedOnly) {
+                await fetchMfaToken({});
+                if (mfaModToken) {
+                    tokenId = mfaModToken.id;
+                } else {
+                    console.error('Error fetching MFA mod token for federated-only user');
+                    return;
+                }
+            } else {
+                showModal = true;
+                return;
+            }
         }
+
         let res = await postOtp(userId, otpKind, otpName, tokenId);
         if (res.data) {
             otps.push(res.data);
@@ -357,13 +399,29 @@
             interval = window.setInterval(() => {
                 calcModSecs();
             }, 1000);
+
+            if (requestedBeforeTokenFetch == 'passkey') {
+                showPasskeyInput = true;
+            } else if (requestedBeforeTokenFetch == 'otp') {
+                showOtpInput = true;
+            }
         } else {
             pwdErr = t.mfa.passwordInvalid;
         }
     }
 
-    function mfaTokenRefresh() {
+    async function mfaTokenRefresh() {
+        requestedBeforeTokenFetch = undefined;
         mfaModToken = undefined;
+
+        if (isUserFederatedOnly) {
+            await fetchMfaToken({});
+            if (!mfaModToken) {
+                console.error('Could not fetch MFA mod token for federated user');
+            }
+            return;
+        }
+
         showModal = true;
     }
 
@@ -457,7 +515,7 @@
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {/if}
 
-        {#if showRegInput}
+        {#if showPasskeyInput}
             <p>
                 {t.mfa.webauthn.p1}
                 <br /><br />
@@ -470,17 +528,8 @@
             </p>
 
             <div class="pkReg">
-                <Form action="" onSubmit={handleRegister}>
-                    <LabeledValue label={t.account.passkeys.type}>
-                        <Options
-                            options={[t.account.passkeys.types[0], t.account.passkeys.types[1]]}
-                            bind:value={passkeyType}
-                            ariaLabel={t.account.passkeys.type}
-                        />
-                        {#if passkeyType === t.account.passkeys.types[1]}
-                            <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
-                        {/if}
-                    </LabeledValue>
+                <Form action="" onSubmit={handleRegisterPasskey}>
+                    <PasskeyTypeSelect bind:residentKey />
                     <Input
                         bind:ref={refInput}
                         bind:value={passkeyName}
@@ -493,10 +542,10 @@
                         required
                     />
                     <div class="regBtns">
-                        <Button type="submit" isDisabled={passkeyType === '-'}>
+                        <Button type="submit">
                             {t.mfa.register}
                         </Button>
-                        <Button level={3} onclick={() => (showRegInput = false)}
+                        <Button level={3} onclick={() => (showPasskeyInput = false)}
                             >{t.common.cancel}</Button
                         >
                     </div>
@@ -504,7 +553,10 @@
             </div>
         {:else}
             <div class="regNewBtn">
-                <Button level={passkeys.length === 0 ? 1 : 2} onclick={onRegisterClick}>
+                <Button
+                    level={passkeys.length === 0 ? 1 : 2}
+                    onclick={() => onRegisterPasskeyClick('passkey')}
+                >
                     {t.mfa.webauthn.registerNew}
                 </Button>
             </div>
@@ -518,7 +570,7 @@
     {/if}
     <div class="keysContainer">
         {#each passkeys as passkey (passkey.name)}
-            <UserPasskey {passkey} {showDelete} onDelete={handleDelete} />
+            <UserPasskey {passkey} {showDelete} onDelete={handleDeletePasskey} />
         {/each}
     </div>
     {#if passkeys.length > 0}
@@ -711,11 +763,6 @@
         background-color: hsla(var(--bg-high) / 0.25);
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
-    }
-
-    .rkWarn {
-        color: hsl(var(--error));
-        font-size: 0.9rem;
     }
 
     .success {

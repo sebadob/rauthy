@@ -1,16 +1,16 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { fetchPost } from '$api/fetch';
-    import type { ProviderResponse } from '$api/types/auth_provider.ts';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import { useParam } from '$state/param.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import ProviderDetails from '$lib5/admin/providers/ProviderDetails.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ProviderAddNew from '$lib5/admin/providers/ProviderAddNew.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { fetchPost } from '#api/fetch.ts';
+    import type { ProviderResponse } from '#api/types/auth_provider.ts';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import ProviderDetails from '#lib/admin/providers/ProviderDetails.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import ProviderAddNew from '#lib/admin/providers/ProviderAddNew.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 

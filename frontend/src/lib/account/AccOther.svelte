@@ -1,21 +1,21 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
     import { fade } from 'svelte/transition';
-    import Input from '$lib5/form/Input.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
+    import Input from '#lib/form/Input.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
     import type {
         UserAttrValueRequest,
         UserAttrValuesUpdateRequest,
         UserResponse,
-    } from '$api/types/user.ts';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { fetchGet, fetchPut } from '$api/fetch';
+    } from '#api/types/user.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
     import type {
         UserEditableAttrResponse,
         UserEditableAttrsResponse,
-    } from '$api/types/user_attrs';
+    } from '#api/types/user_attrs.ts';
     import { onMount } from 'svelte';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
 
     let {
         user = $bindable(),

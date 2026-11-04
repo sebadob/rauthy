@@ -1,19 +1,19 @@
 <script lang="ts">
-    import type { KVAccessRequest, KVAccessResponse } from '$api/types/kv';
-    import Form from '$lib/form/Form.svelte';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import InputPassword from '$lib/form/InputPassword.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
+    import type { KVAccessRequest, KVAccessResponse } from '#api/types/kv.ts';
+    import Form from '#lib/form/Form.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { PATTERN_GROUP } from '#utils/patterns.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { slide } from 'svelte/transition';
     import { untrack } from 'svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import HiddenValueArea from '$lib/HiddenValueArea.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import { fetchDelete, fetchPost, fetchPut } from '#api/fetch.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import HiddenValueArea from '#lib/HiddenValueArea.svelte';
 
     let {
         key = $bindable(),

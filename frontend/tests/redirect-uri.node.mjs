@@ -5,10 +5,15 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { createServer } from 'vite';
 
+/** @type {any} */
 let server;
+/** @type {any} */
 let validateRedirectUriShape;
+/** @type {any} */
 let validatePostLogoutRedirectUriShape;
+/** @type {any} */
 let RESERVED_REDIRECT_QUERY_KEYS;
+/** @type {any} */
 let RESERVED_POST_LOGOUT_QUERY_KEYS;
 
 before(async () => {

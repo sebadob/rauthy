@@ -1,24 +1,24 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
     import { fade } from 'svelte/transition';
-    import Input from '$lib5/form/Input.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { UpdateUserSelfRequest, UserResponse } from '$api/types/user.ts';
-    import Form from '$lib5/form/Form.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { UpdateUserSelfRequest, UserResponse } from '#api/types/user.ts';
+    import Form from '#lib/form/Form.svelte';
     import {
         PATTERN_ALNUM,
         PATTERN_CITY,
         PATTERN_PHONE,
         PATTERN_STREET,
         PATTERN_USER_NAME,
-    } from '$utils/patterns';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
+    } from '#utils/patterns.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { fetchDelete, fetchGet, fetchPut } from '#api/fetch.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
     import { onMount } from 'svelte';
-    import TZSelect from '$lib/TZSelect.svelte';
-    import PreferredUsername from '$lib/PreferredUsername.svelte';
+    import TZSelect from '#lib/TZSelect.svelte';
+    import PreferredUsername from '#lib/PreferredUsername.svelte';
 
     let {
         config,

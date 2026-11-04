@@ -17,10 +17,13 @@ impl I18nEmailChangeInfoOld<'_> {
         match lang {
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
+            Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_en(),
             Language::Nl => Self::build_nl(),
+            Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -38,6 +41,18 @@ impl I18nEmailChangeInfoOld<'_> {
             validity: "This link is only valid for a short period of time for security reasons.",
             expires: "Link expires:",
             button_text: "Block Address Change",
+        }
+    }
+
+    fn build_es() -> Self {
+        Self {
+            subject: "Solicitud de cambio de correo electrónico",
+            header: "Solicitud de cambio de correo electrónico para",
+            change_info: "Se ha solicitado el cambio de su dirección de correo electrónico. Nueva dirección:",
+            click_link: "Si no ha solicitado este cambio, haga clic en el enlace de abajo",
+            validity: "Por motivos de seguridad, este enlace solo es válido durante un breve período de tiempo.",
+            expires: "El enlace caduca el:",
+            button_text: "Bloquear cambio de dirección",
         }
     }
 
@@ -101,6 +116,18 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
+    fn build_ja() -> Self {
+        Self {
+            subject: "メールアドレス変更のご依頼",
+            header: "メールアドレス変更のご依頼 -",
+            change_info: "メールアドレスの変更が依頼されました。新しいアドレス:",
+            click_link: "この変更に心当たりがない場合は、下のリンクをクリックしてください",
+            validity: "このリンクは、安全のため短い時間だけ有効です。",
+            expires: "リンクの有効期限:",
+            button_text: "アドレスの変更を止める",
+        }
+    }
+
     fn build_ko() -> Self {
         Self {
             subject: "이메일 변경 요청",
@@ -122,6 +149,18 @@ impl I18nEmailChangeInfoOld<'_> {
             validity: "Deze link is om veiligheidsredenen slechts korte tijd geldig.",
             expires: "Link vervalt:",
             button_text: "Adreswijziging blokkeren",
+        }
+    }
+
+    fn build_pt() -> Self {
+        Self {
+            subject: "Pedido de alteração de e-mail",
+            header: "Pedido de alteração de e-mail para",
+            change_info: "Foi pedida a alteração do seu endereço de e-mail. Novo endereço:",
+            click_link: "Se não pediu esta alteração, clique na ligação abaixo",
+            validity: "Por motivos de segurança, esta ligação só é válida durante um curto período de tempo.",
+            expires: "A ligação expira em:",
+            button_text: "Bloquear alteração de endereço",
         }
     }
 }

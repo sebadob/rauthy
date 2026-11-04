@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type { ThemeCss } from '$api/types/themes.ts';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import RauthyLogo from '$lib/RauthyLogo.svelte';
+    import type { ThemeCss } from '#api/types/themes.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import RauthyLogo from '#lib/RauthyLogo.svelte';
 
     let {
         logoUrl,
@@ -53,17 +53,11 @@
 >
     <div class="inner">
         <div class="container">
-            <div class="logo">
+            <div class="logo" class:default={showDefault}>
                 {#if showDefault}
                     <RauthyLogo width="100%" show={typ} />
                 {:else}
-                    <img
-                        src={logoUrl}
-                        alt="Client Logo"
-                        width="100%"
-                        height="100%"
-                        onerror={() => (showDefault = true)}
-                    />
+                    <img src={logoUrl} alt="Client Logo" onerror={() => (showDefault = true)} />
                 {/if}
             </div>
 
@@ -84,14 +78,17 @@
                 </div>
 
                 <div>
-                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
                     <br />
-                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
                     <br />
-                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
+                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}
+                        >Button
+                    </Button>
                 </div>
             </div>
 
@@ -141,10 +138,20 @@
 
     .logo {
         margin: 0 0.25rem;
-        width: 84px;
         height: 84px;
+        max-width: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
+    }
+
+    .logo.default {
+        width: 84px;
+    }
+
+    .logo img {
+        height: 100%;
+        max-width: 100%;
+        object-fit: contain;
     }
 </style>

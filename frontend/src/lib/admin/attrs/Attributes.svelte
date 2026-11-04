@@ -1,20 +1,20 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import { fetchGet } from '$api/fetch';
-    import { useParam } from '$state/param.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import { useParam } from '#state/param.svelte.ts';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
-    } from '$api/types/user_attrs.ts';
-    import AttrAddNew from '$lib5/admin/attrs/AttrAddNew.svelte';
-    import AttrDetails from '$lib5/admin/attrs/AttrDetails.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    } from '#api/types/user_attrs.ts';
+    import AttrAddNew from '#lib/admin/attrs/AttrAddNew.svelte';
+    import AttrDetails from '#lib/admin/attrs/AttrDetails.svelte';
+    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 

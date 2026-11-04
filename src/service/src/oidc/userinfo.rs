@@ -106,7 +106,7 @@ pub async fn get_userinfo(
     let mut userinfo = Userinfo {
         id: user.id.clone(),
         sub: user.id.clone(),
-        name: user.email_recipient_name(),
+        name: user.full_name(),
         roles,
         mfa_enabled: user.has_webauthn_enabled(),
 

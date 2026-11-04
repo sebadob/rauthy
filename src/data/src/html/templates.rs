@@ -64,6 +64,7 @@ pub enum HtmlTemplate {
     IsRegOpen(bool),
     LoginAction(FrontendAction),
     OtpLength(u8),
+    PasskeyRegType,
     PasswordReset(TplPasswordReset),
     PasswordResetLinkAlways(bool),
     RestrictedEmailDomain(String),
@@ -92,6 +93,7 @@ impl HtmlTemplate {
             Self::IsRegOpen(_) => "tpl_is_reg_open",
             Self::LoginAction(_) => "tpl_login_action",
             Self::OtpLength(_) => "tpl_otp_length",
+            Self::PasskeyRegType => "tpl_passkey_reg_type",
             Self::PasswordReset(_) => "tpl_password_reset",
             Self::PasswordResetLinkAlways(_) => "tpl_password_reset_link_always",
             Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
@@ -121,6 +123,7 @@ impl HtmlTemplate {
             Self::IsRegOpen(i) => i.to_string(),
             Self::LoginAction(i) => i.to_string(),
             Self::OtpLength(i) => i.to_string(),
+            Self::PasskeyRegType => RauthyConfig::get().vars.webauthn.passkey_reg_type_str(),
             Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
             Self::PasswordResetLinkAlways(i) => i.to_string(),
             Self::StatusCode(i) => i.to_string(),
@@ -144,7 +147,7 @@ pub struct IndexHtml<'a> {
 impl IndexHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = IndexHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
@@ -169,7 +172,7 @@ pub struct AccountHtml<'a> {
 impl AccountHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64, templates: &[HtmlTemplate]) -> String {
         let res = AccountHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates,
@@ -190,7 +193,7 @@ pub struct AdminHtml<'a> {
 impl AdminHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -212,7 +215,7 @@ pub struct DeviceHtml<'a> {
 impl DeviceHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = DeviceHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[HtmlTemplate::DeviceUserCodeLength(
@@ -236,7 +239,7 @@ pub struct FedCMHtml<'a> {
 impl FedCMHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = FedCMHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -266,7 +269,7 @@ impl ErrorHtml<'_> {
         C: Into<Cow<'static, str>>,
     {
         let res = ErrorHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
@@ -311,7 +314,7 @@ impl Error1Html<'_> {
         C: Into<Cow<'static, str>>,
     {
         let res = Error1Html {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
@@ -344,7 +347,7 @@ impl Error2Html<'_> {
         C: Into<Cow<'static, str>>,
     {
         let res = Error2Html {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
@@ -377,7 +380,7 @@ impl Error3Html<'_> {
         C: Into<Cow<'static, str>>,
     {
         let res = Error3Html {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
@@ -402,7 +405,7 @@ pub struct AdminApiKeysHtml<'a> {
 impl AdminApiKeysHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminApiKeysHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -424,7 +427,7 @@ pub struct AdminAttributesHtml<'a> {
 impl AdminAttributesHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminAttributesHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -446,7 +449,7 @@ pub struct AdminBlacklistHtml<'a> {
 impl AdminBlacklistHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminBlacklistHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -468,7 +471,7 @@ pub struct AdminClientsHtml<'a> {
 impl AdminClientsHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminClientsHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -490,7 +493,7 @@ pub struct AdminConfigArgon2Html<'a> {
 impl AdminConfigArgon2Html<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigArgon2Html {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -512,7 +515,7 @@ pub struct AdminConfigBackupsHtml<'a> {
 impl AdminConfigBackupsHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigBackupsHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -534,7 +537,7 @@ pub struct AdminConfigEncryptionHtml<'a> {
 impl AdminConfigEncryptionHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigEncryptionHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -556,7 +559,7 @@ pub struct AdminConfigJwksHtml<'a> {
 impl AdminConfigJwksHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigJwksHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -578,7 +581,7 @@ pub struct AdminConfigPolicyHtml<'a> {
 impl AdminConfigPolicyHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminConfigPolicyHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -600,7 +603,7 @@ pub struct AdminDocsHtml<'a> {
 impl AdminDocsHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminDocsHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -622,7 +625,7 @@ pub struct AdminEventsHtml<'a> {
 impl AdminEventsHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminEventsHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -644,7 +647,7 @@ pub struct AdminGroupsHtml<'a> {
 impl AdminGroupsHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminGroupsHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -666,7 +669,7 @@ pub struct AdminKVHtml<'a> {
 impl AdminKVHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminGroupsHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -688,7 +691,7 @@ pub struct AdminRolesHtml<'a> {
 impl AdminRolesHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminRolesHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -710,7 +713,7 @@ pub struct AdminScopesHtml<'a> {
 impl AdminScopesHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminScopesHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -732,7 +735,7 @@ pub struct AdminPAMHtml<'a> {
 impl AdminPAMHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminPAMHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -754,7 +757,7 @@ pub struct AdminSessionsHtml<'a> {
 impl AdminSessionsHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminSessionsHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -776,7 +779,7 @@ pub struct AdminUsersHtml<'a> {
 impl AdminUsersHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = AdminUsersHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -803,7 +806,7 @@ impl AuthorizeHtml<'_> {
         templates: &[HtmlTemplate],
     ) -> String {
         let res = AuthorizeHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id,
             theme_ts,
             templates,
@@ -825,7 +828,7 @@ pub struct CallbackHtml<'a> {
 impl CallbackHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = CallbackHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -847,7 +850,7 @@ pub struct ProvidersHtml<'a> {
 impl ProvidersHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = ProvidersHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -869,7 +872,7 @@ pub struct ProviderCallbackHtml<'a> {
 impl ProviderCallbackHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         let res = ProviderCallbackHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             ..Default::default()
@@ -891,7 +894,7 @@ pub struct LogoutHtml<'a> {
 impl LogoutHtml<'_> {
     pub fn build(csrf_token: String, lang: &Language, theme_ts: i64) -> String {
         let res = LogoutHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[HtmlTemplate::CsrfToken(csrf_token)],
@@ -915,10 +918,13 @@ impl PwdResetHtml<'_> {
     // to provide the email manually
     pub fn build(lang: &Language, theme_ts: i64, template: TplPasswordReset) -> String {
         let res = PwdResetHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
-            templates: &[HtmlTemplate::PasswordReset(template)],
+            templates: &[
+                HtmlTemplate::PasswordReset(template),
+                HtmlTemplate::PasskeyRegType,
+            ],
         };
 
         res.render().unwrap()
@@ -960,7 +966,7 @@ pub struct UserEmailChangeConfirmHtml<'a> {
 impl UserEmailChangeConfirmHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64, templates: &[HtmlTemplate]) -> String {
         UserEmailChangeConfirmHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates,
@@ -982,7 +988,7 @@ pub struct UserRegisterHtml<'a> {
 impl UserRegisterHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64, auth_providers: HtmlTemplate) -> String {
         UserRegisterHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
@@ -1015,7 +1021,7 @@ pub struct UserRevokeHtml<'a> {
 impl UserRevokeHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
         UserRevokeHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[],
@@ -1037,7 +1043,7 @@ pub struct UserPasswordResetHtml<'a> {
 impl UserPasswordResetHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64, logo_updated: Option<i64>) -> String {
         UserPasswordResetHtml {
-            lang: lang.as_str(),
+            lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[HtmlTemplate::ClientLogoUpdated(logo_updated)],

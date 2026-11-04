@@ -6,7 +6,7 @@ let sanitizedHTML = $state('');
 
 export function useMarkdownWorker() {
     if (!worker) {
-        worker = new Worker(new URL('../../workers/md.ts', import.meta.url));
+        worker = new Worker(new URL('../../workers/md.ts', import.meta.url), { type: 'module' });
     }
 
     worker.onmessage = ev => {

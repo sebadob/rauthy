@@ -1,29 +1,28 @@
 <script lang="ts">
-    import { generatePassword, normalizeClientUri } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
-    import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
+    import { generatePassword, normalizeClientUri } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import PasswordPolicy from '#lib/PasswordPolicy.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
     import { slide } from 'svelte/transition';
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import { IS_DEV, TPL_PASSWORD_RESET } from '$utils/constants';
-    import { useI18n } from '$state/i18n.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import type { PasswordResetTemplate } from '$api/templates/PasswordReset';
-    import Template from '$lib5/Template.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { WebauthnAdditionalData } from '$mfa/webauthn/types.ts';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
-    import A from '$lib5/A.svelte';
-    import { webauthnReg } from '$mfa/webauthn/registration';
-    import Form from '$lib5/form/Form.svelte';
-    import { PATTERN_USER_NAME } from '$utils/patterns';
-    import type { PasswordResetRequest } from '$api/types/password_reset.ts';
-    import type { MfaPurpose } from '$api/types/mfa';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import Options from '$lib/Options.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
+    import { IS_DEV, TPL_PASSWORD_RESET } from '#utils/constants.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import type { PasswordResetTemplate } from '#api/templates/PasswordReset.ts';
+    import Template from '#lib/Template.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import A from '#lib/A.svelte';
+    import { webauthnReg } from '#mfa/webauthn/registration.ts';
+    import Form from '#lib/form/Form.svelte';
+    import { PATTERN_USER_NAME } from '#utils/patterns.ts';
+    import type { PasswordResetRequest } from '#api/types/password_reset.ts';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
+    import PasskeyTypeSelect from '#lib/PasskeyTypeSelect.svelte';
 
     const inputWidth = '20rem';
 
@@ -48,7 +47,7 @@
     let password = $state('');
     let passwordConfirm = $state('');
 
-    let passkeyType = $state(t.account.passkeys.types[0]);
+    let residentKey = $state(false);
 
     let reportValidityNew: undefined | (() => void) = $state();
     let reportValidityConfirm: undefined | (() => void) = $state();
@@ -117,8 +116,7 @@
             tplData.magic_link_id,
             tplData.csrf_token,
             undefined,
-            // the 2nd type is the resident key
-            passkeyType === t.account.passkeys.types[1],
+            residentKey,
         );
         if (res.error) {
             console.log(res.error.toLowerCase());
@@ -130,6 +128,7 @@
             }
         } else {
             resetValues();
+            redirectUri = res.location || '';
             success = true;
         }
     }
@@ -345,19 +344,7 @@
                         {:else if accountTypeNew === 'passkey'}
                             <div transition:slide>
                                 <Form action="" onSubmit={handleRegister}>
-                                    <LabeledValue label={t.account.passkeys.type}>
-                                        <Options
-                                            options={[
-                                                t.account.passkeys.types[0],
-                                                t.account.passkeys.types[1],
-                                            ]}
-                                            bind:value={passkeyType}
-                                            ariaLabel={t.account.passkeys.type}
-                                        />
-                                        {#if passkeyType === t.account.passkeys.types[1]}
-                                            <p class="rkWarn">{t.account.passkeys.rkWarning}</p>
-                                        {/if}
-                                    </LabeledValue>
+                                    <PasskeyTypeSelect bind:residentKey />
                                     <Input
                                         bind:ref={refPasskey}
                                         bind:value={passkeyName}
@@ -444,11 +431,6 @@
     .policy {
         max-width: 100dvw;
         overflow: clip;
-    }
-
-    .rkWarn {
-        color: hsl(var(--error));
-        font-size: 0.9rem;
     }
 
     .typeChoice {

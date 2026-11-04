@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { formatDateFromTs } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import type { OtpResponse } from '$api/types/otp';
-    import IconCheckBadge from '$icons/IconCheckBadge.svelte';
-    import IconStop from '$icons/IconStop.svelte';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import type { OtpResponse } from '#api/types/otp.ts';
+    import IconCheckBadge from '#icons/IconCheckBadge.svelte';
+    import IconStop from '#icons/IconStop.svelte';
 
     let {
         otp,

@@ -2,14 +2,18 @@ use crate::Assets;
 use actix_web::http::header;
 use actix_web::http::header::VARY;
 use actix_web::{HttpRequest, HttpResponse, get, web};
+use rauthy_common::utils::real_ip_from_req;
+use rauthy_data::entity::ip_blacklist::IpBlacklist;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::html::HtmlCached;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use std::borrow::Cow;
+use std::time::Duration;
 
 #[get("/{_:.*}")]
 pub async fn get_static_assets(
+    req: HttpRequest,
     path: web::Path<String>,
     accept_encoding: web::Header<header::AcceptEncoding>,
 ) -> HttpResponse {
@@ -38,11 +42,17 @@ pub async fn get_static_assets(
         None => {
             if path.starts_with("admin/") && path.ends_with('/') {
                 let new_path = format!("/auth/v1/{}", &path[..path.len() - 1]);
+                let Ok(loc) = header::HeaderValue::from_str(&new_path) else {
+                    // This can only happen if an attacker sends an invalid character, like a
+                    // control char, inside the path. This does not happen by accident, so we
+                    // blacklist for a short period of time.
+                    if let Ok(ip) = real_ip_from_req(&req) {
+                        let _ = IpBlacklist::put(ip.to_string(), Duration::from_secs(600)).await;
+                    }
+                    return HttpResponse::BadRequest().finish();
+                };
                 return HttpResponse::MovedPermanently()
-                    .insert_header((
-                        actix_web::http::header::LOCATION,
-                        actix_web::http::header::HeaderValue::from_str(&new_path).unwrap(),
-                    ))
+                    .insert_header((header::LOCATION, loc))
                     .finish();
             }
 

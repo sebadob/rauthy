@@ -4,7 +4,7 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.37.1"
+version = "0.37.3-20261026-ios-rk-test"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
@@ -37,7 +37,7 @@ accept-language = "3"
 actix = "0.13"
 actix-multipart = "0.8"
 actix-web = { version = "4", features = ["rustls-0_23"] }
-actix-web-lab = "0.28"
+actix-web-lab = "0.29"
 actix-web-prom = "0.10"
 ahash = "0.8.12"
 ammonia = "4.1"
@@ -45,17 +45,23 @@ arc-swap = "1.7"
 argon2 = { version = "0.6", features = ["parallel", "zeroize"] }
 askama = "0.16"
 async-trait = "0.1.74"
-async-compression = { version = "0.4.41", features = ["brotli", "gzip", "tokio"] }
-atrium-api = "0.25.3"
-atrium-common = "0.1.2"
-atrium-identity = "0.1.4"
-atrium-oauth = "0.1.2"
+async-compression = { version = "0.4.41", features = [
+    "brotli",
+    "gzip",
+    "tokio",
+] }
+atrium-api = "0.26"
+atrium-common = "0.1.4"
+atrium-identity = "0.2"
+atrium-oauth = "0.2"
 base64 = "0.23"
 bincode-next = { version = "3.1.1", features = ["derive", "serde"] }
 bytes = "1.11.1"
 chacha20poly1305 = { version = "0.11", features = ["rand_core", "zeroize"] }
 chrono = { version = "0.4", default-features = false, features = [
-    "clock", "serde", "std"
+    "clock",
+    "serde",
+    "std",
 ] }
 chrono-tz = "0.10.4"
 cidr = "0.3.0"
@@ -78,16 +84,26 @@ gethostname = "1"
 hex = { version = "0.4", features = ["serde"] }
 hickory-resolver = "0.26.1"
 hiqlite = { version = "0.15.0", features = [
-    "cache", "cast_ints", "counters", "dashboard", "listen_notify", "macros"
+    "cache",
+    "cast_ints",
+    "counters",
+    "dashboard",
+    "listen_notify",
+    "macros",
 ] }
 hmac-sha256 = { version = "1.1.7", features = ["traits010"] }
 hmac-sha512 = { version = "1.1.5", features = ["traits010", "sha384"] }
 image = { version = "0.25.1", default-features = false, features = [
-    "jpeg", "png", "webp"
+    "jpeg",
+    "png",
+    "webp",
 ] }
 itertools = "0.15"
 lettre = { version = "0.11", default-features = false, features = [
-    "builder", "smtp-transport", "tokio1-rustls-tls", "tracing"
+    "builder",
+    "smtp-transport",
+    "tokio1-rustls-tls",
+    "tracing",
 ] }
 maxminddb = "0.32"
 mime = "0.3.17"
@@ -95,7 +111,7 @@ mime_guess = "2"
 num_cpus = "1"
 openssl = { version = "0.10.79", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
-oxiri = "0.2.2"
+oxiri = "0.3.1"
 percent-encoding = "2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
@@ -103,10 +119,15 @@ pulldown-cmark = "0.13"
 rand = "0.10"
 rand_core = { version = "0.10", features = [] }
 rcgen = "0.14.3"
-refinery = { version = "0.9", features = ["tokio-postgres"] }
+refinery = { version = "0.10", features = ["tokio-postgres"] }
 regex = "1"
 reqwest = { version = "0.13.3", default-features = false, features = [
-    "charset", "form", "http2", "json", "stream", "rustls-no-provider"
+    "charset",
+    "form",
+    "http2",
+    "json",
+    "stream",
+    "rustls-no-provider",
 ] }
 ring = "0.17.13"
 rio_api = "0.8.4"
@@ -114,12 +135,16 @@ rio_turtle = "0.8.4"
 rpassword = "7.5"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
 ruma-client = { version = "0.20", features = [
-    "client-api", "reqwest-rustls-no-provider"
+    "client-api",
+    "reqwest-rustls-no-provider",
 ] }
 rusqlite = "0.40.1"
 rust-embed = "8.5.0"
-rustls = { version = "0.23.37", default-features = false, features = [
-    "logging", "std", "tls12", "ring"
+rustls = { version = "0.23.46", default-features = false, features = [
+    "logging",
+    "std",
+    "tls12",
+    "ring",
 ] }
 rustls-pki-types = "1.4.1"
 s3-simple = "0.9.1"
@@ -135,31 +160,41 @@ strum = { version = "0.28", features = ["derive"] }
 svg-hush = "0.9.4"
 tar = "0.4.45"
 tikv-jemallocator = { version = "0.7", features = [
-    "unprefixed_malloc_on_supported_platforms"
+    "unprefixed_malloc_on_supported_platforms",
 ] }
 time = { version = "0.3.47", features = [
-    "formatting", "local-offset", "macros", "parsing", "serde"
+    "formatting",
+    "local-offset",
+    "macros",
+    "parsing",
+    "serde",
 ] }
-tls-hot-reload = "0.3"
+tls-hot-reload = "0.4.1"
 toml = "1"
 tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = [
-    "env-filter", "json", "tracing"
+    "env-filter",
+    "json",
+    "tracing",
 ] }
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7.10", features = ["with-chrono-0_4"] }
 tokio-postgres-rustls = { version = "0.14", features = [] }
 tokio-util = { version = "0.7.18", features = ["rt"] }
-utoipa = { version = "5", features = [
-    "actix_extras", "chrono", "openapi_extensions"
+utoipa = { version = "6", features = [
+    "actix_extras",
+    "chrono",
+    "openapi_extensions",
 ] }
-utoipa-swagger-ui = { version = "9.0.0", features = ["actix-web", "vendored"] }
+utoipa-swagger-ui = { version = "10.0.2", features = ["actix-web", "vendored"] }
 uuid = { version = "1.24.0", features = ["v4"] }
 validator = { version = "0.21", features = ["derive"] }
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.55"
 webauthn-rs = { version = "0.5", features = [
-    "danger-allow-state-serialisation", "danger-credential-internals", "resident-key-support"
+    "danger-allow-state-serialisation",
+    "danger-credential-internals",
+    "resident-key-support",
 ] }
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"

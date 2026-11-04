@@ -38,6 +38,13 @@ pub async fn reg_start(
     };
 
     let cfg = &RauthyConfig::get().vars.webauthn;
+    let allow_rk = payload.allow_rk.unwrap_or(false);
+    if !cfg.is_passkey_reg_type_allowed(allow_rk) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "This Passkey Type is not allowed",
+        ));
+    }
     // New-user magic links may remove an initialized password at finish.
     let require_uv =
         requires_uv(user.account_type(), cfg.force_uv) || payload.magic_link_id.is_some();
@@ -54,7 +61,7 @@ pub async fn reg_start(
         &user.email,
         exclude_creds,
         require_uv,
-        payload.allow_rk.unwrap_or(false),
+        allow_rk,
         attestation_ca_list,
     ) {
         Ok((mut ccr, reg_state)) => {
@@ -224,11 +231,23 @@ pub async fn reg_finish(
             };
 
             let is_rk = {
-                match cred.extensions.cred_props {
-                    ExtnState::NotRequested | ExtnState::Ignored => None,
+                let props = match cred.extensions.cred_props {
                     ExtnState::Set(props) => props.rk,
                     ExtnState::Unsolicited(props) => props.rk,
                     ExtnState::Unsigned(props) => props.rk,
+                    ExtnState::NotRequested | ExtnState::Ignored => None,
+                };
+                match props {
+                    Some(v) => Some(v),
+                    None => {
+                        // If the authenticator did not send any cred props, we fall back to other
+                        // possibly known values. This improves compatibility for e.g. MacOS.
+                        let fallback = payload.allow_rk_hint.unwrap_or(
+                            RauthyConfig::get().vars.webauthn.passkey_reg_type_str()
+                                == "resident_key",
+                        );
+                        Some(fallback)
+                    }
                 }
             };
 

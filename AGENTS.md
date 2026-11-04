@@ -80,7 +80,7 @@ Entity files contain both the struct and its DB / Cache methods (`find_*`, `crea
 ### Notable deviations from the pattern
 
 - OIDC request-param validation lives in **`service/src/oidc/validation.rs`**
-  (`validate_auth_req_param`) — not under `api/`.
+  (`validate_auth_code_req_params`) — not under `api/`.
 - Grant-type logic for `/oidc/token` lives in `service/src/oidc/grant_types/<grant>.rs`, dispatched
   by `get_token_set` (`service/src/oidc/mod.rs`).
 - Brute-force defense on login is split across three places (see below).

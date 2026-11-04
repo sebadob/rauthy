@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Template from '$lib5/Template.svelte';
-    import { TPL_ADMIN_BUTTON_HIDE, TPL_IS_REG_OPEN } from '$utils/constants';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Main from '#lib/Main.svelte';
+    import ContentCenter from '#lib/ContentCenter.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Template from '#lib/Template.svelte';
+    import { TPL_ADMIN_BUTTON_HIDE, TPL_IS_REG_OPEN } from '#utils/constants.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
 
     const btnWidth = '9rem';
 

@@ -148,6 +148,7 @@ impl HtmlCached {
                         HtmlTemplate::UserValues,
                         HtmlTemplate::OtpLength(RauthyConfig::get().vars.otp.length),
                         HtmlTemplate::IsOtpEnabled(RauthyConfig::get().vars.otp.enable),
+                        HtmlTemplate::PasskeyRegType,
                     ],
                 )
             }

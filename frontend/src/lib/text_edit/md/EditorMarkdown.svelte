@@ -1,21 +1,21 @@
 <script lang="ts">
-    import ToolbarIcon from '$lib/text_edit/md/ToolbarIconMarkdown.svelte';
-    import IconBold from '$icons/editor/IconBold.svelte';
-    import IconH1 from '$icons/editor/IconH1.svelte';
-    import IconH2 from '$icons/editor/IconH2.svelte';
-    import IconH3 from '$icons/editor/IconH3.svelte';
-    import IconItalic from '$icons/editor/IconItalic.svelte';
-    import IconStrikeThrough from '$icons/editor/IconStrikeThrough.svelte';
-    import IconListBullet from '$icons/editor/IconListBullet.svelte';
-    import IconListNumbered from '$icons/editor/IconListNumbered.svelte';
-    import IconQueueList from '$icons/editor/IconQueueList.svelte';
-    import IconCode from '$icons/editor/IconCode.svelte';
-    import IconQuote from '$icons/editor/IconQuote.svelte';
-    import IconLink from '$icons/editor/IconLink.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useMarkdownWorker } from '$lib/text_edit/useWorker.svelte';
+    import ToolbarIcon from '#lib/text_edit/md/ToolbarIconMarkdown.svelte';
+    import IconBold from '#icons/editor/IconBold.svelte';
+    import IconH1 from '#icons/editor/IconH1.svelte';
+    import IconH2 from '#icons/editor/IconH2.svelte';
+    import IconH3 from '#icons/editor/IconH3.svelte';
+    import IconItalic from '#icons/editor/IconItalic.svelte';
+    import IconStrikeThrough from '#icons/editor/IconStrikeThrough.svelte';
+    import IconListBullet from '#icons/editor/IconListBullet.svelte';
+    import IconListNumbered from '#icons/editor/IconListNumbered.svelte';
+    import IconQueueList from '#icons/editor/IconQueueList.svelte';
+    import IconCode from '#icons/editor/IconCode.svelte';
+    import IconQuote from '#icons/editor/IconQuote.svelte';
+    import IconLink from '#icons/editor/IconLink.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
 
     let {
         markdown = $bindable(),

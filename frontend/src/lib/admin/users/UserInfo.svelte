@@ -1,45 +1,45 @@
 <script lang="ts">
-    import { formatDateFromTs } from '$utils/helpers.js';
-    import Button from '$lib5/button/Button.svelte';
+    import { formatDateFromTs } from '#utils/helpers.js';
+    import Button from '#lib/button/Button.svelte';
     import { untrack } from 'svelte';
-    import CheckIcon from '$lib5/CheckIcon.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import type { UserResponse, UserResponseSimple } from '$api/types/user.ts';
-    import type { RoleResponse } from '$api/types/roles.ts';
-    import type { GroupResponse } from '$api/types/groups.ts';
-    import type { SelectItem } from '$lib5/select_list/props.ts';
-    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
-    import { fetchGet, fetchPatch } from '$api/fetch';
-    import Form from '$lib5/form/Form.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
+    import CheckIcon from '#lib/CheckIcon.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import type { SelectItem } from '#lib/select_list/props.ts';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import { fetchGet, fetchPatch } from '#api/fetch.ts';
+    import Form from '#lib/form/Form.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import {
         PATTERN_ALNUM,
         PATTERN_CITY,
         PATTERN_PHONE,
         PATTERN_STREET,
         PATTERN_USER_NAME,
-    } from '$utils/patterns';
-    import Options from '$lib5/Options.svelte';
-    import SelectList from '$lib5/select_list/SelectList.svelte';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
+    } from '#utils/patterns.ts';
+    import Options from '#lib/Options.svelte';
+    import SelectList from '#lib/select_list/SelectList.svelte';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
     import { slide } from 'svelte/transition';
-    import type { Language } from '$api/types/i18n.ts';
-    import { useI18nConfig } from '$state/i18n_config.svelte';
-    import UserPicture from '$lib/UserPicture.svelte';
-    import type { PatchOp } from '$api/types/generic';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
-    import { useSession } from '$state/session.svelte';
-    import Tooltip from '$lib/Tooltip.svelte';
-    import TZSelect from '$lib/TZSelect.svelte';
-    import PreferredUsername from '$lib/PreferredUsername.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import Template from '$lib5/Template.svelte';
-    import { TPL_IS_OTP_ENABLED } from '$utils/constants';
-    import type { OtpResponse } from '$api/types/otp';
+    import type { Language } from '#api/types/i18n.ts';
+    import { useI18nConfig } from '#state/i18n_config.svelte.ts';
+    import UserPicture from '#lib/UserPicture.svelte';
+    import type { PatchOp } from '#api/types/generic.ts';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
+    import { useSession } from '#state/session.svelte.ts';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import TZSelect from '#lib/TZSelect.svelte';
+    import PreferredUsername from '#lib/PreferredUsername.svelte';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
+    import Template from '#lib/Template.svelte';
+    import { TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
+    import type { OtpResponse } from '#api/types/otp.ts';
 
     let {
         user = $bindable(),

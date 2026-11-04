@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import type { UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
-    import AttrConfig from '$lib5/admin/attrs/AttrConfig.svelte';
-    import AttrDelete from '$lib5/admin/attrs/AttrDelete.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import type { UserAttrConfigValueResponse } from '#api/types/user_attrs.ts';
+    import AttrConfig from '#lib/admin/attrs/AttrConfig.svelte';
+    import AttrDelete from '#lib/admin/attrs/AttrDelete.svelte';
 
     let {
         attr,

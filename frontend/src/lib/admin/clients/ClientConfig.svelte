@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { fetchGet, fetchPut } from '$api/fetch';
-    import Form from '$lib5/form/Form.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
+    import Form from '#lib/form/Form.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
     import {
         PATTERN_CLIENT_NAME,
         PATTERN_CLIENT_URI,
@@ -15,31 +15,31 @@
         PATTERN_ORIGIN,
         PATTERN_RESOURCE,
         PATTERN_URI,
-    } from '$utils/patterns';
+    } from '#utils/patterns.ts';
     import {
         AuthFlowDeviceCode,
         AuthFlowTokenExchange,
         type ClientResponse,
         type ScimClientRequestResponse,
         type UpdateClientRequest,
-    } from '$api/types/clients';
-    import type { JwkKeyPairAlg } from '$api/types/oidc.ts';
-    import InputTags from '$lib5/form/InputTags.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import SelectList from '$lib5/select_list/SelectList.svelte';
-    import type { SelectItem } from '$lib5/select_list/props.ts';
+    } from '#api/types/clients.ts';
+    import type { JwkKeyPairAlg } from '#api/types/oidc.ts';
+    import InputTags from '#lib/form/InputTags.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import SelectList from '#lib/select_list/SelectList.svelte';
+    import type { SelectItem } from '#lib/select_list/props.ts';
     import { slide } from 'svelte/transition';
-    import Options from '$lib5/Options.svelte';
-    import InputPassword from '$lib/form/InputPassword.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
+    import Options from '#lib/Options.svelte';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
     import { untrack } from 'svelte';
     import {
         invalidPostLogoutRedirectUrisMsg,
         invalidRedirectUrisMsg,
         postLogoutRedirectUriShapeErrorMsg,
         redirectUriShapeErrorMsg,
-    } from '$utils/redirectUri';
+    } from '#utils/redirectUri.ts';
 
     let {
         client = $bindable(),

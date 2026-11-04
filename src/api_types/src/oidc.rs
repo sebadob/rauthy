@@ -368,6 +368,13 @@ pub struct DeviceGrantRequest {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub nonce: Option<String>,
+    /// RFC 8707 resource indicator. Must be an absolute URI without a fragment. The
+    /// requested resource is validated against the client's `allowed_resources`, bound to
+    /// the device code and, on success, added to the issued access token's `aud`.
+    ///
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$` (no `#`; RFC 8707 forbids a fragment)
+    #[validate(regex(path = "*RE_RESOURCE", code = "[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]+$"))]
+    pub resource: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -629,6 +636,8 @@ pub enum OAuth2ErrorTypeResponse {
     SlowDown,
     AccessDenied,
     ExpiredToken,
+    // RFC 8707 §2
+    InvalidTarget,
 }
 
 #[derive(Serialize, ToSchema)]

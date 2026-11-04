@@ -1,3 +1,4 @@
+use cryptr::EncValue;
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
 use rauthy_api_types::oidc::GrantType;
 use rauthy_common::validation::validate_redirect_uri;
@@ -155,12 +156,19 @@ pub async fn get_client_secret(id: String) -> Result<ClientSecretResponse, Error
 pub async fn generate_new_secret(
     id: String,
     cache_current_hours: Option<u8>,
+    plain_secret: Option<String>,
 ) -> Result<ClientSecretResponse, ErrorResponse> {
     let mut client = Client::find(id).await?;
 
     client.cache_current_secret(cache_current_hours).await?;
 
-    let (clear, enc) = Client::generate_new_secret()?;
+    let (clear, enc) = if let Some(plain) = plain_secret {
+        // an externally provisioned secret is applied the same way as a bootstrap `Plain` secret
+        let enc = EncValue::encrypt(plain.as_bytes())?.into_bytes().to_vec();
+        (plain, enc)
+    } else {
+        Client::generate_new_secret()?
+    };
     client.confidential = true;
     client.secret = Some(enc);
     client.save().await?;

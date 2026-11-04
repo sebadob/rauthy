@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
     import { onMount } from 'svelte';
-    import type { ProviderLinkedUserResponse, ProviderResponse } from '$api/types/auth_provider.ts';
-    import { fetchDelete, fetchGet } from '$api/fetch';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import Expandable from '$lib5/Expandable.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import type { ProviderLinkedUserResponse, ProviderResponse } from '#api/types/auth_provider.ts';
+    import { fetchDelete, fetchGet } from '#api/fetch.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Expandable from '#lib/Expandable.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         provider,

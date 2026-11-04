@@ -1,5 +1,5 @@
 <script>
-    import Providers from '$lib5/admin/providers/Providers.svelte';
+    import Providers from '#lib/admin/providers/Providers.svelte';
 </script>
 
 <svelte:head>

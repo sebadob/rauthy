@@ -1,16 +1,16 @@
 <script lang="ts">
-    import { formatDateFromTs } from '$utils/helpers';
-    import type { SessionResponse } from '$api/types/session.ts';
-    import CheckIcon from '$lib5/CheckIcon.svelte';
-    import Expandable from '$lib5/Expandable.svelte';
-    import Tooltip from '$lib5/Tooltip.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import { fetchDelete } from '$api/fetch';
-    import { useSession } from '$state/session.svelte';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import type { SessionResponse } from '#api/types/session.ts';
+    import CheckIcon from '#lib/CheckIcon.svelte';
+    import Expandable from '#lib/Expandable.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import IconTrash from '#icons/IconTrash.svelte';
+    import { fetchDelete } from '#api/fetch.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         session,

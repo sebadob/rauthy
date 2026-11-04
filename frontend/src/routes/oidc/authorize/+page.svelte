@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { formatDateFromTs, normalizeClientUri, saveCsrfToken } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
+    import { formatDateFromTs, normalizeClientUri, saveCsrfToken } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import LangSelector from '#lib/LangSelector.svelte';
     import {
         IS_DEV,
         TPL_AUTH_PROVIDERS,
@@ -14,6 +14,7 @@
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION,
+        TPL_PASSKEY_REG_TYPE,
         TPL_ATPROTO_ID,
         TPL_PASSWORD_RESET_LINK_ALWAYS,
     } from '$utils/constants.js';
@@ -36,24 +37,24 @@
         OtpLoginResponse,
         RequestResetRequest,
         WebauthnLoginResponse,
-    } from '$api/types/authorize.ts';
-    import Form from '$lib5/form/Form.svelte';
-    import ButtonAuthProvider from '$lib5/ButtonAuthProvider.svelte';
+    } from '#api/types/authorize.ts';
+    import Form from '#lib/form/Form.svelte';
+    import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
     import { onMount } from 'svelte';
-    import type { SessionInfoResponse } from '$api/types/session.ts';
-    import ClientLogo from '$lib5/ClientLogo.svelte';
-    import type { ProviderLoginRequest } from '$api/types/auth_provider.ts';
-    import { fetchSolvePow } from '$utils/pow';
-    import { PATTERN_ATPROTO_ID } from '$utils/patterns';
-    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
-    import TosAccept from '$lib/TosAccept.svelte';
-    import { execProviderLogin } from '$utils/login';
-    import Modal from '$lib/Modal.svelte';
-    import Loading from '$lib/Loading.svelte';
-    import OtpRequest from '$lib5/OtpRequest.svelte';
-    import type { MfaPurpose } from '$api/types/mfa';
-    import type { OtpAdditionalData } from '$mfa/otp/types';
-    import IconKey from '$icons/IconKey.svelte';
+    import type { SessionInfoResponse } from '#api/types/session.ts';
+    import ClientLogo from '#lib/ClientLogo.svelte';
+    import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
+    import { fetchSolvePow } from '#utils/pow.ts';
+    import { PATTERN_ATPROTO_ID } from '#utils/patterns.ts';
+    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
+    import TosAccept from '#lib/TosAccept.svelte';
+    import { execProviderLogin } from '#utils/login.ts';
+    import Modal from '#lib/Modal.svelte';
+    import Loading from '#lib/Loading.svelte';
+    import OtpRequest from '#lib/OtpRequest.svelte';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
+    import type { OtpAdditionalData } from '#mfa/otp/types.ts';
+    import IconKey from '#icons/IconKey.svelte';
 
     const inputWidth = '18rem';
 
@@ -103,6 +104,12 @@
     let tooManyRequests = $state(false);
     let emailAfterSubmit = $state('');
     let isRegOpen = $state(false);
+    // `webauthn.passkey_reg_type`: without Resident Keys, the Passkey button can never find one
+    let passkeyRegType = $state('default resident_key');
+    let isPasskeyDiscoverable = $derived(passkeyRegType.split(' ').includes('resident_key'));
+    let hasLoginAlternatives = $derived(isPasskeyDiscoverable || providers.length > 0);
+    // the error of a failed Passkey button login, to show a hint with it
+    let passkeyDiscoverErr = $state('');
 
     let atprotoId = $state('');
     let atprotoHandle = $state('');
@@ -441,6 +448,9 @@
                 tooManyRequests = false;
                 err = '';
             }, diff);
+        } else if (res.status === 0 || res.status >= 500) {
+            // network or server error -> not a credentials problem
+            err = res.error?.message || '';
         } else if (!needsPassword) {
             // this will happen always if the user does the first try with a password-only account
             // the good thing about this is, that it is a prevention against autofill passwords from the browser
@@ -527,6 +537,8 @@
             err = t.account.passkeys.missingAttestation;
         } else {
             err = error;
+            // The browser found no Resident Key, or the user cancelled. Both look the same here.
+            passkeyDiscoverErr = mfaPurpose === 'Discover' ? error : '';
         }
 
         // If there is any error with the key, the user should start a new login process
@@ -603,6 +615,7 @@
 <Template id={TPL_LOGIN_ACTION} bind:value={loginAction} />
 <Template id={TPL_IS_REG_OPEN} bind:value={isRegOpen} />
 <Template id={TPL_PASSWORD_RESET_LINK_ALWAYS} bind:value={resetLinkAlways} />
+<Template id={TPL_PASSKEY_REG_TYPE} bind:value={passkeyRegType} />
 
 <Main>
     {#if isAutoRefreshing}
@@ -773,6 +786,11 @@
                     <div class="errMsg">
                         {err}
                     </div>
+                    {#if err === passkeyDiscoverErr}
+                        <div class="errMsg">
+                            {t.authorize.passkeyNotDiscovered}
+                        </div>
+                    {/if}
                 {/if}
 
                 {#if emailSuccess}
@@ -796,7 +814,7 @@
                     <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
                 {/if}
 
-                {#if !showReset && !clientMfaForce && !isAtproto}
+                {#if !showReset && !clientMfaForce && !isAtproto && hasLoginAlternatives}
                     <div class="providers flex-col gap-05">
                         <div class="providersSeparator">
                             <div class="separator"></div>
@@ -807,19 +825,21 @@
                             </div>
                         </div>
 
-                        <div class="btn flex-col">
-                            <Button
-                                level={2}
-                                ariaLabel={t.authorize.login}
-                                onclick={onPasskeyDiscover}
-                                {isLoading}
-                            >
-                                <div class="flex gap-05">
-                                    <IconKey width="1.2rem" />
-                                    Passkey
-                                </div>
-                            </Button>
-                        </div>
+                        {#if isPasskeyDiscoverable}
+                            <div class="btn flex-col">
+                                <Button
+                                    level={2}
+                                    ariaLabel={t.authorize.login}
+                                    onclick={onPasskeyDiscover}
+                                    {isLoading}
+                                >
+                                    <div class="flex gap-05">
+                                        <IconKey width="1.2rem" />
+                                        {t.authorize.passkey}
+                                    </div>
+                                </Button>
+                            </div>
+                        {/if}
 
                         {#each providers as provider (provider.id)}
                             <ButtonAuthProvider

@@ -117,9 +117,13 @@ export const I18nKo: I18n = {
             missingAttestation: 'The Passkey does not match the required security standards.',
             type: 'Passkey Type',
             types: ['Default', 'Resident Key'],
-            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
-                the need to provide the E-Mail address, an additional storage slot is necessary
-                for each application. You need to make sure there is enough space left.`,
+            rkWarning: `주의: Resident Key는 이메일 주소를 입력하지 않고 바로 로그인할 수 있지만, 애플리케이션마다 추가 저장 공간이 필요합니다.
+                남은 공간이 충분한지 확인하세요. 기존 Passkey를 Resident Key로 바꾸려면 먼저 삭제한 후 다시 추가하세요.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                '이 Passkey로 로그인하려면 먼저 이메일을 입력해야 합니다.',
+                '이메일을 입력하지 않고 로그인 페이지의 Passkey 버튼으로 사용할 수 있습니다.',
+            ],
         },
         passwordConfirm: '비밀번호 확인',
         passwordCurr: '현재 비밀번호',
@@ -180,10 +184,14 @@ export const I18nKo: I18n = {
         invalidKeyUsed: '유효하지 않은 키입니다.',
         login: '로그인',
         mfaAck: '확인되었습니다.',
+        mfaOpenApp: '앱을 열어 계속 진행하세요',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: '또는 다음으로 로그인',
+        passkey: 'Passkey',
+        passkeyNotDiscovered:
+            'Resident Key로 추가되지 않은 Passkey는 이 방법으로 찾을 수 없습니다. 대신 이메일을 입력하세요.',
         password: '비밀번호',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: '비밀번호를 잊으셨나요?',

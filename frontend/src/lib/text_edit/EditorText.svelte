@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         content = $bindable(''),

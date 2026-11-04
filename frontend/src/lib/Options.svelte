@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Popover from '$lib5/Popover.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import SearchBar from '$lib5/search_bar/SearchBar.svelte';
-    import IconChevronDown from '$icons/IconChevronDown.svelte';
+    import Popover from '#lib/Popover.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import IconChevronDown from '#icons/IconChevronDown.svelte';
     import { untrack } from 'svelte';
 
     let {

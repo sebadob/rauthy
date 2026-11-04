@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
+    import { genKey } from '#utils/helpers.ts';
 
     let {
         name,

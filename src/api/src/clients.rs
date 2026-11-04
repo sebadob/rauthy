@@ -587,7 +587,7 @@ pub async fn put_generate_client_secret(
     };
     payload.validate()?;
 
-    client::generate_new_secret(id.into_inner(), payload.cache_current_hours)
+    client::generate_new_secret(id.into_inner(), payload.cache_current_hours, payload.secret)
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }

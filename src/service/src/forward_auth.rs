@@ -14,6 +14,7 @@ use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::borrow::Cow;
 use std::net::IpAddr;
 use std::str::FromStr;
 use tracing::{debug, error};
@@ -248,6 +249,12 @@ pub async fn get_forward_auth_client_callback(
             "Mismatch in AuthCode.client_id",
         ));
     }
+    if !auth_code.is_for_client(&client) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid auth code or code expired",
+        ));
+    }
     // Bind the presented `state` to this exact authorization code. Without this check, an
     // attacker on the same proxy IP could pair their own valid `state` with a victim's
     // unconsumed auth code.
@@ -353,14 +360,19 @@ async fn get_client_validated(client_id: String, origin: &str) -> Result<Client,
 }
 
 #[inline]
-fn auth_header(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
+pub fn auth_header(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
     let name = HeaderName::from_str(name).map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Invalid header name '{name}'"),
         )
     })?;
-    let value = HeaderValue::from_str(value).map_err(|_| {
+    let value = if RauthyConfig::get().vars.auth_headers.percent_encode {
+        percent_encode_header_value(value)
+    } else {
+        Cow::Borrowed(value)
+    };
+    let value = HeaderValue::from_str(&value).map_err(|_| {
         ErrorResponse::new(
             ErrorResponseType::Internal,
             format!("Invalid value for header '{name}'"),
@@ -368,6 +380,14 @@ fn auth_header(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), Err
     })?;
 
     Ok((name, value))
+}
+
+/// Percent-encodes (UTF-8) non-ASCII bytes, control characters and `%` itself.
+/// Other ASCII characters, including spaces and commas, stay the same.
+#[inline]
+fn percent_encode_header_value(value: &str) -> Cow<'_, str> {
+    const SET: &percent_encoding::AsciiSet = &percent_encoding::CONTROLS.add(b'%');
+    percent_encoding::utf8_percent_encode(value, SET).into()
 }
 
 #[inline]
@@ -450,5 +470,22 @@ fn validate_proxy(req: &HttpRequest) -> Result<(), ErrorResponse> {
             ErrorResponseType::Forbidden,
             "Invalid proxy peer IP",
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_percent_encode_header_value() {
+        assert_eq!(
+            percent_encode_header_value("admin,user_1 x@y.z"),
+            "admin,user_1 x@y.z"
+        );
+        assert_eq!(percent_encode_header_value("admins,users"), "admins,users");
+        assert_eq!(percent_encode_header_value("山田"), "%E5%B1%B1%E7%94%B0");
+        assert_eq!(percent_encode_header_value("100%"), "100%25");
+        assert_eq!(percent_encode_header_value("a\nb\x7f"), "a%0Ab%7F");
     }
 }

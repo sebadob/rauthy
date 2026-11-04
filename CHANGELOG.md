@@ -1,15 +1,212 @@
 # Changelog
 
-## Unreleased
+## UNRELEASED
 
-### Features
+### Changes
 
-- The 'Password forgotten?' link on the login page only shows up after a failed login. With the new
-  `access.password_reset_link_always` (`PASSWORD_RESET_LINK_ALWAYS`) set to `true`, it is visible
-  from the start, even before the password input is shown. The default is `false`, which keeps the
-  current behavior.
-  Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
-  via `PASSWORD_RESET_LINK_ALWAYS` until every node is upgraded.
+#### Always Show *Password Forgotten*
+
+The 'Password forgotten?' link on the login page only shows up after a failed login. With the new
+`access.password_reset_link_always` (`PASSWORD_RESET_LINK_ALWAYS`) set to `true`, it is visible
+from the start, even before the password input is shown. The default is `false`, which keeps the
+current behavior.
+Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
+via `PASSWORD_RESET_LINK_ALWAYS` until every node is upgraded.
+
+#### Opt-in Bootstrap Reconcile
+
+The bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` can be re-applied on
+every start, and not only against an empty database. Check the
+[book](https://sebadob.github.io/rauthy/config/bootstrap.html) for the details.
+
+```toml
+[bootstrap]
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+reconcile = false
+```
+
+[#1847](https://github.com/sebadob/rauthy/issues/1847)
+
+#### Externally Provisioned Client Secrets
+
+`PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is
+stored (encrypted with the active `ENC_KEY`) instead of generating a new random secret. This makes
+continuous declarative provisioning of clients against a running instance possible, which the
+bootstrap `Plain` secret cannot do, since the bootstrap only runs on an empty database. When
+`secret` is not given, the behavior is unchanged and a new random secret is generated, so existing
+callers (like the Admin UI) are not affected.
+
+#### Open Native Apps after MFA Login
+
+When a client uses a custom scheme `redirect_uri` for a native App (RFC 8252), like
+`myapp://callback`, and the login requires a Passkey, the browser silently blocked the final
+redirect to the App: external protocols require a user activation, which the Passkey ceremony
+consumed. The MFA *Acknowledged* page now shows an *Open the App to continue* link for non-http
+locations in this case. A click provides a fresh user activation, and the App receives the
+authorization code. Http(s) redirects are unchanged and remain automatic.
+
+[#1827](https://github.com/sebadob/rauthy/pull/1827)
+
+## v0.37.2
+
+### Security
+
+- Fixed a race-condition that could happen in lab tests when you concurrently use the immediate
+  refresh via the login form while at the same time having an admin triggering full user logout.
+  Because, the `Session::set_authenticated` used an `UPSERT` instead of a specific `UPDATE`, it was
+  possible that a session was re-inserted mid-flight.
+  [#1807](https://github.com/sebadob/rauthy/pull/1807)
+- Added additional validation for `response_type` in `POST /authorize`. This is was not a security
+  issue, since validation at this point was done upfront and only provides better UX. The
+  `response_type` during the POST is simply ignored, and you always get back an
+  `authorization_code`, which is exactly what this endpoints sole purpose is. Since all this
+  endpoint does is issuing `authorization_code`s (which is the most secure flow of all of them
+  anyway), this is more a "keep it clean" fix.
+  [#1807](https://github.com/sebadob/rauthy/pull/1807)
+- Fixed the possibility of an unauthenticated DoS. A security advisory will be released in the
+  upcoming week.
+
+### Changes
+
+#### Passkey Types
+
+Users often added a *Default* Passkey and then could not log in with the *Passkey* button on the
+login page, which only finds Resident Keys. The UI explains this better now:
+
+- The *Passkey Type* selection on the Account Dashboard and during a password reset shows what the
+  chosen type means at login, highlighted.
+- The Resident Key warning mentions that an existing Passkey must be deleted before it can be added
+  again as a Resident Key.
+- When a login with the *Passkey* button fails, a hint says that Passkeys not added as a Resident
+  Key cannot be found this way, and that the E-Mail should be entered instead.
+
+A new, optional `webauthn.passkey_reg_type` (`WEBAUTHN_PASSKEY_REG_TYPE`) controls which types
+users can choose from. With a single value, users have no choice. With both, the first one is
+selected by default. With only `default`, the *Passkey* button on the login page is hidden. Already
+registered Passkeys are not changed.
+
+```toml
+[webauthn]
+# default: 'default resident_key'
+# overwritten by: WEBAUTHN_PASSKEY_REG_TYPE
+passkey_reg_type = 'default resident_key'
+```
+
+[#1792](https://github.com/sebadob/rauthy/issues/1792)
+
+#### MFA Modification for Federated Users
+
+It was not really a bug before, but also no good UX either.
+
+When you created a fedarated-only user, meaning direct login + user creation through an upstream
+provder, your account does neither have a password nor a passkey, and it only accessible through the
+upstream provider login. That was fine, and you could have initialized it with local credentials via
+the "request password reset" button from the Account Dashboard. You then have the option to
+initialize with either Password or Passkey.
+
+The issue was, that these users still saw the *MFA* tab as the default. But, since they were unable
+to authenticate locally, they had no possibility to reqeust an MFA Mod Token to add MFA keys. The
+logic for requesting these was simple: When the user has MFA active, request MFA authentication, and
+password otherwise. Federated-only users do have none of these. This version makes it possible for
+such users that an MFA Mod Token is granted without any additional authentication for adding the
+very first MFA key in this special case. Without this special handling, it was impossible to use the
+MFA tab in any meaningful way for these users.
+
+[#1798](https://github.com/sebadob/rauthy/pull/1798)
+
+#### Name Order for the `name` Claim
+
+The `name` claim was always built as `given_name family_name`. In Japanese, Chinese and Korean, the
+family name comes first, so applications showing `name` displayed it the wrong way around. The new,
+optional `user_values.name_order_reverse` (`USER_VALUES_NAME_ORDER_REVERSE`) puts the family name
+first, both in the `id_token` and in `/userinfo`. The default keeps the current order.
+
+```toml
+[user_values]
+name_order_reverse = true
+```
+
+[#1800](https://github.com/sebadob/rauthy/pull/1800)
+
+#### Added I18n
+
+The following new translations for the UI are available:
+
+- `es`
+- `ja`
+- `pt`
+
+[#1786](https://github.com/sebadob/rauthy/pull/1786)
+
+#### TLS Hot-Reload PollWatcher
+
+Rauthy supports TLS hot-reloading since quite a while. However, this does not work when you store
+your certs on e.g. an NFS backend where the kernel cannot send `inotify` events. To fix this issue,
+you can not opt-in to a poll-based file watcher:
+
+```toml
+[tls]
+# You can change from the `inotify` watcher for TLS hot-reloading
+# to a poll-based one. Usually, you never want this. However, when you
+# store your certs on e.g. an NFS backend, where the kernel cannot send
+# file change events, you want to switch to the poll watcher. If you
+# provide any duration here, it will be used as the interval for the
+# watcher. For TLS reloading, you usually want a higher value. They
+# usually don't need to be instant.
+#
+# type: duration
+# default value: not set
+# overwritten by: TLS_POLL_WATCH_INTERVAL
+poll_watch_interval = '5m'
+```
+
+[#1811](https://github.com/sebadob/rauthy/pull/1811)
+
+#### Client Logo Aspect Ratio
+
+The aspect ratio of uploaded client logos is now preserved up to a ratio of 4:1.
+
+[#1796](https://github.com/sebadob/rauthy/pull/1796)
+
+#### Percent-encoded Auth Headers
+
+Forward auth header values, like names, may contain non-ASCII characters, which can cause issues
+with proxies and backends. The new opt-in `auth_headers.percent_encode`
+(`AUTH_HEADERS_PERCENT_ENCODE`)
+percent-encodes (UTF-8) non-ASCII bytes, control characters and `%` in all auth header values, for
+both forward auth endpoints. Other ASCII characters stay the same.
+
+```toml
+[auth_headers]
+percent_encode = true
+```
+
+[#1801](https://github.com/sebadob/rauthy/pull/1801)
+
+### Bugfix
+
+- There were 2 smaller bugs in MFA key registration and Admin-triggered deletion. Names for new
+  registrations were not `trim`ed, and since we allowed lots of special characters for the key
+  names, the deletion of a passkey needs to percent-encode the name.
+  [#1806](https://github.com/sebadob/rauthy/pull/1806)
+- Dynamic Clients that only ever used the `device_code` flow were deleted by the automatic cleanup
+  scheduler, since this flow never updated their `last_used` timestamp.
+  [#1808](https://github.com/sebadob/rauthy/pull/1808)
+- The `rauthy` default custom fallback branding for ephemeral clients was not working properly. They
+  always got the raw default, not when you had a custom one for `rauthy` itself.
+  [#1809](https://github.com/sebadob/rauthy/pull/1809)
+- The version bump of `tls-hot-reload` fixed an issue where multiple TLS cert replacements could
+  make the file watcher for hot reloading lose its targets.
+  [#1811](https://github.com/sebadob/rauthy/pull/1811)
 
 ## v0.37.1
 

@@ -15,10 +15,13 @@ impl I18nEmailLoginLocation<'_> {
         match lang {
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
+            Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -49,6 +52,16 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
+    fn build_es() -> Self {
+        Self {
+            subject: "Aviso de seguridad",
+            unknown_location: "Inicio de sesión desde una ubicación desconocida",
+            if_invalid: "Si no reconoce este inicio de sesión, ¡revóquelo de inmediato y actualice sus credenciales!",
+            revoke_link: "Revocar acceso",
+            account_link: "Panel de la cuenta",
+        }
+    }
+
     fn build_fr() -> Self {
         Self {
             subject: "Avertissement de sécurité",
@@ -57,6 +70,16 @@ impl I18nEmailLoginLocation<'_> {
                 vos identifiants !",
             revoke_link: "Révoquer l’accès",
             account_link: "Tableau de bord du compte",
+        }
+    }
+
+    fn build_ja() -> Self {
+        Self {
+            subject: "セキュリティの警告",
+            unknown_location: "見慣れない場所からのログイン",
+            if_invalid: "心当たりのないログインであれば、すぐにアクセスを取り消し、パスワードなどの認証情報を変更してください。",
+            revoke_link: "アクセスを取り消す",
+            account_link: "アカウント画面",
         }
     }
 
@@ -90,6 +113,16 @@ impl I18nEmailLoginLocation<'_> {
                 uw inloggegevens bijwerken!",
             revoke_link: "Toegang intrekken",
             account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_pt() -> Self {
+        Self {
+            subject: "Aviso de segurança",
+            unknown_location: "Início de sessão a partir de uma localização desconhecida",
+            if_invalid: "Se não reconhece este início de sessão, revogue-o imediatamente e atualize as suas credenciais!",
+            revoke_link: "Revogar acesso",
+            account_link: "Painel da conta",
         }
     }
 

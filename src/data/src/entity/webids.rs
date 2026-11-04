@@ -5,7 +5,7 @@ use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::CACHE_TTL_USER;
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
 use rio_api::parser::TriplesParser;
@@ -121,7 +121,16 @@ impl WebId {
         let custom_triples = if let Some(data) = custom_data_turtle {
             let mut ttl_parser = TurtleParser::new(
                 data.as_bytes(),
-                Some(Self::resolve_webid_card_uri(&user_id, pub_url).parse()?),
+                Some(
+                    Self::resolve_webid_card_uri(&user_id, pub_url)
+                        .parse()
+                        .map_err(|err| {
+                            ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                format!("Invalid iri given: {err:?}"),
+                            )
+                        })?,
+                ),
             );
             let mut ntriples_fmt = NTriplesFormatter::new(Vec::<u8>::new());
             ttl_parser.parse_all(&mut |t| ntriples_fmt.format(&t))?;

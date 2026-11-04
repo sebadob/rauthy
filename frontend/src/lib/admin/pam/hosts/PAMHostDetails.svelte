@@ -4,22 +4,22 @@
         PamHostDetailsResponse,
         PamHostSimpleResponse,
         PamHostUpdateRequest,
-    } from '$api/types/pam';
-    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import { PATTERN_LINUX_HOSTNAME } from '$utils/patterns';
-    import Input from '$lib/form/Input.svelte';
-    import Options from '$lib/Options.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import InputTags from '$lib/form/InputTags.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Button from '$lib/button/Button.svelte';
+    } from '#api/types/pam.ts';
+    import { fetchDelete, fetchGet, fetchPut } from '#api/fetch.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import { PATTERN_LINUX_HOSTNAME } from '#utils/patterns.ts';
+    import Input from '#lib/form/Input.svelte';
+    import Options from '#lib/Options.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import InputTags from '#lib/form/InputTags.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
     import { slide } from 'svelte/transition';
-    import { useI18n } from '$state/i18n.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import PAMHostSecret from '$lib/admin/pam/hosts/PAMHostSecret.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import PAMHostSecret from '#lib/admin/pam/hosts/PAMHostSecret.svelte';
     import { untrack } from 'svelte';
 
     let {

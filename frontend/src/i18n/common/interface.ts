@@ -98,6 +98,8 @@ export interface I18n {
             // [Default, Resident Key]
             types: string[];
             rkWarning: string;
+            // [Default, Resident Key]
+            typesDesc: string[];
         };
         passwordConfirm: string;
         passwordCurr: string;
@@ -149,9 +151,12 @@ export interface I18n {
         invalidKeyUsed: string;
         login: string;
         mfaAck: string;
+        mfaOpenApp: string;
         navigateToAccount: string;
         needsUserUpdate: string;
         orLoginWith: string;
+        passkey: string;
+        passkeyNotDiscovered: string;
         password: string;
         passwordExpired: string;
         passwordForgotten: string;

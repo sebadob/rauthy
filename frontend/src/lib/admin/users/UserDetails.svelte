@@ -1,23 +1,23 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import type { RoleResponse } from '$api/types/roles.ts';
-    import type { GroupResponse } from '$api/types/groups.ts';
-    import UserInfo from '$lib5/admin/users/UserInfo.svelte';
-    import { fetchGet } from '$api/fetch';
-    import type { UserResponse } from '$api/types/user.ts';
-    import UserAttr from '$lib5/admin/users/UserAttr.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import UserInfo from '#lib/admin/users/UserInfo.svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import type { UserResponse } from '#api/types/user.ts';
+    import UserAttr from '#lib/admin/users/UserAttr.svelte';
     import UserAddToGroups from './UserAddToGroups.svelte';
     import UserPassword from './UserPassword.svelte';
     import UserMfa from './UserMfa.svelte';
-    import Devices from '$lib5/devices/Devices.svelte';
+    import Devices from '#lib/devices/Devices.svelte';
     import UserForceLogout from './UserForceLogout.svelte';
-    import UserDelete from '$lib5/admin/users/UserDelete.svelte';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
-    import { useTrigger } from '$state/callback.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import { useSession } from '$state/session.svelte';
+    import UserDelete from '#lib/admin/users/UserDelete.svelte';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
+    import { useTrigger } from '#state/callback.svelte.ts';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         userValuesConfig,

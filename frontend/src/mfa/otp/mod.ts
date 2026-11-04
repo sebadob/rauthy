@@ -1,5 +1,5 @@
-import { fetchDelete, fetchPost, fetchPut } from '$api/fetch';
-import type { OtpResponse } from '$api/types/otp';
+import { fetchDelete, fetchPost, fetchPut } from '#api/fetch.ts';
+import type { OtpResponse } from '#api/types/otp.ts';
 import type {
     OtpActivateRequest,
     OtpActivateResponse,
@@ -8,7 +8,7 @@ import type {
     OtpDeleteRequest,
     OtpDeleteResponse,
     OtpKind,
-} from '$mfa/otp/types.ts';
+} from '#mfa/otp/types.ts';
 
 export async function postOtp(
     userId: string,
@@ -17,7 +17,7 @@ export async function postOtp(
     mfaModTokenId: string,
 ): Promise<OtpCreateResponse> {
     let payload: OtpCreateRequest = {
-        otp_name: name,
+        otp_name: name?.trim(),
         otp_kind: kind,
         mfa_mod_token_id: mfaModTokenId,
     };

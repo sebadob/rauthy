@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Options from '$lib/Options.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import Options from '#lib/Options.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import { onMount } from 'svelte';
-    import { fetchTimezones } from '$utils/helpers';
+    import { fetchTimezones } from '#utils/helpers.ts';
 
     let {
         value = $bindable('UTC'),
