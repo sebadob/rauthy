@@ -98,6 +98,12 @@
                     <span class="font-mono">{formatDateFromTs(consent.updated)}</span>
                 </div>
             {/if}
+            {#if consent.user_agent}
+                <div class="row">
+                    <span class="label">{t.account.privacy.userAgent}</span>
+                    <span class="font-mono">{consent.user_agent}</span>
+                </div>
+            {/if}
             <div class="row">
                 <div></div>
                 <div class="revokeBtn" title={t.account.privacy.revokeDesc}>

@@ -164,6 +164,7 @@ export const I18nNl: I18n = {
                 'Intrekken verwijdert de toestemming en de applicatie kan haar toegang niet meer vernieuwen. Access tokens die met de verwijderde refresh tokens zijn uitgegeven, worden ingetrokken bij userinfo en introspectie. Applicaties die hun tokens zelf valideren, kunnen ze nog accepteren tot ze verlopen. De applicatie moet opnieuw om uw toestemming vragen.',
             scopes: 'Scopes',
             updated: 'Bijgewerkt',
+            userAgent: 'User-agent',
         },
         providerLink: 'Account koppelen',
         providerLinkDesc: `U kunt dit account koppelen aan een van de volgende inlogproviders.\nNa

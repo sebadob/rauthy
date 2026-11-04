@@ -170,6 +170,7 @@ export const I18nDe: I18n = {
                 'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff nicht mehr erneuern. Access Tokens, die mit den gelöschten Refresh Tokens ausgestellt wurden, werden bei Userinfo und Introspection widerrufen. Anwendungen, die ihre Tokens selbst validieren, können sie bis zu ihrem Ablauf weiterhin akzeptieren. Die Anwendung muss erneut um Ihre Zustimmung bitten.',
             scopes: 'Scopes',
             updated: 'Aktualisiert',
+            userAgent: 'User Agent',
         },
         providerLink: 'Account Verbinden',
         providerLinkDesc: `Dieser Account kann mit einem der folgenden Login Provider\nverbunden 

@@ -165,6 +165,7 @@ export const I18nPt: I18n = {
                 'A revogação remove o consentimento e a aplicação deixa de poder renovar o seu acesso. Os Access Tokens emitidos com os Refresh Tokens eliminados são revogados no userinfo e na introspection. As aplicações que validam os seus tokens por si próprias podem continuar a aceitá-los até expirarem. A aplicação terá de pedir novamente o seu consentimento.',
             scopes: 'Scopes',
             updated: 'Atualizado',
+            userAgent: 'Agente do utilizador',
         },
         providerLink: 'Federar conta',
         providerLinkDesc: `Pode associar esta conta a um dos seguintes fornecedores de início de

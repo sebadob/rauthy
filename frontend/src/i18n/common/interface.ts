@@ -131,6 +131,7 @@ export interface I18n {
             revokeDesc: string;
             scopes: string;
             updated: string;
+            userAgent: string;
         };
         providerLink: string;
         providerLinkDesc: string;

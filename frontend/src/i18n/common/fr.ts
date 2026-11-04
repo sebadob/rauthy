@@ -166,6 +166,7 @@ export const I18nFr: I18n = {
                 'La révocation supprime le consentement et l’application ne peut plus renouveler son accès. Les jetons d’accès émis avec les jetons de rafraîchissement supprimés sont révoqués pour userinfo et l’introspection. Les applications qui valident elles-mêmes leurs jetons peuvent encore les accepter jusqu’à leur expiration. L’application devra de nouveau demander votre consentement.',
             scopes: 'Scopes',
             updated: 'Mis à jour',
+            userAgent: 'Agent utilisateur',
         },
         providerLink: 'Compte fédéré',
         providerLinkDesc: `Vous pouvez lier ce compte à l’un des fournisseurs d’authentification suivants.\n

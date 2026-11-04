@@ -164,6 +164,7 @@ export const I18nNb: I18n = {
                 'Tilbaketrekking fjerner samtykket, og applikasjonen kan ikke lenger fornye tilgangen sin. Tilgangstokener som ble utstedt med de slettede oppdateringstokenene, trekkes tilbake ved userinfo og introspeksjon. Applikasjoner som validerer tokenene sine selv, kan fortsatt godta dem til de utløper. Applikasjonen må be om samtykket ditt på nytt.',
             scopes: 'Scopes',
             updated: 'Oppdatert',
+            userAgent: 'Brukeragent',
         },
         providerLink: 'Koble konto',
         providerLinkDesc: `Denne kontoen kan kobles til en av følgende innloggingsleverandører. 

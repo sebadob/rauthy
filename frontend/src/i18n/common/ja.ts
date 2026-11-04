@@ -154,6 +154,7 @@ export const I18nJa: I18n = {
                 '取り消すと同意が削除され、アプリケーションはアクセスを更新できなくなります。削除された Refresh Token で発行された Access Token は、userinfo と introspection で無効になります。Token を自分で検証するアプリケーションは、有効期限が切れるまでそれを受け入れる場合があります。アプリケーションは改めて同意を求める必要があります。',
             scopes: 'Scope',
             updated: '更新日時',
+            userAgent: 'ユーザーエージェント',
         },
         providerLink: '外部アカウントと連携',
         providerLinkDesc:

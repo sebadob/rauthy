@@ -163,6 +163,7 @@ export const I18nEn: I18n = {
                 'Revoking removes the consent and the application can no longer renew its access. Access tokens issued with the deleted refresh tokens are revoked at userinfo and introspection. Applications that validate their tokens themselves can still accept them until they expire. The application has to ask for your consent again.',
             scopes: 'Scopes',
             updated: 'Updated',
+            userAgent: 'User Agent',
         },
         providerLink: 'Federate Account',
         providerLinkDesc: `You can link this account to one of the following login providers.\nAfter 

@@ -167,6 +167,7 @@ export const I18nEs: I18n = {
                 'La revocación elimina el consentimiento y la aplicación ya no puede renovar su acceso. Los Access Tokens emitidos con los Refresh Tokens eliminados se revocan en userinfo e introspection. Las aplicaciones que validan sus tokens por sí mismas pueden seguir aceptándolos hasta que caduquen. La aplicación tendrá que volver a pedir su consentimiento.',
             scopes: 'Scopes',
             updated: 'Actualizado',
+            userAgent: 'Agente de usuario',
         },
         providerLink: 'Federar cuenta',
         providerLinkDesc: `Puede vincular esta cuenta a uno de los siguientes proveedores de inicio de

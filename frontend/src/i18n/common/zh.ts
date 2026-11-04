@@ -152,6 +152,7 @@ export const I18nZh: I18n = {
                 '撤销将删除该同意，应用将无法再续期其访问权限。随已删除的刷新令牌签发的访问令牌会在 userinfo 和令牌内省中被撤销。自行验证令牌的应用在令牌过期前仍可能接受它们。应用需要重新请求您的同意。',
             scopes: 'Scopes',
             updated: '更新时间',
+            userAgent: '用户代理',
         },
         providerLink: '联合账户',
         providerLinkDesc: `您可以将此账户连接到下列登陆提供者之一。\n
