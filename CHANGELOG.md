@@ -58,6 +58,11 @@ authorization code. Http(s) redirects are unchanged and remain automatic.
 
 ### Bugfix
 
+- Changing the password from the account page cleared the given and family name and all user
+  values, like phone, address and timezone, because the request only contained the password and
+  the self-update replaces the whole profile with the request. The password form now sends the
+  current profile values along with the new password.
+  [#1866](https://github.com/sebadob/rauthy/issues/1866)
 - Registering an email OTP from the account page showed the activation code input without ever
   creating the OTP, and therefore without sending the email, whenever the MFA modification token
   was obtained through the re-authentication modal. The pending registration is now resumed after
