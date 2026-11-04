@@ -254,7 +254,7 @@
                 <Popover
                     ariaLabel="Show Popover Example"
                     offsetLeft="-7.4rem"
-                    offsetTop={openTop ? '-16rem' : '.1rem'}
+                    offsetTop={openTop ? '-17.75rem' : '.1rem'}
                     bind:close
                     {onToggle}
                     btnInvisible

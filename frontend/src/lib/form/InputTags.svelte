@@ -218,7 +218,7 @@
         align-items: center;
         gap: 0.5rem;
         flex-wrap: wrap;
-        overflow-y: scroll;
+        overflow: auto;
     }
 
     li {
@@ -247,6 +247,5 @@
 
     .value {
         background: hsla(var(--accent) / 0.2);
-        overflow: auto;
     }
 </style>

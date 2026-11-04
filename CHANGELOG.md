@@ -56,6 +56,19 @@ authorization code. Http(s) redirects are unchanged and remain automatic.
 
 [#1827](https://github.com/sebadob/rauthy/pull/1827)
 
+### Bugfix
+
+- Registering an email OTP from the account page showed the activation code input without ever
+  creating the OTP, and therefore without sending the email, whenever the MFA modification token
+  was obtained through the re-authentication modal. The pending registration is now resumed after
+  a successful re-authentication, and it is dropped when that re-authentication is aborted, so an
+  interrupted flow cannot trigger an action on a later, unrelated fetch.
+  [#1846](https://github.com/sebadob/rauthy/issues/1846)
+- Typing the activation code of an email OTP could send the activation twice, because the
+  auto-submit that runs once the code has the expected length also re-ran on other changes. It now
+  only runs when the code itself changes to a complete value, so each action sends a single request
+  and the manual submit is unaffected.
+
 ## v0.37.2
 
 ### Security

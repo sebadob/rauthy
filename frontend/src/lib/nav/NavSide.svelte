@@ -136,13 +136,13 @@
             </div>
         </div>
 
-        <div class="scrollable-content">
-            {#if !collapsed}
+        {#if !collapsed}
+            <div class="scrollable-content">
                 <div class="logo">
                     <RauthyLogo width={compact ? '3rem' : '7rem'} />
                 </div>
 
-                <div class="menu" style:margin-top={compact ? '.5rem' : '1.5rem'}>
+                <div class="menu" data-compact={compact}>
                     <NavLink {compact} {params} route="/users">
                         {#snippet icon(width: string)}
                             <IconUser {width} />
@@ -257,10 +257,8 @@
                         {ta.nav.docs}
                     </NavLink>
                 </div>
-            {/if}
-        </div>
+            </div>
 
-        {#if !collapsed}
             <div class="bottom">
                 {#snippet toLogout()}
                     <div class="logout">
@@ -402,6 +400,7 @@
     }
 
     .menu {
+        margin-top: 1.5rem;
         max-height: 85dvh;
         display: flex;
         flex-direction: column;
@@ -409,8 +408,15 @@
         overflow-y: auto;
     }
 
+    .menu[data-compact='true'] {
+        margin-top: 0.5rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        white-space: nowrap;
+    }
+
     nav[data-compact='true'] .menu {
-        max-height: 80dvh;
+        max-height: calc(100dvh - 12rem);
     }
 
     .navmod {
