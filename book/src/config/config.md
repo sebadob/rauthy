@@ -860,10 +860,6 @@ backup_keep_for_local = '3d'
 #HQL_DANGER_RAFT_STATE_RESET=true
 
 [consent]
-# Upgrading to the release that adds `[consent]` needs a full restart
-# of all nodes, independent of `consent.enable`. Mixed versions in one
-# cluster and a rollback are not supported, see the CHANGELOG.
-#
 # Set to `true` to enable user consent for clients. This feature is
 # still in progress. Currently, it only makes a client deletion also
 # delete all legacy refresh tokens (issued before refresh tokens were
@@ -1826,9 +1822,9 @@ level_user_login_revoke = 'warning'
 # for a client has been revoked, either by the user
 # themselves or by an admin.
 #
-# default: warning
+# default: notice
 # overwritten by: EVENT_LEVEL_CONSENT_REVOKED
-level_consent_revoked = 'warning'
+level_consent_revoked = 'notice'
 # The level for the generated Event after a SCIM
 # update task ultimately failed after exceeding
 # all retries.

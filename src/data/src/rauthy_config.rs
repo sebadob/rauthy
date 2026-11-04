@@ -508,7 +508,7 @@ impl Default for Vars {
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
-                level_consent_revoked: EventLevel::Warning,
+                level_consent_revoked: EventLevel::Notice,
                 level_scim_task_failed: EventLevel::Critical,
                 level_email_send_error: EventLevel::Critical,
                 level_suspicious_request: EventLevel::Notice,
@@ -5189,6 +5189,17 @@ mod tests {
         let mut table: toml::Table = toml::from_str("[consent]\nenable = true").unwrap();
         vars.parse_consent(&mut table);
         assert!(vars.consent.enable);
+    }
+
+    #[test]
+    fn consent_revoked_event_level() {
+        let mut vars = Vars::default();
+        assert_eq!(vars.events.level_consent_revoked, EventLevel::Notice);
+
+        let mut table: toml::Table =
+            toml::from_str("[events]\nlevel_consent_revoked = 'critical'").unwrap();
+        vars.parse_events(&mut table, &mut RauthySecrets::default());
+        assert_eq!(vars.events.level_consent_revoked, EventLevel::Critical);
     }
 
     #[test]

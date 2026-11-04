@@ -501,9 +501,9 @@ level_user_login_revoke = 'warning'
 # for a client has been revoked, either by the user
 # themselves or by an admin.
 #
-# default: warning
+# default: notice
 # overwritten by: EVENT_LEVEL_CONSENT_REVOKED
-level_consent_revoked = 'warning'
+level_consent_revoked = 'notice'
 # The level for the generated Event after a SCIM
 # update task ultimately failed after exceeding
 # all retries.
