@@ -11,6 +11,7 @@
         "test": "playwright test",
         "test:webauthn": "svelte-kit sync && node --test tests/webauthn-auth.node.mjs",
         "test:redirect-uri": "node --test tests/redirect-uri.node.mjs",
+        "test:fetch-error": "svelte-kit sync && node --test tests/fetch-error.node.mjs",
         "test:password-reset": "npm run build && node --test tests/password-reset.node.mjs",
         "lint": "prettier --check . && eslint .",
         "format": "./node_modules/prettier/bin/prettier.cjs --write .",
