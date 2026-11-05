@@ -46,7 +46,7 @@ jobs:
         # test:account-mfa) are not wired here: they need a browser
         # binary plus the already-built frontend. Run them locally
         # after `just build-ui`.
-        run: npm run test:webauthn
+        run: npm run test:webauthn && npm run test:webauthn-reg
 
       - name: Integration Tests against Hiqlite
         # We are running integration tests inside the same job to benefit from the already cached

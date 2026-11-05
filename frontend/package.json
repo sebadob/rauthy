@@ -10,6 +10,7 @@
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test": "svelte-kit sync && node --test tests/*.node.mjs",
         "test:webauthn": "svelte-kit sync && node --test tests/webauthn-auth.node.mjs",
+        "test:webauthn-reg": "svelte-kit sync && node --test tests/webauthn-reg.node.mjs",
         "test:redirect-uri": "node --test tests/redirect-uri.node.mjs",
         "test:generate-password": "svelte-kit sync && node --test tests/generate-password.node.mjs",
         "test:fetch-error": "svelte-kit sync && node --test tests/fetch-error.node.mjs",

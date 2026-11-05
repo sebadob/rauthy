@@ -39,9 +39,9 @@ export async function webauthnReg(
         body: JSON.stringify(payloadStart),
     });
     let bodyStart = await resStart.json();
-    if ('error' in bodyStart) {
+    if (!resStart.ok) {
         return {
-            error: bodyStart.error.message || 'did not receive any registration data',
+            error: bodyStart.message || 'did not receive any registration data',
         };
     }
 
@@ -121,12 +121,12 @@ export async function webauthnReg(
     } else if (resFinish.status === 406) {
         let body = await resFinish.json();
         return {
-            error: body.error?.message || 'Missing Attestation',
+            error: body.message || 'Missing Attestation',
         };
     } else {
         let body = await resFinish.json();
         return {
-            error: body.error?.message || 'Registration failed',
+            error: body.message || 'Registration failed',
         };
     }
 }
