@@ -21,6 +21,26 @@ pub mod secrets;
 pub mod temp_migrations;
 pub mod vault_config;
 
+/// Test encryption key IDs. Every unit test in this crate must init keys through
+/// `init_test_enc_keys`, because `EncKeys::init` only succeeds once per process.
+#[cfg(test)]
+pub(crate) const TEST_ENC_KEY_ID: &str = "test";
+#[cfg(test)]
+pub(crate) const TEST_ENC_KEY_ID_ACTIVE: &str = "testactive";
+
+/// Inits static `EncKeys` with two keys, where the active one is NOT `TEST_ENC_KEY_ID`.
+#[cfg(test)]
+pub(crate) fn init_test_enc_keys() {
+    static INIT: std::sync::Once = std::sync::Once::new();
+    INIT.call_once(|| {
+        let mut keys = cryptr::EncKeys::generate_with_id(TEST_ENC_KEY_ID.to_string()).unwrap();
+        // appending makes the new key the active one
+        keys.append_new_random_with_id(TEST_ENC_KEY_ID_ACTIVE.to_string())
+            .unwrap();
+        keys.init().unwrap();
+    });
+}
+
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),
     AwaitToSAccept(AwaitToSAccept),

@@ -99,6 +99,16 @@ impl KVNamespace {
     }
 }
 
+/// Decrypts `value` and encrypts it again with `new_kid`. Used for secrets migration.
+fn re_encrypt(value: Vec<u8>, new_kid: &str) -> Result<Vec<u8>, ErrorResponse> {
+    let dec = EncValue::try_from(value)?.decrypt()?;
+    Ok(
+        EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+            .into_bytes()
+            .to_vec(),
+    )
+}
+
 #[derive(Debug, FromRow, FromPgRow)]
 pub struct KVValue {
     pub ns: String,
@@ -298,14 +308,13 @@ LIMIT $2
         Ok(res)
     }
 
-    /// Re-encrypts the value and updates the DB. Used for secret migration.
-    pub async fn save_re_encrypted(self) -> Result<(), ErrorResponse> {
+    /// Re-encrypts the value with `new_kid` and updates the DB. Used for secret migration.
+    pub async fn save_re_encrypted(self, new_kid: &str) -> Result<(), ErrorResponse> {
         if self.encrypted != Some(true) {
             return Ok(());
         }
 
-        let dec = EncValue::try_from(self.value)?.into_bytes();
-        let value = EncValue::encrypt(dec.as_ref())?.into_bytes().to_vec();
+        let value = re_encrypt(self.value, new_kid)?;
 
         let sql = "UPDATE kv_values SET value = $1 WHERE ns = $2 AND key = $3";
         if is_hiqlite() {
@@ -450,10 +459,9 @@ impl KVAccess {
         })
     }
 
-    /// Re-encrypts the secret and saves it into the DB. Used for secrets migration only.
-    pub async fn save_re_encrypt_secret(self) -> Result<(), ErrorResponse> {
-        let dec = EncValue::try_from(self.secret)?.decrypt()?;
-        let secret = EncValue::encrypt(dec.as_ref())?.into_bytes().to_vec();
+    /// Re-encrypts the secret with `new_kid` and saves it into the DB. Used for secret migration.
+    pub async fn save_re_encrypt_secret(self, new_kid: &str) -> Result<(), ErrorResponse> {
+        let secret = re_encrypt(self.secret, new_kid)?;
 
         let sql = "UPDATE kv_access SET secret = $1 WHERE id = $2";
         if is_hiqlite() {
@@ -568,5 +576,36 @@ impl From<KVNamespace> for KVNamespaceResponse {
             name: value.ns,
             public: value.public,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{KVValue, re_encrypt};
+    use crate::{TEST_ENC_KEY_ID, TEST_ENC_KEY_ID_ACTIVE, init_test_enc_keys};
+    use cryptr::{EncKeys, EncValue};
+
+    #[test]
+    fn re_encrypt_uses_new_kid_and_keeps_value_readable() {
+        init_test_enc_keys();
+        assert_eq!(EncKeys::get_static().enc_key_active, TEST_ENC_KEY_ID_ACTIVE);
+
+        let json = serde_json::json!({"a": 1});
+        let value = EncValue::encrypt(json.to_string().as_bytes())
+            .unwrap()
+            .into_bytes()
+            .to_vec();
+
+        let value = re_encrypt(value, TEST_ENC_KEY_ID).unwrap();
+        let header = EncValue::try_from(value.clone()).unwrap().header;
+        assert_eq!(header.enc_key_id, TEST_ENC_KEY_ID);
+
+        let kv = KVValue {
+            ns: "ns".to_string(),
+            key: "key".to_string(),
+            encrypted: Some(true),
+            value,
+        };
+        assert_eq!(kv.value().unwrap(), json);
     }
 }

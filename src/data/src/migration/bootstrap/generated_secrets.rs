@@ -348,18 +348,8 @@ fn tmp_path(path: &Path) -> Result<PathBuf, ErrorResponse> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cryptr::EncKeys;
+    use crate::init_test_enc_keys as init_keys;
     use std::os::unix::fs::PermissionsExt;
-    use std::sync::Once;
-
-    static INIT_KEYS: Once = Once::new();
-
-    fn init_keys() {
-        INIT_KEYS.call_once(|| {
-            let keys = EncKeys::generate_with_id("test".to_string()).unwrap();
-            let _ = keys.init();
-        });
-    }
 
     fn test_path(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
