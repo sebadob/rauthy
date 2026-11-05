@@ -5,7 +5,7 @@ use rauthy_data::rauthy_config::{RauthyConfig, UserValueConfigValue};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::borrow::Cow;
 use std::str::FromStr;
-use tracing::{debug, warn};
+use tracing::debug;
 
 #[derive(Debug)]
 pub struct UserValuesValidator<'a> {
@@ -17,7 +17,6 @@ pub struct UserValuesValidator<'a> {
 
 impl UserValuesValidator<'_> {
     pub fn validate(&self) -> Result<(), ErrorResponse> {
-        warn!("Validating values {self:?}");
         let config = &RauthyConfig::get().vars.user_values;
 
         if config.given_name == UserValueConfigValue::Required
