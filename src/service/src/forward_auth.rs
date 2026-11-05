@@ -221,7 +221,7 @@ pub async fn get_forward_auth_client_callback(
             "Mismatch in client_id",
         ));
     }
-    if state.peer_ip != ip {
+    if RauthyConfig::get().vars.access.session_validate_ip && state.peer_ip != ip {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "State created from different IP",
