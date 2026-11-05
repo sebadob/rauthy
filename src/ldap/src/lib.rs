@@ -40,6 +40,8 @@ const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 const IDLE_TIMEOUT: Duration = Duration::from_secs(300);
 // bound sessions are not rechecked, so this caps how long a rotated client secret stays usable
 const MAX_CONN_LIFETIME: Duration = Duration::from_secs(3600);
+// each targeted user costs several sequential DB queries, so a search must stay far below a full load
+const MAX_TARGETS: usize = 50;
 
 enum Session {
     Anonymous,
@@ -323,7 +325,7 @@ async fn search_client(
     };
     let user_count = User::count().await.map_err(internal)?;
     let threshold = RauthyConfig::get().vars.server.ssp_threshold;
-    let targets = targets(user_count, threshold, user_id, &req.filter)?;
+    let targets = targets(user_count, threshold, user_id, &search_base, &req.filter)?;
     let (users, groups) = directory::load(&client, targets).await.map_err(internal)?;
 
     let entries = directory::build(client_id, &client_base, &users, &groups);
@@ -340,12 +342,14 @@ async fn search_client(
 }
 
 /// Below `server.ssp_threshold` users, searches load the whole directory (`None`). At or above it,
-/// only the users a search can return are loaded: a user session's own entry, or the users of
-/// `uid` / `mail` equality filters. Any other search is refused with `sizeLimitExceeded`.
+/// only the users a search can return are loaded: a user session's own entry, the user of a user
+/// DN `search_base`, or the users of `uid` / `mail` equality filters, at most [MAX_TARGETS]. Any
+/// other search is refused with `sizeLimitExceeded`.
 fn targets(
     user_count: i64,
     threshold: u16,
     user_id: Option<&str>,
+    search_base: &str,
     filter: &LdapFilter,
 ) -> Result<Option<Vec<Target>>, (LdapResultCode, String)> {
     if user_count < threshold as i64 {
@@ -354,20 +358,37 @@ fn targets(
     if let Some(id) = user_id {
         return Ok(Some(vec![Target::Id(id.to_string())]));
     }
-    filter_targets(filter).map(Some).ok_or((
-        LdapResultCode::SizeLimitExceeded,
-        "too many users, filter by uid or mail".into(),
-    ))
+    let size_limit = || {
+        (
+            LdapResultCode::SizeLimitExceeded,
+            "too many users, filter by uid or mail".to_string(),
+        )
+    };
+    let base_uid = dn::parse(search_base).and_then(|rdns| match rdns.as_slice() {
+        [(k, uid), (ou, people), ..] if k == "uid" && ou == "ou" && people == "people" => {
+            Some(vec![Target::Uid(uid.clone())])
+        }
+        _ => None,
+    });
+    let mut targets = base_uid
+        .or_else(|| filter_targets(filter))
+        .ok_or_else(size_limit)?;
+    targets.sort();
+    targets.dedup();
+    if targets.len() > MAX_TARGETS {
+        return Err(size_limit());
+    }
+    Ok(Some(targets))
 }
 
 /// Returns the users that every entry matching `filter` must be one of, if the filter limits it.
 fn filter_targets(filter: &LdapFilter) -> Option<Vec<Target>> {
     match filter {
         LdapFilter::Equality(attr, val) if attr.eq_ignore_ascii_case("uid") => {
-            Some(vec![Target::Uid(val.clone())])
+            Some(vec![Target::Uid(val.to_lowercase())])
         }
         LdapFilter::Equality(attr, val) if attr.eq_ignore_ascii_case("mail") => {
-            Some(vec![Target::Mail(val.clone())])
+            Some(vec![Target::Mail(val.to_lowercase())])
         }
         LdapFilter::And(fs) => fs.iter().find_map(filter_targets),
         LdapFilter::Or(fs) if !fs.is_empty() => {
@@ -541,11 +562,11 @@ mod tests {
         let all = LdapFilter::Present("objectClass".into());
 
         // below the threshold, everything is loaded
-        assert_eq!(targets(999, 1000, None, &all), Ok(None));
+        assert_eq!(targets(999, 1000, None, BASE, &all), Ok(None));
 
         // at or above it, user sessions only load their own entry
         assert_eq!(
-            targets(1000, 1000, Some("id1"), &all),
+            targets(1000, 1000, Some("id1"), BASE, &all),
             Ok(Some(vec![Target::Id("id1".into())]))
         );
 
@@ -555,23 +576,46 @@ mod tests {
             LdapFilter::Or(vec![eq("UID", "alice"), eq("mail", "alice@x.io")]),
         ]);
         assert_eq!(
-            targets(1000, 1000, None, &filter),
+            targets(1000, 1000, None, BASE, &filter),
             Ok(Some(vec![
                 Target::Uid("alice".into()),
                 Target::Mail("alice@x.io".into())
             ]))
         );
         for filter in [
-            all,
+            all.clone(),
             eq("cn", "alice"),
             LdapFilter::Or(vec![eq("uid", "alice"), eq("cn", "bob")]),
             LdapFilter::Not(Box::new(eq("uid", "alice"))),
             LdapFilter::Or(vec![]),
+            LdapFilter::Or(
+                (0..=MAX_TARGETS)
+                    .map(|i| eq("uid", &i.to_string()))
+                    .collect(),
+            ),
         ] {
             assert_eq!(
-                targets(1000, 1000, None, &filter).map_err(|(c, _)| c),
+                targets(1000, 1000, None, BASE, &filter).map_err(|(c, _)| c),
                 Err(LdapResultCode::SizeLimitExceeded)
             );
         }
+
+        // identical terms count once, case-insensitively like they are resolved
+        let filter = LdapFilter::Or(
+            (0..10_000)
+                .map(|i| eq("uid", if i % 2 == 0 { "Alice" } else { "alice" }))
+                .collect(),
+        );
+        assert_eq!(
+            targets(1000, 1000, None, BASE, &filter),
+            Ok(Some(vec![Target::Uid("alice".into())]))
+        );
+
+        // a base search on a user DN targets that user, whatever the filter
+        let alice = "uid=alice,ou=people,cn=app,ou=clients,dc=x";
+        assert_eq!(
+            targets(1000, 1000, None, alice, &all),
+            Ok(Some(vec![Target::Uid("alice".into())]))
+        );
     }
 }

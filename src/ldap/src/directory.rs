@@ -180,7 +180,7 @@ pub fn build(
 }
 
 /// A user a search can be narrowed down to, used at or above `server.ssp_threshold`.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Target {
     Id(String),
     Uid(String),
