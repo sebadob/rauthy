@@ -33,6 +33,7 @@ use rauthy_data::entity::one_time_password::{
 use rauthy_data::entity::password::PasswordPolicy;
 use rauthy_data::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_data::entity::pow::PowEntity;
+use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
@@ -1162,6 +1163,7 @@ pub async fn delete_user_device(
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
     ),
 )]
 #[get("/users/{id}/consents")]
@@ -1272,23 +1274,55 @@ pub async fn delete_user_consent(
 
 /// An API key with `rights` on users, else the user itself, an admin session or a group admin
 /// session that manages the user. A key without these rights is rejected even with a valid
-/// session.
+/// session. Admin and group admin sessions pass the `admin_force_mfa` gate.
 async fn validate_consent_access(
-    principal: &ReqPrincipal,
+    principal: &Principal,
     user_id: &str,
     rights: AccessRights,
 ) -> Result<(), ErrorResponse> {
     match principal.validate_api_key(AccessGroup::Users, rights) {
-        Err(err) if err.error == ErrorResponseType::Unauthorized => {
-            if principal.validate_user_or_admin(user_id).is_ok() {
-                return Ok(());
-            }
-            // a delegated group admin may access the consents of a user it manages
+        Err(err) if err.error == ErrorResponseType::Unauthorized => {}
+        res => return res,
+    }
+
+    match consent_session_role(principal, user_id)? {
+        ConsentSessionRole::Owner => Ok(()),
+        ConsentSessionRole::Admin => principal.validate_admin_session(),
+        ConsentSessionRole::GroupAdmin => {
             principal.validate_group_admin_session()?;
             let target = User::find(user_id.to_string()).await?;
             principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())
         }
-        res => res,
+    }
+}
+
+/// The role a session acts in on the consents of `user_id`, checked in this order.
+#[derive(Debug, PartialEq)]
+enum ConsentSessionRole {
+    /// The user itself, also when it is an admin or a group admin
+    Owner,
+    /// A full admin
+    Admin,
+    /// A group admin, which may only access a user it manages
+    GroupAdmin,
+}
+
+fn consent_session_role(
+    principal: &Principal,
+    user_id: &str,
+) -> Result<ConsentSessionRole, ErrorResponse> {
+    principal.validate_session_auth()?;
+    if principal.is_user(user_id).is_ok() {
+        Ok(ConsentSessionRole::Owner)
+    } else if principal.is_admin() {
+        Ok(ConsentSessionRole::Admin)
+    } else if principal.is_group_admin() {
+        Ok(ConsentSessionRole::GroupAdmin)
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Access is forbidden with this user",
+        ))
     }
 }
 
@@ -3077,7 +3111,74 @@ pub async fn delete_user_by_id(
 
 #[cfg(test)]
 mod tests {
-    use super::redirect_uri_matches_client;
+    use super::*;
+    use rauthy_data::entity::sessions::SessionState;
+
+    fn session_principal(user_id: &str, roles: &[&str], is_mfa: bool) -> Principal {
+        let now = Utc::now().timestamp();
+        Principal {
+            session: Some(Session {
+                id: "session_id_0123".to_string(),
+                csrf_token: "csrf_token_0123".to_string(),
+                user_id: Some(user_id.to_string()),
+                roles: Some(roles.join(",")),
+                groups: None,
+                is_mfa,
+                state: SessionState::Auth,
+                exp: now + 3600,
+                last_seen: now,
+                remote_ip: None,
+            }),
+            api_key: None,
+            roles: roles.iter().map(|r| r.to_string()).collect(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_consent_access_plain_user_gets_the_user_error() {
+        let user = session_principal("alice", &["user"], true);
+        let err = validate_consent_access(&user, "bob", AccessRights::Read)
+            .await
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert_eq!(err.message, "Access is forbidden with this user");
+    }
+
+    #[test]
+    fn test_consent_session_role() {
+        // a full admin on another user's consents must go through the admin session gate,
+        // which enforces `admin_force_mfa`
+        let admin = session_principal("admin", &["rauthy_admin"], false);
+        assert_eq!(
+            consent_session_role(&admin, "bob").unwrap(),
+            ConsentSessionRole::Admin
+        );
+        // own consents, also for admins and group admins
+        assert_eq!(
+            consent_session_role(&admin, "admin").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        let ga = session_principal("ga", &["rauthy_admin:dev"], false);
+        assert_eq!(
+            consent_session_role(&ga, "ga").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        assert_eq!(
+            consent_session_role(&ga, "bob").unwrap(),
+            ConsentSessionRole::GroupAdmin
+        );
+        let user = session_principal("alice", &["user"], false);
+        assert_eq!(
+            consent_session_role(&user, "alice").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        let err = consent_session_role(&user, "bob").unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert_eq!(err.message, "Access is forbidden with this user");
+        // no session at all
+        let err = consent_session_role(&Principal::default(), "bob").unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Unauthorized);
+    }
 
     #[test]
     fn test_redirect_uri_matches_client() {
