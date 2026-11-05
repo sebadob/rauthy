@@ -18,7 +18,13 @@ base_dn = 'dc=example,dc=com'
 ```
 
 Only implicit TLS (LDAPS) is supported, StartTLS is not. If Rauthy itself runs plain HTTP behind a
-reverse proxy, set `cert_path` and `key_path`, because LDAP clients connect to Rauthy directly.
+reverse proxy, set `cert_path` and `key_path`, unless the proxy terminates TLS for LDAP as well.
+
+If your reverse proxy forwards the raw TCP stream and terminates TLS itself, set
+`ldap.plain_text = true` to serve plain LDAP. As a safeguard, this requires
+`server.proxy_mode = true`. Rauthy then sees the proxy's IP for every LDAP connection, so the per-IP
+brute-force protection below applies to the proxy as a whole. Never expose the plain LDAP port to
+anything but the proxy.
 
 ## Supported Operations
 
@@ -69,19 +75,21 @@ fails with `sizeLimitExceeded`.
 
 The layout follows LLDAP, so existing app presets only need a different base DN.
 
-Users (`ou=people`) are all users allowed for the client that have a local password and are enabled
-and not expired. A PAM username or `preferred_username` that is not unique case-insensitively, or
-that equals another user's email, falls back to the email as `uid`:
+Users (`ou=people`) are all users allowed for the client that have a local password and a
+`preferred_username`, and are enabled and not expired. The `preferred_username` is the `uid`, an
+email never is. Users without a `preferred_username`, or with one that is not unique
+case-insensitively or that equals another user's email, are not part of the directory and cannot
+bind. Set `user_values.preferred_username.preferred_username = 'required'` to make sure all users
+have one. PAM users are not used:
 
 | attribute                                   | value                                                    |
 |---------------------------------------------|----------------------------------------------------------|
-| `uid`                                       | the PAM username, else the `preferred_username`, else the email |
+| `uid`                                       | `preferred_username`                                     |
 | `entryUUID`                                 | the Rauthy user ID                                       |
 | `mail`                                      | email                                                    |
 | `cn`, `displayName`                         | given name + family name                                 |
 | `givenName`, `sn`                           | given name, family name                                  |
 | `memberOf`                                  | the DNs of the user's groups                             |
-| `uidNumber`, `gidNumber`, `homeDirectory`, `loginShell` | only for users with a [PAM](pam.md) user     |
 
 Groups (`ou=groups`) are Rauthy groups, filtered by the client's `restrict_group_prefix` if set,
 with `cn` and `member` / `uniqueMember`.

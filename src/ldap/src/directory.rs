@@ -2,7 +2,6 @@ use crate::dn;
 use ldap3_proto::simple::{LdapPartialAttribute, LdapSearchResultEntry};
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::groups::Group;
-use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::{UidCandidate, UserValues};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -45,13 +44,6 @@ impl Entry {
     }
 }
 
-pub struct PosixAttrs {
-    pub uid_number: u32,
-    pub gid_number: u32,
-    pub home: String,
-    pub shell: String,
-}
-
 pub struct DirUser {
     pub id: String,
     pub uid: String,
@@ -59,7 +51,6 @@ pub struct DirUser {
     pub given_name: String,
     pub family_name: Option<String>,
     pub groups: Vec<String>,
-    pub posix: Option<PosixAttrs>,
 }
 
 pub fn root_dse(base_dn: &str) -> Entry {
@@ -113,13 +104,16 @@ pub fn build(
             Some(f) => format!("{} {f}", u.given_name),
             None => u.given_name.clone(),
         };
-        let mut object_class = vec![
-            "top".into(),
-            "person".into(),
-            "organizationalPerson".into(),
-            "inetOrgPerson".into(),
-        ];
-        let mut attrs = vec![
+        let attrs = vec![
+            (
+                "objectClass",
+                vec![
+                    "top".into(),
+                    "person".into(),
+                    "organizationalPerson".into(),
+                    "inetOrgPerson".into(),
+                ],
+            ),
             ("uid", vec![u.uid.clone()]),
             ("entryUUID", vec![u.id.clone()]),
             ("mail", vec![u.email.clone()]),
@@ -136,16 +130,6 @@ pub fn build(
                     .collect(),
             ),
         ];
-        if let Some(p) = &u.posix {
-            object_class.push("posixAccount".into());
-            attrs.extend([
-                ("uidNumber", vec![p.uid_number.to_string()]),
-                ("gidNumber", vec![p.gid_number.to_string()]),
-                ("homeDirectory", vec![p.home.clone()]),
-                ("loginShell", vec![p.shell.clone()]),
-            ]);
-        }
-        attrs.insert(0, ("objectClass", object_class));
         entries.push(Entry {
             dn: dn::user_dn(&u.uid, client_base),
             attrs,
@@ -188,8 +172,8 @@ pub enum Target {
 }
 
 /// Loads the users and groups visible to `client`.
-/// Users must have a local password, be enabled, not expired and pass the client's group
-/// restriction. With `targets`, only these users are loaded instead of all of them, with the same
+/// Users must have a local password and a `uid`, be enabled, not expired and pass the client's
+/// group restriction. With `targets`, only these users are loaded instead of all of them, with the same
 /// `uid`s a full load would assign. Group `member`s then only contain the loaded users.
 pub async fn load(
     client: &Client,
@@ -207,7 +191,7 @@ pub async fn load(
         })
         .collect();
 
-    let (all, pam, mut uids) = match targets {
+    let (all, mut uids) = match targets {
         None => load_uids().await?,
         Some(targets) => load_targets(targets).await?,
     };
@@ -219,22 +203,15 @@ pub async fn load(
                 && u.check_expired().is_ok()
                 && client.validate_user_groups(u).is_ok()
         })
-        .map(|u| {
-            let p = pam.get(&u.email);
-            DirUser {
+        .filter_map(|u| {
+            Some(DirUser {
                 groups: u.get_groups(),
-                posix: p.map(|p| PosixAttrs {
-                    uid_number: p.id,
-                    gid_number: p.gid,
-                    home: p.home_dir(),
-                    shell: p.shell.clone(),
-                }),
-                uid: uids.remove(&u.id).unwrap_or_else(|| u.email.clone()),
+                uid: uids.remove(&u.id)?,
                 id: u.id,
                 email: u.email,
                 given_name: u.given_name,
                 family_name: u.family_name,
-            }
+            })
         })
         .collect();
 
@@ -248,7 +225,10 @@ async fn load_targets(targets: Vec<Target>) -> Result<Uids, ErrorResponse> {
         let user = match target {
             Target::Id(id) => User::find(id).await,
             Target::Mail(email) => User::find_by_email(email).await,
-            Target::Uid(uid) => User::find_by_email(resolve_email(&uid).await?).await,
+            Target::Uid(uid) => match resolve_email(&uid).await? {
+                Some(email) => User::find_by_email(email).await,
+                None => continue,
+            },
         };
         match user {
             Ok(u) if !users.iter().any(|known| known.id == u.id) => users.push(u),
@@ -258,65 +238,40 @@ async fn load_targets(targets: Vec<Target>) -> Result<Uids, ErrorResponse> {
         }
     }
 
-    let mut pam = HashMap::with_capacity(users.len());
     let mut uids = HashMap::with_capacity(users.len());
     for u in &users {
-        // the same rows `uid_owner` needs: every user sharing a name or email with this one
-        let mut rows = UserValues::find_uid_candidates(&u.email).await?;
-        let names: Vec<String> = rows
-            .iter()
-            .filter(|r| r.0 == u.id)
-            .flat_map(|(_, _, pam, pref)| [pam, pref])
-            .flatten()
-            .map(|n| n.to_lowercase())
-            .collect();
-        for name in names {
-            rows.extend(UserValues::find_uid_candidates(&name).await?);
-        }
+        let Some(name) = UserValues::find_preferred_username(&u.id).await? else {
+            continue;
+        };
+        let rows = UserValues::find_uid_candidates(&name.to_lowercase()).await?;
         if let Some(uid) = uid_of(&u.id, rows) {
             uids.insert(u.id.clone(), uid);
         }
-        match PamUser::find_by_user_id(u.id.clone()).await {
-            Ok(p) => {
-                pam.insert(u.email.clone(), p);
-            }
-            Err(err) if err.error == ErrorResponseType::NotFound => {}
-            Err(err) => return Err(err),
-        }
     }
-    Ok((users, pam, uids))
+    Ok((users, uids))
 }
 
-/// Resolves a bind `uid` to the user's email with the same `uid`s the directory publishes.
-/// Anything that is not a published `uid` is treated as the email itself.
-pub async fn resolve_email(uid: &str) -> Result<String, ErrorResponse> {
+/// Resolves a bind `uid` to the email of the user it is published for, if any.
+pub async fn resolve_email(uid: &str) -> Result<Option<String>, ErrorResponse> {
     let uid_lc = uid.to_lowercase();
-    let mut rows = UserValues::find_uid_candidates(&uid_lc).await?;
-    // a candidate's `uid` also depends on the users that share one of its other names
-    let names: Vec<String> = rows
-        .iter()
-        .flat_map(|(_, _, pam, pref)| [pam, pref])
-        .flatten()
-        .map(|n| n.to_lowercase())
-        .filter(|n| *n != uid_lc)
-        .collect();
-    for name in names {
-        rows.extend(UserValues::find_uid_candidates(&name).await?);
-    }
-    Ok(uid_owner(&uid_lc, rows).unwrap_or_else(|| uid.to_string()))
+    let rows = UserValues::find_uid_candidates(&uid_lc).await?;
+    Ok(uid_owner(&uid_lc, rows))
 }
 
 /// Returns the email of the user in `rows` whose `uid` is `uid_lc`. `rows` must contain every
-/// user that shares a name or email with a user named `uid_lc`.
+/// user whose `preferred_username` or email equals `uid_lc`.
 fn uid_owner(uid_lc: &str, rows: Vec<UidCandidate>) -> Option<String> {
     let (rows, uids) = assign_candidate_uids(rows);
     rows.into_iter()
-        .find(|r| uids[&r.0].to_lowercase() == uid_lc)
+        .find(|r| {
+            uids.get(&r.0)
+                .is_some_and(|uid| uid.to_lowercase() == uid_lc)
+        })
         .map(|r| r.1)
 }
 
-/// Returns the `uid` of user `id`. `rows` must contain every user that shares a name or email
-/// with that user.
+/// Returns the `uid` of user `id`. `rows` must contain every user whose `preferred_username` or
+/// email equals that user's `preferred_username`.
 fn uid_of(id: &str, rows: Vec<UidCandidate>) -> Option<String> {
     assign_candidate_uids(rows).1.remove(id)
 }
@@ -327,32 +282,19 @@ fn assign_candidate_uids(
     rows.sort_by(|a, b| a.0.cmp(&b.0));
     rows.dedup_by(|a, b| a.0 == b.0);
     let ids: Vec<(String, String)> = rows.iter().map(|r| (r.0.clone(), r.1.clone())).collect();
-    let pam_names = rows
-        .iter()
-        .filter_map(|r| Some((r.1.clone(), r.2.clone()?)))
-        .collect();
     let preferred = rows
         .iter()
-        .filter_map(|r| Some((r.0.clone(), r.3.clone()?)))
+        .filter_map(|r| Some((r.0.clone(), r.2.clone()?)))
         .collect();
-    let uids = assign_uids(&ids, &pam_names, &preferred);
+    let uids = assign_uids(&ids, &preferred);
     (rows, uids)
 }
 
-type Uids = (Vec<User>, HashMap<String, PamUser>, HashMap<String, String>);
+type Uids = (Vec<User>, HashMap<String, String>);
 
-/// Loads all users, their PAM users by email, and their `uid`s by user ID.
+/// Loads all users and the `uid`s of the users that have one by user ID.
 async fn load_uids() -> Result<Uids, ErrorResponse> {
     let users = User::find_all().await?;
-    let pam: HashMap<String, PamUser> = PamUser::find_all()
-        .await?
-        .into_iter()
-        .map(|p| (p.email.clone(), p))
-        .collect();
-    let pam_names = pam
-        .iter()
-        .map(|(e, p)| (e.clone(), p.name.clone()))
-        .collect();
     let preferred = UserValues::find_all_preferred_usernames()
         .await?
         .into_iter()
@@ -361,65 +303,42 @@ async fn load_uids() -> Result<Uids, ErrorResponse> {
         .iter()
         .map(|u| (u.id.clone(), u.email.clone()))
         .collect();
-    let uids = assign_uids(&ids, &pam_names, &preferred);
-    Ok((users, pam, uids))
+    let uids = assign_uids(&ids, &preferred);
+    Ok((users, uids))
 }
 
-/// Assigns each `(id, email)` its `uid`: the PAM username, else the `preferred_username`, else
-/// the email. A PAM name wins over the same `preferred_username`. A name that is not unique
-/// case-insensitively, among names of its kind and all emails, falls back to the email, because
-/// `uid` filters are case-insensitive and apps would otherwise pick the wrong user.
+/// Assigns each `(id, email)` with a `preferred_username` that name as its `uid`. Users without
+/// one get no `uid` and are not part of the directory, so an email is never a `uid`. A name that is
+/// not unique case-insensitively, or that equals another user's email, gets no `uid` either,
+/// because `uid` filters are case-insensitive and apps would otherwise pick the wrong user.
 /// Non-ASCII names are ignored, because the bind lookup folds case in SQL, which only folds ASCII.
 fn assign_uids(
     users: &[(String, String)],
-    pam_names: &HashMap<String, String>,
     preferred: &HashMap<String, String>,
 ) -> HashMap<String, String> {
-    let ascii = |m: &HashMap<String, String>| -> HashMap<String, String> {
-        m.iter()
-            .filter(|(_, n)| n.is_ascii())
-            .map(|(k, n)| (k.clone(), n.clone()))
-            .collect()
-    };
-    let (pam_names, preferred) = (&ascii(pam_names), &ascii(preferred));
     let emails: HashMap<String, &str> = users
         .iter()
         .map(|(id, email)| (email.to_lowercase(), id.as_str()))
         .collect();
-    let count = |names: &mut dyn Iterator<Item = &String>| {
-        let mut counts: HashMap<String, usize> = HashMap::new();
-        for n in names {
-            *counts.entry(n.to_lowercase()).or_default() += 1;
-        }
-        counts
-    };
-    let pam_count = count(&mut pam_names.values());
-    let pref_count = count(&mut preferred.values());
-    let unique = |id: &str, name: &str, counts: &HashMap<String, usize>| {
-        let lc = name.to_lowercase();
-        counts.get(&lc) == Some(&1) && emails.get(&lc).is_none_or(|owner| *owner == id)
-    };
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for n in preferred.values().filter(|n| n.is_ascii()) {
+        *counts.entry(n.to_lowercase()).or_default() += 1;
+    }
 
     users
         .iter()
-        .map(|(id, email)| {
-            let pam = pam_names.get(email);
-            let pref = preferred.get(id);
-            let uid = pam
-                .filter(|n| unique(id, n, &pam_count))
-                .or_else(|| {
-                    pref.filter(|n| {
-                        !pam_count.contains_key(&n.to_lowercase()) && unique(id, n, &pref_count)
-                    })
-                })
-                .cloned()
-                .unwrap_or_else(|| {
-                    if let Some(name) = pam.or(pref) {
-                        warn!("LDAP uid '{name}' is not unique, using the email of user {id}");
-                    }
-                    email.clone()
-                });
-            (id.clone(), uid)
+        .filter_map(|(id, _)| {
+            let name = preferred.get(id)?;
+            let lc = name.to_lowercase();
+            if name.is_ascii()
+                && counts.get(&lc) == Some(&1)
+                && emails.get(&lc).is_none_or(|owner| *owner == id)
+            {
+                Some((id.clone(), name.clone()))
+            } else {
+                warn!("LDAP uid '{name}' is not unique or not ASCII, skipping user {id}");
+                None
+            }
         })
         .collect()
 }
@@ -440,58 +359,42 @@ mod tests {
             (s("6"), s("f@x.io")),
             (s("7"), s("g@x.io")),
             (s("8"), s("h@x.io")),
-            (s("9"), s("i@x.io")),
         ];
-        let pam = HashMap::from([(s("a@x.io"), s("alice")), (s("f@x.io"), s("frank"))]);
         let preferred = HashMap::from([
-            (s("2"), s("Alice")), // loses against the PAM name
+            (s("1"), s("alice")),
             (s("3"), s("Carol")),
-            (s("4"), s("carol")),  // case-insensitive duplicate, both fall back
+            (s("4"), s("carol")),  // case-insensitive duplicate, both get no uid
             (s("5"), s("B@x.io")), // another user's email
-            (s("6"), s("eve")),    // the PAM name wins for the same user
+            (s("6"), s("F@x.io")), // the user's own email
             (s("7"), s("\u{212A}im")), // non-ASCII, ignored, so `kim` stays unique
-            (s("8"), s("Ärger")),  // non-ASCII, ignored
-            (s("9"), s("kim")),
+            (s("8"), s("kim")),
         ]);
-        let uids = assign_uids(&users, &pam, &preferred);
-        assert_eq!(uids["1"], "alice");
-        assert_eq!(uids["2"], "b@x.io");
-        assert_eq!(uids["3"], "c@x.io");
-        assert_eq!(uids["4"], "d@x.io");
-        assert_eq!(uids["5"], "e@x.io");
-        assert_eq!(uids["6"], "frank");
-        assert_eq!(uids["7"], "g@x.io");
-        assert_eq!(uids["8"], "h@x.io");
-        assert_eq!(uids["9"], "kim");
+        let uids = assign_uids(&users, &preferred);
+        let expected = HashMap::from([
+            (s("1"), s("alice")),
+            (s("6"), s("F@x.io")),
+            (s("8"), s("kim")),
+        ]);
+        assert_eq!(uids, expected);
 
         let rows: Vec<UidCandidate> = users
             .iter()
-            .map(|(id, email)| {
-                (
-                    id.clone(),
-                    email.clone(),
-                    pam.get(email).cloned(),
-                    preferred.get(id).cloned(),
-                )
-            })
+            .map(|(id, email)| (id.clone(), email.clone(), preferred.get(id).cloned()))
             .collect();
         let owner = |uid: &str| uid_owner(uid, rows.clone());
         assert_eq!(owner("alice").as_deref(), Some("a@x.io"));
-        assert_eq!(owner("frank").as_deref(), Some("f@x.io"));
-        assert_eq!(owner("b@x.io").as_deref(), Some("b@x.io"));
+        assert_eq!(owner("kim").as_deref(), Some("h@x.io"));
+        assert_eq!(owner("f@x.io").as_deref(), Some("f@x.io"));
+        // emails are never a uid
+        assert_eq!(owner("b@x.io"), None);
+        assert_eq!(owner("a@x.io"), None);
         assert_eq!(owner("carol"), None);
-        assert_eq!(owner("eve"), None);
-        assert_eq!(owner("kim").as_deref(), Some("i@x.io"));
-        assert_eq!(owner("ärger"), None);
         // targeted loads assign the same uids as the full load
         for (id, _) in &users {
-            assert_eq!(uid_of(id, rows.clone()).as_ref(), Some(&uids[id]));
+            assert_eq!(uid_of(id, rows.clone()), uids.get(id).cloned());
         }
-        // only the rows the queries return for `alice`: the users named or emailed `alice`
-        assert_eq!(
-            uid_owner("alice", vec![rows[0].clone(), rows[1].clone()]).as_deref(),
-            Some("a@x.io")
-        );
+        // only the rows the query returns for `b@x.io`: user 2 by email, user 5 by name
+        assert_eq!(uid_of("5", vec![rows[1].clone(), rows[4].clone()]), None);
     }
 
     #[test]
@@ -505,12 +408,6 @@ mod tests {
                 given_name: "Alice".into(),
                 family_name: Some("Liddell".into()),
                 groups: vec!["admins".into(), "hidden".into()],
-                posix: Some(PosixAttrs {
-                    uid_number: 100_000,
-                    gid_number: 100_000,
-                    home: "/home/alice".into(),
-                    shell: "/bin/bash".into(),
-                }),
             },
             DirUser {
                 id: "id2".into(),
@@ -519,7 +416,6 @@ mod tests {
                 given_name: "Bob".into(),
                 family_name: None,
                 groups: vec![],
-                posix: None,
             },
         ];
         let entries = build("app", &base, &users, &["admins".into()]);
@@ -528,8 +424,7 @@ mod tests {
         let alice = &entries[3];
         assert_eq!(alice.dn, "uid=alice,ou=people,cn=app,ou=clients,dc=x");
         assert_eq!(alice.values("CN").next().unwrap(), "Alice Liddell");
-        assert_eq!(alice.values("uidNumber").next().unwrap(), "100000");
-        assert!(alice.values("objectClass").any(|v| v == "posixAccount"));
+        assert!(alice.values("objectClass").any(|v| v == "inetOrgPerson"));
         assert_eq!(
             alice.values("memberOf").collect::<Vec<_>>(),
             vec!["cn=admins,ou=groups,cn=app,ou=clients,dc=x"]
@@ -537,7 +432,6 @@ mod tests {
 
         let bob = &entries[4];
         assert!(bob.values("sn").next().is_none());
-        assert!(bob.values("uidNumber").next().is_none());
 
         let admins = &entries[5];
         assert_eq!(

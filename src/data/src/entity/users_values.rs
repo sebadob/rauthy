@@ -20,8 +20,8 @@ pub struct UserValues {
     pub tz: Option<String>,
 }
 
-/// `(user_id, email, pam_name, preferred_username)`
-pub type UidCandidate = (String, String, Option<String>, Option<String>);
+/// `(user_id, email, preferred_username)`
+pub type UidCandidate = (String, String, Option<String>);
 
 impl UserValues {
     #[inline(always)]
@@ -315,41 +315,26 @@ RETURNING *"#;
         Ok(res)
     }
 
-    /// Returns `(user_id, email, pam_name, preferred_username)` of all users whose email, PAM
-    /// username or `preferred_username` equals the lowercase `name` case-insensitively.
+    /// Returns `(user_id, email, preferred_username)` of all users whose email or
+    /// `preferred_username` equals the lowercase `name` case-insensitively.
     pub async fn find_uid_candidates(name: &str) -> Result<Vec<UidCandidate>, ErrorResponse> {
         let sql = r#"
-SELECT u.id, u.email, p.name AS pam_name, v.preferred_username
+SELECT u.id, u.email, v.preferred_username
 FROM users u
-LEFT JOIN pam_users p ON p.email = u.email
 LEFT JOIN users_values v ON v.id = u.id
-WHERE u.email = $1 OR lower(p.name) = $1 OR lower(v.preferred_username) = $1"#;
+WHERE u.email = $1 OR lower(v.preferred_username) = $1"#;
         let res = if is_hiqlite() {
             DB::hql()
                 .query_raw(sql, params!(name))
                 .await?
                 .into_iter()
-                .map(|mut r| {
-                    (
-                        r.get("id"),
-                        r.get("email"),
-                        r.get("pam_name"),
-                        r.get("preferred_username"),
-                    )
-                })
+                .map(|mut r| (r.get("id"), r.get("email"), r.get("preferred_username")))
                 .collect()
         } else {
             DB::pg_query_rows(sql, &[&name], 1)
                 .await?
                 .into_iter()
-                .map(|r| {
-                    (
-                        r.get("id"),
-                        r.get("email"),
-                        r.get("pam_name"),
-                        r.get("preferred_username"),
-                    )
-                })
+                .map(|r| (r.get("id"), r.get("email"), r.get("preferred_username")))
                 .collect()
         };
         Ok(res)

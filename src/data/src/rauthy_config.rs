@@ -104,6 +104,10 @@ impl RauthyConfig {
             ),
         };
 
+        if vars.ldap.plain_text && !vars.server.proxy_mode {
+            panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
+        }
+
         let argon2_params = argon2::Params::new(
             vars.hashing.argon2_m_cost,
             vars.hashing.argon2_t_cost,
@@ -626,6 +630,7 @@ impl Default for Vars {
                 base_dn: "dc=rauthy,dc=local".into(),
                 cert_path: None,
                 key_path: None,
+                plain_text: false,
                 disable_ip_brute_force_protection: false,
             },
             pam: VarsPam {
@@ -3344,6 +3349,9 @@ impl Vars {
         if self.ldap.cert_path.is_some() != self.ldap.key_path.is_some() {
             panic!("ldap.cert_path and ldap.key_path must be set together");
         }
+        if let Some(v) = t_bool(&mut table, "ldap", "plain_text", "LDAP_PLAIN_TEXT") {
+            self.ldap.plain_text = v;
+        }
 
         if let Some(v) = t_bool(
             &mut table,
@@ -4745,6 +4753,8 @@ pub struct VarsLdap {
     /// `None` reuses the `[tls]` certificate.
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
+    /// Serves plain LDAP without TLS, only allowed with `server.proxy_mode`.
+    pub plain_text: bool,
     /// Skips the per-IP brute-force checks for user binds, the per-user counter still applies.
     pub disable_ip_brute_force_protection: bool,
 }
@@ -5345,7 +5355,7 @@ mod tests {
         assert!(!vars.ldap.disable_ip_brute_force_protection);
 
         let mut table: toml::Table = toml::from_str(
-            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'\ndisable_ip_brute_force_protection = true",
+            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'\nplain_text = true\ndisable_ip_brute_force_protection = true",
         )
         .unwrap();
         vars.parse_ldap(&mut table);
@@ -5353,6 +5363,7 @@ mod tests {
         assert_eq!(vars.ldap.port, 636);
         assert_eq!(vars.ldap.base_dn, "dc=example,dc=com");
         assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
+        assert!(vars.ldap.plain_text);
         assert!(vars.ldap.disable_ip_brute_force_protection);
     }
 

@@ -2314,11 +2314,22 @@ base_dn = 'dc=rauthy,dc=local'
 # TLS certificate and key for the LDAPS server, in PEM format.
 # Both must be set together. If not set, the `[tls]` certificate
 # is used. Set them when Rauthy itself runs plain HTTP behind a
-# reverse proxy, since LDAP clients connect to Rauthy directly.
+# reverse proxy that does not terminate TLS for LDAP as well.
 #
 # overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
 #cert_path = 'tls/ldap.crt'
 #key_path = 'tls/ldap.key'
+
+# Serves plain LDAP without TLS instead of LDAPS, for a reverse
+# proxy that terminates TLS and forwards the raw TCP stream. As a
+# safeguard, this requires `server.proxy_mode = true`. Rauthy
+# then sees the proxy's IP for every LDAP connection, so the
+# per-IP brute-force protection applies to the proxy as a whole.
+# Never expose the plain LDAP port to anything but the proxy.
+#
+# default: false
+# overwritten by: LDAP_PLAIN_TEXT
+plain_text = false
 
 # Disables the per-IP brute-force protection for LDAP user binds:
 # no credential stuffing detection, no per-IP failed login counter

@@ -197,12 +197,13 @@ pub async fn run(
     let ldap = &RauthyConfig::get().vars.ldap;
     if ldap.enable {
         let tls = match (&ldap.key_path, &ldap.cert_path) {
+            _ if ldap.plain_text => None,
             (Some(key), Some(cert)) => {
-                tls_hot_reload::load_server_config(key.clone(), cert.clone()).await
+                Some(tls_hot_reload::load_server_config(key.clone(), cert.clone()).await)
             }
-            _ => tls::load_tls().await,
+            _ => Some(tls::load_tls().await),
         };
-        tokio::spawn(rauthy_ldap::run(Arc::new(tls)));
+        tokio::spawn(rauthy_ldap::run(tls.map(Arc::new)));
     }
 
     if RauthyConfig::get().vars.server.metrics_enable {

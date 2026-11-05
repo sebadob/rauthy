@@ -53,8 +53,9 @@ enum Session {
     },
 }
 
-/// Runs the LDAPS listener forever. Only call it when `ldap.enable` is set.
-pub async fn run(tls: Arc<rustls::ServerConfig>) {
+/// Runs the LDAP listener forever. Only call it when `ldap.enable` is set.
+/// Without `tls`, it serves plain LDAP, which `ldap.plain_text` only allows behind a proxy.
+pub async fn run(tls: Option<Arc<rustls::ServerConfig>>) {
     let vars = &RauthyConfig::get().vars.ldap;
     let addr = format!("{}:{}", vars.listen_address, vars.port);
     let listener = match TcpListener::bind(&addr).await {
@@ -64,9 +65,10 @@ pub async fn run(tls: Arc<rustls::ServerConfig>) {
             return;
         }
     };
-    info!("LDAPS listening on {addr}");
+    let acceptor = tls.map(TlsAcceptor::from);
+    let proto = if acceptor.is_some() { "LDAPS" } else { "LDAP" };
+    info!("{proto} listening on {addr}");
 
-    let acceptor = TlsAcceptor::from(tls);
     loop {
         let (stream, peer) = match listener.accept().await {
             Ok(v) => v,
@@ -81,6 +83,10 @@ pub async fn run(tls: Arc<rustls::ServerConfig>) {
             if is_blacklisted(ip).await {
                 return;
             }
+            let Some(acceptor) = acceptor else {
+                handle_conn(stream, ip).await;
+                return;
+            };
             let stream = match timeout(TLS_HANDSHAKE_TIMEOUT, acceptor.accept(stream)).await {
                 Ok(Ok(s)) => s,
                 _ => {
@@ -260,7 +266,9 @@ async fn check_bind(
             None
         }
         Some(uid) => {
-            let email = directory::resolve_email(&uid).await?;
+            let email = directory::resolve_email(&uid)
+                .await?
+                .ok_or_else(unauthorized)?;
             let user =
                 password_login(&client, email, password, ip, user_failed_logins, ip_checks).await?;
             Some(user.id)
@@ -474,7 +482,6 @@ mod tests {
             given_name: uid.into(),
             family_name: None,
             groups: vec!["admins".into()],
-            posix: None,
         };
         let users = [user("id1", "alice"), user("id2", "bob")];
         directory::build("app", BASE, &users, &["admins".into()])

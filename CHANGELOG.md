@@ -126,6 +126,12 @@ Apps send the binds of all users from a single IP. If the LDAPS port is only rea
 apps, `disable_ip_brute_force_protection` makes user binds skip the per-IP checks, so a few failed
 logins do not block the app's IP for everyone. It is disabled by default.
 
+If a reverse proxy terminates TLS for LDAP as well, `plain_text` serves plain LDAP instead. It
+requires `server.proxy_mode = true`.
+
+Users are published with their `preferred_username` as `uid`. Users without one, or with one that
+is not unique case-insensitively or equals another user's email, are not part of the directory.
+
 ```toml
 [ldap]
 # Enables a minimal, read-only LDAPS server for clients that can
@@ -159,11 +165,22 @@ base_dn = 'dc=rauthy,dc=local'
 # TLS certificate and key for the LDAPS server, in PEM format.
 # Both must be set together. If not set, the `[tls]` certificate
 # is used. Set them when Rauthy itself runs plain HTTP behind a
-# reverse proxy, since LDAP clients connect to Rauthy directly.
+# reverse proxy that does not terminate TLS for LDAP as well.
 #
 # overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
 #cert_path = 'tls/ldap.crt'
 #key_path = 'tls/ldap.key'
+
+# Serves plain LDAP without TLS instead of LDAPS, for a reverse
+# proxy that terminates TLS and forwards the raw TCP stream. As a
+# safeguard, this requires `server.proxy_mode = true`. Rauthy
+# then sees the proxy's IP for every LDAP connection, so the
+# per-IP brute-force protection applies to the proxy as a whole.
+# Never expose the plain LDAP port to anything but the proxy.
+#
+# default: false
+# overwritten by: LDAP_PLAIN_TEXT
+plain_text = false
 
 # Disables the per-IP brute-force protection for LDAP user binds:
 # no credential stuffing detection, no per-IP failed login counter
