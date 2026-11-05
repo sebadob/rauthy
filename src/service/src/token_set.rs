@@ -867,5 +867,18 @@ mod tests {
         let err =
             custom_scope_claims(&scopes, &bad, |s| s.attr_include_access.as_deref()).unwrap_err();
         assert_eq!(err.error, ErrorResponseType::Internal);
+
+        // A reserved claim is fine nested under `custom`, but rejected at the token root.
+        let sub = HashMap::from([("sub".to_string(), b"\"spoofed\"".to_vec())]);
+        let claims = |scopes: &[Scope]| {
+            custom_scope_claims(scopes, &sub, |s| s.attr_include_access.as_deref())
+        };
+        assert!(claims(&[scope("nested", "sub", false)]).is_ok());
+        let err = claims(&[scope("root", "sub", true)]).unwrap_err();
+        assert!(
+            err.message.contains("reserved JWT claims"),
+            "{}",
+            err.message
+        );
     }
 }
