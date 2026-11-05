@@ -2320,6 +2320,22 @@ base_dn = 'dc=rauthy,dc=local'
 #cert_path = 'tls/ldap.crt'
 #key_path = 'tls/ldap.key'
 
+# Disables the per-IP brute-force protection for LDAP user binds:
+# no credential stuffing detection, no per-IP failed login counter
+# and no IP blacklisting because of failed user binds. Apps like
+# Jellyfin send the binds of all users from a single IP, so a few
+# failed logins from different users would otherwise block the
+# app's IP for everyone. The per-user failed login counter and its
+# login delays still apply, and an already blacklisted IP is still
+# refused. Service binds keep the per-IP protection.
+# CAUTION: a client connecting directly to the LDAPS port can then
+# try passwords across many users without an IP limit. Only enable
+# it when the LDAPS port is reachable for your apps only.
+#
+# default: false
+# overwritten by: LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION
+disable_ip_brute_force_protection = false
+
 [logging]
 # This is the log level for stdout logs
 # Accepts: error, warn, info, debug, trace

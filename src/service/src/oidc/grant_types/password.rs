@@ -82,7 +82,7 @@ pub async fn grant_type_password(
 
     let ip = real_ip_from_req(&req)?;
 
-    let user = password_login(&client, email, password, ip, user_failed_logins).await?;
+    let user = password_login(&client, email, password, ip, user_failed_logins, true).await?;
 
     let ts = TokenSet::from_user(
         &user,

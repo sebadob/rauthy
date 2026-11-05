@@ -44,6 +44,12 @@ cn=<group>,ou=groups,cn=<client_id>,ou=clients,<base_dn>   groups
   restriction (`restrict_group_prefix`). A user bind can only search its own entry, the whole
   directory is only visible to the service bind.
 
+All users of an app bind from the app's IP. By default, a few failed user binds with different
+usernames therefore trigger the credential stuffing detection and block the app's IP for everyone.
+If the LDAPS port is only reachable for your apps, you can set
+`ldap.disable_ip_brute_force_protection = true`. User binds then skip all per-IP checks and only
+the per-user failed login counter slows down repeated failures.
+
 Like the `password` grant, LDAP binds cannot do MFA. A user with MFA or passkeys who also has a
 local password can log in with the password alone. Only users with a local password can log in,
 passkey-only or upstream-provider-only accounts are not part of the directory.

@@ -12,17 +12,21 @@ use zeroize::Zeroize;
 
 /// The user side of a password login, shared by the `password` grant and LDAP binds.
 /// The `client` must already be validated by the caller (enabled, secret, `password` flow).
+/// `cred_stuff_detect = false` skips the per-IP credential stuffing detection.
 pub async fn password_login(
     client: &Client,
     email: String,
     mut password: String,
     ip: IpAddr,
     user_failed_logins: &mut Option<i64>,
+    cred_stuff_detect: bool,
 ) -> Result<User, ErrorResponse> {
     let mut user = match User::find_by_email(email.clone()).await {
         Ok(u) => u,
         Err(err) => {
-            CredStuffDetect::trigger(ip, &email, Some(&password)).await;
+            if cred_stuff_detect {
+                CredStuffDetect::trigger(ip, &email, Some(&password)).await;
+            }
             password.zeroize();
             return Err(err);
         }
@@ -70,7 +74,9 @@ pub async fn password_login(
 
             // The password grant receives username + password, so it is subject to credential
             // stuffing just like the authorize flow. Trigger the detection here as well.
-            CredStuffDetect::trigger(ip, &user.email, Some(&password)).await;
+            if cred_stuff_detect {
+                CredStuffDetect::trigger(ip, &user.email, Some(&password)).await;
+            }
 
             password.zeroize();
 

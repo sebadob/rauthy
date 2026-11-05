@@ -626,6 +626,7 @@ impl Default for Vars {
                 base_dn: "dc=rauthy,dc=local".into(),
                 cert_path: None,
                 key_path: None,
+                disable_ip_brute_force_protection: false,
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -3344,6 +3345,15 @@ impl Vars {
             panic!("ldap.cert_path and ldap.key_path must be set together");
         }
 
+        if let Some(v) = t_bool(
+            &mut table,
+            "ldap",
+            "disable_ip_brute_force_protection",
+            "LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION",
+        ) {
+            self.ldap.disable_ip_brute_force_protection = v;
+        }
+
         check_table_empty(table, "ldap");
     }
 
@@ -4735,6 +4745,8 @@ pub struct VarsLdap {
     /// `None` reuses the `[tls]` certificate.
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
+    /// Skips the per-IP brute-force checks for user binds, the per-user counter still applies.
+    pub disable_ip_brute_force_protection: bool,
 }
 
 #[derive(Debug)]
@@ -5330,9 +5342,10 @@ mod tests {
         assert!(!vars.ldap.enable);
         assert_eq!(vars.ldap.port, 6360);
         assert!(vars.ldap.cert_path.is_none());
+        assert!(!vars.ldap.disable_ip_brute_force_protection);
 
         let mut table: toml::Table = toml::from_str(
-            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'",
+            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'\ndisable_ip_brute_force_protection = true",
         )
         .unwrap();
         vars.parse_ldap(&mut table);
@@ -5340,6 +5353,7 @@ mod tests {
         assert_eq!(vars.ldap.port, 636);
         assert_eq!(vars.ldap.base_dn, "dc=example,dc=com");
         assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
+        assert!(vars.ldap.disable_ip_brute_force_protection);
     }
 
     #[test]

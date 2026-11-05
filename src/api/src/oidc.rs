@@ -414,8 +414,15 @@ pub async fn post_authorize_handle(
     };
 
     let ip = real_ip_from_req(&req)?;
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed, user_failed_logins)
-        .await
+    login_delay::handle_login_delay(
+        ip,
+        start,
+        res,
+        has_password_been_hashed,
+        user_failed_logins,
+        true,
+    )
+    .await
 }
 
 /// Immediate login refresh with valid session
@@ -1097,8 +1104,15 @@ pub async fn post_token(
         }
     };
 
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed, user_failed_logins)
-        .await
+    login_delay::handle_login_delay(
+        ip,
+        start,
+        res,
+        has_password_been_hashed,
+        user_failed_logins,
+        true,
+    )
+    .await
 }
 
 #[utoipa::path(

@@ -189,8 +189,26 @@ async fn bind(req: &SimpleBindRequest, ip: IpAddr) -> (LdapMsg, Session) {
     let mut user_failed_logins = None;
     let bind_dn = dn::parse_bind(&req.dn, &RauthyConfig::get().vars.ldap.base_dn);
     let is_user_bind = matches!(bind_dn, Some(BindDn::User { .. }));
-    let res = check_bind(bind_dn, req.pw.clone(), ip, &mut user_failed_logins).await;
-    let res = handle_login_delay(ip, start, res, is_user_bind, user_failed_logins).await;
+    // all users of an app bind from the app's IP, so the per-IP checks can be disabled for them
+    let ip_checks = !(is_user_bind
+        && RauthyConfig::get()
+            .vars
+            .ldap
+            .disable_ip_brute_force_protection);
+    let res = check_bind(
+        bind_dn,
+        req.pw.clone(),
+        ip,
+        &mut user_failed_logins,
+        ip_checks,
+    )
+    .await;
+    let res = if res.is_ok() && !is_user_bind {
+        // a successful service bind must not reset the per-IP counter of the user binds after it
+        res
+    } else {
+        handle_login_delay(ip, start, res, is_user_bind, user_failed_logins, ip_checks).await
+    };
 
     match res {
         Ok((client_id, user_id)) => (
@@ -218,6 +236,7 @@ async fn check_bind(
     password: String,
     ip: IpAddr,
     user_failed_logins: &mut Option<i64>,
+    ip_checks: bool,
 ) -> Result<(String, Option<String>), ErrorResponse> {
     let unauthorized = || ErrorResponse::new(ErrorResponseType::Unauthorized, "invalid bind DN");
     let (client_id, uid) = match bind_dn.ok_or_else(unauthorized)? {
@@ -239,7 +258,8 @@ async fn check_bind(
         }
         Some(uid) => {
             let email = directory::resolve_email(&uid).await?;
-            let user = password_login(&client, email, password, ip, user_failed_logins).await?;
+            let user =
+                password_login(&client, email, password, ip, user_failed_logins, ip_checks).await?;
             Some(user.id)
         }
     };

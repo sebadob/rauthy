@@ -122,6 +122,66 @@ with a minimal, read-only LDAPS server. It is disabled by default and configured
 subtree at `cn=<client_id>,ou=clients,<base_dn>`. User binds run the same checks as the `password`
 grant. See the book chapter *LDAP* for details.
 
+Apps send the binds of all users from a single IP. If the LDAPS port is only reachable for your
+apps, `disable_ip_brute_force_protection` makes user binds skip the per-IP checks, so a few failed
+logins do not block the app's IP for everyone. It is disabled by default.
+
+```toml
+[ldap]
+# Enables a minimal, read-only LDAPS server for clients that can
+# only log in via an LDAP bind, like the Jellyfin LDAP plugin.
+# Only implicit TLS (LDAPS) is supported, no StartTLS.
+# See the book chapter "LDAP" for the directory layout.
+#
+# default: false
+# overwritten by: LDAP_ENABLE
+enable = false
+
+# The address the LDAPS server listens on.
+#
+# default: '0.0.0.0'
+# overwritten by: LDAP_LISTEN_ADDRESS
+listen_address = '0.0.0.0'
+
+# The port the LDAPS server listens on.
+#
+# default: 6360
+# overwritten by: LDAP_PORT
+port = 6360
+
+# The base DN of the directory. Each client gets its own subtree
+# below it at `cn=<client_id>,ou=clients,<base_dn>`.
+#
+# default: 'dc=rauthy,dc=local'
+# overwritten by: LDAP_BASE_DN
+base_dn = 'dc=rauthy,dc=local'
+
+# TLS certificate and key for the LDAPS server, in PEM format.
+# Both must be set together. If not set, the `[tls]` certificate
+# is used. Set them when Rauthy itself runs plain HTTP behind a
+# reverse proxy, since LDAP clients connect to Rauthy directly.
+#
+# overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
+#cert_path = 'tls/ldap.crt'
+#key_path = 'tls/ldap.key'
+
+# Disables the per-IP brute-force protection for LDAP user binds:
+# no credential stuffing detection, no per-IP failed login counter
+# and no IP blacklisting because of failed user binds. Apps like
+# Jellyfin send the binds of all users from a single IP, so a few
+# failed logins from different users would otherwise block the
+# app's IP for everyone. The per-user failed login counter and its
+# login delays still apply, and an already blacklisted IP is still
+# refused. Service binds keep the per-IP protection.
+# CAUTION: a client connecting directly to the LDAPS port can then
+# try passwords across many users without an IP limit. Only enable
+# it when the LDAPS port is reachable for your apps only.
+#
+# default: false
+# overwritten by: LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION
+disable_ip_brute_force_protection = false
+```
+
 [#1851](https://github.com/sebadob/rauthy/issues/1851)
 
 #### Externally Provisioned Client Secrets
