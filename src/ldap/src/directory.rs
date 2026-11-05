@@ -5,7 +5,7 @@ use rauthy_data::entity::groups::Group;
 use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::{UidCandidate, UserValues};
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::collections::HashMap;
 use tracing::warn;
 
@@ -179,13 +179,22 @@ pub fn build(
     entries
 }
 
+/// A user a search can be narrowed down to, used at or above `server.ssp_threshold`.
+#[derive(Debug, PartialEq)]
+pub enum Target {
+    Id(String),
+    Uid(String),
+    Mail(String),
+}
+
 /// Loads the users and groups visible to `client`.
 /// Users must have a local password, be enabled, not expired and pass the client's group
-/// restriction.
-///
-/// shortcut: loads all users on every search, fine for small directories; add caching or
-/// paging if large directories need it. Binds use targeted queries, see [resolve_email].
-pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorResponse> {
+/// restriction. With `targets`, only these users are loaded instead of all of them, with the same
+/// `uid`s a full load would assign. Group `member`s then only contain the loaded users.
+pub async fn load(
+    client: &Client,
+    targets: Option<Vec<Target>>,
+) -> Result<(Vec<DirUser>, Vec<String>), ErrorResponse> {
     let groups: Vec<String> = Group::find_all()
         .await?
         .into_iter()
@@ -198,7 +207,10 @@ pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorR
         })
         .collect();
 
-    let (all, pam, mut uids) = load_uids().await?;
+    let (all, pam, mut uids) = match targets {
+        None => load_uids().await?,
+        Some(targets) => load_targets(targets).await?,
+    };
     let users = all
         .into_iter()
         .filter(|u| {
@@ -229,6 +241,52 @@ pub async fn load(client: &Client) -> Result<(Vec<DirUser>, Vec<String>), ErrorR
     Ok((users, groups))
 }
 
+/// Loads only the `targets` with targeted queries, see [load_uids] for the result.
+async fn load_targets(targets: Vec<Target>) -> Result<Uids, ErrorResponse> {
+    let mut users: Vec<User> = Vec::with_capacity(targets.len());
+    for target in targets {
+        let user = match target {
+            Target::Id(id) => User::find(id).await,
+            Target::Mail(email) => User::find_by_email(email).await,
+            Target::Uid(uid) => User::find_by_email(resolve_email(&uid).await?).await,
+        };
+        match user {
+            Ok(u) if !users.iter().any(|known| known.id == u.id) => users.push(u),
+            Ok(_) => {}
+            Err(err) if err.error == ErrorResponseType::NotFound => {}
+            Err(err) => return Err(err),
+        }
+    }
+
+    let mut pam = HashMap::with_capacity(users.len());
+    let mut uids = HashMap::with_capacity(users.len());
+    for u in &users {
+        // the same rows `uid_owner` needs: every user sharing a name or email with this one
+        let mut rows = UserValues::find_uid_candidates(&u.email).await?;
+        let names: Vec<String> = rows
+            .iter()
+            .filter(|r| r.0 == u.id)
+            .flat_map(|(_, _, pam, pref)| [pam, pref])
+            .flatten()
+            .map(|n| n.to_lowercase())
+            .collect();
+        for name in names {
+            rows.extend(UserValues::find_uid_candidates(&name).await?);
+        }
+        if let Some(uid) = uid_of(&u.id, rows) {
+            uids.insert(u.id.clone(), uid);
+        }
+        match PamUser::find_by_user_id(u.id.clone()).await {
+            Ok(p) => {
+                pam.insert(u.email.clone(), p);
+            }
+            Err(err) if err.error == ErrorResponseType::NotFound => {}
+            Err(err) => return Err(err),
+        }
+    }
+    Ok((users, pam, uids))
+}
+
 /// Resolves a bind `uid` to the user's email with the same `uid`s the directory publishes.
 /// Anything that is not a published `uid` is treated as the email itself.
 pub async fn resolve_email(uid: &str) -> Result<String, ErrorResponse> {
@@ -250,7 +308,22 @@ pub async fn resolve_email(uid: &str) -> Result<String, ErrorResponse> {
 
 /// Returns the email of the user in `rows` whose `uid` is `uid_lc`. `rows` must contain every
 /// user that shares a name or email with a user named `uid_lc`.
-fn uid_owner(uid_lc: &str, mut rows: Vec<UidCandidate>) -> Option<String> {
+fn uid_owner(uid_lc: &str, rows: Vec<UidCandidate>) -> Option<String> {
+    let (rows, uids) = assign_candidate_uids(rows);
+    rows.into_iter()
+        .find(|r| uids[&r.0].to_lowercase() == uid_lc)
+        .map(|r| r.1)
+}
+
+/// Returns the `uid` of user `id`. `rows` must contain every user that shares a name or email
+/// with that user.
+fn uid_of(id: &str, rows: Vec<UidCandidate>) -> Option<String> {
+    assign_candidate_uids(rows).1.remove(id)
+}
+
+fn assign_candidate_uids(
+    mut rows: Vec<UidCandidate>,
+) -> (Vec<UidCandidate>, HashMap<String, String>) {
     rows.sort_by(|a, b| a.0.cmp(&b.0));
     rows.dedup_by(|a, b| a.0 == b.0);
     let ids: Vec<(String, String)> = rows.iter().map(|r| (r.0.clone(), r.1.clone())).collect();
@@ -263,9 +336,7 @@ fn uid_owner(uid_lc: &str, mut rows: Vec<UidCandidate>) -> Option<String> {
         .filter_map(|r| Some((r.0.clone(), r.3.clone()?)))
         .collect();
     let uids = assign_uids(&ids, &pam_names, &preferred);
-    rows.into_iter()
-        .find(|r| uids[&r.0].to_lowercase() == uid_lc)
-        .map(|r| r.1)
+    (rows, uids)
 }
 
 type Uids = (Vec<User>, HashMap<String, PamUser>, HashMap<String, String>);
@@ -412,6 +483,10 @@ mod tests {
         assert_eq!(owner("eve"), None);
         assert_eq!(owner("kim").as_deref(), Some("i@x.io"));
         assert_eq!(owner("ärger"), None);
+        // targeted loads assign the same uids as the full load
+        for (id, _) in &users {
+            assert_eq!(uid_of(id, rows.clone()).as_ref(), Some(&uids[id]));
+        }
         // only the rows the queries return for `alice`: the users named or emailed `alice`
         assert_eq!(
             uid_owner("alice", vec![rows[0].clone(), rows[1].clone()]).as_deref(),

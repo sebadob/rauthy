@@ -5,7 +5,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::directory::Entry;
+use crate::directory::{Entry, Target};
 use crate::dn::BindDn;
 use futures::{SinkExt, StreamExt};
 use ldap3_proto::LdapCodec;
@@ -17,6 +17,7 @@ use ldap3_proto::simple::{
 use rauthy_api_types::oidc::GrantType;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::ip_blacklist::IpBlacklist;
+use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::login_delay::handle_login_delay;
@@ -316,10 +317,14 @@ async fn search_client(
                 "client disabled".into(),
             )
         })?;
-    let (users, groups) = directory::load(&client).await.map_err(|err| {
+    let internal = |err: ErrorResponse| {
         error!("LDAP search failed to load the directory: {}", err.message);
-        (LdapResultCode::Other, "internal error".into())
-    })?;
+        (LdapResultCode::Other, "internal error".to_string())
+    };
+    let user_count = User::count().await.map_err(internal)?;
+    let threshold = RauthyConfig::get().vars.server.ssp_threshold;
+    let targets = targets(user_count, threshold, user_id, &req.filter)?;
+    let (users, groups) = directory::load(&client, targets).await.map_err(internal)?;
 
     let entries = directory::build(client_id, &client_base, &users, &groups);
     Ok(visible(
@@ -332,6 +337,48 @@ async fn search_client(
     .into_iter()
     .map(|e| req.gen_result_entry(e.into_result(&req.attrs)))
     .collect())
+}
+
+/// Below `server.ssp_threshold` users, searches load the whole directory (`None`). At or above it,
+/// only the users a search can return are loaded: a user session's own entry, or the users of
+/// `uid` / `mail` equality filters. Any other search is refused with `sizeLimitExceeded`.
+fn targets(
+    user_count: i64,
+    threshold: u16,
+    user_id: Option<&str>,
+    filter: &LdapFilter,
+) -> Result<Option<Vec<Target>>, (LdapResultCode, String)> {
+    if user_count < threshold as i64 {
+        return Ok(None);
+    }
+    if let Some(id) = user_id {
+        return Ok(Some(vec![Target::Id(id.to_string())]));
+    }
+    filter_targets(filter).map(Some).ok_or((
+        LdapResultCode::SizeLimitExceeded,
+        "too many users, filter by uid or mail".into(),
+    ))
+}
+
+/// Returns the users that every entry matching `filter` must be one of, if the filter limits it.
+fn filter_targets(filter: &LdapFilter) -> Option<Vec<Target>> {
+    match filter {
+        LdapFilter::Equality(attr, val) if attr.eq_ignore_ascii_case("uid") => {
+            Some(vec![Target::Uid(val.clone())])
+        }
+        LdapFilter::Equality(attr, val) if attr.eq_ignore_ascii_case("mail") => {
+            Some(vec![Target::Mail(val.clone())])
+        }
+        LdapFilter::And(fs) => fs.iter().find_map(filter_targets),
+        LdapFilter::Or(fs) if !fs.is_empty() => {
+            let mut targets = Vec::new();
+            for f in fs {
+                targets.extend(filter_targets(f)?);
+            }
+            Some(targets)
+        }
+        _ => None,
+    }
 }
 
 /// Normalizes the requested search `base` and refuses any base outside `client_base`.
@@ -486,5 +533,45 @@ mod tests {
             dns("not a dn", LdapSearchScope::Subtree, None),
             Err(LdapResultCode::InvalidDNSyntax)
         );
+    }
+
+    #[test]
+    fn ssp_threshold_targets() {
+        let eq = |a: &str, v: &str| LdapFilter::Equality(a.into(), v.into());
+        let all = LdapFilter::Present("objectClass".into());
+
+        // below the threshold, everything is loaded
+        assert_eq!(targets(999, 1000, None, &all), Ok(None));
+
+        // at or above it, user sessions only load their own entry
+        assert_eq!(
+            targets(1000, 1000, Some("id1"), &all),
+            Ok(Some(vec![Target::Id("id1".into())]))
+        );
+
+        // service sessions need a uid / mail equality filter
+        let filter = LdapFilter::And(vec![
+            LdapFilter::Equality("objectClass".into(), "inetOrgPerson".into()),
+            LdapFilter::Or(vec![eq("UID", "alice"), eq("mail", "alice@x.io")]),
+        ]);
+        assert_eq!(
+            targets(1000, 1000, None, &filter),
+            Ok(Some(vec![
+                Target::Uid("alice".into()),
+                Target::Mail("alice@x.io".into())
+            ]))
+        );
+        for filter in [
+            all,
+            eq("cn", "alice"),
+            LdapFilter::Or(vec![eq("uid", "alice"), eq("cn", "bob")]),
+            LdapFilter::Not(Box::new(eq("uid", "alice"))),
+            LdapFilter::Or(vec![]),
+        ] {
+            assert_eq!(
+                targets(1000, 1000, None, &filter).map_err(|(c, _)| c),
+                Err(LdapResultCode::SizeLimitExceeded)
+            );
+        }
     }
 }
