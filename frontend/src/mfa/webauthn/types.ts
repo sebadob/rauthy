@@ -55,23 +55,6 @@ export interface WebauthnRegFinishRequest {
 // ######################################################################
 
 type AuthenticatorTransport = 'Usb' | 'Nfc' | 'Ble' | 'Internal' | 'Hybrid' | 'Test' | 'Unknown';
-type AttestationFormat =
-    | 'packed'
-    | 'Packed'
-    | 'tpm'
-    | 'Tpm'
-    | 'TPM'
-    | 'android-key'
-    | 'AndroidKey'
-    | 'android-safetynet'
-    | 'AndroidSafetyNet'
-    | 'AndroidSafetynet'
-    | 'fido-u2f'
-    | 'FIDOU2F'
-    | 'apple'
-    | 'AppleAnonymous'
-    | 'none'
-    | 'None';
 type Base64UrlSafeData = string;
 type CredentialProtectionPolicy =
     | 'UserVerificationOptional'
@@ -131,76 +114,6 @@ export interface AuthenticatorAssertionResponseRaw {
     clientDataJSON: Base64UrlSafeData;
     signature: Base64UrlSafeData;
     userHandle?: Base64UrlSafeData;
-}
-
-export interface CreationChallengeResponse {
-    publicKey: PublicKeyCredentialCreationOptions;
-}
-
-export interface PublicKeyCredentialCreationOptions {
-    rp: RelyingParty;
-    user: User;
-    challenge: Base64UrlSafeData;
-    pubKeyCredParams: PubKeyCredParams[];
-    timeout?: number;
-    excludeCredentials?: PublicKeyCredentialDescriptor[];
-    authenticatorSelection?: AuthenticatorSelectionCriteria;
-    hints?: PublicKeyCredentialHints[];
-    attestation?: AttestationConveyancePreference;
-    attestationFormats?: AttestationFormat[];
-    extensions?: RequestRegistrationExtensions;
-}
-
-export interface RelyingParty {
-    name: string;
-    id: string;
-}
-
-export interface User {
-    /// The user's id in base64 form. This MUST be a unique id, and
-    /// must NOT contain personally identifying information, as this value can NEVER
-    /// be changed.
-    id: Base64UrlSafeData;
-    /// A detailed name for the account, such as an email address. This value
-    /// **can** change, so **must not** be used as a primary key.
-    name: string;
-    /// The user's preferred name for display. This value **can** change, so
-    /// **must not** be used as a primary key.
-    display_name: string;
-}
-
-export interface PubKeyCredParams {
-    type: string;
-    alg: number;
-}
-
-export interface PublicKeyCredentialDescriptor {
-    type: string;
-    id: Base64UrlSafeData;
-    transports?: AuthenticatorTransport[];
-}
-
-export interface RequestRegistrationExtensions {
-    credProtect?: CredProtect;
-    /// ⚠️  - Browsers do not support this!
-    uvm?: boolean;
-    /// ⚠️  - This extension result is always unsigned, and only indicates if the
-    /// browser *requests* a residentKey to be created. It has no bearing on the
-    /// true rk state of the credential.
-    credProps?: boolean;
-    /// CTAP2.1 minimum pin length
-    minPinLength?: boolean;
-    /// ⚠️  - Browsers support the *creation* of the secret, but not the retrieval of it.
-    /// CTAP2.1 create hmac secret
-    hmacCreateSecret?: boolean;
-}
-
-export interface CredProtect {
-    credentialProtectionPolicy: CredentialProtectionPolicy;
-    /// Whether it is better for the authenticator to fail to create a
-    /// credential rather than ignore the protection policy
-    /// If no value is provided, the client treats it as `false`.
-    enforceCredentialProtectionPolicy?: boolean;
 }
 
 export interface RegisterPublicKeyCredential {

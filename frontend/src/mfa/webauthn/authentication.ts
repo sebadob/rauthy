@@ -1,4 +1,4 @@
-import { arrBufToBase64UrlSafe, promiseTimeout } from '#utils/helpers.ts';
+import { promiseTimeout } from '#utils/helpers.ts';
 import { fetchPost } from '#api/fetch.ts';
 import type {
     WebauthnAdditionalData,
@@ -6,7 +6,7 @@ import type {
     WebauthnAuthStartRequest,
     WebauthnAuthStartResponse,
 } from '#mfa/webauthn/types.ts';
-import { base64UrlSafeToArrBuf } from './utils';
+import { arrBufToBase64UrlSafe, base64UrlSafeToArrBuf } from './utils';
 import type { MfaPurpose } from '#api/types/mfa.js';
 
 export interface WebauthnAuthResult {
@@ -68,11 +68,11 @@ export async function webauthnAuth(
     // prompt for the passkey and get its public key
     const exp = (resp.exp - 1) * 1000;
     const expTime = new Date().getTime() + exp;
-    let credential: Credential;
+    let credential: PublicKeyCredential;
     try {
         const cred = await promiseTimeout(navigator.credentials.get(challenge), exp);
         if (cred) {
-            credential = cred;
+            credential = cred as PublicKeyCredential;
         } else {
             return {
                 error: errorI18nInvalidKey,
@@ -86,27 +86,20 @@ export async function webauthnAuth(
     }
 
     // The backend expects base64 url safe strings instead of array buffers.
-    // The values we need to modify are not publicly exported in the TS type though, but they exist.
+    const response = credential.response as AuthenticatorAssertionResponse;
     let payloadFinish: WebauthnAuthFinishRequest = {
         code: resp.code,
         data: {
             id: credential.id,
-            // @ts-ignore the `response.rawId` actually exists
             rawId: arrBufToBase64UrlSafe(credential.rawId),
             response: {
-                // @ts-ignore the `response.authenticatorData` actually exists
-                authenticatorData: arrBufToBase64UrlSafe(credential.response.authenticatorData),
-                // @ts-ignore the `response.clientDataJSON` actually exists
-                clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
-                // @ts-ignore the `response.signature` actually exists
-                signature: arrBufToBase64UrlSafe(credential.response.signature),
-                // @ts-ignore the `response.userHandle` actually exists
-                userHandle: credential.response.userHandle
-                    ? // @ts-ignore the `response.userHandle` actually exists
-                      arrBufToBase64UrlSafe(credential.response.userHandle)
+                authenticatorData: arrBufToBase64UrlSafe(response.authenticatorData),
+                clientDataJSON: arrBufToBase64UrlSafe(response.clientDataJSON),
+                signature: arrBufToBase64UrlSafe(response.signature),
+                userHandle: response.userHandle
+                    ? arrBufToBase64UrlSafe(response.userHandle)
                     : undefined,
             },
-            // @ts-ignore the `response.getClientExtensionResults()` actually exists
             extensions: credential.getClientExtensionResults(),
             type: credential.type,
         },

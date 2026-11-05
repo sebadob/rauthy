@@ -68,11 +68,11 @@ export async function webauthnReg(
     // prompt for the passkey and get its public key
     let exp = (options.publicKey.timeout || 60000) - 1000;
     const expTime = new Date().getTime() + exp;
-    let credential: Credential;
+    let credential: PublicKeyCredential;
     try {
         const cred = await promiseTimeout(navigator.credentials.create(options), exp);
         if (cred) {
-            credential = cred;
+            credential = cred as PublicKeyCredential;
         } else {
             return {
                 error: errorI18nInvalidKey,
@@ -91,19 +91,16 @@ export async function webauthnReg(
     }
 
     // the backend expects base64 url safe string instead of array buffers
+    const response = credential.response as AuthenticatorAttestationResponse;
     let payloadFinish: WebauthnRegFinishRequest = {
         passkey_name: passkeyName.trim(),
         data: {
             id: credential.id,
-            // @ts-ignore the `rawId` actually exists
             rawId: arrBufToBase64UrlSafe(credential.rawId),
             response: {
-                // @ts-ignore the `response.attestationObject` actually exists
-                attestationObject: arrBufToBase64UrlSafe(credential.response.attestationObject),
-                // @ts-ignore the `response.clientDataJSON` actually exists
-                clientDataJSON: arrBufToBase64UrlSafe(credential.response.clientDataJSON),
+                attestationObject: arrBufToBase64UrlSafe(response.attestationObject),
+                clientDataJSON: arrBufToBase64UrlSafe(response.clientDataJSON),
             },
-            // @ts-ignore the `response.getClientExtensionResults()` actually exists
             extensions: credential.getClientExtensionResults(),
             type: credential.type,
         },

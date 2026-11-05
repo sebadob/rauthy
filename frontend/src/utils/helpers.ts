@@ -11,7 +11,6 @@ import {
     PROVIDER_TOKEN,
     REDIRECT_URI,
 } from './constants.js';
-import { decode, encode } from 'base64-arraybuffer';
 import type { PasswordPolicyResponse } from '#api/types/password_policy.ts';
 import type { EventLevel } from '#api/types/events.ts';
 import { generateNonce, generatePKCE } from '#utils/pkce.ts';
@@ -143,16 +142,6 @@ export const purgeStorage = () => {
     localStorage.removeItem(PKCE_VERIFIER_UPSTREAM);
     localStorage.removeItem(PROVIDER_TOKEN);
 };
-
-export function arrBufToBase64UrlSafe(buffer: ArrayBuffer) {
-    let base64 = encode(buffer);
-    const enc = {
-        '+': '-',
-        '/': '_',
-        '=': '',
-    };
-    return base64.replace(/[+/=]/g, m => enc[m as '+' | '/' | '=']);
-}
 
 // export function base64UrlSafeToArrBuf(base64url: string) {
 // 	const dec = {
