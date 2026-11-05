@@ -3010,6 +3010,16 @@ revalidate_during_login = true
 # overwritten by: USER_VALUES_NAME_ORDER_REVERSE
 name_order_reverse = false
 
+# Seconds after a successful password reset until the reset
+# page redirects the user, either to the `redirect_uri` of the
+# reset request or to the account dashboard. Set to `0` to
+# disable the redirect: the success message then stays visible
+# with a link to continue.
+#
+# default: 5
+# overwritten by: PASSWORD_RESET_REDIRECT_TIMEOUT
+password_reset_redirect_timeout = 5
+
 [user_values.preferred_username]
 
 # If the `preferred_username` is not set for a given user, the

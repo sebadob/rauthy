@@ -38,6 +38,8 @@ pub struct TplPasswordReset {
     pub magic_link_id: String,
     pub needs_mfa: bool,
     pub password_policy: PasswordPolicyResponse,
+    /// Seconds until the reset page redirects after a successful reset, `0` disables it.
+    pub redirect_timeout: u16,
     pub user_id: String,
 }
 

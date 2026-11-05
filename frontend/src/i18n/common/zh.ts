@@ -295,6 +295,7 @@ export const I18nZh: I18n = {
     passwordReset: {
         accountLogin: '账户登录',
         badFormat: '格式错误',
+        continueSignIn: '继续登录',
         fidoLink: 'https://fidoalliance.org/fido2/?lang=zh-hans',
         generate: '生成',
         newAccDesc1: '您可以在两种账户类型之间选择：无密码账户或传统密码账户',
@@ -311,7 +312,7 @@ export const I18nZh: I18n = {
         required: '必填',
         save: '保存',
         success1: '密码已成功更新。',
-        success2: '您将很快被重定向。',
+        success2: '您将在 {{ secs }} 秒后被重定向。',
         success3: '如果您未被重定向，请点击这里：',
         successPasskey1: '您的新通行密钥已成功注册。',
         successPasskey2: `请尽快登录您的账户并注册第二个备份密钥。

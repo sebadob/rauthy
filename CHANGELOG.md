@@ -13,6 +13,31 @@ current behavior.
 Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
 via `PASSWORD_RESET_LINK_ALWAYS` until every node is upgraded.
 
+#### Password Reset Redirect Timeout
+
+After a successful password reset, the reset page redirected after a fixed 5 seconds, so a user
+who missed the confirmation could think the reset had sent them back to where they started. The
+new `user_values.password_reset_redirect_timeout` (`PASSWORD_RESET_REDIRECT_TIMEOUT`) sets the
+timeout in seconds, and `0` disables the redirect, which keeps the confirmation visible with a
+link to continue. That link now reads *Continue to sign in* when it leads back to the client, and
+the message shows the actual number of seconds. The default is `5`, which keeps the current
+behavior.
+
+```toml
+[user_values]
+# Seconds after a successful password reset until the reset
+# page redirects the user, either to the `redirect_uri` of the
+# reset request or to the account dashboard. Set to `0` to
+# disable the redirect: the success message then stays visible
+# with a link to continue.
+#
+# default: 5
+# overwritten by: PASSWORD_RESET_REDIRECT_TIMEOUT
+password_reset_redirect_timeout = 5
+```
+
+[#1722](https://github.com/sebadob/rauthy/issues/1722)
+
 #### Opt-in Bootstrap Reconcile
 
 The bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` can be re-applied on

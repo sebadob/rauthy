@@ -314,6 +314,7 @@ export const I18nEn: I18n = {
     passwordReset: {
         accountLogin: 'Account Login',
         badFormat: 'Bad Format',
+        continueSignIn: 'Continue to sign in',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generate',
         newAccDesc1:
@@ -331,7 +332,7 @@ export const I18nEn: I18n = {
         required: 'Required',
         save: 'Save',
         success1: 'The password has been updated successfully.',
-        success2: 'You will be redirected shortly.',
+        success2: 'You will be redirected in {{ secs }} seconds.',
         success3: 'If you are not being redirected, please click here:',
         successPasskey1: 'Your new passkey has been registered successfully.',
         successPasskey2: `Please log into your account and register a second backup key as\nsoon as 

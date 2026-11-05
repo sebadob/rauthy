@@ -305,6 +305,7 @@ export const I18nKo: I18n = {
     passwordReset: {
         accountLogin: '계정 로그인',
         badFormat: '잘못된 형식',
+        continueSignIn: '로그인으로 계속',
         fidoLink: 'https://fidoalliance.org/fido2/?lang=ko',
         generate: '생성',
         newAccDesc1: `계정 종류는 비밀번호가 없는 계정 또는 기존의 비밀번호가 있는 계정 중 하나를 선택할 수 
@@ -321,7 +322,7 @@ export const I18nKo: I18n = {
         required: '필수',
         save: '저장',
         success1: '비밀번호가 성공적으로 변경되었습니다.',
-        success2: '곧 리다이렉트됩니다.',
+        success2: '{{ secs }}초 후에 리다이렉트됩니다.',
         success3: '만약 리다이렉트가 되지 않으면, 여기를 클릭해 주세요:',
         successPasskey1: '새로운 패스키가 성공적으로 등록되었습니다.',
         successPasskey2: `계정에 로그인하여 가능한 한 빨리 두 번째 백업 키를 등록해 주세요.\n패스키 전용 계정은 

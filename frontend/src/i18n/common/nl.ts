@@ -316,6 +316,7 @@ export const I18nNl: I18n = {
     passwordReset: {
         accountLogin: 'Account inloggen',
         badFormat: 'Ongeldig formaat',
+        continueSignIn: 'Doorgaan naar inloggen',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Genereren',
         newAccDesc1:
@@ -333,7 +334,7 @@ export const I18nNl: I18n = {
         required: 'Verplicht',
         save: 'Opslaan',
         success1: 'Het wachtwoord is succesvol bijgewerkt.',
-        success2: 'U wordt binnenkort doorgestuurd.',
+        success2: 'U wordt over {{ secs }} seconden doorgestuurd.',
         success3: 'Als u niet wordt doorgestuurd, klik dan hier:',
         successPasskey1: 'Uw nieuwe passkey is succesvol geregistreerd.',
         successPasskey2: `Log zo snel mogelijk in op uw account en registreer een tweede
