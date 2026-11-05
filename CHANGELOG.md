@@ -2,6 +2,25 @@
 
 ## UNRELEASED
 
+### Security
+
+#### Forward Auth cookie can no longer be used as a Rauthy session
+
+The Forward Auth session cookie (`__Host-Rauthy-Ext-Session`), which the reverse proxy passes on to
+the protected upstream app, held the exact same value as Rauthy's own `__Host-RauthySession`. The
+upstream app, or anyone able to read its cookies, could replay it against Rauthy and act as the
+user in the Account and Admin UI. The Forward Auth cookie value is now domain-separated, so it no
+longer resolves as a Rauthy session, and the other way around.
+
+Existing Forward Auth sessions need to log in once more after the update.
+
+**If you use Forward Auth, invalidate all sessions after upgrading** (Admin UI > Sessions, or
+`DELETE /auth/v1/sessions`). Forward Auth cookies issued before this release still hold the bare
+session id and can be replayed as a Rauthy session until that session ends. Logging in again does
+not rotate the session, so only invalidating it closes the window. Rauthy does not do this
+automatically, because it would log out every user on every instance, including the ones that
+never used Forward Auth.
+
 ### Changes
 
 #### Always Show *Password Forgotten*
