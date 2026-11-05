@@ -1,13 +1,11 @@
-use crate::cust_validation::{
-    validate_resource, validate_resource_or_empty, validate_vec_groups, validate_vec_roles,
-};
+use crate::cust_validation::{validate_vec_groups, validate_vec_roles};
 use crate::generic::Language;
 use crate::oidc::AddressClaim;
 use hiqlite::macros::FromRow;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_CITY, RE_CLIENT_ID,
-    RE_CLIENT_NAME, RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_STREET, RE_URI,
-    RE_USER_NAME,
+    RE_CLIENT_NAME, RE_DATE_STR, RE_MFA_CODE, RE_PHONE, RE_PREFERRED_USERNAME, RE_RESOURCE,
+    RE_RESOURCE_OR_EMPTY, RE_STREET, RE_URI, RE_USER_NAME,
 };
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -316,8 +314,14 @@ pub struct UserConsentDeleteParams {
     /// `resource` filter of `GET /users/{id}/consents`, where an empty value selects the
     /// consents without a resource.
     ///
-    /// Validation: `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`, at most 1024 bytes
-    #[validate(custom(function = "validate_resource"))]
+    /// Validation: `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`
+    #[validate(
+        length(max = 1024),
+        regex(
+            path = "*RE_RESOURCE",
+            code = "^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$"
+        )
+    )]
     pub resource: Option<String>,
 }
 
@@ -328,8 +332,11 @@ pub struct UserConsentsParams {
     /// a consent without a resource is selected by leaving `resource` out, and an empty value is
     /// rejected.
     ///
-    /// Validation: empty or `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`, at most 1024 bytes
-    #[validate(custom(function = "validate_resource_or_empty"))]
+    /// Validation: `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{0,1024}$`
+    #[validate(regex(
+        path = "*RE_RESOURCE_OR_EMPTY",
+        code = "^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{0,1024}$"
+    ))]
     pub resource: Option<String>,
 }
 
