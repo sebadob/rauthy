@@ -316,7 +316,7 @@ pub struct UserConsentDeleteParams {
     ///
     /// Validation: `^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$`
     #[validate(
-        length(max = 1024),
+        length(max = 1024, code = "^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$"),
         regex(
             path = "*RE_RESOURCE",
             code = "^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$"
@@ -867,7 +867,16 @@ mod tests {
         let max = format!("{prefix}{}", "a".repeat(1024 - prefix.len()));
         assert_eq!(max.len(), 1024);
         assert!(params(Some(max.clone())).validate().is_ok());
-        assert!(params(Some(format!("{max}a"))).validate().is_err());
+        // an over-long value reports the documented pattern, like an invalid character
+        let err = params(Some(format!("{max}a"))).validate().unwrap_err();
+        let codes = err
+            .field_errors()
+            .get("resource")
+            .unwrap()
+            .iter()
+            .map(|e| e.code.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(codes, ["^[a-zA-Z0-9,.:/_-&?=~!$'()*+%@]{1,1024}$"]);
         assert!(params(Some(" ".to_string())).validate().is_err());
         assert!(
             params(Some("https://api.example.com/ä".to_string()))

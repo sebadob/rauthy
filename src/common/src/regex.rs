@@ -85,12 +85,13 @@ pub static RE_CLIENT_URI: LazyLock<Regex> = LazyLock::new(|| {
 });
 // Like `RE_URI` but WITHOUT `#`, so a value cannot contain a fragment. Used for RFC 8707
 // `resource` indicators, which MUST be an absolute URI without a fragment (RFC 8707 §2).
+const RESOURCE_CHARS: &str = r"a-zA-Z0-9,.:/_\-&?=~!$'()*+%@";
 pub static RE_RESOURCE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~!$'()*+%@]+$").unwrap());
+    LazyLock::new(|| Regex::new(&format!("^[{RESOURCE_CHARS}]+$")).unwrap());
 // `RE_RESOURCE`, but also empty and at most 1024 characters (ASCII only, so 1024 bytes), for a
 // filter where an empty value selects the entries without a resource.
 pub static RE_RESOURCE_OR_EMPTY: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~!$'()*+%@]{0,1024}$").unwrap());
+    LazyLock::new(|| Regex::new(&format!("^[{RESOURCE_CHARS}]{{0,1024}}$")).unwrap());
 pub static RE_USER_NAME: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}$").unwrap());
 pub static RE_TOKEN_68: LazyLock<Regex> =
