@@ -440,6 +440,9 @@ mod tests {
         lt.exp = now + 1;
         lt.validate_claims_with(header.clone(), lifetime, skew)
             .expect("exp within the skew must be accepted");
+        lt.exp = now - 2;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("exp expired within the skew must be accepted");
         lt.exp = now - skew - 1;
         lt.validate_claims_with(header, lifetime, skew)
             .expect_err("exp beyond the skew must be rejected");
