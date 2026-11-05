@@ -299,10 +299,32 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
-    // 10b. it has no access to the consents of a user, not even of a managed one: it can
-    // neither list them nor revoke one
+    // 10b. it can list and revoke the consents of a managed user
     let res = client
         .get(format!("{backend}/users/{}/consents", member.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .delete(format!(
+            "{backend}/users/{}/consents?client_id=init_client",
+            member.id
+        ))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // 10c. but not those of a user outside its managed groups, nor of another admin
+    let res = client
+        .get(format!("{backend}/users/{}/consents", coadmin.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+    let res = client
+        .get(format!("{backend}/users/{}/consents", outsider.id))
         .headers(ga_headers.clone())
         .send()
         .await?;
@@ -310,7 +332,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
     let res = client
         .delete(format!(
             "{backend}/users/{}/consents?client_id=init_client",
-            member.id
+            outsider.id
         ))
         .headers(ga_headers.clone())
         .send()

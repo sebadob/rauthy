@@ -1149,6 +1149,7 @@ pub async fn delete_user_device(
 ///
 /// **Permissions**
 /// - rauthy_admin
+/// - a group admin, for a user it manages
 /// - the user itself
 /// - an API key with `users: read`
 #[utoipa::path(
@@ -1170,7 +1171,7 @@ pub async fn get_user_consents(
     Query(params): Query<UserConsentsParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
-    validate_consent_access(&principal, &user_id, AccessRights::Read)?;
+    validate_consent_access(&principal, &user_id, AccessRights::Read).await?;
     params.validate()?;
 
     let consents = UserConsent::find_for_user(&user_id, params.resource.as_deref()).await?;
@@ -1202,6 +1203,7 @@ pub async fn get_user_consents(
 ///
 /// **Permissions**
 /// - rauthy_admin
+/// - a group admin, for a user it manages
 /// - the user itself
 /// - an API key with `users: delete`
 #[utoipa::path(
@@ -1225,7 +1227,7 @@ pub async fn delete_user_consent(
     req: HttpRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     let user_id = path.into_inner();
-    validate_consent_access(&principal, &user_id, AccessRights::Delete)?;
+    validate_consent_access(&principal, &user_id, AccessRights::Delete).await?;
     params.validate()?;
 
     let user = User::find(user_id).await?;
@@ -1268,16 +1270,23 @@ pub async fn delete_user_consent(
     }))
 }
 
-/// An API key with `rights` on users, else the user itself or an admin session. A key without
-/// these rights is rejected even with a valid session.
-fn validate_consent_access(
+/// An API key with `rights` on users, else the user itself, an admin session or a group admin
+/// session that manages the user. A key without these rights is rejected even with a valid
+/// session.
+async fn validate_consent_access(
     principal: &ReqPrincipal,
     user_id: &str,
     rights: AccessRights,
 ) -> Result<(), ErrorResponse> {
     match principal.validate_api_key(AccessGroup::Users, rights) {
         Err(err) if err.error == ErrorResponseType::Unauthorized => {
-            principal.validate_user_or_admin(user_id)
+            if principal.validate_user_or_admin(user_id).is_ok() {
+                return Ok(());
+            }
+            // a delegated group admin may access the consents of a user it manages
+            principal.validate_group_admin_session()?;
+            let target = User::find(user_id.to_string()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())
         }
         res => res,
     }
