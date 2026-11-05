@@ -214,7 +214,7 @@ pub async fn grant_type_authorization_code(
 
     // backchannel logout and login state tracking is not supported for ephemeral clients
     if !client.is_ephemeral() {
-        UserLoginState::insert(user.id.clone(), client.id, code.session_id).await?;
+        UserLoginState::insert(&user.id, &client.id, code.session_id.as_deref()).await?;
     }
 
     // No location check here, this is done in `POST /authorize` already
