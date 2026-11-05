@@ -15,6 +15,7 @@
         "test:fetch-error": "svelte-kit sync && node --test tests/fetch-error.node.mjs",
         "test:password-reset": "npm run build && node --test tests/password-reset.node.mjs",
         "test:account-mfa": "npm run build && node --test tests/account-mfa.node.mjs",
+        "test:login": "npm run build && node --test tests/login.node.mjs",
         "lint": "prettier --check . && eslint .",
         "format": "./node_modules/prettier/bin/prettier.cjs --write .",
         "format-check": "./node_modules/prettier/bin/prettier.cjs -c ."
