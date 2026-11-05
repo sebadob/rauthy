@@ -600,6 +600,17 @@ mod tests {
             );
         }
 
+        // exactly MAX_TARGETS distinct targets are still accepted
+        let filter = LdapFilter::Or(
+            (0..MAX_TARGETS)
+                .map(|i| eq("uid", &i.to_string()))
+                .collect(),
+        );
+        assert_eq!(
+            targets(1000, 1000, None, BASE, &filter).map(|t| t.map(|t| t.len())),
+            Ok(Some(MAX_TARGETS))
+        );
+
         // identical terms count once, case-insensitively like they are resolved
         let filter = LdapFilter::Or(
             (0..10_000)

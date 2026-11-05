@@ -60,9 +60,10 @@ applies to open connections within that time.
 Below `server.ssp_threshold` users (default 1000), each search loads the whole directory. At or
 above it, a search only loads the users it can return: a user bind's own entry, the user of a
 search base like `uid=alice,ou=people,...`, or the users named in `uid` or `mail` equality filters,
-for instance `(&(objectClass=inetOrgPerson)(uid=alice))` or `(|(uid=alice)(mail=alice@example.com))`,
-at most 50 different ones. Group entries then only list these users as members. Any other search
-from a service bind, like listing all users or groups, fails with `sizeLimitExceeded`.
+for instance `(&(objectClass=inetOrgPerson)(uid=alice))` or
+`(|(uid=alice)(mail=alice@example.com))`, at most 50 different ones. Group entries then only list
+these users as members. Any other search from a service bind, like listing all users or groups,
+fails with `sizeLimitExceeded`.
 
 ## Directory Layout
 
