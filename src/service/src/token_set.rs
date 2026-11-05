@@ -151,7 +151,7 @@ impl TokenSet {
         dpop_fingerprint: Option<DpopFingerprint>,
         lifetime: i64,
         scope: TokenScopes<'_>,
-        scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+        scope_customs: Option<(&[Scope], &HashMap<String, Vec<u8>>)>,
         sid: Option<SessionId>,
         resource: Option<&str>,
         act: Option<ActClaim<'_>>,
@@ -238,37 +238,9 @@ impl TokenSet {
             custom_flattened: None,
         };
 
-        if let Some((cust, user_attrs)) = scope_customs {
-            let user_attrs = user_attrs.as_ref().unwrap();
-            // Attributes of scopes flagged `claims_at_root` go to the token root
-            // (flattened); all others stay nested under `custom`. Routing is
-            // per-scope, so a single token can mix nested and root-level claims.
-            let mut nested = HashMap::new();
-            let mut flattened = HashMap::new();
-            for c in cust {
-                if let Some(csv) = &c.attr_include_access {
-                    let target = if c.claims_at_root {
-                        &mut flattened
-                    } else {
-                        &mut nested
-                    };
-                    for cust_name in csv.split(',') {
-                        if let Some(value) = user_attrs.get(cust_name) {
-                            let json = serde_json::from_slice(value.as_slice())
-                                .expect("Converting cust user id attr to json");
-                            target.insert(cust_name.to_string(), json);
-                        }
-                    }
-                }
-            }
-            if !nested.is_empty() {
-                claims_new_impl.custom = Some(nested);
-            }
-            if !flattened.is_empty() {
-                // Fail issuance rather than emit a token that shadows a reserved claim.
-                validate_no_reserved_collision(&flattened)?;
-                claims_new_impl.custom_flattened = Some(flattened);
-            }
+        if let Some((scopes, attrs)) = scope_customs {
+            (claims_new_impl.custom, claims_new_impl.custom_flattened) =
+                custom_scope_claims(scopes, attrs, |s| s.attr_include_access.as_deref())?;
         }
 
         // `client_credentials` tokens have no user (`user.is_none()`), so they
@@ -317,7 +289,7 @@ impl TokenSet {
         lifetime: i64,
         nonce: Option<TokenNonce>,
         scope: &str,
-        scope_customs: Option<(Vec<&Scope>, &Option<HashMap<String, Vec<u8>>>)>,
+        scope_customs: Option<(&[Scope], &HashMap<String, Vec<u8>>)>,
         sid: Option<SessionId>,
         auth_code_flow: AuthCodeFlow,
     ) -> Result<String, ErrorResponse> {
@@ -447,35 +419,9 @@ impl TokenSet {
             claims.groups = Some(user.get_groups());
         }
 
-        if let Some((cust, user_attrs)) = scope_customs {
-            let user_attrs = user_attrs.as_ref().unwrap();
-            // See `build_access_token`: per-scope routing to root vs nested `custom`.
-            let mut nested = HashMap::new();
-            let mut flattened = HashMap::new();
-            for c in cust {
-                if let Some(csv) = &c.attr_include_id {
-                    let target = if c.claims_at_root {
-                        &mut flattened
-                    } else {
-                        &mut nested
-                    };
-                    for cust_name in csv.split(',') {
-                        if let Some(value) = user_attrs.get(cust_name) {
-                            let json = serde_json::from_slice(value.as_slice())
-                                .expect("Converting cust user id attr to json");
-                            target.insert(cust_name.to_string(), json);
-                        }
-                    }
-                }
-            }
-            if !nested.is_empty() {
-                claims.custom = Some(nested);
-            }
-            if !flattened.is_empty() {
-                // Fail issuance rather than emit a token that shadows a reserved claim.
-                validate_no_reserved_collision(&flattened)?;
-                claims.custom_flattened = Some(flattened);
-            }
+        if let Some((scopes, attrs)) = scope_customs {
+            (claims.custom, claims.custom_flattened) =
+                custom_scope_claims(scopes, attrs, |s| s.attr_include_id.as_deref())?;
         }
 
         let key_pair_alg = JwkKeyPairAlg::from_str(&client.id_token_alg)?;
@@ -641,38 +587,10 @@ impl TokenSet {
 
         // Custom scope mappings are resolved the same way as in `from_user`, so an exchanged
         // token carries the same custom claims a directly issued one would for these scopes.
-        let cust = Scope::extract_custom(&scope.0);
-        let scps;
-        let attrs;
-        let customs_access = if let Some(user) = user
-            && !cust.is_empty()
-        {
-            scps = Some(Scope::find_all().await?);
-            let mut customs_access = Vec::with_capacity(cust.len());
-            for s in scps.as_ref().unwrap() {
-                if cust.contains(s.name.as_str()) && s.attr_include_access.is_some() {
-                    customs_access.push(s);
-                }
-            }
-
-            attrs = if customs_access.is_empty() {
-                None
-            } else {
-                let attrs = UserAttrValueEntity::find_for_user_with_defaults(&user.id).await?;
-                let mut res = HashMap::with_capacity(attrs.len());
-                for a in attrs {
-                    res.insert(a.key, a.value);
-                }
-                Some(res)
-            };
-
-            if customs_access.is_empty() {
-                None
-            } else {
-                Some((customs_access, &attrs))
-            }
-        } else {
-            None
+        // There is no id token, so only access token mappings matter.
+        let customs = match user {
+            Some(user) => resolve_custom_scopes(&scope.0, &user.id, false).await?,
+            None => None,
         };
 
         let (_jti, access_token) = Self::build_access_token(
@@ -681,7 +599,7 @@ impl TokenSet {
             dpop_fingerprint,
             lifetime,
             TokenScopes::new(scope.0.as_ref()),
-            customs_access,
+            customs.as_ref().map(|(s, a)| (s.as_slice(), a)),
             None,
             resource,
             act,
@@ -719,56 +637,8 @@ impl TokenSet {
             None => Cow::Owned(client.default_scopes.replace(',', " ")),
         };
 
-        // check for any non-custom scopes and prepare data
-        let cust = Scope::extract_custom(&scope);
-
-        let scps;
-        let attrs;
-        let (customs_access, customs_id) = if !cust.is_empty() {
-            scps = Some(Scope::find_all().await?);
-
-            let mut customs_access = Vec::with_capacity(cust.len());
-            let mut customs_id = Vec::with_capacity(cust.len());
-
-            for s in scps.as_ref().unwrap() {
-                if cust.contains(s.name.as_str()) {
-                    if s.attr_include_access.is_some() {
-                        customs_access.push(s);
-                    }
-                    if s.attr_include_id.is_some() {
-                        customs_id.push(s);
-                    }
-                }
-            }
-
-            // if there was any custom mapping, we need the additional user attributes
-            attrs = if !customs_access.is_empty() || !customs_id.is_empty() {
-                let attrs = UserAttrValueEntity::find_for_user_with_defaults(&user.id).await?;
-                let mut res = HashMap::with_capacity(attrs.len());
-                for a in attrs {
-                    res.insert(a.key, a.value);
-                }
-                Some(res)
-            } else {
-                None
-            };
-
-            // prepare the result
-            let access = if customs_access.is_empty() {
-                None
-            } else {
-                Some((customs_access, &attrs))
-            };
-            let id = if customs_id.is_empty() {
-                None
-            } else {
-                Some((customs_id, &attrs))
-            };
-
-            (access, id)
-        } else {
-            (None, None)
-        };
+        let customs = resolve_custom_scopes(&scope, &user.id, true).await?;
+        let customs = customs.as_ref().map(|(s, a)| (s.as_slice(), a));
 
         // set the correct lifetime
         let lifetime = if let Some(ts) = user.user_expires {
@@ -798,7 +668,7 @@ impl TokenSet {
             dpop_fingerprint.clone(),
             lifetime,
             TokenScopes::new(scope.as_ref()),
-            customs_access,
+            customs,
             sid.clone(),
             resource.as_deref(),
             None,
@@ -816,7 +686,7 @@ impl TokenSet {
             lifetime,
             nonce,
             &scope,
-            customs_id,
+            customs,
             sid.clone(),
             auth_code_flow,
         )
@@ -854,6 +724,82 @@ impl TokenSet {
     }
 }
 
+/// Finds the custom scopes in `scope` that map user attributes into the access token (or the id
+/// token too, if `include_id`), and loads the user's attributes when there is any such mapping.
+async fn resolve_custom_scopes(
+    scope: &str,
+    user_id: &str,
+    include_id: bool,
+) -> Result<Option<(Vec<Scope>, HashMap<String, Vec<u8>>)>, ErrorResponse> {
+    let cust = Scope::extract_custom(scope);
+    if cust.is_empty() {
+        return Ok(None);
+    }
+
+    let scopes = Scope::find_all()
+        .await?
+        .into_iter()
+        .filter(|s| {
+            cust.contains(s.name.as_str())
+                && (s.attr_include_access.is_some() || (include_id && s.attr_include_id.is_some()))
+        })
+        .collect::<Vec<_>>();
+    if scopes.is_empty() {
+        return Ok(None);
+    }
+
+    let attrs = UserAttrValueEntity::find_for_user_with_defaults(user_id)
+        .await?
+        .into_iter()
+        .map(|a| (a.key, a.value))
+        .collect();
+    Ok(Some((scopes, attrs)))
+}
+
+type CustomClaims = HashMap<String, serde_json::Value>;
+
+/// Builds the custom claims for the user attributes each scope maps via `pick`, returned as
+/// `(nested, flattened)`. Attributes of scopes flagged `claims_at_root` go to the token root
+/// (flattened); all others stay nested under `custom`. Routing is per-scope, so a single token
+/// can mix nested and root-level claims.
+fn custom_scope_claims(
+    scopes: &[Scope],
+    attrs: &HashMap<String, Vec<u8>>,
+    pick: impl Fn(&Scope) -> Option<&str>,
+) -> Result<(Option<CustomClaims>, Option<CustomClaims>), ErrorResponse> {
+    let mut nested = HashMap::new();
+    let mut flattened = HashMap::new();
+    for s in scopes {
+        if let Some(csv) = pick(s) {
+            let target = if s.claims_at_root {
+                &mut flattened
+            } else {
+                &mut nested
+            };
+            for cust_name in csv.split(',') {
+                if let Some(value) = attrs.get(cust_name) {
+                    let json = serde_json::from_slice(value).map_err(|err| {
+                        ErrorResponse::new(
+                            ErrorResponseType::Internal,
+                            format!("Converting cust user id attr to json: {err}"),
+                        )
+                    })?;
+                    target.insert(cust_name.to_string(), json);
+                }
+            }
+        }
+    }
+
+    if !flattened.is_empty() {
+        // Fail issuance rather than emit a token that shadows a reserved claim.
+        validate_no_reserved_collision(&flattened)?;
+    }
+    Ok((
+        (!nested.is_empty()).then_some(nested),
+        (!flattened.is_empty()).then_some(flattened),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -882,5 +828,44 @@ mod tests {
         };
         let at_hash = AtHash::for_client(b"token", &client).unwrap();
         assert_eq!(at_hash.0, AtHash::build(b"token", AtHashAlg::Sha512).0);
+    }
+
+    #[test]
+    fn test_custom_scope_claims() {
+        let scope = |name: &str, access: &str, claims_at_root| Scope {
+            id: name.to_string(),
+            name: name.to_string(),
+            attr_include_access: Some(access.to_string()),
+            attr_include_id: None,
+            claims_at_root,
+        };
+        let scopes = [
+            scope("nested", "a,missing", false),
+            scope("root", "b", true),
+        ];
+        let attrs = HashMap::from([
+            ("a".to_string(), b"\"x\"".to_vec()),
+            ("b".to_string(), b"1".to_vec()),
+        ]);
+
+        let (nested, flattened) =
+            custom_scope_claims(&scopes, &attrs, |s| s.attr_include_access.as_deref()).unwrap();
+        assert_eq!(
+            nested.unwrap(),
+            HashMap::from([("a".to_string(), "x".into())])
+        );
+        assert_eq!(
+            flattened.unwrap(),
+            HashMap::from([("b".to_string(), 1.into())])
+        );
+
+        let (nested, flattened) =
+            custom_scope_claims(&scopes, &attrs, |s| s.attr_include_id.as_deref()).unwrap();
+        assert!(nested.is_none() && flattened.is_none());
+
+        let bad = HashMap::from([("a".to_string(), b"not json".to_vec())]);
+        let err =
+            custom_scope_claims(&scopes, &bad, |s| s.attr_include_access.as_deref()).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Internal);
     }
 }
