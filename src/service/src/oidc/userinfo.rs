@@ -157,16 +157,7 @@ pub async fn get_userinfo(
             userinfo.birthdate = values.birthdate;
             userinfo.zoneinfo = values.tz;
 
-            if let Some(username) = values.preferred_username {
-                userinfo.preferred_username = Some(username);
-            } else if RauthyConfig::get()
-                .vars
-                .user_values
-                .preferred_username
-                .email_fallback
-            {
-                userinfo.preferred_username = userinfo.email.clone();
-            }
+            userinfo.preferred_username = values.preferred_username;
         }
 
         if has_phone {
@@ -174,6 +165,17 @@ pub async fn get_userinfo(
             // Note: Rauthy does not have a mechanism to send SMS and therefore verify a number.
             userinfo.phone_number_verified = Some(false);
         }
+    }
+
+    if has_profile
+        && userinfo.preferred_username.is_none()
+        && RauthyConfig::get()
+            .vars
+            .user_values
+            .preferred_username
+            .email_fallback
+    {
+        userinfo.preferred_username = Some(user.email.clone());
     }
 
     if has_email {
