@@ -69,6 +69,10 @@ pub fn http_client_builder() -> reqwest::ClientBuilder {
     let https_only = !(vars.http_client.danger_unencrypted || vars.dev.dev_mode);
     #[cfg(not(debug_assertions))]
     let https_only = !vars.http_client.danger_unencrypted;
+    #[cfg(debug_assertions)]
+    let insecure = vars.http_client.danger_insecure || vars.dev.dev_mode;
+    #[cfg(not(debug_assertions))]
+    let insecure = vars.http_client.danger_insecure;
 
     let mut builder = reqwest::Client::builder()
         .connect_timeout(vars.http_client.connect_timeout)
@@ -77,7 +81,7 @@ pub fn http_client_builder() -> reqwest::ClientBuilder {
         .min_tls_version(tls_version)
         .user_agent(format!("Rauthy Client v{RAUTHY_VERSION}"))
         .https_only(https_only)
-        .danger_accept_invalid_certs(vars.http_client.danger_insecure || vars.dev.dev_mode)
+        .danger_accept_invalid_certs(insecure)
         .use_rustls_tls();
 
     for cert in certs {
