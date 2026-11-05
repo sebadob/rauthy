@@ -4,6 +4,13 @@
 
 ### Security
 
+#### Token Exchange is limited to the exchanging client's scopes and lifetime
+
+An exchanged token inherited all scopes of the `subject_token`, even ones the exchanging client is
+not allowed to have, including custom scopes that embed user attributes. The exchanged token now
+only keeps scopes the exchanging client is allowed. Inherited scopes outside of that are dropped,
+and explicitly requesting one is rejected. The lifetime is now capped by the `subject_token`'s own
+expiry and the user's expiry as well, so a client can no longer extend access by re-exchanging.
 #### Forward Auth cookie can no longer be used as a Rauthy session
 
 The Forward Auth session cookie (`__Host-Rauthy-Ext-Session`), which the reverse proxy passes on to

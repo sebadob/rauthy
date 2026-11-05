@@ -619,6 +619,7 @@ impl TokenSet {
     pub async fn for_token_exchange(
         user: Option<&User>,
         client: &Client,
+        lifetime: i64,
         dpop_fingerprint: Option<DpopFingerprint>,
         scope: TokenScopes<'_>,
         resource: Option<&str>,
@@ -670,7 +671,7 @@ impl TokenSet {
             user,
             client,
             dpop_fingerprint,
-            client.access_token_lifetime as i64,
+            lifetime,
             TokenScopes::new(scope.0.as_ref()),
             customs_access,
             None,
@@ -684,7 +685,7 @@ impl TokenSet {
             access_token,
             token_type,
             id_token: None,
-            expires_in: client.access_token_lifetime,
+            expires_in: lifetime as i32,
             refresh_token: None,
             scope: Some(scope.0.into_owned()),
         })
