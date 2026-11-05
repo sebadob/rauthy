@@ -1,11 +1,13 @@
 use crate::common::{get_auth_headers, get_backend_url, session_headers_with};
 use pretty_assertions::assert_eq;
+use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_api_types::roles::RoleRequest;
 use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
+use rauthy_common::utils::new_store_id;
 use reqwest::Client;
-use reqwest::header::HeaderMap;
+use reqwest::header::{AUTHORIZATION, HeaderMap};
 use std::error::Error;
 
 mod common;
@@ -299,7 +301,8 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 403);
 
-    // 10b. it can list and revoke the consents of a managed user
+    // 10b. it is authorized to list and revoke the consents of a managed user, the effect of
+    // a revoke is covered in `handler_users.rs`
     let res = client
         .get(format!("{backend}/users/{}/consents", member.id))
         .headers(ga_headers.clone())
@@ -316,9 +319,77 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
+    // its own consents, before the group admin check that would refuse an admin target
+    let res = client
+        .get(format!("{backend}/users/{}/consents", ga.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .delete(format!(
+            "{backend}/users/{}/consents?client_id=init_client",
+            ga.id
+        ))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // an API key of another access group is checked first and rejected, even with the group
+    // admin session
+    let key = ApiKeyRequest {
+        name: new_store_id(),
+        exp: None,
+        access: vec![ApiKeyAccess {
+            group: AccessGroup::Clients,
+            access_rights: vec![AccessRights::Read, AccessRights::Delete],
+        }],
+    };
+    let res = client
+        .post(format!("{backend}/api_keys"))
+        .headers(admin.clone())
+        .json(&key)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let key_header = format!("API-Key {}", res.text().await?);
+    let res = client
+        .get(format!("{backend}/users/{}/consents", member.id))
+        .headers(ga_headers.clone())
+        .header(AUTHORIZATION, &key_header)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+    let res = client
+        .delete(format!(
+            "{backend}/users/{}/consents?client_id=init_client",
+            member.id
+        ))
+        .headers(ga_headers.clone())
+        .header(AUTHORIZATION, &key_header)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+    let res = client
+        .delete(format!("{backend}/api_keys/{}", key.name))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
     // 10c. but not those of a user outside its managed groups, nor of another admin
     let res = client
         .get(format!("{backend}/users/{}/consents", coadmin.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 403);
+    let res = client
+        .delete(format!(
+            "{backend}/users/{}/consents?client_id=init_client",
+            coadmin.id
+        ))
         .headers(ga_headers.clone())
         .send()
         .await?;

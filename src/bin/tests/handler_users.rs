@@ -597,6 +597,19 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert_eq!(res.status(), 200);
+    // an empty filter selects the consents without a resource
+    let res = client
+        .get(format!("{url}?resource="))
+        .headers(user_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert!(
+        res.json::<Vec<UserConsentResponse>>()
+            .await?
+            .iter()
+            .all(|c| c.resource.is_none())
+    );
     let res = client
         .get(format!(
             "{url}?resource=https%3A%2F%2Fapi.example.com%23frag"
