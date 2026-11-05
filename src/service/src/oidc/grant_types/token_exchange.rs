@@ -227,6 +227,13 @@ pub async fn grant_type_token_exchange(
     if let Some(user) = &user {
         user.check_enabled()?;
         user.check_expired()?;
+        client.validate_user_groups(user)?;
+        // We do not validate any `force_mfa` setting here. This is
+        // 1. impossible, since we just cannot verify it at this stage anyway
+        // 2. not necessary at all, since the token exchange is guarded by admin-configured resource
+        //    access and validation. If we would require MFA here (which we don't know anyway), it
+        //    would destroy a few important flows. Since this is deliberately configured by an
+        //    admin, we just don't need to.
     }
 
     // Never outlive the subject token or the user, or re-exchanging could extend access forever.

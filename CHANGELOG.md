@@ -4,6 +4,13 @@
 
 ### Security
 
+#### Additional `device_code` checks
+
+The `device_code` grant does additional validations for users (another round-trip of enabled and
+not expired), and it checks for a `force_mfa` requirement by the client the user is verifying the
+device for. This is only a snaptshot in time though, since it's impossible to re-validate if the
+device is allowed to refresh tokens.
+
 #### Token Exchange is limited to the exchanging client's scopes and lifetime
 
 An exchanged token inherited all scopes of the `subject_token`, even ones the exchanging client is
@@ -11,13 +18,18 @@ not allowed to have, including custom scopes that embed user attributes. The exc
 only keeps scopes the exchanging client is allowed. Inherited scopes outside of that are dropped,
 and explicitly requesting one is rejected. The lifetime is now capped by the `subject_token`'s own
 expiry and the user's expiry as well, so a client can no longer extend access by re-exchanging.
+
 #### Forward Auth cookie can no longer be used as a Rauthy session
 
-The Forward Auth session cookie (`__Host-Rauthy-Ext-Session`), which the reverse proxy passes on to
-the protected upstream app, held the exact same value as Rauthy's own `__Host-RauthySession`. The
-upstream app, or anyone able to read its cookies, could replay it against Rauthy and act as the
-user in the Account and Admin UI. The Forward Auth cookie value is now domain-separated, so it no
-longer resolves as a Rauthy session, and the other way around.
+The Forward Auth session cookie, which the reverse proxy passes on to the protected upstream app, 
+held the exact same value as Rauthy's own session cookie. That was on purpose, so that an 
+invalidation of the main session would immediately log the user out of all forwarded apps. However,
+if was theoretically possible that such a protected app (which knows nothing about authentication
+in the first place, otherwise it would have a native auth), could be malicious and replay the
+forward auth session cookie again Rauthys main API for the logged-in user. The encrypted value
+inside the forward auth session cookie is now tagged as a pure forward auth session, and separated
+by client. This means it cannot be replayed, is still bound to the main session under the hood,
+and a malicious forward auth app cannot replay the same cookie against other forward auth apps.
 
 Existing Forward Auth sessions need to log in once more after the update.
 

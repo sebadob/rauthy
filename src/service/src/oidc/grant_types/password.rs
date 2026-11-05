@@ -57,6 +57,9 @@ pub async fn grant_type_password(
         client.validate_secret(secret, &req).await?;
     }
     client.validate_flow(GrantType::Password)?;
+    // The password grant has no way to perform MFA, so `force_mfa` can never be satisfied here.
+    // This is by design and RFC. If an admin allows the `password` flow for a client, not MFA
+    // enforcement is possible.
 
     let mut headers = Vec::new();
     let dpop_fingerprint =
