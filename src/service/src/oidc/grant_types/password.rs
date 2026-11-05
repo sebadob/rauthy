@@ -145,7 +145,7 @@ pub async fn grant_type_password(
                     .await?;
             }
 
-            UserLoginState::insert(user.id.clone(), client.id, None).await?;
+            UserLoginState::insert(&user.id, &client.id, None).await?;
 
             LoginLocation::spawn_background_check(user, &req, browser_id)?;
 
