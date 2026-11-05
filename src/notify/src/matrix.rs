@@ -81,19 +81,13 @@ impl NotifierMatrix {
         };
 
         // try login and check access and config
-        let mut retry = 0;
-        let limit = 3;
-        while retry < limit {
+        for attempt in 1..=3 {
             match slf.login().await {
                 Ok(_) => break,
+                Err(err) if attempt == 3 => return Err(err),
                 Err(err) => {
-                    if retry < limit {
-                        warn!("{err:?} - retry in 5 seconds");
-                        retry += 1;
-                        time::sleep(Duration::from_secs(5)).await;
-                    } else {
-                        return Err(err);
-                    }
+                    warn!("{err:?} - retry in 5 seconds");
+                    time::sleep(Duration::from_secs(5)).await;
                 }
             }
         }
