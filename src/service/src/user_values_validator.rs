@@ -187,4 +187,23 @@ mod tests {
 
         assert!(validator.validate_with(&config).is_err());
     }
+
+    #[test]
+    fn required_value_cleared_to_empty_string_is_rejected() {
+        let mut config = Vars::default().user_values;
+        config.street = UserValueConfigValue::Required;
+
+        let user_values = Some(UserValuesRequest {
+            street: Some(String::new()),
+            ..Default::default()
+        });
+        let validator = UserValuesValidator {
+            given_name: Some("A"),
+            family_name: None,
+            preferred_username: None,
+            user_values: &user_values,
+        };
+
+        assert!(validator.validate_with(&config).is_err());
+    }
 }

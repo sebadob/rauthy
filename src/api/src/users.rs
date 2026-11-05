@@ -2494,6 +2494,15 @@ pub async fn patch_user(
     }
 
     upd_req.validate()?;
+    // validate the merged result, so a patch cannot clear or delete required values
+    UserValuesValidator {
+        given_name: upd_req.given_name.as_deref(),
+        family_name: upd_req.family_name.as_deref(),
+        // has its own endpoint for updates
+        preferred_username: None,
+        user_values: &upd_req.user_values,
+    }
+    .validate()?;
 
     let new_groups = upd_req.groups.as_deref().unwrap_or_default();
     // only managed groups may be changed and roles may never be touched (applies to self too) ...
@@ -2603,6 +2612,15 @@ pub async fn put_user_self(
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth()?;
     payload.validate()?;
+    // the payload replaces the stored values, omitted `user_values` delete them
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        // has its own endpoint for updates
+        preferred_username: None,
+        user_values: &payload.user_values,
+    }
+    .validate()?;
 
     // make sure the logged-in user can only update itself
     let id = id.into_inner();
