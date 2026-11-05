@@ -104,10 +104,6 @@ impl RauthyConfig {
             ),
         };
 
-        if vars.ldap.plain_text && !vars.server.proxy_mode {
-            panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
-        }
-
         let argon2_params = argon2::Params::new(
             vars.hashing.argon2_m_cost,
             vars.hashing.argon2_t_cost,
@@ -4227,6 +4223,7 @@ impl Vars {
             &self.lifetimes.jwk_autorotate_cron,
         );
         self.validate_ephemeral_clients();
+        self.validate_ldap();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
@@ -4300,6 +4297,12 @@ impl Vars {
 }
 
 impl Vars {
+    fn validate_ldap(&self) {
+        if self.ldap.plain_text && !self.server.proxy_mode {
+            panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
+        }
+    }
+
     /// Only enforced for an enabled feature and an explicitly set `default_scopes`.
     fn validate_ephemeral_clients(&self) {
         let eph = &self.ephemeral_clients;
@@ -5365,6 +5368,17 @@ mod tests {
         assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
         assert!(vars.ldap.plain_text);
         assert!(vars.ldap.disable_ip_brute_force_protection);
+    }
+
+    #[test]
+    #[should_panic(expected = "requires server.proxy_mode")]
+    fn ldap_plain_text_without_proxy_mode() {
+        let mut vars = Vars::default();
+        vars.ldap.plain_text = true;
+        vars.server.proxy_mode = true;
+        vars.validate_ldap();
+        vars.server.proxy_mode = false;
+        vars.validate_ldap();
     }
 
     #[test]
