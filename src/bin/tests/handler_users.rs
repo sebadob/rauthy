@@ -3,10 +3,10 @@ use crate::common::{
 };
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
-use rauthy_api_types::generic::Language;
 use rauthy_api_types::users::{
     NewUserRequest, RequestResetRequest, UserResponse, UserResponseSimple, Userinfo,
 };
+use rauthy_common::language::Language;
 use rauthy_common::utils::new_store_id;
 use reqwest::StatusCode;
 use reqwest::header::AUTHORIZATION;

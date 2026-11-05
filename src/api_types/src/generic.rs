@@ -1,4 +1,5 @@
 use crate::sessions::SessionState;
+use rauthy_common::language::Language;
 use rauthy_common::regex::{RE_ALNUM, RE_SEARCH};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -30,24 +31,6 @@ pub enum I18nContent {
     Logout,
     PasswordReset,
     Register,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum Language {
-    De,
-    En,
-    Es,
-    Fr,
-    Ja,
-    Ko,
-    Nb,
-    Nl,
-    Pt,
-    Ru,
-    Uk,
-    #[serde(alias = "zh")]
-    ZhHans,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

@@ -11,13 +11,13 @@
 //! NOTE: Most database IDs here are all optional. If you provide them, the given, static ID will be
 //! used. If it is not given, a random ID will be generated.
 
-use crate::language::Language;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights};
 use rauthy_api_types::clients::ScimClientRequestResponse;
 use rauthy_api_types::cust_validation::*;
 use rauthy_api_types::oidc::GrantType;
 use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
+use rauthy_common::language::Language;
 use rauthy_common::regex::*;
 use regex::Regex;
 use serde::{Deserialize, Deserializer};

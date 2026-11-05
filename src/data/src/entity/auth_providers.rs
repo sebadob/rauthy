@@ -4,7 +4,6 @@ use crate::entity::logos::{Logo, LogoType};
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
 use crate::entity::{atproto, auth_provider_cust_impls};
-use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::cookie::Cookie;
 use atrium_api::xrpc::http::header::{ACCEPT, AUTHORIZATION};
@@ -22,6 +21,7 @@ use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, IDX_AUTH_PROVIDER,
     IDX_AUTH_PROVIDER_TEMPLATE, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE,
 };
+use rauthy_common::language::Language;
 use rauthy_common::utils::{
     base64_decode, base64_encode, base64_url_no_pad_decode, deserialize, new_store_id, serialize,
 };

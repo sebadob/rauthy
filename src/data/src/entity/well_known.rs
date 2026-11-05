@@ -1,9 +1,9 @@
 use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
-use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::CACHE_TTL_APP;
+use rauthy_common::language::Language;
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
 use utoipa::ToSchema;

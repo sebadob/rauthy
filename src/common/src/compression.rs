@@ -11,7 +11,7 @@
 //! Algorithm  | Level      |  Time (us) |      Ratio
 //! --------------------------------------------------
 //! Brotli     | 1          |         18 |       3.17x
-//! Gzip       | 1          |         25 |       3.15x
+//! Gzip       | 1          |         14 |       3.15x
 //! ----------------------------------------------------
 //! Brotli     | 2          |         24 |       3.31x
 //! Gzip       | 2          |         19 |       3.45x
@@ -46,9 +46,8 @@
 //!
 //! This benchmark shows that there is basically nothing happening between brotli level 5 and 10,
 //! apart from higher resource consumption, and the small improvements at level 10 are tiny compared
-//! to the additional time taken. For gzip, level 2 is the best for speed, and it does not make any
-//! sense to go higher than 5 for static content.
-//! When it's about the best value overall, gzip level 2 wins easily.
+//! to the additional time taken. When it's about the best value overall, gzip level 1 wins easily
+//! for any dynamic compression.
 use actix_web::body::{BodyStream, BoxBody};
 use async_compression::brotli;
 use async_compression::tokio::bufread::{BrotliEncoder, GzipEncoder};
@@ -100,7 +99,7 @@ pub async fn compress_gzip(input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
 
 #[inline]
 pub fn compress_gzip_dyn(input: String) -> BoxBody {
-    let level = async_compression::Level::Precise(2);
+    let level = async_compression::Level::Precise(1);
 
     let buf_reader = BufReader::new(Cursor::new(input));
     let compressor = GzipEncoder::with_quality(buf_reader, level);

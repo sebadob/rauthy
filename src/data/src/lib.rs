@@ -14,7 +14,6 @@ pub mod fido_mds;
 pub mod html;
 pub mod http_client;
 pub mod ipgeo;
-pub mod language;
 pub mod migration;
 pub mod rauthy_config;
 pub mod secrets;

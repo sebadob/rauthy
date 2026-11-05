@@ -167,6 +167,11 @@ fido-mds-prep source="https://mds.fidoalliance.org/" out="assets/fido_mds/datase
 
     cargo run --bin fido-mds-prep -- --source {{ source }} --out {{ out }}
 
+
+# Prepares the i18n files. Must be run before being able to compile the main applcation.
+i18n-prep:
+    cargo run -p rauthy-i18n-prep
+
 # delete the local hiqlite database
 delete-hiqlite:
     #!/usr/bin/env bash

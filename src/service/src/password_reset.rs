@@ -6,6 +6,7 @@ use rauthy_api_types::users::{
     PasswordResetRequest, WebauthnRegFinishRequest, WebauthnRegStartRequest,
 };
 use rauthy_common::constants::{PWD_CSRF_HEADER, PWD_RESET_COOKIE};
+use rauthy_common::language::Language;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::magic_links::{MagicLink, MagicLinkUsage};
@@ -18,7 +19,6 @@ use rauthy_data::entity::webauthn;
 use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::events::event::Event;
 use rauthy_data::html::templates::{PwdResetHtml, TplPasswordReset};
-use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::{debug, error};

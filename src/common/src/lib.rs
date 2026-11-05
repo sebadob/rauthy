@@ -4,6 +4,8 @@ use std::sync::OnceLock;
 
 pub mod compression;
 pub mod constants;
+pub mod content_hash;
+pub mod language;
 pub mod logging;
 pub mod markdown;
 pub mod password_hasher;

@@ -9,13 +9,13 @@ use crate::html::templates::{
     HtmlTemplate, IndexHtml, LogoutHtml, ProviderCallbackHtml, ProvidersHtml,
     UserPasswordResetHtml, UserRegisterHtml,
 };
-use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::body::BoxBody;
 use actix_web::http::header::{ACCEPT_ENCODING, VARY};
 use actix_web::{HttpRequest, HttpResponse};
 use rauthy_common::compression::{compress_br, compress_br_dyn, compress_gzip, compress_gzip_dyn};
 use rauthy_common::constants::HEADER_HTML;
+use rauthy_common::language::Language;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
 use templates::AdminDocsHtml;

@@ -1,7 +1,7 @@
-use crate::language::Language;
 use crate::rauthy_config::{RauthyConfig, VarsEmailTzFmt};
 use chrono::DateTime;
 use chrono_tz::Tz;
+use rauthy_common::language::Language;
 use std::str::FromStr;
 
 pub mod custom;
