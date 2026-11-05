@@ -99,6 +99,16 @@ impl KVNamespace {
     }
 }
 
+/// Decrypts `value` and encrypts it again with `new_kid`. Used for secrets migration.
+fn re_encrypt(value: Vec<u8>, new_kid: &str) -> Result<Vec<u8>, ErrorResponse> {
+    let dec = EncValue::try_from(value)?.decrypt()?;
+    Ok(
+        EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
+            .into_bytes()
+            .to_vec(),
+    )
+}
+
 #[derive(Debug, FromRow, FromPgRow)]
 pub struct KVValue {
     pub ns: String,
@@ -304,7 +314,7 @@ LIMIT $2
             return Ok(());
         }
 
-        let value = Self::re_encrypt(self.value, new_kid)?;
+        let value = re_encrypt(self.value, new_kid)?;
 
         let sql = "UPDATE kv_values SET value = $1 WHERE ns = $2 AND key = $3";
         if is_hiqlite() {
@@ -320,15 +330,6 @@ LIMIT $2
 }
 
 impl KVValue {
-    fn re_encrypt(value: Vec<u8>, new_kid: &str) -> Result<Vec<u8>, ErrorResponse> {
-        let dec = EncValue::try_from(value)?.decrypt()?;
-        Ok(
-            EncValue::encrypt_with_key_id(dec.as_ref(), new_kid.to_string())?
-                .into_bytes()
-                .to_vec(),
-        )
-    }
-
     #[inline]
     pub fn value(&self) -> Result<serde_json::Value, ErrorResponse> {
         let v = if self.encrypted == Some(true) {
@@ -458,10 +459,9 @@ impl KVAccess {
         })
     }
 
-    /// Re-encrypts the secret and saves it into the DB. Used for secrets migration only.
-    pub async fn save_re_encrypt_secret(self) -> Result<(), ErrorResponse> {
-        let dec = EncValue::try_from(self.secret)?.decrypt()?;
-        let secret = EncValue::encrypt(dec.as_ref())?.into_bytes().to_vec();
+    /// Re-encrypts the secret with `new_kid` and saves it into the DB. Used for secret migration.
+    pub async fn save_re_encrypt_secret(self, new_kid: &str) -> Result<(), ErrorResponse> {
+        let secret = re_encrypt(self.secret, new_kid)?;
 
         let sql = "UPDATE kv_access SET secret = $1 WHERE id = $2";
         if is_hiqlite() {
@@ -581,7 +581,7 @@ impl From<KVNamespace> for KVNamespaceResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::KVValue;
+    use super::{KVValue, re_encrypt};
     use cryptr::{EncKeys, EncValue};
     use std::sync::Once;
 
@@ -608,7 +608,7 @@ mod tests {
             ns: "ns".to_string(),
             key: "key".to_string(),
             encrypted: Some(true),
-            value: KVValue::re_encrypt(value, "test").unwrap(),
+            value: re_encrypt(value, "test").unwrap(),
         };
 
         assert_eq!(kv.value().unwrap(), json);
