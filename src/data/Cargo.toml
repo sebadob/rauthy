@@ -34,6 +34,7 @@ chrono = { workspace = true }
 chrono-tz = { workspace = true }
 cidr = { workspace = true }
 constant_time_eq = { workspace = true }
+cron = { workspace = true }
 cryptr = { workspace = true }
 ed25519-compact = { workspace = true }
 flate2 = { workspace = true }

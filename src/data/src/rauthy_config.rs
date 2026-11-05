@@ -4141,6 +4141,12 @@ impl Vars {
         if let Err(err) = validate_max_document_bytes(self.ephemeral_clients.max_document_bytes) {
             panic!("{err}");
         }
+
+        validate_cron("geo.maxmind_update_cron", &self.geo.maxmind_update_cron);
+        validate_cron(
+            "lifetimes.jwk_autorotate_cron",
+            &self.lifetimes.jwk_autorotate_cron,
+        );
         self.validate_ephemeral_clients();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
@@ -4458,6 +4464,16 @@ pub fn validate_max_document_bytes(v: u32) -> Result<(), String> {
         ))
     } else {
         Ok(())
+    }
+}
+
+/// Schedulers `.unwrap()` the parsed cron and its next occurrence inside a spawned task, where a
+/// panic would only be logged and silently stop the job - so reject such values at startup.
+pub fn validate_cron(key: &str, v: &str) {
+    let schedule = cron::Schedule::from_str(v)
+        .unwrap_or_else(|err| panic!("Invalid cron expression for `{key}`: {err}"));
+    if schedule.upcoming(chrono::Utc).next().is_none() {
+        panic!("`{key}` has no future occurrence: {v}");
     }
 }
 
@@ -5442,5 +5458,24 @@ default_scopes = ['profile']
     fn validate_ephemeral_default_scopes_is_skipped_when_disabled() {
         eph_vars(false, &["openid"], &["groups"]).validate_ephemeral_clients();
         eph_vars(false, &["openid"], &[]).validate_ephemeral_clients();
+    }
+
+    #[test]
+    fn validate_cron_accepts_valid_schedule() {
+        validate_cron("lifetimes.jwk_autorotate_cron", "0 30 3 1 * * *");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid cron expression for `lifetimes.jwk_autorotate_cron`")]
+    fn validate_cron_rejects_unparsable_schedule() {
+        // 5-field crontab syntax is not what the `cron` crate expects
+        validate_cron("lifetimes.jwk_autorotate_cron", "30 3 1 * *");
+    }
+
+    #[test]
+    #[should_panic(expected = "`geo.maxmind_update_cron` has no future occurrence")]
+    fn validate_cron_rejects_exhausted_schedule() {
+        // valid syntax, but the year is in the past -> never fires again
+        validate_cron("geo.maxmind_update_cron", "0 30 3 1 * * 2020");
     }
 }
