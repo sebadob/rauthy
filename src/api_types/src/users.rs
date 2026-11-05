@@ -858,7 +858,43 @@ mod tests {
         );
         let prefix = "https://api.example.com/";
         let max = format!("{prefix}{}", "a".repeat(1024 - prefix.len()));
+        assert_eq!(max.len(), 1024);
         assert!(params(Some(max.clone())).validate().is_ok());
         assert!(params(Some(format!("{max}a"))).validate().is_err());
+        assert!(params(Some(" ".to_string())).validate().is_err());
+        assert!(
+            params(Some("https://api.example.com/ä".to_string()))
+                .validate()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn consents_params_resource() {
+        let params = |resource: Option<String>| UserConsentsParams { resource };
+        assert!(params(None).validate().is_ok());
+        // an empty filter selects the consents without a resource
+        assert!(params(Some(String::new())).validate().is_ok());
+        assert!(
+            params(Some("https://api.example.com/v1?x=1".to_string()))
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            params(Some("https://api.example.com#frag".to_string()))
+                .validate()
+                .is_err()
+        );
+        assert!(params(Some(" ".to_string())).validate().is_err());
+        let prefix = "https://api.example.com/";
+        let max = format!("{prefix}{}", "a".repeat(1024 - prefix.len()));
+        assert_eq!(max.len(), 1024);
+        assert!(params(Some(max.clone())).validate().is_ok());
+        assert!(params(Some(format!("{max}a"))).validate().is_err());
+        assert!(
+            params(Some("https://api.example.com/ä".to_string()))
+                .validate()
+                .is_err()
+        );
     }
 }
