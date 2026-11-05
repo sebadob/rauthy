@@ -16,6 +16,7 @@ use ldap3_proto::simple::{
 };
 use rauthy_api_types::oidc::GrantType;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::ip_blacklist::IpBlacklist;
 use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -31,6 +32,7 @@ use tokio::time::timeout;
 use tokio_rustls::TlsAcceptor;
 use tokio_util::codec::Framed;
 use tracing::{debug, error, info, warn};
+use zeroize::Zeroize;
 
 mod directory;
 mod dn;
@@ -242,7 +244,7 @@ async fn bind(req: &SimpleBindRequest, ip: IpAddr) -> (LdapMsg, Session) {
 /// Runs all bind checks and returns the bound `client_id` and, for a user bind, the user ID.
 async fn check_bind(
     bind_dn: Option<BindDn>,
-    password: String,
+    mut password: String,
     ip: IpAddr,
     user_failed_logins: &mut Option<i64>,
     ip_checks: bool,
@@ -266,9 +268,14 @@ async fn check_bind(
             None
         }
         Some(uid) => {
-            let email = directory::resolve_email(&uid)
-                .await?
-                .ok_or_else(unauthorized)?;
+            let Some(email) = directory::resolve_email(&uid).await? else {
+                // like `password_login` for an unknown email, stuffing lists are mostly unknown names
+                if ip_checks {
+                    CredStuffDetect::trigger(ip, &uid, Some(&password)).await;
+                }
+                password.zeroize();
+                return Err(unauthorized());
+            };
             let user =
                 password_login(&client, email, password, ip, user_failed_logins, ip_checks).await?;
             Some(user.id)
