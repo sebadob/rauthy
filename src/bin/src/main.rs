@@ -23,11 +23,29 @@ mod tls;
 mod utils;
 mod version_migration;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     dotenvy::dotenv().ok();
 
-    match Args::parse() {
+    let args = Args::parse();
+    if matches!(args, Args::Serve(_)) {
+        #[cfg(debug_assertions)]
+        if !rauthy_common::constants::RAUTHY_VERSION.starts_with("0.37.") {
+            todo!("Remove the env set var for temporary hiqlite migrations");
+        }
+        // We will set this var automatically. Rauthy does not depend on the cache being persistent.
+        // Only for other people using Hiqlite, this must be an opt-in step, just in case.
+        // SAFETY: no other threads exist yet, the tokio runtime is built afterwards.
+        unsafe { env::set_var("HQL_CACHE_WAL_AUTO_MIGRATE", "true") };
+    }
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(async_main(args))
+}
+
+async fn async_main(args: Args) -> Result<(), Box<dyn Error>> {
+    match args {
         Args::Serve(args) => {
             let local_test = env::var("LOCAL_TEST")
                 .unwrap_or_else(|_| "false".to_string())

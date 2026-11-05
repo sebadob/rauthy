@@ -1,5 +1,4 @@
 use rauthy_data::rauthy_config::RauthyConfig;
-use std::env;
 use tracing::Level;
 
 // Sets up the logging / tracing depending on the env var `LOG_LEVEL`
@@ -18,16 +17,13 @@ pub fn setup_logging() -> tracing::Level {
         log_level_db.as_str(),
     );
 
-    // Unsafe because `env::set_var` has no locking under the hood,
-    // which is not an issue in our case since this function is only called once at startup.
-    unsafe {
-        env::set_var("RUST_LOG", &filter);
-    }
-
-    if log_level == Level::TRACE {
-        unsafe {
-            env::set_var("RUST_BACKTRACE", "1");
-        }
+    // Skip when RUST_BACKTRACE is set, the default hook already prints one then.
+    if log_level == Level::TRACE && std::env::var_os("RUST_BACKTRACE").is_none() {
+        let default = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            default(info);
+            eprintln!("{}", std::backtrace::Backtrace::force_capture());
+        }));
     }
 
     if is_log_fmt_json() {

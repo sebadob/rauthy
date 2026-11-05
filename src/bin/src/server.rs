@@ -34,8 +34,8 @@ use std::cmp::max;
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
+use std::thread;
 use std::time::Duration;
-use std::{env, thread};
 use tokio::sync::mpsc;
 use tokio::time;
 use tracing::{debug, error, info, warn};
@@ -45,14 +45,6 @@ pub async fn run(
     secrets_file: String,
     test_mode: bool,
 ) -> Result<(), Box<dyn Error>> {
-    #[cfg(debug_assertions)]
-    if !RAUTHY_VERSION.starts_with("0.37.") {
-        todo!("Remove the env set var for temporary hiqlite migrations");
-    }
-    // We will set this var automatically. Rauthy does not depend on the cache being persistent.
-    // Only for other people using Hiqlite, this must be an opt-in step, just in case.
-    unsafe { env::set_var("HQL_CACHE_WAL_AUTO_MIGRATE", "true") };
-
     let (tx_email, rx_email) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
