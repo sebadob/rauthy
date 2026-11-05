@@ -5153,7 +5153,7 @@ pub fn t_str_vec(
     }
 
     let Value::Array(arr) = value? else {
-        return None;
+        panic!("{}", err_t(key, parent, "Array of Strings"));
     };
     let mut res = Vec::with_capacity(arr.len());
     for value in arr {
@@ -5228,6 +5228,13 @@ mod tests {
             toml::from_str("[user_registration]\nallow_open_redirect = true").unwrap();
         vars.parse_user_registration(&mut table);
         assert!(vars.user_registration.allow_open_redirect);
+    }
+
+    #[test]
+    #[should_panic(expected = "Array of Strings")]
+    fn test_t_str_vec_rejects_string() {
+        let mut table: toml::Table = toml::from_str("domain_blacklist = 'x'").unwrap();
+        t_str_vec(&mut table, "user_registration", "domain_blacklist", "");
     }
 
     #[test]
