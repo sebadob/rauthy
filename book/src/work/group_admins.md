@@ -45,6 +45,8 @@ not themselves any kind of `rauthy_admin`. For those users it can:
   full-admin action),
 - upload or remove the profile picture of a managed user,
 - view and invalidate (force-logout) sessions,
+- list and revoke the app consents of a managed user (a revoke also deletes that user's refresh
+  tokens for the client and revokes the latest access token issued with each of them),
 - send a custom E-Mail to the users of a group it manages, and view the resulting E-Mail jobs.
   The recipient filter is locked to a single one of its managed groups (a full admin may also
   send to all users or filter by role).
