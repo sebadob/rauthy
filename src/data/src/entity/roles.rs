@@ -6,7 +6,7 @@ use hiqlite::macros::params;
 use rauthy_api_types::roles::{RoleRequest, RoleResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_ROLES};
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{csv_rename, new_store_id};
+use rauthy_common::utils::new_store_id;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -177,7 +177,7 @@ impl Role {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
             for mut user in users {
-                user.roles = csv_rename(&user.roles, &role.name, &new_role.name);
+                user.rename_role(&role.name, &new_role.name);
                 user.save_txn_append(&mut txn);
             }
 
@@ -199,7 +199,7 @@ impl Role {
             let txn = cl.transaction().await?;
 
             for mut user in users {
-                user.delete_role(&role.name);
+                user.rename_role(&role.name, &new_role.name);
                 user.save_txn(&txn).await?;
             }
             DB::pg_txn_append(&txn, sql, &[&new_role.name, &new_role.meta, &new_role.id]).await?;

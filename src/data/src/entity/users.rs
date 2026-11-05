@@ -42,7 +42,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
-use rauthy_common::utils::{csv_remove, new_store_id, real_ip_from_req};
+use rauthy_common::utils::{csv_remove, csv_rename, new_store_id, real_ip_from_req};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -1748,6 +1748,14 @@ impl User {
 
     pub fn delete_role(&mut self, role: &str) {
         self.roles = csv_remove(&self.roles, role);
+    }
+
+    pub fn rename_group(&mut self, old: &str, new: &str) {
+        self.groups = self.groups.as_deref().map(|g| csv_rename(g, old, new));
+    }
+
+    pub fn rename_role(&mut self, old: &str, new: &str) {
+        self.roles = csv_rename(&self.roles, old, new);
     }
 
     pub fn email_recipient_name(&self) -> String {
