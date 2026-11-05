@@ -560,18 +560,7 @@ impl From<rauthy_api_types::api_keys::ApiKeyAccess> for ApiKeyAccess {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cryptr::EncKeys;
-    use std::sync::Once;
-
-    static INIT_KEYS: Once = Once::new();
-
-    fn init_keys() {
-        INIT_KEYS.call_once(|| {
-            let _ = EncKeys::generate_with_id("test".to_string())
-                .unwrap()
-                .init();
-        });
-    }
+    use crate::init_test_enc_keys as init_keys;
 
     fn access() -> Vec<ApiKeyAccess> {
         vec![ApiKeyAccess {

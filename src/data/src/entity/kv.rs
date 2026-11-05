@@ -582,35 +582,30 @@ impl From<KVNamespace> for KVNamespaceResponse {
 #[cfg(test)]
 mod tests {
     use super::{KVValue, re_encrypt};
+    use crate::{TEST_ENC_KEY_ID, TEST_ENC_KEY_ID_ACTIVE, init_test_enc_keys};
     use cryptr::{EncKeys, EncValue};
-    use std::sync::Once;
-
-    static INIT_KEYS: Once = Once::new();
-
-    fn init_keys() {
-        INIT_KEYS.call_once(|| {
-            let _ = EncKeys::generate_with_id("test".to_string())
-                .unwrap()
-                .init();
-        });
-    }
 
     #[test]
-    fn re_encrypt_keeps_value_readable() {
-        init_keys();
+    fn re_encrypt_uses_new_kid_and_keeps_value_readable() {
+        init_test_enc_keys();
+        assert_eq!(EncKeys::get_static().enc_key_active, TEST_ENC_KEY_ID_ACTIVE);
+
         let json = serde_json::json!({"a": 1});
         let value = EncValue::encrypt(json.to_string().as_bytes())
             .unwrap()
             .into_bytes()
             .to_vec();
 
+        let value = re_encrypt(value, TEST_ENC_KEY_ID).unwrap();
+        let header = EncValue::try_from(value.clone()).unwrap().header;
+        assert_eq!(header.enc_key_id, TEST_ENC_KEY_ID);
+
         let kv = KVValue {
             ns: "ns".to_string(),
             key: "key".to_string(),
             encrypted: Some(true),
-            value: re_encrypt(value, "test").unwrap(),
+            value,
         };
-
         assert_eq!(kv.value().unwrap(), json);
     }
 }
