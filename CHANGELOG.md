@@ -130,7 +130,7 @@ If a reverse proxy terminates TLS for LDAP as well, `plain_text` serves plain LD
 requires `server.proxy_mode = true`.
 
 Users are published with their `preferred_username` as `uid`. Users without one, or with one that
-is not unique case-insensitively or equals another user's email, are not part of the directory.
+contains an `@` or is not unique case-insensitively, are not part of the directory.
 
 ```toml
 [ldap]

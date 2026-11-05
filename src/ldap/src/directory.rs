@@ -308,18 +308,14 @@ async fn load_uids() -> Result<Uids, ErrorResponse> {
 }
 
 /// Assigns each `(id, email)` with a `preferred_username` that name as its `uid`. Users without
-/// one get no `uid` and are not part of the directory, so an email is never a `uid`. A name that is
-/// not unique case-insensitively, or that equals another user's email, gets no `uid` either,
+/// one get no `uid` and are not part of the directory. A name with an `@` gets no `uid`, so an
+/// email is never a `uid`. A name that is not unique case-insensitively gets none either,
 /// because `uid` filters are case-insensitive and apps would otherwise pick the wrong user.
 /// Non-ASCII names are ignored, because the bind lookup folds case in SQL, which only folds ASCII.
 fn assign_uids(
     users: &[(String, String)],
     preferred: &HashMap<String, String>,
 ) -> HashMap<String, String> {
-    let emails: HashMap<String, &str> = users
-        .iter()
-        .map(|(id, email)| (email.to_lowercase(), id.as_str()))
-        .collect();
     let mut counts: HashMap<String, usize> = HashMap::new();
     for n in preferred.values().filter(|n| n.is_ascii()) {
         *counts.entry(n.to_lowercase()).or_default() += 1;
@@ -330,13 +326,12 @@ fn assign_uids(
         .filter_map(|(id, _)| {
             let name = preferred.get(id)?;
             let lc = name.to_lowercase();
-            if name.is_ascii()
-                && counts.get(&lc) == Some(&1)
-                && emails.get(&lc).is_none_or(|owner| *owner == id)
-            {
+            if name.is_ascii() && !name.contains('@') && counts.get(&lc) == Some(&1) {
                 Some((id.clone(), name.clone()))
             } else {
-                warn!("LDAP uid '{name}' is not unique or not ASCII, skipping user {id}");
+                warn!(
+                    "LDAP uid '{name}' is not unique, not ASCII or has an '@', skipping user {id}"
+                );
                 None
             }
         })
@@ -365,16 +360,12 @@ mod tests {
             (s("3"), s("Carol")),
             (s("4"), s("carol")),  // case-insensitive duplicate, both get no uid
             (s("5"), s("B@x.io")), // another user's email
-            (s("6"), s("F@x.io")), // the user's own email
+            (s("6"), s("F@x.io")), // the user's own email, still an email
             (s("7"), s("\u{212A}im")), // non-ASCII, ignored, so `kim` stays unique
             (s("8"), s("kim")),
         ]);
         let uids = assign_uids(&users, &preferred);
-        let expected = HashMap::from([
-            (s("1"), s("alice")),
-            (s("6"), s("F@x.io")),
-            (s("8"), s("kim")),
-        ]);
+        let expected = HashMap::from([(s("1"), s("alice")), (s("8"), s("kim"))]);
         assert_eq!(uids, expected);
 
         let rows: Vec<UidCandidate> = users
@@ -384,8 +375,8 @@ mod tests {
         let owner = |uid: &str| uid_owner(uid, rows.clone());
         assert_eq!(owner("alice").as_deref(), Some("a@x.io"));
         assert_eq!(owner("kim").as_deref(), Some("h@x.io"));
-        assert_eq!(owner("f@x.io").as_deref(), Some("f@x.io"));
         // emails are never a uid
+        assert_eq!(owner("f@x.io"), None);
         assert_eq!(owner("b@x.io"), None);
         assert_eq!(owner("a@x.io"), None);
         assert_eq!(owner("carol"), None);

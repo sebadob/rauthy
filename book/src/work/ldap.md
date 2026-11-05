@@ -77,10 +77,10 @@ The layout follows LLDAP, so existing app presets only need a different base DN.
 
 Users (`ou=people`) are all users allowed for the client that have a local password and a
 `preferred_username`, and are enabled and not expired. The `preferred_username` is the `uid`, an
-email never is. Users without a `preferred_username`, or with one that is not unique
-case-insensitively or that equals another user's email, are not part of the directory and cannot
-bind. Set `user_values.preferred_username.preferred_username = 'required'` to make sure all users
-have one. PAM users are not used:
+email never is. Users without a `preferred_username`, or with one that contains an `@` or is not
+unique case-insensitively, are not part of the directory and cannot bind. Set
+`user_values.preferred_username.preferred_username = 'required'` to make sure all users have one.
+PAM users are not used:
 
 | attribute                                   | value                                                    |
 |---------------------------------------------|----------------------------------------------------------|
