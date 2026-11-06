@@ -197,6 +197,19 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
     assert_eq!(info.name, "Admin Init");
     assert!(info.roles.contains(&"rauthy_admin".to_string()));
 
+    // `init_client` has the `profile` scope, the admin has no `preferred_username`
+    // -> `email_fallback` (default: true) must apply, like in the ID token
+    let ts = get_token_set_init_client().await;
+    let res = client
+        .get(&url)
+        .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let info = res.json::<Userinfo>().await?;
+    assert!(info.email.is_some());
+    assert_eq!(info.preferred_username, info.email);
+
     Ok(())
 }
 

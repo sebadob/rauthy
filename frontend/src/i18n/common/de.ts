@@ -222,6 +222,7 @@ export const I18nDe: I18n = {
         needsUserUpdate: `Es fehlen Informationen zum Account. Diese benötigen ein Update, bevor
             mit dem Login fortgefahren werden kann.`,
         orLoginWith: 'oder einloggen mit',
+        passkey: 'Passkey',
         passkeyNotDiscovered: `Passkeys, die nicht verknüpft (als Resident Key) hinzugefügt wurden,
             können so nicht gefunden werden. Bitte stattdessen die E-Mail Adresse eingeben.`,
         password: 'Password',

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::database::DB;
 use chrono::Utc;
 use hiqlite::macros::params;
@@ -5,6 +7,7 @@ use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
 use serde::Deserialize;
+use tracing::error;
 
 #[derive(Debug, Deserialize, FromPgRow)]
 pub struct UserLoginState {
@@ -17,10 +20,33 @@ pub struct UserLoginState {
 
 /// CRUD
 impl UserLoginState {
+    /// For efficiency, we use *NOW* with ms precision as part of the DB key. In synthetic
+    /// benchmarks, it's possible to produce a conflict during login when 2 clients log in at the
+    /// exact same ms. This function retries 3 times and gives up after that.
     pub async fn insert(
-        user_id: String,
-        client_id: String,
-        session_id: Option<String>,
+        user_id: &str,
+        client_id: &str,
+        session_id: Option<&str>,
+    ) -> Result<(), ErrorResponse> {
+        for i in 1..=3 {
+            match Self::insert_exec(user_id, client_id, session_id).await {
+                Ok(_) => break,
+                Err(err) => {
+                    error!(
+                        "Error inserting UserLoginState into DB: {} - retrying",
+                        err.message
+                    );
+                    tokio::time::sleep(Duration::from_millis(i * 3)).await;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn insert_exec(
+        user_id: &str,
+        client_id: &str,
+        session_id: Option<&str>,
     ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp_millis();
 
@@ -34,7 +60,7 @@ WHERE NOT EXISTS (
     SELECT 1 FROM user_login_states
     WHERE user_id = $2 AND client_id = $3 AND session_id IS NULL
 )"#,
-                params!(now - 1, &user_id, &client_id),
+                params!(now - 1, user_id, client_id),
             ));
             if session_id.is_some() {
                 txn.push((

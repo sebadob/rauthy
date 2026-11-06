@@ -10,6 +10,7 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::constants::{CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_ATTR_CONFIG};
 use rauthy_common::is_hiqlite;
+use rauthy_common::utils::{csv_remove, csv_rename};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -111,7 +112,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
             let attr_include_access = if let Some(access) = s.attr_include_access {
                 if access.contains(&name) {
                     needs_update = true;
-                    let a = access.replace(&format!("{name},"), "").replace(&name, "");
+                    let a = csv_remove(&access, &name);
                     if a.is_empty() { None } else { Some(a) }
                 } else {
                     Some(access)
@@ -123,7 +124,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
             let attr_include_id = if let Some(id) = s.attr_include_id {
                 if id.contains(&name) {
                     needs_update = true;
-                    let i = id.replace(&format!("{name},"), "").replace(&name, "");
+                    let i = csv_remove(&id, &name);
                     if i.is_empty() { None } else { Some(i) }
                 } else {
                     Some(id)
@@ -306,7 +307,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 let attr_include_access = if let Some(access) = scope.attr_include_access {
                     if access.contains(&name) {
                         needs_update = true;
-                        let a = access.replace(&name, &req_data.name);
+                        let a = csv_rename(&access, &name, &req_data.name);
                         Some(a)
                     } else {
                         Some(access)
@@ -318,7 +319,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 let attr_include_id = if let Some(id) = scope.attr_include_id {
                     if id.contains(&name) {
                         needs_update = true;
-                        let i = id.replace(&name, &req_data.name);
+                        let i = csv_rename(&id, &name, &req_data.name);
                         Some(i)
                     } else {
                         Some(id)

@@ -8,7 +8,7 @@ use hiqlite::macros::params;
 use rauthy_api_types::scopes::{ScopeRequest, ScopeResponse};
 use rauthy_common::constants::{CACHE_TTL_APP, IDX_CLIENTS, IDX_SCOPES};
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::new_store_id;
+use rauthy_common::utils::{csv_rename, new_store_id};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -250,8 +250,8 @@ VALUES ($1, $2, $3, $4, $5)"#;
                 .await?
                 .into_iter()
                 .map(|mut c| {
-                    c.scopes = c.scopes.replace(&scope.name, &scope_req.scope);
-                    c.default_scopes = c.default_scopes.replace(&scope.name, &scope_req.scope);
+                    c.scopes = csv_rename(&c.scopes, &scope.name, &scope_req.scope);
+                    c.default_scopes = csv_rename(&c.default_scopes, &scope.name, &scope_req.scope);
                     c
                 })
                 .collect::<Vec<_>>();

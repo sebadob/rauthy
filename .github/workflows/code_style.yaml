@@ -10,9 +10,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: "always"
-  CARGO_INCREMENTAL: "0"
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   check:
@@ -23,9 +20,6 @@ jobs:
       image: ghcr.io/sebadob/rauthy-builder:20260519
     steps:
       - uses: actions/checkout@v4
-      - name: Set up sccache
-        uses: mozilla-actions/sccache-action@v0.0.11
-
       - name: Setup && build UI
         run: |
           just build-wasm
@@ -48,10 +42,11 @@ jobs:
         run: npm run check
       - name: Frontend Contract Tests
         working-directory: ./frontend
-        # The Chromium reset-page test (npm run test:password-reset) is not
-        # wired here: it needs a browser binary plus the already-built
-        # frontend. Run it locally after `just build-ui`.
-        run: npm run test:webauthn
+        # The Chromium tests (npm run test:password-reset and
+        # test:account-mfa) are not wired here: they need a browser
+        # binary plus the already-built frontend. Run them locally
+        # after `just build-ui`.
+        run: npm run test:webauthn && npm run test:webauthn-reg
 
       - name: Integration Tests against Hiqlite
         # We are running integration tests inside the same job to benefit from the already cached
@@ -59,7 +54,3 @@ jobs:
         # for merge requests ready to review anyway. Only running Hiqlite (for now) because it's a
         # simpler setup.
         run: just test-hiqlite
-
-      - name: Show sccache statistics
-        shell: bash
-        run: sccache --show-stats

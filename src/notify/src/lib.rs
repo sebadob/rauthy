@@ -7,14 +7,11 @@ use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_error::ErrorResponse;
 use reqwest::tls;
 use serde::{Deserialize, Serialize};
-use std::sync::OnceLock;
 use std::time::Duration;
 use tracing::info;
 
 pub mod matrix;
 pub mod slack;
-
-static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum NotificationLevel {
@@ -53,16 +50,6 @@ pub struct Notification {
 }
 
 impl Notification {
-    pub async fn client() -> &'static reqwest::Client {
-        if let Some(client) = HTTP_CLIENT.get() {
-            client
-        } else {
-            let client = Self::build_client(false, None).await;
-            let _ = HTTP_CLIENT.set(client);
-            HTTP_CLIENT.get().unwrap()
-        }
-    }
-
     pub async fn build_client(
         disable_tls_validation: bool,
         root_ca_path: Option<&str>,
@@ -74,10 +61,6 @@ impl Notification {
             .min_tls_version(tls::Version::TLS_1_2)
             .pool_idle_timeout(Duration::from_secs(600))
             .danger_accept_invalid_certs(disable_tls_validation);
-
-        if disable_tls_validation {
-            builder = builder.danger_accept_invalid_certs(true);
-        }
 
         if let Some(path) = root_ca_path {
             let pem_file = tokio::fs::read(path)

@@ -4,6 +4,7 @@ use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest, TokenType};
+use rauthy_api_types::users::UserResponse;
 use rauthy_service::token_set::TokenSet;
 use std::error::Error;
 
@@ -346,6 +347,157 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let claims = decode_claims(&ts.access_token);
     assert_eq!(claims["scope"], serde_json::json!(first_scope));
     assert_eq!(ts.scope.as_deref(), Some(first_scope.as_str()));
+
+    // (11) the exchanging client only gets its own scopes, and never outlives the subject token
+    let flows = vec![
+        GrantType::ClientCredentials,
+        GrantType::Password,
+        GrantType::RefreshToken,
+        GrantType::TokenExchange,
+    ];
+    // the password grant always issues the `default_scopes`, so `email` must be one of them
+    let res = client
+        .put(format!("{backend_url}/clients/{ID}"))
+        .headers(auth_headers.clone())
+        .json(&UpdateClientRequest {
+            default_scopes: vec!["openid".to_string(), "email".to_string()],
+            ..base_update(flows.clone())
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .post(&url_token)
+        .form(&TokenRequest {
+            grant_type: GrantType::Password,
+            client_id: Some(ID.to_string()),
+            client_secret: Some(secret.clone()),
+            username: Some(USERNAME.to_string()),
+            password: Some(PASSWORD.to_string()),
+            ..Default::default()
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let wide_subject: TokenSet = res.json().await?;
+    let wide_claims = decode_claims(&wide_subject.access_token);
+    assert!(
+        wide_claims["scope"].as_str().unwrap().contains("email"),
+        "{}",
+        wide_claims["scope"]
+    );
+
+    // the client loses `email` and gets a longer lifetime than the subject token has left
+    let res = client
+        .put(format!("{backend_url}/clients/{ID}"))
+        .headers(auth_headers.clone())
+        .json(&UpdateClientRequest {
+            scopes: vec!["openid".to_string()],
+            access_token_lifetime: 600,
+            ..base_update(flows.clone())
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let exchange = || TokenRequest {
+        grant_type: GrantType::TokenExchange,
+        client_id: Some(ID.to_string()),
+        client_secret: Some(secret.clone()),
+        subject_token: Some(wide_subject.access_token.clone()),
+        subject_token_type: Some(TokenType::AccessToken.to_string()),
+        audience: Some(TARGET.to_string()),
+        ..Default::default()
+    };
+
+    // inherited scopes the client is not allowed are dropped
+    let res = client.post(&url_token).form(&exchange()).send().await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert_eq!(ts.scope.as_deref(), Some("openid"));
+    assert_eq!(claims["scope"], serde_json::json!("openid"));
+    assert!(
+        claims["exp"].as_i64().unwrap() <= wide_claims["exp"].as_i64().unwrap(),
+        "exchanged exp {} outlives the subject exp {}",
+        claims["exp"],
+        wide_claims["exp"]
+    );
+
+    // explicitly requesting a scope the client is not allowed is rejected
+    let res = client
+        .post(&url_token)
+        .form(&TokenRequest {
+            scope: Some("email".to_string()),
+            ..exchange()
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 400);
+
+    // (12) the client's `default_scopes` are allowed as well, same as on login
+    let res = client
+        .put(format!("{backend_url}/clients/{ID}"))
+        .headers(auth_headers.clone())
+        .json(&UpdateClientRequest {
+            scopes: vec!["openid".to_string()],
+            default_scopes: vec!["openid".to_string(), "email".to_string()],
+            access_token_lifetime: 600,
+            ..base_update(flows)
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client.post(&url_token).form(&exchange()).send().await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    assert!(
+        ts.scope.as_deref().unwrap().contains("email"),
+        "{:?}",
+        ts.scope
+    );
+
+    // (13) the exchanged token never outlives its user
+    let res = client
+        .get(format!("{backend_url}/users/email/{USERNAME}"))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user: UserResponse = res.json().await?;
+    let user_expires = chrono::Utc::now().timestamp() + 60;
+    let patch_user = |body: serde_json::Value| {
+        client
+            .patch(format!("{backend_url}/users/{}", user.id))
+            .headers(auth_headers.clone())
+            .json(&body)
+            .send()
+    };
+    let res = patch_user(serde_json::json!({
+        "put": [{ "key": "user_expires", "value": user_expires }],
+        "del": [],
+    }))
+    .await?;
+    assert_eq!(res.status(), 200);
+    let res = client.post(&url_token).form(&exchange()).send().await;
+    // restore the user before asserting anything, so a failure cannot leave it expiring
+    let restore = match user.user_expires {
+        Some(ts) => {
+            serde_json::json!({ "put": [{ "key": "user_expires", "value": ts }], "del": [] })
+        }
+        None => serde_json::json!({ "put": [], "del": ["user_expires"] }),
+    };
+    assert_eq!(patch_user(restore).await?.status(), 200);
+    let res = res?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert!(
+        claims["exp"].as_i64().unwrap() <= user_expires,
+        "exchanged exp {} outlives the user expiry {user_expires}",
+        claims["exp"]
+    );
+    assert!(ts.expires_in <= 60, "expires_in {}", ts.expires_in);
 
     // cleanup
     let res = client

@@ -42,7 +42,7 @@ use rauthy_common::constants::{
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
-use rauthy_common::utils::{new_store_id, real_ip_from_req};
+use rauthy_common::utils::{csv_remove, csv_rename, new_store_id, real_ip_from_req};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
@@ -254,6 +254,24 @@ impl Debug for User {
 }
 
 // CRUD
+// Keyset cursors over a composite key: `created_at` alone (seconds) is not unique, so a
+// plain comparison on it skips users at batch boundaries (same reasoning as `find_paginated`).
+const SQL_FIND_BATCH: &str = r#"
+SELECT * FROM users
+WHERE (created_at, email) > ($1, $2)
+ORDER BY created_at ASC, email ASC
+LIMIT $3"#;
+
+const SQL_FIND_FOR_SCIM_SYNC: &str = r#"
+SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
+    created_at, language, picture_id, birthdate, phone, street, zip, city, country,
+    preferred_username, tz
+FROM users u
+LEFT JOIN users_values uv ON u.id = uv.id
+WHERE (u.created_at, u.id) > ($1, $2)
+ORDER BY u.created_at ASC, u.id ASC
+LIMIT $3"#;
+
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
         let client = DB::hql();
@@ -683,20 +701,17 @@ ORDER BY created_at ASC"#;
         from_created_at: i64,
         batch_size: u16,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
-SELECT * FROM users
-WHERE created_at >= $1 AND email > $2
-ORDER BY created_at ASC, email ASC
-LIMIT $3"#;
-
         let batch_size = batch_size as i64;
         let res = if is_hiqlite() {
             DB::hql()
-                .query_as(sql, params!(from_created_at, after_email, batch_size))
+                .query_as(
+                    SQL_FIND_BATCH,
+                    params!(from_created_at, after_email, batch_size),
+                )
                 .await?
         } else {
             DB::pg_query(
-                sql,
+                SQL_FIND_BATCH,
                 &[&from_created_at, &after_email, &batch_size],
                 batch_size as usize,
             )
@@ -711,12 +726,14 @@ LIMIT $3"#;
         let like = format!("%{group_name}%");
         let sql = "SELECT * FROM users WHERE groups LIKE $1";
 
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
             DB::pg_query(sql, &[&like], count).await?
         };
+        // LIKE matches substrings - keep only real members
+        res.retain(|u| u.groups_iter().any(|g| g == group_name));
 
         Ok(res)
     }
@@ -726,12 +743,14 @@ LIMIT $3"#;
         let like = format!("%{role_name}%");
         let sql = "SELECT * FROM users WHERE roles LIKE $1";
 
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
             DB::pg_query(sql, &[&like], count).await?
         };
+        // LIKE matches substrings - keep only real members
+        res.retain(|u| u.roles_iter().any(|r| r == role_name));
 
         Ok(res)
     }
@@ -947,23 +966,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     /// Caution: Results will only contain values necessary for SCIM syncs.
     pub async fn find_for_scim_sync(
         last_created_ts: i64,
+        last_user_id: &str,
         limit: u16,
     ) -> Result<Vec<(Self, UserValues)>, ErrorResponse> {
-        let sql = r#"
-SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
-    created_at, language, picture_id, birthdate, phone, street, zip, city, country,
-    preferred_username, tz
-FROM users u
-LEFT JOIN users_values uv ON u.id = uv.id
-WHERE u.created_at > $1
-ORDER BY created_at ASC
-LIMIT $2"#;
-
         let mut res = Vec::with_capacity(limit as usize);
 
         if is_hiqlite() {
             let rows = DB::hql()
-                .query_raw(sql, params!(last_created_ts, limit))
+                .query_raw(
+                    SQL_FIND_FOR_SCIM_SYNC,
+                    params!(last_created_ts, last_user_id, limit),
+                )
                 .await?;
             for mut row in rows {
                 let user = Self {
@@ -1002,8 +1015,12 @@ LIMIT $2"#;
                 res.push((user, values));
             }
         } else {
-            let rows = DB::pg_query_rows(sql, &[&last_created_ts, &(limit as i32)], limit as usize)
-                .await?;
+            let rows = DB::pg_query_rows(
+                SQL_FIND_FOR_SCIM_SYNC,
+                &[&last_created_ts, &last_user_id, &(limit as i32)],
+                limit as usize,
+            )
+            .await?;
             for row in rows {
                 let user = Self {
                     id: row.get("user_id"),
@@ -1952,57 +1969,21 @@ impl User {
     }
 
     pub fn delete_group(&mut self, group: &str) {
-        if self.groups.is_none() {
-            return;
-        }
-        let old_groups = self.groups.as_ref().unwrap();
-
-        let i_opt = old_groups.find(group);
-        if i_opt.is_none() {
-            return;
-        }
-
-        let i = i_opt.unwrap();
-        if i == 0 {
-            // the group is the first entry
-            if old_groups.len() > group.len() {
-                let g = format!("{group},");
-                self.groups = Some(old_groups.replace(&g, ""));
-            } else {
-                self.groups = None;
-            }
-        } else {
-            // the role is at the end or in the middle
-            let g = format!(",{group}");
-            self.groups = Some(old_groups.replace(&g, ""));
+        if let Some(groups) = &self.groups {
+            self.groups = Some(csv_remove(groups, group)).filter(|g| !g.is_empty());
         }
     }
 
     pub fn delete_role(&mut self, role: &str) {
-        // find the role via index in the string
-        // first entry: delete role + ',' if it exists
-        // last entry: delete role + ',' in front if it exists
-        // middle: delete role + ',' in front if it exists
-        // --> 2 cases: first entry or else
-        let i_opt = self.roles.find(role);
-        if i_opt.is_none() {
-            return;
-        }
+        self.roles = csv_remove(&self.roles, role);
+    }
 
-        let i = i_opt.unwrap();
-        if i == 0 {
-            // the role is the first entry
-            if self.roles.len() > role.len() {
-                let r = format!("{role},");
-                self.roles = self.roles.replace(&r, "");
-            } else {
-                self.roles = String::from("");
-            }
-        } else {
-            // the role is at the end or in the middle
-            let r = format!(",{role}");
-            self.roles = self.roles.replace(&r, "");
-        }
+    pub fn rename_group(&mut self, old: &str, new: &str) {
+        self.groups = self.groups.as_deref().map(|g| csv_rename(g, old, new));
+    }
+
+    pub fn rename_role(&mut self, old: &str, new: &str) {
+        self.roles = csv_rename(&self.roles, old, new);
     }
 
     pub fn email_recipient_name(&self) -> String {
@@ -2833,5 +2814,72 @@ mod tests {
             .await
             .unwrap();
         assert!(rts.is_empty());
+    }
+
+    /// Pages through all users with the real batch SQL on an in-memory SQLite, the way
+    /// `EmailJob::task_execute` and `ClientScim::sync_users_exec` advance their cursors.
+    #[test]
+    fn test_batch_cursors_reach_every_user() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            r#"
+CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, email_verified INT,
+    given_name TEXT, family_name TEXT, roles TEXT, groups TEXT, enabled INT,
+    created_at INT NOT NULL, language TEXT, picture_id TEXT);
+CREATE TABLE users_values (id TEXT PRIMARY KEY, birthdate TEXT, phone TEXT, street TEXT,
+    zip TEXT, city TEXT, country TEXT, preferred_username TEXT, tz TEXT);
+INSERT INTO users (id, email, created_at) VALUES
+    ('a', 'anna@x', 100), ('b', 'zoe@x', 200), ('c', 'bob@x', 300),
+    ('d', 'carl@x', 400), ('e', 'zack@x', 500);
+"#,
+        )
+        .unwrap();
+
+        // email job: cursor is (created_at, email) of the last user in the batch
+        let mut cursor = (0i64, String::new());
+        let mut reached = Vec::new();
+        loop {
+            let rows: Vec<(i64, String)> = conn
+                .prepare(SQL_FIND_BATCH)
+                .unwrap()
+                .query_map(rusqlite::params![cursor.0, cursor.1, 2], |r| {
+                    Ok((r.get("created_at")?, r.get("email")?))
+                })
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            if rows.is_empty() {
+                break;
+            }
+            cursor = rows.last().unwrap().clone();
+            reached.extend(rows.into_iter().map(|(_, email)| email));
+        }
+        assert_eq!(reached, ["anna@x", "zoe@x", "bob@x", "carl@x", "zack@x"]);
+
+        // SCIM sync: several users created in the same second, cursor is the last synced user
+        conn.execute_batch(
+            "DELETE FROM users; INSERT INTO users (id, email, created_at) VALUES
+    ('a', 'a@x', 100), ('b', 'b@x', 100), ('c', 'c@x', 100), ('d', 'd@x', 200);",
+        )
+        .unwrap();
+        let mut cursor = (0i64, String::new());
+        let mut reached = Vec::new();
+        loop {
+            let rows: Vec<(i64, String)> = conn
+                .prepare(SQL_FIND_FOR_SCIM_SYNC)
+                .unwrap()
+                .query_map(rusqlite::params![cursor.0, cursor.1, 2], |r| {
+                    Ok((r.get("created_at")?, r.get("user_id")?))
+                })
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            if rows.is_empty() {
+                break;
+            }
+            cursor = rows.last().unwrap().clone();
+            reached.extend(rows.into_iter().map(|(_, id)| id));
+        }
+        assert_eq!(reached, ["a", "b", "c", "d"]);
     }
 }

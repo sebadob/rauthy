@@ -26,7 +26,7 @@ use rauthy_api_types::oidc::GrantType;
 use rauthy_common::constants::RAUTHY_VERSION;
 use rauthy_common::constants::{CACHE_TTL_APP, SECRET_LEN_CLIENTS};
 use rauthy_common::is_hiqlite;
-use rauthy_common::utils::{get_rand, real_ip_from_req};
+use rauthy_common::utils::{csv_remove, get_rand, real_ip_from_req};
 use rauthy_common::validation::validate_redirect_uri;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -43,6 +43,15 @@ use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 use zeroize::Zeroize;
+
+pub const SQL_INSERT: &str = r#"
+INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
+default_aud, created_micros)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+$18, $19, $20, $21, $22, $23, $24, $25)"#;
 
 static SQL_SAVE: &str = r#"
 UPDATE clients
@@ -169,19 +178,10 @@ impl Client {
         client.secret_kid = kid;
         client.created_micros = Some(Utc::now().timestamp_micros());
 
-        let sql = r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
-default_aud, created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23, $24, $25)"#;
-
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    sql,
+                    SQL_INSERT,
                     params!(
                         &client.id,
                         &client.name,
@@ -213,7 +213,7 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
                 .await?;
         } else {
             DB::pg_execute(
-                sql,
+                SQL_INSERT,
                 &[
                     &client.id,
                     &client.name,
@@ -264,13 +264,6 @@ $18, $19, $20, $21, $22, $23, $24, $25)"#;
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        let sql_1 = r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-$21, $22, $23)"#;
         let sql_2 = r#"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
@@ -280,7 +273,7 @@ VALUES ($1, $2, $3, $4)"#;
             DB::hql()
                 .txn([
                     (
-                        sql_1,
+                        SQL_INSERT,
                         params!(
                             &client.id,
                             &client.name,
@@ -304,6 +297,8 @@ VALUES ($1, $2, $3, $4)"#;
                             &client.contacts,
                             &client.backchannel_logout_uri,
                             &client.restrict_group_prefix,
+                            &client.allowed_resources,
+                            &client.default_aud,
                             client.created_micros
                         ),
                     ),
@@ -324,7 +319,7 @@ VALUES ($1, $2, $3, $4)"#;
 
             DB::pg_txn_append(
                 &txn,
-                sql_1,
+                SQL_INSERT,
                 &[
                     &client.id,
                     &client.name,
@@ -348,6 +343,8 @@ VALUES ($1, $2, $3, $4)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &client.allowed_resources,
+                    &client.default_aud,
                     &client.created_micros,
                 ],
             )
@@ -565,11 +562,18 @@ VALUES ($1, $2, $3, $4)"#;
         let like = format!("%{scope_name}%");
         let sql = "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1";
 
-        let clients = if is_hiqlite() {
+        let mut clients: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             DB::pg_query(sql, &[&like], 0).await?
         };
+        // LIKE matches substrings - keep only real members
+        clients.retain(|c| {
+            c.scopes
+                .split(',')
+                .chain(c.default_scopes.split(','))
+                .any(|s| s == scope_name)
+        });
 
         Ok(clients)
     }
@@ -980,45 +984,9 @@ impl Client {
         self.is_flow_enabled(GrantType::RefreshToken)
     }
 
-    // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
     pub fn delete_scope(&mut self, scope: &str) {
-        // find the scope via index in the string
-        // first entry: delete scope + ',' if it exists
-        // last entry: delete scope + ',' in front if it exists
-        // middle: delete scope + ',' in front if it exists
-        // --> 2 cases: first entry or else
-        if let Some(i) = self.scopes.find(scope) {
-            if i == 0 {
-                // the scope is the first entry
-                if self.scopes.len() > scope.len() {
-                    let s = format!("{scope},");
-                    self.scopes = self.scopes.replace(&s, "");
-                } else {
-                    self.scopes = String::default();
-                }
-            } else {
-                // the scope is at the end or in the middle
-                let s = format!(",{scope}");
-                self.scopes = self.scopes.replace(&s, "");
-            }
-        }
-
-        // check if the to-be-deleted scope is in the default scopes
-        if let Some(i) = self.default_scopes.find(scope) {
-            if i == 0 {
-                // the scope is the first entry
-                if self.default_scopes.len() > scope.len() {
-                    let s = format!("{scope},");
-                    self.default_scopes = self.default_scopes.replace(&s, "");
-                } else {
-                    self.default_scopes = String::default();
-                }
-            } else {
-                // the scope is at the end or in the middle
-                let s = format!(",{scope}");
-                self.default_scopes = self.default_scopes.replace(&s, "");
-            }
-        }
+        self.scopes = csv_remove(&self.scopes, scope);
+        self.default_scopes = csv_remove(&self.default_scopes, scope);
     }
 
     /// Generates a new random 64 character long client secret and returns the cleartext and
@@ -3407,6 +3375,23 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         client.delete_scope("groups");
         assert_eq!(&client.scopes, "openid");
         assert_eq!(&client.default_scopes, "openid");
+    }
+
+    #[test]
+    fn test_delete_client_scope_substring() {
+        let mut client = Client {
+            scopes: "openid,profile,email,pro".to_string(),
+            default_scopes: "openid,pro,profile".to_string(),
+            ..Default::default()
+        };
+
+        client.delete_scope("pro");
+        assert_eq!(&client.scopes, "openid,profile,email");
+        assert_eq!(&client.default_scopes, "openid,profile");
+
+        // not a member -> unchanged
+        client.delete_scope("mail");
+        assert_eq!(&client.scopes, "openid,profile,email");
     }
 
     /// The stored client as an admin left it: every admin-set / internal field differs from

@@ -53,7 +53,7 @@ pub async fn get_forward_auth_client(
         }
         Some(s) => {
             debug!(fwd_auth_session = ?s);
-            if s.validate(&req).is_ok() {
+            if s.validate(&req, &client.id).is_ok() {
                 if check_csrf {
                     match s.validate_csrf(&req, params.danger_cookie_insecure) {
                         Ok(_) => Some(s),
@@ -221,7 +221,7 @@ pub async fn get_forward_auth_client_callback(
             "Mismatch in client_id",
         ));
     }
-    if state.peer_ip != ip {
+    if RauthyConfig::get().vars.access.session_validate_ip && state.peer_ip != ip {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "State created from different IP",
@@ -314,7 +314,10 @@ pub async fn get_forward_auth_client_callback(
     session.last_seen = Utc::now().timestamp();
     session.upsert().await?;
 
-    let fwd_session = ForwardAuthSession { inner: session };
+    let fwd_session = ForwardAuthSession {
+        client_id: client.id,
+        inner: session,
+    };
     let (cookie_session, cookie_csrf) = fwd_session.build_cookies(state.danger_cookie_insecure)?;
 
     Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())

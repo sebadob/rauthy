@@ -1,11 +1,13 @@
 use crate::token_set::{DpopFingerprint, TokenScopes, TokenSet};
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
+use chrono::Utc;
 use rauthy_api_types::oidc::{GrantType, TokenRequest, TokenType};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::issued_tokens::IssuedToken;
+use rauthy_data::entity::scopes::Scope;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -108,13 +110,14 @@ pub async fn grant_type_token_exchange(
     // anyway, so extracting them here costs nothing extra and saves a second 512 byte buffer.
     let mut buf = Vec::with_capacity(512);
 
-    let (subject_sub, subject_scope) = {
+    let (subject_sub, subject_scope, subject_exp) = {
         let subject_claims =
             validate_exchange_token(subject_token, subject_token_type, "subject_token", &mut buf)
                 .await?;
         (
             subject_claims.common.sub.map(|s| s.to_string()),
             subject_claims.common.scope.map(|s| s.to_string()),
+            subject_claims.common.exp,
         )
     };
 
@@ -171,6 +174,16 @@ pub async fn grant_type_token_exchange(
     // `openid` is deliberately not forced in here: only access tokens can be exchanged, so the
     // result carries no identity part that would need it, and the caller stays in control of
     // what the exchanged token is scoped to.
+    // On top, the exchanging client only ever gets scopes it is allowed itself, with the same
+    // rule as `Client::sanitize_login_scopes`: its `default_scopes` plus its `scopes`.
+    let matrix_enabled = RauthyConfig::get().vars.matrix.msc3861_enable;
+    let client_allows = |s: &str| {
+        client.default_scopes.split(',').any(|d| d == s)
+            || client
+                .scopes
+                .split(',')
+                .any(|allowed| Scope::matches(allowed, s, matrix_enabled))
+    };
     let subject_scope = subject_scope.unwrap_or_default();
     let scope = if let Some(requested) = req_data.scope.as_deref() {
         let mut narrowed = Vec::with_capacity(1);
@@ -181,11 +194,21 @@ pub async fn grant_type_token_exchange(
                     format!("the requested scope '{s}' is not granted to the 'subject_token'"),
                 ));
             }
+            if !client_allows(s) {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("the requested scope '{s}' is not allowed for this client"),
+                ));
+            }
             narrowed.push(s);
         }
         narrowed.join(" ")
     } else {
         subject_scope
+            .split_whitespace()
+            .filter(|s| client_allows(s))
+            .collect::<Vec<_>>()
+            .join(" ")
     };
 
     // A token exchange without a user is only possible for a `client_credentials` subject token,
@@ -204,11 +227,32 @@ pub async fn grant_type_token_exchange(
     if let Some(user) = &user {
         user.check_enabled()?;
         user.check_expired()?;
+        client.validate_user_groups(user)?;
+        // We do not validate any `force_mfa` setting here. This is
+        // 1. impossible, since we just cannot verify it at this stage anyway
+        // 2. not necessary at all, since the token exchange is guarded by admin-configured resource
+        //    access and validation. If we would require MFA here (which we don't know anyway), it
+        //    would destroy a few important flows. Since this is deliberately configured by an
+        //    admin, we just don't need to.
+    }
+
+    // Never outlive the subject token or the user, or re-exchanging could extend access forever.
+    let now = Utc::now().timestamp();
+    let mut lifetime = (client.access_token_lifetime as i64).min(subject_exp - now);
+    if let Some(user_expires) = user.as_ref().and_then(|u| u.user_expires) {
+        lifetime = lifetime.min(user_expires - now);
+    }
+    if lifetime < 1 {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "the 'subject_token' or its user has expired",
+        ));
     }
 
     let ts = TokenSet::for_token_exchange(
         user.as_ref(),
         &client,
+        lifetime,
         dpop_fingerprint,
         TokenScopes::new(scope),
         target,

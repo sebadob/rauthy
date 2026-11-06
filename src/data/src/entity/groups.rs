@@ -174,12 +174,7 @@ impl Group {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
             for mut user in users {
-                user.groups = Some(
-                    user.groups
-                        .as_ref()
-                        .unwrap()
-                        .replace(&group.name, &new_group.name),
-                );
+                user.rename_group(&group.name, &new_group.name);
                 user.save_txn_append(&mut txn);
             }
 
@@ -201,7 +196,7 @@ impl Group {
             let txn = cl.transaction().await?;
 
             for mut user in users {
-                user.delete_group(&group.name);
+                user.rename_group(&group.name, &new_group.name);
                 user.save_txn(&txn).await?;
             }
             DB::pg_txn_append(

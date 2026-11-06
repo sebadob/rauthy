@@ -95,8 +95,28 @@
 
         isLoading = true;
 
+        // The self-update endpoint replaces the whole profile with what it receives, so send the
+        // current profile values along with the password, normalized the same way as in
+        // `AccEdit.svelte`. Otherwise a password change would clear them.
+        let values = user.user_values;
+        let tz = values?.tz || undefined;
+        if (tz === 'Etc/UTC' || tz === 'UTC') {
+            tz = undefined;
+        }
+
         let payload: UpdateUserSelfRequest = {
+            given_name: user.given_name || undefined,
+            family_name: user.family_name || undefined,
             password_new: passwords.new,
+            user_values: {
+                birthdate: values?.birthdate || undefined,
+                phone: values?.phone || undefined,
+                street: values?.street || undefined,
+                zip: values?.zip || undefined,
+                city: values?.city || undefined,
+                country: values?.country || undefined,
+                tz,
+            },
         };
         if (mfaCode) {
             payload.mfa_code = mfaCode;

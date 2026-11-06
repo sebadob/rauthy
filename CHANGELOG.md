@@ -17,7 +17,77 @@ full restart of all nodes, independent of `consent.enable`.
   `false` (the default), nothing changes for existing logins and refresh tokens. See the
   `[consent]` section in the config reference before you enable it.
 
+### Security
+
+#### Additional `device_code` checks
+
+The `device_code` grant does additional validations for users (another round-trip of enabled and
+not expired), and it checks for a `force_mfa` requirement by the client the user is verifying the
+device for. This is only a snaptshot in time though, since it's impossible to re-validate if the
+device is allowed to refresh tokens.
+
+#### Token Exchange is limited to the exchanging client's scopes and lifetime
+
+An exchanged token inherited all scopes of the `subject_token`, even ones the exchanging client is
+not allowed to have, including custom scopes that embed user attributes. The exchanged token now
+only keeps scopes the exchanging client is allowed. Inherited scopes outside of that are dropped,
+and explicitly requesting one is rejected. The lifetime is now capped by the `subject_token`'s own
+expiry and the user's expiry as well, so a client can no longer extend access by re-exchanging.
+
+#### Forward Auth cookie can no longer be used as a Rauthy session
+
+The Forward Auth session cookie, which the reverse proxy passes on to the protected upstream app, 
+held the exact same value as Rauthy's own session cookie. That was on purpose, so that an 
+invalidation of the main session would immediately log the user out of all forwarded apps. However,
+if was theoretically possible that such a protected app (which knows nothing about authentication
+in the first place, otherwise it would have a native auth), could be malicious and replay the
+forward auth session cookie again Rauthys main API for the logged-in user. The encrypted value
+inside the forward auth session cookie is now tagged as a pure forward auth session, and separated
+by client. This means it cannot be replayed, is still bound to the main session under the hood,
+and a malicious forward auth app cannot replay the same cookie against other forward auth apps.
+
+Existing Forward Auth sessions need to log in once more after the update.
+
+**If you use Forward Auth, invalidate all sessions after upgrading** (Admin UI > Sessions, or
+`DELETE /auth/v1/sessions`). Forward Auth cookies issued before this release still hold the bare
+session id and can be replayed as a Rauthy session until that session ends. Logging in again does
+not rotate the session, so only invalidating it closes the window. Rauthy does not do this
+automatically, because it would log out every user on every instance, including the ones that
+never used Forward Auth.
+
 ### Changes
+
+#### Always Show *Password Forgotten*
+
+The 'Password forgotten?' link on the login page only shows up after a failed login. With the new
+`access.password_reset_link_always` (`PASSWORD_RESET_LINK_ALWAYS`) set to `true`, it is visible
+from the start, even before the password input is shown. The default is `false`, which keeps the
+current behavior.
+Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
+via `PASSWORD_RESET_LINK_ALWAYS` until every node is upgraded.
+
+#### Opt-in Bootstrap Reconcile
+
+The bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` can be re-applied on
+every start, and not only against an empty database. Check the
+[book](https://sebadob.github.io/rauthy/config/bootstrap.html) for the details.
+
+```toml
+[bootstrap]
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+reconcile = false
+```
+
+[#1847](https://github.com/sebadob/rauthy/issues/1847)
 
 #### Externally Provisioned Client Secrets
 
@@ -43,6 +113,27 @@ authorization code. Http(s) redirects are unchanged and remain automatic.
 
 When the same user is deleted by two requests at the same time, the one that loses the race now
 gets a `404` instead of succeeding a second time.
+
+### Bugfix
+
+- Changing the password from the account page cleared the given and family name and all user
+  values, like phone, address and timezone, because the request only contained the password and
+  the self-update replaces the whole profile with the request. The password form now sends the
+  current profile values along with the new password.
+  [#1866](https://github.com/sebadob/rauthy/issues/1866)
+- Registering an email OTP from the account page showed the activation code input without ever
+  creating the OTP, and therefore without sending the email, whenever the MFA modification token
+  was obtained through the re-authentication modal. The pending registration is now resumed after
+  a successful re-authentication, and it is dropped when that re-authentication is aborted, so an
+  interrupted flow cannot trigger an action on a later, unrelated fetch.
+  [#1846](https://github.com/sebadob/rauthy/issues/1846)
+- Typing the activation code of an email OTP could send the activation twice, because the
+  auto-submit that runs once the code has the expected length also re-ran on other changes. It now
+  only runs when the code itself changes to a complete value, so each action sends a single request
+  and the manual submit is unaffected.
+- An invalid `lifetimes.jwk_autorotate_cron` or `geo.maxmind_update_cron`, or one without a future
+  occurrence, made its scheduler silently die after boot. Rauthy now refuses to start instead.
+  [#1857](https://github.com/sebadob/rauthy/pull/1857)
 
 ## v0.37.2
 

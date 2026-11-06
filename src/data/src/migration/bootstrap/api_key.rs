@@ -210,19 +210,8 @@ impl From<crate::migration::bootstrap::types::ApiKeyAccess>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::init_test_enc_keys as init_keys;
     use crate::migration::bootstrap::generated_secrets::read_container;
-    use cryptr::EncKeys;
-    use std::sync::Once;
-
-    static INIT_KEYS: Once = Once::new();
-
-    fn init_keys() {
-        INIT_KEYS.call_once(|| {
-            let _ = EncKeys::generate_with_id("test".to_string())
-                .unwrap()
-                .init();
-        });
-    }
 
     fn test_path(name: &str) -> std::path::PathBuf {
         std::env::temp_dir().join(format!(

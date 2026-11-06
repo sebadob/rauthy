@@ -251,7 +251,7 @@ impl LogoutToken<'_> {
         let now = Utc::now().timestamp();
 
         let iat_limit = now - token_lifetime - allow_clock_skew;
-        let exp_limit = now + allow_clock_skew;
+        let exp_limit = now - allow_clock_skew;
 
         if self.iat < iat_limit {
             return Err(ErrorResponse::new(
@@ -428,5 +428,23 @@ mod tests {
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
         lt.validate_claims_with(header, lifetime, skew)
             .expect_err("empty sub and sid");
+
+        // clock skew must make `exp` more lenient, not stricter
+        let token = LogoutToken::new(iss, aud, Some(sub), None, lifetime)
+            .into_token_with_kp(&kp_25519)
+            .unwrap();
+        buf.clear();
+        let (header, mut lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
+        let now = Utc::now().timestamp();
+        lt.iat = now - 10;
+        lt.exp = now + 1;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("exp within the skew must be accepted");
+        lt.exp = now - 2;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("exp expired within the skew must be accepted");
+        lt.exp = now - skew - 1;
+        lt.validate_claims_with(header, lifetime, skew)
+            .expect_err("exp beyond the skew must be rejected");
     }
 }

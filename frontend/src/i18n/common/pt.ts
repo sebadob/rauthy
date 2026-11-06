@@ -215,6 +215,7 @@ export const I18nPt: I18n = {
         needsUserUpdate: `Faltam algumas informações nesta conta. Tem de atualizar estes dados
             antes de continuar com o início de sessão.`,
         orLoginWith: 'ou iniciar sessão com',
+        passkey: 'Passkey',
         passkeyNotDiscovered: `As Passkeys que não foram adicionadas como Resident Key não podem ser
             encontradas desta forma. Introduza antes o seu e-mail.`,
         password: 'Palavra-passe',

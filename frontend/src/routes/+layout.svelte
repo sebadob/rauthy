@@ -4,7 +4,6 @@
     import { initI18n } from '#state/i18n.svelte.ts';
 
     import '../css/global.css';
-    import { fetchSolvePow } from '#utils/pow.ts';
 
     initLang();
     initI18n();

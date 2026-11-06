@@ -297,6 +297,14 @@ whoami_headers = true
 # overwritten by: ADMIN_BUTTON_HIDE
 admin_button_hide = false
 
+# By default, the 'Password forgotten?' link on the login page will
+# only show up after a failed login. If set to `true`, it will be
+# visible from the start, even before the password input is shown.
+#
+# default: false
+# overwritten by: PASSWORD_RESET_LINK_ALWAYS
+#password_reset_link_always = false
+
 # If set to `true`, requests to `/auth/v1/` will be redirected to
 # `/auth/v1/account` (the account dashboard). This is useful if you want
 # users to land directly on their account page when visiting the root URL.
@@ -534,6 +542,18 @@ api_key_secret = 'twUA2M7RZ8H3FyJHbti2AcMADPDCxDqUKbvi8FDnm3nYidwQx57Wfv6iaVTQyn
 # default: '10m'
 # overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
 #generated_secrets_ttl = '10m'
+
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+#reconcile = false
 
 # This is the directory where the bootstrap logic will look for
 # additional bootstrapping data. It will expect JSON files with

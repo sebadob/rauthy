@@ -733,26 +733,39 @@ LIMIT 1"#;
 }
 
 impl JwkKeyPair {
+    // RSA arms pass an RNG so `rsa` applies blinding (RUSTSEC-2023-0071 / Marvin mitigation).
     pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
         match self.typ {
             JwkKeyPairAlg::RS256 => {
                 let hash = hmac_sha256::Hash::hash(input);
                 let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha256>(), hash.as_slice())?;
+                let sig = key.sign_with_rng(
+                    &mut rand_08::thread_rng(),
+                    rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                    hash.as_slice(),
+                )?;
                 Ok(sig)
             }
 
             JwkKeyPairAlg::RS384 => {
                 let hash = hmac_sha512::sha384::Hash::hash(input);
                 let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha384>(), hash.as_slice())?;
+                let sig = key.sign_with_rng(
+                    &mut rand_08::thread_rng(),
+                    rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                    hash.as_slice(),
+                )?;
                 Ok(sig)
             }
 
             JwkKeyPairAlg::RS512 => {
                 let hash = hmac_sha512::Hash::hash(input);
                 let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha512>(), hash.as_slice())?;
+                let sig = key.sign_with_rng(
+                    &mut rand_08::thread_rng(),
+                    rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                    hash.as_slice(),
+                )?;
                 Ok(sig)
             }
 
@@ -983,7 +996,31 @@ impl From<JwkKeyPairAlg> for rauthy_api_types::oidc::JwkKeyPairAlg {
 
 #[cfg(test)]
 mod tests {
-    use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
+    use crate::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg, JwkKeyPairType};
+    use rauthy_common::utils::base64_url_encode;
+    use rsa::pkcs8::EncodePrivateKey;
+
+    #[test]
+    fn test_rsa_sign_verify_roundtrip() {
+        let key = rsa::RsaPrivateKey::new(&mut rand_08::thread_rng(), 2048).unwrap();
+        let bytes = key.to_pkcs8_der().unwrap().to_bytes().to_vec();
+        for typ in [
+            JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512,
+        ] {
+            let kp = JwkKeyPair {
+                kid: "test".to_string(),
+                typ,
+                bytes: bytes.clone(),
+            };
+            let message = "header.claims";
+            let sig = kp.sign(message.as_bytes()).unwrap();
+            let token = format!("{message}.{}", base64_url_encode(&sig));
+            let mut buf = Vec::new();
+            assert_eq!(kp.verify_token(&token, &mut buf).unwrap(), message);
+        }
+    }
 
     #[test]
     fn test_alg_compatibility() {

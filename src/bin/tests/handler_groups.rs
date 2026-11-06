@@ -1,6 +1,8 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
+use rauthy_api_types::generic::Language;
 use rauthy_api_types::groups::GroupRequest;
+use rauthy_api_types::users::{NewUserRequest, UserResponse};
 use rauthy_data::entity::groups::Group;
 use std::error::Error;
 
@@ -36,6 +38,28 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     let group = res.json::<Group>().await?;
     assert_eq!(group.name, "My Group 123");
 
+    // assign the group to a user, so the rename below must rewrite the membership
+    let url_users = format!("{}/users", backend_url);
+    let res = reqwest::Client::new()
+        .post(&url_users)
+        .headers(auth_headers.clone())
+        .json(&NewUserRequest {
+            given_name: Some("Group".to_string()),
+            family_name: Some("Rename".to_string()),
+            email: "group-rename@localhost.de".to_string(),
+            preferred_username: None,
+            language: Language::En,
+            roles: vec!["user".to_string()],
+            groups: Some(vec!["My Group 123".to_string()]),
+            user_expires: None,
+            tz: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user = res.json::<UserResponse>().await?;
+    assert_eq!(user.groups, Some(vec!["My Group 123".to_string()]));
+
     // modify the group
     let upd_group = GroupRequest {
         group: "group456".to_string(),
@@ -51,6 +75,24 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let upd_grp = res.json::<Group>().await?;
     assert_eq!(upd_group.group, upd_grp.name);
+
+    // the user must have the renamed group, not lose it
+    let url_user = format!("{}/{}", url_users, user.id);
+    let res = reqwest::Client::new()
+        .get(&url_user)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user = res.json::<UserResponse>().await?;
+    assert_eq!(user.groups, Some(vec!["group456".to_string()]));
+
+    let res = reqwest::Client::new()
+        .delete(&url_user)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 204);
 
     // delete the group
     let url_del = format!("{}/{}", url, upd_grp.id);

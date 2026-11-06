@@ -323,6 +323,7 @@ impl Default for Vars {
                 token_revoke_device_tokens: false,
                 whoami_headers: false,
                 admin_button_hide: false,
+                password_reset_link_always: false,
                 redirect_root_to_account: false,
             },
             auth_headers: VarsAuthHeaders {
@@ -356,6 +357,7 @@ impl Default for Vars {
                 bootstrap_dir: "bootstrap".into(),
                 generated_secrets_file: String::new().into(),
                 generated_secrets_ttl: Duration::from_secs(600),
+                reconcile: false,
             },
             consent: VarsConsent { enable: false },
             cred_stuff_detect: VarsCredStuff {
@@ -1625,6 +1627,14 @@ impl Vars {
         if let Some(v) = t_bool(
             &mut table,
             "access",
+            "password_reset_link_always",
+            "PASSWORD_RESET_LINK_ALWAYS",
+        ) {
+            self.access.password_reset_link_always = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "access",
             "redirect_root_to_account",
             "REDIRECT_ROOT_TO_ACCOUNT",
         ) {
@@ -1820,6 +1830,9 @@ impl Vars {
             "BOOTSTRAP_GENERATED_SECRETS_TTL",
         ) {
             self.bootstrap.generated_secrets_ttl = v;
+        }
+        if let Some(v) = t_bool(&mut table, "bootstrap", "reconcile", "BOOTSTRAP_RECONCILE") {
+            self.bootstrap.reconcile = v;
         }
 
         check_table_empty(table, "bootstrap");
@@ -3895,6 +3908,14 @@ impl Vars {
         ) {
             self.user_registration.domain_blacklist = v;
         }
+        if let Some(v) = t_bool(
+            &mut table,
+            "user_registration",
+            "allow_open_redirect",
+            "USER_REG_OPEN_REDIRECT",
+        ) {
+            self.user_registration.allow_open_redirect = v;
+        }
 
         check_table_empty(table, "user_registration");
     }
@@ -4130,6 +4151,12 @@ impl Vars {
         if let Err(err) = validate_max_document_bytes(self.ephemeral_clients.max_document_bytes) {
             panic!("{err}");
         }
+
+        validate_cron("geo.maxmind_update_cron", &self.geo.maxmind_update_cron);
+        validate_cron(
+            "lifetimes.jwk_autorotate_cron",
+            &self.lifetimes.jwk_autorotate_cron,
+        );
         self.validate_ephemeral_clients();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
@@ -4255,6 +4282,7 @@ pub struct VarsAccess {
     pub token_revoke_device_tokens: bool,
     pub whoami_headers: bool,
     pub admin_button_hide: bool,
+    pub password_reset_link_always: bool,
     pub redirect_root_to_account: bool,
 }
 
@@ -4294,6 +4322,7 @@ pub struct VarsBootstrap {
     pub bootstrap_dir: Cow<'static, str>,
     pub generated_secrets_file: Cow<'static, str>,
     pub generated_secrets_ttl: Duration,
+    pub reconcile: bool,
 }
 
 #[derive(Debug)]
@@ -4445,6 +4474,16 @@ pub fn validate_max_document_bytes(v: u32) -> Result<(), String> {
         ))
     } else {
         Ok(())
+    }
+}
+
+/// Schedulers `.unwrap()` the parsed cron and its next occurrence inside a spawned task, where a
+/// panic would only be logged and silently stop the job - so reject such values at startup.
+pub fn validate_cron(key: &str, v: &str) {
+    let schedule = cron::Schedule::from_str(v)
+        .unwrap_or_else(|err| panic!("Invalid cron expression for `{key}`: {err}"));
+    if schedule.upcoming(chrono::Utc).next().is_none() {
+        panic!("`{key}` has no future occurrence: {v}");
     }
 }
 
@@ -5125,7 +5164,7 @@ pub fn t_str_vec(
     }
 
     let Value::Array(arr) = value? else {
-        return None;
+        panic!("{}", err_t(key, parent, "Array of Strings"));
     };
     let mut res = Vec::with_capacity(arr.len());
     for value in arr {
@@ -5200,6 +5239,24 @@ mod tests {
             toml::from_str("[events]\nlevel_consent_revoked = 'critical'").unwrap();
         vars.parse_events(&mut table, &mut RauthySecrets::default());
         assert_eq!(vars.events.level_consent_revoked, EventLevel::Critical);
+    }
+
+    #[test]
+    fn user_registration_allow_open_redirect() {
+        let mut vars = Vars::default();
+        assert!(!vars.user_registration.allow_open_redirect);
+
+        let mut table: toml::Table =
+            toml::from_str("[user_registration]\nallow_open_redirect = true").unwrap();
+        vars.parse_user_registration(&mut table);
+        assert!(vars.user_registration.allow_open_redirect);
+    }
+
+    #[test]
+    #[should_panic(expected = "Array of Strings")]
+    fn test_t_str_vec_rejects_string() {
+        let mut table: toml::Table = toml::from_str("domain_blacklist = 'x'").unwrap();
+        t_str_vec(&mut table, "user_registration", "domain_blacklist", "");
     }
 
     #[test]
@@ -5430,5 +5487,24 @@ default_scopes = ['profile']
     fn validate_ephemeral_default_scopes_is_skipped_when_disabled() {
         eph_vars(false, &["openid"], &["groups"]).validate_ephemeral_clients();
         eph_vars(false, &["openid"], &[]).validate_ephemeral_clients();
+    }
+
+    #[test]
+    fn validate_cron_accepts_valid_schedule() {
+        validate_cron("lifetimes.jwk_autorotate_cron", "0 30 3 1 * * *");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid cron expression for `lifetimes.jwk_autorotate_cron`")]
+    fn validate_cron_rejects_unparsable_schedule() {
+        // 5-field crontab syntax is not what the `cron` crate expects
+        validate_cron("lifetimes.jwk_autorotate_cron", "30 3 1 * *");
+    }
+
+    #[test]
+    #[should_panic(expected = "`geo.maxmind_update_cron` has no future occurrence")]
+    fn validate_cron_rejects_exhausted_schedule() {
+        // valid syntax, but the year is in the past -> never fires again
+        validate_cron("geo.maxmind_update_cron", "0 30 3 1 * * 2020");
     }
 }

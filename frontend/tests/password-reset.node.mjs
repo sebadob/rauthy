@@ -1,27 +1,22 @@
 // Built-UI contract tests, not backend authorization tests. All requests are intercepted;
 // credentials and reset context exist only in memory, without traces or a mail server.
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { after, before, test } from 'node:test';
-import { chromium } from '@playwright/test';
+import {
+    addVirtualAuthenticator,
+    injectTemplates,
+    launchChromium,
+    readBuiltHtml,
+    serveUi,
+} from './helpers/browser.mjs';
 
 /** @type {any} */
 let browser;
 /** @type {any} */
 let html;
 before(async () => {
-    assert.ok(
-        !process.env.DEBUG && !process.env.PWDEBUG,
-        'Run without browser/protocol debug logging',
-    );
-    html = await readFile(
-        new URL('../../templates/html/users/{id}/reset/reset.html', import.meta.url),
-        'utf8',
-    );
-    browser = await chromium.launch({
-        executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-    });
+    html = await readBuiltHtml('users/{id}/reset/reset.html');
+    browser = await launchChromium();
 });
 after(async () => browser?.close());
 
@@ -64,108 +59,81 @@ for (const scenario of [
         /** @type {string[]} */
         const requests = [];
         const documentPath = '/auth/v1/users/reset-user/reset/reset';
-        await context.route(
-            '**/*',
-            /** @param {any} route */ async route => {
-                const request = route.request();
-                const url = new URL(request.url());
-                if (url.origin !== 'http://localhost') return route.abort();
-                if (request.method() === 'GET' && url.pathname === documentPath) {
-                    return route.fulfill({
-                        contentType: 'text/html',
-                        body: html.replace(
-                            /\{%- for tpl in templates -%\}[\s\S]*?\{%- endfor %\}/,
-                            `<template id="tpl_password_reset">${JSON.stringify(tpl)}</template>`,
-                        ),
-                    });
-                }
-                if (
-                    /^\/auth\/v1\/_app\/immutable\/(entry|chunks|nodes|assets)\/[\w.-]+\.(js|css|woff2)$/.test(
-                        url.pathname,
-                    )
-                ) {
-                    return route.fulfill({
-                        path: fileURLToPath(
-                            new URL(`../../static/v1/${url.pathname.slice(9)}`, import.meta.url),
-                        ),
-                    });
-                }
-                if (request.method() === 'GET') return route.fulfill({ status: 404 });
-                requests.push(`${request.method()} ${url.pathname}`);
-                if (url.pathname === '/auth/v1/users/reset-user/webauthn/auth/start') {
-                    assert.deepEqual(request.postDataJSON(), { purpose: 'PasswordReset' });
-                    if (scenario === 'start-rejected' && !startRejected) {
-                        startRejected = true;
-                        return route.fulfill({
-                            status: 400,
-                            json: { message: 'Reset binding rejected' },
-                        });
-                    }
-                    challengeCode = crypto.randomUUID();
-                    /** @type {any} */
-                    const publicKey = {
-                        challenge: btoa(crypto.randomUUID()),
-                        rpId: 'localhost',
-                        userVerification: 'required',
+        /**
+         * @param {any} route
+         * @param {any} request
+         * @param {any} url
+         */
+        const handle = async (route, request, url) => {
+            if (url.pathname === '/auth/v1/users/reset-user/webauthn/auth/start') {
+                assert.deepEqual(request.postDataJSON(), { purpose: 'PasswordReset' });
+                if (scenario === 'start-rejected' && !startRejected) {
+                    startRejected = true;
+                    return {
+                        status: 400,
+                        json: { message: 'Reset binding rejected' },
                     };
-                    if (createdCredId) {
-                        publicKey.allowCredentials = [{ id: createdCredId, type: 'public-key' }];
-                    }
-                    return route.fulfill({
-                        // Short expiry for the timeout scenario so the test does not
-                        // wait out the full WebAuthn timeout with no authenticator present.
-                        json: {
-                            code: challengeCode,
-                            exp: scenario === 'authenticator-timeout' ? 6 : 60,
-                            rcr: { publicKey },
-                        },
-                    });
                 }
-                if (url.pathname === '/auth/v1/users/webauthn_finish') {
-                    assert.ok(request.postDataJSON().code === challengeCode);
-                    if (scenario === 'finish-rejected' && !finishRejected) {
-                        finishRejected = true;
-                        return route.fulfill({
-                            status: 403,
-                            json: { message: 'Verification rejected' },
-                        });
-                    }
-                    mfaCode = crypto.randomUUID();
-                    return route.fulfill({
-                        status: 202,
-                        json: { code: mfaCode, user_id: tpl.user_id },
-                    });
+                challengeCode = crypto.randomUUID();
+                /** @type {any} */
+                const publicKey = {
+                    challenge: btoa(crypto.randomUUID()),
+                    rpId: 'localhost',
+                    userVerification: 'required',
+                };
+                if (createdCredId) {
+                    publicKey.allowCredentials = [{ id: createdCredId, type: 'public-key' }];
                 }
-                if (url.pathname === '/auth/v1/users/reset-user/reset') {
-                    const body = request.postDataJSON();
-                    assert.equal(request.method(), 'PUT');
-                    assert.ok(body.magic_link_id === tpl.magic_link_id);
-                    assert.ok(request.headers()['x-pwd-csrf-token'] === tpl.csrf_token);
-                    assert.ok(body.mfa_code === (tpl.needs_mfa ? mfaCode : undefined));
-                    assert.ok(typeof body.password === 'string' && body.password.length >= 12);
-                    if (scenario === 'put-rejected' && !putRejected) {
-                        putRejected = true;
-                        return route.fulfill({ status: 400, json: { message: 'Reset rejected' } });
-                    }
-                    return route.fulfill({ status: 202 });
+                return {
+                    // Short expiry for the timeout scenario so the test does not
+                    // wait out the full WebAuthn timeout with no authenticator present.
+                    json: {
+                        code: challengeCode,
+                        exp: scenario === 'authenticator-timeout' ? 6 : 60,
+                        rcr: { publicKey },
+                    },
+                };
+            }
+            if (url.pathname === '/auth/v1/users/webauthn_finish') {
+                assert.ok(request.postDataJSON().code === challengeCode);
+                if (scenario === 'finish-rejected' && !finishRejected) {
+                    finishRejected = true;
+                    return {
+                        status: 403,
+                        json: { message: 'Verification rejected' },
+                    };
                 }
-                return route.fulfill({ status: 400, json: { message: 'Unexpected endpoint' } });
-            },
-        );
+                mfaCode = crypto.randomUUID();
+                return {
+                    status: 202,
+                    json: { code: mfaCode, user_id: tpl.user_id },
+                };
+            }
+            if (url.pathname === '/auth/v1/users/reset-user/reset') {
+                const body = request.postDataJSON();
+                assert.equal(request.method(), 'PUT');
+                assert.ok(body.magic_link_id === tpl.magic_link_id);
+                assert.ok(request.headers()['x-pwd-csrf-token'] === tpl.csrf_token);
+                assert.ok(body.mfa_code === (tpl.needs_mfa ? mfaCode : undefined));
+                assert.ok(typeof body.password === 'string' && body.password.length >= 12);
+                if (scenario === 'put-rejected' && !putRejected) {
+                    putRejected = true;
+                    return { status: 400, json: { message: 'Reset rejected' } };
+                }
+                return { status: 202 };
+            }
+            return { status: 400, json: { message: 'Unexpected endpoint' } };
+        };
+        await serveUi({
+            context,
+            documentPath,
+            html: injectTemplates(html, { tpl_password_reset: JSON.stringify(tpl) }),
+            requests,
+            handle,
+        });
         await page.goto(`http://localhost${documentPath}`);
         await page.locator('input[type=password]').first().waitFor();
-        const cdp = await context.newCDPSession(page);
-        await cdp.send('WebAuthn.enable');
-        const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
-            options: {
-                protocol: 'ctap2',
-                transport: 'internal',
-                hasResidentKey: true,
-                hasUserVerification: true,
-                isUserVerified: true,
-                automaticPresenceSimulation: true,
-            },
-        });
+        const { cdp, authenticatorId } = await addVirtualAuthenticator(context, page);
         if (scenario === 'authenticator-timeout') {
             // No authenticator is available, so the prompt times out and
             // nothing must be sent beyond the already-issued start request.

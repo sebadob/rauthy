@@ -169,7 +169,7 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
 
     // migrate KV Access keys
     for access in KVAccess::find_all_no_ns().await? {
-        access.save_re_encrypt_secret().await?;
+        access.save_re_encrypt_secret(new_kid).await?;
     }
     info!(
         "Finished KV Access Keys secrets migration to key id: {}",
@@ -178,7 +178,7 @@ pub async fn migrate_encryption_alg(new_kid: &str) -> Result<(), ErrorResponse> 
 
     // migrate KV Values
     for value in KVValue::find_all_encrypted().await? {
-        value.save_re_encrypted().await?;
+        value.save_re_encrypted(new_kid).await?;
     }
     info!(
         "Finished KV Values secrets migration to key id: {}",

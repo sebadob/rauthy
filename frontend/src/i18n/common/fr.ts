@@ -131,7 +131,7 @@ export const I18nFr: I18n = {
             // [Default, Resident Key]
             typesDesc: [
                 `Vous devez saisir votre adresse e-mail avant de vous connecter avec cette Passkey.`,
-                `Fonctionne avec le bouton Passkey de la page de connexion, sans saisir votre
+                `Fonctionne avec le bouton « Clé d'accès » de la page de connexion, sans saisir votre
                     adresse e-mail.`,
             ],
         },
@@ -215,6 +215,7 @@ export const I18nFr: I18n = {
         needsUserUpdate: `Certaines informations pour ce compte sont manquantes. Vous devez mettre à jour ces
             valeurs avant de pouvoir poursuivre la connexion.`,
         orLoginWith: 'ou se connecter avec',
+        passkey: `Clé d'accès`,
         passkeyNotDiscovered: `Les Passkeys qui n'ont pas été ajoutées comme Resident Key ne
             peuvent pas être trouvées de cette façon. Saisissez plutôt votre adresse e-mail.`,
         password: 'Mot de passe',

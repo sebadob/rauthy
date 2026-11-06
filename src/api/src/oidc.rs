@@ -197,6 +197,9 @@ pub async fn get_authorize(
     templates.push(HtmlTemplate::IsRegOpen(
         RauthyConfig::get().vars.user_registration.enable,
     ));
+    templates.push(HtmlTemplate::PasswordResetLinkAlways(
+        RauthyConfig::get().vars.access.password_reset_link_always,
+    ));
     templates.push(HtmlTemplate::PasskeyRegType);
     if RauthyConfig::get().vars.atproto.enable {
         let provider_atproto = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
@@ -727,6 +730,15 @@ pub async fn post_device_verify(
 
     match payload.device_accepted {
         DeviceAcceptedRequest::Accept => {
+            // The session tells whether this login actually used MFA, the device poll cannot.
+            let client = Client::find(device_code.client_id.clone()).await?;
+            if client.force_mfa && !principal.has_mfa_active() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::MfaRequired,
+                    "MFA is required for this client",
+                ));
+            }
+
             device_code.verified_by = Some(principal.user_id()?.to_string());
             device_code.save().await?;
 

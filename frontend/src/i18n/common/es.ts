@@ -217,6 +217,7 @@ export const I18nEs: I18n = {
         needsUserUpdate: `Falta información en esta cuenta. Debe actualizar estos datos antes de
             continuar con el inicio de sesión.`,
         orLoginWith: 'o iniciar sesión con',
+        passkey: 'Passkey',
         passkeyNotDiscovered: `Las Passkeys que no se añadieron como Resident Key no se pueden
             encontrar de esta forma. Introduzca su correo electrónico en su lugar.`,
         password: 'Contraseña',

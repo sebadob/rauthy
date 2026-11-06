@@ -76,7 +76,9 @@
 
     type RegType = undefined | 'passkey' | 'otp';
     // Saves the type of the reg button the user clicked before fetching an MFA mod token, so that
-    // we can show the correct input after a successful fetch.
+    // we can resume that action after a successful fetch. It is consumed by the resume itself and
+    // dropped when the re-authentication is aborted, so that an old click cannot trigger an action
+    // after an unrelated successful fetch.
     let requestedBeforeTokenFetch: RegType = $state(undefined);
 
     onMount(() => {
@@ -111,8 +113,12 @@
         }
     });
 
+    let submittedOtp = '';
+
     $effect(() => {
-        if (mfaModToken && otpValueNew.replaceAll(' ', '').length === otpSize) {
+        const code = otpValueNew.replaceAll(' ', '');
+        if (mfaModToken && code.length === otpSize && code !== submittedOtp) {
+            submittedOtp = code;
             handleActivateOtp();
         }
     });
@@ -246,9 +252,7 @@
             // a bigger setup that is not implemented so far for this special case. That could be
             // improved in the future.
             await fetchMfaToken({});
-            if (mfaModToken) {
-                showPasskeyInput = true;
-            } else {
+            if (!mfaModToken) {
                 console.error('Could not fetch MFA mod token for federated user');
             }
         } else {
@@ -288,16 +292,13 @@
             requestedBeforeTokenFetch = 'otp';
             if (isUserFederatedOnly) {
                 await fetchMfaToken({});
-                if (mfaModToken) {
-                    tokenId = mfaModToken.id;
-                } else {
+                if (!mfaModToken) {
                     console.error('Error fetching MFA mod token for federated-only user');
-                    return;
                 }
             } else {
                 showModal = true;
-                return;
             }
+            return;
         }
 
         let res = await postOtp(userId, otpKind, otpName, tokenId);
@@ -400,10 +401,13 @@
                 calcModSecs();
             }, 1000);
 
-            if (requestedBeforeTokenFetch == 'passkey') {
+            let action = requestedBeforeTokenFetch;
+            requestedBeforeTokenFetch = undefined;
+
+            if (action === 'passkey') {
                 showPasskeyInput = true;
-            } else if (requestedBeforeTokenFetch == 'otp') {
-                showOtpInput = true;
+            } else if (action === 'otp') {
+                await handleCreateOtp();
             }
         } else {
             pwdErr = t.mfa.passwordInvalid;
@@ -443,6 +447,7 @@
         msg = error;
         mfaPurpose = undefined;
         mfaKind = undefined;
+        requestedBeforeTokenFetch = undefined;
         setTimeout(() => {
             err = false;
             msg = '';
@@ -481,6 +486,15 @@
 
         mfaKind = undefined;
         mfaPurpose = undefined;
+    }
+
+    // A closed re-auth modal without a token means the user aborted, and the action it was about
+    // to perform must not be resumed by any later fetch. A close that only hands over to the
+    // selected method keeps it.
+    function onMfaModalClose() {
+        if (!mfaModToken && !mfaPurpose) {
+            requestedBeforeTokenFetch = undefined;
+        }
     }
 </script>
 
@@ -647,7 +661,7 @@
     </div>
 </div>
 
-<Modal bind:showModal bind:closeModal>
+<Modal bind:showModal bind:closeModal onClose={onMfaModalClose}>
     {#if user.webauthn_user_id}
         <p style:max-width="20rem">
             {t.mfa.reAuthenticatePasskey}
