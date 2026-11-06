@@ -16,10 +16,9 @@ use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
-use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
+use rauthy_data::entity::mfa_login::{MfaLoginReq, MfaToSAwaitData};
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
-use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{
@@ -407,7 +406,7 @@ pub(crate) async fn finish_authorize(
             session: session.clone(),
         };
 
-        WebauthnLoginReq {
+        MfaLoginReq {
             code: step.code.clone(),
             user_id: user.id,
             header_loc,
@@ -415,11 +414,13 @@ pub(crate) async fn finish_authorize(
                 .header_origin
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
-            tos_await_data: need_tos_accept.then_some(WebauthnToSAwaitData {
+            tos_await_data: need_tos_accept.then_some(MfaToSAwaitData {
                 auth_code: code.id,
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
             needs_user_update,
+            has_webauthn: data.require_webauthn,
+            has_otp: data.require_otp,
         }
         .save()
         .await?;
@@ -435,7 +436,7 @@ pub(crate) async fn finish_authorize(
             active_otps: user.get_otp_kind().await?,
         };
 
-        OtpLoginReq {
+        MfaLoginReq {
             code: step.code.clone(),
             user_id: user.id,
             header_loc,
@@ -443,7 +444,7 @@ pub(crate) async fn finish_authorize(
                 .header_origin
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
-            tos_await_data: need_tos_accept.then_some(OtpToSAwaitData {
+            tos_await_data: need_tos_accept.then_some(MfaToSAwaitData {
                 auth_code: code.id,
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
