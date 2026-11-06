@@ -2633,6 +2633,17 @@ swagger_ui_enable = false
 # overwritten by: SSP_THRESHOLD
 #ssp_threshold = 1000
 
+# An optional label for this Rauthy instance.
+# If set, it will be displayed in the Admin UI in the bottom left
+# corner next to the version number.  This can be useful when you have
+# multiple Rauthy instances (e.g. staging, production, or in a HA
+# cluster) to quickly identify which one you are currently working
+# with.
+#
+# default: not set
+# overwritten by: INSTANCE_LABEL
+#instance_label = 'Production'
+
 [suspicious_requests]
 # The "catch all" route handler on `/` will compare the request
 # path against a hardcoded list of common scan targets from bots

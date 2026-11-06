@@ -656,6 +656,7 @@ impl Default for Vars {
                 swagger_ui_public: false,
                 see_keep_alive: Duration::from_secs(30),
                 ssp_threshold: 1000,
+                instance_label: None,
             },
             sponsor: VarsSponsor {
                 email_reminder_disable: false
@@ -3490,6 +3491,9 @@ impl Vars {
         if let Some(v) = t_u16(&mut table, "server", "ssp_threshold", "SSP_THRESHOLD") {
             self.server.ssp_threshold = v;
         }
+        if let Some(v) = t_str(&mut table, "server", "instance_label", "INSTANCE_LABEL") {
+            self.server.instance_label = Some(v);
+        }
 
         check_table_empty(table, "server");
     }
@@ -4731,6 +4735,7 @@ pub struct VarsServer {
     pub swagger_ui_public: bool,
     pub see_keep_alive: Duration,
     pub ssp_threshold: u16,
+    pub instance_label: Option<String>,
 }
 
 #[derive(Debug)]

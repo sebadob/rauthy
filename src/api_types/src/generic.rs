@@ -199,3 +199,9 @@ pub struct PasswordPolicyResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_recently_used: Option<i32>,
 }
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct InstanceLabelResponse<'a> {
+    pub label: Option<&'a str>,
+}
