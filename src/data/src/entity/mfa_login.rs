@@ -34,12 +34,12 @@ pub enum MfaKind {
 // CRUD
 impl MfaLoginReq {
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::Webauthn, self.code.clone()).await?;
+        DB::hql().delete(Cache::Mfa, self.code.clone()).await?;
         Ok(())
     }
 
     pub async fn find_remove(code: String) -> Result<Self, ErrorResponse> {
-        let res: Option<Self> = DB::hql().get_remove(Cache::Webauthn, code).await?;
+        let res: Option<Self> = DB::hql().get_remove(Cache::Mfa, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -78,7 +78,7 @@ impl MfaLoginReq {
         let ttl = Some(ttl_webauthn.max(ttl_otp));
 
         DB::hql()
-            .put(Cache::Webauthn, self.code.clone(), self, ttl)
+            .put(Cache::Mfa, self.code.clone(), self, ttl)
             .await?;
         Ok(())
     }

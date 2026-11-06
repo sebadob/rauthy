@@ -63,6 +63,7 @@ pub enum Cache {
     EmailRateLimit,
     CredStuffDetect,
     OneTimePassword,
+    Mfa,
 }
 
 pub struct DB;
