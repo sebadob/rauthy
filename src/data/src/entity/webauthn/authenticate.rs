@@ -1,10 +1,11 @@
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
+use crate::entity::mfa_login::{MfaLoginReq, MfaKind};
 use crate::entity::sessions::Session;
 use crate::entity::users::User;
 use crate::entity::webauthn::auth_data::{WebauthnAdditionalData, WebauthnData};
-use crate::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnServiceReq};
+use crate::entity::webauthn::auth_req::WebauthnServiceReq;
 use crate::entity::webauthn::authenticate_rk::auth_finish_discover;
 use crate::entity::webauthn::ceremony::{AuthenticationState, requires_uv};
 use crate::entity::webauthn::passkey::PasskeyEntity;
@@ -36,7 +37,7 @@ pub async fn auth_start(
     let (add_data, user_id) = match purpose {
         MfaPurpose::Login(code) => {
             debug_assert!(user_id.is_none());
-            let d = WebauthnLoginReq::find_remove(code).await?;
+            let d = MfaLoginReq::find_kind_remove(code, MfaKind::Webauthn).await?;
             let user_id = d.user_id.clone();
             (WebauthnAdditionalData::Login(d), user_id)
         }

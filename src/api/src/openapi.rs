@@ -268,7 +268,7 @@ use utoipa::{OpenApi, openapi};
             entity::roles::Role,
             entity::scopes::Scope,
             entity::webauthn::auth_data::WebauthnAdditionalData,
-            entity::webauthn::auth_req::WebauthnLoginReq,
+            entity::mfa_login::MfaLoginReq,
             entity::webauthn::auth_req::WebauthnServiceReq,
             entity::well_known::WellKnown,
 

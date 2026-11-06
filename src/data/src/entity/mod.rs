@@ -37,6 +37,7 @@ pub mod login_locations;
 pub mod logos;
 pub mod magic_links;
 pub mod mfa_cookie;
+pub mod mfa_login;
 pub mod mfa_mod_token;
 pub mod one_time_password;
 pub mod pam;
