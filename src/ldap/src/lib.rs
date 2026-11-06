@@ -128,15 +128,9 @@ async fn handle_conn<S: AsyncRead + AsyncWrite + Unpin>(stream: S, ip: IpAddr) {
         };
         let responses = match ServerOps::try_from(msg.clone()) {
             Ok(ServerOps::SimpleBind(req)) => {
-                let (res, new_session) = bind(&req, ip, service_client.as_deref()).await;
-                if let Session::Bound {
-                    client_id,
-                    user_id: None,
-                    ..
-                } = &new_session
-                {
-                    service_client = Some(client_id.clone());
-                }
+                let (res, new_session, is_user_bind) =
+                    bind(&req, ip, service_client.as_deref()).await;
+                service_client = service_client_after(service_client, is_user_bind, &new_session);
                 session = new_session;
                 vec![res]
             }
@@ -205,25 +199,27 @@ fn unsupported(msg: LdapMsg) -> Option<LdapMsg> {
 }
 
 /// `service_client` is the client of the last successful service bind on this connection.
+/// Returns the response, the new session and whether this was a user bind.
 async fn bind(
     req: &SimpleBindRequest,
     ip: IpAddr,
     service_client: Option<&str>,
-) -> (LdapMsg, Session) {
+) -> (LdapMsg, Session, bool) {
     if req.dn.is_empty() && req.pw.is_empty() {
-        return (req.gen_success(), Session::Anonymous);
+        return (req.gen_success(), Session::Anonymous, false);
     }
+    let bind_dn = dn::parse_bind(&req.dn, &RauthyConfig::get().vars.ldap.base_dn);
+    let is_user_bind = matches!(bind_dn, Some(BindDn::User { .. }));
     if is_blacklisted(ip).await {
         return (
             req.gen_error(LdapResultCode::Unavailable, "IP is blacklisted".into()),
             Session::Anonymous,
+            is_user_bind,
         );
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let mut user_failed_logins = None;
-    let bind_dn = dn::parse_bind(&req.dn, &RauthyConfig::get().vars.ldap.base_dn);
-    let is_user_bind = matches!(bind_dn, Some(BindDn::User { .. }));
     // all users of an app bind from the app's IP, so the per-IP checks can be disabled for them
     let ip_checks = !(is_user_bind
         && RauthyConfig::get()
@@ -254,6 +250,7 @@ async fn bind(
                 dn: req.dn.clone(),
                 user_id,
             },
+            is_user_bind,
         ),
         Err(err) => {
             info!(
@@ -261,7 +258,7 @@ async fn bind(
                 req.dn, err.message
             );
             // never tell the client why, to not leak which users or clients exist
-            (req.gen_invalid_cred(), Session::Anonymous)
+            (req.gen_invalid_cred(), Session::Anonymous, is_user_bind)
         }
     }
 }
@@ -319,6 +316,24 @@ async fn check_bind(
     };
 
     Ok((client.id, user_id))
+}
+
+/// A user bind keeps the service bind of the connection. Any other bind replaces it with its own
+/// result, so a failed service bind or an anonymous bind clears it.
+fn service_client_after(
+    prev: Option<String>,
+    is_user_bind: bool,
+    session: &Session,
+) -> Option<String> {
+    match session {
+        _ if is_user_bind => prev,
+        Session::Bound {
+            client_id,
+            user_id: None,
+            ..
+        } => Some(client_id.clone()),
+        _ => None,
+    }
 }
 
 /// Like the `password` grant, a confidential client must prove its secret first, with a service
@@ -623,6 +638,52 @@ mod tests {
         assert!(user_bind_allowed(&client(true), Some("app")));
         assert!(!user_bind_allowed(&client(true), None));
         assert!(!user_bind_allowed(&client(true), Some("other")));
+    }
+
+    #[test]
+    fn service_client_tracking() {
+        let prev = || Some("app".to_string());
+        let bound = |client_id: &str, user_id: Option<&str>| Session::Bound {
+            client_id: client_id.into(),
+            dn: String::new(),
+            user_id: user_id.map(Into::into),
+        };
+
+        // a failed service bind clears it, for the same or another client
+        assert_eq!(
+            service_client_after(prev(), false, &Session::Anonymous),
+            None
+        );
+        // a successful service bind replaces it
+        assert_eq!(
+            service_client_after(prev(), false, &bound("other", None)),
+            Some("other".into())
+        );
+        // user binds keep it, failed or not
+        assert_eq!(
+            service_client_after(prev(), true, &Session::Anonymous),
+            prev()
+        );
+        assert_eq!(
+            service_client_after(prev(), true, &bound("app", Some("id1"))),
+            prev()
+        );
+    }
+
+    #[tokio::test]
+    async fn anonymous_bind_clears_service_client() {
+        let req = SimpleBindRequest {
+            msgid: 1,
+            dn: String::new(),
+            pw: String::new(),
+        };
+        let (_, session, is_user_bind) =
+            bind(&req, IpAddr::from([127, 0, 0, 1]), Some("app")).await;
+        assert!(matches!(session, Session::Anonymous));
+        assert_eq!(
+            service_client_after(Some("app".into()), is_user_bind, &session),
+            None
+        );
     }
 
     #[test]
