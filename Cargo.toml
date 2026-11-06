@@ -73,6 +73,7 @@ deadpool = { version = "0.13", features = ["rt_tokio_1", "serde"] }
 deadpool-postgres = "0.14"
 dotenvy = "0.15"
 ed25519-compact = { version = "2.0.4", features = ["ed25519"] }
+enumset = { version = "1.1", features = ["serde"] }
 flate2 = "1.1"
 flume = "0.12"
 form_urlencoded = "1"

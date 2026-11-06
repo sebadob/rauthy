@@ -271,7 +271,7 @@ use utoipa::{OpenApi, openapi};
             entity::roles::Role,
             entity::scopes::Scope,
             entity::webauthn::auth_data::WebauthnAdditionalData,
-            entity::webauthn::auth_req::WebauthnLoginReq,
+            entity::mfa_login::MfaLoginReq,
             entity::webauthn::auth_req::WebauthnServiceReq,
             entity::well_known::WellKnown,
 
@@ -417,8 +417,8 @@ use utoipa::{OpenApi, openapi};
             OAuth2ErrorTypeResponse,
             PasswordPolicyResponse,
             MfaModTokenResponse,
+            MfaLoginResponse,
             OtpGetResponse,
-            OtpLoginResponse,
             OtpAuthStartResponse,
             OtpLoginFinishResponse,
             PasskeyResponse,
@@ -468,7 +468,6 @@ use utoipa::{OpenApi, openapi};
             UserResponse,
             WebauthnAuthStartResponse,
             WebauthnLoginFinishResponse,
-            WebauthnLoginResponse,
             WebId,
             WebIdResponse,
 

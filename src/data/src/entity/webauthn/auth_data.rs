@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
-use crate::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnServiceReq};
+use crate::entity::mfa_login::MfaLoginReq;
+use crate::entity::webauthn::auth_req::WebauthnServiceReq;
 use crate::entity::webauthn::authenticate::WebauthnLoginToSAwaitCode;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::header::{
@@ -51,7 +52,7 @@ impl WebauthnData {
 // This is the data, that will be passed to the client as response to a successful MFA auth
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum WebauthnAdditionalData {
-    Login(WebauthnLoginReq),
+    Login(MfaLoginReq),
     Discover(Option<String>), // contains the Resident Key Token on success
     Service(WebauthnServiceReq),
     Test(String), // contains the User ID
