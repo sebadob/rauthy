@@ -307,6 +307,7 @@ enum EventType {
   CredentialStuffing,
   EmailSendError,
   ConsentRevoked,
+  LdapLogin,
 }
 ```
 
@@ -523,6 +524,12 @@ level_suspicious_request = 'notice'
 # default: info
 # overwritten by: EVENT_LEVEL_TOKEN_ISSUED
 level_token_issued = 'info'
+# The level for the generated Event after a successful
+# LDAP user bind.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_LDAP_LOGIN
+level_ldap_login = 'info'
 
 # The level for the generated Event after certain
 # amounts of false logins from an IP
