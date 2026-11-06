@@ -45,6 +45,10 @@ pub async fn handle_get_pwd_reset<'a>(
             magic_link_id: ml.id.clone(),
             needs_mfa: user.has_webauthn_enabled(),
             password_policy: PasswordPolicyResponse::from(password_policy),
+            redirect_timeout: RauthyConfig::get()
+                .vars
+                .user_values
+                .password_reset_redirect_timeout,
             user_id,
         };
         PwdResetHtml::build(&lang, ThemeCssFull::find_theme_ts_rauthy().await?, tpl)

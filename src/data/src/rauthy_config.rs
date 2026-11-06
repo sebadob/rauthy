@@ -1360,6 +1360,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 tz: UserValueConfigValue::Optional,
                 revalidate_during_login: false,
                 name_order_reverse: false,
+                password_reset_redirect_timeout: 5,
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
@@ -3967,6 +3968,14 @@ impl Vars {
         ) {
             self.user_values.name_order_reverse = v;
         }
+        if let Some(v) = t_u16(
+            &mut table,
+            "user_values",
+            "password_reset_redirect_timeout",
+            "PASSWORD_RESET_REDIRECT_TIMEOUT",
+        ) {
+            self.user_values.password_reset_redirect_timeout = v;
+        }
 
         let mut pref_username = t_table(&mut table, "preferred_username");
 
@@ -4825,6 +4834,7 @@ pub struct VarsUserValuesConfig {
     pub tz: UserValueConfigValue,
     pub revalidate_during_login: bool,
     pub name_order_reverse: bool,
+    pub password_reset_redirect_timeout: u16,
     pub preferred_username: VarsUserPreferredUsername,
 }
 

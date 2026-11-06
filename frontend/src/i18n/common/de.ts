@@ -340,6 +340,7 @@ export const I18nDe: I18n = {
     passwordReset: {
         accountLogin: 'Account Login',
         badFormat: 'Ungültiges Format',
+        continueSignIn: 'Weiter zur Anmeldung',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generieren',
         newAccDesc1: `Sie haben die Option zwischen zwei Account Typen zu wählen: Passwortlos 
@@ -358,7 +359,7 @@ export const I18nDe: I18n = {
         required: 'Notwendig',
         save: 'Speichern',
         success1: 'Das Passwort wurde erfolgreich zurückgesetzt.',
-        success2: 'Sie werden in Kürze weitergeleitet.',
+        success2: 'Sie werden in {{ secs }} Sekunden weitergeleitet.',
         success3: 'Sollte Sie nicht weitergeleitet werden, klicken Sie bitte hier:',
         successPasskey1: 'Der neue Passkey wurde erfolgreich registriert.',
         successPasskey2: `Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie 

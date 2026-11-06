@@ -334,6 +334,7 @@ export const I18nUk: I18n = {
     passwordReset: {
         accountLogin: 'Вхід в акаунт',
         badFormat: 'Неправильний формат',
+        continueSignIn: 'Перейти до входу',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Згенерувати',
         newAccDesc1:
@@ -352,7 +353,7 @@ export const I18nUk: I18n = {
         required: "Обов'язково",
         save: 'Зберегти',
         success1: 'Пароль успішно оновлено.',
-        success2: 'Вас буде незабаром перенаправлено.',
+        success2: 'Вас буде перенаправлено через {{ secs }} с.',
         success3: 'Якщо вас не перенаправило, будь ласка, натисніть тут:',
         successPasskey1: 'Ваш новий ключ доступу успішно зареєстровано.',
         successPasskey2: `Будь ласка, увійдіть у свій акаунт і зареєструйте другий, резервний ключ

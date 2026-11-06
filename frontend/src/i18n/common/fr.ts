@@ -334,6 +334,7 @@ export const I18nFr: I18n = {
     passwordReset: {
         accountLogin: 'Connexion au compte',
         badFormat: 'Mauvais format',
+        continueSignIn: 'Continuer vers la connexion',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Générer',
         newAccDesc1:
@@ -352,7 +353,7 @@ export const I18nFr: I18n = {
         required: 'Obligatoire',
         save: 'Enregistrer',
         success1: 'Le mot de passe a été mis à jour avec succès.',
-        success2: 'Vous serez redirigé sous peu.',
+        success2: 'Vous serez redirigé dans {{ secs }} secondes.',
         success3: `Si vous n'êtes pas redirigé, veuillez cliquer ici :`,
         successPasskey1: 'Votre nouveau mot de passe a été enregistré avec succès.',
         successPasskey2: `Veuillez vous connecter à votre compte et enregistrer une deuxième clé\n
