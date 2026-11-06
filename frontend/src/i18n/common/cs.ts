@@ -204,6 +204,10 @@ export const I18nCs: I18n = {
         login: 'Přihlásit',
         mfaAck: 'Potvrzeno',
         mfaOpenApp: 'Pokračujte v aplikaci',
+        mfaSelectionDesc: 'Zvolte způsob ověření:',
+        usePasskey: 'Použít passkey',
+        useEmailCode: 'Použít kód z e-mailu',
+        emailCodeDesc: 'Obdržet jednorázový kód e-mailem',
         navigateToAccount: 'Přehled účtu',
         needsUserUpdate: `U tohoto účtu chybějí některé údaje. Než budete moci pokračovat
             v přihlášení, musíte je doplnit.`,

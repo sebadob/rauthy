@@ -8,11 +8,7 @@
     import { useParam } from '#state/param.svelte.ts';
     import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
     import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
-    import type {
-        ActiveOtp,
-        OtpLoginResponse,
-        WebauthnLoginResponse,
-    } from '#api/types/authorize.ts';
+    import type { ActiveOtp, LoginResponse } from '#api/types/authorize.ts';
     import type { ProviderCallbackRequest } from '#api/types/auth_provider.ts';
     import { IS_DEV } from '#utils/constants.ts';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
@@ -20,13 +16,14 @@
     import type { MfaPurpose } from '#api/types/mfa.ts';
     import OtpRequest from '#lib/OtpRequest.svelte';
     import type { OtpAdditionalData } from '#mfa/otp/types.ts';
+    import MfaSelection from '#lib/MfaSelection.svelte';
 
     let t = useI18n();
     let clientMfaForce = $state(false);
     let error = $state('');
 
     let mfaPurpose: undefined | MfaPurpose = $state();
-    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' | 'selection' = $state();
     let activeOtps: undefined | ActiveOtp[] = $state();
 
     let tos: undefined | ToSLatestResponse = $state();
@@ -67,17 +64,16 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-        >(url, payload);
+        let res = await fetchPost<undefined | LoginResponse[] | ToSAwaitLoginResponse>(
+            url,
+            payload,
+        );
 
         await handleAuthRes(res);
     });
 
     async function handleAuthRes(
-        res?: IResponse<
-            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
-        >,
+        res?: IResponse<undefined | LoginResponse[] | ToSAwaitLoginResponse>,
     ) {
         if (!res) {
             return;
@@ -90,11 +86,13 @@
             // -> all good, but needs additional passkey validation
             error = '';
             let body = res.body;
-            if (body && 'code' in body) {
-                mfaPurpose = { Login: body.code as string };
-                if ('active_otps' in body) {
-                    activeOtps = body.active_otps;
-                    mfaKind = 'otp';
+            if (Array.isArray(body) && body.length > 0) {
+                // one entry per MFA method the user may choose, all with the same code
+                mfaPurpose = { Login: body[0].code };
+                let otp = body.find(r => 'active_otps' in r);
+                if (otp && 'active_otps' in otp) {
+                    activeOtps = otp.active_otps;
+                    mfaKind = body.length > 1 ? 'selection' : 'otp';
                 } else {
                     mfaKind = 'webauthn';
                 }
@@ -177,7 +175,9 @@
 
 <PublicPage>
     {#if mfaPurpose}
-        {#if mfaKind == 'webauthn'}
+        {#if mfaKind == 'selection'}
+            <MfaSelection {activeOtps} onSelect={kind => (mfaKind = kind)} onError={onMfaError} />
+        {:else if mfaKind == 'webauthn'}
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {:else if mfaKind == 'otp' && activeOtps}
             <OtpRequest

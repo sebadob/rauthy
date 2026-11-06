@@ -24,6 +24,7 @@ use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
+use crate::{MfaMethod, MfaMethods};
 use actix_web::HttpRequest;
 use argon2::PasswordHash;
 use chrono::Utc;
@@ -2429,6 +2430,23 @@ impl User {
     #[inline(always)]
     pub fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
+    }
+
+    /// The second factors this user may complete a login with. Webauthn overrides OTP, unless the
+    /// user is allowed to select the MFA method.
+    pub async fn allowed_mfa_methods(&self) -> MfaMethods {
+        let config = RauthyConfig::get();
+        let allow_select_mfa = !(self.is_admin() && config.vars.mfa.admin_passkey_only)
+            && config.vars.mfa.optional_select_mfa;
+
+        let mut mfa_methods = MfaMethods::empty();
+        if self.has_webauthn_enabled() {
+            mfa_methods |= MfaMethod::Webauthn;
+        }
+        if (allow_select_mfa || mfa_methods.is_empty()) && self.has_otp_enabled().await {
+            mfa_methods |= MfaMethod::Otp;
+        }
+        mfa_methods
     }
 
     pub fn into_response(self, user_values: Option<UserValues>) -> UserResponse {

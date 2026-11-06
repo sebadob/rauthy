@@ -211,6 +211,10 @@ export const I18nPt: I18n = {
         login: 'Iniciar sessão',
         mfaAck: 'Confirmado',
         mfaOpenApp: 'Abra o aplicativo para continuar',
+        mfaSelectionDesc: 'Escolha o seu método de verificação:',
+        usePasskey: 'Usar chave de acesso',
+        useEmailCode: 'Usar código por e-mail',
+        emailCodeDesc: 'Receba um código de utilização única por e-mail',
         navigateToAccount: 'Painel da conta',
         needsUserUpdate: `Faltam algumas informações nesta conta. Tem de atualizar estes dados
             antes de continuar com o início de sessão.`,

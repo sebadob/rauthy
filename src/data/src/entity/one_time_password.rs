@@ -573,8 +573,13 @@ impl OtpLoginReq {
         Ok(())
     }
 
-    pub async fn find(code: &String) -> Result<Self, ErrorResponse> {
-        let res: Option<Self> = DB::hql().get(Cache::OneTimePassword, code).await?;
+    /// Removes the whole login. If `optional_select_mfa` is enabled, this also removes the
+    /// `WebauthnLoginReq` offered with the same `code`.
+    pub async fn find_remove(code: String) -> Result<Self, ErrorResponse> {
+        if RauthyConfig::get().vars.mfa.optional_select_mfa {
+            DB::hql().delete(Cache::Webauthn, code.clone()).await?;
+        }
+        let res: Option<Self> = DB::hql().get_remove(Cache::OneTimePassword, code).await?;
         match res {
             None => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
@@ -649,7 +654,7 @@ pub async fn auth_start(
     let (add_data, user_id) = match &payload.purpose {
         MfaPurpose::Login(code) => {
             debug_assert!(user_id.is_none());
-            let d = OtpLoginReq::find(code).await?;
+            let d = OtpLoginReq::find_remove(code.clone()).await?;
             let user_id = d.user_id.clone();
             (OtpAdditionalData::Login(d), user_id)
         }

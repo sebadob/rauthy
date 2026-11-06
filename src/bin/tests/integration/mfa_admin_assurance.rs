@@ -70,7 +70,7 @@ fn fixture_headers() -> Result<HeaderMap, Box<dyn Error>> {
     Ok(headers)
 }
 
-/// The `AwaitOtpCode` body of a `POST /oidc/authorize`, down to what a ceremony needs.
+/// The OTP entry of the `AwaitMfa` body of a `POST /oidc/authorize`, as far as a ceremony needs.
 #[derive(serde::Deserialize)]
 struct OtpChallenge {
     code: String,
@@ -317,10 +317,10 @@ async fn assured_admin_session(email: &str) -> Result<(String, HeaderMap), Box<d
     ensure_otp(&admin_id, email).await?;
 
     let session = init_session().await?;
-    let challenge = expect_status_json!(
+    let [challenge] = expect_status_json!(
         login(email, PASSWORD_ONLY, &session).await,
         200,
-        OtpChallenge
+        [OtpChallenge; 1]
     );
     let start_code = otp_start(&session, &challenge).await?;
     complete_ceremony(&session, &admin_id, &start_code).await?;
@@ -460,10 +460,10 @@ async fn test_mfa_assurance_ceremony_is_bound_to_its_session() -> Result<(), Box
     ensure_otp(&admin_id, ADMIN_WITH_OTP.as_str()).await?;
 
     let session = init_session().await?;
-    let challenge = expect_status_json!(
+    let [challenge] = expect_status_json!(
         login(ADMIN_WITH_OTP.as_str(), PASSWORD_ONLY, &session).await,
         200,
-        OtpChallenge
+        [OtpChallenge; 1]
     );
     let start_code = otp_start(&session, &challenge).await?;
 
