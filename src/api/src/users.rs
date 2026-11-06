@@ -2598,15 +2598,6 @@ pub async fn put_user_by_id(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    UserValuesValidator {
-        given_name: payload.given_name.as_deref(),
-        family_name: payload.family_name.as_deref(),
-        // has its own endpoint for updates
-        preferred_username: None,
-        user_values: &payload.user_values,
-    }
-    .validate()?;
-
     principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
 
     let id = id.into_inner();
@@ -2626,6 +2617,8 @@ pub async fn put_user_by_id(
     )?;
 
     let preferred_username = UserValues::find_preferred_username(&id).await?;
+    UserValuesValidator::from_update_req(&payload, preferred_username.as_deref()).validate()?;
+
     handle_put_user_by_id(id, req, principal, payload, preferred_username).await
 }
 
@@ -2660,6 +2653,7 @@ pub async fn patch_user(
     // a `rauthy_admin:*` itself). The role / group guards still apply, so it cannot escalate.
     let is_self = principal.user_id() == Ok(target.id.as_str());
 
+    let (stored, _) = User::upd_req_from_db(user_id.clone()).await?;
     let (mut upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
 
     // A group admin may also patch an as-yet-unmanaged ordinary user to add it to one of its
@@ -2698,6 +2692,12 @@ pub async fn patch_user(
             new_groups,
         )?;
     }
+
+    // validate the merged result, so a patch cannot clear or delete required values
+    let preferred_username = has_preferred_username.as_deref();
+    UserValuesValidator::from_update_req(&upd_req, preferred_username).validate_update(
+        &UserValuesValidator::from_update_req(&stored, preferred_username),
+    )?;
 
     handle_put_user_by_id(user_id, req, principal, upd_req, has_preferred_username).await
 }
@@ -2791,6 +2791,19 @@ pub async fn put_user_self(
     // make sure the logged-in user can only update itself
     let id = id.into_inner();
     principal.is_user(&id)?;
+
+    // the payload replaces the stored values, omitted `user_values` delete them
+    let (stored, preferred_username) = User::upd_req_from_db(id.clone()).await?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: preferred_username.as_deref(),
+        user_values: &payload.user_values,
+    }
+    .validate_update(&UserValuesValidator::from_update_req(
+        &stored,
+        preferred_username.as_deref(),
+    ))?;
 
     let (user, user_values, email_updated) = User::update_self_req(id, payload).await?;
 
