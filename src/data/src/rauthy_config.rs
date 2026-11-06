@@ -517,6 +517,7 @@ impl Default for Vars {
                 level_suspicious_request: EventLevel::Notice,
                 level_new_login_location: EventLevel::Notice,
                 level_token_issued: EventLevel::Info,
+                level_ldap_login: EventLevel::Info,
                 level_failed_logins_25: EventLevel::Critical,
                 level_failed_logins_20: EventLevel::Critical,
                 level_failed_logins_15: EventLevel::Warning,
@@ -628,6 +629,7 @@ impl Default for Vars {
                 key_path: None,
                 plain_text: false,
                 disable_ip_brute_force_protection: false,
+                max_connections: 1000,
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -2831,6 +2833,15 @@ impl Vars {
             self.events.level_token_issued =
                 EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_token_issued");
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_ldap_login",
+            "EVENT_LEVEL_LDAP_LOGIN",
+        ) {
+            self.events.level_ldap_login =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_ldap_login");
+        }
 
         if let Some(v) = t_str(
             &mut table,
@@ -3356,6 +3367,17 @@ impl Vars {
             "LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION",
         ) {
             self.ldap.disable_ip_brute_force_protection = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "ldap",
+            "max_connections",
+            "LDAP_MAX_CONNECTIONS",
+        ) {
+            if v == 0 {
+                panic!("ldap.max_connections must be greater than 0");
+            }
+            self.ldap.max_connections = v;
         }
 
         check_table_empty(table, "ldap");
@@ -4644,6 +4666,7 @@ pub struct VarsEvents {
     pub level_suspicious_request: EventLevel,
     pub level_new_login_location: EventLevel,
     pub level_token_issued: EventLevel,
+    pub level_ldap_login: EventLevel,
 
     pub level_failed_logins_25: EventLevel,
     pub level_failed_logins_20: EventLevel,
@@ -4760,6 +4783,8 @@ pub struct VarsLdap {
     pub plain_text: bool,
     /// Skips the per-IP brute-force checks for user binds, the per-user counter still applies.
     pub disable_ip_brute_force_protection: bool,
+    /// Open connections at most, further ones wait until one is closed.
+    pub max_connections: u32,
 }
 
 #[derive(Debug)]
@@ -5356,9 +5381,10 @@ mod tests {
         assert_eq!(vars.ldap.port, 6360);
         assert!(vars.ldap.cert_path.is_none());
         assert!(!vars.ldap.disable_ip_brute_force_protection);
+        assert_eq!(vars.ldap.max_connections, 1000);
 
         let mut table: toml::Table = toml::from_str(
-            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'\nplain_text = true\ndisable_ip_brute_force_protection = true",
+            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'\nplain_text = true\ndisable_ip_brute_force_protection = true\nmax_connections = 10",
         )
         .unwrap();
         vars.parse_ldap(&mut table);
@@ -5368,6 +5394,7 @@ mod tests {
         assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
         assert!(vars.ldap.plain_text);
         assert!(vars.ldap.disable_ip_brute_force_protection);
+        assert_eq!(vars.ldap.max_connections, 10);
     }
 
     #[test]

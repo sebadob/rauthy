@@ -129,8 +129,23 @@ logins do not block the app's IP for everyone. It is disabled by default.
 If a reverse proxy terminates TLS for LDAP as well, `plain_text` serves plain LDAP instead. It
 requires `server.proxy_mode = true`.
 
-Users are published with their `preferred_username` as `uid`. Users without one, or with one that
-contains an `@` or is not unique case-insensitively, are not part of the directory.
+Each user who should log in via LDAP needs a PAM username, which is published as their `uid`. PAM
+usernames are always lowercase and therefore unique for the case-insensitive LDAP `uid`. Users
+without one are not part of the directory.
+
+For a confidential client, a user bind only succeeds on a connection that did a successful service
+bind with the client secret before. Public clients accept user binds right away. Each successful
+user bind creates a new `LdapLogin` event:
+
+```toml
+[events]
+# The level for the generated Event after a successful
+# LDAP user bind.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_LDAP_LOGIN
+level_ldap_login = 'info'
+```
 
 ```toml
 [ldap]
@@ -166,6 +181,8 @@ base_dn = 'dc=rauthy,dc=local'
 # Both must be set together. If not set, the `[tls]` certificate
 # is used. Set them when Rauthy itself runs plain HTTP behind a
 # reverse proxy that does not terminate TLS for LDAP as well.
+# They are hot-reloaded like the `[tls]` certificate and use
+# `tls.poll_watch_interval` as well.
 #
 # overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
 #cert_path = 'tls/ldap.crt'
@@ -197,6 +214,13 @@ plain_text = false
 # default: false
 # overwritten by: LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION
 disable_ip_brute_force_protection = false
+
+# The maximum number of open LDAP connections. Further ones wait
+# until a connection is closed.
+#
+# default: 1000
+# overwritten by: LDAP_MAX_CONNECTIONS
+max_connections = 1000
 ```
 
 [#1851](https://github.com/sebadob/rauthy/issues/1851)

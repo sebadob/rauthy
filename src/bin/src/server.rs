@@ -199,7 +199,7 @@ pub async fn run(
         let tls = match (&ldap.key_path, &ldap.cert_path) {
             _ if ldap.plain_text => None,
             (Some(key), Some(cert)) => {
-                Some(tls_hot_reload::load_server_config(key.clone(), cert.clone()).await)
+                Some(tls::load_server_config(key.clone(), cert.clone()).await)
             }
             _ => Some(tls::load_tls().await),
         };

@@ -166,6 +166,7 @@ pub enum EventType {
     CredentialStuffing,
     EmailSendError,
     ConsentRevoked,
+    LdapLogin,
 }
 
 impl Display for EventType {
@@ -196,6 +197,7 @@ impl Display for EventType {
             Self::CredentialStuffing => write!(f, "Possible credential stuffing"),
             Self::EmailSendError => write!(f, "E-Mail send error"),
             Self::ConsentRevoked => write!(f, "User consent revoked"),
+            Self::LdapLogin => write!(f, "LDAP login"),
         }
     }
 }
@@ -230,6 +232,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::CredentialStuffing => Self::CredentialStuffing,
             rauthy_api_types::events::EventType::EmailSendError => Self::EmailSendError,
             rauthy_api_types::events::EventType::ConsentRevoked => Self::ConsentRevoked,
+            rauthy_api_types::events::EventType::LdapLogin => Self::LdapLogin,
         }
     }
 }
@@ -262,6 +265,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::CredentialStuffing => Self::CredentialStuffing,
             EventType::EmailSendError => Self::EmailSendError,
             EventType::ConsentRevoked => Self::ConsentRevoked,
+            EventType::LdapLogin => Self::LdapLogin,
         }
     }
 }
@@ -294,6 +298,7 @@ impl EventType {
             Self::CredentialStuffing => "CredentialStuffing",
             Self::EmailSendError => "EmailSendError",
             Self::ConsentRevoked => "ConsentRevoked",
+            Self::LdapLogin => "LdapLogin",
         }
     }
 
@@ -327,6 +332,7 @@ impl EventType {
             EventType::CredentialStuffing => 22,
             EventType::EmailSendError => 23,
             EventType::ConsentRevoked => 24,
+            EventType::LdapLogin => 25,
         }
     }
 }
@@ -359,6 +365,7 @@ impl From<String> for EventType {
             "CredentialStuffing" => Self::CredentialStuffing,
             "EmailSendError" => Self::EmailSendError,
             "ConsentRevoked" => Self::ConsentRevoked,
+            "LdapLogin" => Self::LdapLogin,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -402,6 +409,7 @@ impl From<i64> for EventType {
             22 => EventType::CredentialStuffing,
             23 => EventType::EmailSendError,
             24 => EventType::ConsentRevoked,
+            25 => EventType::LdapLogin,
             _ => EventType::Test,
         }
     }
@@ -514,6 +522,7 @@ impl From<&Event> for Notification {
             )),
             EventType::EmailSendError => value.text.clone(),
             EventType::ConsentRevoked => value.text.clone(),
+            EventType::LdapLogin => value.text.clone(),
         };
 
         Self {
@@ -981,6 +990,16 @@ impl Event {
         )
     }
 
+    pub fn ldap_login(client_id: &str, email: &str, ip: IpAddr) -> Self {
+        Self::new(
+            RauthyConfig::get().vars.events.level_ldap_login.clone(),
+            EventType::LdapLogin,
+            Some(ip.to_string()),
+            None,
+            Some(format!("{client_id} {email}")),
+        )
+    }
+
     pub fn token_issued(flow: &str, client_id: &str, email: Option<&str>) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_token_issued.clone(),
@@ -1094,6 +1113,7 @@ impl Event {
             EventType::TokenIssued => self.text.clone().unwrap_or_default(),
             EventType::EmailSendError => self.text.clone().unwrap_or_default(),
             EventType::ConsentRevoked => self.text.clone().unwrap_or_default(),
+            EventType::LdapLogin => self.text.clone().unwrap_or_default(),
         }
     }
 

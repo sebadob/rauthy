@@ -19,6 +19,7 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::ip_blacklist::IpBlacklist;
 use rauthy_data::entity::users::User;
+use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::login_delay::handle_login_delay;
@@ -28,6 +29,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpListener;
+use tokio::sync::Semaphore;
 use tokio::time::timeout;
 use tokio_rustls::TlsAcceptor;
 use tokio_util::codec::Framed;
@@ -71,7 +73,13 @@ pub async fn run(tls: Option<Arc<rustls::ServerConfig>>) {
     let proto = if acceptor.is_some() { "LDAPS" } else { "LDAP" };
     info!("{proto} listening on {addr}");
 
+    let conns = Arc::new(Semaphore::new(vars.max_connections as usize));
     loop {
+        let permit = conns
+            .clone()
+            .acquire_owned()
+            .await
+            .expect("the semaphore is never closed");
         let (stream, peer) = match listener.accept().await {
             Ok(v) => v,
             Err(err) => {
@@ -81,6 +89,7 @@ pub async fn run(tls: Option<Arc<rustls::ServerConfig>>) {
         };
         let acceptor = acceptor.clone();
         tokio::spawn(async move {
+            let _permit = permit;
             let ip = peer.ip();
             if is_blacklisted(ip).await {
                 return;
@@ -108,6 +117,8 @@ async fn is_blacklisted(ip: IpAddr) -> bool {
 async fn handle_conn<S: AsyncRead + AsyncWrite + Unpin>(stream: S, ip: IpAddr) {
     let mut framed = Framed::new(stream, LdapCodec::default());
     let mut session = Session::Anonymous;
+    // a confidential client's user binds need a service bind with its secret on this connection
+    let mut service_client: Option<String> = None;
     let deadline = Instant::now() + MAX_CONN_LIFETIME;
 
     loop {
@@ -117,7 +128,15 @@ async fn handle_conn<S: AsyncRead + AsyncWrite + Unpin>(stream: S, ip: IpAddr) {
         };
         let responses = match ServerOps::try_from(msg.clone()) {
             Ok(ServerOps::SimpleBind(req)) => {
-                let (res, new_session) = bind(&req, ip).await;
+                let (res, new_session) = bind(&req, ip, service_client.as_deref()).await;
+                if let Session::Bound {
+                    client_id,
+                    user_id: None,
+                    ..
+                } = &new_session
+                {
+                    service_client = Some(client_id.clone());
+                }
                 session = new_session;
                 vec![res]
             }
@@ -185,7 +204,12 @@ fn unsupported(msg: LdapMsg) -> Option<LdapMsg> {
     })
 }
 
-async fn bind(req: &SimpleBindRequest, ip: IpAddr) -> (LdapMsg, Session) {
+/// `service_client` is the client of the last successful service bind on this connection.
+async fn bind(
+    req: &SimpleBindRequest,
+    ip: IpAddr,
+    service_client: Option<&str>,
+) -> (LdapMsg, Session) {
     if req.dn.is_empty() && req.pw.is_empty() {
         return (req.gen_success(), Session::Anonymous);
     }
@@ -212,6 +236,7 @@ async fn bind(req: &SimpleBindRequest, ip: IpAddr) -> (LdapMsg, Session) {
         ip,
         &mut user_failed_logins,
         ip_checks,
+        service_client,
     )
     .await;
     let res = if res.is_ok() && !is_user_bind {
@@ -248,6 +273,7 @@ async fn check_bind(
     ip: IpAddr,
     user_failed_logins: &mut Option<i64>,
     ip_checks: bool,
+    service_client: Option<&str>,
 ) -> Result<(String, Option<String>), ErrorResponse> {
     let unauthorized = || ErrorResponse::new(ErrorResponseType::Unauthorized, "invalid bind DN");
     let (client_id, uid) = match bind_dn.ok_or_else(unauthorized)? {
@@ -268,6 +294,13 @@ async fn check_bind(
             None
         }
         Some(uid) => {
+            if !user_bind_allowed(&client, service_client) {
+                password.zeroize();
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "user bind without a service bind for a confidential client",
+                ));
+            }
             let Some(email) = directory::resolve_email(&uid).await? else {
                 // like `password_login` for an unknown email, stuffing lists are mostly unknown names
                 if ip_checks {
@@ -278,11 +311,20 @@ async fn check_bind(
             };
             let user =
                 password_login(&client, email, password, ip, user_failed_logins, ip_checks).await?;
+            Event::ldap_login(&client.id, &user.email, ip)
+                .send()
+                .await?;
             Some(user.id)
         }
     };
 
     Ok((client.id, user_id))
+}
+
+/// Like the `password` grant, a confidential client must prove its secret first, with a service
+/// bind on the same connection. Public clients allow user binds right away.
+fn user_bind_allowed(client: &Client, service_client: Option<&str>) -> bool {
+    !client.confidential || service_client == Some(client.id.as_str())
 }
 
 async fn search(req: &SearchRequest, session: &Session) -> Vec<LdapMsg> {
@@ -568,6 +610,19 @@ mod tests {
             dns("not a dn", LdapSearchScope::Subtree, None),
             Err(LdapResultCode::InvalidDNSyntax)
         );
+    }
+
+    #[test]
+    fn user_bind_needs_service_bind_for_confidential_clients() {
+        let client = |confidential| Client {
+            id: "app".into(),
+            confidential,
+            ..Default::default()
+        };
+        assert!(user_bind_allowed(&client(false), None));
+        assert!(user_bind_allowed(&client(true), Some("app")));
+        assert!(!user_bind_allowed(&client(true), None));
+        assert!(!user_bind_allowed(&client(true), Some("other")));
     }
 
     #[test]

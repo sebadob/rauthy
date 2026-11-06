@@ -50,6 +50,16 @@ cn=<group>,ou=groups,cn=<client_id>,ou=clients,<base_dn>   groups
   restriction (`restrict_group_prefix`). A user bind can only search its own entry, the whole
   directory is only visible to the service bind.
 
+Like the `password` grant, a confidential client needs its secret for user logins as well. For a
+confidential client, a user bind only succeeds on a connection that already did a successful
+service bind for the same client. Apps like the Jellyfin LDAP plugin do exactly this: they bind as
+the service, search the user, and then bind as the user on the same connection. A public client
+accepts user binds right away.
+
+Each successful user bind creates an `LdapLogin` event, with `events.level_ldap_login` as its level.
+At most `ldap.max_connections` (default 1000) connections are open at the same time, further ones
+wait until one is closed.
+
 All users of an app bind from the app's IP. By default, a few failed user binds with different
 usernames therefore trigger the credential stuffing detection and block the app's IP for everyone.
 If the LDAPS port is only reachable for your apps, you can set
@@ -76,15 +86,14 @@ fails with `sizeLimitExceeded`.
 The layout follows LLDAP, so existing app presets only need a different base DN.
 
 Users (`ou=people`) are all users allowed for the client that have a local password and a
-`preferred_username`, and are enabled and not expired. The `preferred_username` is the `uid`, an
-email never is. Users without a `preferred_username`, or with one that contains an `@` or is not
-unique case-insensitively, are not part of the directory and cannot bind. Set
-`user_values.preferred_username.preferred_username = 'required'` to make sure all users have one.
-PAM users are not used:
+**PAM username**, and are enabled and not expired. The PAM username is the `uid`. LDAP compares
+`uid`s case-insensitively, and PAM usernames are always lowercase, so they are the only names that
+are guaranteed to be unique. Each user who should log in via LDAP therefore needs a
+[PAM user](pam_users.md). Users without one are not part of the directory and cannot bind:
 
 | attribute                                   | value                                                    |
 |---------------------------------------------|----------------------------------------------------------|
-| `uid`                                       | `preferred_username`                                     |
+| `uid`                                       | PAM username                                             |
 | `entryUUID`                                 | the Rauthy user ID                                       |
 | `mail`                                      | email                                                    |
 | `cn`, `displayName`                         | given name + family name                                 |

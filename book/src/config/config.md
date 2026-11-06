@@ -1865,6 +1865,12 @@ level_suspicious_request = 'notice'
 # default: info
 # overwritten by: EVENT_LEVEL_TOKEN_ISSUED
 level_token_issued = 'info'
+# The level for the generated Event after a successful
+# LDAP user bind.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_LDAP_LOGIN
+level_ldap_login = 'info'
 
 # The level for the generated Event after certain
 # amounts of false logins from an IP
@@ -2271,6 +2277,8 @@ filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru',
 # Both must be set together. If not set, the `[tls]` certificate
 # is used. Set them when Rauthy itself runs plain HTTP behind a
 # reverse proxy that does not terminate TLS for LDAP as well.
+# They are hot-reloaded like the `[tls]` certificate and use
+# `tls.poll_watch_interval` as well.
 #
 # overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
 #cert_path = 'tls/ldap.crt'
@@ -2302,6 +2310,13 @@ filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru',
 # default: false
 # overwritten by: LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION
 #disable_ip_brute_force_protection = false
+
+# The maximum number of open LDAP connections. Further ones wait
+# until a connection is closed.
+#
+# default: 1000
+# overwritten by: LDAP_MAX_CONNECTIONS
+#max_connections = 1000
 
 [logging]
 # This is the log level for stdout logs

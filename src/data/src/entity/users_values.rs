@@ -20,9 +20,6 @@ pub struct UserValues {
     pub tz: Option<String>,
 }
 
-/// `(user_id, email, preferred_username)`
-pub type UidCandidate = (String, String, Option<String>);
-
 impl UserValues {
     #[inline(always)]
     fn cache_idx(user_id: &str) -> String {
@@ -292,52 +289,6 @@ RETURNING *"#;
             .await?;
 
         Ok(())
-    }
-
-    /// Returns `(user_id, preferred_username)` for all users that have one set.
-    pub async fn find_all_preferred_usernames() -> Result<Vec<(String, String)>, ErrorResponse> {
-        let sql =
-            "SELECT id, preferred_username FROM users_values WHERE preferred_username IS NOT NULL";
-        let res = if is_hiqlite() {
-            DB::hql()
-                .query_raw(sql, params!())
-                .await?
-                .into_iter()
-                .map(|mut r| (r.get("id"), r.get("preferred_username")))
-                .collect()
-        } else {
-            DB::pg_query_rows(sql, &[], 16)
-                .await?
-                .into_iter()
-                .map(|r| (r.get("id"), r.get("preferred_username")))
-                .collect()
-        };
-        Ok(res)
-    }
-
-    /// Returns `(user_id, email, preferred_username)` of all users whose email or
-    /// `preferred_username` equals the lowercase `name` case-insensitively.
-    pub async fn find_uid_candidates(name: &str) -> Result<Vec<UidCandidate>, ErrorResponse> {
-        let sql = r#"
-SELECT u.id, u.email, v.preferred_username
-FROM users u
-LEFT JOIN users_values v ON v.id = u.id
-WHERE u.email = $1 OR lower(v.preferred_username) = $1"#;
-        let res = if is_hiqlite() {
-            DB::hql()
-                .query_raw(sql, params!(name))
-                .await?
-                .into_iter()
-                .map(|mut r| (r.get("id"), r.get("email"), r.get("preferred_username")))
-                .collect()
-        } else {
-            DB::pg_query_rows(sql, &[&name], 1)
-                .await?
-                .into_iter()
-                .map(|r| (r.get("id"), r.get("email"), r.get("preferred_username")))
-                .collect()
-        };
-        Ok(res)
     }
 
     pub async fn validate_preferred_username_free(
