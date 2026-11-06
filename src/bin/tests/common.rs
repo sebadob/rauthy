@@ -80,6 +80,41 @@ pub async fn get_token_set() -> TokenSet {
     ts
 }
 
+/// A password grant token set for `email` on the init client.
+pub async fn password_token_set(client: &reqwest::Client, email: &str, password: &str) -> TokenSet {
+    let res = client
+        .post(format!("{}/oidc/token", get_backend_url()))
+        .form(&TokenRequest {
+            grant_type: GrantType::Password,
+            client_id: Some(CLIENT_ID.to_string()),
+            client_secret: Some(CLIENT_SECRET.to_string()),
+            username: Some(email.to_string()),
+            password: Some(password.to_string()),
+            ..Default::default()
+        })
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 200, "password grant for {email}");
+    res.json::<TokenSet>().await.unwrap()
+}
+
+/// A refresh token grant on the init client.
+pub async fn refresh(client: &reqwest::Client, refresh_token: String) -> Response {
+    client
+        .post(format!("{}/oidc/token", get_backend_url()))
+        .form(&TokenRequest {
+            grant_type: GrantType::RefreshToken,
+            client_id: Some(CLIENT_ID.to_string()),
+            client_secret: Some(CLIENT_SECRET.to_string()),
+            refresh_token: Some(refresh_token),
+            ..Default::default()
+        })
+        .send()
+        .await
+        .unwrap()
+}
+
 pub async fn get_token_set_init_client() -> TokenSet {
     // get a token to validate
     let url_token = format!("{}/oidc/token", get_backend_url());

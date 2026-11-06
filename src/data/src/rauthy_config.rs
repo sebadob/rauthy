@@ -510,6 +510,7 @@ impl Default for Vars {
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
+                level_consent_revoked: EventLevel::Notice,
                 level_scim_task_failed: EventLevel::Critical,
                 level_email_send_error: EventLevel::Critical,
                 level_suspicious_request: EventLevel::Notice,
@@ -2775,6 +2776,15 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "events",
+            "level_consent_revoked",
+            "EVENT_LEVEL_CONSENT_REVOKED",
+        ) {
+            self.events.level_consent_revoked =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for consent_revoked");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
             "level_scim_task_failed",
             "EVENT_LEVEL_SCIM_TASK_FAILED",
         ) {
@@ -4556,6 +4566,7 @@ pub struct VarsEvents {
     pub level_backchannel_logout_failed: EventLevel,
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,
+    pub level_consent_revoked: EventLevel,
     pub level_scim_task_failed: EventLevel,
     pub level_email_send_error: EventLevel,
     pub level_suspicious_request: EventLevel,
@@ -5217,6 +5228,17 @@ mod tests {
         let mut table: toml::Table = toml::from_str("[consent]\nenable = true").unwrap();
         vars.parse_consent(&mut table);
         assert!(vars.consent.enable);
+    }
+
+    #[test]
+    fn consent_revoked_event_level() {
+        let mut vars = Vars::default();
+        assert_eq!(vars.events.level_consent_revoked, EventLevel::Notice);
+
+        let mut table: toml::Table =
+            toml::from_str("[events]\nlevel_consent_revoked = 'critical'").unwrap();
+        vars.parse_events(&mut table, &mut RauthySecrets::default());
+        assert_eq!(vars.events.level_consent_revoked, EventLevel::Critical);
     }
 
     #[test]

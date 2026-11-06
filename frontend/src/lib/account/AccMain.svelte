@@ -25,6 +25,7 @@
     import { useSession } from '#state/session.svelte.ts';
     import AccOther from '#lib/account/AccOther.svelte';
     import AccPAM from '#lib/account/AccPAM.svelte';
+    import AccPrivacy from '#lib/account/AccPrivacy.svelte';
     import type { PamUserResponse } from '#api/types/pam.ts';
     import { fetchGet, fetchPost } from '#api/fetch.ts';
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
@@ -71,7 +72,14 @@
             tabs.push('PAM');
         }
 
-        tabs = [...tabs, t.account.navMfa, t.account.devices, t.account.navEdit, t.common.password];
+        tabs = [
+            ...tabs,
+            t.account.navMfa,
+            t.account.devices,
+            t.account.navEdit,
+            t.common.password,
+            t.account.privacy.privacy,
+        ];
         if (!!webIdData) {
             tabs.push('WebID');
         }
@@ -235,6 +243,8 @@
                     <AccOther {user} />
                 {:else if selected === t.account.devices}
                     <Devices userId={user.id} />
+                {:else if selected === t.account.privacy.privacy}
+                    <AccPrivacy {user} />
                 {/if}
             </div>
         </div>
@@ -276,6 +286,8 @@
                         <AccOther {user} />
                     {:else if selected === t.account.devices}
                         <AccDevices />
+                    {:else if selected === t.account.privacy.privacy}
+                        <AccPrivacy {user} />
                     {/if}
                 </div>
             </div>

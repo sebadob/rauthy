@@ -17,7 +17,7 @@ use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::io::Cursor;
+use std::io::{self, Cursor};
 use std::string::ToString;
 use std::sync::LazyLock;
 use tokio::fs;
@@ -292,36 +292,62 @@ impl UserPicture {
                     "invalid picture_id for this user",
                 ));
             }
-            let slf = Self::find(id).await?;
-
-            match PictureStorage::from(slf.storage.as_str()) {
-                PictureStorage::DB => {
-                    // no additional data exists
-                }
-                PictureStorage::File => {
-                    let path = Self::local_file_path(&slf.id, &slf.content_type);
-                    if let Err(err) = fs::remove_file(&path).await {
-                        error!(path, ?err, "Error cleaning up local picture")
-                    }
-                }
-                PictureStorage::S3 => {
-                    if let Err(err) = PICTURE_S3_BUCKET
-                        .delete(&Self::file_name(&slf.id, &slf.content_type))
-                        .await
-                    {
-                        error!(object_id = slf.id, ?err, "Error cleaning up s3 picture")
-                    }
-                }
-                PictureStorage::Disabled => unreachable!(),
-            }
-
-            Self::delete(slf.id).await?;
+            Self::delete_with_data(id).await?;
 
             user.picture_id = None;
             user.save(None).await?;
         }
 
         Ok(())
+    }
+
+    /// Deletes the picture `id` and its data in the storage, without touching the user it
+    /// belongs to. A failure to remove the data from a file or S3, or an unknown storage, is only
+    /// logged: the row is deleted either way.
+    pub(crate) async fn delete_with_data(id: String) -> Result<(), ErrorResponse> {
+        let slf = Self::find(id).await?;
+        Self::delete_with_data_by(slf, Self::delete).await
+    }
+
+    /// `delete_with_data` for a found picture, with the delete of its row passed in.
+    async fn delete_with_data_by(
+        slf: Self,
+        delete_row: impl AsyncFnOnce(String) -> Result<(), ErrorResponse>,
+    ) -> Result<(), ErrorResponse> {
+        match PictureStorage::from(slf.storage.as_str()) {
+            PictureStorage::DB => {
+                // no additional data exists
+            }
+            PictureStorage::File => {
+                let path = Self::local_file_path(&slf.id, &slf.content_type);
+                match fs::remove_file(&path).await {
+                    Ok(()) => {}
+                    Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                        debug!(path, "Local picture already removed")
+                    }
+                    Err(err) => error!(path, ?err, "Error cleaning up local picture"),
+                }
+            }
+            PictureStorage::S3 => {
+                if let Err(err) = PICTURE_S3_BUCKET
+                    .delete(&Self::file_name(&slf.id, &slf.content_type))
+                    .await
+                {
+                    error!(object_id = slf.id, ?err, "Error cleaning up s3 picture")
+                }
+            }
+            // an unknown `storage` of a stored picture: its data cannot be found, but the row
+            // is still deleted
+            PictureStorage::Disabled => {
+                error!(
+                    picture_id = slf.id,
+                    storage = slf.storage,
+                    "Unknown storage of a picture, its data is not cleaned up"
+                )
+            }
+        }
+
+        delete_row(slf.id).await
     }
 
     pub async fn download(
@@ -406,5 +432,47 @@ impl UserPicture {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    fn picture(storage: &str) -> UserPicture {
+        UserPicture {
+            id: "pic1".to_string(),
+            content_type: "image/png".to_string(),
+            storage: storage.to_string(),
+            data: None,
+        }
+    }
+
+    /// A picture with an unknown `storage` has no data to clean up, but its row is still
+    /// deleted, so the user can upload a new one or be deleted.
+    #[tokio::test]
+    async fn test_delete_with_data_unknown_storage() {
+        for storage in ["bogus", "disabled", "db"] {
+            let deleted = RefCell::new(Vec::new());
+            UserPicture::delete_with_data_by(picture(storage), async |id| {
+                deleted.borrow_mut().push(id);
+                Ok(())
+            })
+            .await
+            .unwrap();
+            assert_eq!(*deleted.borrow(), vec!["pic1".to_string()], "{storage}");
+        }
+    }
+
+    /// A failing row delete is returned.
+    #[tokio::test]
+    async fn test_delete_with_data_row_error() {
+        let err = UserPicture::delete_with_data_by(picture("bogus"), async |_| {
+            Err(ErrorResponse::new(ErrorResponseType::Database, "down"))
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Database);
     }
 }

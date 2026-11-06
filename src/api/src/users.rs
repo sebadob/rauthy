@@ -33,12 +33,14 @@ use rauthy_data::entity::one_time_password::{
 use rauthy_data::entity::password::PasswordPolicy;
 use rauthy_data::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_data::entity::pow::PowEntity;
+use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use rauthy_data::entity::user_consents::{ConsentRevoked, UserConsent};
 use rauthy_data::entity::user_revoke::UserRevoke;
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::users_values::UserValues;
@@ -47,7 +49,7 @@ use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
 use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::entity::webauthn::passkey::PasskeyEntity;
 use rauthy_data::entity::webids::WebId;
-use rauthy_data::events::event::Event;
+use rauthy_data::events::event::{ConsentRevokedBy, Event};
 use rauthy_data::html::HtmlCached;
 use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
@@ -1140,6 +1142,188 @@ pub async fn delete_user_device(
     DeviceEntity::delete_refresh_tokens(&payload.device_id).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// GET all consents this user has given to clients
+///
+/// `resource` filters by resource, an empty value returns consents without a resource.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - a group admin, for a user it manages
+/// - the user itself
+/// - an API key with `users: read`
+#[utoipa::path(
+    get,
+    path = "/users/{id}/consents",
+    tag = "users",
+    params(UserConsentsParams),
+    responses(
+        (status = 200, description = "Ok", body = [UserConsentResponse]),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/consents")]
+pub async fn get_user_consents(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    Query(params): Query<UserConsentsParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    validate_consent_access(&principal, &user_id, AccessRights::Read).await?;
+    params.validate()?;
+
+    let consents = UserConsent::find_for_user(&user_id, params.resource.as_deref()).await?;
+    let mut resp = Vec::with_capacity(consents.len());
+    for consent in consents {
+        // the client may be gone or ephemeral
+        let client_name = match Client::find(consent.client_id.clone()).await {
+            Ok(client) => client.name,
+            Err(err) if err.error == ErrorResponseType::NotFound => None,
+            Err(err) => return Err(err),
+        };
+        resp.push(consent.into_response(client_name));
+    }
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+/// DELETE a consent and all refresh tokens of this user for the client
+///
+/// `resource` is left out for a consent without a resource. Refresh tokens are revoked
+/// for the client as a whole, independent of `resource`. With `consent.enable` on, the user's
+/// legacy refresh tokens issued without a `client_id` are deleted as well; with it off, they are
+/// kept. Only the access token of each deleted refresh token, the one issued with its latest
+/// rotation, is revoked. Access tokens from earlier rotations and access tokens issued without a
+/// refresh token stay valid until they expire. With `consent.enable` off, an authorization code
+/// issued before the revoke can still be exchanged within its lifetime.
+///
+/// The request is idempotent: `consent_deleted` is `false` when there was no consent to delete.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - a group admin, for a user it manages
+/// - the user itself
+/// - an API key with `users: delete`
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/consents",
+    tag = "users",
+    params(UserConsentDeleteParams),
+    responses(
+        (status = 200, description = "Ok", body = UserConsentDeleteResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{id}/consents")]
+pub async fn delete_user_consent(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    Query(params): Query<UserConsentDeleteParams>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    validate_consent_access(&principal, &user_id, AccessRights::Delete).await?;
+    params.validate()?;
+
+    let user = User::find(user_id).await?;
+    // an API key authorized the request even with a session, see `validate_consent_access`
+    let admin_email = match (&principal.api_key, principal.user_id()) {
+        (None, Ok(id)) if id != user.id => Some(User::find(id.to_string()).await?.email),
+        _ => None,
+    };
+    let revoked_by = match (&principal.api_key, &admin_email) {
+        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
+        (None, Some(email)) => ConsentRevokedBy::Admin(email),
+        (None, None) => ConsentRevokedBy::User,
+    };
+
+    let ip = real_ip_from_req(&req)?;
+    let resource = params.resource.as_deref();
+    let ConsentRevoked {
+        consent_deleted,
+        refresh_tokens_deleted,
+    } = UserConsent::revoke(&user.id, &params.client_id, resource).await?;
+
+    // the revoke is committed at this point, a failing event must not turn it into an error
+    if (consent_deleted || refresh_tokens_deleted > 0)
+        && let Err(err) = Event::consent_revoked(
+            &user.email,
+            &params.client_id,
+            resource.unwrap_or_default(),
+            revoked_by,
+            ip,
+        )
+        .send()
+        .await
+    {
+        error!(?err, "Cannot send the consent revoked event");
+    }
+
+    Ok(HttpResponse::Ok().json(UserConsentDeleteResponse {
+        consent_deleted,
+        refresh_tokens_deleted,
+    }))
+}
+
+/// An API key with `rights` on users, else the user itself, an admin session or a group admin
+/// session that manages the user. A key without these rights is rejected even with a valid
+/// session. Admin and group admin sessions pass the `admin_force_mfa` gate.
+async fn validate_consent_access(
+    principal: &Principal,
+    user_id: &str,
+    rights: AccessRights,
+) -> Result<(), ErrorResponse> {
+    match principal.validate_api_key(AccessGroup::Users, rights) {
+        Err(err) if err.error == ErrorResponseType::Unauthorized => {}
+        res => return res,
+    }
+
+    match consent_session_role(principal, user_id)? {
+        ConsentSessionRole::Owner => Ok(()),
+        ConsentSessionRole::Admin => principal.validate_admin_session(),
+        ConsentSessionRole::GroupAdmin => {
+            principal.validate_group_admin_session()?;
+            let target = User::find(user_id.to_string()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())
+        }
+    }
+}
+
+/// The role a session acts in on the consents of `user_id`, checked in this order.
+#[derive(Debug, PartialEq)]
+enum ConsentSessionRole {
+    /// The user itself, also when it is an admin or a group admin
+    Owner,
+    /// A full admin
+    Admin,
+    /// A group admin, which may only access a user it manages
+    GroupAdmin,
+}
+
+fn consent_session_role(
+    principal: &Principal,
+    user_id: &str,
+) -> Result<ConsentSessionRole, ErrorResponse> {
+    principal.validate_session_auth()?;
+    if principal.is_user(user_id).is_ok() {
+        Ok(ConsentSessionRole::Owner)
+    } else if principal.is_admin() {
+        Ok(ConsentSessionRole::Admin)
+    } else if principal.is_group_admin() {
+        Ok(ConsentSessionRole::GroupAdmin)
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Access is forbidden with this user",
+        ))
+    }
 }
 
 /// Endpoint for resetting passwords
@@ -2927,7 +3111,74 @@ pub async fn delete_user_by_id(
 
 #[cfg(test)]
 mod tests {
-    use super::redirect_uri_matches_client;
+    use super::*;
+    use rauthy_data::entity::sessions::SessionState;
+
+    fn session_principal(user_id: &str, roles: &[&str], is_mfa: bool) -> Principal {
+        let now = Utc::now().timestamp();
+        Principal {
+            session: Some(Session {
+                id: "session_id_0123".to_string(),
+                csrf_token: "csrf_token_0123".to_string(),
+                user_id: Some(user_id.to_string()),
+                roles: Some(roles.join(",")),
+                groups: None,
+                is_mfa,
+                state: SessionState::Auth,
+                exp: now + 3600,
+                last_seen: now,
+                remote_ip: None,
+            }),
+            api_key: None,
+            roles: roles.iter().map(|r| r.to_string()).collect(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_consent_access_plain_user_gets_the_user_error() {
+        let user = session_principal("alice", &["user"], true);
+        let err = validate_consent_access(&user, "bob", AccessRights::Read)
+            .await
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert_eq!(err.message, "Access is forbidden with this user");
+    }
+
+    #[test]
+    fn test_consent_session_role() {
+        // a full admin on another user's consents must go through the admin session gate,
+        // which enforces `admin_force_mfa`
+        let admin = session_principal("admin", &["rauthy_admin"], false);
+        assert_eq!(
+            consent_session_role(&admin, "bob").unwrap(),
+            ConsentSessionRole::Admin
+        );
+        // own consents, also for admins and group admins
+        assert_eq!(
+            consent_session_role(&admin, "admin").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        let ga = session_principal("ga", &["rauthy_admin:dev"], false);
+        assert_eq!(
+            consent_session_role(&ga, "ga").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        assert_eq!(
+            consent_session_role(&ga, "bob").unwrap(),
+            ConsentSessionRole::GroupAdmin
+        );
+        let user = session_principal("alice", &["user"], false);
+        assert_eq!(
+            consent_session_role(&user, "alice").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        let err = consent_session_role(&user, "bob").unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert_eq!(err.message, "Access is forbidden with this user");
+        // no session at all
+        let err = consent_session_role(&Principal::default(), "bob").unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Unauthorized);
+    }
 
     #[test]
     fn test_redirect_uri_matches_client() {

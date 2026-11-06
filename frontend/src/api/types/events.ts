@@ -21,7 +21,8 @@ export type EventType =
     | 'UserLoginRevoke'
     | 'LoginNewLocation'
     | 'SuspiciousApiScan'
-    | 'TokenIssued';
+    | 'TokenIssued'
+    | 'ConsentRevoked';
 
 export interface EventsRequest {
     /// Unix timestamp in seconds
