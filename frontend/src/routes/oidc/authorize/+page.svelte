@@ -34,9 +34,8 @@
         CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
-        OtpLoginResponse,
+        MfaLoginResponse,
         RequestResetRequest,
-        WebauthnLoginResponse,
     } from '#api/types/authorize.ts';
     import Form from '#lib/form/Form.svelte';
     import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
@@ -87,7 +86,7 @@
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
-    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' | 'selection' = $state();
     let activeOtps: undefined | ActiveOtp[] = $state();
 
     let isLoading = $state(false);
@@ -391,15 +390,18 @@
             let body = res.body;
             if (body && 'code' in body) {
                 mfaPurpose = { Login: body.code as string };
-                if ('active_otps' in body) {
-                    activeOtps = body.active_otps;
-                    mfaKind = 'otp';
-                } else {
+                activeOtps = body.active_otps || [];
+
+                if (body.require_webauthn && body.require_otp) {
+                    mfaKind = 'selection';
+                } else if (body.require_webauthn) {
                     mfaKind = 'webauthn';
+                } else if (body.require_otp) {
+                    mfaKind = 'otp';
                 }
             } else {
                 console.error(
-                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                    'did not receive a proper MfaLoginResponse after HTTP200',
                 );
             }
         } else if (res.status === 205) {
@@ -653,7 +655,53 @@
                     to output proper logs in case of misconfiguration.
                     Another approach would be to check this in the backend and emit warning logs.
                     -->
-                    {#if mfaKind == 'webauthn'}
+                    {#if mfaKind == 'selection'}
+                        <!-- MFA Method Selection -->
+                        <div class="mfa-selection">
+                            <h3>{t.authorize.mfaSelectionTitle || 'Two-Factor Authentication'}</h3>
+                            <p class="mfa-selection-desc">
+                                {t.authorize.mfaSelectionDesc || 'Choose your verification method:'}
+                            </p>
+
+                            <div class="mfa-options">
+                                <button 
+                                    class="mfa-option-btn primary"
+                                    type="button"
+                                    onclick={() => {
+                                        mfaKind = 'webauthn';
+                                    }}
+                                    disabled={isLoading}
+                                >
+                                    <div class="mfa-icon">🔑</div>
+                                    <div class="mfa-content">
+                                        <div class="mfa-title">{t.authorize.usePasskey || 'Use Passkey'}</div>
+                                        <div class="mfa-desc">
+                                            {t.authorize.passkeyDesc || 'Fast and secure with your security key'}
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {#if activeOtps && activeOtps.length > 0}
+                                    <button 
+                                        class="mfa-option-btn"
+                                        type="button"
+                                        onclick={() => {
+                                            mfaKind = 'otp';
+                                        }}
+                                        disabled={isLoading}
+                                    >
+                                        <div class="mfa-icon">📧</div>
+                                        <div class="mfa-content">
+                                            <div class="mfa-title">{t.authorize.useEmailCode || 'Use Email Code'}</div>
+                                            <div class="mfa-desc">
+                                                {t.authorize.emailCodeDesc || 'Receive a one-time code via email'}
+                                            </div>
+                                        </div>
+                                    </button>
+                                {/if}
+                            </div>
+                        </div>
+                    {:else if mfaKind == 'webauthn'}
                         <WebauthnRequest
                             purpose={mfaPurpose}
                             onSuccess={onMfaSuccess}
@@ -969,5 +1017,78 @@
     .success {
         margin: 0 5px;
         color: hsl(var(--action));
+    }
+
+    /* MFA Selection Styles */
+    .mfa-selection {
+        max-width: 400px;
+        margin: 1.5rem auto;
+        text-align: center;
+    }
+
+    .mfa-selection h3 {
+        margin-bottom: 0.5rem;
+    }
+
+    .mfa-selection-desc {
+        color: hsl(var(--text-secondary, var(--text)));
+        margin-bottom: 1.5rem;
+        opacity: 0.8;
+    }
+
+    .mfa-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .mfa-option-btn {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border: 2px solid hsl(var(--border, var(--bg-high)));
+        border-radius: var(--border-radius);
+        background: hsl(var(--bg));
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+        width: 100%;
+    }
+
+    .mfa-option-btn:hover:not(:disabled) {
+        border-color: hsl(var(--primary, var(--action)));
+        background: hsl(var(--bg-high));
+        transform: translateY(-1px);
+    }
+
+    .mfa-option-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .mfa-option-btn.primary {
+        border-color: hsl(var(--primary, var(--action)));
+    }
+
+    .mfa-icon {
+        font-size: 1.75rem;
+        line-height: 1;
+    }
+
+    .mfa-content {
+        flex: 1;
+    }
+
+    .mfa-title {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .mfa-desc {
+        font-size: 0.85rem;
+        color: hsl(var(--text-secondary, var(--text)));
+        opacity: 0.8;
     }
 </style>

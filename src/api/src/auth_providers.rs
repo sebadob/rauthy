@@ -9,7 +9,7 @@ use rauthy_api_types::auth_providers::{
 };
 use rauthy_api_types::auth_providers::{ProviderLookupResponse, ProviderResponse};
 use rauthy_api_types::generic::LogoParams;
-use rauthy_api_types::users::{UserResponse, WebauthnLoginResponse};
+use rauthy_api_types::users::{MfaLoginResponse, UserResponse};
 use rauthy_common::constants::{HEADER_JSON, PROVIDER_ATPROTO};
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::auth_providers::{
@@ -182,7 +182,7 @@ pub async fn get_provider_callback_html(req: HttpRequest) -> Result<HttpResponse
     tag = "providers",
     request_body = ProviderCallbackRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login", body = MfaLoginResponse),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),

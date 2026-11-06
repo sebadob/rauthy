@@ -210,6 +210,12 @@ export const I18nFr: I18n = {
         login: 'Connexion',
         mfaAck: 'Confirmé',
         mfaOpenApp: "Ouvrez l'application pour continuer",
+        mfaSelectionTitle: 'Authentification à deux facteurs',
+        mfaSelectionDesc: 'Choisissez votre méthode de vérification :',
+        usePasskey: 'Utiliser une clé d’accès',
+        passkeyDesc: 'Rapide et sécurisée grâce à votre clé de sécurité',
+        useEmailCode: 'Utiliser un code par e-mail',
+        emailCodeDesc: 'Recevez un code à usage unique par e-mail',
         navigateToAccount: 'Tableau de bord du compte',
         needsUserUpdate: `Certaines informations pour ce compte sont manquantes. Vous devez mettre à jour ces
             valeurs avant de pouvoir poursuivre la connexion.`,

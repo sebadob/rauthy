@@ -208,6 +208,12 @@ export const I18nNb: I18n = {
         login: 'Logg inn',
         mfaAck: 'Bekreftet',
         mfaOpenApp: 'Åpne appen for å fortsette',
+        mfaSelectionTitle: 'Tofaktorautentisering',
+        mfaSelectionDesc: 'Velg bekreftelsesmetode:',
+        usePasskey: 'Bruk passnøkkel',
+        passkeyDesc: 'Raskt og sikkert med sikkerhetsnøkkelen din',
+        useEmailCode: 'Bruk e-postkode',
+        emailCodeDesc: 'Motta en engangskode via e-post',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
