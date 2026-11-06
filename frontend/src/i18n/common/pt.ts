@@ -195,6 +195,12 @@ export const I18nPt: I18n = {
         invalidKeyUsed: 'Chave inválida',
         login: 'Iniciar sessão',
         mfaAck: 'Confirmado',
+        mfaSelectionTitle: 'Autenticação de dois fatores',
+        mfaSelectionDesc: 'Escolha o seu método de verificação:',
+        usePasskey: 'Usar chave de acesso',
+        passkeyDesc: 'Rápido e seguro com a sua chave de segurança',
+        useEmailCode: 'Usar código por e-mail',
+        emailCodeDesc: 'Receba um código de utilização única por e-mail',
         navigateToAccount: 'Painel da conta',
         needsUserUpdate: `Faltam algumas informações nesta conta. Tem de atualizar estes dados
             antes de continuar com o início de sessão.`,

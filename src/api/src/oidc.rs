@@ -16,7 +16,7 @@ use rauthy_api_types::oidc::{
     SessionInfoResponse, TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
-use rauthy_api_types::users::{OtpLoginResponse, Userinfo, WebauthnLoginResponse};
+use rauthy_api_types::users::{MfaLoginResponse, Userinfo};
 use rauthy_common::compression::{compress_br_dyn, compress_gzip_dyn};
 use rauthy_common::constants::{
     APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
@@ -321,10 +321,7 @@ fn build_authorize_resp(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with MFA Login (Webauthn or OTP)", content(
-            (WebauthnLoginResponse = "application/webauthn+json"),
-            (OtpLoginResponse = "application/otp+json"),
-        )),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login", body = MfaLoginResponse),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
         (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),

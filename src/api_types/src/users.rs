@@ -484,12 +484,6 @@ pub struct ActiveOtp {
     pub otp_kind: OtpKind,
 }
 
-#[derive(Serialize, ToSchema)]
-pub struct OtpLoginResponse {
-    pub code: String,
-    pub active_otps: Vec<ActiveOtp>,
-}
-
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct OtpAuthStartRequest {
@@ -772,7 +766,11 @@ pub struct WebauthnLoginFinishResponse {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct WebauthnLoginResponse {
+pub struct MfaLoginResponse {
     pub code: String,
     pub exp: u64,
+    pub email: String,
+    pub require_webauthn: bool,
+    pub require_otp: bool,
+    pub active_otps: Vec<ActiveOtp>,
 }

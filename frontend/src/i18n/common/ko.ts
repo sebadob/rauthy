@@ -184,6 +184,12 @@ export const I18nKo: I18n = {
         invalidKeyUsed: '유효하지 않은 키입니다.',
         login: '로그인',
         mfaAck: '확인되었습니다.',
+        mfaSelectionTitle: '2단계 인증',
+        mfaSelectionDesc: '인증 방법을 선택하세요:',
+        usePasskey: '패스키 사용',
+        passkeyDesc: '빠르고 안전한 보안 키 인증',
+        useEmailCode: '이메일 코드 사용',
+        emailCodeDesc: '이메일로 일회용 코드를 받습니다',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,

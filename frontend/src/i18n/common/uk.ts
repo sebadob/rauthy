@@ -197,6 +197,12 @@ export const I18nUk: I18n = {
         invalidKeyUsed: 'Недійсний ключ',
         login: 'Увійти',
         mfaAck: 'Підтверджено',
+        mfaSelectionTitle: 'Двофакторна автентифікація',
+        mfaSelectionDesc: 'Виберіть спосіб підтвердження:',
+        usePasskey: 'Використати ключ доступу',
+        passkeyDesc: 'Швидка й безпечна автентифікація за допомогою ключа безпеки',
+        useEmailCode: 'Використати код з електронної пошти',
+        emailCodeDesc: 'Отримайте одноразовий код електронною поштою',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,

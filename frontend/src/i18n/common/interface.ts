@@ -151,6 +151,12 @@ export interface I18n {
         invalidKeyUsed: string;
         login: string;
         mfaAck: string;
+        mfaSelectionTitle: string;
+        mfaSelectionDesc: string;
+        usePasskey: string;
+        passkeyDesc: string;
+        useEmailCode: string;
+        emailCodeDesc: string;
         navigateToAccount: string;
         needsUserUpdate: string;
         orLoginWith: string;

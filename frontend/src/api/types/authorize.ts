@@ -70,14 +70,11 @@ export interface ActiveOtp {
     otp_kind: string;
 }
 
-export interface OtpLoginResponse {
+export interface MfaLoginResponse {
     code: string;
-    active_otps: ActiveOtp[];
-    user_id: string;
-}
-
-export interface WebauthnLoginResponse {
-    code: string;
-    user_id: string;
     exp: number;
+    email: string;
+    require_webauthn: boolean;
+    require_otp: boolean;
+    active_otps: ActiveOtp[];
 }

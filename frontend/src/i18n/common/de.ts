@@ -201,6 +201,12 @@ export const I18nDe: I18n = {
         invalidKeyUsed: 'Ungültiger Sicherheitsschlüssel',
         login: 'Login',
         mfaAck: 'Bestätigt',
+        mfaSelectionTitle: 'Zwei-Faktor-Authentifizierung',
+        mfaSelectionDesc: 'Wählen Sie Ihre Bestätigungsmethode:',
+        usePasskey: 'Passkey verwenden',
+        passkeyDesc: 'Schnell und sicher mit Ihrem Sicherheitsschlüssel',
+        useEmailCode: 'E-Mail-Code verwenden',
+        emailCodeDesc: 'Erhalten Sie einen einmaligen Code per E-Mail',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Es fehlen Informationen zum Account. Diese benötigen ein Update, bevor
             mit dem Login fortgefahren werden kann.`,

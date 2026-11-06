@@ -30,6 +30,21 @@ impl MfaCookie {
         Self { email, exp }
     }
 
+    pub fn new_mfa(email: String, has_webauthn: bool, has_otp: bool) -> Self {
+        let exp = OffsetDateTime::now_utc().add(
+            match (has_otp, has_webauthn) {
+                (true, true) => {
+                    let diff_otp = RauthyConfig::get().vars.otp.renew_exp;
+                    let diff_webauthn = RauthyConfig::get().vars.webauthn.renew_exp;
+                    diff_otp.min(diff_webauthn)
+                },
+                (true, false) => RauthyConfig::get().vars.otp.renew_exp,
+                (false, true) => RauthyConfig::get().vars.webauthn.renew_exp,
+                (false, false) => std::time::Duration::from_secs(0),
+            });
+        Self { email, exp }
+    }
+
     pub fn build(&self) -> Result<Cookie<'_>, ErrorResponse> {
         let set = serialize(self)?;
         let enc = EncValue::encrypt(&set)?.into_bytes();
