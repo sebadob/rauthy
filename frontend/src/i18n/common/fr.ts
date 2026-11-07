@@ -13,7 +13,7 @@ export const I18nFr: I18n = {
         delete: 'Supprimer',
         details: 'Détails',
         edit: 'Modifier',
-        email: 'e-mail',
+        email: 'E-mail',
         errTooShort: 'Saisie trop courte',
         errTooLong: 'Saisie trop longue',
         expandContent: 'Développer le contenu',
@@ -62,20 +62,20 @@ export const I18nFr: I18n = {
             ce mot de passe.\nVous ne pourrez alors pas vous connecter sur n'importe quel appareil sans avoir
             préalablement saisi votre mot de passe au moins une fois.`,
         accTypePasskeyText3: 'Voulez-vous convertir votre compte et ajouter un mot de passe ?',
-        accessExp: 'Expire l’accès',
-        accessRenew: 'Accès renouvelable jusqu’au',
+        accessExp: `Expiration de l'accès`,
+        accessRenew: `Accès renouvelable jusqu'au`,
         accessRenewDelete: 'Supprimer la possibilité de renouvellement',
         birthdate: 'Date de naissance',
-        canModifyFor: 'Les authentifications multifactorielle peuvent être modifiés pour :',
+        canModifyFor: `L'authentification multifacteur peut être modifiée pour :`,
         city: 'Ville',
         changePassword: 'Changer le mot de passe',
         convertAccount: 'Convertir le compte',
-        convertAccountP1: `Vous pouvez convertir votre compte en un compte à mot de passe uniquement.\n
-            Cette conversion supprime votre mot de passe et vous ne pouvez et ne devez vous connecter qu'avec vos mots
-            de passe enregistrés.\n
-            Veuillez noter que seuls les mots de passe avec vérification utilisateur supplémentaire seront acceptés.\n
-            Si vos mots de passe prennent en charge cette vérification, vous trouverez un petit symbole derrière le nom
-            de la clé sur la page 'MFA'.`,
+        convertAccountP1: `Vous pouvez convertir votre compte en un compte à clé d'accès uniquement.\n
+            Cette conversion supprime votre mot de passe et vous ne pouvez et ne devez vous connecter qu'avec vos clés
+            d'accès enregistrées.\n
+            Veuillez noter que seules les clés d'accès avec vérification utilisateur supplémentaire seront acceptées.\n
+            Si vos clés d'accès prennent en charge cette vérification, vous trouverez un petit symbole derrière le nom
+            de la clé sur la page « MFA ».`,
         country: 'Pays',
         deleteAccount: {
             deleteAccount: 'Supprimer le compte',
@@ -121,18 +121,17 @@ export const I18nFr: I18n = {
             validFor: 'Mot de passe valide pendant {{ secs }} secondes',
         },
         passkeys: {
-            missingAttestation: 'The Passkey does not match the required security standards.',
-            type: 'Passkey Type',
-            types: ['Default', 'Resident Key'],
+            missingAttestation: `La clé d'accès ne respecte pas les normes de sécurité requises.`,
+            type: `Type de clé d'accès`,
+            types: ['Par défaut', 'Resident Key'],
             rkWarning: `ATTENTION : même si une Resident Key permet une connexion directe sans
                 saisir l'adresse e-mail, elle occupe un emplacement de stockage supplémentaire pour
                 chaque application. Assurez-vous qu'il reste assez d'espace. Pour transformer une
-                Passkey existante en Resident Key, supprimez-la d'abord, puis ajoutez-la à nouveau.`,
+                clé d'accès existante en Resident Key, supprimez-la d'abord, puis ajoutez-la à nouveau.`,
             // [Default, Resident Key]
             typesDesc: [
-                `Vous devez saisir votre adresse e-mail avant de vous connecter avec cette Passkey.`,
-                `Fonctionne avec le bouton « Clé d'accès » de la page de connexion, sans saisir votre
-                    adresse e-mail.`,
+                `Vous devez saisir votre adresse e-mail avant de vous connecter avec cette clé d'accès.`,
+                `Fonctionne avec le bouton « Clé d'accès » de la page de connexion, sans saisir votre                    adresse e-mail.`,
             ],
         },
         passwordConfirm: 'Confirmer le mot de passe',
@@ -169,12 +168,12 @@ export const I18nFr: I18n = {
             userAgent: 'Agent utilisateur',
         },
         providerLink: 'Compte fédéré',
-        providerLinkDesc: `Vous pouvez lier ce compte à l’un des fournisseurs d’authentification suivants.\n
+        providerLinkDesc: `Vous pouvez lier ce compte à l'un des fournisseurs d'authentification suivants.\n
             Après avoir activé cette fonction, vous serez redirigé vers la page de connexion du fournisseur choisi.\n
-            Après une connexion réussie et si l’adresse e-mail correspond, votre compte sera lié.`,
+            Après une connexion réussie et si l'adresse e-mail correspond, votre compte sera lié.`,
         providerUnlink: 'Dissocier la fédération',
-        providerUnlinkDesc: `Vous ne pouvez dissocier ce compte du fournisseur d’accès\n
-            que si vous avez configuré au moins un mot de passe ou une clé d’accès.`,
+        providerUnlinkDesc: `Vous ne pouvez dissocier ce compte du fournisseur d'authentification\n
+            que si vous avez configuré au moins un mot de passe ou une clé d'accès.`,
         regDate: `Date d'inscription`,
         regIp: `Adresse IP d'inscription`,
         roles: 'Rôles',
@@ -184,9 +183,9 @@ export const I18nFr: I18n = {
         userEnabled: 'Utilisateur activé',
         userExpiry: `Expiration de l'utilisateur`,
         userVerifiedTooltip: 'Sécurisé par empreinte digitale ou code PIN',
-        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
-            providing an E-Mail.`,
-        aaguidTooltip: 'Certified Passkey',
+        residentKeyTooltip: `Ceci est une Resident Key. Vous pouvez l'utiliser pour une connexion directe
+            sans saisir votre adresse e-mail.`,
+        aaguidTooltip: `Clé d'accès certifiée`,
         webIdDesc: `Vous pouvez configurer les champs à exposer avec votre WebID.\n
             Cette fonctionnalité est utilisée par certains réseaux pour les connexions décentralisées.\n
             Si vous ne savez pas de quoi il s'agit, vous n'en avez probablement pas besoin.`,
@@ -199,11 +198,11 @@ export const I18nFr: I18n = {
         clientForceMfa: `Cette connexion nécessite la double authentification (MFA) pour une sécurité renforcée.\nPour y accéder, vous devez
             vous connecter à votre compte et ajouter au moins une clé d'accès supplémentaire`,
         clientGroupPrefixForbidden: 'Attribution de groupe manquante pour cette connexion',
-        email: 'e-mail',
+        email: 'E-mail',
         emailBadFormat: `Mauvais format d'e-mail`,
         emailRequired: `L'e-mail est requis`,
         emailSentMsg: 'Si votre e-mail existe, une demande a été envoyée',
-        expectingOtp: `En attente de l'authentification par OTP`,
+        expectingOtp: `En attente de l'authentification par code à usage unique`,
         expectingPasskey: `En attente de l'authentification par clé d'accès`,
         http429: `Trop de tentatives invalides. Verrouillé jusqu'à :`,
         invalidCredentials: 'Identifiants invalides',
@@ -216,7 +215,7 @@ export const I18nFr: I18n = {
             valeurs avant de pouvoir poursuivre la connexion.`,
         orLoginWith: 'ou se connecter avec',
         passkey: `Clé d'accès`,
-        passkeyNotDiscovered: `Les Passkeys qui n'ont pas été ajoutées comme Resident Key ne
+        passkeyNotDiscovered: `Les clés d'accès qui n'ont pas été ajoutées comme Resident Key ne
             peuvent pas être trouvées de cette façon. Saisissez plutôt votre adresse e-mail.`,
         password: 'Mot de passe',
         passwordExpired:
@@ -238,11 +237,11 @@ export const I18nFr: I18n = {
         closeWindow: 'Vous pouvez fermer cette fenêtre maintenant.',
         decline: 'Refuser',
         desc: 'Veuillez saisir le code utilisateur de {{count}} caractères depuis votre appareil.',
-        descScopes: 'L’appareil demande l’accès à :',
+        descScopes: `L'appareil demande l'accès à :`,
         isAccepted: 'La demande a été acceptée.',
         isDeclined: 'La demande a été refusée.',
         submit: 'Envoyer',
-        title: 'Autorisation de l’appareil',
+        title: `Autorisation de l'appareil`,
         userCode: 'Code utilisateur',
         wrongOrExpired: 'Code incorrect ou expiré',
     },
@@ -269,42 +268,42 @@ export const I18nFr: I18n = {
     },
     mfa: {
         webauthn: {
-            title: 'Clé d’accès',
-            p1: `Si vous prévoyez d’utiliser votre clé MFA avec plusieurs systèmes comme Windows et Android,
-                vous devriez l’enregistrer auprès d’Android.`,
-            p2: `Android est la plateforme qui prend le moins en charge les fonctionnalités de l’authentification sans mot
-                de passe. Les clés enregistrées auprès d’Android fonctionnent également ailleurs.
+            title: `Clé d'accès`,
+            p1: `Si vous prévoyez d'utiliser votre clé MFA avec plusieurs systèmes comme Windows et Android,
+                vous devriez l'enregistrer auprès d'Android.`,
+            p2: `Android est la plateforme qui prend le moins en charge les fonctionnalités de l'authentification sans mot
+                de passe. Les clés enregistrées auprès d'Android fonctionnent également ailleurs.
                 Cependant, cela ne s'applique pas dans l'autre sens.`,
             p3: `Pour plus d'informations, consultez`,
             registerNew: 'Enregistrer une nouvelle clé',
             docLinkText: `la documentation sur les clés d'accès`,
             unsupportedText:
-                'Your browser does not support Webauthn credentials and must be updated.',
+                'Votre navigateur ne prend pas en charge les identifiants WebAuthn et doit être mis à jour.',
         },
         otp: {
             title: 'Code à usage unique (OTP)',
-            titleEmail: 'Email-based OTP',
+            titleEmail: 'Code à usage unique par e-mail',
             activationCode: 'Entrez le code à usage unique qui vous a été envoyé par e-mail',
             code: 'Code à usage unique',
-            registerNew: 'Register New OTP',
-            resendOtp: 'Resend Code',
-            sessionExpiresIn: 'OTP session will expire in:',
-            sessionExpired: 'OTP session has expired.',
+            registerNew: 'Enregistrer un nouveau code à usage unique',
+            resendOtp: 'Renvoyer le code',
+            sessionExpiresIn: 'La session de code à usage unique expire dans :',
+            sessionExpired: 'La session de code à usage unique a expiré.',
         },
-        requestCanceled: 'Request was canceled',
+        requestCanceled: 'La demande a été annulée',
         errorReg: `Erreur lors du démarrage du processus d'enregistrement`,
         lastUsed: 'Dernière utilisation',
         noKey: 'Aucune clé de sécurité enregistrée pour cet emplacement',
-        reAuthenticatePasskey: `Avant de pouvoir modifier les authentifications multifactorielle,
+        reAuthenticatePasskey: `Avant de pouvoir modifier l'authentification multifacteur,
             vous devez vous authentifier avec une clé déjà enregistrée :`,
-        reAuthenticatePwd: `Avant de pouvoir modifier les authentifications multifactorielle,
+        reAuthenticatePwd: `Avant de pouvoir modifier l'authentification multifacteur,
             vous devez vous réauthentifier avec votre mot de passe.`,
-        reAuthenticateOtp: `Avant de pouvoir modifier les authentifications multifactorielle,
+        reAuthenticateOtp: `Avant de pouvoir modifier l'authentification multifacteur,
             vous devez vous réauthentifier avec un code à usage unique :`,
         register: 'Enregistrer',
         registered: 'Enregistré',
         registeredKeys: 'Clés enregistrées',
-        registeredOtps: 'Code à usage unique enregistrés',
+        registeredOtps: 'Codes à usage unique enregistrés',
         passkeyName: `Nom de la clé d'accès`,
         passkeyNameErr: '2 à 32 caractères non spéciaux',
         passwordInvalid: 'Mot de passe invalide',
@@ -329,7 +328,7 @@ export const I18nFr: I18n = {
         uppercaseMin: 'Nombre minimal de majuscules',
         digitsMin: 'Nombre minimal de chiffres',
         specialMin: 'Nombre minimal de caractères spéciaux',
-        notRecent: 'Ce n’est pas l’un des derniers mots de passe récents',
+        notRecent: 'Différent des derniers mots de passe utilisés',
     },
     passwordReset: {
         accountLogin: 'Connexion au compte',
@@ -340,8 +339,8 @@ export const I18nFr: I18n = {
         newAccDesc1:
             'Vous avez le choix entre deux types de compte : sans mot de passe ou avec mot de passe traditionnel',
         newAccDesc2: `Le compte sans mot de passe est toujours préféré,\n
-            car il fournit un moyen de une sécurité renforcée.
-            Vous aurez besoin d'au moins un mot de passe (Yubikey, Apple Touch ID, Windows Hello, ...)\n
+            car il offre une sécurité renforcée.
+            Vous aurez besoin d'au moins une clé d'accès (Yubikey, Apple Touch ID, Windows Hello, ...)\n
             pour créer un tel compte. Votre appareil doit adopter la norme FIDO2.\n
             Pour plus d'informations à ce sujet, vous pouvez suivre ce lien : `,
         newAccount: 'Nouveau compte',
@@ -355,7 +354,7 @@ export const I18nFr: I18n = {
         success1: 'Le mot de passe a été mis à jour avec succès.',
         success2: 'Vous serez redirigé dans {{ secs }} secondes.',
         success3: `Si vous n'êtes pas redirigé, veuillez cliquer ici :`,
-        successPasskey1: 'Votre nouveau mot de passe a été enregistré avec succès.',
+        successPasskey1: `Votre nouvelle clé d'accès a été enregistrée avec succès.`,
         successPasskey2: `Veuillez vous connecter à votre compte et enregistrer une deuxième clé\n
             de sauvegarde dès que possible. Avec un compte avec clé d'accès uniquement,\n
             vous ne pourrez pas utiliser une réinitialisation de mot de passe par e-mail\n
@@ -367,7 +366,7 @@ export const I18nFr: I18n = {
         domainAllowed: 'Domaine autorisé :',
         domainErr: 'Domaine de messagerie non autorisé',
         domainRestricted: 'Les domaines de messagerie sont restreints',
-        email: 'e-mail',
+        email: 'E-mail',
         emailBadFormat: `Mauvais format d'e-mail`,
         emailCheck: 'Veuillez vérifier votre boîte de réception e-mail',
         orRegisterWith: 'ou inscrivez-vous auprès de',

@@ -24,11 +24,11 @@ export let I18nAdminFr: I18nAdmin = {
         makeEditable: 'Rendre modifiable',
         makeEditableP1:
             'Vous pouvez convertir cet attribut et le rendre modifiable par les utilisateurs eux-mêmes.',
-        makeEditableP2: `<b>ATTENTION :</b> Ceci ne peut jamais être modifié !
+        makeEditableP2: `<b>ATTENTION :</b> Cette opération est irréversible !
             Toutes les données saisies directement par un utilisateur sont toujours non fiables
             et ne DOIVENT JAMAIS être utilisées pour une quelconque forme d'authentification ou d'autorisation !`,
-        makeEditableP3: `Un attribut ne peut pas être rendu modifiable car il a autorisé des saisies non fiables par le
-            passé, quelle que soit la durée de cette autorisation.`,
+        makeEditableP3: `Un attribut modifiable ne peut pas redevenir non modifiable, car il a autorisé des saisies
+            non fiables par le passé, quelle que soit la durée de cette autorisation.`,
         name: `Nom de l'attribut`,
         userEditable: `Modifiable par l'utilisateur`,
     },
@@ -43,10 +43,9 @@ export let I18nAdminFr: I18nAdmin = {
     clients: {
         allowedResources: 'Ressources autorisées',
         defaultAud: 'Audiences par défaut',
-        descAllowedResources: `Indicateurs de ressources RFC 8707 optionnels que ce client peut demander. Une liste vide rejette tout paramètre 'resource' avec 'invalid_target'.`,
-        descDefaultAud: `Audiences toujours ajoutées aux jetons de ce client, indépendamment de tout paramètre 'resource'.`,
-        backchannelLogout:
-            'Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l’URI ici.',
+        descAllowedResources: `Indicateurs de ressources RFC 8707 optionnels que ce client peut demander. Une liste vide rejette tout paramètre « resource » avec « invalid_target ».`,
+        descDefaultAud: `Audiences toujours ajoutées aux jetons de ce client, indépendamment de tout paramètre « resource ».`,
+        backchannelLogout: `Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l'URI ici.`,
         branding: {
             descHsl: `Les valeurs suivantes doivent être fournies au format HSL. Seules les couleurs de base sont
                 fournies. Les canaux alpha et les autres valeurs sont gérés dynamiquement par le thème.`,
@@ -58,28 +57,28 @@ export let I18nAdminFr: I18nAdmin = {
             faviconPreviewAlt: 'Aperçu du favicon du client',
             faviconUpload: 'Téléverser un favicon',
         },
-        claimsAtRoot: 'Émettre les claims à la racine du token',
-        claimsAtRootWarning: `Les claims de ce client sont écrits à la racine du token au lieu d'être
-            imbriqués sous « custom ». C'est à vous de garantir la correction face aux collisions : si
-            le nom d'un claim entre en collision avec une revendication JWT réservée, l'émission du
-            token échoue. Les claims personnalisés placés à la racine peuvent aussi casser lors de
+        claimsAtRoot: 'Émettre les claims à la racine du jeton',
+        claimsAtRootWarning: `Les claims de ce client sont écrits à la racine du jeton au lieu d'être
+            imbriqués sous « custom ». C'est à vous d'éviter les collisions : si
+            le nom d'un claim entre en collision avec un claim JWT réservé, l'émission du
+            jeton échoue. Les claims personnalisés placés à la racine peuvent aussi casser lors de
             futures évolutions du protocole ou de nouvelles fonctionnalités. Référence :`,
-        claims: 'Custom claims (client_credentials)',
-        claimsDesc: `Un objet JSON émis dans les tokens client_credentials, imbriqué sous le claim
+        claims: 'Claims personnalisés (client_credentials)',
+        claimsDesc: `Un objet JSON émis dans les jetons client_credentials, imbriqué sous le claim
             custom. Maximum 1024 caractères sérialisés.`,
         confidential: 'Confidentiel',
-        confidentialNoSecret: 'Ce client n’est pas confidentiel et ne possède donc aucun secret.',
+        confidentialNoSecret: `Ce client n'est pas confidentiel et ne possède donc aucun secret.`,
         config: 'Configuration du client',
         delete1: 'Êtes-vous sûr de vouloir supprimer ce client ?',
-        descAuthCode: `La validité des codes d'authentification peut être ajustée pour une sécurité renforcée.
-            Les codes d'authentification ne peuvent être utilisés qu'une seule fois et sont valides pendant 60 secondes
+        descAuthCode: `La validité des codes d'autorisation peut être ajustée pour une sécurité renforcée.
+            Les codes d'autorisation ne peuvent être utilisés qu'une seule fois et sont valides pendant 60 secondes
             par défaut. Plus la validité est courte, mieux c'est, à condition que le client puisse se connecter
             suffisamment rapidement.`,
         descClientUri: `Informations concernant l'URI et les contacts de ce client, à afficher sur la page de connexion.`,
         descName: `Le nom du client peut être modifié sans incidence sur sa configuration. Il est uniquement affiché sur
             la page de connexion.`,
         descGroupPrefix: `La connexion à ce client peut être restreinte par un préfixe de groupe optionnel. Seuls les
-            utilisateurs appartenant à ce groupe seront autorisés à se connecter.`,
+            utilisateurs appartenant à un groupe correspondant seront autorisés à se connecter.`,
         descOrigin: `Origines externes autorisées supplémentaires ; généralement nécessaires uniquement si ce client
             doit effectuer des requêtes à Rauthy directement depuis le navigateur, notamment pour les applications
             monopages (SPA).`,
@@ -91,16 +90,16 @@ export let I18nAdminFr: I18nAdmin = {
         descUri: `Vous pouvez fournir autant d'URI de redirection que vous le souhaitez. À la fin de chacune, vous
             pouvez utiliser <code>*</code> comme caractère générique.`,
         errConfidentialPKCE: `Le client doit être confidentiel ou avoir au moins un défi PKCE activé.`,
-        forceMfa: 'Forcer l’authentification multifacteur',
+        forceMfa: `Forcer l'authentification multifacteur`,
         groupLoginPrefix: 'Préfixe du groupe de connexion',
         name: 'Nom du client',
-        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
-            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
-            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
-            client side. You can use the 'amr' claim to do this.`,
+        passwordFlowMfaWarn: `ATTENTION : « Forcer l'authentification multifacteur » et le flux
+            « password » sont activés en même temps. Rauthy ne peut PAS imposer la MFA via ce flux
+            d'authentification, car cela enfreindrait la RFC OIDC. Si la MFA est strictement requise,
+            vous devez donc la valider côté client. Vous pouvez utiliser le claim « amr » pour cela.`,
         scim: {
             baseUri: `L'URI de base SCIM est celle à partir de laquelle les sous-routes comme
-                <code>{base_uri}/Users/{id}</base_uri></code> peuvent être correctement dérivées.`,
+                <code>{base_uri}/Users/{id}</code> peuvent être correctement dérivées.`,
             desc: `Si ce client prend en charge {{ SCIM_LINK }}, vous pouvez l'activer ici.`,
             enable: 'Activer SCIMv2',
             groupSync: 'Synchroniser les groupes',
@@ -135,11 +134,11 @@ export let I18nAdminFr: I18nAdmin = {
                 'Attention : vous ne devez pas mettre en cache le secret actuel si vous avez subi une fuite !',
         },
         tokenLifetime: {
-            p1: `La durée de vie du jeton s’applique aux jetons d’accès et d’identification
+            p1: `La durée de vie du jeton s'applique aux jetons d'accès et d'identification
                 et est exprimée en secondes.`,
             p2: `Si le client prend en charge les algorithmes EdDSA/ed25519, il est toujours préférable de les utiliser.
                 Les algorithmes RSA existent uniquement à des fins de compatibilité.`,
-            p3: `L’algorithme des jetons d’actualisation ne peut pas être modifié, car ceux-ci sont utilisés
+            p3: `L'algorithme des jetons d'actualisation ne peut pas être modifié, car ceux-ci sont utilisés
                 exclusivement par Rauthy.`,
         },
     },
@@ -183,7 +182,7 @@ export let I18nAdminFr: I18nAdmin = {
             p2: `La clé active est définie statiquement dans le fichier de configuration Rauthy / les variables
                 d'environnement. Elle ne peut pas être modifiée dynamiquement ici.
                 Tout nouveau chiffrement JWK utilisera toujours la clé actuellement active.`,
-            p3: `Si vous migrez tous les secrets existants, l’opération peut prendre quelques secondes si votre ensemble
+            p3: `Si vous migrez tous les secrets existants, l'opération peut prendre quelques secondes si votre ensemble
                 de données est volumineux.`,
             pNotPossible:
                 'Pour pouvoir effectuer la migration, au moins deux clés de chiffrement doivent être disponibles.',
@@ -203,7 +202,7 @@ export let I18nAdminFr: I18nAdmin = {
                 Toutefois, pour une connexion sécurisée, un temps de connexion compris entre 500 et 1000 ms ne devrait
                 pas poser de problème. Le temps de connexion ne doit pas être trop court, car cela réduirait la
                 robustesse du hachage.`,
-            loginTime2: `Afin d’assurer une sécurité maximale par défaut, cet utilitaire ne permet pas de descendre en
+            loginTime2: `Afin d'assurer une sécurité maximale par défaut, cet utilitaire ne permet pas de descendre en
                 dessous de 500 ms pour le temps de connexion.`,
 
             mCost1: `<code>m_cost</code> définit la quantité de <b>mémoire (en ko)</b> utilisée pour le hachage.
@@ -217,7 +216,7 @@ export let I18nAdminFr: I18nAdmin = {
                 total d'utilisateurs, mais se situe généralement entre 32 et 96 Mo.`,
             mCost3: 'La valeur minimale autorisée de <code>m_cost</code> est de <code>32768</code>.',
 
-            pCost1: `La valeur <code>p_cost</code> définit le niveau de <b>parallelism</b> pour le hachage.
+            pCost1: `La valeur <code>p_cost</code> définit le niveau de <b>parallélisme</b> pour le hachage.
                 Cette valeur atteint généralement un maximum d'environ 8,
                 ce qui correspond à la valeur par défaut pour Rauthy.`,
             pCost2: `La règle générale est la suivante :<br>Définissez <code>p_cost</code> à deux fois le nombre de
@@ -232,16 +231,16 @@ export let I18nAdminFr: I18nAdmin = {
                 augmentez <code>t_cost</code> tant que vous n'avez pas atteint votre objectif de temps de hachage.`,
 
             utilityHead: 'Utilitaire de calcul de paramètres',
-            utility1: `Cet outil permet d’estimer des valeurs optimales pour votre déploiement.
-                Il est important de noter qu’il doit être exécuté avec Rauthy installé à son emplacement final et
+            utility1: `Cet outil permet d'estimer des valeurs optimales pour votre déploiement.
+                Il est important de noter qu'il doit être exécuté avec Rauthy installé à son emplacement final et
                 disposant de toutes les ressources finales.
-                Il est recommandé d’exécuter cet utilitaire pendant la charge afin d’éviter un surdimensionnement.`,
+                Il est recommandé d'exécuter cet utilitaire pendant la charge afin d'éviter un surdimensionnement.`,
             utility2: `<code>m_cost</code> est facultatif ; la valeur minimale de sécurité <code>32768</code> sera
-                choisie s’il est vide. <code>p_cost</code> est également facultatif ; s’il est vide, Rauthy utilisera
+                choisie s'il est vide. <code>p_cost</code> est également facultatif ; s'il est vide, Rauthy utilisera
                 tous les threads disponibles.`,
 
-            time: 'Heure',
-            targetTime: 'Heure cible',
+            time: 'Durée',
+            targetTime: 'Durée cible',
             tune: `Important : Ces valeurs doivent être optimisées sur l'architecture finale !`,
             pDetails: `Pour une introduction détaillée à Argon2ID, de nombreuses ressources sont disponibles en ligne.
                 Ce guide ne donne qu'un bref aperçu des valeurs. Trois d'entre elles doivent être configurées :`,
@@ -253,8 +252,8 @@ export let I18nAdminFr: I18nAdmin = {
         },
         openapi:
             "Si vous souhaitez intégrer une application externe et utiliser l'API de Rauthy, consultez",
-        openapiNote: `Dans la configuration par défaut, l'interface Swagger n'est pas active via le lien ci-dessus. Ça 
-            peut être activé via la configuration « server.swagger_ui_enable » et éventuellement 
+        openapiNote: `Dans la configuration par défaut, l'interface Swagger n'est pas active via le lien ci-dessus. Elle
+            peut être activée via la configuration « server.swagger_ui_enable » et éventuellement 
             « server.swagger_ui_public ».`,
         source: 'Le code source est disponible ici',
     },
@@ -277,7 +276,7 @@ export let I18nAdminFr: I18nAdmin = {
     },
     email: {
         cancelJob: 'Annuler la tâche',
-        filterType: ['Aucun', 'Dans le groupe', 'Hors du groupe', 'A un rôle', `N'a pas de rôle`],
+        filterType: ['Aucun', 'Dans le groupe', 'Hors du groupe', 'A le rôle', `N'a pas le rôle`],
         immediate: 'Immédiat',
         jobs: `Tâches d'envoi d'e-mails`,
         scheduled: 'Envoi programmé',
@@ -326,7 +325,7 @@ export let I18nAdminFr: I18nAdmin = {
             'Voulez-vous vraiment supprimer cet espace de noms, y compris toutes les données existantes ?',
         encryptedDesc: `Pour des raisons de performance, le chiffrement supplémentaire ne doit être utilisé que pour les
             valeurs particulièrement sensibles telles que les clés d'accès ou les informations personnelles.`,
-        deleteConfirmMsg: `Voulez-vous vraiment supprimer la clé '{{ key }}' ?`,
+        deleteConfirmMsg: `Voulez-vous vraiment supprimer la clé « {{ key }} » ?`,
         help: {
             help: 'Aide',
             ops: [
@@ -337,12 +336,12 @@ export let I18nAdminFr: I18nAdmin = {
                 `Obtenir la valeur d'une clé`,
                 'Supprimer une clé',
             ],
-            p1: `L’accès externe aux bases de données KV est volontairement très simple.
+            p1: `L'accès externe aux bases de données KV est volontairement très simple.
                 Seules quelques opérations sont possibles :`,
-            p2: `Chacune de ces opérations requiert une clé d’accès sous forme de jeton <code>Bearer</code>
-                (<code>{id}\${secret}</code>) dans l’en-tête <code>Authorization</code>.
-                Une clé d’accès n’est valide que pour l’espace de noms dans lequel elle se trouve.`,
-            p3: `Vous trouverez ici des exemples d’utilisation de <code>curl</code> pour les opérations mentionnées
+            p2: `Chacune de ces opérations requiert une clé d'accès sous forme de jeton <code>Bearer</code>
+                (<code>{id}\${secret}</code>) dans l'en-tête <code>Authorization</code>.
+                Une clé d'accès n'est valide que pour l'espace de noms dans lequel elle se trouve.`,
+            p3: `Vous trouverez ici des exemples d'utilisation de <code>curl</code> pour les opérations mentionnées
                 ci-dessus.`,
         },
         key: 'Clé',
@@ -400,7 +399,7 @@ export let I18nAdminFr: I18nAdmin = {
         hostLocalPwdOnly: 'Connexion par mot de passe local',
         hostLocalPwdOnlyInfo: `Lorsque l'option Connexion par mot de passe local est activée, elle remplace l'option
             Forcer l'authentification multifacteur pour les connexions locales.
-            Par conséquent, aucun mot de passe ne sera jamais demandé (localement) lors des connexions,
+            En parallèle, aucune clé d'accès ne sera jamais demandée (localement) lors des connexions,
             même si l'utilisateur est protégé par l'authentification multifacteur.
             Cette option ne doit être activée qu'en cas de réelle nécessité,
             par exemple si les utilisateurs protégés par l'authentification multifacteur doivent pouvoir
@@ -419,7 +418,7 @@ export let I18nAdminFr: I18nAdmin = {
     passwordPolicy: {
         configDesc: 'Politique relative aux nouveaux mots de passe.',
         resetSet0: `La valeur 0 désactive l'exigence.`,
-        validForDays: 'Durée de validité',
+        validForDays: 'Durée de validité (jours)',
         validityNew: 'Validité pour les nouveaux mots de passe.',
     },
     providers: {
@@ -442,9 +441,9 @@ export let I18nAdminFr: I18nAdmin = {
             descClientName: 'Nom du client à afficher sur la page de connexion Rauthy.',
             descClientSecret: `Secret client fourni par le fournisseur d'authentification.
                 Un secret client ou un PKCE est requis.`,
-            descScope: `Étendue des droits que le client doit utiliser lors de la redirection vers la page de connexion.
+            descScope: `Portée que le client doit utiliser lors de la redirection vers la page de connexion.
                 Séparez les valeurs par un espace.`,
-            errNoAuthMethod: `Vous avez fourni un secret client,mais aucune méthode d'authentification client n'est active`,
+            errNoAuthMethod: `Vous avez fourni un secret client, mais aucune méthode d'authentification client n'est active`,
             errConfidential: 'Vous devez au moins utiliser un client confidentiel ou PKCE',
             jsonPath: {
                 p1: `Les valeurs du jeton d'identification après une connexion réussie en amont peuvent être
@@ -458,16 +457,16 @@ export let I18nAdminFr: I18nAdmin = {
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
             },
             lookup: 'Chercher',
-            pathAdminClaim: `Chemin de revendication d'administration`,
-            pathMfaClaim: 'Chemin de revendication MFA',
+            pathAdminClaim: `Chemin du claim d'administrateur`,
+            pathMfaClaim: 'Chemin du claim MFA',
             rootPemCert: 'Certificat PEM racine',
-            mapMfa: `Si votre fournisseur émet une attestation indiquant que l'utilisateur a utilisé au moins
+            mapMfa: `Si votre fournisseur émet un claim indiquant que l'utilisateur a utilisé au moins
                 l'authentification à deux facteurs (2FA) lors de la connexion,
-                vous pouvez spécifier le chemin d'accès à l'attestation multifacteur (MFA).`,
-            mapUser: `Vous pouvez associer un utilisateur au rôle d'administrateur Rauthy en fonction d'une attestation
-                d'identification en amont.`,
-            valueAdminClaim: `Valeur de l'attestation d'administrateur`,
-            valueMfaClaim: `Valeur de l'attestation multifacteur`,
+                vous pouvez spécifier le chemin d'accès au claim MFA.`,
+            mapUser: `Vous pouvez associer un utilisateur au rôle d'administrateur Rauthy en fonction d'un claim
+                du jeton d'identification en amont.`,
+            valueAdminClaim: `Valeur du claim d'administrateur`,
+            valueMfaClaim: `Valeur du claim MFA`,
         },
         delete: {
             areYouSure: 'Êtes-vous sûr de vouloir supprimer ce fournisseur ?',
@@ -484,21 +483,21 @@ export let I18nAdminFr: I18nAdmin = {
         name: 'Nom du rôle',
     },
     scopes: {
-        claimsAtRoot: 'Émettre les claims à la racine du token',
-        claimsAtRootWarning: `Les attributs associés à cette étendue sont écrits à la racine du token au
-            lieu d'être imbriqués sous « custom ». C'est à vous de garantir la correction face aux
-            collisions : si le nom d'un attribut associé entre en collision avec une revendication JWT
-            réservée, l'émission du token échoue. Les claims personnalisés placés à la racine peuvent
+        claimsAtRoot: 'Émettre les claims à la racine du jeton',
+        claimsAtRootWarning: `Les attributs associés à cette portée sont écrits à la racine du jeton au
+            lieu d'être imbriqués sous « custom ». C'est à vous d'éviter les
+            collisions : si le nom d'un attribut associé entre en collision avec un claim JWT
+            réservé, l'émission du jeton échoue. Les claims personnalisés placés à la racine peuvent
             aussi casser lors de futures évolutions du protocole ou de nouvelles fonctionnalités.
             Référence :`,
-        defaultNoMod: `Il s'agit d'une étendue OIDC par défaut. Ces étendues sont immuables.`,
-        delete1: 'Êtes-vous sûr de vouloir supprimer cette étendue ?',
-        deleteDefault: 'Les étendues OIDC par défaut ne peuvent pas être supprimées.',
-        mapping1: 'Vous pouvez associer des étendues personnalisées à des attributs.',
+        defaultNoMod: `Il s'agit d'une portée OIDC par défaut. Ces portées sont immuables.`,
+        delete1: 'Êtes-vous sûr de vouloir supprimer cette portée ?',
+        deleteDefault: 'Les portées OIDC par défaut ne peuvent pas être supprimées.',
+        mapping1: 'Vous pouvez associer des portées personnalisées à des attributs.',
         mapping2: `Tous les attributs supplémentaires configurés peuvent avoir une valeur personnalisée pour chaque
-            utilisateur. Lorsqu'ils sont associés à une étendue, ils peuvent être inclus dans les jetons d'accès et/ou
+            utilisateur. Lorsqu'ils sont associés à une portée, ils peuvent être inclus dans les jetons d'accès et/ou
             d'identification.`,
-        name: `Nom de l'étendue`,
+        name: `Nom de la portée`,
     },
     search: {
         orderBy: 'Trier par...',
@@ -515,7 +514,7 @@ export let I18nAdminFr: I18nAdmin = {
     tos: {
         accepted: 'Accepté',
         addNewToS: 'Nouvelles CGU',
-        addNewToSFromCurrent: 'Nouvelles CGU sélectionnées',
+        addNewToSFromCurrent: 'Nouvelles CGU à partir de la version sélectionnée',
         added: 'Ajouté',
         checkStatus: `Vérifier le statut de l'utilisateur`,
         immutable: `ATTENTION : Une fois ajoutées, les nouvelles Conditions d'utilisation sont immuables et ne peuvent
@@ -550,31 +549,30 @@ export let I18nAdminFr: I18nAdmin = {
             addToGroups: 'Ajouter à mes groupes',
         },
         lastLogin: 'Dernière connexion',
-        manualInitDesc: `L’utilisateur peut également être initialisé ici. Dans ce cas, vous devez communiquer le
+        manualInitDesc: `L'utilisateur peut également être initialisé ici. Dans ce cas, vous devez communiquer le
             mot de passe directement.`,
         manualInit: 'Initialisation manuelle',
         mfa: {
             otp: {
-                title: 'One Time Password',
-                mfaDelete1:
-                    'Vous pouvez supprimer les mots de passe à usage unique de cet utilisateur.',
-                mfaDelete2: `Attention ! La suppression d’un mot de passe à usage unique est irréversible ; l’utilisateur doit procéder à une
+                title: 'Code à usage unique',
+                mfaDelete1: 'Vous pouvez supprimer les codes à usage unique de cet utilisateur.',
+                mfaDelete2: `Attention ! La suppression d'un code à usage unique est <b>irréversible</b> ; l'utilisateur doit procéder à une
             nouvelle inscription complète.`,
-                noMfaOtps: 'Cet utilisateur n’a pas de mot de passe à usage unique',
+                noMfaOtps: `Cet utilisateur n'a pas de code à usage unique`,
             },
             webauthn: {
-                title: 'Clés d’accès',
-                mfaDelete1: 'Vous pouvez supprimer les clés d’accès de cet utilisateur.',
-                mfaDelete2: `Attention ! La suppression d’une clé d’accès est irréversible ; l’utilisateur doit procéder à une
+                title: `Clés d'accès`,
+                mfaDelete1: `Vous pouvez supprimer les clés d'accès de cet utilisateur.`,
+                mfaDelete2: `Attention ! La suppression d'une clé d'accès est <b>irréversible</b> ; l'utilisateur doit procéder à une
             nouvelle inscription complète.`,
-                noMfaKeys: 'Cet utilisateur n’a aucune clé d’accès enregistrée.',
+                noMfaKeys: `Cet utilisateur n'a aucune clé d'accès enregistrée.`,
             },
         },
-        pkOnly1: 'Il s’agit d’un compte utilisant uniquement une clé d’accès.',
+        pkOnly1: `Il s'agit d'un compte utilisant uniquement une clé d'accès.`,
         pkOnly2: `Cet utilisateur utilise la connexion sans mot de passe et n'a défini aucun mot de passe.`,
-        pkOnly3: `Si cet utilisateur a perdu tous ses identifiants, son compte peut être entièrement réinitialisé et un
+        pkOnly3: `Si cet utilisateur a perdu toutes ses clés d'accès, son compte peut être entièrement réinitialisé et un
             nouvel e-mail de réinitialisation de mot de passe peut lui être envoyé. Pour ce faire, accédez à l'onglet
-            'MFA' et supprimez tous les identifiants existants.`,
+            « MFA » et supprimez toutes les clés d'accès existantes.`,
         pwdNoInit: `L'utilisateur n'a pas encore effectué la réinitialisation initiale de son mot de passe.`,
         pwdSendEmailBtn: 'Envoyer un e-mail de réinitialisation',
         pwdSendEmailDesc: `Vous pouvez envoyer un nouvel e-mail de réinitialisation si l'utilisateur n'en a pas reçu.`,
@@ -593,9 +591,9 @@ export let I18nAdminFr: I18nAdmin = {
                 "Une URI de redirection ne doit pas contenir de caractères de contrôle dans le nom d'un paramètre de requête",
             fragment: 'Une URI de redirection ne doit pas contenir de fragment (#)',
             reservedKey:
-                'Une URI de redirection ne doit pas contenir le paramètre de requête "{{ KEY }}", car il est défini par la réponse d\'autorisation',
+                "Une URI de redirection ne doit pas contenir le paramètre de requête « {{ KEY }} », car il est défini par la réponse d'autorisation",
             reservedKeyLogout:
-                'Une URI de redirection après déconnexion ne doit pas contenir le paramètre de requête "{{ KEY }}", car il est défini lors de la déconnexion',
+                'Une URI de redirection après déconnexion ne doit pas contenir le paramètre de requête « {{ KEY }} », car il est défini lors de la déconnexion',
         },
     },
 };
