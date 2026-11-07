@@ -194,6 +194,9 @@ pub struct PamUserCreateRequest {
     pub username: String,
     #[validate(email)]
     pub email: String,
+    /// Optional group memberships to assign immediately on creation.
+    /// Each entry links this user to a PAM group by `gid`.
+    pub groups: Option<Vec<PamGroupUserLink>>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
