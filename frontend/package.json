@@ -20,6 +20,7 @@
         "test:login": "npm run build && node --test tests/login.node.mjs",
         "test:mail-empty-body": "npm run build && node --test tests/mail-empty-body.node.mjs",
         "test:admin-provider-reset": "npm run build && node --test tests/admin-provider-reset.node.mjs",
+        "test:editor-toolbar": "npm run build && node --test tests/editor-toolbar.node.mjs",
         "lint": "prettier --check . && eslint .",
         "format": "./node_modules/prettier/bin/prettier.cjs --write .",
         "format-check": "./node_modules/prettier/bin/prettier.cjs -c ."
