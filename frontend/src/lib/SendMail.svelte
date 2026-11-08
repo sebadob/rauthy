@@ -237,7 +237,9 @@
         </p>
 
         <div class="flex gap-10">
-            <Button onclick={submit} isDisabled={!(body || bodyRaw) || !subject}>Send</Button>
+            <Button onclick={submit} isDisabled={!(body.trim() || bodyRaw.trim()) || !subject}
+                >Send</Button
+            >
 
             {#if success}
                 <IconCheck />
