@@ -121,7 +121,8 @@ pub async fn grant_type_password(
                 user.password = Some(new_hash);
             }
 
-            user.save(None).await?;
+            // only the login columns: the user may have changed during the password hashing
+            user.save_login_state(!hash_uptodate).await?;
 
             if client.is_dynamic() {
                 ClientDyn::update_used(&client.id).await?;
@@ -168,7 +169,7 @@ pub async fn grant_type_password(
 
             user.last_failed_login = Some(Utc::now().timestamp());
             user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
-            user.save(None).await?;
+            user.save_login_state(false).await?;
 
             *user_failed_logins = user.failed_login_attempts;
 

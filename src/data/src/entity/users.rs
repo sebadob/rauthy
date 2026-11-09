@@ -170,6 +170,15 @@ failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expire
 auth_provider_id = $16, federation_uid = $17, picture_id = $18
 WHERE id = $19"#;
 
+static SQL_SAVE_LOGIN_STATE: &str = r#"
+UPDATE USERS SET last_login = $1, last_failed_login = $2, failed_login_attempts = $3
+WHERE id = $4"#;
+
+static SQL_SAVE_LOGIN_STATE_PASSWORD: &str = r#"
+UPDATE USERS SET last_login = $1, last_failed_login = $2, failed_login_attempts = $3,
+password = $4
+WHERE id = $5"#;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
     // New -> neither password nor a passkey has been set yet
@@ -1155,6 +1164,76 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
             ],
         )
         .await?;
+
+        Ok(())
+    }
+
+    /// Saves only what a password login changes: `last_login`, `last_failed_login`,
+    /// `failed_login_attempts`, and `password` with `password_rehashed`. Unlike [`Self::save`],
+    /// it does not write back the other columns of this copy, which the login read before it
+    /// spent its time on the password hash, so a change of the user meanwhile (a picture upload,
+    /// an admin update) is kept. The cached user is dropped, the next lookup reads the row.
+    pub async fn save_login_state(&self, password_rehashed: bool) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            let client = DB::hql();
+            if password_rehashed {
+                client
+                    .execute(
+                        SQL_SAVE_LOGIN_STATE_PASSWORD,
+                        params!(
+                            self.last_login,
+                            self.last_failed_login,
+                            self.failed_login_attempts,
+                            &self.password,
+                            &self.id
+                        ),
+                    )
+                    .await?;
+            } else {
+                client
+                    .execute(
+                        SQL_SAVE_LOGIN_STATE,
+                        params!(
+                            self.last_login,
+                            self.last_failed_login,
+                            self.failed_login_attempts,
+                            &self.id
+                        ),
+                    )
+                    .await?;
+            }
+        } else if password_rehashed {
+            DB::pg_execute(
+                SQL_SAVE_LOGIN_STATE_PASSWORD,
+                &[
+                    &self.last_login,
+                    &self.last_failed_login,
+                    &self.failed_login_attempts,
+                    &self.password,
+                    &self.id,
+                ],
+            )
+            .await?;
+        } else {
+            DB::pg_execute(
+                SQL_SAVE_LOGIN_STATE,
+                &[
+                    &self.last_login,
+                    &self.last_failed_login,
+                    &self.failed_login_attempts,
+                    &self.id,
+                ],
+            )
+            .await?;
+        }
+
+        let client = DB::hql();
+        client
+            .delete(Cache::User, format!("{IDX_USERS}_{}", self.id))
+            .await?;
+        client
+            .delete(Cache::User, format!("{IDX_USERS}_{}", self.email))
+            .await?;
 
         Ok(())
     }
@@ -2633,6 +2712,54 @@ mod tests {
         assert_eq!(User::count().await.unwrap(), count);
         assert!(hql_cached(idx_id).await.is_none());
         assert!(hql_cached(idx_email).await.is_none());
+    }
+
+    /// A login saved through a copy of the user read before a concurrent change, like a picture
+    /// upload during the password hashing, keeps that change and drops the cached user.
+    #[tokio::test]
+    async fn test_save_login_state_keeps_concurrent_changes_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        DB::hql()
+            .execute(
+                "INSERT INTO pictures (id, content_type, storage, data) \
+                VALUES ($1, 'image/png', 'db', NULL)",
+                params!("login_state_pic"),
+            )
+            .await
+            .unwrap();
+        let user = hql_insert_user("login_state", None).await;
+        let mut login = User::find(user.id.clone()).await.unwrap();
+
+        let mut upload = User::find(user.id.clone()).await.unwrap();
+        upload.picture_id = Some("login_state_pic".to_string());
+        upload.save(None).await.unwrap();
+
+        login.last_login = Some(42);
+        login.last_failed_login = None;
+        login.failed_login_attempts = None;
+        login.password = Some("rehashed".to_string());
+        login.save_login_state(true).await.unwrap();
+
+        let idx_id = format!("{IDX_USERS}_{}", user.id);
+        let idx_email = format!("{IDX_USERS}_{}", user.email);
+        assert!(hql_cached(idx_id).await.is_none());
+        assert!(hql_cached(idx_email).await.is_none());
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.picture_id.as_deref(), Some("login_state_pic"));
+        assert_eq!(saved.last_login, Some(42));
+        assert_eq!(saved.password.as_deref(), Some("rehashed"));
+
+        // without a rehash, the password is left alone
+        login.password = Some("stale".to_string());
+        login.last_failed_login = Some(43);
+        login.failed_login_attempts = Some(1);
+        login.save_login_state(false).await.unwrap();
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.password.as_deref(), Some("rehashed"));
+        assert_eq!(saved.last_failed_login, Some(43));
+        assert_eq!(saved.failed_login_attempts, Some(1));
+        assert_eq!(saved.picture_id.as_deref(), Some("login_state_pic"));
     }
 
     /// The picture removed with a user is the one of the deleted row, not the one of a stale
