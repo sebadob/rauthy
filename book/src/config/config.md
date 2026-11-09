@@ -953,11 +953,12 @@ backup_keep_for_local = '3d'
 #   "intro": "...",
 #   "terms_url": "https://example.com/terms"
 # }
-# The response for the user's language is used, the `lang=en`
-# one if that is unavailable.
-# The version of the consent content is the hash of the English
-# (`lang=en`) response. Translations don't affect it, so keep
-# them in sync with `en`.
+# Rauthy requests every language it supports. The `lang=en`
+# response is required and the default: it is shown when the
+# response for the user's language is unavailable.
+# The version of the consent content is the hash of all
+# available responses, so a change in any translation changes
+# it, and so does a translation becoming (un)available.
 # If the `lang=en` response is unavailable or invalid, the
 # built-in content is used instead.
 #source = 'local'
