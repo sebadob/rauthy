@@ -8,6 +8,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::future::Future;
@@ -64,20 +65,22 @@ pub struct ConsentScope {
 
 /// What the user is asked to consent to for a login.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct ConsentContent {
+pub struct ConsentContent<'a> {
     /// `local` as well for an unavailable `remote` source.
     pub source: ConsentSourceType,
     /// SHA-256 (hex) of the canonical JSON of the content, the version a consent is given for.
     /// For `remote`, always the one of the `en` document, independent of the user's language.
     pub content_hash: String,
-    pub name: Option<String>,
+    /// Borrowed from the `[[consent.sources]]` registry, owned from a remote document.
+    #[schema(value_type = Option<String>)]
+    pub name: Option<Cow<'a, str>>,
     /// The requested scopes, sorted.
     pub scopes: Vec<ConsentScope>,
     pub intro: Option<String>,
     pub terms_url: Option<String>,
 }
 
-impl ConsentContent {
+impl<'a> ConsentContent<'a> {
     /// The consent content for a login to `client` with the optional RFC 8707 `resource`.
     /// `None` without `consent.enable`. An unavailable or invalid remote source degrades to
     /// the `local` content and never fails the login. Not called yet, the consent screen will.
@@ -91,8 +94,8 @@ impl ConsentContent {
         resource: Option<&str>,
         scopes: &[String],
         lang: Language,
-    ) -> Option<Self> {
-        Self::resolve_with(
+    ) -> Option<ConsentContent<'static>> {
+        ConsentContent::resolve_with(
             client,
             resource,
             scopes,
@@ -109,7 +112,7 @@ impl ConsentContent {
         resource: Option<&str>,
         scopes: &[String],
         lang: Language,
-        vars: &VarsConsent,
+        vars: &'a VarsConsent,
         find_remote: F,
     ) -> Option<Self>
     where
@@ -119,7 +122,7 @@ impl ConsentContent {
         // the registry entry is the source whenever it exists for the `resource`
         let name = resource
             .and_then(|r| vars.source_for(r))
-            .map(|s| s.name.clone());
+            .map(|s| Cow::Borrowed(s.name.as_str()));
 
         let ConsentSource::Remote(url) = source else {
             return Some(Self::build(None, name, scopes));
@@ -163,7 +166,7 @@ impl ConsentContent {
     }
 
     /// `name` from the `[[consent.sources]]` registry wins over the remote document's `name`.
-    fn build(remote: Option<RemoteDocs>, name: Option<String>, scopes: &[String]) -> Self {
+    fn build(remote: Option<RemoteDocs>, name: Option<Cow<'a, str>>, scopes: &[String]) -> Self {
         let mut scopes = scopes.iter().map(String::as_str).collect::<Vec<_>>();
         scopes.sort_unstable();
         scopes.dedup();
@@ -204,14 +207,14 @@ impl ConsentContent {
         Self {
             source: ConsentSourceType::Remote,
             content_hash,
-            name: name.or(remote.name),
+            name: name.or(remote.name.map(Cow::Owned)),
             scopes,
             intro: remote.intro,
             terms_url: remote.terms_url,
         }
     }
 
-    fn local(name: Option<String>, scopes: &[&str]) -> Self {
+    fn local(name: Option<Cow<'a, str>>, scopes: &[&str]) -> Self {
         let value = serde_json::json!({
             "source": "local",
             "scopes": scopes,
@@ -707,7 +710,7 @@ mod tests {
         let remote = RemoteConsent::parse(REMOTE.as_bytes()).unwrap();
         let content = ConsentContent::build(
             Some(RemoteDocs::same(remote)),
-            Some("Registry".to_string()),
+            Some("Registry".into()),
             &strs(&["openid", "data.write", "data.read"]),
         );
 
@@ -894,7 +897,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             content,
-            ConsentContent::build(None, Some("Registry".to_string()), &scopes)
+            ConsentContent::build(None, Some("Registry".into()), &scopes)
         );
         assert_eq!(content.source, ConsentSourceType::Local);
         assert_eq!(content.name.as_deref(), Some("Registry"));
@@ -975,7 +978,11 @@ mod tests {
 
     /// Resolves the client's own remote source with `en` / `de` mock documents, `None` for
     /// an unavailable one.
-    async fn resolve_mock(lang: Language, en: Option<&str>, de: Option<&str>) -> ConsentContent {
+    async fn resolve_mock(
+        lang: Language,
+        en: Option<&str>,
+        de: Option<&str>,
+    ) -> ConsentContent<'static> {
         resolve_mock_counted(lang, en, de).await.0
     }
 
@@ -984,7 +991,9 @@ mod tests {
         lang: Language,
         en: Option<&str>,
         de: Option<&str>,
-    ) -> (ConsentContent, usize) {
+    ) -> (ConsentContent<'static>, usize) {
+        static NO_SOURCES: LazyLock<VarsConsent> = LazyLock::new(|| vars(Vec::default()));
+
         let calls = AtomicUsize::new(0);
         let client = Client {
             id: "client".to_string(),
@@ -1011,7 +1020,7 @@ mod tests {
             None,
             &strs(&["data.read"]),
             lang,
-            &vars(Vec::default()),
+            &NO_SOURCES,
             find,
         )
         .await
