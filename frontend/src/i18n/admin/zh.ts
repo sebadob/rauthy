@@ -97,7 +97,7 @@ export let I18nAdminZh: I18nAdmin = {
             client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `SCIM基础URI是从中可以正确派生子路由的URI，
-                如<code>{base_uri}/Users/{id}</base_uri></code>。`,
+                如<code>{base_uri}/Users/{id}</code>。`,
             desc: '如果此客户端支持{{ SCIM_LINK }}，您可以在此处激活它。',
             enable: '启用SCIMv2',
             groupSync: '同步组',

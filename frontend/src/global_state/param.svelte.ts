@@ -8,16 +8,6 @@ let _signals: any = $state({});
 let _params: undefined | URLSearchParams =
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : undefined;
 
-export const updateParams = (paramsNew: URLSearchParams) => {
-    for (let [key, value] of paramsNew.entries()) {
-        if (_params && _params.get(key) !== value) {
-            // console.log('updating ', key, ' from ', _params.get(key), ' to ', value);
-            _signals[key] = value;
-        }
-    }
-    _params = paramsNew;
-};
-
 export interface IParam {
     get: () => undefined | string;
     getNum: () => undefined | number;

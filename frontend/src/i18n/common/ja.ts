@@ -313,6 +313,7 @@ export const I18nJa: I18n = {
     passwordReset: {
         accountLogin: 'アカウントにログイン',
         badFormat: '形式が正しくありません',
+        continueSignIn: 'サインインに進む',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: '生成',
         newAccDesc1:
@@ -328,7 +329,7 @@ export const I18nJa: I18n = {
         required: '必須',
         save: '保存',
         success1: 'パスワードを更新しました。',
-        success2: 'まもなく移動します。',
+        success2: '{{ secs }} 秒後に移動します。',
         success3: '移動しない場合は、こちらをクリックしてください:',
         successPasskey1: '新しい Passkey を登録しました。',
         successPasskey2:

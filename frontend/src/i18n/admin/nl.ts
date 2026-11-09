@@ -102,7 +102,7 @@ export let I18nAdminNl: I18nAdmin = {
             client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `De SCIM-basis-URI is die waarvan de subroutes zoals
-                <code>{base_uri}/Users/{id}</base_uri></code> correct kunnen worden afgeleid.`,
+                <code>{base_uri}/Users/{id}</code> correct kunnen worden afgeleid.`,
             desc: 'Als deze client {{ SCIM_LINK }} ondersteunt, kunt u het hier activeren.',
             enable: 'SCIMv2 inschakelen',
             groupSync: 'Groepen synchroniseren',

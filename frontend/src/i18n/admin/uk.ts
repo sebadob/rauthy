@@ -100,7 +100,7 @@ export let I18nAdminUk: I18nAdmin = {
             client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `Базовий URI для SCIM — це той, з якого можна коректно вивести під-маршрути,
-                наприклад <code>{base_uri}/Users/{id}</base_uri></code>.`,
+                наприклад <code>{base_uri}/Users/{id}</code>.`,
             desc: 'Якщо цей клієнт підтримує {{ SCIM_LINK }}, ви можете активувати його тут.',
             enable: 'Активувати SCIMv2',
             groupSync: 'Синхронізувати групи',

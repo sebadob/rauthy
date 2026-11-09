@@ -280,6 +280,7 @@ export interface I18n {
     passwordReset: {
         accountLogin: string;
         badFormat: string;
+        continueSignIn: string;
         fidoLink: string;
         generate: string;
         newAccDesc1: string;

@@ -102,7 +102,7 @@ export let I18nAdminPt: I18nAdmin = {
             Client. Para isso, pode usar a claim 'amr'.`,
         scim: {
             baseUri: `O base URI do SCIM é aquele a partir do qual as sub-rotas, como
-                <code>{base_uri}/Users/{id}</base_uri></code>, podem ser derivadas corretamente.`,
+                <code>{base_uri}/Users/{id}</code>, podem ser derivadas corretamente.`,
             desc: 'Se este Client suportar {{ SCIM_LINK }}, pode ativá-lo aqui.',
             enable: 'Ativar SCIMv2',
             groupSync: 'Sincronizar grupos',
