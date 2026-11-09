@@ -194,8 +194,8 @@ pub async fn run(
 
     rauthy_schedulers::spawn();
 
-    let ldap = &RauthyConfig::get().vars.ldap;
-    if ldap.enable {
+    if RauthyConfig::get().vars.ldap.enable {
+        let ldap = &RauthyConfig::get().vars.ldap;
         let tls = match (&ldap.key_path, &ldap.cert_path) {
             _ if ldap.plain_text => None,
             (Some(key), Some(cert)) => {

@@ -400,7 +400,7 @@ async fn search_client(
     let targets = targets(user_count, threshold, user_id, &search_base, &req.filter)?;
     let (users, groups) = directory::load(&client, targets).await.map_err(internal)?;
 
-    let entries = directory::build(client_id, &client_base, &users, &groups);
+    let entries = directory::build(client_id, &client_base, users, groups);
     Ok(visible(
         entries,
         &search_base,
@@ -460,7 +460,7 @@ fn filter_targets(filter: &LdapFilter) -> Option<Vec<Target>> {
             Some(vec![Target::Uid(val.to_lowercase())])
         }
         LdapFilter::Equality(attr, val) if attr.eq_ignore_ascii_case("mail") => {
-            Some(vec![Target::Mail(val.to_lowercase())])
+            Some(vec![Target::Mail(val.clone())])
         }
         LdapFilter::And(fs) => fs.iter().find_map(filter_targets),
         LdapFilter::Or(fs) if !fs.is_empty() => {
@@ -547,8 +547,8 @@ mod tests {
             family_name: None,
             groups: vec!["admins".into()],
         };
-        let users = [user("id1", "alice"), user("id2", "bob")];
-        directory::build("app", BASE, &users, &["admins".into()])
+        let users = vec![user("id1", "alice"), user("id2", "bob")];
+        directory::build("app", BASE, users, vec!["admins".into()])
     }
 
     fn dns(

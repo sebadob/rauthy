@@ -69,8 +69,8 @@ pub fn root_dse(base_dn: &str) -> Entry {
 pub fn build(
     client_id: &str,
     client_base: &str,
-    users: &[DirUser],
-    groups: &[String],
+    users: Vec<DirUser>,
+    groups: Vec<String>,
 ) -> Vec<Entry> {
     let ou = |name: &str| Entry {
         dn: format!("ou={name},{client_base}"),
@@ -98,11 +98,29 @@ pub fn build(
         ou("groups"),
     ];
 
+    let members: Vec<Vec<String>> = groups
+        .iter()
+        .map(|g| {
+            users
+                .iter()
+                .filter(|u| u.groups.contains(g))
+                .map(|u| dn::user_dn(&u.uid, client_base))
+                .collect()
+        })
+        .collect();
+
     for u in users {
         let name = match &u.family_name {
             Some(f) => format!("{} {f}", u.given_name),
             None => u.given_name.clone(),
         };
+        let dn = dn::user_dn(&u.uid, client_base);
+        let member_of = u
+            .groups
+            .iter()
+            .filter(|g| groups.contains(g))
+            .map(|g| dn::group_dn(g, client_base))
+            .collect();
         let attrs = vec![
             (
                 "objectClass",
@@ -113,36 +131,21 @@ pub fn build(
                     "inetOrgPerson".into(),
                 ],
             ),
-            ("uid", vec![u.uid.clone()]),
-            ("entryUUID", vec![u.id.clone()]),
-            ("mail", vec![u.email.clone()]),
+            ("uid", vec![u.uid]),
+            ("entryUUID", vec![u.id]),
+            ("mail", vec![u.email]),
             ("cn", vec![name.clone()]),
             ("displayName", vec![name]),
-            ("givenName", vec![u.given_name.clone()]),
-            ("sn", u.family_name.clone().into_iter().collect()),
-            (
-                "memberOf",
-                u.groups
-                    .iter()
-                    .filter(|g| groups.contains(g))
-                    .map(|g| dn::group_dn(g, client_base))
-                    .collect(),
-            ),
+            ("givenName", vec![u.given_name]),
+            ("sn", u.family_name.into_iter().collect()),
+            ("memberOf", member_of),
         ];
-        entries.push(Entry {
-            dn: dn::user_dn(&u.uid, client_base),
-            attrs,
-        });
+        entries.push(Entry { dn, attrs });
     }
 
-    for g in groups {
-        let members: Vec<String> = users
-            .iter()
-            .filter(|u| u.groups.contains(g))
-            .map(|u| dn::user_dn(&u.uid, client_base))
-            .collect();
+    for (g, members) in groups.into_iter().zip(members) {
         entries.push(Entry {
-            dn: dn::group_dn(g, client_base),
+            dn: dn::group_dn(&g, client_base),
             attrs: vec![
                 (
                     "objectClass",
@@ -152,7 +155,7 @@ pub fn build(
                         "groupOfUniqueNames".into(),
                     ],
                 ),
-                ("cn", vec![g.clone()]),
+                ("cn", vec![g]),
                 ("member", members.clone()),
                 ("uniqueMember", members),
             ],
@@ -278,25 +281,27 @@ mod tests {
     #[test]
     fn entries() {
         let base = dn::client_base("app", "dc=x");
-        let users = vec![
-            DirUser {
-                id: "id1".into(),
-                uid: "alice".into(),
-                email: "alice@x.io".into(),
-                given_name: "Alice".into(),
-                family_name: Some("Liddell".into()),
-                groups: vec!["admins".into(), "hidden".into()],
-            },
-            DirUser {
-                id: "id2".into(),
-                uid: "bob@x.io".into(),
-                email: "bob@x.io".into(),
-                given_name: "Bob".into(),
-                family_name: None,
-                groups: vec![],
-            },
-        ];
-        let entries = build("app", &base, &users, &["admins".into()]);
+        let users = || {
+            vec![
+                DirUser {
+                    id: "id1".into(),
+                    uid: "alice".into(),
+                    email: "alice@x.io".into(),
+                    given_name: "Alice".into(),
+                    family_name: Some("Liddell".into()),
+                    groups: vec!["admins".into(), "hidden".into()],
+                },
+                DirUser {
+                    id: "id2".into(),
+                    uid: "bob@x.io".into(),
+                    email: "bob@x.io".into(),
+                    given_name: "Bob".into(),
+                    family_name: None,
+                    groups: vec![],
+                },
+            ]
+        };
+        let entries = build("app", &base, users(), vec!["admins".into()]);
         assert_eq!(entries.len(), 3 + 2 + 1);
 
         let alice = &entries[3];
@@ -317,7 +322,7 @@ mod tests {
             vec!["uid=alice,ou=people,cn=app,ou=clients,dc=x"]
         );
 
-        let res = build("app", &base, &users, &[])
+        let res = build("app", &base, users(), vec![])
             .remove(3)
             .into_result(&["mail".into(), "UID".into()]);
         assert_eq!(res.attributes.len(), 2);
