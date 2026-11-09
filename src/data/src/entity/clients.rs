@@ -2832,9 +2832,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
 
     #[test]
     fn consent_source_precedence() {
-        let remote = |url: &str| ConsentSource::Remote {
-            url: reqwest::Url::parse(url).unwrap(),
-        };
+        let remote = |url: &str| ConsentSource::Remote(reqwest::Url::parse(url).unwrap());
         let client = Client {
             id: "client".to_string(),
             consent: Some("https://consent.example.com/client".to_string()),

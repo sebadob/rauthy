@@ -32,7 +32,7 @@ pub enum ConsentSource {
     /// Built-in: only the requested scope names, no fetch.
     Local,
     /// Fetched via `GET {url}?lang=<BCP47>`.
-    Remote { url: Url },
+    Remote(Url),
 }
 
 impl ConsentSource {
@@ -42,7 +42,7 @@ impl ConsentSource {
         if value == "local" {
             return Ok(Self::Local);
         }
-        validate_consent_source_url(value).map(|url| Self::Remote { url })
+        validate_consent_source_url(value).map(Self::Remote)
     }
 }
 
@@ -98,13 +98,13 @@ impl ConsentContent {
             scopes,
             lang,
             &RauthyConfig::get().vars.consent,
-            |url, lang| async move { RemoteConsent::find(&url, lang).await },
+            RemoteConsent::find,
         )
         .await
     }
 
     /// [`Self::resolve`] with injected config and remote lookup.
-    async fn resolve_with<F, Fut>(
+    async fn resolve_with<F>(
         client: &Client,
         resource: Option<&str>,
         scopes: &[String],
@@ -113,8 +113,7 @@ impl ConsentContent {
         find_remote: F,
     ) -> Option<Self>
     where
-        F: Fn(Url, Language) -> Fut,
-        Fut: Future<Output = Result<RemoteConsent, ErrorResponse>>,
+        F: AsyncFn(&Url, Language) -> Result<RemoteConsent, ErrorResponse>,
     {
         let source = client.consent_source_with(resource, vars)?;
         // the registry entry is the source whenever it exists for the `resource`
@@ -122,19 +121,17 @@ impl ConsentContent {
             .and_then(|r| vars.source_for(r))
             .map(|s| s.name.clone());
 
-        let ConsentSource::Remote { url } = source else {
+        let ConsentSource::Remote(url) = source else {
             return Some(Self::build(None, name, scopes));
         };
 
         // `None` for `lang == en`. Fetched concurrently with `en`, and ignored if that one
         // fails.
         let (en, translation) = if lang == HASH_LANGUAGE {
-            (find_remote(url.clone(), HASH_LANGUAGE).await, None)
+            (find_remote(&url, HASH_LANGUAGE).await, None)
         } else {
-            let (en, translation) = tokio::join!(
-                find_remote(url.clone(), HASH_LANGUAGE),
-                find_remote(url.clone(), lang)
-            );
+            let (en, translation) =
+                tokio::join!(find_remote(&url, HASH_LANGUAGE), find_remote(&url, lang));
             (en, Some(translation))
         };
 
@@ -172,7 +169,7 @@ impl ConsentContent {
         scopes.dedup();
 
         let Some(RemoteDocs {
-            display: remote,
+            display: mut remote,
             en,
         }) = remote
         else {
@@ -186,11 +183,12 @@ impl ConsentContent {
             .map(|s| {
                 // a stale translation must not drop a warning of the hashed `en` document
                 let en_warning = en.scopes.get(s).is_some_and(|scope| scope.warning);
-                match remote.scopes.get(s) {
+                // the scopes are deduplicated, so each one is taken once
+                match remote.scopes.remove(s) {
                     Some(scope) => ConsentScope {
                         name: s.to_string(),
-                        title: Some(scope.title.clone()),
-                        description: scope.description.clone(),
+                        title: Some(scope.title),
+                        description: scope.description,
                         warning: scope.warning || en_warning,
                     },
                     None => ConsentScope {
@@ -351,8 +349,8 @@ impl RemoteConsent {
         url: &Url,
     ) -> Option<Result<Self, ErrorResponse>> {
         match cache.get(idx).await {
-            Ok(Some(CachedRemoteConsent::Found(slf))) => Some(Ok(slf)),
-            Ok(Some(CachedRemoteConsent::Unavailable)) => Some(Err(ErrorResponse::new(
+            Ok(Some(Some(slf))) => Some(Ok(slf)),
+            Ok(Some(None)) => Some(Err(ErrorResponse::new(
                 ErrorResponseType::Connection,
                 "consent source recently unavailable",
             ))),
@@ -376,11 +374,10 @@ impl RemoteConsent {
             return;
         };
         // The remaining race between this read and the write is acceptable.
-        if matches!(value, CachedRemoteConsent::Unavailable) && keeps_cached(&cache.get(idx).await)
-        {
+        if value.is_none() && keeps_cached(&cache.get(idx).await) {
             return;
         }
-        if let Err(err) = cache.put(idx, &value, ttl).await {
+        if let Err(err) = cache.put(idx, value, ttl).await {
             error!("Cannot cache consent content for {url}: {err}");
         }
     }
@@ -418,41 +415,35 @@ impl RemoteConsent {
     }
 }
 
-/// Cache value of [`RemoteConsent::find`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-enum CachedRemoteConsent {
-    Found(RemoteConsent),
-    Unavailable,
-}
-
 /// The cache value and TTL for the result of a fetch. `None` for the local back pressure of
 /// the fetcher, which says nothing about the source.
 fn cache_value(
     res: &Result<RemoteConsent, ErrorResponse>,
     ttl: u32,
-) -> Option<(CachedRemoteConsent, u32)> {
+) -> Option<(Option<&RemoteConsent>, u32)> {
     match res {
-        Ok(slf) => Some((CachedRemoteConsent::Found(slf.clone()), ttl)),
+        Ok(slf) => Some((Some(slf), ttl)),
         Err(err) if matches!(err.error, ErrorResponseType::TooManyRequests(_)) => None,
-        Err(_) => Some((CachedRemoteConsent::Unavailable, negative_cache_ttl(ttl))),
+        Err(_) => Some((None, negative_cache_ttl(ttl))),
     }
 }
 
 /// `true` if a failed fetch must not overwrite what the cache holds, given a cache read right
 /// before the write: a value a concurrent lookup has cached meanwhile is kept. An unreadable
 /// cache is written like an empty one, so the failure is still cached.
-fn keeps_cached<E>(reread: &Result<Option<CachedRemoteConsent>, E>) -> bool {
+fn keeps_cached<E>(reread: &Result<Option<Option<RemoteConsent>>, E>) -> bool {
     matches!(reread, Ok(Some(_)))
 }
 
-/// Cache of [`RemoteConsent::find`].
+/// Cache of [`RemoteConsent::find`]. A value is the document, or `None` for a recently
+/// unavailable source.
 trait ConsentCache {
-    async fn get(&self, idx: &str) -> Result<Option<CachedRemoteConsent>, ErrorResponse>;
+    async fn get(&self, idx: &str) -> Result<Option<Option<RemoteConsent>>, ErrorResponse>;
 
     async fn put(
         &self,
         idx: &str,
-        value: &CachedRemoteConsent,
+        value: Option<&RemoteConsent>,
         ttl: u32,
     ) -> Result<(), ErrorResponse>;
 }
@@ -461,21 +452,21 @@ trait ConsentCache {
 struct HqlConsentCache;
 
 impl ConsentCache for HqlConsentCache {
-    async fn get(&self, idx: &str) -> Result<Option<CachedRemoteConsent>, ErrorResponse> {
+    async fn get(&self, idx: &str) -> Result<Option<Option<RemoteConsent>>, ErrorResponse> {
         Ok(DB::hql().get(Cache::ConsentContent, idx).await?)
     }
 
     async fn put(
         &self,
         idx: &str,
-        value: &CachedRemoteConsent,
+        value: Option<&RemoteConsent>,
         ttl: u32,
     ) -> Result<(), ErrorResponse> {
         DB::hql()
             .put(
                 Cache::ConsentContent,
                 idx.to_string(),
-                value,
+                &value,
                 Some(ttl as i64),
             )
             .await?;
@@ -637,9 +628,7 @@ mod tests {
         assert_eq!(ConsentSource::parse("local").unwrap(), ConsentSource::Local);
         assert_eq!(
             ConsentSource::parse("https://consent.example.com/api").unwrap(),
-            ConsentSource::Remote {
-                url: Url::parse("https://consent.example.com/api").unwrap()
-            }
+            ConsentSource::Remote(Url::parse("https://consent.example.com/api").unwrap())
         );
         assert!(ConsentSource::parse("https://consent.example.com/api?v=1&language=x").is_ok());
 
@@ -890,10 +879,7 @@ mod tests {
         };
         let scopes = strs(&["openid", "data.read"]);
         let fetcher = test_fetcher();
-        let find = |url: Url, lang| {
-            let fetcher = &fetcher;
-            async move { RemoteConsent::fetch(fetcher, &url, lang).await }
-        };
+        let find = async |url: &Url, lang| RemoteConsent::fetch(&fetcher, url, lang).await;
 
         // registry source
         let content = ConsentContent::resolve_with(
@@ -934,7 +920,7 @@ mod tests {
             ..Default::default()
         };
         let scopes = strs(&["data.read"]);
-        let find = |url: Url, _lang: Language| async move {
+        let find = async |url: &Url, _lang: Language| {
             Ok(RemoteConsent {
                 name: Some(url.to_string()),
                 ..RemoteConsent::parse(REMOTE.as_bytes()).unwrap()
@@ -1005,21 +991,19 @@ mod tests {
             consent: Some("https://consent.example.com/client".to_string()),
             ..Default::default()
         };
-        let find = |_url: Url, lang: Language| {
+        let find = async |_url: &Url, lang: Language| {
             calls.fetch_add(1, Ordering::SeqCst);
-            async move {
-                let doc = match lang {
-                    Language::En => en,
-                    Language::De => de,
-                    lang => panic!("unexpected fetch for {lang:?}"),
-                };
-                match doc {
-                    Some(doc) => RemoteConsent::parse(doc.as_bytes()),
-                    None => Err(ErrorResponse::new(
-                        ErrorResponseType::Connection,
-                        "unavailable",
-                    )),
-                }
+            let doc = match lang {
+                Language::En => en,
+                Language::De => de,
+                lang => panic!("unexpected fetch for {lang:?}"),
+            };
+            match doc {
+                Some(doc) => RemoteConsent::parse(doc.as_bytes()),
+                None => Err(ErrorResponse::new(
+                    ErrorResponseType::Connection,
+                    "unavailable",
+                )),
             }
         };
         let content = ConsentContent::resolve_with(
@@ -1139,24 +1123,24 @@ mod tests {
     /// In-memory [`ConsentCache`]. Reads fail from the `fail_reads_from`th one on (0-based).
     #[derive(Default)]
     struct MemCache {
-        map: Mutex<HashMap<String, CachedRemoteConsent>>,
+        map: Mutex<HashMap<String, Option<RemoteConsent>>>,
         fail_reads_from: Option<usize>,
         reads: AtomicUsize,
         puts: AtomicUsize,
     }
 
     impl MemCache {
-        fn value(&self, idx: &str) -> Option<CachedRemoteConsent> {
+        fn value(&self, idx: &str) -> Option<Option<RemoteConsent>> {
             self.map.lock().unwrap().get(idx).cloned()
         }
 
-        fn insert(&self, idx: &str, value: CachedRemoteConsent) {
+        fn insert(&self, idx: &str, value: Option<RemoteConsent>) {
             self.map.lock().unwrap().insert(idx.to_string(), value);
         }
     }
 
     impl ConsentCache for MemCache {
-        async fn get(&self, idx: &str) -> Result<Option<CachedRemoteConsent>, ErrorResponse> {
+        async fn get(&self, idx: &str) -> Result<Option<Option<RemoteConsent>>, ErrorResponse> {
             let n = self.reads.fetch_add(1, Ordering::SeqCst);
             if self.fail_reads_from.is_some_and(|from| n >= from) {
                 return Err(ErrorResponse::new(
@@ -1170,11 +1154,11 @@ mod tests {
         async fn put(
             &self,
             idx: &str,
-            value: &CachedRemoteConsent,
+            value: Option<&RemoteConsent>,
             _ttl: u32,
         ) -> Result<(), ErrorResponse> {
             self.puts.fetch_add(1, Ordering::SeqCst);
-            self.insert(idx, value.clone());
+            self.insert(idx, value.cloned());
             Ok(())
         }
     }
@@ -1199,11 +1183,11 @@ mod tests {
     fn cache_value_by_result() {
         assert_eq!(
             cache_value(&Ok(remote_doc()), 3600),
-            Some((CachedRemoteConsent::Found(remote_doc()), 3600))
+            Some((Some(&remote_doc()), 3600))
         );
         assert_eq!(
             cache_value(&Err(unavailable()), 3600),
-            Some((CachedRemoteConsent::Unavailable, negative_cache_ttl(3600)))
+            Some((None, negative_cache_ttl(3600)))
         );
         // the fetcher's own back pressure says nothing about the source
         assert_eq!(cache_value(&Err(too_many()), 3600), None);
@@ -1225,12 +1209,8 @@ mod tests {
 
     #[test]
     fn keeps_cached_only_a_cached_value() {
-        assert!(keeps_cached::<()>(&Ok(Some(CachedRemoteConsent::Found(
-            remote_doc()
-        )))));
-        assert!(keeps_cached::<()>(&Ok(Some(
-            CachedRemoteConsent::Unavailable
-        ))));
+        assert!(keeps_cached::<()>(&Ok(Some(Some(remote_doc())))));
+        assert!(keeps_cached::<()>(&Ok(Some(None))));
         assert!(!keeps_cached::<()>(&Ok(None)));
         // an unreadable cache is written like an empty one
         assert!(!keeps_cached(&Err(())));
@@ -1255,7 +1235,7 @@ mod tests {
         )
         .await;
         assert!(res.is_err());
-        assert_eq!(cache.value(&idx), Some(CachedRemoteConsent::Unavailable));
+        assert_eq!(cache.value(&idx), Some(None));
     }
 
     #[tokio::test]
@@ -1271,16 +1251,13 @@ mod tests {
             3600,
             || async {
                 // another lookup caches the document while this fetch fails
-                cache.insert(&idx, CachedRemoteConsent::Found(remote_doc()));
+                cache.insert(&idx, Some(remote_doc()));
                 Err(unavailable())
             },
         )
         .await;
         assert!(res.is_err());
-        assert_eq!(
-            cache.value(&idx),
-            Some(CachedRemoteConsent::Found(remote_doc()))
-        );
+        assert_eq!(cache.value(&idx), Some(Some(remote_doc())));
         assert_eq!(cache.puts.load(Ordering::SeqCst), 0);
     }
 
@@ -1357,7 +1334,7 @@ mod tests {
             Language::En,
             3600,
             || async {
-                cache.insert(&idx, CachedRemoteConsent::Found(remote_doc()));
+                cache.insert(&idx, Some(remote_doc()));
                 Err(too_many())
             },
         )

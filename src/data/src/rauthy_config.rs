@@ -5406,9 +5406,9 @@ name = 'Data'
                 },
                 VarsConsentSource {
                     resource: "urn:example:data".to_string(),
-                    source: ConsentSource::Remote {
-                        url: reqwest::Url::parse("https://consent.example.com/data").unwrap()
-                    },
+                    source: ConsentSource::Remote(
+                        reqwest::Url::parse("https://consent.example.com/data").unwrap()
+                    ),
                     name: "Data".to_string(),
                 },
             ]
