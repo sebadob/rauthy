@@ -460,7 +460,8 @@ fn filter_targets(filter: &LdapFilter) -> Option<Vec<Target>> {
             Some(vec![Target::Uid(val.to_lowercase())])
         }
         LdapFilter::Equality(attr, val) if attr.eq_ignore_ascii_case("mail") => {
-            Some(vec![Target::Mail(val.clone())])
+            // lowercased only so `targets()` dedups case variants, lookups lowercase anyway
+            Some(vec![Target::Mail(val.to_lowercase())])
         }
         LdapFilter::And(fs) => fs.iter().find_map(filter_targets),
         LdapFilter::Or(fs) if !fs.is_empty() => {
@@ -750,6 +751,24 @@ mod tests {
         assert_eq!(
             targets(1000, 1000, None, BASE, &filter),
             Ok(Some(vec![Target::Uid("alice".into())]))
+        );
+        let filter = LdapFilter::Or(
+            (0..10_000)
+                .map(|i| {
+                    eq(
+                        "mail",
+                        if i % 2 == 0 {
+                            "Alice@x.io"
+                        } else {
+                            "alice@x.io"
+                        },
+                    )
+                })
+                .collect(),
+        );
+        assert_eq!(
+            targets(1000, 1000, None, BASE, &filter),
+            Ok(Some(vec![Target::Mail("alice@x.io".into())]))
         );
 
         // a base search on a user DN targets that user, whatever the filter
