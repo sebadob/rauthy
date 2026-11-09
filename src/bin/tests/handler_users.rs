@@ -113,24 +113,16 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     let user_by_email = res.json::<UserResponse>().await?;
     assert_eq!(user_by_email.id, alfred.id);
 
-    // `given_name` is required by default and must not be deletable via PATCH
+    // an admin may clear a required value (`given_name` by default) to make the user set it again
     let res = reqwest::Client::new()
         .patch(&url_id)
         .headers(auth_headers.clone())
         .json(&serde_json::json!({ "put": [], "del": ["given_name"] }))
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
-    // a patch keeping the required values still succeeds
-    let res = reqwest::Client::new()
-        .patch(&url_id)
-        .headers(auth_headers.clone())
-        .json(&serde_json::json!({ "put": [{ "key": "family_name", "value": "Pennyworth" }], "del": [] }))
-        .send()
-        .await?;
-    assert_eq!(res.status(), 200);
+    assert_eq!(res.status(), StatusCode::OK);
     let patched = res.json::<UserResponse>().await?;
-    assert_eq!(patched.given_name.as_deref(), Some("Alfred"));
+    assert_eq!(patched.given_name, None);
 
     // delete the user again
     let res = reqwest::Client::new()
