@@ -165,6 +165,17 @@ pub struct NewClientRequest {
     /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
+    /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
+    /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
+    /// precedence over this value, which in turn takes precedence over `local`. `None` falls back
+    /// to `local`. Stored but not used yet, the consent screen will.
+    ///
+    /// Validation: `^(local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
+    /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch.
+    /// Checked when the client is saved, not by `validate()`, so that an error never echoes the
+    /// value.
+    #[serde(default)]
+    pub consent: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -245,6 +256,17 @@ pub struct UpdateClientRequest {
     /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
     #[validate(custom(function = "validate_vec_resource"))]
     pub default_aud: Option<Vec<String>>,
+    /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
+    /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
+    /// precedence over this value, which in turn takes precedence over `local`. `None` falls back
+    /// to `local`. Stored but not used yet, the consent screen will.
+    ///
+    /// Validation: `^(local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
+    /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch.
+    /// Checked when the client is saved, not by `validate()`, so that an error never echoes the
+    /// value.
+    #[serde(default)]
+    pub consent: Option<String>,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -334,6 +356,8 @@ pub struct ClientResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_aud: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub consent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimClientRequestResponse>,
 }
 
@@ -381,4 +405,47 @@ pub struct DynamicClientResponse {
     pub id_token_signed_response_alg: String,
     pub token_endpoint_auth_method: String,
     pub token_endpoint_auth_signing_alg: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// `validate()` must not check `consent`: its error would echo the URL, which may carry
+    /// userinfo credentials, into the 400 body and the debug log. `consent` is validated in
+    /// `Client::validate_consent` instead.
+    const CONSENT_WITH_SECRET: &str = "https://user:secret@consent.example.com/x";
+
+    #[test]
+    fn new_client_validation_skips_the_consent() {
+        let req = serde_json::from_value::<NewClientRequest>(json!({
+            "id": "client",
+            "confidential": false,
+            "redirect_uris": ["https://client.example.com/cb"],
+            "consent": CONSENT_WITH_SECRET,
+        }))
+        .unwrap();
+        req.validate().unwrap();
+    }
+
+    #[test]
+    fn update_client_validation_skips_the_consent() {
+        let req = serde_json::from_value::<UpdateClientRequest>(json!({
+            "confidential": false,
+            "redirect_uris": ["https://client.example.com/cb"],
+            "enabled": true,
+            "flows_enabled": ["authorization_code"],
+            "access_token_alg": "EdDSA",
+            "id_token_alg": "EdDSA",
+            "auth_code_lifetime": 60,
+            "access_token_lifetime": 1800,
+            "scopes": ["openid"],
+            "default_scopes": ["openid"],
+            "force_mfa": false,
+            "consent": CONSENT_WITH_SECRET,
+        }))
+        .unwrap();
+        req.validate().unwrap();
+    }
 }

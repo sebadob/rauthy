@@ -1,3 +1,5 @@
+use crate::constants::CONSENT_SOURCE_MAX_LEN;
+use crate::regex::RE_RESOURCE;
 use ammonia::Url;
 use ammonia::url::form_urlencoded;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -78,6 +80,56 @@ fn reserved_query_key(key: &str, reserved_keys: &[&'static str]) -> Option<&'sta
 }
 
 #[inline]
+/// `value` must be an absolute `https://` URL with a host, without userinfo and without a
+/// fragment.
+pub fn validate_https_url(value: &str) -> Result<Url, String> {
+    // The errors never contain `value`, which may carry credentials.
+    let url = Url::parse(value).map_err(|err| format!("invalid URL: {err}"))?;
+    if url.scheme() != "https" {
+        return Err("the URL must be an https URL".to_string());
+    }
+    if url.host_str().is_none_or(|h| h.is_empty()) {
+        return Err("the URL has no host".to_string());
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err("the URL must not contain userinfo".to_string());
+    }
+    if url.fragment().is_some() {
+        return Err("the URL must not contain a fragment".to_string());
+    }
+    Ok(url)
+}
+
+/// The grammar of a remote consent source URL, checked by `ConsentSource::parse`, which both the
+/// client API (through `Client::validate_consent`) and the runtime use: at most
+/// [`CONSENT_SOURCE_MAX_LEN`] bytes of [`RE_RESOURCE`] characters, an URL accepted by
+/// [`validate_https_url`], and no `lang` query key, which is appended on each fetch.
+pub fn validate_consent_source_url(value: &str) -> Result<Url, String> {
+    if value.len() > CONSENT_SOURCE_MAX_LEN {
+        return Err(format!(
+            "consent source URL must not exceed {CONSENT_SOURCE_MAX_LEN} bytes"
+        ));
+    }
+    if !RE_RESOURCE.is_match(value) {
+        return Err(format!(
+            "consent source URL must match `{}`",
+            RE_RESOURCE.as_str()
+        ));
+    }
+    let url = validate_https_url(value)?;
+    if url
+        .query_pairs()
+        .any(|(k, _)| reserved_query_key(&k, &["lang"]).is_some())
+    {
+        return Err(
+            "consent source URL must not contain a `lang` query parameter in any case or form, it \
+             is added by Rauthy"
+                .to_string(),
+        );
+    }
+    Ok(url)
+}
+
 fn bad_request<T: Into<Cow<'static, str>>>(msg: T) -> Result<Url, ErrorResponse> {
     Err(ErrorResponse::new(ErrorResponseType::BadRequest, msg))
 }
@@ -85,6 +137,74 @@ fn bad_request<T: Into<Cow<'static, str>>>(msg: T) -> Result<Url, ErrorResponse>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_consent_source_url() {
+        for v in [
+            "https://consent.example.com",
+            "https://consent.example.com/api?v=1&language=x",
+            "https://127.0.0.1:8443/consent",
+        ] {
+            assert!(validate_consent_source_url(v).is_ok(), "{v}");
+        }
+        for v in [
+            "",
+            "local",
+            "https://",
+            "http://consent.example.com",
+            "https://consent.example.com/#x",
+            "https://consent.example.com/a b",
+            "https://consent.example.com/a\nb",
+            "https://u:p@consent.example.com/api",
+            "https://u@consent.example.com/api",
+            "https://:p@consent.example.com/api",
+            "https://consent.example.com/api?lang=en",
+            "https://consent.example.com/api?v=1&lang=",
+            "https://consent.example.com/api?LANG=de",
+            "https://consent.example.com/api?lang%5B%5D=de",
+            "https://consent.example.com/api?lang%5B0%5D=x",
+            "https://consent.example.com/api?lang.x=1",
+            "https://consent.example.com/api?l%61ng=en",
+        ] {
+            assert!(validate_consent_source_url(v).is_err(), "{v}");
+        }
+
+        let prefix = "https://consent.example.com/";
+        let max = format!(
+            "{prefix}{}",
+            "a".repeat(CONSENT_SOURCE_MAX_LEN - prefix.len())
+        );
+        assert!(validate_consent_source_url(&max).is_ok());
+        assert!(validate_consent_source_url(&format!("{max}a")).is_err());
+    }
+
+    #[test]
+    fn test_https_url_rejects_userinfo() {
+        assert!(validate_https_url("https://example.com/terms").is_ok());
+        assert!(validate_https_url("https://u:p@example.com/terms").is_err());
+        assert!(validate_https_url("https://u@example.com/terms").is_err());
+    }
+
+    #[test]
+    fn test_url_errors_do_not_echo_the_value() {
+        for v in [
+            "https://user:secret@host/x",
+            "http://user:secret@host/x",
+            "https://user:secret@host/x#secret",
+            "https://user:secret@host/x?lang=secret",
+            "https://user:secret@host/x y",
+            "https://host/x?token=secret&lang=en",
+            "https://host/x?token=secret#f",
+            "https://?token=secret",
+            "secret",
+        ] {
+            let err = validate_consent_source_url(v).unwrap_err();
+            assert!(!err.contains("secret"), "{v}: {err}");
+            if let Err(err) = validate_https_url(v) {
+                assert!(!err.contains("secret"), "{v}: {err}");
+            }
+        }
+    }
 
     #[test]
     fn test_redirect_uri() {

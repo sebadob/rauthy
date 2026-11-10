@@ -308,6 +308,7 @@ async fn to_entity(
         created_micros: existing
             .map(|e| e.created_micros)
             .unwrap_or_else(|| Some(Utc::now().timestamp_micros())),
+        consent: existing.and_then(|e| e.consent.clone()),
     })
 }
 
@@ -341,7 +342,8 @@ async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
                     c.restrict_group_prefix.clone(),
                     c.allowed_resources.clone(),
                     c.default_aud.clone(),
-                    c.created_micros
+                    c.created_micros,
+                    c.consent.clone()
                 ),
             )
             .await?;
@@ -374,6 +376,7 @@ async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
                 &c.allowed_resources,
                 &c.default_aud,
                 &c.created_micros,
+                &c.consent,
             ],
         )
         .await?;
@@ -430,6 +433,7 @@ mod tests {
         existing.secret_kid = Some("kid".to_string());
         existing.claims = Some(b"{}".to_vec());
         existing.default_aud = Some("aud".to_string());
+        existing.consent = Some("https://consent.example.com/app".to_string());
 
         // `generate` must never rotate an existing secret
         let mut c = client("app", "https://localhost/changed");
@@ -442,6 +446,7 @@ mod tests {
         // values outside the bootstrap format are kept, the rest comes from the file
         assert_eq!(e.claims, existing.claims);
         assert_eq!(e.default_aud, existing.default_aud);
+        assert_eq!(e.consent, existing.consent);
         assert_eq!(e.created_micros, existing.created_micros);
         assert_eq!(
             e.redirect_uris,

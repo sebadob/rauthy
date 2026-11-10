@@ -639,17 +639,7 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // USER CONSENTS
     debug!("Migrating table: user_consents");
-    // the table may not exist yet in the source DB
-    let exists: bool = conn.query_row(
-        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user_consents')",
-        [],
-        |row| row.get(0),
-    )?;
-    let before = if exists {
-        query_sqlite::<UserConsent>(&conn, "SELECT * FROM user_consents").await?
-    } else {
-        Vec::new()
-    };
+    let before = query_sqlite::<UserConsent>(&conn, "SELECT * FROM user_consents").await?;
     inserts::user_consents(before).await?;
 
     Ok(())
@@ -1036,21 +1026,7 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
 
     // USER CONSENTS
     debug!("Migrating table: user_consents");
-    // the table may not exist yet in the source DB
-    let exists: bool = DB::pg_query_rows_with(
-        &cl,
-        "SELECT to_regclass('user_consents') IS NOT NULL",
-        &[],
-        1,
-    )
-    .await?
-    .first()
-    .is_some_and(|row| row.get(0));
-    let before = if exists {
-        DB::pg_query_map_with(&cl, "SELECT * FROM user_consents", &[], 0).await?
-    } else {
-        Vec::new()
-    };
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_consents", &[], 0).await?;
     inserts::user_consents(before).await?;
 
     Ok(())

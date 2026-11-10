@@ -114,14 +114,15 @@ pub async fn grant_type_password(
             user.failed_login_attempts = None;
 
             // check if the password hash should be upgraded
-            let hash_uptodate = user.is_argon2_uptodate(&RauthyConfig::get().argon2_params)?;
-            if !hash_uptodate {
+            let new_hash = if user.is_argon2_uptodate(&RauthyConfig::get().argon2_params)? {
+                None
+            } else {
                 info!("Updating Argon2ID params for user '{}'", &user.email);
-                let new_hash = HashPassword::hash_password(password).await?;
-                user.password = Some(new_hash);
-            }
+                Some(HashPassword::hash_password(password).await?)
+            };
 
-            user.save(None).await?;
+            // only the login columns: the user may have changed during the password hashing
+            user.save_login_state(new_hash.as_deref()).await?;
 
             if client.is_dynamic() {
                 ClientDyn::update_used(&client.id).await?;
@@ -168,7 +169,7 @@ pub async fn grant_type_password(
 
             user.last_failed_login = Some(Utc::now().timestamp());
             user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
-            user.save(None).await?;
+            user.save_login_state(None).await?;
 
             *user_failed_logins = user.failed_login_attempts;
 

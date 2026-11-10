@@ -1,4 +1,4 @@
-use crate::database::{Cache, DB};
+use crate::database::{Cache, DB, PgClient};
 use crate::email::email_change_confirm::send_email_confirm_change;
 use crate::email::email_change_info::send_email_change_info_new;
 use crate::email::password_reset::send_pwd_reset;
@@ -169,6 +169,14 @@ email_verified = $8, password_expires = $9, last_login = $10, last_failed_login 
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
 auth_provider_id = $16, federation_uid = $17, picture_id = $18
 WHERE id = $19"#;
+
+/// The new password hash `$5` is written only while the stored one is still the validated `$4`.
+/// SQLite numbers `$n` in the order of appearance, so they appear in order.
+static SQL_SAVE_LOGIN_STATE: &str = r#"
+UPDATE USERS SET last_login = $1, last_failed_login = $2, failed_login_attempts = $3,
+password = CASE WHEN password = $4 THEN COALESCE($5, password) ELSE password END
+WHERE id = $6
+RETURNING email"#;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -1157,6 +1165,67 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         .await?;
 
         Ok(())
+    }
+
+    /// Saves only what a password login changes: `last_login`, `last_failed_login`,
+    /// `failed_login_attempts`, and a rehashed `new_password`. Unlike [`Self::save`], it does
+    /// not write back the other columns of this copy, which the login read before it spent its
+    /// time on the password hash, so a change of the user meanwhile (a picture upload, an admin
+    /// update) is kept. `new_password` replaces only the hash this copy holds, the one the login
+    /// validated: a password changed meanwhile is kept. The cached user is dropped under its
+    /// email and under the stored one, if a concurrent update changed it.
+    pub async fn save_login_state(&self, new_password: Option<&str>) -> Result<(), ErrorResponse> {
+        let stored_email = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    SQL_SAVE_LOGIN_STATE,
+                    params!(
+                        self.last_login,
+                        self.last_failed_login,
+                        self.failed_login_attempts,
+                        &self.password,
+                        new_password.map(String::from),
+                        &self.id
+                    ),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get::<String>("email"))
+        } else {
+            let cl = DB::pg().await?;
+            self.pg_save_login_state(&cl, new_password).await?
+        };
+
+        Self::invalidate_cache(&self.id, &self.email).await?;
+        if let Some(email) = stored_email.filter(|email| email != &self.email) {
+            Self::invalidate_cache(&self.id, &email).await?;
+        }
+        Ok(())
+    }
+
+    /// The Postgres statement of [`Self::save_login_state`], the stored email if the row exists.
+    async fn pg_save_login_state(
+        &self,
+        cl: &PgClient,
+        new_password: Option<&str>,
+    ) -> Result<Option<String>, ErrorResponse> {
+        let rows = DB::pg_query_rows_with(
+            cl,
+            SQL_SAVE_LOGIN_STATE,
+            &[
+                &self.last_login,
+                &self.last_failed_login,
+                &self.failed_login_attempts,
+                &self.password,
+                &new_password,
+                &self.id,
+            ],
+            1,
+        )
+        .await?;
+        Ok(rows.first().map(|row| row.get("email")))
     }
 
     pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
@@ -2633,6 +2702,252 @@ mod tests {
         assert_eq!(User::count().await.unwrap(), count);
         assert!(hql_cached(idx_id).await.is_none());
         assert!(hql_cached(idx_email).await.is_none());
+    }
+
+    /// A user with the validated password hash `validated` for the login state tests.
+    async fn hql_insert_login_user(id: &str) -> User {
+        let mut user = hql_insert_user(id, None).await;
+        user.password = Some("validated".to_string());
+        user.save(None).await.unwrap();
+        user
+    }
+
+    /// A login saved through a copy of the user read before a concurrent change, like a picture
+    /// upload or an admin update during the password hashing, keeps that change and drops the
+    /// cached user. Cleared failed login columns are persisted: their NULLs overwrite the stored
+    /// values.
+    #[tokio::test]
+    async fn test_save_login_state_keeps_concurrent_changes_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        DB::hql()
+            .execute(
+                "INSERT INTO pictures (id, content_type, storage, data) \
+                VALUES ($1, 'image/png', 'db', NULL)",
+                params!("login_state_pic"),
+            )
+            .await
+            .unwrap();
+        let mut user = hql_insert_login_user("login_state").await;
+        user.last_failed_login = Some(7);
+        user.failed_login_attempts = Some(3);
+        user.save(None).await.unwrap();
+        let mut login = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(login.failed_login_attempts, Some(3));
+
+        let mut upload = User::find(user.id.clone()).await.unwrap();
+        upload.picture_id = Some("login_state_pic".to_string());
+        upload.roles = "admin".to_string();
+        upload.enabled = false;
+        upload.save(None).await.unwrap();
+
+        login.last_login = Some(42);
+        login.last_failed_login = None;
+        login.failed_login_attempts = None;
+        login.save_login_state(Some("rehashed")).await.unwrap();
+
+        let idx_id = format!("{IDX_USERS}_{}", user.id);
+        let idx_email = format!("{IDX_USERS}_{}", user.email);
+        assert!(hql_cached(idx_id).await.is_none());
+        assert!(hql_cached(idx_email).await.is_none());
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.picture_id.as_deref(), Some("login_state_pic"));
+        assert_eq!(saved.roles, "admin");
+        assert!(!saved.enabled);
+        assert_eq!(saved.last_login, Some(42));
+        assert_eq!(saved.last_failed_login, None);
+        assert_eq!(saved.failed_login_attempts, None);
+        assert_eq!(saved.password.as_deref(), Some("rehashed"));
+
+        // without a rehash, the password is left alone
+        login.password = Some("rehashed".to_string());
+        login.last_failed_login = Some(43);
+        login.failed_login_attempts = Some(1);
+        login.save_login_state(None).await.unwrap();
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.password.as_deref(), Some("rehashed"));
+        assert_eq!(saved.last_failed_login, Some(43));
+        assert_eq!(saved.failed_login_attempts, Some(1));
+        assert_eq!(saved.picture_id.as_deref(), Some("login_state_pic"));
+        assert_eq!(saved.roles, "admin");
+        assert!(!saved.enabled);
+    }
+
+    /// A login state saved for a user deleted meanwhile is a no-op: no row is created and no
+    /// user is cached.
+    #[tokio::test]
+    async fn test_save_login_state_missing_user_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let login = User {
+            id: "login_state_missing".to_string(),
+            email: "login_state_missing@example.com".to_string(),
+            password: Some("validated".to_string()),
+            last_login: Some(42),
+            ..Default::default()
+        };
+        login.save_login_state(None).await.unwrap();
+
+        let err = User::find(login.id.clone()).await.unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::NotFound);
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{}", login.id))
+                .await
+                .is_none()
+        );
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{}", login.email))
+                .await
+                .is_none()
+        );
+    }
+
+    /// A rehash does not overwrite a password changed during the login, e.g. by a reset, while
+    /// the login columns are still saved.
+    #[tokio::test]
+    async fn test_save_login_state_keeps_concurrent_password_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let user = hql_insert_login_user("login_state_pwd").await;
+        let mut login = User::find(user.id.clone()).await.unwrap();
+
+        let mut reset = User::find(user.id.clone()).await.unwrap();
+        reset.password = Some("changed".to_string());
+        reset.save(None).await.unwrap();
+
+        login.last_login = Some(42);
+        login.save_login_state(Some("rehashed")).await.unwrap();
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.password.as_deref(), Some("changed"));
+        assert_eq!(saved.last_login, Some(42));
+    }
+
+    /// An email changed during the login does not keep the user cached under the new email with
+    /// the login state from before.
+    #[tokio::test]
+    async fn test_save_login_state_after_concurrent_email_change_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let user = hql_insert_login_user("login_state_mail").await;
+        let mut login = User::find(user.id.clone()).await.unwrap();
+
+        // the update caches the user under the new email
+        let mut admin = User::find(user.id.clone()).await.unwrap();
+        let new_email = "login_state_mail_new@example.com".to_string();
+        admin.email = new_email.clone();
+        admin.save(Some(user.email.clone())).await.unwrap();
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{new_email}"))
+                .await
+                .is_some()
+        );
+
+        login.last_failed_login = Some(43);
+        login.failed_login_attempts = Some(1);
+        login.save_login_state(None).await.unwrap();
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{new_email}"))
+                .await
+                .is_none()
+        );
+        let saved = User::find_by_email(new_email).await.unwrap();
+        assert_eq!(saved.failed_login_attempts, Some(1));
+        assert_eq!(saved.last_failed_login, Some(43));
+    }
+
+    /// The Postgres statement of `User::save_login_state`, with and without a rehash, against
+    /// all Postgres migrations: only the login columns are written, a password changed
+    /// meanwhile is kept, and the stored email is returned.
+    /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
+    #[tokio::test]
+    #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
+    async fn test_save_login_state_postgres() {
+        let (cl, schema) = crate::database::pg_test_schema("login_state").await;
+        cl.batch_execute(
+            r#"
+INSERT INTO users (id, email, given_name, password, roles, enabled, email_verified, created_at,
+                   last_failed_login, failed_login_attempts, language)
+VALUES ('u1', 'u1@example.com', 'u1', 'validated', 'user', true, true, 1, 7, 3, 'en'),
+       ('u2', 'u2@example.com', 'u2', 'validated', 'user', true, true, 1, NULL, NULL, 'en');
+UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com' WHERE id = 'u1';
+UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
+        )
+        .await
+        .unwrap();
+        let row = async |id: &str| {
+            cl.query_one(
+                "SELECT password, enabled, roles, last_login, last_failed_login, \
+                failed_login_attempts FROM users WHERE id = $1",
+                &[&id],
+            )
+            .await
+            .unwrap()
+        };
+        let login = |id: &str| User {
+            id: id.to_string(),
+            email: format!("{id}@example.com"),
+            password: Some("validated".to_string()),
+            last_login: Some(42),
+            ..Default::default()
+        };
+
+        // rehash: the login columns and the new hash, the concurrent update is kept
+        let email = login("u1")
+            .pg_save_login_state(&cl, Some("rehashed"))
+            .await
+            .unwrap();
+        assert_eq!(email.as_deref(), Some("u1_new@example.com"));
+        let r = row("u1").await;
+        assert_eq!(
+            r.get::<_, Option<String>>("password").as_deref(),
+            Some("rehashed")
+        );
+        assert!(!r.get::<_, bool>("enabled"));
+        assert_eq!(r.get::<_, String>("roles"), "admin");
+        assert_eq!(r.get::<_, Option<i64>>("last_login"), Some(42));
+        assert_eq!(r.get::<_, Option<i64>>("last_failed_login"), None);
+        assert_eq!(r.get::<_, Option<i64>>("failed_login_attempts"), None);
+
+        // no rehash: the password is left alone, also when it is the validated one
+        let mut failed = login("u1");
+        failed.password = Some("rehashed".to_string());
+        failed.last_failed_login = Some(43);
+        failed.failed_login_attempts = Some(1);
+        failed.pg_save_login_state(&cl, None).await.unwrap();
+        let r = row("u1").await;
+        assert_eq!(
+            r.get::<_, Option<String>>("password").as_deref(),
+            Some("rehashed")
+        );
+        assert_eq!(r.get::<_, Option<i64>>("last_failed_login"), Some(43));
+        assert_eq!(r.get::<_, Option<i64>>("failed_login_attempts"), Some(1));
+        assert!(!r.get::<_, bool>("enabled"));
+
+        // a password changed meanwhile is not overwritten by the rehash
+        let email = login("u2")
+            .pg_save_login_state(&cl, Some("rehashed"))
+            .await
+            .unwrap();
+        assert_eq!(email.as_deref(), Some("u2@example.com"));
+        let r = row("u2").await;
+        assert_eq!(
+            r.get::<_, Option<String>>("password").as_deref(),
+            Some("changed")
+        );
+        assert_eq!(r.get::<_, Option<i64>>("last_login"), Some(42));
+
+        // a missing user
+        assert!(
+            login("u3")
+                .pg_save_login_state(&cl, Some("rehashed"))
+                .await
+                .unwrap()
+                .is_none()
+        );
+
+        cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+            .await
+            .unwrap();
     }
 
     /// The picture removed with a user is the one of the deleted row, not the one of a stale
