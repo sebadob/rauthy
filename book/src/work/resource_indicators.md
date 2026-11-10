@@ -115,12 +115,13 @@ is cached for `consent.content_cache_ttl` seconds.
 
 The `lang=en` response is required and the default: the content is taken from the response for
 the user's language, or the `lang=en` one if that is unavailable. The version of the consent content
-is the hash of the whole document shown in the user's language, so any edit to that document (any
-field) asks for consent again. A user who switches the language may be asked again. If the
-`lang=en` response is unavailable or returns an invalid document, the built-in content is used
-instead. A failed fetch
-is cached for `min(content_cache_ttl, 60)` seconds per language, so an unavailable source is not
-requested on every lookup.
+is the hash of the content as shown: the name, `intro`, `terms_url` and the requested scopes with
+their title, description and warning (the warnings of the `lang=en` response are shown in every
+language). Any edit to a shown field asks for consent again, an edit to a scope that was not
+requested does not. A user who switches the language may be asked again. If the `lang=en`
+response is unavailable or returns an invalid document, the built-in content is used instead. A
+failed fetch is cached for `min(content_cache_ttl, 60)` seconds per language, so an unavailable
+source is not requested on every lookup.
 
 ## Introspection
 
