@@ -17,6 +17,7 @@
         "test:password-reset": "npm run build && node --test tests/password-reset.node.mjs",
         "test:account-mfa": "npm run build && node --test tests/account-mfa.node.mjs",
         "test:login": "npm run build && node --test tests/login.node.mjs",
+        "test:admin-provider-reset": "npm run build && node --test tests/admin-provider-reset.node.mjs",
         "lint": "prettier --check . && eslint .",
         "format": "./node_modules/prettier/bin/prettier.cjs --write .",
         "format-check": "./node_modules/prettier/bin/prettier.cjs -c ."
