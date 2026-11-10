@@ -129,12 +129,12 @@ async fn handle_conn<S: AsyncRead + AsyncWrite + Unpin>(stream: S, ip: IpAddr) {
         let responses = match ServerOps::try_from(msg.clone()) {
             Ok(ServerOps::SimpleBind(req)) => {
                 let (res, new_session, is_user_bind) =
-                    bind(&req, ip, service_client.as_deref()).await;
+                    bind(req, ip, service_client.as_deref()).await;
                 service_client = service_client_after(service_client, is_user_bind, &new_session);
                 session = new_session;
                 vec![res]
             }
-            Ok(ServerOps::Search(req)) => search(&req, &session).await,
+            Ok(ServerOps::Search(req)) => search(req, &session).await,
             // RFC 4532: an empty authzId for anonymous, `dn:<dn>` otherwise
             Ok(ServerOps::Whoami(req)) => vec![req.gen_success(&match &session {
                 Session::Anonymous => String::new(),
@@ -201,7 +201,7 @@ fn unsupported(msg: LdapMsg) -> Option<LdapMsg> {
 /// `service_client` is the client of the last successful service bind on this connection.
 /// Returns the response, the new session and whether this was a user bind.
 async fn bind(
-    req: &SimpleBindRequest,
+    mut req: SimpleBindRequest,
     ip: IpAddr,
     service_client: Option<&str>,
 ) -> (LdapMsg, Session, bool) {
@@ -228,7 +228,7 @@ async fn bind(
             .disable_ip_brute_force_protection);
     let res = check_bind(
         bind_dn,
-        req.pw.clone(),
+        std::mem::take(&mut req.pw),
         ip,
         &mut user_failed_logins,
         ip_checks,
@@ -247,7 +247,7 @@ async fn bind(
             req.gen_success(),
             Session::Bound {
                 client_id,
-                dn: req.dn.clone(),
+                dn: req.dn,
                 user_id,
             },
             is_user_bind,
@@ -342,7 +342,7 @@ fn user_bind_allowed(client: &Client, service_client: Option<&str>) -> bool {
     !client.confidential || service_client == Some(client.id.as_str())
 }
 
-async fn search(req: &SearchRequest, session: &Session) -> Vec<LdapMsg> {
+async fn search(req: SearchRequest, session: &Session) -> Vec<LdapMsg> {
     let base_dn = &RauthyConfig::get().vars.ldap.base_dn;
 
     if req.base.is_empty() {
@@ -362,19 +362,32 @@ async fn search(req: &SearchRequest, session: &Session) -> Vec<LdapMsg> {
         return vec![req.gen_error(LdapResultCode::InsufficentAccessRights, "bind first".into())];
     };
 
+    // `search_client` consumes `req`, and the final response only needs its `msgid`
+    let msgid = req.msgid;
+    let done = |code, message| {
+        LdapMsg::new(
+            msgid,
+            LdapOp::SearchResultDone(LdapResult {
+                code,
+                matcheddn: String::new(),
+                message,
+                referral: Vec::new(),
+            }),
+        )
+    };
     match search_client(req, client_id, user_id.as_deref(), base_dn).await {
         Ok(mut res) => {
-            res.push(req.gen_success());
+            res.push(done(LdapResultCode::Success, String::new()));
             res
         }
-        Err((code, msg)) => vec![req.gen_error(code, msg)],
+        Err((code, msg)) => vec![done(code, msg)],
     }
 }
 
 /// A `user_id` limits the results to that user's own entry, which also hides it as soon as the
 /// user is no longer allowed for the client.
 async fn search_client(
-    req: &SearchRequest,
+    req: SearchRequest,
     client_id: &str,
     user_id: Option<&str>,
     base_dn: &str,
@@ -401,16 +414,17 @@ async fn search_client(
     let (users, groups) = directory::load(&client, targets).await.map_err(internal)?;
 
     let entries = directory::build(client_id, &client_base, users, groups);
-    Ok(visible(
-        entries,
-        &search_base,
-        req.scope.clone(),
-        user_id,
-        &req.filter,
-    )?
-    .into_iter()
-    .map(|e| req.gen_result_entry(e.into_result(&req.attrs)))
-    .collect())
+    Ok(
+        visible(entries, &search_base, req.scope, user_id, &req.filter)?
+            .into_iter()
+            .map(|e| {
+                LdapMsg::new(
+                    req.msgid,
+                    LdapOp::SearchResultEntry(e.into_result(&req.attrs)),
+                )
+            })
+            .collect(),
+    )
 }
 
 /// Below `server.ssp_threshold` users, searches load the whole directory (`None`). At or above it,
@@ -678,8 +692,7 @@ mod tests {
             dn: String::new(),
             pw: String::new(),
         };
-        let (_, session, is_user_bind) =
-            bind(&req, IpAddr::from([127, 0, 0, 1]), Some("app")).await;
+        let (_, session, is_user_bind) = bind(req, IpAddr::from([127, 0, 0, 1]), Some("app")).await;
         assert!(matches!(session, Session::Anonymous));
         assert_eq!(
             service_client_after(Some("app".into()), is_user_bind, &session),
