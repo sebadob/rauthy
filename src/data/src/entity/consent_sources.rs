@@ -1105,7 +1105,9 @@ mod tests {
         let en2 = resolve_mock(Language::En, Some(REMOTE), Some(&changed_de)).await;
         assert_eq!(en2.content_hash, en.content_hash);
 
-        // an edit only in `en` changes it for an `en` user, not for a `de` one
+        // an edit of `en` text that the `de` document overrides changes the `en` hash, not the
+        // `de` one (`en` warnings still count, see
+        // content_hash_covers_the_en_warning_of_a_translation)
         let changed_en = REMOTE.replace("Read your data", "Read all your data");
         let en3 = resolve_mock(Language::En, Some(&changed_en), Some(REMOTE_DE)).await;
         assert_ne!(en3.content_hash, en.content_hash);

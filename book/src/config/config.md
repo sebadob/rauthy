@@ -965,6 +965,12 @@ backup_keep_for_local = '3d'
 # language may be asked again.
 # If the `lang=en` response is unavailable or invalid, the
 # built-in content is used instead.
+# These fallbacks change the version as well and may ask again:
+# the built-in content while `lang=en` is unavailable or
+# invalid, and the `lang=en` content while the translation is
+# unavailable.
+# This is the planned contract: nothing compares the version
+# with the one a consent was given for yet.
 #source = 'local'
 # The name of the resource shown on the consent screen. It wins
 # over the `name` of a remote consent document, which is only

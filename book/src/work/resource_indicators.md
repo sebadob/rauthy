@@ -119,7 +119,10 @@ is the hash of the content as shown: the name, `intro`, `terms_url` and the requ
 their title, description and warning (the warnings of the `lang=en` response are shown in every
 language). Any edit to a shown field asks for consent again, an edit to a scope that was not
 requested does not. A user who switches the language may be asked again. If the `lang=en`
-response is unavailable or returns an invalid document, the built-in content is used instead. A
+response is unavailable or returns an invalid document, the built-in content is used instead. These
+fallbacks change the version as well and may ask again: the built-in content while `lang=en` is
+unavailable or invalid, and the `lang=en` content while the translation is unavailable. This is the
+planned contract: nothing compares the version with the one a consent was given for yet. A
 failed fetch is cached for `min(content_cache_ttl, 60)` seconds per language, so an unavailable
 source is not requested on every lookup.
 

@@ -2714,7 +2714,8 @@ mod tests {
 
     /// A login saved through a copy of the user read before a concurrent change, like a picture
     /// upload or an admin update during the password hashing, keeps that change and drops the
-    /// cached user. A successful login clears the failed login columns.
+    /// cached user. Cleared failed login columns are persisted: their NULLs overwrite the stored
+    /// values.
     #[tokio::test]
     async fn test_save_login_state_keeps_concurrent_changes_hiqlite() {
         let _lock = HQL_LOCK.lock().await;
@@ -2770,6 +2771,35 @@ mod tests {
         assert_eq!(saved.picture_id.as_deref(), Some("login_state_pic"));
         assert_eq!(saved.roles, "admin");
         assert!(!saved.enabled);
+    }
+
+    /// A login state saved for a user deleted meanwhile is a no-op: no row is created and no
+    /// user is cached.
+    #[tokio::test]
+    async fn test_save_login_state_missing_user_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let login = User {
+            id: "login_state_missing".to_string(),
+            email: "login_state_missing@example.com".to_string(),
+            password: Some("validated".to_string()),
+            last_login: Some(42),
+            ..Default::default()
+        };
+        login.save_login_state(None).await.unwrap();
+
+        let err = User::find(login.id.clone()).await.unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::NotFound);
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{}", login.id))
+                .await
+                .is_none()
+        );
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{}", login.email))
+                .await
+                .is_none()
+        );
     }
 
     /// A rehash does not overwrite a password changed during the login, e.g. by a reset, while
