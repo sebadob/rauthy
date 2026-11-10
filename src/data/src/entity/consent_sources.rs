@@ -14,9 +14,8 @@ use std::fmt::Write;
 use std::future::Future;
 use std::sync::{Arc, LazyLock, Mutex, PoisonError, Weak};
 use std::time::Duration;
-use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
-use tracing::{debug, error, warn};
+use tracing::{error, warn};
 use utoipa::ToSchema;
 
 /// Max size of a remote consent document.
@@ -70,7 +69,7 @@ pub struct ConsentContent<'a> {
     /// `local` as well for an unavailable `remote` source.
     pub source: ConsentSourceType,
     /// SHA-256 (hex) of the canonical JSON of the content, the version a consent is given for.
-    /// For `remote`, always the one of the `en` document, independent of the user's language.
+    /// For `remote`, the one of the whole document shown, so it depends on the user's language.
     pub content_hash: String,
     /// Borrowed from the `[[consent.sources]]` registry, owned from a remote document.
     #[schema(value_type = Option<String>)]
@@ -86,11 +85,10 @@ impl<'a> ConsentContent<'a> {
     /// `None` without `consent.enable`. An unavailable or invalid remote source degrades to
     /// the `local` content and never fails the login. Not called yet, the consent screen will.
     ///
-    /// For a remote source, the document of every [`Language`] is looked up. The content is
-    /// shown from the `lang` document (the `en` one if that fails), while the `content_hash`
-    /// covers all available documents, so it does not depend on the user's language and
-    /// changes with any translation. Without a valid `en` document, the whole content is
-    /// `local`.
+    /// For a remote source, the content is shown from the `lang` document, or the `en` one if
+    /// that fails. The `content_hash` is the one of the whole document shown, so any change
+    /// of it asks for consent again, and so may a change of the user's language. Without a
+    /// valid `en` document, the whole content is `local`.
     pub async fn resolve(
         client: &Client,
         resource: Option<&str>,
@@ -130,49 +128,41 @@ impl<'a> ConsentContent<'a> {
             return Some(Self::build(None, name, scopes));
         };
 
-        // every language, concurrently: the `content_hash` covers all of them
-        let find_remote = &find_remote;
-        let url = &url;
-        let results = futures::future::join_all(
-            Language::iter().map(|l| async move { (l, find_remote(url, l).await) }),
-        )
-        .await;
+        // `None` for `lang == en`. Fetched concurrently with `en`, and ignored if that one
+        // fails.
+        let (en, translation) = if lang == DEFAULT_LANGUAGE {
+            (find_remote(&url, DEFAULT_LANGUAGE).await, None)
+        } else {
+            let (en, translation) =
+                tokio::join!(find_remote(&url, DEFAULT_LANGUAGE), find_remote(&url, lang));
+            (en, Some(translation))
+        };
 
-        let mut docs = BTreeMap::new();
-        for (l, res) in results {
-            match res {
-                Ok(doc) => {
-                    docs.insert(l.as_bcp47(), doc);
-                }
-                Err(err) if l == DEFAULT_LANGUAGE => {
-                    warn!(
-                        "Consent source {url} unavailable for client {}, using `local`: {}",
-                        client.id, err.message
-                    );
-                    return Some(Self::build(None, name, scopes));
-                }
-                Err(err) if l == lang => warn!(
+        let Ok(en) = en.inspect_err(|err| {
+            warn!(
+                "Consent source {url} unavailable for client {}, using `local`: {}",
+                client.id, err.message
+            )
+        }) else {
+            return Some(Self::build(None, name, scopes));
+        };
+        let display = match translation {
+            None => en.clone(),
+            Some(Ok(display)) => display,
+            Some(Err(err)) => {
+                warn!(
                     "Consent source {url} unavailable for client {} and language {}, using \
                     `{}`: {}",
                     client.id,
                     lang.as_bcp47(),
                     DEFAULT_LANGUAGE.as_bcp47(),
                     err.message
-                ),
-                Err(err) => debug!(
-                    "Consent source {url} unavailable for client {} and language {}: {}",
-                    client.id,
-                    l.as_bcp47(),
-                    err.message
-                ),
+                );
+                en.clone()
             }
-        }
-
-        let remote = RemoteDocs {
-            docs,
-            display: lang,
         };
-        Some(Self::build(Some(remote), name, scopes))
+
+        Some(Self::build(Some(RemoteDocs { display, en }), name, scopes))
     }
 
     /// `name` from the `[[consent.sources]]` registry wins over the remote document's `name`.
@@ -181,27 +171,21 @@ impl<'a> ConsentContent<'a> {
         scopes.sort_unstable();
         scopes.dedup();
 
-        let Some(RemoteDocs { mut docs, display }) = remote else {
+        let Some(RemoteDocs {
+            display: mut remote,
+            en,
+        }) = remote
+        else {
             return Self::local(name, &scopes);
         };
 
-        let value = serde_json::to_value(&docs).expect("RemoteConsent to always serialize");
+        let value = serde_json::to_value(&remote).expect("RemoteConsent to always serialize");
         let content_hash = content_hash(&value);
-        let mut remote = docs
-            .remove(display.as_bcp47())
-            .or_else(|| docs.remove(DEFAULT_LANGUAGE.as_bcp47()))
-            .expect("RemoteDocs to always hold `en`");
-        // `None` if `remote` is the `en` document
-        let en = docs.get(DEFAULT_LANGUAGE.as_bcp47());
         let scopes = scopes
             .into_iter()
             .map(|s| {
                 // a stale translation must not drop a warning of the `en` document
-                let en_warning = en
-                    .unwrap_or(&remote)
-                    .scopes
-                    .get(s)
-                    .is_some_and(|scope| scope.warning);
+                let en_warning = en.scopes.get(s).is_some_and(|scope| scope.warning);
                 // the scopes are deduplicated, so each one is taken once
                 match remote.scopes.remove(s) {
                     Some(scope) => ConsentScope {
@@ -258,31 +242,20 @@ impl<'a> ConsentContent<'a> {
 /// The language a remote source must provide. Shown when the user's language is unavailable.
 const DEFAULT_LANGUAGE: Language = Language::En;
 
-/// The available documents of a remote source by BCP 47 tag, always with `en`. The
-/// `content_hash` covers all of them, the `display` one (or `en`) is shown.
-#[derive(Debug)]
+/// The remote documents for a login: `display` in the user's language (or `en` as fallback),
+/// shown and hashed, and `en` for its scope warnings.
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct RemoteDocs {
-    docs: BTreeMap<&'static str, RemoteConsent>,
-    display: Language,
+    display: RemoteConsent,
+    en: RemoteConsent,
 }
 
 impl RemoteDocs {
-    /// `en` only.
     #[cfg(test)]
     fn same(doc: RemoteConsent) -> Self {
-        Self::with(doc, None)
-    }
-
-    /// `en` and an optional `de` translation, shown in `de`.
-    #[cfg(test)]
-    fn with(en: RemoteConsent, de: Option<RemoteConsent>) -> Self {
-        let mut docs = BTreeMap::from([(DEFAULT_LANGUAGE.as_bcp47(), en)]);
-        if let Some(de) = de {
-            docs.insert(Language::De.as_bcp47(), de);
-        }
         Self {
-            docs,
-            display: Language::De,
+            display: doc.clone(),
+            en: doc,
         }
     }
 }
@@ -1032,7 +1005,7 @@ mod tests {
             let doc = match lang {
                 Language::En => en,
                 Language::De => de,
-                _ => None,
+                lang => panic!("unexpected fetch for {lang:?}"),
             };
             match doc {
                 Some(doc) => RemoteConsent::parse(doc.as_bytes()),
@@ -1055,35 +1028,34 @@ mod tests {
         (content, calls.load(Ordering::SeqCst))
     }
 
-    /// One lookup per language for the hash, also when the `en` document is unavailable.
+    /// One lookup for `en`, two for any other language (the required `en` one as well), also
+    /// when the `en` document is unavailable.
     #[tokio::test]
     async fn remote_lookups_per_language() {
-        let all = Language::iter().count();
         for en in [Some(REMOTE), None] {
-            assert_eq!(resolve_mock_counted(Language::En, en, None).await.1, all);
+            assert_eq!(resolve_mock_counted(Language::En, en, None).await.1, 1);
             assert_eq!(
                 resolve_mock_counted(Language::De, en, Some(REMOTE_DE))
                     .await
                     .1,
-                all
+                2
             );
         }
     }
 
+    /// The hash is the one of the whole document shown, in the user's language.
     #[tokio::test]
-    async fn content_hash_covers_every_language() {
+    async fn content_hash_is_from_the_shown_document() {
         let en = resolve_mock(Language::En, Some(REMOTE), Some(REMOTE_DE)).await;
         assert_eq!(en.source, ConsentSourceType::Remote);
         assert_eq!(en.name.as_deref(), Some("Example API"));
-
-        // shown in German, same hash as for `en`
         let de = resolve_mock(Language::De, Some(REMOTE), Some(REMOTE_DE)).await;
         assert_eq!(de.source, ConsentSourceType::Remote);
         assert_eq!(de.name.as_deref(), Some("Beispiel-API"));
         assert_eq!(de.scopes[0].title.as_deref(), Some("Daten lesen"));
-        assert_eq!(de.content_hash, en.content_hash);
+        assert_ne!(de.content_hash, en.content_hash);
 
-        // a change only in a translation changes the hash for every language
+        // an edit only in `de` changes the hash for a `de` user, not for an `en` one
         let changed_de = REMOTE_DE.replace("Deine Daten lesen", "Alle deine Daten lesen");
         let de2 = resolve_mock(Language::De, Some(REMOTE), Some(&changed_de)).await;
         assert_eq!(
@@ -1092,61 +1064,43 @@ mod tests {
         );
         assert_ne!(de2.content_hash, de.content_hash);
         let en2 = resolve_mock(Language::En, Some(REMOTE), Some(&changed_de)).await;
-        assert_eq!(en2.scopes[0].title.as_deref(), Some("Read data"));
-        assert_eq!(en2.content_hash, de2.content_hash);
+        assert_eq!(en2.content_hash, en.content_hash);
 
-        // so does a changed `en` document
+        // an edit only in `en` changes it for an `en` user, not for a `de` one
         let changed_en = REMOTE.replace("Read your data", "Read all your data");
-        let de3 = resolve_mock(Language::De, Some(&changed_en), Some(REMOTE_DE)).await;
-        assert_ne!(de3.content_hash, de.content_hash);
         let en3 = resolve_mock(Language::En, Some(&changed_en), Some(REMOTE_DE)).await;
-        assert_eq!(de3.content_hash, en3.content_hash);
-
-        // an unavailable translation is not part of it
-        let en_only = resolve_mock(Language::En, Some(REMOTE), None).await;
-        assert_ne!(en_only.content_hash, en.content_hash);
+        assert_ne!(en3.content_hash, en.content_hash);
+        let de3 = resolve_mock(Language::De, Some(&changed_en), Some(REMOTE_DE)).await;
+        assert_eq!(de3.content_hash, de.content_hash);
     }
 
-    /// The order in which the documents arrive does not matter.
+    /// Any field of the shown document is part of the hash, also one of a scope that was not
+    /// requested.
     #[tokio::test]
-    async fn content_hash_ignores_the_fetch_order() {
-        let client = Client {
-            id: "client".to_string(),
-            consent: Some("https://consent.example.com/client".to_string()),
-            ..Default::default()
-        };
-        let vars = vars(Vec::default());
-        let scopes = strs(&["data.read"]);
-        let langs = Language::iter().collect::<Vec<_>>();
-
-        let mut hashes = Vec::new();
-        for reverse in [false, true] {
-            let find = async |_url: &Url, lang: Language| {
-                let pos = langs.iter().position(|l| *l == lang).unwrap();
-                let delay = if reverse { langs.len() - pos } else { pos };
-                tokio::time::sleep(Duration::from_millis(5 * delay as u64)).await;
-                match lang {
-                    Language::En => RemoteConsent::parse(REMOTE.as_bytes()),
-                    Language::De => RemoteConsent::parse(REMOTE_DE.as_bytes()),
-                    _ => Err(ErrorResponse::new(
-                        ErrorResponseType::Connection,
-                        "unavailable",
-                    )),
-                }
-            };
-            let content =
-                ConsentContent::resolve_with(&client, None, &scopes, Language::De, &vars, find)
-                    .await
-                    .unwrap();
-            hashes.push(content.content_hash);
+    async fn content_hash_covers_every_field_of_the_shown_document() {
+        let base = resolve_mock(Language::En, Some(REMOTE), None).await;
+        for (from, to) in [
+            ("Read your data", "Read all your data"),
+            ("https://example.com/terms", "https://example.com/terms2"),
+            ("Example wants", "Example would like"),
+            (r#""name": "Example API""#, r#""name": "Other API""#),
+            ("Change your data", "Change all your data"),
+            (r#""warning": true"#, r#""warning": false"#),
+        ] {
+            let changed = REMOTE.replace(from, to);
+            assert_ne!(changed, REMOTE, "{from}");
+            let content = resolve_mock(Language::En, Some(&changed), None).await;
+            assert_ne!(content.content_hash, base.content_hash, "{from}");
         }
-        assert_eq!(hashes[0], hashes[1]);
-        assert_eq!(
-            hashes[0],
-            resolve_mock(Language::De, Some(REMOTE), Some(REMOTE_DE))
-                .await
-                .content_hash
-        );
+    }
+
+    /// A `de` user without a `de` document is shown the `en` one, with its hash.
+    #[tokio::test]
+    async fn missing_translation_gets_the_en_hash() {
+        let en = resolve_mock(Language::En, Some(REMOTE), None).await;
+        let de = resolve_mock(Language::De, Some(REMOTE), None).await;
+        assert_eq!(de.content_hash, en.content_hash);
+        assert_eq!(de.scopes[0].title.as_deref(), Some("Read data"));
     }
 
     #[test]
@@ -1157,7 +1111,10 @@ mod tests {
             RemoteConsent::parse(br#"{"scopes": {"data.write": {"title": "Daten schreiben"}}}"#)
                 .unwrap();
         let content = ConsentContent::build(
-            Some(RemoteDocs::with(en.clone(), Some(de))),
+            Some(RemoteDocs {
+                display: de,
+                en: en.clone(),
+            }),
             None,
             &strs(&["data.read", "data.write"]),
         );
@@ -1173,7 +1130,7 @@ mod tests {
         )
         .unwrap();
         let content = ConsentContent::build(
-            Some(RemoteDocs::with(en, Some(de))),
+            Some(RemoteDocs { display: de, en }),
             None,
             &strs(&["data.read"]),
         );

@@ -113,12 +113,12 @@ consent source cannot hold up ephemeral client lookups. Non-public addresses are
 `consent.danger_allow_private_addresses`, independent of the ephemeral client setting. The content
 is cached for `consent.content_cache_ttl` seconds.
 
-Rauthy requests the document for every language it supports. The `lang=en` response is required
-and the default: the content is taken from the response for the user's language, or the `lang=en`
-one if that is unavailable. The version of the consent content is the hash of all available
-responses, so a change in any translation changes it, and so does a translation becoming available
-or unavailable. If the `lang=en` response is unavailable or returns an invalid document, the
-built-in content is used instead. A failed fetch
+The `lang=en` response is required and the default: the content is taken from the response for
+the user's language, or the `lang=en` one if that is unavailable. The version of the consent content
+is the hash of the whole document shown in the user's language, so any edit to that document (any
+field) asks for consent again. A user who switches the language may be asked again. If the
+`lang=en` response is unavailable or returns an invalid document, the built-in content is used
+instead. A failed fetch
 is cached for `min(content_cache_ttl, 60)` seconds per language, so an unavailable source is not
 requested on every lookup.
 
