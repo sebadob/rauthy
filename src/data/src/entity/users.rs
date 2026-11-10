@@ -2713,7 +2713,8 @@ mod tests {
     }
 
     /// A login saved through a copy of the user read before a concurrent change, like a picture
-    /// upload during the password hashing, keeps that change and drops the cached user.
+    /// upload or an admin update during the password hashing, keeps that change and drops the
+    /// cached user. A successful login clears the failed login columns.
     #[tokio::test]
     async fn test_save_login_state_keeps_concurrent_changes_hiqlite() {
         let _lock = HQL_LOCK.lock().await;
@@ -2726,11 +2727,17 @@ mod tests {
             )
             .await
             .unwrap();
-        let user = hql_insert_login_user("login_state").await;
+        let mut user = hql_insert_login_user("login_state").await;
+        user.last_failed_login = Some(7);
+        user.failed_login_attempts = Some(3);
+        user.save(None).await.unwrap();
         let mut login = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(login.failed_login_attempts, Some(3));
 
         let mut upload = User::find(user.id.clone()).await.unwrap();
         upload.picture_id = Some("login_state_pic".to_string());
+        upload.roles = "admin".to_string();
+        upload.enabled = false;
         upload.save(None).await.unwrap();
 
         login.last_login = Some(42);
@@ -2744,7 +2751,11 @@ mod tests {
         assert!(hql_cached(idx_email).await.is_none());
         let saved = User::find(user.id.clone()).await.unwrap();
         assert_eq!(saved.picture_id.as_deref(), Some("login_state_pic"));
+        assert_eq!(saved.roles, "admin");
+        assert!(!saved.enabled);
         assert_eq!(saved.last_login, Some(42));
+        assert_eq!(saved.last_failed_login, None);
+        assert_eq!(saved.failed_login_attempts, None);
         assert_eq!(saved.password.as_deref(), Some("rehashed"));
 
         // without a rehash, the password is left alone
@@ -2757,6 +2768,8 @@ mod tests {
         assert_eq!(saved.last_failed_login, Some(43));
         assert_eq!(saved.failed_login_attempts, Some(1));
         assert_eq!(saved.picture_id.as_deref(), Some("login_state_pic"));
+        assert_eq!(saved.roles, "admin");
+        assert!(!saved.enabled);
     }
 
     /// A rehash does not overwrite a password changed during the login, e.g. by a reset, while
