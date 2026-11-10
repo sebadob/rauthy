@@ -492,6 +492,13 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
 /// `search_path` of the returned connection. Drop the returned schema at the end of the test.
 #[cfg(test)]
 pub(crate) async fn pg_test_schema(prefix: &str) -> (PgClient, String) {
+    let (pool, schema) = pg_test_pool(prefix).await;
+    (pg_test_conn(&pool, &schema).await, schema)
+}
+
+/// [`pg_test_schema`] for tests that need more than one connection, see [`pg_test_conn`].
+#[cfg(test)]
+pub(crate) async fn pg_test_pool(prefix: &str) -> (deadpool_postgres::Pool, String) {
     use deadpool_postgres::{Config, Runtime};
     use tokio_postgres::NoTls;
 
@@ -530,7 +537,17 @@ pub(crate) async fn pg_test_schema(prefix: &str) -> (PgClient, String) {
             .await
             .unwrap();
     }
-    (cl, schema)
+    (pool, schema)
+}
+
+/// A connection of `pool` with `schema` as its `search_path`.
+#[cfg(test)]
+pub(crate) async fn pg_test_conn(pool: &deadpool_postgres::Pool, schema: &str) -> PgClient {
+    let cl = pool.get().await.unwrap();
+    cl.batch_execute(&format!("SET search_path TO {schema}"))
+        .await
+        .unwrap();
+    cl
 }
 
 /// Starts a single hiqlite node with all migrations for the tests of this crate, once per test
