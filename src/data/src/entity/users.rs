@@ -167,8 +167,12 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#;
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#;
+
+/// `picture_id` is written only here, by the picture upload and removal: a full-row save
+/// works on a copy that may predate a concurrent picture change.
+static SQL_SET_PICTURE_ID: &str = "UPDATE users SET picture_id = $1 WHERE id = $2";
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -1111,7 +1115,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 self.user_expires,
                 self.auth_provider_id,
                 self.federation_uid,
-                self.picture_id,
                 self.id
             ),
         ));
@@ -1150,7 +1153,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 &self.user_expires,
                 &self.auth_provider_id,
                 &self.federation_uid,
-                &self.picture_id,
                 &self.id,
             ],
         )
@@ -1189,7 +1191,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         self.user_expires,
                         &self.auth_provider_id,
                         &self.federation_uid,
-                        &self.picture_id,
                         &self.id
                     ),
                 )
@@ -1215,7 +1216,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &self.user_expires,
                     &self.auth_provider_id,
                     &self.federation_uid,
-                    &self.picture_id,
                     &self.id,
                 ],
             )
@@ -1234,13 +1234,30 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
             client.delete(Cache::User, idx).await?;
         }
 
-        let idx = format!("{IDX_USERS}_{}", self.id);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
-
-        let idx = format!("{IDX_USERS}_{}", self.email);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
+        // `self` may be a copy read before a concurrent change of a column this save does not
+        // write, like `picture_id`: drop the cached user instead of caching this copy
+        Self::invalidate_cache(&self.id, &self.email).await?;
 
         Ok(())
+    }
+
+    /// Sets the `picture_id` of the user `id` alone, then drops the cached user.
+    pub async fn set_picture_id(
+        id: &str,
+        email: &str,
+        picture_id: Option<&str>,
+    ) -> Result<(), ErrorResponse> {
+        if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    SQL_SET_PICTURE_ID,
+                    params!(picture_id.map(String::from), id.to_string()),
+                )
+                .await?;
+        } else {
+            DB::pg_execute(SQL_SET_PICTURE_ID, &[&picture_id, &id]).await?;
+        }
+        Self::invalidate_cache(id, email).await
     }
 
     /// Caution: Uses regex / LIKE on the database -> very costly query
@@ -2633,6 +2650,79 @@ mod tests {
         assert_eq!(User::count().await.unwrap(), count);
         assert!(hql_cached(idx_id).await.is_none());
         assert!(hql_cached(idx_email).await.is_none());
+    }
+
+    async fn hql_insert_picture(id: &str) {
+        DB::hql()
+            .execute(
+                "INSERT INTO pictures (id, content_type, storage, data) \
+                VALUES ($1, 'image/png', 'db', NULL)",
+                params!(id),
+            )
+            .await
+            .unwrap();
+    }
+
+    /// A save through a copy of the user read before a picture upload, like a login that read
+    /// the user before it hashed the password, keeps the uploaded picture. The save drops the
+    /// cached user instead of caching its copy, which still has no picture.
+    #[tokio::test]
+    async fn test_save_keeps_concurrent_picture_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        hql_insert_picture("save_pic_1").await;
+        let user = hql_insert_user("save_pic", None).await;
+        let idx_id = format!("{IDX_USERS}_{}", user.id);
+        let idx_email = format!("{IDX_USERS}_{}", user.email);
+
+        let mut stale = User::find(user.id.clone()).await.unwrap();
+        User::set_picture_id(&user.id, &user.email, Some("save_pic_1"))
+            .await
+            .unwrap();
+        assert!(hql_cached(idx_id.clone()).await.is_none());
+        assert!(hql_cached(idx_email.clone()).await.is_none());
+        let found = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(found.picture_id.as_deref(), Some("save_pic_1"));
+        assert!(hql_cached(idx_id.clone()).await.is_some());
+
+        assert_eq!(stale.picture_id, None);
+        stale.given_name = "changed".to_string();
+        stale.save(None).await.unwrap();
+        assert!(hql_cached(idx_id).await.is_none());
+        assert!(hql_cached(idx_email).await.is_none());
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.picture_id.as_deref(), Some("save_pic_1"));
+        assert_eq!(saved.given_name, "changed");
+        let saved = User::find_by_email(user.email.clone()).await.unwrap();
+        assert_eq!(saved.picture_id.as_deref(), Some("save_pic_1"));
+    }
+
+    /// `set_picture_id` writes only the `picture_id` of its user: a removal through a stale
+    /// copy keeps the columns changed meanwhile, and other users are left alone.
+    #[tokio::test]
+    async fn test_set_picture_id_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        hql_insert_picture("set_pic_1").await;
+        hql_insert_picture("set_pic_other").await;
+        let user = hql_insert_user("set_pic", Some("set_pic_1")).await;
+        let other = hql_insert_user("set_pic_other", Some("set_pic_other")).await;
+        let stale = User::find(user.id.clone()).await.unwrap();
+
+        let mut admin = User::find(user.id.clone()).await.unwrap();
+        admin.enabled = false;
+        admin.roles = "admin".to_string();
+        admin.save(None).await.unwrap();
+
+        User::set_picture_id(&stale.id, &stale.email, None)
+            .await
+            .unwrap();
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.picture_id, None);
+        assert!(!saved.enabled);
+        assert_eq!(saved.roles, "admin");
+        let other = User::find(other.id).await.unwrap();
+        assert_eq!(other.picture_id.as_deref(), Some("set_pic_other"));
     }
 
     /// The picture removed with a user is the one of the deleted row, not the one of a stale
