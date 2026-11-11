@@ -1222,8 +1222,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         Ok(())
     }
 
-    /// Writes every column of this copy but `picture_id`, which only [`Self::set_picture_id`]
-    /// updates, then drops the cached user, also under `old_email`.
+    /// Writes every column of this copy but `id`, `created_at` and `picture_id`, which only
+    /// [`Self::set_picture_id`] updates, then drops the cached user, also under `old_email`.
     pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
             User::is_email_free(self.email.clone()).await?;
@@ -3025,6 +3025,8 @@ mod tests {
 
         reset.password = Some("reset".to_string());
         reset.password_expires = Some(42);
+        User::find(user.id.clone()).await.unwrap();
+        assert!(hql_cached(idx_id.clone()).await.is_some());
         reset.save_password_reset().await.unwrap();
         assert!(!reset.email_verified);
         assert!(hql_cached(idx_id).await.is_none());
@@ -3100,6 +3102,54 @@ mod tests {
         assert_eq!(count("sessions", &user.id).await, 0);
         assert_eq!(count("refresh_tokens", "pwd_reset_off_other").await, 1);
         assert_eq!(count("sessions", "pwd_reset_off_other").await, 1);
+    }
+
+    /// A password reset of a user deleted meanwhile writes nothing and caches nothing.
+    #[tokio::test]
+    async fn test_save_password_reset_missing_user_hiqlite() {
+        let _lock = HQL_TEST_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let mut reset = User {
+            id: "pwd_reset_missing".to_string(),
+            email: "pwd_reset_missing@example.com".to_string(),
+            password: Some("reset".to_string()),
+            ..Default::default()
+        };
+        let count = User::count().await.unwrap();
+
+        reset.save_password_reset().await.unwrap();
+        assert!(!reset.email_verified);
+        assert_eq!(User::count().await.unwrap(), count);
+        let err = User::find(reset.id.clone()).await.unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::NotFound);
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{}", reset.id))
+                .await
+                .is_none()
+        );
+        assert!(
+            hql_cached(format!("{IDX_USERS}_{}", reset.email))
+                .await
+                .is_none()
+        );
+    }
+
+    /// A save with a new email drops the user cached under the old one.
+    #[tokio::test]
+    async fn test_save_email_change_drops_old_email_cache_hiqlite() {
+        let _lock = HQL_TEST_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let user = hql_insert_user("save_email", None).await;
+        let old_email = user.email.clone();
+        let idx_old = format!("{IDX_USERS}_{old_email}");
+        let mut changed = User::find_by_email(old_email.clone()).await.unwrap();
+        assert!(hql_cached(idx_old.clone()).await.is_some());
+
+        changed.email = "save_email_new@example.com".to_string();
+        changed.save(Some(old_email)).await.unwrap();
+        assert!(hql_cached(idx_old).await.is_none());
+        let saved = User::find(user.id).await.unwrap();
+        assert_eq!(saved.email, "save_email_new@example.com");
     }
 
     /// A user with the validated password hash `validated` for the login state tests.
