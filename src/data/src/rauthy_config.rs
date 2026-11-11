@@ -277,6 +277,7 @@ pub struct Vars {
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
     pub lifetimes: VarsLifetimes,
+    pub ldap: VarsLdap,
     pub logging: VarsLogging,
     pub matrix: VarsMatrix,
     pub mfa: VarsMfa,
@@ -516,6 +517,7 @@ impl Default for Vars {
                 level_suspicious_request: EventLevel::Notice,
                 level_new_login_location: EventLevel::Notice,
                 level_token_issued: EventLevel::Info,
+                level_ldap_login: EventLevel::Info,
                 level_failed_logins_25: EventLevel::Critical,
                 level_failed_logins_20: EventLevel::Critical,
                 level_failed_logins_15: EventLevel::Warning,
@@ -617,6 +619,17 @@ impl Default for Vars {
                 email: VarsOtpEmail {
                     enable: true,
                 },
+            },
+            ldap: VarsLdap {
+                enable: false,
+                listen_address: "0.0.0.0".into(),
+                port: 6360,
+                base_dn: "dc=rauthy,dc=local".into(),
+                cert_path: None,
+                key_path: None,
+                plain_text: false,
+                disable_ip_brute_force_protection: false,
+                max_connections: 1000,
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -1457,6 +1470,7 @@ impl Vars {
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
+        slf.parse_ldap(&mut table);
         slf.parse_logging(&mut table);
         slf.parse_matrix(&mut table);
         slf.parse_mfa(&mut table);
@@ -2819,6 +2833,15 @@ impl Vars {
             self.events.level_token_issued =
                 EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_token_issued");
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_ldap_login",
+            "EVENT_LEVEL_LDAP_LOGIN",
+        ) {
+            self.events.level_ldap_login =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_ldap_login");
+        }
 
         if let Some(v) = t_str(
             &mut table,
@@ -3303,6 +3326,61 @@ impl Vars {
         }
 
         check_table_empty(table, "mfa");
+    }
+
+    fn parse_ldap(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "ldap");
+
+        if let Some(v) = t_bool(&mut table, "ldap", "enable", "LDAP_ENABLE") {
+            self.ldap.enable = v;
+        }
+        if let Some(v) = t_str(&mut table, "ldap", "listen_address", "LDAP_LISTEN_ADDRESS") {
+            self.ldap.listen_address = v;
+        }
+        if let Some(v) = t_u16(&mut table, "ldap", "port", "LDAP_PORT") {
+            self.ldap.port = v;
+        }
+        if let Some(v) = t_str(&mut table, "ldap", "base_dn", "LDAP_BASE_DN") {
+            self.ldap.base_dn = v.to_lowercase();
+        }
+        // shortcut: does not handle escaped `,` / `=`, which no sane base DN contains
+        let base_dn_valid = self.ldap.base_dn.split(',').all(|rdn| {
+            rdn.split_once('=')
+                .is_some_and(|(k, v)| !k.trim().is_empty() && !v.trim().is_empty())
+        });
+        if !base_dn_valid {
+            panic!("ldap.base_dn '{}' is not a valid DN", self.ldap.base_dn);
+        }
+        self.ldap.cert_path = t_str(&mut table, "ldap", "cert_path", "LDAP_TLS_CERT");
+        self.ldap.key_path = t_str(&mut table, "ldap", "key_path", "LDAP_TLS_KEY");
+        if self.ldap.cert_path.is_some() != self.ldap.key_path.is_some() {
+            panic!("ldap.cert_path and ldap.key_path must be set together");
+        }
+        if let Some(v) = t_bool(&mut table, "ldap", "plain_text", "LDAP_PLAIN_TEXT") {
+            self.ldap.plain_text = v;
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "ldap",
+            "disable_ip_brute_force_protection",
+            "LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION",
+        ) {
+            self.ldap.disable_ip_brute_force_protection = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "ldap",
+            "max_connections",
+            "LDAP_MAX_CONNECTIONS",
+        ) {
+            if v == 0 {
+                panic!("ldap.max_connections must be greater than 0");
+            }
+            self.ldap.max_connections = v;
+        }
+
+        check_table_empty(table, "ldap");
     }
 
     fn parse_pam(&mut self, table: &mut toml::Table) {
@@ -4167,6 +4245,7 @@ impl Vars {
             &self.lifetimes.jwk_autorotate_cron,
         );
         self.validate_ephemeral_clients();
+        self.validate_ldap();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
@@ -4240,6 +4319,12 @@ impl Vars {
 }
 
 impl Vars {
+    fn validate_ldap(&self) {
+        if self.ldap.plain_text && !self.server.proxy_mode {
+            panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
+        }
+    }
+
     /// Only enforced for an enabled feature and an explicitly set `default_scopes`.
     fn validate_ephemeral_clients(&self) {
         let eph = &self.ephemeral_clients;
@@ -4581,6 +4666,7 @@ pub struct VarsEvents {
     pub level_suspicious_request: EventLevel,
     pub level_new_login_location: EventLevel,
     pub level_token_issued: EventLevel,
+    pub level_ldap_login: EventLevel,
 
     pub level_failed_logins_25: EventLevel,
     pub level_failed_logins_20: EventLevel,
@@ -4681,6 +4767,24 @@ pub struct VarsOtp {
 #[derive(Debug)]
 pub struct VarsOtpEmail {
     pub enable: bool,
+}
+
+#[derive(Debug)]
+pub struct VarsLdap {
+    pub enable: bool,
+    pub listen_address: String,
+    pub port: u16,
+    /// Always lowercase.
+    pub base_dn: String,
+    /// `None` reuses the `[tls]` certificate.
+    pub cert_path: Option<String>,
+    pub key_path: Option<String>,
+    /// Serves plain LDAP without TLS, only allowed with `server.proxy_mode`.
+    pub plain_text: bool,
+    /// Skips the per-IP brute-force checks for user binds, the per-user counter still applies.
+    pub disable_ip_brute_force_protection: bool,
+    /// Open connections at most, further ones wait until one is closed.
+    pub max_connections: u32,
 }
 
 #[derive(Debug)]
@@ -5267,6 +5371,48 @@ mod tests {
     fn test_t_str_vec_rejects_string() {
         let mut table: toml::Table = toml::from_str("domain_blacklist = 'x'").unwrap();
         t_str_vec(&mut table, "user_registration", "domain_blacklist", "");
+    }
+
+    #[test]
+    fn ldap() {
+        let mut vars = Vars::default();
+        vars.parse_ldap(&mut toml::Table::new());
+        assert!(!vars.ldap.enable);
+        assert_eq!(vars.ldap.port, 6360);
+        assert!(vars.ldap.cert_path.is_none());
+        assert!(!vars.ldap.disable_ip_brute_force_protection);
+        assert_eq!(vars.ldap.max_connections, 1000);
+
+        let mut table: toml::Table = toml::from_str(
+            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'\nplain_text = true\ndisable_ip_brute_force_protection = true\nmax_connections = 10",
+        )
+        .unwrap();
+        vars.parse_ldap(&mut table);
+        assert!(vars.ldap.enable);
+        assert_eq!(vars.ldap.port, 636);
+        assert_eq!(vars.ldap.base_dn, "dc=example,dc=com");
+        assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
+        assert!(vars.ldap.plain_text);
+        assert!(vars.ldap.disable_ip_brute_force_protection);
+        assert_eq!(vars.ldap.max_connections, 10);
+    }
+
+    #[test]
+    #[should_panic(expected = "requires server.proxy_mode")]
+    fn ldap_plain_text_without_proxy_mode() {
+        let mut vars = Vars::default();
+        vars.ldap.plain_text = true;
+        vars.server.proxy_mode = true;
+        vars.validate_ldap();
+        vars.server.proxy_mode = false;
+        vars.validate_ldap();
+    }
+
+    #[test]
+    #[should_panic(expected = "not a valid DN")]
+    fn ldap_invalid_base_dn() {
+        let mut table: toml::Table = toml::from_str("[ldap]\nbase_dn = 'rauthy.local'").unwrap();
+        Vars::default().parse_ldap(&mut table);
     }
 
     #[test]

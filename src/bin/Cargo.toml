@@ -22,6 +22,7 @@ path = "src/fido_mds_prep.rs"
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-handlers = { path = "../api" }
+rauthy-ldap = { path = "../ldap" }
 rauthy-jwt = { path = "../jwt" }
 rauthy-middlewares = { path = "../middlewares" }
 rauthy-data = { path = "../data" }
