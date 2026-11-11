@@ -81,6 +81,8 @@ The same applies to the `subject_token`: if it already carries an `act`, that ch
 the new one, and without an `actor_token` it is passed on unchanged. If both tokens carry an `act`,
 the exchange is rejected, because two chains cannot be merged into a single one.
 
+The `act` claim is part of the token introspection response (`POST /oidc/introspect`) as well.
+
 ## Sessions
 
 An exchanged token belongs to the same session as its `subject_token`. If the tokens of that session

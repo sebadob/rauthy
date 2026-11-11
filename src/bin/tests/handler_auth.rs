@@ -1325,6 +1325,8 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
     let text = res.text().await?;
     let info = serde_json::from_str::<TokenInfo>(&text)?;
     assert!(info.active);
+    // no `act` for a token that was not issued via a token exchange with delegation
+    assert!(info.act.is_none());
 
     // with valid basic auth - client_id:client_secret
     let plain = format!("{}:{}", CLIENT_ID, CLIENT_SECRET);

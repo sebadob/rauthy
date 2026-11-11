@@ -276,6 +276,7 @@ use utoipa::{OpenApi, openapi};
 
             AccessGroup,
             AccessRights,
+            ActClaim,
             AddressClaim,
             ApiKeyAccess,
             AuthProviderType,

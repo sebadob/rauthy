@@ -157,7 +157,8 @@ async fn create_actor(
 /// `flows_enabled`, the `allowed_resources` target allow-list, impersonation vs
 /// delegation (`act`), scope narrowing, and the guarantee that an exchanged token never
 /// carries a refresh or id token. On top of that: the nested `act` delegation chain, the
-/// per-client binding of the `actor_token` to the exchanging client and the inherited session.
+/// per-client binding of the `actor_token` to the exchanging client, the inherited session and
+/// `act` in the introspection.
 #[tokio::test]
 async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
@@ -863,6 +864,20 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let res = introspect(&sessionless.access_token).await?;
     assert_eq!(res.status(), 200);
     assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+
+    // (20) the introspection returns the nested `act`
+    let res = introspect(&hop_2.access_token).await?;
+    assert_eq!(res.status(), 200);
+    let info: serde_json::Value = res.json().await?;
+    assert_eq!(info["active"], true);
+    assert_eq!(info["sub"], subject_claims["sub"]);
+    assert_eq!(info["act"], chain);
+    // no `act` for a token without one
+    let res = introspect(&subject_token).await?;
+    assert_eq!(res.status(), 200);
+    let info: serde_json::Value = res.json().await?;
+    assert_eq!(info["active"], true);
+    assert!(info.get("act").is_none(), "unexpected `act` in: {info}");
 
     // cleanup
     for id in [&actor_a.id, &actor_b.id] {

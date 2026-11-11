@@ -77,6 +77,13 @@ API), an `actor_token` in a Token Exchange must have been issued to the exchangi
 and any other is rejected with `invalid_grant`. It is off by default, which keeps the current
 behavior of accepting any valid access token.
 
+#### `act` in the Token Introspection
+
+The `/oidc/introspect` response now contains the `act` claim of a token issued via a Token Exchange
+with delegation, including a nested chain, as registered by
+[RFC 8693](https://www.rfc-editor.org/rfc/rfc8693#section-7.3). Nothing changes for tokens without
+an `act`.
+
 #### Always Show *Password Forgotten*
 
 The 'Password forgotten?' link on the login page only shows up after a failed login. With the new
