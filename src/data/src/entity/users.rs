@@ -1260,9 +1260,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         self.invalidate_cache_also(old_email.as_deref()).await
     }
 
-    /// Sets the `picture_id` of this user alone, then drops the cached user, under the email of
-    /// this copy and under the stored one, if a concurrent update changed it.
-    pub async fn set_picture_id(&self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
+    /// Sets the `picture_id` of this user alone, in the database and in this copy, then drops
+    /// the cached user, under the email of this copy and under the stored one, if a concurrent
+    /// update changed it.
+    pub async fn set_picture_id(&mut self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
         let stored_email = if is_hiqlite() {
             DB::hql()
                 .execute_returning(
@@ -1280,6 +1281,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 .first()
                 .map(|row| row.get("email"))
         };
+        self.picture_id = picture_id.map(String::from);
         self.invalidate_cache_also(stored_email.as_deref()).await
     }
 
@@ -2888,7 +2890,7 @@ mod tests {
         let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         hql_insert_picture("save_pic_1").await;
-        let user = hql_insert_user("save_pic", None).await;
+        let mut user = hql_insert_user("save_pic", None).await;
         let idx_id = format!("{IDX_USERS}_{}", user.id);
         let idx_email = format!("{IDX_USERS}_{}", user.email);
 
@@ -2912,8 +2914,9 @@ mod tests {
         assert_eq!(saved.picture_id.as_deref(), Some("save_pic_1"));
     }
 
-    /// `set_picture_id` writes only the `picture_id` of its user: a removal through a stale
-    /// copy keeps the columns changed meanwhile, and other users are left alone.
+    /// `set_picture_id` writes only the `picture_id` of its user, and sets it in its copy: a
+    /// removal through a stale copy keeps the columns changed meanwhile, and other users are left
+    /// alone.
     #[tokio::test]
     async fn test_set_picture_id_hiqlite() {
         let _lock = HQL_TEST_LOCK.lock().await;
@@ -2922,7 +2925,7 @@ mod tests {
         hql_insert_picture("set_pic_other").await;
         let user = hql_insert_user("set_pic", Some("set_pic_1")).await;
         let other = hql_insert_user("set_pic_other", Some("set_pic_other")).await;
-        let stale = User::find(user.id.clone()).await.unwrap();
+        let mut stale = User::find(user.id.clone()).await.unwrap();
 
         let mut admin = User::find(user.id.clone()).await.unwrap();
         admin.enabled = false;
@@ -2930,6 +2933,7 @@ mod tests {
         admin.save(None).await.unwrap();
 
         stale.set_picture_id(None).await.unwrap();
+        assert_eq!(stale.picture_id, None);
         let saved = User::find(user.id.clone()).await.unwrap();
         assert_eq!(saved.picture_id, None);
         assert!(!saved.enabled);
@@ -2946,7 +2950,7 @@ mod tests {
         crate::database::init_test_hiqlite();
         hql_insert_picture("set_pic_email_1").await;
         let user = hql_insert_user("set_pic_email", None).await;
-        let stale = User::find(user.id.clone()).await.unwrap();
+        let mut stale = User::find(user.id.clone()).await.unwrap();
 
         let mut admin = User::find(user.id.clone()).await.unwrap();
         admin.email = "set_pic_email_new@example.com".to_string();
@@ -2956,6 +2960,7 @@ mod tests {
         assert!(hql_cached(idx_new.clone()).await.is_some());
 
         stale.set_picture_id(Some("set_pic_email_1")).await.unwrap();
+        assert_eq!(stale.picture_id.as_deref(), Some("set_pic_email_1"));
         assert!(hql_cached(idx_new).await.is_none());
         let saved = User::find_by_email(admin.email.clone()).await.unwrap();
         assert_eq!(saved.picture_id.as_deref(), Some("set_pic_email_1"));
@@ -3150,7 +3155,7 @@ mod tests {
         let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         hql_insert_picture("login_fail_pic").await;
-        let user = hql_insert_login_user("login_fail").await;
+        let mut user = hql_insert_login_user("login_fail").await;
         let mut logins = Vec::new();
         for _ in 0..5 {
             logins.push(User::find(user.id.clone()).await.unwrap());

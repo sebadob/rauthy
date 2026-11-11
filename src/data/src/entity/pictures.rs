@@ -177,7 +177,7 @@ impl UserPicture {
         mut payload: actix_multipart::Multipart,
     ) -> Result<HttpResponse, ErrorResponse> {
         // make sure to always create a new picture with a new id for more efficient caching
-        let user = User::find(user_id).await?;
+        let mut user = User::find(user_id).await?;
         if let Some(picture_id) = user.picture_id.clone() {
             Self::remove(picture_id, user.id.clone()).await?;
         }
@@ -283,7 +283,7 @@ impl UserPicture {
     }
 
     pub async fn remove(id: String, user_id: String) -> Result<(), ErrorResponse> {
-        let user = User::find(user_id).await?;
+        let mut user = User::find(user_id).await?;
         if let Some(picture_id) = user.picture_id.as_deref() {
             if id != picture_id {
                 return Err(ErrorResponse::new(
