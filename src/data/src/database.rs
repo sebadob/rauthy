@@ -487,6 +487,68 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
     }
 }
 
+/// A fresh schema `<prefix>_..` on `RAUTHY_TEST_PG_URL` with all Postgres migrations, set as the
+/// `search_path` of the returned connection. Drop the returned schema at the end of the test.
+#[cfg(test)]
+pub(crate) async fn pg_test_schema(prefix: &str) -> (PgClient, String) {
+    let (pool, schema) = pg_test_pool(prefix).await;
+    (pg_test_conn(&pool, &schema).await, schema)
+}
+
+/// [`pg_test_schema`] for tests that need more than one connection, see [`pg_test_conn`].
+#[cfg(test)]
+pub(crate) async fn pg_test_pool(prefix: &str) -> (deadpool_postgres::Pool, String) {
+    use deadpool_postgres::{Config, Runtime};
+    use tokio_postgres::NoTls;
+
+    let url = env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let schema = format!("{prefix}_{}_{nanos}", std::process::id());
+    let cfg = Config {
+        url: Some(url),
+        ..Default::default()
+    };
+    let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
+    let mut files = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .map(|p| {
+            let name = p.file_name().unwrap().to_str().unwrap();
+            let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
+            (nr, p)
+        })
+        .collect::<Vec<_>>();
+    files.sort();
+
+    let cl = pool.get().await.unwrap();
+    cl.batch_execute(&format!(
+        "CREATE SCHEMA {schema}; SET search_path TO {schema};"
+    ))
+    .await
+    .unwrap();
+    for (_, path) in files {
+        cl.batch_execute(&std::fs::read_to_string(path).unwrap())
+            .await
+            .unwrap();
+    }
+    (pool, schema)
+}
+
+/// A connection of `pool` with `schema` as its `search_path`.
+#[cfg(test)]
+pub(crate) async fn pg_test_conn(pool: &deadpool_postgres::Pool, schema: &str) -> PgClient {
+    let cl = pool.get().await.unwrap();
+    cl.batch_execute(&format!("SET search_path TO {schema}"))
+        .await
+        .unwrap();
+    cl
+}
+
 /// Starts a single hiqlite node with all migrations for the tests of this crate, once per test
 /// binary, and sets the database type to hiqlite. The node runs on a runtime of its own, so that
 /// it outlives the runtime of the test that started it.
