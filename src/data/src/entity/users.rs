@@ -183,6 +183,11 @@ password = CASE WHEN password = $2 THEN COALESCE($3, password) ELSE password END
 WHERE id = $4
 RETURNING email"#;
 
+static SQL_SAVE_PASSWORD_RESET: &str = r#"
+UPDATE users SET password = $1, password_expires = $2, email_verified = true
+WHERE id = $3
+RETURNING email"#;
+
 static SQL_SAVE_LOGIN_FAILURE: &str = r#"
 UPDATE users SET last_failed_login = $1,
 failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
@@ -1386,6 +1391,48 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         Ok(rows
             .first()
             .map(|row| (row.get("email"), row.get("failed_login_attempts"))))
+    }
+
+    /// Saves a password reset: writes the `password` and `password_expires` that
+    /// [`Self::apply_password_rules`] set in this copy, and sets `email_verified`, in this copy
+    /// and in the database. Unlike [`Self::save`], it does not write back the other columns of
+    /// this copy, which the reset read before it spent its time on the password hash, so a
+    /// concurrent change of the user (an admin update, a failed login) is kept. The cached user
+    /// is dropped under the email of this copy, and under the stored one, if a concurrent update
+    /// changed it.
+    pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
+        self.email_verified = true;
+
+        let stored_email = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    SQL_SAVE_PASSWORD_RESET,
+                    params!(&self.password, self.password_expires, &self.id),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get::<String>("email"))
+        } else {
+            let cl = DB::pg().await?;
+            self.pg_save_password_reset(&cl).await?
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// The Postgres statement of [`Self::save_password_reset`], the stored email if the row
+    /// exists.
+    async fn pg_save_password_reset(&self, cl: &PgClient) -> Result<Option<String>, ErrorResponse> {
+        let rows = DB::pg_query_rows_with(
+            cl,
+            SQL_SAVE_PASSWORD_RESET,
+            &[&self.password, &self.password_expires, &self.id],
+            1,
+        )
+        .await?;
+        Ok(rows.first().map(|row| row.get("email")))
     }
 
     /// Drops the cached user under its id and the email of this copy, and under `other_email`
@@ -2882,6 +2929,49 @@ mod tests {
         assert_eq!(saved.picture_id.as_deref(), Some("set_pic_email_1"));
     }
 
+    /// A password reset saved through a copy read before concurrent changes, like an admin
+    /// update or a failed login during the password hashing, keeps those changes: it writes
+    /// only the new password, its expiry and the verified email, and drops the cached user, also
+    /// under the stored email a concurrent update changed.
+    #[tokio::test]
+    async fn test_save_password_reset_keeps_concurrent_changes_hiqlite() {
+        let _lock = HQL_TEST_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let user = hql_insert_login_user("pwd_reset").await;
+        let mut reset = User::find(user.id.clone()).await.unwrap();
+        assert!(reset.enabled);
+        assert!(!reset.email_verified);
+
+        let mut admin = User::find(user.id.clone()).await.unwrap();
+        admin.enabled = false;
+        admin.roles = "admin".to_string();
+        admin.email = "pwd_reset_new@example.com".to_string();
+        admin.save(Some(user.email.clone())).await.unwrap();
+        let mut failed = User::find(user.id.clone()).await.unwrap();
+        failed.save_login_failure().await.unwrap();
+        User::find_by_email(admin.email.clone()).await.unwrap();
+        let idx_id = format!("{IDX_USERS}_{}", user.id);
+        let idx_new = format!("{IDX_USERS}_{}", admin.email);
+        assert!(hql_cached(idx_new.clone()).await.is_some());
+
+        reset.password = Some("reset".to_string());
+        reset.password_expires = Some(42);
+        reset.save_password_reset().await.unwrap();
+        assert!(reset.email_verified);
+        assert!(hql_cached(idx_id).await.is_none());
+        assert!(hql_cached(idx_new).await.is_none());
+
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.password.as_deref(), Some("reset"));
+        assert_eq!(saved.password_expires, Some(42));
+        assert!(saved.email_verified);
+        assert!(!saved.enabled);
+        assert_eq!(saved.roles, "admin");
+        assert_eq!(saved.email, "pwd_reset_new@example.com");
+        assert_eq!(saved.failed_login_attempts, Some(1));
+        assert_eq!(saved.last_failed_login, failed.last_failed_login);
+    }
+
     /// A user with the validated password hash `validated` for the login state tests.
     async fn hql_insert_login_user(id: &str) -> User {
         let mut user = hql_insert_user(id, None).await;
@@ -3195,6 +3285,67 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
             .unwrap();
         assert_eq!(set.get::<_, String>("email"), "u1_new@example.com");
         assert_eq!(row("u1").await.get::<_, Option<String>>("picture_id"), None);
+
+        cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+            .await
+            .unwrap();
+    }
+
+    /// The Postgres statement of `User::save_password_reset` against all Postgres migrations:
+    /// only the password, its expiry and the verified email are written, and the stored email is
+    /// returned.
+    /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
+    #[tokio::test]
+    #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
+    async fn test_save_password_reset_postgres() {
+        let (cl, schema) = crate::database::pg_test_schema("pwd_reset").await;
+        cl.batch_execute(
+            r#"
+INSERT INTO users (id, email, given_name, password, roles, enabled, email_verified, created_at,
+                   language)
+VALUES ('u1', 'u1@example.com', 'u1', 'old', 'user', true, false, 1, 'en');
+UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
+    last_failed_login = 7, failed_login_attempts = 3 WHERE id = 'u1';"#,
+        )
+        .await
+        .unwrap();
+        let reset = |id: &str| User {
+            id: id.to_string(),
+            email: format!("{id}@example.com"),
+            password: Some("reset".to_string()),
+            password_expires: Some(42),
+            ..Default::default()
+        };
+
+        let email = reset("u1").pg_save_password_reset(&cl).await.unwrap();
+        assert_eq!(email.as_deref(), Some("u1_new@example.com"));
+        let r = cl
+            .query_one(
+                "SELECT password, password_expires, email_verified, enabled, roles, \
+                last_failed_login, failed_login_attempts FROM users WHERE id = 'u1'",
+                &[],
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            r.get::<_, Option<String>>("password").as_deref(),
+            Some("reset")
+        );
+        assert_eq!(r.get::<_, Option<i64>>("password_expires"), Some(42));
+        assert!(r.get::<_, bool>("email_verified"));
+        assert!(!r.get::<_, bool>("enabled"));
+        assert_eq!(r.get::<_, String>("roles"), "admin");
+        assert_eq!(r.get::<_, Option<i64>>("last_failed_login"), Some(7));
+        assert_eq!(r.get::<_, Option<i64>>("failed_login_attempts"), Some(3));
+
+        // a missing user
+        assert!(
+            reset("u2")
+                .pg_save_password_reset(&cl)
+                .await
+                .unwrap()
+                .is_none()
+        );
 
         cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
             .await
