@@ -638,9 +638,7 @@ pub async fn post_login(
 
     #[inline]
     async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
-        user.last_failed_login = Some(Utc::now().timestamp());
-        user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
-        user.save(None).await?;
+        user.save_login_failure().await?;
 
         // Note: We don't want to increase the FailedLoginCounter for the IP here, because
         // this could be abused for DoS and block remote hosts with enough failed login attempts.
@@ -708,10 +706,7 @@ pub async fn post_login(
 
     // TODO should we even do this user update here? The PAM user belongs to this user, but on the
     //  other hand, these metrics are for all non-PAM logins.
-    user.last_login = Some(Utc::now().timestamp());
-    user.last_failed_login = None;
-    user.failed_login_attempts = None;
-    user.save(None).await?;
+    user.save_login_success(None).await?;
 
     info!("New PAM login for user {}", user.email);
 

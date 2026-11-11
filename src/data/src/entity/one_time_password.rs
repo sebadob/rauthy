@@ -684,10 +684,7 @@ pub async fn auth_finish(
 
             if is_login && let Some(mut session) = session {
                 session.set_authenticated(&user).await?;
-                user.last_login = Some(Utc::now().timestamp());
-                user.last_failed_login = None;
-                user.failed_login_attempts = None;
-                user.save(None).await?;
+                user.save_login_success(None).await?;
             }
 
             info!(

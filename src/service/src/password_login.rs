@@ -1,4 +1,3 @@
-use chrono::Utc;
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
@@ -44,21 +43,17 @@ pub async fn password_login(
 
             client.validate_user_groups(&user)?;
 
-            user.last_login = Some(Utc::now().timestamp());
-            user.last_failed_login = None;
-            user.failed_login_attempts = None;
-
             // check if the password hash should be upgraded
             let hash_uptodate = user.is_argon2_uptodate(&RauthyConfig::get().argon2_params)?;
-            if !hash_uptodate {
+            let new_hash = if !hash_uptodate {
                 info!("Updating Argon2ID params for user '{}'", &user.email);
-                let new_hash = HashPassword::hash_password(password).await?;
-                user.password = Some(new_hash);
+                Some(HashPassword::hash_password(password).await?)
             } else {
                 password.zeroize();
-            }
+                None
+            };
 
-            user.save(None).await?;
+            user.save_login_success(new_hash.as_deref()).await?;
 
             if client.is_dynamic() {
                 ClientDyn::update_used(&client.id).await?;
@@ -80,9 +75,7 @@ pub async fn password_login(
 
             password.zeroize();
 
-            user.last_failed_login = Some(Utc::now().timestamp());
-            user.failed_login_attempts = Some(&user.failed_login_attempts.unwrap_or(0) + 1);
-            user.save(None).await?;
+            user.save_login_failure().await?;
 
             *user_failed_logins = user.failed_login_attempts;
 
