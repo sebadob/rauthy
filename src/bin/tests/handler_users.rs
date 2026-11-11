@@ -1,11 +1,12 @@
 use crate::common::{
-    CLIENT_ID, PASSWORD, USERNAME, get_auth_headers, get_backend_url, get_solved_pow,
-    get_token_set, get_token_set_init_client, password_token_set, prepare_login, refresh,
-    session_headers_with,
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, get_auth_headers, get_backend_url,
+    get_solved_pow, get_token_set, get_token_set_init_client, password_token_set, prepare_login,
+    refresh, session_headers_with,
 };
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_api_types::users::{
     NewUserRequest, RequestResetRequest, UpdateUserRequest, UserConsentDeleteResponse,
     UserConsentResponse, UserResponse, UserResponseSimple, Userinfo,
@@ -1181,6 +1182,86 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
         .headers(admin.clone())
         .send()
         .await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
+
+/// A picture uploaded while wrong password logins of the same user, through `/oidc/authorize` or
+/// the password grant, wait for their hash survives the logins, and every failure is counted.
+#[tokio::test]
+async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "picture-failed-logins@consenttest.io";
+    const WRONG_PWD: &str = "Wrong-TEST.1234!#$";
+
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let user = create_login_user(&client, &admin, EMAIL).await?;
+    let url_user = format!("{backend}/users/{}", user.id);
+
+    for (round, authorize) in [true, true, false, false].into_iter().enumerate() {
+        // two failures only: from the third one of this IP or user on, each is delayed by seconds
+        let mut prepared = Vec::new();
+        if authorize {
+            for _ in 0..2 {
+                prepared.push(prepare_login(EMAIL, WRONG_PWD).await);
+            }
+        }
+        let mut logins = prepared
+            .into_iter()
+            .map(|login| tokio::spawn(async move { login.response().await.status() }))
+            .collect::<Vec<_>>();
+        if !authorize {
+            for _ in 0..2 {
+                let req = client
+                    .post(format!("{backend}/oidc/token"))
+                    .form(&TokenRequest {
+                        grant_type: GrantType::Password,
+                        client_id: Some(CLIENT_ID.to_string()),
+                        client_secret: Some(CLIENT_SECRET.to_string()),
+                        username: Some(EMAIL.to_string()),
+                        password: Some(WRONG_PWD.to_string()),
+                        ..Default::default()
+                    });
+                logins.push(tokio::spawn(
+                    async move { req.send().await.unwrap().status() },
+                ));
+            }
+        }
+        // upload while the logins wait for their password hash, one at a time
+        time::sleep(Duration::from_millis(20)).await;
+        let path = "../../assets/logo/rauthy_dark_small.png";
+        let part = reqwest::multipart::Part::file(path).await?;
+        let form = reqwest::multipart::Form::new().part("image.png", part);
+        let res = client
+            .put(format!("{url_user}/picture"))
+            .headers(admin.clone())
+            .multipart(form)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+        let picture_id = res.text().await?;
+        for login in logins {
+            assert_eq!(login.await?, StatusCode::UNAUTHORIZED, "round {round}");
+        }
+
+        let res = client.get(&url_user).headers(admin.clone()).send().await?;
+        assert_eq!(res.status(), 200);
+        let found = res.json::<UserResponse>().await?;
+        assert_eq!(
+            found.picture_id.as_deref(),
+            Some(picture_id.as_str()),
+            "round {round}"
+        );
+        assert_eq!(found.failed_login_attempts, Some(2), "round {round}");
+        assert!(found.last_failed_login.is_some());
+
+        // a successful login resets the failed logins of the user and of this IP
+        password_token_set(&client, EMAIL, PWD).await;
+    }
+
+    let res = client.delete(&url_user).headers(admin).send().await?;
     assert_eq!(res.status(), 204);
 
     Ok(())

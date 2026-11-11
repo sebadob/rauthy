@@ -243,22 +243,30 @@ impl PreparedLogin {
     /// Sends the login and returns its authenticated session headers.
     pub async fn send(self) -> HeaderMap {
         let email = self.req.email.clone().unwrap_or_default();
-        let res = reqwest::Client::new()
-            .post(&self.url_auth)
-            .headers(self.headers.clone())
-            .json(&self.req)
-            .send()
-            .await
-            .unwrap();
+        let headers = self.headers.clone();
+        let res = self.response().await;
         let status = res.status();
         if status != 202 {
             let body = res.text().await.unwrap_or_default();
             panic!("login for {email} failed: {status} - {body}");
         }
-        self.headers
+        headers
+    }
+
+    /// Sends the login and returns its response, whatever its status.
+    pub async fn response(self) -> Response {
+        reqwest::Client::new()
+            .post(&self.url_auth)
+            .headers(self.headers)
+            .json(&self.req)
+            .send()
+            .await
+            .unwrap()
     }
 }
 
+/// Opens a session, solves its proof of work and builds the login without sending it, so callers
+/// can send several at once through [`PreparedLogin::send`].
 pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
