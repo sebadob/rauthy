@@ -1,14 +1,10 @@
-use crate::common::{get_auth_headers, get_backend_url};
-use pretty_assertions::assert_eq;
-use rauthy_api_types::generic::Language;
-use rauthy_api_types::users::{
-    NewUserRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
+use crate::common::{
+    assert_admin_update_survives_logins, create_login_user, get_auth_headers, get_backend_url,
 };
+use pretty_assertions::assert_eq;
 use reqwest::Client;
 use serde_json::{Value, json};
 use std::error::Error;
-use std::time::Duration;
-use tokio::time;
 
 mod common;
 
@@ -26,7 +22,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
     let backend = get_backend_url();
     let client = Client::new();
 
-    // left-overs from a prior run, the host first, as it refers to the group of the PAM user
+    // a left-over host of a prior run first, as it refers to the group of the PAM user
     let res = client
         .get(format!("{backend}/pam/hosts"))
         .headers(admin.clone())
@@ -46,61 +42,8 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
             assert_eq!(res.status(), 200);
         }
     }
-    let res = client
-        .get(format!("{backend}/users"))
-        .headers(admin.clone())
-        .send()
-        .await?;
-    let users = res.json::<Vec<UserResponseSimple>>().await?;
-    if let Some(user) = users.iter().find(|u| u.email == EMAIL) {
-        let res = client
-            .delete(format!("{backend}/users/{}", user.id))
-            .headers(admin.clone())
-            .send()
-            .await?;
-        assert_eq!(res.status(), 204);
-    }
-
-    // a user with a password, its PAM user and a host for the PAM user's own group
-    let res = client
-        .post(format!("{backend}/users"))
-        .headers(admin.clone())
-        .json(&NewUserRequest {
-            given_name: Some("Pam".to_string()),
-            family_name: None,
-            email: EMAIL.to_string(),
-            preferred_username: None,
-            language: Language::En,
-            roles: vec!["user".to_string()],
-            groups: None,
-            user_expires: None,
-            tz: None,
-        })
-        .send()
-        .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Pam", PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
-    let update = |given_name: &str, roles: &[&str], password: Option<&str>| UpdateUserRequest {
-        email: user.email.clone(),
-        given_name: Some(given_name.to_string()),
-        family_name: None,
-        language: Some(Language::En),
-        password: password.map(String::from),
-        roles: roles.iter().map(|r| r.to_string()).collect(),
-        groups: None,
-        enabled: true,
-        email_verified: true,
-        user_expires: None,
-        user_values: None,
-    };
-    let res = client
-        .put(&url_user)
-        .headers(admin.clone())
-        .json(&update("Pam", &["user"], Some(PWD)))
-        .send()
-        .await?;
-    assert_eq!(res.status(), 200);
 
     let res = client
         .post(format!("{backend}/pam/users"))
@@ -138,15 +81,8 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .unwrap()
         .to_string();
 
-    for round in 0..3 {
-        let given_name = format!("Admin round {round}");
-        let roles: &[&str] = if round % 2 == 0 {
-            &["admin", "user"]
-        } else {
-            &["user"]
-        };
-
-        let logins = (0..6)
+    assert_admin_update_survives_logins(&client, &admin, &user, async || {
+        (0..6)
             .map(|_| {
                 let req = client.post(format!("{backend}/pam/login")).json(&json!({
                     "host_id": host_id,
@@ -154,36 +90,11 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
                     "username": USERNAME,
                     "password": PWD,
                 }));
-                tokio::spawn(async move { req.send().await.unwrap().status() })
+                tokio::spawn(async move { assert_eq!(req.send().await.unwrap().status(), 200) })
             })
-            .collect::<Vec<_>>();
-        // update while the logins wait for their password hash, one at a time
-        time::sleep(Duration::from_millis(20)).await;
-        let res = client
-            .put(&url_user)
-            .headers(admin.clone())
-            .json(&update(&given_name, roles, None))
-            .send()
-            .await?;
-        assert_eq!(res.status(), 200);
-        for login in logins {
-            assert_eq!(login.await?, 200, "round {round}");
-        }
-
-        let res = client.get(&url_user).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 200);
-        let found = res.json::<UserResponse>().await?;
-        assert_eq!(
-            found.given_name.as_deref(),
-            Some(given_name.as_str()),
-            "round {round}"
-        );
-        let mut found_roles = found.roles.clone();
-        found_roles.sort();
-        assert_eq!(found_roles, roles, "round {round}");
-        assert!(found.last_login.is_some());
-        assert_eq!(found.failed_login_attempts, None);
-    }
+            .collect()
+    })
+    .await?;
 
     let res = client
         .delete(format!("{backend}/pam/hosts/{host_id}"))
