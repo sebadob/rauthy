@@ -1,13 +1,19 @@
-use crate::common::{CLIENT_ID, CLIENT_SECRET, check_status, get_backend_url};
+use crate::common::{
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, check_status, get_auth_headers, get_backend_url,
+    password_token_set,
+};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::oidc::{GrantType, TokenRequest};
-use rauthy_api_types::users::PasswordResetRequest;
+use rauthy_api_types::users::{PasswordResetRequest, UserResponse};
 use rauthy_common::constants::PWD_CSRF_HEADER;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header;
 use reqwest::header::{HeaderMap, HeaderValue};
+use serde_json::json;
 use std::error::Error;
+use std::time::Duration;
+use tokio::time;
 
 mod common;
 
@@ -109,14 +115,49 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     assert_eq!(err.error, ErrorResponseType::Unauthorized);
     assert_eq!(err.message, "CSRF Token is missing");
 
-    // correct headers - all should be good now
-    let res = client
-        .put(&url_put)
-        .json(&req)
-        .headers(correct_headers.clone())
-        .send()
-        .await?;
-    assert_eq!(res.status().as_u16(), 202);
+    // correct headers - all should be good now, and an admin change of the user made while the
+    // reset waits for its password hash survives the reset, which saves only its own columns
+    let admin = get_auth_headers().await?;
+    let url_user = format!("{backend_url}/users/{user_id}");
+    // logins ahead of the reset in the hashing queue, so the change lands while it waits
+    let logins = (0..3)
+        .map(|_| {
+            tokio::spawn(async {
+                password_token_set(&reqwest::Client::new(), USERNAME, PASSWORD).await;
+            })
+        })
+        .collect::<Vec<_>>();
+    let reset = tokio::spawn(
+        client
+            .put(&url_put)
+            .json(&req)
+            .headers(correct_headers.clone())
+            .send(),
+    );
+    time::sleep(Duration::from_millis(20)).await;
+    let patch_given_name = |given_name: &str| {
+        client
+            .patch(&url_user)
+            .headers(admin.clone())
+            .json(&json!({
+                "put": [{ "key": "given_name", "value": given_name }],
+                "del": [],
+            }))
+            .send()
+    };
+    let res = patch_given_name("Reset").await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(reset.await??.status().as_u16(), 202);
+    for login in logins {
+        login.await?;
+    }
+    let res = client.get(&url_user).headers(admin.clone()).send().await?;
+    assert_eq!(res.status(), 200);
+    let found = res.json::<UserResponse>().await?;
+    assert_eq!(found.given_name.as_deref(), Some("Reset"));
+    assert!(found.email_verified);
+    let res = patch_given_name("Admin").await?;
+    assert_eq!(res.status(), 200);
 
     // now test logging in with the new password
     let url = format!("{}/oidc/token", get_backend_url());
