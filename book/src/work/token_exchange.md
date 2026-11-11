@@ -72,3 +72,7 @@ With an `actor_token`, the exchanged token carries the acting party per
 
 If the `actor_token` was itself the result of a delegation, its `act` claim is nested inside the new
 one, so the whole chain stays visible to a downstream service.
+
+The same applies to the `subject_token`: if it already carries an `act`, that chain is nested inside
+the new one, and without an `actor_token` it is passed on unchanged. If both tokens carry an `act`,
+the exchange is rejected, because two chains cannot be merged into a single one.

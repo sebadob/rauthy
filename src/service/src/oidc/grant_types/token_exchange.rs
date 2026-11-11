@@ -110,7 +110,9 @@ pub async fn grant_type_token_exchange(
     // anyway, so extracting them here costs nothing extra and saves a second 512 byte buffer.
     let mut buf = Vec::with_capacity(512);
 
-    let (subject_sub, subject_scope, subject_exp) = {
+    // The subject's `act` borrows from the buffer too, so its `sub`s are copied out, outermost
+    // first.
+    let (subject_sub, subject_scope, subject_exp, subject_act) = {
         let subject_claims =
             validate_exchange_token(subject_token, subject_token_type, "subject_token", &mut buf)
                 .await?;
@@ -118,6 +120,7 @@ pub async fn grant_type_token_exchange(
             subject_claims.common.sub.map(|s| s.to_string()),
             subject_claims.common.scope.map(|s| s.to_string()),
             subject_claims.common.exp,
+            act_chain_subs(subject_claims.act.as_ref()),
         )
     };
 
@@ -144,12 +147,26 @@ pub async fn grant_type_token_exchange(
 
         // A delegation chain is kept: if the actor was itself acting for someone, that history
         // stays nested inside the new `act`.
+        // The same goes for an `act` of the subject (RFC 8693 section 4.1). Only one of the two
+        // chains can be kept, so the exchange is rejected if both tokens carry one.
+        let prior = match (act_chain_from_subs(&subject_act), actor_claims.act) {
+            (Some(_), Some(_)) => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "the 'subject_token' and the 'actor_token' both carry an 'act' claim, which \
+                    cannot be merged into a single delegation chain",
+                ));
+            }
+            (Some(act), None) | (None, Some(act)) => Some(Box::new(act)),
+            (None, None) => None,
+        };
         Some(ActClaim {
             sub: actor_sub,
-            act: actor_claims.act.map(Box::new),
+            act: prior,
         })
     } else {
-        None
+        // Without an actor nobody is added, but an `act` of the subject is passed on unchanged.
+        act_chain_from_subs(&subject_act)
     };
 
     // RFC 8693 names the exchange target `audience`; `resource` does the same job here and is
@@ -271,6 +288,27 @@ pub async fn grant_type_token_exchange(
     }
 
     Ok((ts, headers))
+}
+
+/// Collects the `sub`s of an `act` chain as owned values, with the outermost one first.
+fn act_chain_subs(act: Option<&ActClaim>) -> Vec<String> {
+    let mut subs = Vec::new();
+    let mut next = act;
+    while let Some(act) = next {
+        subs.push(act.sub.to_string());
+        next = act.act.as_deref();
+    }
+    subs
+}
+
+/// The reverse of [`act_chain_subs`]: builds the nested `act` from its `sub`s again.
+fn act_chain_from_subs(subs: &[String]) -> Option<ActClaim<'_>> {
+    subs.iter().rev().fold(None, |inner, sub| {
+        Some(ActClaim {
+            sub,
+            act: inner.map(Box::new),
+        })
+    })
 }
 
 /// Validates a `subject_token` / `actor_token`. Only access tokens are accepted, and the token

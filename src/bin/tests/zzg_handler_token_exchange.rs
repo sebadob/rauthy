@@ -3,9 +3,11 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
+use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest, TokenType};
-use rauthy_api_types::users::UserResponse;
+use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
 use rauthy_service::token_set::TokenSet;
+use reqwest::header::HeaderMap;
 use std::error::Error;
 
 mod common;
@@ -13,6 +15,9 @@ mod common;
 const ID: &str = "exchange_test";
 const TARGET: &str = "https://rs-downstream.example.com/api";
 const TARGET_FORBIDDEN: &str = "https://rs-forbidden.example.com/api";
+// `zzb_handler_password_policy` runs before this test and leaves a strict policy behind:
+// at least 2 lower case, 3 upper case, 4 digits and 5 special characters
+const ACTOR_PASSWORD: &str = "Exch4nge!Act0r#2026$%&XYZ";
 
 fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
     UpdateClientRequest {
@@ -47,14 +52,24 @@ fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
 /// This test deliberately does not use `common::get_token_set_init_client`, because
 /// `zzd_handler_clients` rotates the `init_client` secret and this test runs after it.
 async fn password_token(http: &reqwest::Client, id: &str, secret: &str) -> TokenSet {
+    password_token_for(http, id, secret, USERNAME, PASSWORD).await
+}
+
+async fn password_token_for(
+    http: &reqwest::Client,
+    id: &str,
+    secret: &str,
+    email: &str,
+    password: &str,
+) -> TokenSet {
     let res = http
         .post(format!("{}/oidc/token", get_backend_url()))
         .form(&TokenRequest {
             grant_type: GrantType::Password,
             client_id: Some(id.to_string()),
             client_secret: Some(secret.to_string()),
-            username: Some(USERNAME.to_string()),
-            password: Some(PASSWORD.to_string()),
+            username: Some(email.to_string()),
+            password: Some(password.to_string()),
             ..Default::default()
         })
         .send()
@@ -62,15 +77,81 @@ async fn password_token(http: &reqwest::Client, id: &str, secret: &str) -> Token
         .expect("the test backend to be running");
     if !res.status().is_success() {
         let text = res.text().await.unwrap();
-        panic!("Error during password login for '{id}':\n{text}");
+        panic!("Error during password login of '{email}' for '{id}':\n{text}");
     }
     res.json::<TokenSet>().await.unwrap()
+}
+
+/// Creates a user that can log in via the `password` grant, to have an acting party with a
+/// `sub` different from the test user's. A left-over from an aborted run is removed first,
+/// because the password policy would refuse to set the same password for it again.
+async fn create_actor(
+    http: &reqwest::Client,
+    admin: &HeaderMap,
+    email: &str,
+) -> Result<UserResponse, Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    let res = http
+        .get(format!("{backend_url}/users/email/{email}"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    if res.status().is_success() {
+        let left_over: UserResponse = res.json().await?;
+        let res = http
+            .delete(format!("{backend_url}/users/{}", left_over.id))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
+
+    let res = http
+        .post(format!("{backend_url}/users"))
+        .headers(admin.clone())
+        .json(&NewUserRequest {
+            given_name: Some("Exchange".to_string()),
+            family_name: Some("Actor".to_string()),
+            email: email.to_string(),
+            preferred_username: None,
+            language: Language::En,
+            roles: vec!["user".to_string()],
+            groups: None,
+            user_expires: None,
+            tz: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user: UserResponse = res.json().await?;
+
+    let res = http
+        .put(format!("{backend_url}/users/{}", user.id))
+        .headers(admin.clone())
+        .json(&UpdateUserRequest {
+            email: user.email.clone(),
+            given_name: user.given_name.clone(),
+            family_name: user.family_name.clone(),
+            language: Some(Language::En),
+            password: Some(ACTOR_PASSWORD.to_string()),
+            roles: user.roles.clone(),
+            groups: user.groups.clone(),
+            enabled: true,
+            email_verified: true,
+            user_expires: user.user_expires,
+            user_values: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    Ok(user)
 }
 
 /// End-to-end coverage for the RFC 8693 token exchange: deny-by-default via
 /// `flows_enabled`, the `allowed_resources` target allow-list, impersonation vs
 /// delegation (`act`), scope narrowing, and the guarantee that an exchanged token never
-/// carries a refresh or id token.
+/// carries a refresh or id token. On top of that: the nested `act` delegation chain.
 #[tokio::test]
 async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
@@ -499,7 +580,88 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     );
     assert!(ts.expires_in <= 60, "expires_in {}", ts.expires_in);
 
+    // (14) a two-hop delegation chain: the subject's `act` is nested below the new actor
+    let actor_a = create_actor(&client, &auth_headers, "exchange_actor_a@localhost").await?;
+    let actor_b = create_actor(&client, &auth_headers, "exchange_actor_b@localhost").await?;
+    let token_a = password_token_for(&client, ID, &secret, &actor_a.email, ACTOR_PASSWORD)
+        .await
+        .access_token;
+    let token_b = password_token_for(&client, ID, &secret, &actor_b.email, ACTOR_PASSWORD)
+        .await
+        .access_token;
+    assert_ne!(actor_a.id, actor_b.id);
+    assert_ne!(subject_claims["sub"], serde_json::json!(actor_a.id));
+
+    let delegate = |subject: &str, actor: Option<&str>| {
+        client
+            .post(&url_token)
+            .form(&TokenRequest {
+                grant_type: GrantType::TokenExchange,
+                client_id: Some(ID.to_string()),
+                client_secret: Some(secret.clone()),
+                subject_token: Some(subject.to_string()),
+                subject_token_type: Some(TokenType::AccessToken.to_string()),
+                actor_token: actor.map(String::from),
+                actor_token_type: actor.map(|_| TokenType::AccessToken.to_string()),
+                audience: Some(TARGET.to_string()),
+                ..Default::default()
+            })
+            .send()
+    };
+
+    let res = delegate(&subject_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let hop_1: TokenSet = res.json().await?;
+    let claims = decode_claims(&hop_1.access_token);
+    assert_eq!(claims["sub"], subject_claims["sub"]);
+    assert_eq!(claims["act"], serde_json::json!({ "sub": actor_a.id }));
+
+    let res = delegate(&hop_1.access_token, Some(&token_b)).await?;
+    assert_eq!(res.status(), 200);
+    let hop_2: TokenSet = res.json().await?;
+    let claims = decode_claims(&hop_2.access_token);
+    assert_eq!(claims["sub"], subject_claims["sub"]);
+    // the current actor is the outermost one, the prior actor is nested
+    let chain = serde_json::json!({ "sub": actor_b.id, "act": { "sub": actor_a.id } });
+    assert_eq!(claims["act"], chain);
+
+    // an actor that is acting for someone itself brings its own chain along
+    let res = delegate(&token_a, Some(&hop_1.access_token)).await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert_eq!(claims["sub"], serde_json::json!(actor_a.id));
+    assert_eq!(
+        claims["act"],
+        serde_json::json!({ "sub": subject_claims["sub"], "act": { "sub": actor_a.id } })
+    );
+
+    // (15) impersonation keeps the chain: no actor is added, but none is hidden either
+    let res = delegate(&hop_2.access_token, None).await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert_eq!(claims["sub"], subject_claims["sub"]);
+    assert_eq!(claims["act"], chain);
+
+    // (16) a conflict is rejected: both tokens carry an `act`, which cannot be merged
+    let res = delegate(&hop_2.access_token, Some(&hop_1.access_token)).await?;
+    assert_eq!(res.status(), 400);
+    let body = res.text().await?;
+    assert!(
+        body.contains("both carry an 'act'"),
+        "unexpected body: {body}"
+    );
+
     // cleanup
+    for id in [&actor_a.id, &actor_b.id] {
+        let res = client
+            .delete(format!("{backend_url}/users/{id}"))
+            .headers(auth_headers.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
     let res = client
         .delete(format!("{backend_url}/clients/{ID}"))
         .headers(auth_headers.clone())
