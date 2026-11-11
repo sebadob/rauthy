@@ -513,29 +513,17 @@ pub(crate) async fn pg_test_pool(prefix: &str) -> (deadpool_postgres::Pool, Stri
     };
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
 
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
-    let mut files = std::fs::read_dir(dir)
-        .unwrap()
-        .map(|e| e.unwrap().path())
-        .map(|p| {
-            let name = p.file_name().unwrap().to_str().unwrap();
-            let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
-            (nr, p)
-        })
-        .collect::<Vec<_>>();
-    files.sort();
-
-    let cl = pool.get().await.unwrap();
+    // the embedded migrations of `DB::migrate`, their history table in the new schema too
+    let mut cl = pool.get().await.unwrap();
     cl.batch_execute(&format!(
         "CREATE SCHEMA {schema}; SET search_path TO {schema};"
     ))
     .await
     .unwrap();
-    for (_, path) in files {
-        cl.batch_execute(&std::fs::read_to_string(path).unwrap())
-            .await
-            .unwrap();
-    }
+    migrations_postgres::migrations::runner()
+        .run_async(cl.deref_mut().deref_mut())
+        .await
+        .unwrap();
     (pool, schema)
 }
 
