@@ -53,6 +53,10 @@ Admin UI under the client config or via the clients API:
    question is the same one: may this client mint a token for that target? A requested target that
    is not on the list is rejected with the RFC error code `invalid_target`.
 
+Optionally, **Actor token from this client only** can be enabled on top. An `actor_token` must then
+have been issued to the exchanging client itself, and one from any other client is rejected with
+`invalid_grant`.
+
 A `subject_token` that is not a valid access token, or has been revoked, is rejected with
 `invalid_grant`.
 

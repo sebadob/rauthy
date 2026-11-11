@@ -138,6 +138,14 @@ pub async fn grant_type_token_exchange(
         let actor_claims =
             validate_exchange_token(actor_token, actor_token_type, "actor_token", &mut buf).await?;
 
+        // Opt-in per client: the `actor_token` must have been issued to this client.
+        if client.actor_same_client && actor_claims.common.azp != client.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidGrant,
+                "the 'actor_token' was not issued to this client",
+            ));
+        }
+
         let Some(actor_sub) = actor_claims.common.sub else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::InvalidGrant,

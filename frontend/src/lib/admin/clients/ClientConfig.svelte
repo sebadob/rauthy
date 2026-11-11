@@ -141,6 +141,7 @@
 
     let jsonClaims = $state(untrack(() => stringifyJsonValue(client.claims) || ''));
     let claimsAtRoot = $state(untrack(() => client.claims_at_root));
+    let actorSameClient = $state(untrack(() => client.actor_same_client));
 
     $effect(() => {
         if (client.id) {
@@ -191,6 +192,7 @@
 
             jsonClaims = stringifyJsonValue(client.claims) || '';
             claimsAtRoot = client.claims_at_root;
+            actorSameClient = client.actor_same_client;
 
             scim = {
                 base_uri: client.scim?.base_uri || '',
@@ -258,6 +260,7 @@
             claims_at_root: claimsAtRoot,
             allowed_resources: allowedResources.length > 0 ? allowedResources : undefined,
             default_aud: defaultAud.length > 0 ? defaultAud : undefined,
+            actor_same_client: actorSameClient,
         };
 
         if (flows.authorizationCode) {
@@ -396,6 +399,17 @@
         >
             token_exchange
         </InputCheckbox>
+        {#if flows.tokenExchange}
+            <div transition:slide={{ duration: 150 }} class="tokenExchangeOpts">
+                <InputCheckbox
+                    ariaLabel={ta.clients.actorSameClient}
+                    bind:checked={actorSameClient}
+                >
+                    {ta.clients.actorSameClient}
+                </InputCheckbox>
+                <p class="desc">{ta.clients.descActorSameClient}</p>
+            </div>
+        {/if}
 
         <div style:height=".5rem"></div>
         <p class="mb-0"><b>PKCE</b></p>
@@ -683,6 +697,10 @@
 
     .passwordMfaWarn {
         color: hsl(var(--error));
+        margin-left: 1.5rem;
+    }
+
+    .tokenExchangeOpts {
         margin-left: 1.5rem;
     }
 

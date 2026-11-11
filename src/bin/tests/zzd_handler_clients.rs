@@ -115,6 +115,7 @@ async fn put_client_claims(
         claims_at_root,
         allowed_resources: None,
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     };
 
@@ -305,6 +306,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     };
 

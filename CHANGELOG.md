@@ -63,6 +63,13 @@ The Token Exchange now keeps the `act` of the `subject_token` as well, like it a
 `actor_token`: it is nested inside the new one, or passed on unchanged without an `actor_token`. If
 both tokens carry an `act`, the exchange is rejected, because the two chains cannot be merged.
 
+#### Token Exchange can bind the `actor_token` to the exchanging client
+
+With the new per-client option *Actor token from this client only* (`actor_same_client` via the
+API), an `actor_token` in a Token Exchange must have been issued to the exchanging client itself,
+and any other is rejected with `invalid_grant`. It is off by default, which keeps the current
+behavior of accepting any valid access token.
+
 #### Always Show *Password Forgotten*
 
 The 'Password forgotten?' link on the login page only shows up after a failed login. With the new

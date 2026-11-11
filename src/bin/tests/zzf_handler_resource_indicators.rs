@@ -69,6 +69,7 @@ fn base_update() -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     }
 }
@@ -238,6 +239,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         claims_at_root: false,
         allowed_resources: Some(vec![RES_REFRESH.to_string()]),
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     };
     let res = http

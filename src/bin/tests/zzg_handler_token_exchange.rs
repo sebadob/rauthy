@@ -13,6 +13,7 @@ use std::error::Error;
 mod common;
 
 const ID: &str = "exchange_test";
+const ID_FOREIGN: &str = "exchange_test_foreign";
 const TARGET: &str = "https://rs-downstream.example.com/api";
 const TARGET_FORBIDDEN: &str = "https://rs-forbidden.example.com/api";
 // `zzb_handler_password_policy` runs before this test and leaves a strict policy behind:
@@ -44,6 +45,7 @@ fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: Some(vec![TARGET.to_string()]),
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     }
 }
@@ -151,7 +153,8 @@ async fn create_actor(
 /// End-to-end coverage for the RFC 8693 token exchange: deny-by-default via
 /// `flows_enabled`, the `allowed_resources` target allow-list, impersonation vs
 /// delegation (`act`), scope narrowing, and the guarantee that an exchanged token never
-/// carries a refresh or id token. On top of that: the nested `act` delegation chain.
+/// carries a refresh or id token. On top of that: the nested `act` delegation chain and the
+/// per-client binding of the `actor_token` to the exchanging client.
 #[tokio::test]
 async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
@@ -652,6 +655,109 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         body.contains("both carry an 'act'"),
         "unexpected body: {body}"
     );
+
+    // (17) `actor_same_client`: an actor token of a foreign client
+    let res = client
+        .post(format!("{backend_url}/clients"))
+        .headers(auth_headers.clone())
+        .json(&NewClientRequest {
+            id: ID_FOREIGN.to_string(),
+            secret: None,
+            name: Some("Exchange Test Foreign".to_string()),
+            confidential: true,
+            redirect_uris: vec!["http://localhost/callback".to_string()],
+            post_logout_redirect_uris: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .put(format!("{backend_url}/clients/{ID_FOREIGN}"))
+        .headers(auth_headers.clone())
+        .json(&base_update(vec![GrantType::Password]))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .post(format!("{backend_url}/clients/{ID_FOREIGN}/secret"))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let secret_foreign = res.json::<ClientSecretResponse>().await?.secret.unwrap();
+    let token_foreign = password_token_for(
+        &client,
+        ID_FOREIGN,
+        &secret_foreign,
+        &actor_a.email,
+        ACTOR_PASSWORD,
+    )
+    .await
+    .access_token;
+    assert_eq!(
+        decode_claims(&token_foreign)["azp"],
+        serde_json::json!(ID_FOREIGN)
+    );
+
+    // the flag is off by default, and the foreign actor token is accepted
+    let res = delegate(&subject_token, Some(&token_foreign)).await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert_eq!(claims["act"], serde_json::json!({ "sub": actor_a.id }));
+
+    let set_actor_same_client = |enable: bool| {
+        client
+            .put(format!("{backend_url}/clients/{ID}"))
+            .headers(auth_headers.clone())
+            .json(&UpdateClientRequest {
+                scopes: vec!["openid".to_string()],
+                default_scopes: vec!["openid".to_string(), "email".to_string()],
+                access_token_lifetime: 600,
+                actor_same_client: enable,
+                ..base_update(vec![
+                    GrantType::ClientCredentials,
+                    GrantType::Password,
+                    GrantType::RefreshToken,
+                    GrantType::TokenExchange,
+                ])
+            })
+            .send()
+    };
+    let res = set_actor_same_client(true).await?;
+    assert_eq!(res.status(), 200);
+    let resp: ClientResponse = res.json().await?;
+    assert!(resp.actor_same_client);
+
+    // with the flag on, the foreign actor token is rejected ...
+    let res = delegate(&subject_token, Some(&token_foreign)).await?;
+    assert_eq!(res.status(), 400);
+    let body = res.text().await?;
+    assert!(body.contains("invalid_grant"), "unexpected body: {body}");
+    assert!(
+        body.contains("not issued to this client"),
+        "unexpected body: {body}"
+    );
+    // ... while an actor token issued to the exchanging client itself still works, ...
+    let res = delegate(&subject_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    // ... and the flag only is about the actor: a foreign `subject_token` is not affected
+    let res = delegate(&token_foreign, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+
+    let res = set_actor_same_client(false).await?;
+    assert_eq!(res.status(), 200);
+    let resp: ClientResponse = res.json().await?;
+    assert!(!resp.actor_same_client);
+    let res = delegate(&subject_token, Some(&token_foreign)).await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .delete(format!("{backend_url}/clients/{ID_FOREIGN}"))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
 
     // cleanup
     for id in [&actor_a.id, &actor_b.id] {
