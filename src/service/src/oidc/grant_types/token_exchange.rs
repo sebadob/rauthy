@@ -1,4 +1,4 @@
-use crate::token_set::{DpopFingerprint, TokenScopes, TokenSet};
+use crate::token_set::{DpopFingerprint, SessionId, TokenScopes, TokenSet};
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
@@ -112,8 +112,8 @@ pub async fn grant_type_token_exchange(
 
     // The subject's `act` borrows from the buffer too, so its `sub`s are copied out, outermost
     // first.
-    let (subject_sub, subject_scope, subject_exp, subject_act) = {
-        let subject_claims =
+    let (subject_sub, subject_scope, subject_exp, subject_act, subject_issued) = {
+        let (subject_claims, subject_issued) =
             validate_exchange_token(subject_token, subject_token_type, "subject_token", &mut buf)
                 .await?;
         (
@@ -121,8 +121,11 @@ pub async fn grant_type_token_exchange(
             subject_claims.common.scope.map(|s| s.to_string()),
             subject_claims.common.exp,
             act_chain_subs(subject_claims.act.as_ref()),
+            subject_issued,
         )
     };
+    // The exchanged token inherits the session of the `subject_token`, like a refreshed one.
+    let sid = subject_issued.and_then(|t| t.sid).map(SessionId);
 
     // An `actor_token` turns this into a delegation. By RFC, `actor_token_type` is REQUIRED as
     // soon as an `actor_token` is given.
@@ -135,7 +138,7 @@ pub async fn grant_type_token_exchange(
         };
         // the subject claims are out of scope by now, so the buffer is free to be re-used
         buf.clear();
-        let actor_claims =
+        let (actor_claims, _) =
             validate_exchange_token(actor_token, actor_token_type, "actor_token", &mut buf).await?;
 
         // Opt-in per client: the `actor_token` must have been issued to this client.
@@ -280,6 +283,7 @@ pub async fn grant_type_token_exchange(
         lifetime,
         dpop_fingerprint,
         TokenScopes::new(scope),
+        sid,
         target,
         act,
     )
@@ -320,13 +324,13 @@ fn act_chain_from_subs(subs: &[String]) -> Option<ActClaim<'_>> {
 }
 
 /// Validates a `subject_token` / `actor_token`. Only access tokens are accepted, and the token
-/// must not have been revoked.
+/// must not have been revoked. Returns the claims and the token's stored row.
 async fn validate_exchange_token<'a>(
     token: &str,
     token_type: &str,
     name: &str,
     buf: &'a mut Vec<u8>,
-) -> Result<JwtAccessClaims<'a>, ErrorResponse> {
+) -> Result<(JwtAccessClaims<'a>, Option<IssuedToken>), ErrorResponse> {
     if TokenType::from_str(token_type).ok() != Some(TokenType::AccessToken) {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -354,9 +358,11 @@ async fn validate_exchange_token<'a>(
     }
     let claims = serde_json::from_slice::<JwtAccessClaims>(buf)?;
 
-    if let Some(jti) = claims.common.jti {
-        IssuedToken::validate_not_revoked(jti).await?;
-    }
+    let issued = if let Some(jti) = claims.common.jti {
+        Some(IssuedToken::validate_not_revoked(jti).await?)
+    } else {
+        None
+    };
 
-    Ok(claims)
+    Ok((claims, issued))
 }

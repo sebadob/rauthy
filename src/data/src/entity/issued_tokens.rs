@@ -161,8 +161,9 @@ VALUES ($1, $2, $3, $4, $5)
         Ok(())
     }
 
+    /// Returns the token's row, if it exists and is not revoked.
     #[inline]
-    pub async fn validate_not_revoked(jti: &str) -> Result<(), ErrorResponse> {
+    pub async fn validate_not_revoked(jti: &str) -> Result<Self, ErrorResponse> {
         let sql = "SELECT * FROM issued_tokens WHERE jti = $1";
 
         let opt: Option<Self> = if is_hiqlite() {
@@ -173,7 +174,7 @@ VALUES ($1, $2, $3, $4, $5)
 
         if let Some(slf) = opt {
             if slf.revoked != Some(true) {
-                Ok(())
+                Ok(slf)
             } else {
                 Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,

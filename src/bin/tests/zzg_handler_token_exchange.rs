@@ -1,10 +1,13 @@
-use crate::common::{PASSWORD, USERNAME, decode_claims, get_auth_headers, get_backend_url};
+use crate::common::{
+    PASSWORD, USERNAME, decode_claims, get_auth_headers, get_backend_url,
+    session_headers_for_client,
+};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_api_types::generic::Language;
-use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest, TokenType};
+use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, LogoutRequest, TokenRequest, TokenType};
 use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::HeaderMap;
@@ -153,8 +156,8 @@ async fn create_actor(
 /// End-to-end coverage for the RFC 8693 token exchange: deny-by-default via
 /// `flows_enabled`, the `allowed_resources` target allow-list, impersonation vs
 /// delegation (`act`), scope narrowing, and the guarantee that an exchanged token never
-/// carries a refresh or id token. On top of that: the nested `act` delegation chain and the
-/// per-client binding of the `actor_token` to the exchanging client.
+/// carries a refresh or id token. On top of that: the nested `act` delegation chain, the
+/// per-client binding of the `actor_token` to the exchanging client and the inherited session.
 #[tokio::test]
 async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
@@ -758,6 +761,108 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     assert_eq!(res.status(), 200);
+
+    // (18) a session logout revokes the exchanged token (needs `token_revoke_on_logout = true`)
+    let res = client
+        .put(format!("{backend_url}/clients/{ID}"))
+        .headers(auth_headers.clone())
+        .json(&UpdateClientRequest {
+            scopes: vec!["openid".to_string()],
+            default_scopes: vec!["openid".to_string(), "email".to_string()],
+            access_token_lifetime: 600,
+            ..base_update(vec![
+                GrantType::AuthorizationCode,
+                GrantType::ClientCredentials,
+                GrantType::Password,
+                GrantType::RefreshToken,
+                GrantType::TokenExchange,
+            ])
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let url_introspect = format!("{backend_url}/oidc/introspect");
+    let introspect = |token: &str| {
+        client
+            .post(&url_introspect)
+            .basic_auth(ID, Some(secret.as_str()))
+            .form(&[("token", token)])
+            .send()
+    };
+    let redirect_uri = "http://localhost/callback";
+
+    let (_, session_ts) = session_headers_for_client(ID, Some(secret.as_str()), redirect_uri).await;
+    let res = delegate(&session_ts.access_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let from_session: TokenSet = res.json().await?;
+    // derived from a token that has no session: must survive the logout below
+    let res = delegate(&subject_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let sessionless: TokenSet = res.json().await?;
+    // a second hop keeps the session as well
+    let res = delegate(&from_session.access_token, None).await?;
+    assert_eq!(res.status(), 200);
+    let second_hop: TokenSet = res.json().await?;
+
+    for token in [
+        &from_session.access_token,
+        &second_hop.access_token,
+        &sessionless.access_token,
+    ] {
+        let res = introspect(token).await?;
+        assert_eq!(res.status(), 200);
+        assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+    }
+
+    let res = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?
+        .post(format!("{backend_url}/oidc/logout"))
+        .form(&LogoutRequest {
+            id_token_hint: session_ts.id_token.clone(),
+            post_logout_redirect_uri: None,
+            state: None,
+            logout_token: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    assert_eq!(introspect(&from_session.access_token).await?.status(), 401);
+    assert_eq!(introspect(&second_hop.access_token).await?.status(), 401);
+    // a revoked token cannot be exchanged any further
+    let res = delegate(&from_session.access_token, None).await?;
+    assert_ne!(res.status(), 200);
+    // other sessions and session-less tokens of the same user are not affected
+    let res = introspect(&sessionless.access_token).await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+
+    // (19) an admin deleting the session revokes the exchanged token, too
+    let (_, session_ts) = session_headers_for_client(ID, Some(secret.as_str()), redirect_uri).await;
+    let sid = decode_claims(session_ts.id_token.as_ref().unwrap())["sid"]
+        .as_str()
+        .expect("the id token to have a `sid`")
+        .to_string();
+    let res = delegate(&session_ts.access_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let from_session: TokenSet = res.json().await?;
+    let res = introspect(&from_session.access_token).await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+
+    let res = client
+        .delete(format!("{backend_url}/sessions/id/{sid}"))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    assert_eq!(introspect(&from_session.access_token).await?.status(), 401);
+    let res = introspect(&sessionless.access_token).await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
 
     // cleanup
     for id in [&actor_a.id, &actor_b.id] {

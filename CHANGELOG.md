@@ -34,6 +34,13 @@ only keeps scopes the exchanging client is allowed. Inherited scopes outside of 
 and explicitly requesting one is rejected. The lifetime is now capped by the `subject_token`'s own
 expiry and the user's expiry as well, so a client can no longer extend access by re-exchanging.
 
+#### Token Exchange keeps the session of the `subject_token`
+
+A token issued via the Token Exchange now inherits the session of its `subject_token`, like
+refreshed tokens do since [#1775](https://github.com/sebadob/rauthy/issues/1775). With
+`access.token_revoke_on_logout = true`, a logout of that session revokes it as well, and so does an
+admin deleting the session. Before, only a logout of the whole user did.
+
 #### Forward Auth cookie can no longer be used as a Rauthy session
 
 The Forward Auth session cookie, which the reverse proxy passes on to the protected upstream app, 
