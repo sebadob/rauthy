@@ -2523,6 +2523,7 @@ impl From<User> for UserResponseSimple {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database::HQL_TEST_LOCK;
     use crate::entity::sessions::{Session, SessionState};
     use pretty_assertions::assert_eq;
     use std::ops::Sub;
@@ -2711,9 +2712,6 @@ mod tests {
         Ok(())
     }
 
-    /// Serializes the tests on the shared hiqlite node, which share the user count
-    static HQL_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
     /// A user inserted into the test hiqlite node, with the email `{id}@example.com`
     async fn hql_insert_user(id: &str, picture_id: Option<&str>) -> User {
         User::insert(User {
@@ -2768,7 +2766,7 @@ mod tests {
     /// `User::save` may have put back.
     #[tokio::test]
     async fn test_delete_twice_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         let user = hql_insert_user("del_twice", None).await;
         let stale = user.clone();
@@ -2807,7 +2805,7 @@ mod tests {
     /// cached user instead of caching its copy, which still has no picture.
     #[tokio::test]
     async fn test_save_keeps_concurrent_picture_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         hql_insert_picture("save_pic_1").await;
         let user = hql_insert_user("save_pic", None).await;
@@ -2840,7 +2838,7 @@ mod tests {
     /// copy keeps the columns changed meanwhile, and other users are left alone.
     #[tokio::test]
     async fn test_set_picture_id_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         hql_insert_picture("set_pic_1").await;
         hql_insert_picture("set_pic_other").await;
@@ -2877,7 +2875,7 @@ mod tests {
     /// cached user. The failed login columns are cleared.
     #[tokio::test]
     async fn test_save_login_success_keeps_concurrent_changes_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         hql_insert_picture("login_ok_pic").await;
         let mut user = hql_insert_login_user("login_ok").await;
@@ -2927,7 +2925,7 @@ mod tests {
     /// the login columns are still saved.
     #[tokio::test]
     async fn test_save_login_success_keeps_concurrent_password_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         let user = hql_insert_login_user("login_ok_pwd").await;
         let mut login = User::find(user.id.clone()).await.unwrap();
@@ -2946,7 +2944,7 @@ mod tests {
     /// count, and each copy gets the stored counter. They write no other column.
     #[tokio::test]
     async fn test_save_login_failure_counts_concurrent_failures_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         hql_insert_picture("login_fail_pic").await;
         let user = hql_insert_login_user("login_fail").await;
@@ -2993,7 +2991,7 @@ mod tests {
     /// user is cached. A failure still counts in the copy, for the login delay.
     #[tokio::test]
     async fn test_save_login_state_missing_user_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         let mut login = User {
             id: "login_missing".to_string(),
@@ -3024,7 +3022,7 @@ mod tests {
     /// the login state from before.
     #[tokio::test]
     async fn test_save_login_state_after_concurrent_email_change_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         let user = hql_insert_login_user("login_mail").await;
         let mut login = User::find(user.id.clone()).await.unwrap();
@@ -3188,7 +3186,7 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
     /// copy, and it is gone once the delete returned.
     #[tokio::test]
     async fn test_delete_removes_stored_picture_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         for id in ["del_pic_old", "del_pic_new"] {
             DB::hql()
@@ -3294,7 +3292,7 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
     /// tokens, which the cascade of the user row removes, in the same transaction.
     #[tokio::test]
     async fn test_delete_revokes_access_tokens_hiqlite() {
-        let _lock = HQL_LOCK.lock().await;
+        let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
         let user = hql_insert_user("del_revoke", None).await;
         hql_insert_user("del_revoke_other", None).await;

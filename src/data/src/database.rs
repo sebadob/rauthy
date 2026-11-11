@@ -549,6 +549,11 @@ pub(crate) async fn pg_test_conn(pool: &deadpool_postgres::Pool, schema: &str) -
     cl
 }
 
+/// Serializes the tests on the hiqlite node of [`init_test_hiqlite`], which share its rows, like
+/// the user count.
+#[cfg(test)]
+pub(crate) static HQL_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// Starts a single hiqlite node with all migrations for the tests of this crate, once per test
 /// binary, and sets the database type to hiqlite. The node runs on a runtime of its own, so that
 /// it outlives the runtime of the test that started it.
