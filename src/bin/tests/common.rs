@@ -228,6 +228,38 @@ pub async fn session_headers_for_client(
 /// authenticated session headers (cookie + CSRF). Mirrors [`session_headers`] but with
 /// caller-provided credentials, used to obtain a delegated group-admin session.
 pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
+    prepare_login(email, password).await.send().await
+}
+
+/// A password login to the `rauthy` client with its session and proof of work done, whose
+/// `POST /oidc/authorize` is only sent by [`PreparedLogin::send`].
+pub struct PreparedLogin {
+    url_auth: String,
+    headers: HeaderMap,
+    req: LoginRequest,
+}
+
+impl PreparedLogin {
+    /// Sends the login and returns its authenticated session headers.
+    pub async fn send(self) -> HeaderMap {
+        let email = self.req.email.clone().unwrap_or_default();
+        let res = reqwest::Client::new()
+            .post(&self.url_auth)
+            .headers(self.headers.clone())
+            .json(&self.req)
+            .send()
+            .await
+            .unwrap();
+        let status = res.status();
+        if status != 202 {
+            let body = res.text().await.unwrap_or_default();
+            panic!("login for {email} failed: {status} - {body}");
+        }
+        self.headers
+    }
+}
+
+pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
@@ -246,7 +278,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
     assert!(res.status().is_success());
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
-    let req_login = LoginRequest {
+    let req = LoginRequest {
         email: Some(email.to_string()),
         password: Some(password.to_string()),
         pow: get_solved_pow().await,
@@ -262,19 +294,11 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
         fwda: None,
     };
 
-    let res = client
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await
-        .unwrap();
-    let status = res.status();
-    if status != 202 {
-        let body = res.text().await.unwrap_or_default();
-        panic!("group-admin login for {email} failed: {status} - {body}");
+    PreparedLogin {
+        url_auth,
+        headers,
+        req,
     }
-    headers
 }
 
 /// extractor for the POST `/oidc/session` endpoint

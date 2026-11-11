@@ -1,6 +1,7 @@
 use crate::common::{
     CLIENT_ID, PASSWORD, USERNAME, get_auth_headers, get_backend_url, get_solved_pow,
-    get_token_set, get_token_set_init_client, password_token_set, refresh, session_headers_with,
+    get_token_set, get_token_set_init_client, password_token_set, prepare_login, refresh,
+    session_headers_with,
 };
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
@@ -990,11 +991,16 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
 
     let url_user = format!("{backend}/users/{}", user.id);
     for round in 0..3 {
-        let logins = (0..6)
-            .map(|_| tokio::spawn(session_headers_with(EMAIL, PWD)))
+        let mut prepared = Vec::new();
+        for _ in 0..6 {
+            prepared.push(prepare_login(EMAIL, PWD).await);
+        }
+        let logins = prepared
+            .into_iter()
+            .map(|login| tokio::spawn(login.send()))
             .collect::<Vec<_>>();
-        // upload while the logins wait for their password hash
-        time::sleep(Duration::from_millis(50)).await;
+        // upload while the logins wait for their password hash, one at a time
+        time::sleep(Duration::from_millis(20)).await;
         let path = "../../assets/logo/rauthy_dark_small.png";
         let part = reqwest::multipart::Part::file(path).await?;
         let form = reqwest::multipart::Form::new().part("image.png", part);
