@@ -923,3 +923,116 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+/// A picture uploaded while password logins of the same user wait for their hash survives the
+/// logins: a login saves only its login state, not the copy of the user it read before.
+#[tokio::test]
+async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "picture-logins@consenttest.io";
+
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+
+    // left-over from a prior run
+    let res = client
+        .get(format!("{backend}/users"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let users = res.json::<Vec<UserResponseSimple>>().await?;
+    if let Some(user) = users.iter().find(|u| u.email == EMAIL) {
+        let res = client
+            .delete(format!("{backend}/users/{}", user.id))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
+
+    let res = client
+        .post(format!("{backend}/users"))
+        .headers(admin.clone())
+        .json(&NewUserRequest {
+            given_name: Some("Picture".to_string()),
+            family_name: None,
+            email: EMAIL.to_string(),
+            preferred_username: None,
+            language: Language::En,
+            roles: vec!["user".to_string()],
+            groups: None,
+            user_expires: None,
+            tz: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user = res.json::<UserResponse>().await?;
+    let res = client
+        .put(format!("{backend}/users/{}", user.id))
+        .headers(admin.clone())
+        .json(&UpdateUserRequest {
+            email: user.email.clone(),
+            given_name: user.given_name.clone(),
+            family_name: user.family_name.clone(),
+            language: Some(Language::En),
+            password: Some(PWD.to_string()),
+            roles: user.roles.clone(),
+            groups: user.groups.clone(),
+            enabled: true,
+            email_verified: true,
+            user_expires: None,
+            user_values: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let url_user = format!("{backend}/users/{}", user.id);
+    for round in 0..3 {
+        let logins = (0..6)
+            .map(|_| tokio::spawn(session_headers_with(EMAIL, PWD)))
+            .collect::<Vec<_>>();
+        // upload while the logins wait for their password hash
+        time::sleep(Duration::from_millis(50)).await;
+        let path = "../../assets/logo/rauthy_dark_small.png";
+        let part = reqwest::multipart::Part::file(path).await?;
+        let form = reqwest::multipart::Form::new().part("image.png", part);
+        let res = client
+            .put(format!("{url_user}/picture"))
+            .headers(admin.clone())
+            .multipart(form)
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+        let picture_id = res.text().await?;
+        for login in logins {
+            login.await?;
+        }
+
+        let res = client.get(&url_user).headers(admin.clone()).send().await?;
+        assert_eq!(res.status(), 200);
+        let found = res.json::<UserResponse>().await?;
+        assert_eq!(
+            found.picture_id.as_deref(),
+            Some(picture_id.as_str()),
+            "round {round}"
+        );
+        assert!(found.last_login.is_some());
+        let res = client
+            .get(format!("{url_user}/picture/{picture_id}"))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200, "round {round}");
+    }
+
+    let res = client
+        .delete(&url_user)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
