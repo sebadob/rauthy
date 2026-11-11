@@ -172,7 +172,7 @@ WHERE id = $18"#;
 
 /// `picture_id` is written only here, by the picture upload and removal: a full-row save
 /// works on a copy that may predate a concurrent picture change.
-static SQL_SET_PICTURE_ID: &str = "UPDATE users SET picture_id = $1 WHERE id = $2";
+static SQL_SET_PICTURE_ID: &str = "UPDATE users SET picture_id = $1 WHERE id = $2 RETURNING email";
 
 /// The new password hash `$3` is written only while the stored one is still the validated `$2`.
 /// SQLite numbers `$n` in the order of first appearance, so they appear in order.
@@ -1251,19 +1251,27 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         self.invalidate_cache_also(old_email.as_deref()).await
     }
 
-    /// Sets the `picture_id` of this user alone, then drops the cached user.
+    /// Sets the `picture_id` of this user alone, then drops the cached user, under the email of
+    /// this copy and under the stored one, if a concurrent update changed it.
     pub async fn set_picture_id(&self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
-        if is_hiqlite() {
+        let stored_email = if is_hiqlite() {
             DB::hql()
-                .execute(
+                .execute_returning(
                     SQL_SET_PICTURE_ID,
                     params!(picture_id.map(String::from), &self.id),
                 )
-                .await?;
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get::<String>("email"))
         } else {
-            DB::pg_execute(SQL_SET_PICTURE_ID, &[&picture_id, &self.id]).await?;
-        }
-        Self::invalidate_cache(&self.id, &self.email).await
+            DB::pg_query_rows(SQL_SET_PICTURE_ID, &[&picture_id, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+        self.invalidate_cache_also(stored_email.as_deref()).await
     }
 
     /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
@@ -2849,6 +2857,29 @@ mod tests {
         assert_eq!(other.picture_id.as_deref(), Some("set_pic_other"));
     }
 
+    /// `set_picture_id` through a copy read before a concurrent email change drops the cached
+    /// user under the stored email too, not only under the email of the copy.
+    #[tokio::test]
+    async fn test_set_picture_id_concurrent_email_change_hiqlite() {
+        let _lock = HQL_TEST_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        hql_insert_picture("set_pic_email_1").await;
+        let user = hql_insert_user("set_pic_email", None).await;
+        let stale = User::find(user.id.clone()).await.unwrap();
+
+        let mut admin = User::find(user.id.clone()).await.unwrap();
+        admin.email = "set_pic_email_new@example.com".to_string();
+        admin.save(Some(user.email.clone())).await.unwrap();
+        User::find_by_email(admin.email.clone()).await.unwrap();
+        let idx_new = format!("{IDX_USERS}_{}", admin.email);
+        assert!(hql_cached(idx_new.clone()).await.is_some());
+
+        stale.set_picture_id(Some("set_pic_email_1")).await.unwrap();
+        assert!(hql_cached(idx_new).await.is_none());
+        let saved = User::find_by_email(admin.email.clone()).await.unwrap();
+        assert_eq!(saved.picture_id.as_deref(), Some("set_pic_email_1"));
+    }
+
     /// A user with the validated password hash `validated` for the login state tests.
     async fn hql_insert_login_user(id: &str) -> User {
         let mut user = hql_insert_user(id, None).await;
@@ -3153,11 +3184,14 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
                 .is_none()
         );
 
-        // the full save binds no `picture_id`, which only `set_picture_id` writes
+        // the full save binds no `picture_id`, which only `set_picture_id` writes, returning
+        // the stored email
         assert_eq!(cl.prepare(SQL_SAVE).await.unwrap().params().len(), 18);
-        cl.execute(SQL_SET_PICTURE_ID, &[&None::<&str>, &"u1"])
+        let set = cl
+            .query_one(SQL_SET_PICTURE_ID, &[&None::<&str>, &"u1"])
             .await
             .unwrap();
+        assert_eq!(set.get::<_, String>("email"), "u1_new@example.com");
         assert_eq!(row("u1").await.get::<_, Option<String>>("picture_id"), None);
 
         cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
