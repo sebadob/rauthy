@@ -236,6 +236,7 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+    /// Updated only by [`Self::set_picture_id`]: [`Self::save`] does not write it.
     pub picture_id: Option<String>,
 }
 
@@ -1175,6 +1176,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         Ok(())
     }
 
+    /// Writes every column of this copy but `picture_id`, which only [`Self::set_picture_id`]
+    /// updates, then drops the cached user, also under `old_email`.
     pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
             User::is_email_free(self.email.clone()).await?;
@@ -1243,35 +1246,24 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
             //  -> compare with old value beforehand somehow, probably in calling fn before updates
         }
 
-        if let Some(email) = old_email {
-            let idx = format!("{IDX_USERS}_{email}");
-            client.delete(Cache::User, idx).await?;
-        }
-
         // `self` may be a copy read before a concurrent change of a column this save does not
         // write, like `picture_id`: drop the cached user instead of caching this copy
-        Self::invalidate_cache(&self.id, &self.email).await?;
-
-        Ok(())
+        self.invalidate_cache_also(old_email.as_deref()).await
     }
 
-    /// Sets the `picture_id` of the user `id` alone, then drops the cached user.
-    pub async fn set_picture_id(
-        id: &str,
-        email: &str,
-        picture_id: Option<&str>,
-    ) -> Result<(), ErrorResponse> {
+    /// Sets the `picture_id` of this user alone, then drops the cached user.
+    pub async fn set_picture_id(&self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::hql()
                 .execute(
                     SQL_SET_PICTURE_ID,
-                    params!(picture_id.map(String::from), id.to_string()),
+                    params!(picture_id.map(String::from), &self.id),
                 )
                 .await?;
         } else {
-            DB::pg_execute(SQL_SET_PICTURE_ID, &[&picture_id, &id]).await?;
+            DB::pg_execute(SQL_SET_PICTURE_ID, &[&picture_id, &self.id]).await?;
         }
-        Self::invalidate_cache(id, email).await
+        Self::invalidate_cache(&self.id, &self.email).await
     }
 
     /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
@@ -1311,7 +1303,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
             self.pg_save_login_success(&cl, new_password).await?
         };
 
-        self.invalidate_login_cache(stored_email).await
+        self.invalidate_cache_also(stored_email.as_deref()).await
     }
 
     /// The Postgres statement of [`Self::save_login_success`], the stored email if the row exists.
@@ -1365,7 +1357,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         };
         self.failed_login_attempts = Some(attempts);
 
-        self.invalidate_login_cache(stored_email).await
+        self.invalidate_cache_also(stored_email.as_deref()).await
     }
 
     /// The Postgres statement of [`Self::save_login_failure`], the stored email and failed
@@ -1386,15 +1378,14 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
             .map(|row| (row.get("email"), row.get("failed_login_attempts"))))
     }
 
-    /// Drops the cached user after a login state save, under the email of this copy and under
-    /// the `stored_email` the save returned, if a concurrent update changed it.
-    async fn invalidate_login_cache(
-        &self,
-        stored_email: Option<String>,
-    ) -> Result<(), ErrorResponse> {
+    /// Drops the cached user under its id and the email of this copy, and under `other_email`
+    /// too, if it differs: the email before a change, or the stored one a write returned, which
+    /// a concurrent update may have changed.
+    async fn invalidate_cache_also(&self, other_email: Option<&str>) -> Result<(), ErrorResponse> {
         Self::invalidate_cache(&self.id, &self.email).await?;
-        if let Some(email) = stored_email.filter(|email| email != &self.email) {
-            Self::invalidate_cache(&self.id, &email).await?;
+        if let Some(email) = other_email.filter(|email| *email != self.email) {
+            let idx = format!("{IDX_USERS}_{email}");
+            DB::hql().delete(Cache::User, idx).await?;
         }
         Ok(())
     }
@@ -2813,9 +2804,7 @@ mod tests {
         let idx_email = format!("{IDX_USERS}_{}", user.email);
 
         let mut stale = User::find(user.id.clone()).await.unwrap();
-        User::set_picture_id(&user.id, &user.email, Some("save_pic_1"))
-            .await
-            .unwrap();
+        user.set_picture_id(Some("save_pic_1")).await.unwrap();
         assert!(hql_cached(idx_id.clone()).await.is_none());
         assert!(hql_cached(idx_email.clone()).await.is_none());
         let found = User::find(user.id.clone()).await.unwrap();
@@ -2851,9 +2840,7 @@ mod tests {
         admin.roles = "admin".to_string();
         admin.save(None).await.unwrap();
 
-        User::set_picture_id(&stale.id, &stale.email, None)
-            .await
-            .unwrap();
+        stale.set_picture_id(None).await.unwrap();
         let saved = User::find(user.id.clone()).await.unwrap();
         assert_eq!(saved.picture_id, None);
         assert!(!saved.enabled);
@@ -2885,9 +2872,7 @@ mod tests {
         let mut login = User::find(user.id.clone()).await.unwrap();
         assert_eq!(login.failed_login_attempts, Some(3));
 
-        User::set_picture_id(&user.id, &user.email, Some("login_ok_pic"))
-            .await
-            .unwrap();
+        user.set_picture_id(Some("login_ok_pic")).await.unwrap();
         let mut admin = User::find(user.id.clone()).await.unwrap();
         admin.roles = "admin".to_string();
         admin.enabled = false;
@@ -2953,9 +2938,7 @@ mod tests {
             logins.push(User::find(user.id.clone()).await.unwrap());
         }
 
-        User::set_picture_id(&user.id, &user.email, Some("login_fail_pic"))
-            .await
-            .unwrap();
+        user.set_picture_id(Some("login_fail_pic")).await.unwrap();
         let mut admin = User::find(user.id.clone()).await.unwrap();
         admin.enabled = false;
         admin.password = Some("changed".to_string());
