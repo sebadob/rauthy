@@ -254,8 +254,12 @@ impl TokenSet {
                     };
                     for cust_name in csv.split(',') {
                         if let Some(value) = user_attrs.get(cust_name) {
-                            let json = serde_json::from_slice(value.as_slice())
-                                .expect("Converting cust user id attr to json");
+                            let json = serde_json::from_slice(value.as_slice()).map_err(|err| {
+                                ErrorResponse::new(
+                                    ErrorResponseType::Internal,
+                                    format!("Converting cust user id attr to json: {err}"),
+                                )
+                            })?;
                             target.insert(cust_name.to_string(), json);
                         }
                     }
@@ -461,8 +465,12 @@ impl TokenSet {
                     };
                     for cust_name in csv.split(',') {
                         if let Some(value) = user_attrs.get(cust_name) {
-                            let json = serde_json::from_slice(value.as_slice())
-                                .expect("Converting cust user id attr to json");
+                            let json = serde_json::from_slice(value.as_slice()).map_err(|err| {
+                                ErrorResponse::new(
+                                    ErrorResponseType::Internal,
+                                    format!("Converting cust user id attr to json: {err}"),
+                                )
+                            })?;
                             target.insert(cust_name.to_string(), json);
                         }
                     }

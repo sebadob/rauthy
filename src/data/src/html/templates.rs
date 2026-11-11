@@ -670,7 +670,7 @@ pub struct AdminKVHtml<'a> {
 
 impl AdminKVHtml<'_> {
     pub fn build(lang: &Language, theme_ts: i64) -> String {
-        let res = AdminGroupsHtml {
+        let res = AdminKVHtml {
             lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
@@ -1052,5 +1052,17 @@ impl UserPasswordResetHtml<'_> {
         }
         .render()
         .expect("rendering password_reset.html")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn admin_kv_does_not_render_the_groups_page() {
+        let kv = AdminKVHtml::build(&Language::En, 0);
+        let groups = AdminGroupsHtml::build(&Language::En, 0);
+        assert_ne!(kv, groups);
     }
 }

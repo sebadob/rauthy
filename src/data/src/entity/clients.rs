@@ -1684,9 +1684,22 @@ impl Client {
     #[inline]
     pub async fn validate_secret(
         &self,
-        mut secret: String,
+        secret: String,
         req: &HttpRequest,
     ) -> Result<(), ErrorResponse> {
+        let res = self.check_secret(secret).await;
+        if res.is_err() {
+            warn!(
+                "Invalid login for client '{}' from '{}'",
+                self.id,
+                real_ip_from_req(req)?
+            );
+        }
+        res
+    }
+
+    /// Validates the `client_secret` without logging, for callers without an `HttpRequest`.
+    pub async fn check_secret(&self, mut secret: String) -> Result<(), ErrorResponse> {
         if !self.confidential {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
@@ -1723,12 +1736,6 @@ impl Client {
             secret.zeroize();
             return Ok(());
         }
-
-        warn!(
-            "Invalid login for client '{}' from '{}'",
-            self.id,
-            real_ip_from_req(req)?
-        );
 
         Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,

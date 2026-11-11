@@ -7,6 +7,7 @@ pub mod encryption;
 pub mod forward_auth;
 pub mod login_delay;
 pub mod oidc;
+pub mod password_login;
 pub mod password_reset;
 pub mod suspicious_request_block;
 pub mod token_set;
