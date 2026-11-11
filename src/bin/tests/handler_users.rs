@@ -12,11 +12,12 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::utils::new_store_id;
 use rauthy_service::token_set::TokenSet;
-use reqwest::header::AUTHORIZATION;
+use reqwest::header::{AUTHORIZATION, HeaderMap};
 use reqwest::{Client, StatusCode};
 use serde_json::{Value, json};
 use std::error::Error;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::task::JoinHandle;
 use tokio::time;
 
 mod common;
@@ -925,24 +926,22 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// A picture uploaded while password logins of the same user wait for their hash survives the
-/// logins: a login saves only its login state, not the copy of the user it read before.
-#[tokio::test]
-async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Error>> {
-    const EMAIL: &str = "picture-logins@consenttest.io";
-
-    let admin = get_auth_headers().await?;
+/// Creates `email` with the role `user` and the password [`PWD`], deleting a left-over of a prior
+/// run first.
+async fn create_login_user(
+    client: &Client,
+    admin: &HeaderMap,
+    email: &str,
+) -> Result<UserResponse, Box<dyn Error>> {
     let backend = get_backend_url();
-    let client = Client::new();
 
-    // left-over from a prior run
     let res = client
         .get(format!("{backend}/users"))
         .headers(admin.clone())
         .send()
         .await?;
     let users = res.json::<Vec<UserResponseSimple>>().await?;
-    if let Some(user) = users.iter().find(|u| u.email == EMAIL) {
+    if let Some(user) = users.iter().find(|u| u.email == email) {
         let res = client
             .delete(format!("{backend}/users/{}", user.id))
             .headers(admin.clone())
@@ -955,9 +954,9 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
         .post(format!("{backend}/users"))
         .headers(admin.clone())
         .json(&NewUserRequest {
-            given_name: Some("Picture".to_string()),
+            given_name: Some("Login".to_string()),
             family_name: None,
-            email: EMAIL.to_string(),
+            email: email.to_string(),
             preferred_username: None,
             language: Language::En,
             roles: vec!["user".to_string()],
@@ -988,6 +987,150 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
         .send()
         .await?;
     assert_eq!(res.status(), 200);
+
+    Ok(user)
+}
+
+/// In three rounds, starts concurrent logins of `user` through `start_logins` and, while they wait
+/// for their password hash, changes the user's name and roles as an admin. Asserts after each
+/// round that the admin change survived the logins, which save only their login state.
+async fn assert_admin_update_survives_logins(
+    client: &Client,
+    admin: &HeaderMap,
+    user: &UserResponse,
+    start_logins: impl AsyncFn() -> Vec<JoinHandle<()>>,
+) -> Result<(), Box<dyn Error>> {
+    let url_user = format!("{}/users/{}", get_backend_url(), user.id);
+
+    for round in 0..3 {
+        let given_name = format!("Admin round {round}");
+        let roles = if round % 2 == 0 {
+            vec!["admin".to_string(), "user".to_string()]
+        } else {
+            vec!["user".to_string()]
+        };
+
+        let logins = start_logins().await;
+        // update while the logins wait for their password hash, one at a time
+        time::sleep(Duration::from_millis(20)).await;
+        let res = client
+            .put(&url_user)
+            .headers(admin.clone())
+            .json(&UpdateUserRequest {
+                email: user.email.clone(),
+                given_name: Some(given_name.clone()),
+                family_name: user.family_name.clone(),
+                language: Some(Language::En),
+                password: None,
+                roles: roles.clone(),
+                groups: user.groups.clone(),
+                enabled: true,
+                email_verified: true,
+                user_expires: None,
+                user_values: None,
+            })
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+        for login in logins {
+            login.await?;
+        }
+
+        let res = client.get(&url_user).headers(admin.clone()).send().await?;
+        assert_eq!(res.status(), 200);
+        let found = res.json::<UserResponse>().await?;
+        assert_eq!(
+            found.given_name.as_deref(),
+            Some(given_name.as_str()),
+            "round {round}"
+        );
+        let mut found_roles = found.roles.clone();
+        found_roles.sort();
+        assert_eq!(found_roles, roles, "round {round}");
+        assert!(found.last_login.is_some());
+        assert_eq!(found.failed_login_attempts, None);
+    }
+
+    Ok(())
+}
+
+/// An admin update of a user made while `/oidc/authorize` logins of that user wait for their hash
+/// survives the logins.
+#[tokio::test]
+async fn test_admin_update_survives_concurrent_logins() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "update-logins@consenttest.io";
+
+    let admin = get_auth_headers().await?;
+    let client = Client::new();
+    let user = create_login_user(&client, &admin, EMAIL).await?;
+
+    assert_admin_update_survives_logins(&client, &admin, &user, async || {
+        let mut prepared = Vec::new();
+        for _ in 0..6 {
+            prepared.push(prepare_login(EMAIL, PWD).await);
+        }
+        prepared
+            .into_iter()
+            .map(|login| {
+                tokio::spawn(async move {
+                    login.send().await;
+                })
+            })
+            .collect()
+    })
+    .await?;
+
+    let res = client
+        .delete(format!("{}/users/{}", get_backend_url(), user.id))
+        .headers(admin)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
+
+/// An admin update of a user made while password grant logins of that user wait for their hash
+/// survives the logins.
+#[tokio::test]
+async fn test_admin_update_survives_concurrent_password_grants() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "update-grants@consenttest.io";
+
+    let admin = get_auth_headers().await?;
+    let client = Client::new();
+    let user = create_login_user(&client, &admin, EMAIL).await?;
+
+    assert_admin_update_survives_logins(&client, &admin, &user, async || {
+        (0..6)
+            .map(|_| {
+                tokio::spawn(async {
+                    password_token_set(&Client::new(), EMAIL, PWD).await;
+                })
+            })
+            .collect()
+    })
+    .await?;
+
+    let res = client
+        .delete(format!("{}/users/{}", get_backend_url(), user.id))
+        .headers(admin)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
+
+/// A picture uploaded while password logins of the same user wait for their hash survives the
+/// logins: a login saves only its login state, not the copy of the user it read before.
+#[tokio::test]
+async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "picture-logins@consenttest.io";
+
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let user = create_login_user(&client, &admin, EMAIL).await?;
 
     let url_user = format!("{backend}/users/{}", user.id);
     for round in 0..3 {
