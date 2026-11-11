@@ -197,6 +197,43 @@ failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
 WHERE id = $2
 RETURNING email, failed_login_attempts"#;
 
+/// Runs the hiqlite write `sql` of one user row and decodes the row its `RETURNING` gives, if
+/// the user exists.
+async fn hql_returning<T>(
+    sql: &'static str,
+    params: Params,
+    decode: impl FnOnce(hiqlite::Row<'_>) -> T,
+) -> Result<Option<T>, ErrorResponse> {
+    Ok(DB::hql()
+        .execute_returning(sql, params)
+        .await?
+        .into_iter()
+        .next()
+        .transpose()?
+        .map(decode))
+}
+
+/// The Postgres [`hql_returning`] on the client `cl`.
+async fn pg_returning<T>(
+    cl: &PgClient,
+    sql: &str,
+    params: &[&(dyn postgres_types::ToSql + Sync)],
+    decode: impl FnOnce(&tokio_postgres::Row) -> T,
+) -> Result<Option<T>, ErrorResponse> {
+    Ok(DB::pg_query_rows_with(cl, sql, params, 1)
+        .await?
+        .first()
+        .map(decode))
+}
+
+/// The stored columns a password reset returns.
+#[derive(Debug, PartialEq)]
+struct StoredReset {
+    email: String,
+    email_verified: bool,
+    enabled: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
     // New -> neither password nor a passkey has been set yet
@@ -1265,24 +1302,30 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     /// update changed it.
     pub async fn set_picture_id(&mut self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
         let stored_email = if is_hiqlite() {
-            DB::hql()
-                .execute_returning(
-                    SQL_SET_PICTURE_ID,
-                    params!(picture_id.map(String::from), &self.id),
-                )
-                .await?
-                .into_iter()
-                .next()
-                .transpose()?
-                .map(|mut row| row.get::<String>("email"))
+            hql_returning(
+                SQL_SET_PICTURE_ID,
+                params!(picture_id.map(String::from), &self.id),
+                |mut row| row.get::<String>("email"),
+            )
+            .await?
         } else {
-            DB::pg_query_rows(SQL_SET_PICTURE_ID, &[&picture_id, &self.id], 1)
-                .await?
-                .first()
-                .map(|row| row.get("email"))
+            let cl = DB::pg().await?;
+            self.pg_set_picture_id(&cl, picture_id).await?
         };
         self.picture_id = picture_id.map(String::from);
         self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// The Postgres statement of [`Self::set_picture_id`], the stored email if the row exists.
+    async fn pg_set_picture_id(
+        &self,
+        cl: &PgClient,
+        picture_id: Option<&str>,
+    ) -> Result<Option<String>, ErrorResponse> {
+        pg_returning(cl, SQL_SET_PICTURE_ID, &[&picture_id, &self.id], |row| {
+            row.get("email")
+        })
+        .await
     }
 
     /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
@@ -1303,21 +1346,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         self.failed_login_attempts = None;
 
         let stored_email = if is_hiqlite() {
-            DB::hql()
-                .execute_returning(
-                    SQL_SAVE_LOGIN_SUCCESS,
-                    params!(
-                        self.last_login,
-                        &self.password,
-                        new_password.map(String::from),
-                        &self.id
-                    ),
-                )
-                .await?
-                .into_iter()
-                .next()
-                .transpose()?
-                .map(|mut row| row.get::<String>("email"))
+            hql_returning(
+                SQL_SAVE_LOGIN_SUCCESS,
+                params!(
+                    self.last_login,
+                    &self.password,
+                    new_password.map(String::from),
+                    &self.id
+                ),
+                |mut row| row.get::<String>("email"),
+            )
+            .await?
         } else {
             let cl = DB::pg().await?;
             self.pg_save_login_success(&cl, new_password).await?
@@ -1332,14 +1371,13 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         cl: &PgClient,
         new_password: Option<&str>,
     ) -> Result<Option<String>, ErrorResponse> {
-        let rows = DB::pg_query_rows_with(
+        pg_returning(
             cl,
             SQL_SAVE_LOGIN_SUCCESS,
             &[&self.last_login, &self.password, &new_password, &self.id],
-            1,
+            |row| row.get("email"),
         )
-        .await?;
-        Ok(rows.first().map(|row| row.get("email")))
+        .await
     }
 
     /// Saves a failed login: sets `last_failed_login` to now and increments
@@ -1351,21 +1389,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         self.last_failed_login = Some(Utc::now().timestamp());
 
         let stored = if is_hiqlite() {
-            DB::hql()
-                .execute_returning(
-                    SQL_SAVE_LOGIN_FAILURE,
-                    params!(self.last_failed_login, &self.id),
-                )
-                .await?
-                .into_iter()
-                .next()
-                .transpose()?
-                .map(|mut row| {
+            hql_returning(
+                SQL_SAVE_LOGIN_FAILURE,
+                params!(self.last_failed_login, &self.id),
+                |mut row| {
                     (
                         row.get::<String>("email"),
                         row.get::<i64>("failed_login_attempts"),
                     )
-                })
+                },
+            )
+            .await?
         } else {
             let cl = DB::pg().await?;
             self.pg_save_login_failure(&cl).await?
@@ -1386,16 +1420,13 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         &self,
         cl: &PgClient,
     ) -> Result<Option<(String, i64)>, ErrorResponse> {
-        let rows = DB::pg_query_rows_with(
+        pg_returning(
             cl,
             SQL_SAVE_LOGIN_FAILURE,
             &[&self.last_failed_login, &self.id],
-            1,
+            |row| (row.get("email"), row.get("failed_login_attempts")),
         )
-        .await?;
-        Ok(rows
-            .first()
-            .map(|row| (row.get("email"), row.get("failed_login_attempts"))))
+        .await
     }
 
     /// Saves a password reset: writes the `password` and `password_expires` that
@@ -1409,34 +1440,27 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     /// tokens of a user the stored row has disabled.
     pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
         let stored = if is_hiqlite() {
-            DB::hql()
-                .execute_returning(
-                    SQL_SAVE_PASSWORD_RESET,
-                    params!(
-                        &self.password,
-                        self.password_expires,
-                        &self.email,
-                        &self.id
-                    ),
-                )
-                .await?
-                .into_iter()
-                .next()
-                .transpose()?
-                .map(|mut row| {
-                    (
-                        row.get::<String>("email"),
-                        row.get::<bool>("email_verified"),
-                        row.get::<bool>("enabled"),
-                    )
-                })
+            hql_returning(
+                SQL_SAVE_PASSWORD_RESET,
+                params!(&self.password, self.password_expires, &self.email, &self.id),
+                |mut row| StoredReset {
+                    email: row.get("email"),
+                    email_verified: row.get("email_verified"),
+                    enabled: row.get("enabled"),
+                },
+            )
+            .await?
         } else {
             let cl = DB::pg().await?;
             self.pg_save_password_reset(&cl).await?
         };
 
         let stored_email = match stored {
-            Some((email, email_verified, enabled)) => {
+            Some(StoredReset {
+                email,
+                email_verified,
+                enabled,
+            }) => {
                 self.email_verified = email_verified;
                 if !enabled {
                     // like `save` does for a disabled user, judged by the stored row, which a
@@ -1456,17 +1480,23 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     async fn pg_save_password_reset(
         &self,
         cl: &PgClient,
-    ) -> Result<Option<(String, bool, bool)>, ErrorResponse> {
-        let rows = DB::pg_query_rows_with(
+    ) -> Result<Option<StoredReset>, ErrorResponse> {
+        pg_returning(
             cl,
             SQL_SAVE_PASSWORD_RESET,
-            &[&self.password, &self.password_expires, &self.email, &self.id],
-            1,
+            &[
+                &self.password,
+                &self.password_expires,
+                &self.email,
+                &self.id,
+            ],
+            |row| StoredReset {
+                email: row.get("email"),
+                email_verified: row.get("email_verified"),
+                enabled: row.get("enabled"),
+            },
         )
-        .await?;
-        Ok(rows
-            .first()
-            .map(|row| (row.get("email"), row.get("email_verified"), row.get("enabled"))))
+        .await
     }
 
     /// Drops the cached user under its id and the email of this copy, and under `other_email`
@@ -3379,12 +3409,16 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
         // the full save binds no `picture_id`, which only `set_picture_id` writes, returning
         // the stored email
         assert_eq!(cl.prepare(SQL_SAVE).await.unwrap().params().len(), 18);
-        let set = cl
-            .query_one(SQL_SET_PICTURE_ID, &[&None::<&str>, &"u1"])
-            .await
-            .unwrap();
-        assert_eq!(set.get::<_, String>("email"), "u1_new@example.com");
+        let email = login("u1").pg_set_picture_id(&cl, None).await.unwrap();
+        assert_eq!(email.as_deref(), Some("u1_new@example.com"));
         assert_eq!(row("u1").await.get::<_, Option<String>>("picture_id"), None);
+        assert!(
+            login("u3")
+                .pg_set_picture_id(&cl, None)
+                .await
+                .unwrap()
+                .is_none()
+        );
 
         cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
             .await
@@ -3419,7 +3453,14 @@ UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
         };
 
         let stored = reset("u1").pg_save_password_reset(&cl).await.unwrap();
-        assert_eq!(stored, Some(("u1_new@example.com".to_string(), false, false)));
+        assert_eq!(
+            stored,
+            Some(StoredReset {
+                email: "u1_new@example.com".to_string(),
+                email_verified: false,
+                enabled: false,
+            })
+        );
         let r = cl
             .query_one(
                 "SELECT password, password_expires, email_verified, enabled, roles, \
@@ -3441,7 +3482,14 @@ UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
 
         // the email of the copy is still the stored one
         let stored = reset("u3").pg_save_password_reset(&cl).await.unwrap();
-        assert_eq!(stored, Some(("u3@example.com".to_string(), true, true)));
+        assert_eq!(
+            stored,
+            Some(StoredReset {
+                email: "u3@example.com".to_string(),
+                email_verified: true,
+                enabled: true,
+            })
+        );
         let r = cl
             .query_one(
                 "SELECT password, email_verified FROM users WHERE id = 'u3'",
