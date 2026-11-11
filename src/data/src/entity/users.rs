@@ -170,8 +170,9 @@ failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expire
 auth_provider_id = $16, federation_uid = $17
 WHERE id = $18"#;
 
-/// `picture_id` is written only here, by the picture upload and removal: a full-row save
-/// works on a copy that may predate a concurrent picture change.
+/// `picture_id` is updated only here, by the picture upload and removal; a row insert sets it
+/// too. A full-row save never writes it: it works on a copy that may predate a concurrent
+/// picture change.
 static SQL_SET_PICTURE_ID: &str = "UPDATE users SET picture_id = $1 WHERE id = $2 RETURNING email";
 
 /// The new password hash `$3` is written only while the stored one is still the validated `$2`.
@@ -1275,7 +1276,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     }
 
     /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
-    /// in this copy and in the database, and replaces a rehashed password with `new_password`.
+    /// in this copy and in the database, and replaces a rehashed password with `new_password`
+    /// in the database only: this copy keeps the hash the login validated.
     /// Unlike [`Self::save`], it does not write back the other columns of this copy, which a
     /// login may have read long before, e.g. before it spent its time on the password hash, so
     /// a concurrent change of the user (a picture upload, an admin update) is kept.
@@ -2982,7 +2984,7 @@ mod tests {
                 login.failed_login_attempts.unwrap()
             }))
             .await;
-        counts.sort();
+        counts.sort_unstable();
         assert_eq!(counts, [1, 2, 3, 4, 5]);
 
         let saved = User::find(user.id.clone()).await.unwrap();
