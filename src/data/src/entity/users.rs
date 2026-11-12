@@ -3166,7 +3166,8 @@ mod tests {
         assert_eq!(ids, ["pwd_reset_on_rt", "pwd_reset_on_rtd"]);
     }
 
-    /// A password reset of a user deleted meanwhile writes nothing and caches nothing.
+    /// A password reset of a user deleted meanwhile writes nothing, drops the cached user and
+    /// returns Ok without email_verified.
     #[tokio::test]
     async fn test_save_password_reset_missing_user_hiqlite() {
         let _lock = HQL_TEST_LOCK.lock().await;
@@ -3178,22 +3179,23 @@ mod tests {
             ..Default::default()
         };
         let count = User::count().await.unwrap();
+        let idx_id = format!("{IDX_USERS}_{}", reset.id);
+        let idx_email = format!("{IDX_USERS}_{}", reset.email);
+        for idx in [&idx_id, &idx_email] {
+            DB::hql()
+                .put(Cache::User, idx.clone(), &reset, CACHE_TTL_USER)
+                .await
+                .unwrap();
+            assert!(hql_cached(idx.clone()).await.is_some());
+        }
 
         reset.save_password_reset().await.unwrap();
         assert!(!reset.email_verified);
         assert_eq!(User::count().await.unwrap(), count);
+        assert!(hql_cached(idx_id).await.is_none());
+        assert!(hql_cached(idx_email).await.is_none());
         let err = User::find(reset.id.clone()).await.unwrap_err();
         assert_eq!(err.error, ErrorResponseType::NotFound);
-        assert!(
-            hql_cached(format!("{IDX_USERS}_{}", reset.id))
-                .await
-                .is_none()
-        );
-        assert!(
-            hql_cached(format!("{IDX_USERS}_{}", reset.email))
-                .await
-                .is_none()
-        );
     }
 
     /// A save with a new email drops the user cached under the old one.
