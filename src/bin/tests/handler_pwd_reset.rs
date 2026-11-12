@@ -118,8 +118,12 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
 
     // correct headers - all should be good now, and an admin change of the user made while the
     // reset waits for its password hash survives the reset, which saves only its own columns
+    // and verifies the email the reset was sent to
     let admin = get_auth_headers().await?;
     let url_user = format!("{backend_url}/users/{user_id}");
+    let res = patch_user(&client, &admin, &url_user, "email_verified", json!(false)).await?;
+    assert_eq!(res.status(), 200);
+    assert!(!res.json::<UserResponse>().await?.email_verified);
     // logins ahead of the reset in the hashing queue, so the change lands while it waits
     let logins = (0..3)
         .map(|_| {
@@ -136,7 +140,8 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
             .send(),
     );
     time::sleep(Duration::from_millis(20)).await;
-    // in a task of its own, so that test_admin gets its name back below whatever it asserts
+    // in a task of its own, so that test_admin gets its name and verified email back below
+    // whatever it asserts
     let checks = tokio::spawn({
         let (client, admin, url_user) = (client.clone(), admin.clone(), url_user.clone());
         async move {
@@ -159,8 +164,13 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         }
     })
     .await;
-    let res = patch_user(&client, &admin, &url_user, "given_name", json!("Admin")).await?;
-    assert_eq!(res.status(), 200);
+    for (key, value) in [
+        ("given_name", json!("Admin")),
+        ("email_verified", json!(true)),
+    ] {
+        let res = patch_user(&client, &admin, &url_user, key, value).await?;
+        assert_eq!(res.status(), 200);
+    }
     match checks {
         Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
         Err(err) => return Err(err.into()),
