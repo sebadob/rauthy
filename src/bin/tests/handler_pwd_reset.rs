@@ -12,6 +12,7 @@ use reqwest::header;
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde_json::json;
 use std::error::Error;
+use std::panic;
 use std::time::Duration;
 use tokio::time;
 
@@ -135,29 +136,37 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
             .send(),
     );
     time::sleep(Duration::from_millis(20)).await;
-    let patch_given_name = |given_name: &str| {
-        client
-            .patch(&url_user)
-            .headers(admin.clone())
-            .json(&json!({
-                "put": [{ "key": "given_name", "value": given_name }],
-                "del": [],
-            }))
-            .send()
-    };
-    let res = patch_given_name("Reset").await?;
+    // in a task of its own, so that test_admin gets its name back below whatever it asserts
+    let checks = tokio::spawn({
+        let (client, admin, url_user) = (client.clone(), admin.clone(), url_user.clone());
+        async move {
+            let res = patch_user(&client, &admin, &url_user, "given_name", json!("Reset")).await?;
+            assert_eq!(res.status(), 200);
+            assert!(
+                !reset.is_finished(),
+                "the admin change must land while the reset waits for its password hash"
+            );
+            assert_eq!(reset.await??.status().as_u16(), 202);
+            for login in logins {
+                login.await?;
+            }
+            let res = client.get(&url_user).headers(admin).send().await?;
+            assert_eq!(res.status(), 200);
+            let found = res.json::<UserResponse>().await?;
+            assert_eq!(found.given_name.as_deref(), Some("Reset"));
+            assert!(found.email_verified);
+            Ok::<_, Box<dyn Error + Send + Sync>>(())
+        }
+    })
+    .await;
+    let res = patch_user(&client, &admin, &url_user, "given_name", json!("Admin")).await?;
     assert_eq!(res.status(), 200);
-    assert_eq!(reset.await??.status().as_u16(), 202);
-    for login in logins {
-        login.await?;
+    match checks {
+        Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
+        Err(err) => return Err(err.into()),
+        Ok(Err(err)) => return Err(err as Box<dyn Error>),
+        Ok(Ok(())) => {}
     }
-    let res = client.get(&url_user).headers(admin.clone()).send().await?;
-    assert_eq!(res.status(), 200);
-    let found = res.json::<UserResponse>().await?;
-    assert_eq!(found.given_name.as_deref(), Some("Reset"));
-    assert!(found.email_verified);
-    let res = patch_given_name("Admin").await?;
-    assert_eq!(res.status(), 200);
 
     // now test logging in with the new password
     let url = format!("{}/oidc/token", get_backend_url());
@@ -188,4 +197,23 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     assert_eq!(err.message, "This link has expired already");
 
     Ok(())
+}
+
+/// Puts the attribute `key` of the user at `url_user` to `value` through an admin PATCH.
+async fn patch_user(
+    client: &reqwest::Client,
+    admin: &HeaderMap,
+    url_user: &str,
+    key: &str,
+    value: serde_json::Value,
+) -> reqwest::Result<reqwest::Response> {
+    client
+        .patch(url_user)
+        .headers(admin.clone())
+        .json(&json!({
+            "put": [{ "key": key, "value": value }],
+            "del": [],
+        }))
+        .send()
+        .await
 }
