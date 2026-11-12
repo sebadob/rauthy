@@ -38,6 +38,7 @@ fn email_ts_prettify_with(
         .unwrap_or_else(|| Tz::from_str(&config.tz_fallback).unwrap());
 
     let fmt_str = match lang {
+        Language::Cs => config.cs.as_ref(),
         Language::De => config.de.as_ref(),
         Language::En => config.en.as_ref(),
         Language::Es => config.es.as_ref(),
@@ -63,6 +64,7 @@ mod tests {
     #[test]
     fn test_email_ts_prettify() {
         let config = VarsEmailTzFmt {
+            cs: "%-d. %-m. %Y %T (%Z)".into(),
             de: "%d.%m.%Y %T (%Z)".into(),
             en: "%m/%d/%Y %T (%Z)".into(),
             es: "%d/%m/%Y %T (%Z)".into(),
@@ -92,5 +94,8 @@ mod tests {
         assert_eq!(&p, "20.10.2000 13:23:33 (UTC)");
         let p = email_ts_prettify_with(&config, now, &Language::De, Some("Europe/Berlin"));
         assert_eq!(&p, "20.10.2000 15:23:33 (CEST)");
+
+        let p = email_ts_prettify_with(&config, now, &Language::Cs, Some("Europe/Prague"));
+        assert_eq!(&p, "20. 10. 2000 15:23:33 (CEST)");
     }
 }

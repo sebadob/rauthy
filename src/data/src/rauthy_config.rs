@@ -439,6 +439,7 @@ impl Default for Vars {
                 microsoft_graph_uri: None,
                 root_ca: None,
                 tz_fmt: VarsEmailTzFmt {
+                    cs: "%-d. %-m. %Y %T (%Z)".into(),
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
                     es: "%d/%m/%Y %T (%Z)".into(),
@@ -560,6 +561,7 @@ impl Default for Vars {
             },
             i18n: VarsI18n {
                 filter_lang_common: vec![
+                    "cs".into(),
                     "de".into(),
                     "en".into(),
                     "es".into(),
@@ -574,6 +576,7 @@ impl Default for Vars {
                     "zhhans".into(),
                 ],
                 filter_lang_admin: vec![
+                    "cs".into(),
                     "de".into(),
                     "en".into(),
                     "es".into(),
@@ -679,6 +682,17 @@ impl Default for Vars {
             },
             templates: VarsTemplates {
                 password_new: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Nové heslo".into(),
+                        header: "Nové heslo –".into(),
+                        text: None,
+                        click_link: Some("Kliknutím na odkaz níže přejdete k nastavení hesla.".into()),
+                        validity: Some("Z bezpečnostních důvodů platí odkaz jen krátkou dobu.".into()),
+                        expires: Some("Odkaz platí do:".into()),
+                        button: Some("Nastavit heslo".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     de: VarsTemplate
                     {
                         subject: "Neues Passwort".into(),
@@ -845,6 +859,17 @@ impl Default for Vars {
                     },
                 },
                 password_reset: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Žádost o obnovení hesla".into(),
+                        header: "Žádost o obnovení hesla –".into(),
+                        text: None,
+                        click_link: Some("Kliknutím na odkaz níže přejdete k obnovení hesla.".into()),
+                        validity: Some("Z bezpečnostních důvodů platí odkaz jen krátkou dobu.".into()),
+                        expires: Some("Odkaz platí do:".into()),
+                        button: Some("Obnovit heslo".into()),
+                        footer: Some("Pokud odkaz vypršel, můžete si vyžádat nový.".into()),
+                        button_text_request_new: Some("Vyžádat nový odkaz".into()),
+                    },
                     de: VarsTemplate {
                         subject: "Passwort Reset angefordert".into(),
                         header: "Passwort Reset angefordert für".into(),
@@ -1004,6 +1029,22 @@ impl Default for Vars {
                     },
                 },
                 email_registered_already: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "E-mail je již registrován".into(),
+                        header: "E-mail je již registrován – ".into(),
+                        text: Some(r#"Někdo se pokusil zaregistrovat nový účet s vaší e-mailovou adresou,
+ačkoli účet s touto adresou již existuje. Pokud jste to byli vy a šlo o omyl,
+můžete tuto zprávu ignorovat. Pokud jste zapomněli heslo, můžete si ho
+obnovit pomocí odkazu níže.
+Pokud jste se registrovat nepokoušeli, nemusíte se obávat.
+Váš účet nebyl napaden a žádná data neunikla."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Vyžádat odkaz na obnovení hesla".into()),
+                    },
                     de: VarsTemplate {
                         subject: "E-Mail bereits registriert".into(),
                         header: "E-Mail bereits registriert - ".into(),
@@ -1197,6 +1238,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                     },
                 },
                 email_otp: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Jednorázový kód".into(),
+                        header: "Jednorázový kód –".into(),
+                        text: Some("Váš jednorázový kód:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     de: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
@@ -2314,6 +2366,9 @@ impl Vars {
         // [email.tz_fmt]
         let mut tz_fmt = t_table(&mut table, "tz_fmt");
 
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "cs", "TZ_FMT_CS") {
+            self.email.tz_fmt.cs = v.into();
+        }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "de", "TZ_FMT_DE") {
             self.email.tz_fmt.de = v.into();
         }
@@ -3642,6 +3697,13 @@ impl Vars {
                         self.templates.password_reset.en.clone()
                     }
                 }
+                "cs" => {
+                    if is_password_new {
+                        self.templates.password_new.cs.clone()
+                    } else {
+                        self.templates.password_reset.cs.clone()
+                    }
+                }
                 "de" => {
                     if is_password_new {
                         self.templates.password_new.de.clone()
@@ -3757,6 +3819,13 @@ impl Vars {
                         self.templates.password_new.en = tpl;
                     } else {
                         self.templates.password_reset.en = tpl;
+                    }
+                }
+                "cs" => {
+                    if is_password_new {
+                        self.templates.password_new.cs = tpl;
+                    } else {
+                        self.templates.password_reset.cs = tpl;
                     }
                 }
                 "de" => {
@@ -4539,6 +4608,7 @@ pub struct VarsEmailJobs {
 
 #[derive(Debug)]
 pub struct VarsEmailTzFmt {
+    pub cs: Cow<'static, str>,
     pub de: Cow<'static, str>,
     pub en: Cow<'static, str>,
     pub es: Cow<'static, str>,
@@ -4858,6 +4928,7 @@ pub struct VarsTemplates {
 
 #[derive(Debug)]
 pub struct VarsTemplatesLanguages {
+    pub cs: VarsTemplate,
     pub de: VarsTemplate,
     pub en: VarsTemplate,
     pub es: VarsTemplate,

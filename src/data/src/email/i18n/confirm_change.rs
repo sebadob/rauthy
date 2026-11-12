@@ -11,6 +11,7 @@ pub struct I18nEmailConfirmChange<'a> {
 impl I18nEmailConfirmChange<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
@@ -28,6 +29,14 @@ impl I18nEmailConfirmChange<'_> {
 }
 
 impl I18nEmailConfirmChange<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Změna e-mailu potvrzena",
+            msg: "Vaše e-mailová adresa byla úspěšně změněna na:",
+            msg_from_admin: "Změnu provedl správce.",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "E-Mail Wechsel bestätigt für",

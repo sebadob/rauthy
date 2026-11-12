@@ -13,6 +13,7 @@ pub struct I18nEmailLoginLocation<'a> {
 impl I18nEmailLoginLocation<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
@@ -30,6 +31,17 @@ impl I18nEmailLoginLocation<'_> {
 }
 
 impl I18nEmailLoginLocation<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Bezpečnostní upozornění",
+            unknown_location: "Přihlášení z neznámého místa",
+            if_invalid: "Pokud jste se nepřihlašovali vy, ihned přístup zrušte a změňte své \
+                přihlašovací údaje!",
+            revoke_link: "Zrušit přístup",
+            account_link: "Přehled účtu",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "Sicherheitswarnung",
