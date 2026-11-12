@@ -2159,11 +2159,11 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en de es fr ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en de es fr ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
 filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 
@@ -2769,7 +2769,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de es fr ja ko nb nl pt ru uk zh_hans
+# one of: en de es fr ja ko nb nl pl pt ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset

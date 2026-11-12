@@ -21,6 +21,7 @@ impl I18nEmailLoginLocation<'_> {
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
             Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
@@ -113,6 +114,17 @@ impl I18nEmailLoginLocation<'_> {
                 uw inloggegevens bijwerken!",
             revoke_link: "Toegang intrekken",
             account_link: "Account Dashboard",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            subject: "Ostrzeżenie bezpieczeństwa",
+            unknown_location: "Logowanie z nieznanej lokalizacji",
+            if_invalid: "Jeśli to logowanie nie było Twoje, natychmiast cofnij dostęp i zmień \
+                swoje dane logowania!",
+            revoke_link: "Cofnij dostęp",
+            account_link: "Panel konta",
         }
     }
 

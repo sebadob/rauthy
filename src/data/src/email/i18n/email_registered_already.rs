@@ -41,6 +41,7 @@ impl I18nEmailRegisteredAlready<'_> {
             Language::Ko => (&tpls.ko).into(),
             Language::Nb => (&tpls.nb).into(),
             Language::Nl => (&tpls.nl).into(),
+            Language::Pl => (&tpls.pl).into(),
             Language::Pt => (&tpls.pt).into(),
             Language::Ru => (&tpls.ru).into(),
             Language::Uk => (&tpls.uk).into(),

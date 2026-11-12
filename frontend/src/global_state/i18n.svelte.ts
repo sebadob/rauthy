@@ -9,6 +9,7 @@ import { I18nKo } from '../i18n/common/ko';
 import { I18nNb } from '../i18n/common/nb';
 import { I18nRu } from '../i18n/common/ru';
 import { I18nNl } from '../i18n/common/nl';
+import { I18nPl } from '../i18n/common/pl';
 import { I18nPt } from '../i18n/common/pt';
 import { I18nUk } from '../i18n/common/uk';
 import { I18nZh } from '../i18n/common/zh';
@@ -42,6 +43,7 @@ const i18nMap: Record<string, I18n> = {
     ko: I18nKo,
     nb: I18nNb,
     nl: I18nNl,
+    pl: I18nPl,
     pt: I18nPt,
     ru: I18nRu,
     uk: I18nUk,

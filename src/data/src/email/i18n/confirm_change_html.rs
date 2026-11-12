@@ -20,6 +20,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
             Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
             Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
@@ -98,6 +99,15 @@ impl I18nEmailConfirmChangeHtml<'_> {
             text_changed: "Uw e-mailadres is gewijzigd van",
             text_login: "U kunt nu inloggen met uw nieuwe adres.",
             to: "naar",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            title: "Zmiana adresu e-mail potwierdzona",
+            text_changed: "Twój adres e-mail został zmieniony z",
+            text_login: "Możesz teraz logować się nowym adresem.",
+            to: "na",
         }
     }
 
