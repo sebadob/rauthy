@@ -6,11 +6,21 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_jwt::claims::{JwtAccessClaims, JwtCommonClaims, JwtTokenType};
+use rauthy_jwt::claims::{ActClaim, JwtAccessClaims, JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use serde::Deserialize;
 use std::time::Duration;
 use tracing::error;
 use zeroize::Zeroize;
+
+/// The claims of an access token that are part of the introspection response.
+#[derive(Deserialize)]
+struct IntrospectClaims<'a> {
+    #[serde(borrow, flatten)]
+    common: JwtCommonClaims<'a>,
+    #[serde(borrow)]
+    act: Option<ActClaim<'a>>,
+}
 
 pub async fn get_token_info(
     req: &HttpRequest,
@@ -35,7 +45,10 @@ pub async fn get_token_info(
             None,
         ));
     }
-    let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;
+    let IntrospectClaims {
+        common: claims,
+        act,
+    } = serde_json::from_slice(&buf)?;
 
     if let Some(jti) = claims.jti {
         IssuedToken::validate_not_revoked(jti).await?;
@@ -64,6 +77,7 @@ pub async fn get_token_info(
         nbf: Some(claims.nbf),
         exp: Some(claims.exp),
         cnf: claims.cnf,
+        act,
     })?;
 
     buf.clear();

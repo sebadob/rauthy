@@ -66,6 +66,7 @@ pub async fn update_client(
         None => None,
     };
     client.claims_at_root = client_req.claims_at_root;
+    client.actor_same_client = client_req.actor_same_client;
     client.allowed_resources = client_req
         .allowed_resources
         .map(|r| r.join(","))

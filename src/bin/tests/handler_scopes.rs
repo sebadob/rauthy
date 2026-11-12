@@ -82,6 +82,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     };
     let res = client

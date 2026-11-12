@@ -72,6 +72,7 @@ async fn create_client(id: &str) -> Result<(), Box<dyn Error>> {
             claims_at_root: c.claims_at_root,
             allowed_resources: c.allowed_resources,
             default_aud: c.default_aud,
+            actor_same_client: c.actor_same_client,
             scim: c.scim,
         })
         .send()

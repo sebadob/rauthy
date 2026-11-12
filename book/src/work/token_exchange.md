@@ -53,6 +53,10 @@ Admin UI under the client config or via the clients API:
    question is the same one: may this client mint a token for that target? A requested target that
    is not on the list is rejected with the RFC error code `invalid_target`.
 
+Optionally, **Actor token from this client only** can be enabled on top. An `actor_token` must then
+have been issued to the exchanging client itself, and one from any other client is rejected with
+`invalid_grant`.
+
 A `subject_token` that is not a valid access token, or has been revoked, is rejected with
 `invalid_grant`.
 
@@ -72,3 +76,15 @@ With an `actor_token`, the exchanged token carries the acting party per
 
 If the `actor_token` was itself the result of a delegation, its `act` claim is nested inside the new
 one, so the whole chain stays visible to a downstream service.
+
+The same applies to the `subject_token`: if it already carries an `act`, that chain is nested inside
+the new one, and without an `actor_token` it is passed on unchanged. If both tokens carry an `act`,
+the exchange is rejected, because two chains cannot be merged into a single one.
+
+The `act` claim is part of the token introspection response (`POST /oidc/introspect`) as well.
+
+## Sessions
+
+An exchanged token belongs to the same session as its `subject_token`. If the tokens of that session
+are revoked, on a logout with `access.token_revoke_on_logout` or when an admin deletes the session,
+the exchanged token is revoked as well.

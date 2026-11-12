@@ -43,8 +43,10 @@ export let I18nAdminFr: I18nAdmin = {
     clients: {
         allowedResources: 'Ressources autorisées',
         defaultAud: 'Audiences par défaut',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Indicateurs de ressources RFC 8707 optionnels que ce client peut demander. Une liste vide rejette tout paramètre « resource » avec « invalid_target ».`,
         descDefaultAud: `Audiences toujours ajoutées aux jetons de ce client, indépendamment de tout paramètre « resource ».`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: `Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l'URI ici.`,
         branding: {
             descHsl: `Les valeurs suivantes doivent être fournies au format HSL. Seules les couleurs de base sont

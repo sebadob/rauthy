@@ -60,8 +60,9 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
-    claims_at_root = $23, allowed_resources = $24, default_aud = $25
-WHERE id = $26"#;
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25,
+    actor_same_client = $26
+WHERE id = $27"#;
 
 /**
 # OIDC Client
@@ -111,6 +112,8 @@ pub struct Client {
     pub allowed_resources: Option<String>,
     /// Audiences always added to this client's tokens, independent of any request (CSV).
     pub default_aud: Option<String>,
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    pub actor_same_client: bool,
     /// Creation time of this client, never changed afterward. Tells a client apart from a
     /// deleted one with the same `id`, everything issued to a client carries a copy of it.
     /// Micros, because a client may be deleted and recreated within the same second.
@@ -128,7 +131,7 @@ impl Debug for Client {
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
         client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
         claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
-        created_micros: {:?} }}",
+        actor_same_client: {}, created_micros: {:?} }}",
             self.id,
             self.name,
             self.enabled,
@@ -153,6 +156,7 @@ impl Debug for Client {
             self.claims_at_root,
             self.allowed_resources,
             self.default_aud,
+            self.actor_same_client,
             self.created_micros,
         )
     }
@@ -620,6 +624,7 @@ VALUES ($1, $2, $3, $4)"#;
                 self.claims_at_root,
                 allowed_resources,
                 default_aud,
+                self.actor_same_client,
                 &self.id
             ),
         ));
@@ -671,6 +676,7 @@ VALUES ($1, $2, $3, $4)"#;
                 &self.claims_at_root,
                 &allowed_resources,
                 &default_aud,
+                &self.actor_same_client,
                 &self.id,
             ],
         )
@@ -723,6 +729,7 @@ VALUES ($1, $2, $3, $4)"#;
                         self.claims_at_root,
                         allowed_resources,
                         default_aud,
+                        self.actor_same_client,
                         self.id.clone()
                     ),
                 )
@@ -756,6 +763,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &self.claims_at_root,
                     &allowed_resources,
                     &default_aud,
+                    &self.actor_same_client,
                     &self.id,
                 ],
             )
@@ -2017,6 +2025,7 @@ impl Client {
             claims_at_root: self.claims_at_root,
             allowed_resources,
             default_aud,
+            actor_same_client: self.actor_same_client,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -2106,6 +2115,7 @@ impl Client {
             claims_at_root: false,
             allowed_resources: value.allowed_resources.map(|r| r.join(",")),
             default_aud: None,
+            actor_same_client: false,
             // never stored, so there is no row that could be deleted and recreated
             created_micros: None,
         })
@@ -2151,6 +2161,7 @@ impl Default for Client {
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
+            actor_same_client: false,
             created_micros: None,
         }
     }
@@ -2223,6 +2234,7 @@ impl Client {
         self.claims_at_root = current.claims_at_root;
         self.allowed_resources = current.allowed_resources;
         self.default_aud = current.default_aud;
+        self.actor_same_client = current.actor_same_client;
         self.created_micros = current.created_micros;
     }
 
@@ -2793,6 +2805,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
+            actor_same_client: false,
             created_micros: None,
         };
 
@@ -3257,6 +3270,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             claims_at_root: false,
             allowed_resources: None,
             default_aud: None,
+            actor_same_client: false,
             created_micros: None,
         }
     }
@@ -3431,6 +3445,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             claims_at_root: true,
             allowed_resources: Some("https://api.example.com".to_string()),
             default_aud: Some("https://aud.example.com".to_string()),
+            actor_same_client: true,
             created_micros: Some(1),
         }
     }
@@ -3485,6 +3500,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         assert_eq!(new_client.claims_at_root, current.claims_at_root);
         assert_eq!(new_client.allowed_resources, current.allowed_resources);
         assert_eq!(new_client.default_aud, current.default_aud);
+        assert_eq!(new_client.actor_same_client, current.actor_same_client);
         assert_eq!(new_client.created_micros, current.created_micros);
         // still public -> the admin's PKCE setting is kept
         assert_eq!(new_client.challenge, current.challenge);

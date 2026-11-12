@@ -554,6 +554,17 @@ pub struct JktClaim<'a> {
     pub jkt: &'a str,
 }
 
+/// RFC 8693 §4.1 `act` (actor) claim. Identifies the party acting on behalf of the `sub`.
+/// Nests recursively, so a chain of delegation keeps the whole history: the outermost `act`
+/// is the current actor, and each nested `act` is the one it in turn acts for.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct ActClaim<'a> {
+    pub sub: &'a str,
+    #[schema(no_recursion)]
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub act: Option<Box<ActClaim<'a>>>,
+}
+
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize, ToSchema)]
 pub enum JwkKeyPairAlg {
     RS256,
@@ -729,6 +740,8 @@ pub struct TokenInfo<'a> {
     pub exp: Option<i64>,
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
     pub cnf: Option<JktClaim<'a>>,
+    #[serde(borrow, skip_serializing_if = "Option::is_none")]
+    pub act: Option<ActClaim<'a>>,
 }
 
 #[cfg(test)]

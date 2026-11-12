@@ -34,6 +34,13 @@ only keeps scopes the exchanging client is allowed. Inherited scopes outside of 
 and explicitly requesting one is rejected. The lifetime is now capped by the `subject_token`'s own
 expiry and the user's expiry as well, so a client can no longer extend access by re-exchanging.
 
+#### Token Exchange keeps the session of the `subject_token`
+
+A token issued via the Token Exchange now inherits the session of its `subject_token`, like
+refreshed tokens do since [#1775](https://github.com/sebadob/rauthy/issues/1775). With
+`access.token_revoke_on_logout = true`, a logout of that session revokes it as well, and so does an
+admin deleting the session. Before, only a logout of the whole user did.
+
 #### Forward Auth cookie can no longer be used as a Rauthy session
 
 The Forward Auth session cookie, which the reverse proxy passes on to the protected upstream app, 
@@ -56,6 +63,26 @@ automatically, because it would log out every user on every instance, including 
 never used Forward Auth.
 
 ### Changes
+
+#### Token Exchange keeps the delegation chain of the `subject_token`
+
+The Token Exchange now keeps the `act` of the `subject_token` as well, like it already does for the
+`actor_token`: it is nested inside the new one, or passed on unchanged without an `actor_token`. If
+both tokens carry an `act`, the exchange is rejected, because the two chains cannot be merged.
+
+#### Token Exchange can bind the `actor_token` to the exchanging client
+
+With the new per-client option *Actor token from this client only* (`actor_same_client` via the
+API), an `actor_token` in a Token Exchange must have been issued to the exchanging client itself,
+and any other is rejected with `invalid_grant`. It is off by default, which keeps the current
+behavior of accepting any valid access token.
+
+#### `act` in the Token Introspection
+
+The `/oidc/introspect` response now contains the `act` claim of a token issued via a Token Exchange
+with delegation, including a nested chain, as registered by
+[RFC 8693](https://www.rfc-editor.org/rfc/rfc8693#section-7.3). Nothing changes for tokens without
+an `act`.
 
 #### Always Show *Password Forgotten*
 

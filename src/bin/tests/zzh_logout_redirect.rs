@@ -42,6 +42,7 @@ fn client_update() -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     }
 }

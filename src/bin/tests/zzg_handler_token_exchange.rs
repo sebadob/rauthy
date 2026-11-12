@@ -1,18 +1,27 @@
-use crate::common::{PASSWORD, USERNAME, decode_claims, get_auth_headers, get_backend_url};
+use crate::common::{
+    PASSWORD, USERNAME, decode_claims, get_auth_headers, get_backend_url,
+    session_headers_for_client,
+};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
-use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, TokenRequest, TokenType};
-use rauthy_api_types::users::UserResponse;
+use rauthy_api_types::generic::Language;
+use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, LogoutRequest, TokenRequest, TokenType};
+use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
 use rauthy_service::token_set::TokenSet;
+use reqwest::header::HeaderMap;
 use std::error::Error;
 
 mod common;
 
 const ID: &str = "exchange_test";
+const ID_FOREIGN: &str = "exchange_test_foreign";
 const TARGET: &str = "https://rs-downstream.example.com/api";
 const TARGET_FORBIDDEN: &str = "https://rs-forbidden.example.com/api";
+// `zzb_handler_password_policy` runs before this test and leaves a strict policy behind:
+// at least 2 lower case, 3 upper case, 4 digits and 5 special characters
+const ACTOR_PASSWORD: &str = "Exch4nge!Act0r#2026$%&XYZ";
 
 fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
     UpdateClientRequest {
@@ -39,6 +48,7 @@ fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: Some(vec![TARGET.to_string()]),
         default_aud: None,
+        actor_same_client: false,
         scim: None,
     }
 }
@@ -47,14 +57,24 @@ fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {
 /// This test deliberately does not use `common::get_token_set_init_client`, because
 /// `zzd_handler_clients` rotates the `init_client` secret and this test runs after it.
 async fn password_token(http: &reqwest::Client, id: &str, secret: &str) -> TokenSet {
+    password_token_for(http, id, secret, USERNAME, PASSWORD).await
+}
+
+async fn password_token_for(
+    http: &reqwest::Client,
+    id: &str,
+    secret: &str,
+    email: &str,
+    password: &str,
+) -> TokenSet {
     let res = http
         .post(format!("{}/oidc/token", get_backend_url()))
         .form(&TokenRequest {
             grant_type: GrantType::Password,
             client_id: Some(id.to_string()),
             client_secret: Some(secret.to_string()),
-            username: Some(USERNAME.to_string()),
-            password: Some(PASSWORD.to_string()),
+            username: Some(email.to_string()),
+            password: Some(password.to_string()),
             ..Default::default()
         })
         .send()
@@ -62,15 +82,83 @@ async fn password_token(http: &reqwest::Client, id: &str, secret: &str) -> Token
         .expect("the test backend to be running");
     if !res.status().is_success() {
         let text = res.text().await.unwrap();
-        panic!("Error during password login for '{id}':\n{text}");
+        panic!("Error during password login of '{email}' for '{id}':\n{text}");
     }
     res.json::<TokenSet>().await.unwrap()
+}
+
+/// Creates a user that can log in via the `password` grant, to have an acting party with a
+/// `sub` different from the test user's. A left-over from an aborted run is removed first,
+/// because the password policy would refuse to set the same password for it again.
+async fn create_actor(
+    http: &reqwest::Client,
+    admin: &HeaderMap,
+    email: &str,
+) -> Result<UserResponse, Box<dyn Error>> {
+    let backend_url = get_backend_url();
+    let res = http
+        .get(format!("{backend_url}/users/email/{email}"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    if res.status().is_success() {
+        let left_over: UserResponse = res.json().await?;
+        let res = http
+            .delete(format!("{backend_url}/users/{}", left_over.id))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
+
+    let res = http
+        .post(format!("{backend_url}/users"))
+        .headers(admin.clone())
+        .json(&NewUserRequest {
+            given_name: Some("Exchange".to_string()),
+            family_name: Some("Actor".to_string()),
+            email: email.to_string(),
+            preferred_username: None,
+            language: Language::En,
+            roles: vec!["user".to_string()],
+            groups: None,
+            user_expires: None,
+            tz: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user: UserResponse = res.json().await?;
+
+    let res = http
+        .put(format!("{backend_url}/users/{}", user.id))
+        .headers(admin.clone())
+        .json(&UpdateUserRequest {
+            email: user.email.clone(),
+            given_name: user.given_name.clone(),
+            family_name: user.family_name.clone(),
+            language: Some(Language::En),
+            password: Some(ACTOR_PASSWORD.to_string()),
+            roles: user.roles.clone(),
+            groups: user.groups.clone(),
+            enabled: true,
+            email_verified: true,
+            user_expires: user.user_expires,
+            user_values: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    Ok(user)
 }
 
 /// End-to-end coverage for the RFC 8693 token exchange: deny-by-default via
 /// `flows_enabled`, the `allowed_resources` target allow-list, impersonation vs
 /// delegation (`act`), scope narrowing, and the guarantee that an exchanged token never
-/// carries a refresh or id token.
+/// carries a refresh or id token. On top of that: the nested `act` delegation chain, the
+/// per-client binding of the `actor_token` to the exchanging client, the inherited session and
+/// `act` in the introspection.
 #[tokio::test]
 async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
@@ -499,7 +587,307 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     );
     assert!(ts.expires_in <= 60, "expires_in {}", ts.expires_in);
 
+    // (14) a two-hop delegation chain: the subject's `act` is nested below the new actor
+    let actor_a = create_actor(&client, &auth_headers, "exchange_actor_a@localhost").await?;
+    let actor_b = create_actor(&client, &auth_headers, "exchange_actor_b@localhost").await?;
+    let token_a = password_token_for(&client, ID, &secret, &actor_a.email, ACTOR_PASSWORD)
+        .await
+        .access_token;
+    let token_b = password_token_for(&client, ID, &secret, &actor_b.email, ACTOR_PASSWORD)
+        .await
+        .access_token;
+    assert_ne!(actor_a.id, actor_b.id);
+    assert_ne!(subject_claims["sub"], serde_json::json!(actor_a.id));
+
+    let delegate = |subject: &str, actor: Option<&str>| {
+        client
+            .post(&url_token)
+            .form(&TokenRequest {
+                grant_type: GrantType::TokenExchange,
+                client_id: Some(ID.to_string()),
+                client_secret: Some(secret.clone()),
+                subject_token: Some(subject.to_string()),
+                subject_token_type: Some(TokenType::AccessToken.to_string()),
+                actor_token: actor.map(String::from),
+                actor_token_type: actor.map(|_| TokenType::AccessToken.to_string()),
+                audience: Some(TARGET.to_string()),
+                ..Default::default()
+            })
+            .send()
+    };
+
+    let res = delegate(&subject_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let hop_1: TokenSet = res.json().await?;
+    let claims = decode_claims(&hop_1.access_token);
+    assert_eq!(claims["sub"], subject_claims["sub"]);
+    assert_eq!(claims["act"], serde_json::json!({ "sub": actor_a.id }));
+
+    let res = delegate(&hop_1.access_token, Some(&token_b)).await?;
+    assert_eq!(res.status(), 200);
+    let hop_2: TokenSet = res.json().await?;
+    let claims = decode_claims(&hop_2.access_token);
+    assert_eq!(claims["sub"], subject_claims["sub"]);
+    // the current actor is the outermost one, the prior actor is nested
+    let chain = serde_json::json!({ "sub": actor_b.id, "act": { "sub": actor_a.id } });
+    assert_eq!(claims["act"], chain);
+
+    // an actor that is acting for someone itself brings its own chain along
+    let res = delegate(&token_a, Some(&hop_1.access_token)).await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert_eq!(claims["sub"], serde_json::json!(actor_a.id));
+    assert_eq!(
+        claims["act"],
+        serde_json::json!({ "sub": subject_claims["sub"], "act": { "sub": actor_a.id } })
+    );
+
+    // (15) impersonation keeps the chain: no actor is added, but none is hidden either
+    let res = delegate(&hop_2.access_token, None).await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert_eq!(claims["sub"], subject_claims["sub"]);
+    assert_eq!(claims["act"], chain);
+
+    // (16) a conflict is rejected: both tokens carry an `act`, which cannot be merged
+    let res = delegate(&hop_2.access_token, Some(&hop_1.access_token)).await?;
+    assert_eq!(res.status(), 400);
+    let body = res.text().await?;
+    assert!(
+        body.contains("both carry an 'act'"),
+        "unexpected body: {body}"
+    );
+
+    // (17) `actor_same_client`: an actor token of a foreign client
+    let res = client
+        .post(format!("{backend_url}/clients"))
+        .headers(auth_headers.clone())
+        .json(&NewClientRequest {
+            id: ID_FOREIGN.to_string(),
+            secret: None,
+            name: Some("Exchange Test Foreign".to_string()),
+            confidential: true,
+            redirect_uris: vec!["http://localhost/callback".to_string()],
+            post_logout_redirect_uris: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .put(format!("{backend_url}/clients/{ID_FOREIGN}"))
+        .headers(auth_headers.clone())
+        .json(&base_update(vec![GrantType::Password]))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = client
+        .post(format!("{backend_url}/clients/{ID_FOREIGN}/secret"))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let secret_foreign = res.json::<ClientSecretResponse>().await?.secret.unwrap();
+    let token_foreign = password_token_for(
+        &client,
+        ID_FOREIGN,
+        &secret_foreign,
+        &actor_a.email,
+        ACTOR_PASSWORD,
+    )
+    .await
+    .access_token;
+    assert_eq!(
+        decode_claims(&token_foreign)["azp"],
+        serde_json::json!(ID_FOREIGN)
+    );
+
+    // the flag is off by default, and the foreign actor token is accepted
+    let res = delegate(&subject_token, Some(&token_foreign)).await?;
+    assert_eq!(res.status(), 200);
+    let ts: TokenSet = res.json().await?;
+    let claims = decode_claims(&ts.access_token);
+    assert_eq!(claims["act"], serde_json::json!({ "sub": actor_a.id }));
+
+    let set_actor_same_client = |enable: bool| {
+        client
+            .put(format!("{backend_url}/clients/{ID}"))
+            .headers(auth_headers.clone())
+            .json(&UpdateClientRequest {
+                scopes: vec!["openid".to_string()],
+                default_scopes: vec!["openid".to_string(), "email".to_string()],
+                access_token_lifetime: 600,
+                actor_same_client: enable,
+                ..base_update(vec![
+                    GrantType::ClientCredentials,
+                    GrantType::Password,
+                    GrantType::RefreshToken,
+                    GrantType::TokenExchange,
+                ])
+            })
+            .send()
+    };
+    let res = set_actor_same_client(true).await?;
+    assert_eq!(res.status(), 200);
+    let resp: ClientResponse = res.json().await?;
+    assert!(resp.actor_same_client);
+
+    // with the flag on, the foreign actor token is rejected ...
+    let res = delegate(&subject_token, Some(&token_foreign)).await?;
+    assert_eq!(res.status(), 400);
+    let body = res.text().await?;
+    assert!(body.contains("invalid_grant"), "unexpected body: {body}");
+    assert!(
+        body.contains("not issued to this client"),
+        "unexpected body: {body}"
+    );
+    // ... while an actor token issued to the exchanging client itself still works, ...
+    let res = delegate(&subject_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    // ... and the flag only is about the actor: a foreign `subject_token` is not affected
+    let res = delegate(&token_foreign, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+
+    let res = set_actor_same_client(false).await?;
+    assert_eq!(res.status(), 200);
+    let resp: ClientResponse = res.json().await?;
+    assert!(!resp.actor_same_client);
+    let res = delegate(&subject_token, Some(&token_foreign)).await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .delete(format!("{backend_url}/clients/{ID_FOREIGN}"))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // (18) a session logout revokes the exchanged token (needs `token_revoke_on_logout = true`)
+    let res = client
+        .put(format!("{backend_url}/clients/{ID}"))
+        .headers(auth_headers.clone())
+        .json(&UpdateClientRequest {
+            scopes: vec!["openid".to_string()],
+            default_scopes: vec!["openid".to_string(), "email".to_string()],
+            access_token_lifetime: 600,
+            ..base_update(vec![
+                GrantType::AuthorizationCode,
+                GrantType::ClientCredentials,
+                GrantType::Password,
+                GrantType::RefreshToken,
+                GrantType::TokenExchange,
+            ])
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let url_introspect = format!("{backend_url}/oidc/introspect");
+    let introspect = |token: &str| {
+        client
+            .post(&url_introspect)
+            .basic_auth(ID, Some(secret.as_str()))
+            .form(&[("token", token)])
+            .send()
+    };
+    let redirect_uri = "http://localhost/callback";
+
+    let (_, session_ts) = session_headers_for_client(ID, Some(secret.as_str()), redirect_uri).await;
+    let res = delegate(&session_ts.access_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let from_session: TokenSet = res.json().await?;
+    // derived from a token that has no session: must survive the logout below
+    let res = delegate(&subject_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let sessionless: TokenSet = res.json().await?;
+    // a second hop keeps the session as well
+    let res = delegate(&from_session.access_token, None).await?;
+    assert_eq!(res.status(), 200);
+    let second_hop: TokenSet = res.json().await?;
+
+    for token in [
+        &from_session.access_token,
+        &second_hop.access_token,
+        &sessionless.access_token,
+    ] {
+        let res = introspect(token).await?;
+        assert_eq!(res.status(), 200);
+        assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+    }
+
+    let res = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?
+        .post(format!("{backend_url}/oidc/logout"))
+        .form(&LogoutRequest {
+            id_token_hint: session_ts.id_token.clone(),
+            post_logout_redirect_uri: None,
+            state: None,
+            logout_token: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    assert_eq!(introspect(&from_session.access_token).await?.status(), 401);
+    assert_eq!(introspect(&second_hop.access_token).await?.status(), 401);
+    // a revoked token cannot be exchanged any further
+    let res = delegate(&from_session.access_token, None).await?;
+    assert_ne!(res.status(), 200);
+    // other sessions and session-less tokens of the same user are not affected
+    let res = introspect(&sessionless.access_token).await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+
+    // (19) an admin deleting the session revokes the exchanged token, too
+    let (_, session_ts) = session_headers_for_client(ID, Some(secret.as_str()), redirect_uri).await;
+    let sid = decode_claims(session_ts.id_token.as_ref().unwrap())["sid"]
+        .as_str()
+        .expect("the id token to have a `sid`")
+        .to_string();
+    let res = delegate(&session_ts.access_token, Some(&token_a)).await?;
+    assert_eq!(res.status(), 200);
+    let from_session: TokenSet = res.json().await?;
+    let res = introspect(&from_session.access_token).await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+
+    let res = client
+        .delete(format!("{backend_url}/sessions/id/{sid}"))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    assert_eq!(introspect(&from_session.access_token).await?.status(), 401);
+    let res = introspect(&sessionless.access_token).await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<serde_json::Value>().await?["active"], true);
+
+    // (20) the introspection returns the nested `act`
+    let res = introspect(&hop_2.access_token).await?;
+    assert_eq!(res.status(), 200);
+    let info: serde_json::Value = res.json().await?;
+    assert_eq!(info["active"], true);
+    assert_eq!(info["sub"], subject_claims["sub"]);
+    assert_eq!(info["act"], chain);
+    // no `act` for a token without one
+    let res = introspect(&subject_token).await?;
+    assert_eq!(res.status(), 200);
+    let info: serde_json::Value = res.json().await?;
+    assert_eq!(info["active"], true);
+    assert!(info.get("act").is_none(), "unexpected `act` in: {info}");
+
     // cleanup
+    for id in [&actor_a.id, &actor_b.id] {
+        let res = client
+            .delete(format!("{backend_url}/users/{id}"))
+            .headers(auth_headers.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
     let res = client
         .delete(format!("{backend_url}/clients/{ID}"))
         .headers(auth_headers.clone())

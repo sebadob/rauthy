@@ -76,6 +76,8 @@ export interface UpdateClientRequest {
     /// Audiences always added to this client's tokens, independent of any request.
     /// Validation: PATTERN_URI
     default_aud?: string[];
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    actor_same_client?: boolean;
     scim?: ScimClientRequestResponse;
 }
 
@@ -109,6 +111,7 @@ export interface ClientResponse {
     claims_at_root: boolean;
     allowed_resources?: string[];
     default_aud?: string[];
+    actor_same_client: boolean;
     scim?: ScimClientRequestResponse;
 }
 

@@ -632,12 +632,14 @@ impl TokenSet {
     /// refresh token: a refresh must come from the client that owns the original token, with a
     /// fresh exchange on top. There is no id token either, because an exchanged token is meant
     /// for a resource server and not for authenticating an end user.
+    #[allow(clippy::too_many_arguments)]
     pub async fn for_token_exchange(
         user: Option<&User>,
         client: &Client,
         lifetime: i64,
         dpop_fingerprint: Option<DpopFingerprint>,
         scope: TokenScopes<'_>,
+        sid: Option<SessionId>,
         resource: Option<&str>,
         act: Option<ActClaim<'_>>,
     ) -> Result<Self, ErrorResponse> {
@@ -690,7 +692,7 @@ impl TokenSet {
             lifetime,
             TokenScopes::new(scope.0.as_ref()),
             customs_access,
-            None,
+            sid,
             resource,
             act,
             DeviceCodeFlow::No,
