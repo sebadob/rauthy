@@ -3000,7 +3000,8 @@ mod tests {
     /// update or a failed login during the password hashing, keeps those changes: it writes
     /// only the new password and its expiry, and drops the cached user, also under the stored
     /// email a concurrent update changed. The reset proves only the email of its copy, so a
-    /// stored email changed meanwhile stays unverified, in the database and in the copy.
+    /// stored email changed meanwhile keeps the `email_verified` of the stored row, here the
+    /// true an admin set, in the database and in the copy.
     #[tokio::test]
     async fn test_save_password_reset_keeps_concurrent_changes_hiqlite() {
         let _lock = HQL_TEST_LOCK.lock().await;
@@ -3014,7 +3015,7 @@ mod tests {
         admin.enabled = false;
         admin.roles = "admin".to_string();
         admin.email = "pwd_reset_new@example.com".to_string();
-        admin.email_verified = false;
+        admin.email_verified = true;
         admin.save(Some(user.email.clone())).await.unwrap();
         let mut failed = User::find(user.id.clone()).await.unwrap();
         failed.save_login_failure().await.unwrap();
@@ -3028,14 +3029,14 @@ mod tests {
         User::find(user.id.clone()).await.unwrap();
         assert!(hql_cached(idx_id.clone()).await.is_some());
         reset.save_password_reset().await.unwrap();
-        assert!(!reset.email_verified);
+        assert!(reset.email_verified);
         assert!(hql_cached(idx_id).await.is_none());
         assert!(hql_cached(idx_new).await.is_none());
 
         let saved = User::find(user.id.clone()).await.unwrap();
         assert_eq!(saved.password.as_deref(), Some("reset"));
         assert_eq!(saved.password_expires, Some(42));
-        assert!(!saved.email_verified);
+        assert!(saved.email_verified);
         assert!(!saved.enabled);
         assert_eq!(saved.roles, "admin");
         assert_eq!(saved.email, "pwd_reset_new@example.com");
@@ -3533,7 +3534,7 @@ INSERT INTO users (id, email, given_name, password, roles, enabled, email_verifi
 VALUES ('u1', 'u1@example.com', 'u1', 'old', 'user', true, false, 1, 'en'),
        ('u3', 'u3@example.com', 'u3', 'old', 'user', true, false, 1, 'en');
 UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
-    last_failed_login = 7, failed_login_attempts = 3 WHERE id = 'u1';"#,
+    email_verified = true, last_failed_login = 7, failed_login_attempts = 3 WHERE id = 'u1';"#,
         )
         .await
         .unwrap();
@@ -3550,7 +3551,7 @@ UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
             stored,
             Some(StoredReset {
                 email: "u1_new@example.com".to_string(),
-                email_verified: false,
+                email_verified: true,
                 enabled: false,
             })
         );
@@ -3567,7 +3568,7 @@ UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
             Some("reset")
         );
         assert_eq!(r.get::<_, Option<i64>>("password_expires"), Some(42));
-        assert!(!r.get::<_, bool>("email_verified"));
+        assert!(r.get::<_, bool>("email_verified"));
         assert!(!r.get::<_, bool>("enabled"));
         assert_eq!(r.get::<_, String>("roles"), "admin");
         assert_eq!(r.get::<_, Option<i64>>("last_failed_login"), Some(7));
