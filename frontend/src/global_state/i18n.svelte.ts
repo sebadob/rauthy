@@ -2,6 +2,7 @@ import { useLang } from '#state/language.svelte.ts';
 import { type I18n } from '../i18n/common/interface';
 import { I18nEn } from '../i18n/common/en';
 import { I18nEs } from '../i18n/common/es';
+import { I18nCs } from '../i18n/common/cs';
 import { I18nDe } from '../i18n/common/de';
 import { I18nFr } from '../i18n/common/fr';
 import { I18nJa } from '../i18n/common/ja';
@@ -34,6 +35,7 @@ export function useI18n(): I18n {
 }
 
 const i18nMap: Record<string, I18n> = {
+    cs: I18nCs,
     de: I18nDe,
     en: I18nEn,
     es: I18nEs,

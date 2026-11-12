@@ -420,15 +420,14 @@ token_lifetime = '30s'
 # overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
 allow_clock_skew = '5s'
 
-# The maximum allowed age for Logout Tokens. This value is
+# The maximum allowed lifetime for Logout Tokens. This value is
 # a security check for upstream auth providers. If Rauthy
-# receives a Logout Token, it will reject it when its `iat` is
-# older than `allowed_token_lifetime` plus `allow_clock_skew`.
-# A token whose `iat` lies more than `allow_clock_skew` in the
-# future is rejected as well. The `exp` claim is only checked
-# for expiry, not against this value, so providers issuing
-# tokens with a longer validity keep working. The RFC
-# recommends a validity of at most 120 seconds.
+# receives a Logout Token, it will check and validate, that the
+# difference between `iat` and `exp` is not greater than
+# `allowed_token_lifetime`. This means Rauthy will reject Logout
+# Tokens from clients with a way too long validity and therefore
+# poor implementations. The RFC states that tokens should be
+# valid for at most 120 seconds.
 #
 # type: duration
 # default: '120s'
@@ -1452,6 +1451,9 @@ password_exp = '10d'
 # You can generally use all options from
 # https://docs.rs/chrono/0.4.42/chrono/format/strftime/index.html
 #
+# default: '%-d. %-m. %Y %T (%Z)'
+# overwritten by: TZ_FMT_CS
+cs = '%-d. %-m. %Y %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_DE
 de = '%d.%m.%Y %T (%Z)'
@@ -2203,13 +2205,13 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr ja ko nb nl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['de', 'en', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['cs', 'de', 'en', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr ja ko nb nl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh

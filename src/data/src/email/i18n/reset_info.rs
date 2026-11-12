@@ -13,6 +13,7 @@ pub struct I18nEmailResetInfo<'a> {
 impl I18nEmailResetInfo<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
@@ -30,6 +31,16 @@ impl I18nEmailResetInfo<'_> {
 }
 
 impl I18nEmailResetInfo<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Platnost hesla brzy vyprší",
+            expires_1: "Vaše heslo ke službě",
+            expires_2: "brzy vyprší:",
+            update: "Heslo můžete změnit zde:",
+            button_text: "Změnit heslo",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "Passwort läuft demnächst ab",

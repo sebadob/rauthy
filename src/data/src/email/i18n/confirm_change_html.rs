@@ -12,6 +12,7 @@ pub struct I18nEmailConfirmChangeHtml<'a> {
 impl I18nEmailConfirmChangeHtml<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
@@ -29,6 +30,15 @@ impl I18nEmailConfirmChangeHtml<'_> {
 }
 
 impl I18nEmailConfirmChangeHtml<'_> {
+    fn build_cs() -> Self {
+        Self {
+            title: "Změna e-mailu potvrzena",
+            text_changed: "Vaše e-mailová adresa byla změněna z",
+            text_login: "Nyní se můžete přihlásit novou adresou.",
+            to: "na",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             title: "E-Mail Wechsel bestätigt",
