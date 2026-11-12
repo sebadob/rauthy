@@ -3001,17 +3001,16 @@ mod tests {
         assert_eq!(saved.picture_id.as_deref(), Some("set_pic_email_1"));
     }
 
-    /// A password reset saved through a copy read before concurrent changes, like an admin
-    /// update or a failed login during the password hashing, keeps those changes: it writes
-    /// only the new password and its expiry, and drops the cached user, also under the stored
-    /// email a concurrent update changed. The reset proves only the email of its copy, so a
-    /// stored email changed meanwhile keeps the `email_verified` of the stored row, here the
-    /// true an admin set, in the database and in the copy.
-    #[tokio::test]
-    async fn test_save_password_reset_keeps_concurrent_changes_hiqlite() {
+    /// A password reset saved through a copy read before an admin update or a failed login
+    /// during the password hashing keeps those changes: it writes only the new password and its
+    /// expiry, and drops the cached user, also under the stored email a concurrent update
+    /// changed. The reset proves only the email of its copy, so a stored email changed meanwhile
+    /// keeps the `email_verified` of the stored row, `admin_verified`, in the database and in the
+    /// copy: the reset never verifies an email its link was not sent to.
+    async fn pwd_reset_keeps_concurrent_changes(id: &str, admin_verified: bool) {
         let _lock = HQL_TEST_LOCK.lock().await;
         crate::database::init_test_hiqlite();
-        let user = hql_insert_login_user("pwd_reset").await;
+        let user = hql_insert_login_user(id).await;
         let mut reset = User::find(user.id.clone()).await.unwrap();
         assert!(reset.enabled);
         assert!(!reset.email_verified);
@@ -3019,8 +3018,8 @@ mod tests {
         let mut admin = User::find(user.id.clone()).await.unwrap();
         admin.enabled = false;
         admin.roles = "admin".to_string();
-        admin.email = "pwd_reset_new@example.com".to_string();
-        admin.email_verified = true;
+        admin.email = format!("{id}_new@example.com");
+        admin.email_verified = admin_verified;
         admin.save(Some(user.email.clone())).await.unwrap();
         let mut failed = User::find(user.id.clone()).await.unwrap();
         failed.save_login_failure().await.unwrap();
@@ -3034,19 +3033,33 @@ mod tests {
         User::find(user.id.clone()).await.unwrap();
         assert!(hql_cached(idx_id.clone()).await.is_some());
         reset.save_password_reset().await.unwrap();
-        assert!(reset.email_verified);
+        assert_eq!(reset.email_verified, admin_verified);
         assert!(hql_cached(idx_id).await.is_none());
         assert!(hql_cached(idx_new).await.is_none());
 
         let saved = User::find(user.id.clone()).await.unwrap();
         assert_eq!(saved.password.as_deref(), Some("reset"));
         assert_eq!(saved.password_expires, Some(42));
-        assert!(saved.email_verified);
+        assert_eq!(saved.email_verified, admin_verified);
         assert!(!saved.enabled);
         assert_eq!(saved.roles, "admin");
-        assert_eq!(saved.email, "pwd_reset_new@example.com");
+        assert_eq!(saved.email, admin.email);
         assert_eq!(saved.failed_login_attempts, Some(1));
         assert_eq!(saved.last_failed_login, failed.last_failed_login);
+    }
+
+    /// [`pwd_reset_keeps_concurrent_changes`] with a changed email an admin verified: it stays
+    /// verified.
+    #[tokio::test]
+    async fn test_save_password_reset_keeps_concurrent_changes_hiqlite() {
+        pwd_reset_keeps_concurrent_changes("pwd_reset", true).await;
+    }
+
+    /// [`pwd_reset_keeps_concurrent_changes`] with a changed email nobody verified: it stays
+    /// unverified.
+    #[tokio::test]
+    async fn test_save_password_reset_changed_email_stays_unverified_hiqlite() {
+        pwd_reset_keeps_concurrent_changes("pwd_reset_unv", false).await;
     }
 
     /// A password reset of a user the stored row has disabled, also through a copy read before
@@ -3541,8 +3554,9 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
 
     /// The Postgres statement of `User::save_password_reset` against all Postgres migrations:
     /// only the password and its expiry are written, and `email_verified` only while the stored
-    /// email is still the one of the copy, and the stored email, `email_verified` and `enabled`
-    /// are returned as the `StoredReset`.
+    /// email is still the one of the copy, else a changed email keeps its stored `email_verified`,
+    /// true (u1) or false (u4), and the stored email, `email_verified` and `enabled` are returned
+    /// as the `StoredReset`.
     /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
@@ -3553,9 +3567,11 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
 INSERT INTO users (id, email, given_name, password, roles, enabled, email_verified, created_at,
                    language)
 VALUES ('u1', 'u1@example.com', 'u1', 'old', 'user', true, false, 1, 'en'),
-       ('u3', 'u3@example.com', 'u3', 'old', 'user', true, false, 1, 'en');
+       ('u3', 'u3@example.com', 'u3', 'old', 'user', true, false, 1, 'en'),
+       ('u4', 'u4@example.com', 'u4', 'old', 'user', true, false, 1, 'en');
 UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
-    email_verified = true, last_failed_login = 7, failed_login_attempts = 3 WHERE id = 'u1';"#,
+    email_verified = true, last_failed_login = 7, failed_login_attempts = 3 WHERE id = 'u1';
+UPDATE users SET email = 'u4_new@example.com' WHERE id = 'u4';"#,
         )
         .await
         .unwrap();
@@ -3617,6 +3633,29 @@ UPDATE users SET enabled = false, roles = 'admin', email = 'u1_new@example.com',
             Some("reset")
         );
         assert!(r.get::<_, bool>("email_verified"));
+
+        // the stored email changed meanwhile and nobody verified it: the reset does not
+        let stored = reset("u4").pg_save_password_reset(&cl).await.unwrap();
+        assert_eq!(
+            stored,
+            Some(StoredReset {
+                email: "u4_new@example.com".to_string(),
+                email_verified: false,
+                enabled: true,
+            })
+        );
+        let r = cl
+            .query_one(
+                "SELECT password, email_verified FROM users WHERE id = 'u4'",
+                &[],
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            r.get::<_, Option<String>>("password").as_deref(),
+            Some("reset")
+        );
+        assert!(!r.get::<_, bool>("email_verified"));
 
         // a missing user
         assert!(
