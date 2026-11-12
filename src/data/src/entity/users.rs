@@ -3104,6 +3104,49 @@ mod tests {
         assert_eq!(count("sessions", "pwd_reset_off_other").await, 1);
     }
 
+    /// A password reset of a user the stored row has enabled keeps the sessions and refresh
+    /// tokens of the user.
+    #[tokio::test]
+    async fn test_save_password_reset_enabled_user_keeps_tokens_hiqlite() {
+        let _lock = HQL_TEST_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let user = hql_insert_login_user("pwd_reset_on").await;
+        let mut reset = User::find(user.id.clone()).await.unwrap();
+        assert!(reset.enabled);
+        hql_insert_tokens(&user.id).await;
+        DB::hql()
+            .execute(
+                "INSERT INTO sessions (id, csrf_token, user_id, is_mfa, state, exp, last_seen) \
+                VALUES ('pwd_reset_on_sid', 'csrf', $1, 0, 'Auth', 2, 1)",
+                params!(user.id.clone()),
+            )
+            .await
+            .unwrap();
+        let sessions = async || -> Vec<String> {
+            DB::hql()
+                .query_raw(
+                    "SELECT id FROM sessions WHERE user_id = 'pwd_reset_on'",
+                    params!(),
+                )
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|mut row| row.get("id"))
+                .collect()
+        };
+
+        reset.password = Some("reset".to_string());
+        reset.save_password_reset().await.unwrap();
+
+        let saved = User::find(user.id.clone()).await.unwrap();
+        assert_eq!(saved.password.as_deref(), Some("reset"));
+        assert!(saved.enabled);
+        assert_eq!(sessions().await, ["pwd_reset_on_sid"]);
+        let mut ids = hql_refresh_token_ids(&user.id).await;
+        ids.sort_unstable();
+        assert_eq!(ids, ["pwd_reset_on_rt", "pwd_reset_on_rtd"]);
+    }
+
     /// A password reset of a user deleted meanwhile writes nothing and caches nothing.
     #[tokio::test]
     async fn test_save_password_reset_missing_user_hiqlite() {
