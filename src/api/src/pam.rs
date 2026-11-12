@@ -909,6 +909,20 @@ pub async fn post_pam_users(
     let user = User::find_by_email(payload.email).await?;
     let pam_user = PamUser::insert(payload.username, user.email).await?;
 
+    if let Some(mut groups) = payload.groups {
+        for g in groups.iter_mut() {
+            g.uid = pam_user.id;
+        }
+        // update_groups does delete-all + re-insert, so include the user's
+        // own group (already created by insert) to avoid removing it.
+        groups.push(rauthy_api_types::pam::PamGroupUserLink {
+            uid: pam_user.id,
+            gid: pam_user.gid,
+            wheel: false,
+        });
+        PamUser::update_groups(pam_user.id, groups).await?;
+    }
+
     Ok(HttpResponse::Ok().json(pam_user.build_response(None)))
 }
 
