@@ -3179,6 +3179,65 @@ mod tests {
         assert_eq!(ids, ["pwd_reset_on_rt", "pwd_reset_on_rtd"]);
     }
 
+    /// A save of an enabled user keeps its sessions and refresh tokens; a save that disables
+    /// the user drops them, and only those of that user.
+    #[tokio::test]
+    async fn test_save_disabled_user_drops_tokens_hiqlite() {
+        let _lock = HQL_TEST_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let mut user = hql_insert_user("save_off", None).await;
+        hql_insert_user("save_off_other", None).await;
+        for uid in [user.id.as_str(), "save_off_other"] {
+            hql_insert_tokens(uid).await;
+            DB::hql()
+                .execute(
+                    "INSERT INTO sessions (id, csrf_token, user_id, is_mfa, state, exp, last_seen) \
+                    VALUES ($1, 'csrf', $2, 0, 'Auth', 2, 1)",
+                    params!(format!("{uid}_sid"), uid.to_string()),
+                )
+                .await
+                .unwrap();
+        }
+        let sessions = async |uid: &str| -> Vec<String> {
+            DB::hql()
+                .query_raw(
+                    "SELECT id FROM sessions WHERE user_id = $1",
+                    params!(uid.to_string()),
+                )
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|mut row| row.get("id"))
+                .collect()
+        };
+        let refresh_token_ids = async |uid: &str| {
+            let mut ids = hql_refresh_token_ids(uid).await;
+            ids.sort_unstable();
+            ids
+        };
+
+        user.given_name = "renamed".to_string();
+        user.save(None).await.unwrap();
+        assert_eq!(sessions(&user.id).await, ["save_off_sid"]);
+        assert_eq!(
+            refresh_token_ids(&user.id).await,
+            ["save_off_rt", "save_off_rtd"]
+        );
+
+        user.enabled = false;
+        user.save(None).await.unwrap();
+        assert!(!User::find(user.id.clone()).await.unwrap().enabled);
+        assert!(sessions(&user.id).await.is_empty());
+        // disabling a user does not drop its device refresh tokens, as in the reset; that
+        // predates the shared token drop and is not changed by it
+        assert_eq!(refresh_token_ids(&user.id).await, ["save_off_rtd"]);
+        assert_eq!(sessions("save_off_other").await, ["save_off_other_sid"]);
+        assert_eq!(
+            refresh_token_ids("save_off_other").await,
+            ["save_off_other_rt", "save_off_other_rtd"]
+        );
+    }
+
     /// A password reset of a user deleted meanwhile writes nothing, drops the cached user and
     /// returns Ok without email_verified.
     #[tokio::test]
