@@ -3541,7 +3541,8 @@ UPDATE users SET password = 'changed' WHERE id = 'u2';"#,
 
     /// The Postgres statement of `User::save_password_reset` against all Postgres migrations:
     /// only the password and its expiry are written, and `email_verified` only while the stored
-    /// email is still the one of the copy, and the stored email is returned.
+    /// email is still the one of the copy, and the stored email, `email_verified` and `enabled`
+    /// are returned as the `StoredReset`.
     /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
