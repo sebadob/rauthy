@@ -197,6 +197,15 @@ failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
 WHERE id = $2
 RETURNING email, failed_login_attempts"#;
 
+/// Drops the sessions and refresh tokens of the disabled user `id`.
+async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
+    Session::invalidate_for_user(id).await?;
+    RefreshToken::invalidate_for_user(id).await?;
+    // TODO trigger backchannel logout and SCIM updates as well?
+    //  -> compare with old value beforehand somehow, probably in calling fn before updates
+    Ok(())
+}
+
 /// Runs the hiqlite write `sql` of one user row and decodes the row its `RETURNING` gives, if
 /// the user exists.
 async fn hql_returning<T>(
@@ -1286,10 +1295,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         }
 
         if !self.enabled {
-            Session::invalidate_for_user(&self.id).await?;
-            RefreshToken::invalidate_for_user(&self.id).await?;
-            // TODO trigger backchannel logout and SCIM updates as well?
-            //  -> compare with old value beforehand somehow, probably in calling fn before updates
+            drop_tokens_of_disabled(&self.id).await?;
         }
 
         // `self` may be a copy read before a concurrent change of a column this save does not
@@ -1465,8 +1471,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 if !enabled {
                     // like `save` does for a disabled user, judged by the stored row, which a
                     // concurrent update may have disabled
-                    Session::invalidate_for_user(&self.id).await?;
-                    RefreshToken::invalidate_for_user(&self.id).await?;
+                    drop_tokens_of_disabled(&self.id).await?;
                 }
                 Some(email)
             }
