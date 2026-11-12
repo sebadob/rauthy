@@ -3093,7 +3093,15 @@ mod tests {
                 .unwrap()
                 .get("n")
         };
-        assert_eq!(count("refresh_tokens", &user.id).await, 1);
+        let refresh_token_ids = async |uid: &str| {
+            let mut ids = hql_refresh_token_ids(uid).await;
+            ids.sort_unstable();
+            ids
+        };
+        assert_eq!(
+            refresh_token_ids(&user.id).await,
+            ["pwd_reset_off_rt", "pwd_reset_off_rtd"]
+        );
         assert_eq!(count("sessions", &user.id).await, 1);
 
         reset.password = Some("reset".to_string());
@@ -3104,9 +3112,14 @@ mod tests {
         assert_eq!(saved.password.as_deref(), Some("reset"));
         assert!(saved.email_verified);
         assert!(!saved.enabled);
-        assert_eq!(count("refresh_tokens", &user.id).await, 0);
+        // disabling a user does not drop its device refresh tokens, here and in `save`; that
+        // predates the reset and is not changed by it
+        assert_eq!(refresh_token_ids(&user.id).await, ["pwd_reset_off_rtd"]);
         assert_eq!(count("sessions", &user.id).await, 0);
-        assert_eq!(count("refresh_tokens", "pwd_reset_off_other").await, 1);
+        assert_eq!(
+            refresh_token_ids("pwd_reset_off_other").await,
+            ["pwd_reset_off_other_rt", "pwd_reset_off_other_rtd"]
+        );
         assert_eq!(count("sessions", "pwd_reset_off_other").await, 1);
     }
 
