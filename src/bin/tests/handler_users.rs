@@ -119,6 +119,17 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     let user_by_email = res.json::<UserResponse>().await?;
     assert_eq!(user_by_email.id, alfred.id);
 
+    // an admin may clear a required value (`given_name` by default) to make the user set it again
+    let res = reqwest::Client::new()
+        .patch(&url_id)
+        .headers(auth_headers.clone())
+        .json(&serde_json::json!({ "put": [], "del": ["given_name"] }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let patched = res.json::<UserResponse>().await?;
+    assert_eq!(patched.given_name, None);
+
     // delete the user again
     let res = reqwest::Client::new()
         .delete(&url_id)
