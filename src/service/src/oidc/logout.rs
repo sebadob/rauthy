@@ -21,7 +21,7 @@ use rauthy_data::entity::users::User;
 use rauthy_data::html::HtmlCached;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_jwt::claims::{JwtIdClaims, JwtTokenType};
+use rauthy_jwt::claims::JwtIdClaims;
 use rauthy_jwt::token::JwtToken;
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -49,14 +49,7 @@ pub async fn get_logout_html(
     // check if the provided token hint is valid
     let token_raw = logout_request.id_token_hint.unwrap();
     let mut buf = Vec::with_capacity(512);
-    JwtToken::validate_claims_into(
-        &token_raw,
-        Some(JwtTokenType::Id),
-        LOGOUT_TOKEN_CLOCK_SKEW,
-        &mut buf,
-        false,
-    )
-    .await?;
+    JwtToken::validate_id_token_hint_into(&token_raw, LOGOUT_TOKEN_CLOCK_SKEW, &mut buf).await?;
     let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
 
     // from here on, the token_hint contains a valid ID token -> skip the logout confirmation
@@ -83,14 +76,8 @@ pub async fn post_logout_handle(
     let mut buf = Vec::with_capacity(512);
     let (session, user, cors_header, post_logout_redirect_uri) =
         if let Some(id_token_hint) = &params.id_token_hint {
-            JwtToken::validate_claims_into(
-                id_token_hint,
-                Some(JwtTokenType::Id),
-                LOGOUT_TOKEN_CLOCK_SKEW,
-                &mut buf,
-                false,
-            )
-            .await?;
+            JwtToken::validate_id_token_hint_into(id_token_hint, LOGOUT_TOKEN_CLOCK_SKEW, &mut buf)
+                .await?;
             let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
             let client = Client::find(claims.common.azp.to_string()).await?;
             let cors_header = client.get_validated_origin_header(&req)?;
