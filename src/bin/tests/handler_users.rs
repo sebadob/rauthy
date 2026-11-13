@@ -1290,19 +1290,24 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
 
 /// An admin save of a user keeps its sessions and refresh tokens while the user stays enabled,
 /// and drops them once the save disables the user: they stay invalid after it is enabled again.
+/// Those of another user are kept.
 #[tokio::test]
 async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(), Box<dyn Error>> {
     const EMAIL: &str = "disable-drops@userstest.io";
+    const OTHER_EMAIL: &str = "disable-drops-other@userstest.io";
 
     let admin = get_auth_headers().await?;
     let backend = get_backend_url();
     let client = Client::new();
     let user = create_login_user(&client, &admin, EMAIL, "Disable", LOGIN_PWD).await?;
+    let other = create_login_user(&client, &admin, OTHER_EMAIL, "Other", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
     let url_session = format!("{backend}/oidc/sessioninfo");
 
     let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
     let session = session_headers_with(EMAIL, LOGIN_PWD).await;
+    let other_ts = password_token_set(&client, OTHER_EMAIL, LOGIN_PWD).await;
+    let other_session = session_headers_with(OTHER_EMAIL, LOGIN_PWD).await;
 
     let save = async |enabled: bool| {
         let res = client
@@ -1337,8 +1342,24 @@ async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(
     assert_eq!(res.status(), 401);
     assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
 
-    let res = client.delete(&url_user).headers(admin).send().await?;
-    assert_eq!(res.status(), 204);
+    // the other user keeps both
+    let res = client
+        .get(&url_session)
+        .headers(other_session)
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = refresh(&client, other_ts.refresh_token.unwrap()).await;
+    assert_eq!(res.status(), 200);
+
+    for id in [&user.id, &other.id] {
+        let res = client
+            .delete(format!("{backend}/users/{id}"))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
 
     Ok(())
 }
