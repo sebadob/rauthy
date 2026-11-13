@@ -435,6 +435,29 @@ async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error
     Ok(())
 }
 
+/// An admin update of `user` that keeps its state, as `f` changes it. All users of this file are
+/// created with `En`.
+fn update_request(
+    user: &UserResponse,
+    f: impl FnOnce(&mut UpdateUserRequest),
+) -> UpdateUserRequest {
+    let mut upd = UpdateUserRequest {
+        email: user.email.clone(),
+        given_name: user.given_name.clone(),
+        family_name: user.family_name.clone(),
+        language: Some(Language::En),
+        password: None,
+        roles: user.roles.clone(),
+        groups: user.groups.clone(),
+        enabled: user.enabled,
+        email_verified: user.email_verified,
+        user_expires: user.user_expires,
+        user_values: None,
+    };
+    f(&mut upd);
+    upd
+}
+
 const EMAIL: &str = "consent-user@consenttest.io";
 // satisfies the stricter policy of `zzb_handler_password_policy` as well
 const PWD: &str = "Consent-TEST.1234!#$";
@@ -532,19 +555,10 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     let res = client
         .put(format!("{backend}/users/{}", user.id))
         .headers(admin.clone())
-        .json(&UpdateUserRequest {
-            email: user.email.clone(),
-            given_name: user.given_name.clone(),
-            family_name: user.family_name.clone(),
-            language: Some(Language::En),
-            password: Some(PWD.to_string()),
-            roles: user.roles.clone(),
-            groups: user.groups.clone(),
-            enabled: true,
-            email_verified: true,
-            user_expires: None,
-            user_values: None,
-        })
+        .json(&update_request(&user, |upd| {
+            upd.password = Some(PWD.to_string());
+            upd.email_verified = true;
+        }))
         .send()
         .await?;
     assert_eq!(res.status(), 200);
@@ -763,19 +777,10 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
     let res = client
         .put(format!("{backend}/users/{}", user.id))
         .headers(admin.clone())
-        .json(&UpdateUserRequest {
-            email: user.email.clone(),
-            given_name: user.given_name.clone(),
-            family_name: user.family_name.clone(),
-            language: Some(Language::En),
-            password: Some(PWD.to_string()),
-            roles: user.roles.clone(),
-            groups: user.groups.clone(),
-            enabled: true,
-            email_verified: true,
-            user_expires: None,
-            user_values: None,
-        })
+        .json(&update_request(&user, |upd| {
+            upd.password = Some(PWD.to_string());
+            upd.email_verified = true;
+        }))
         .send()
         .await?;
     assert_eq!(res.status(), 200);
@@ -926,19 +931,11 @@ async fn assert_admin_update_survives_logins(
         let res = client
             .put(&url_user)
             .headers(admin.clone())
-            .json(&UpdateUserRequest {
-                email: user.email.clone(),
-                given_name: Some(given_name.clone()),
-                family_name: user.family_name.clone(),
-                language: Some(Language::En),
-                password: None,
-                roles: roles.clone(),
-                groups: user.groups.clone(),
-                enabled: true,
-                email_verified: true,
-                user_expires: None,
-                user_values: None,
-            })
+            .json(&update_request(user, |upd| {
+                upd.given_name = Some(given_name.clone());
+                upd.roles = roles.clone();
+                upd.email_verified = true;
+            }))
             .send()
             .await?;
         assert_eq!(res.status(), 200);
@@ -1287,19 +1284,10 @@ async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(
         let res = client
             .put(&url_user)
             .headers(admin.clone())
-            .json(&UpdateUserRequest {
-                email: user.email.clone(),
-                given_name: user.given_name.clone(),
-                family_name: user.family_name.clone(),
-                language: Some(Language::En),
-                password: None,
-                roles: user.roles.clone(),
-                groups: user.groups.clone(),
-                enabled,
-                email_verified: true,
-                user_expires: None,
-                user_values: None,
-            })
+            .json(&update_request(&user, |upd| {
+                upd.enabled = enabled;
+                upd.email_verified = true;
+            }))
             .send()
             .await
             .unwrap();
