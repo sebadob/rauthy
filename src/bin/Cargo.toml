@@ -69,6 +69,7 @@ tikv-jemallocator = { workspace = true, optional = true }
 rauthy-api-types = { path = "../api_types" }
 
 ed25519-compact = { workspace = true }
+futures = { workspace = true }
 josekit = "0.8"
 pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }

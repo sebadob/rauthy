@@ -3,6 +3,7 @@ use crate::common::{
     get_solved_pow, get_token_set, get_token_set_init_client, password_grant, password_token_set,
     prepare_login, refresh, session_headers_with,
 };
+use futures::{StreamExt, stream};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::generic::Language;
@@ -13,10 +14,13 @@ use rauthy_api_types::users::{
 use rauthy_common::utils::new_store_id;
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{AUTHORIZATION, HeaderMap};
-use reqwest::{Client, StatusCode};
+use reqwest::multipart::{Form, Part};
+use reqwest::{Body, Client, StatusCode};
 use serde_json::{Value, json};
 use std::error::Error;
+use std::io;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
 use tokio::time;
 
@@ -1144,15 +1148,17 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
     Ok(())
 }
 
+/// The picture the tests upload.
+const LOGO: &str = "../../assets/logo/rauthy_dark_small.png";
+
 /// Uploads the test logo as the picture of the user at `url_user` and returns its id.
 async fn upload_picture(
     client: &Client,
     url_user: &str,
     headers: &HeaderMap,
 ) -> Result<String, Box<dyn Error>> {
-    let path = "../../assets/logo/rauthy_dark_small.png";
-    let part = reqwest::multipart::Part::file(path).await?;
-    let form = reqwest::multipart::Form::new().part("image.png", part);
+    let part = Part::file(LOGO).await?;
+    let form = Form::new().part("image.png", part);
     let res = client
         .put(format!("{url_user}/picture"))
         .headers(headers.clone())
@@ -1465,6 +1471,106 @@ async fn test_admin_email_change_drops_cached_old_email() -> Result<(), Box<dyn 
 
     let res = client.delete(&url_user).headers(admin).send().await?;
     assert_eq!(res.status(), 204);
+
+    Ok(())
+}
+
+/// A picture upload, which reads the user before it receives the picture, keeps an admin update
+/// made while it waits for the rest of its body, and so does a later picture removal: both write
+/// only the `picture_id` of their user, and leave another user alone.
+#[tokio::test]
+async fn test_picture_change_keeps_concurrent_admin_update() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "picture-update@userstest.io";
+    const OTHER_EMAIL: &str = "picture-update-other@userstest.io";
+
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let user = create_login_user(&client, &admin, EMAIL, "Picture", PWD).await?;
+    let other = create_login_user(&client, &admin, OTHER_EMAIL, "Other", PWD).await?;
+    let url_user = format!("{backend}/users/{}", user.id);
+    let url_other = format!("{backend}/users/{}", other.id);
+    let other_picture = upload_picture(&client, &url_other, &admin).await?;
+
+    // the upload sends the second half of its picture only once the admin update is done
+    let png = tokio::fs::read(LOGO).await?;
+    let (head, tail) = png.split_at(png.len() / 2);
+    let (head, tail) = (head.to_vec(), tail.to_vec());
+    let (send_tail, tail_sent) = oneshot::channel::<()>();
+    let body =
+        stream::once(async move { Ok::<_, io::Error>(head) }).chain(stream::once(async move {
+            tail_sent.await.ok();
+            Ok(tail)
+        }));
+    let part = Part::stream_with_length(Body::wrap_stream(body), png.len() as u64)
+        .file_name("image.png")
+        .mime_str("image/png")?;
+    let upload = tokio::spawn(
+        client
+            .put(format!("{url_user}/picture"))
+            .headers(admin.clone())
+            .multipart(Form::new().part("image.png", part))
+            .send(),
+    );
+    time::sleep(Duration::from_millis(200)).await;
+
+    let roles = vec!["admin".to_string(), "user".to_string()];
+    let res = client
+        .put(&url_user)
+        .headers(admin.clone())
+        .json(&update_request(&user, |upd| {
+            upd.roles = roles.clone();
+            upd.enabled = false;
+            upd.email_verified = true;
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert!(
+        !upload.is_finished(),
+        "the admin update must land while the upload waits for its body"
+    );
+    send_tail.send(()).unwrap();
+    let res = upload.await??;
+    assert_eq!(res.status(), 200);
+    let picture_id = res.text().await?;
+
+    let assert_users = async |picture_id: Option<&str>| {
+        let res = client.get(&url_user).headers(admin.clone()).send().await?;
+        assert_eq!(res.status(), 200);
+        let found = res.json::<UserResponse>().await?;
+        assert_eq!(found.picture_id.as_deref(), picture_id);
+        assert!(!found.enabled);
+        let mut found_roles = found.roles.clone();
+        found_roles.sort();
+        assert_eq!(found_roles, roles);
+
+        // the list reads the stored rows, not the cached users
+        let res = client
+            .get(format!("{backend}/users"))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+        let users = res.json::<Vec<UserResponseSimple>>().await?;
+        let found = users.iter().find(|u| u.id == other.id).unwrap();
+        assert_eq!(found.picture_id.as_deref(), Some(other_picture.as_str()));
+        Ok::<_, Box<dyn Error>>(())
+    };
+    assert_users(Some(&picture_id)).await?;
+
+    let res = client
+        .delete(format!("{url_user}/picture/{picture_id}"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_users(None).await?;
+
+    for url in [&url_user, &url_other] {
+        let res = client.delete(url).headers(admin.clone()).send().await?;
+        assert_eq!(res.status(), 204);
+    }
 
     Ok(())
 }
