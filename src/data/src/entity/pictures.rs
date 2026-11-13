@@ -178,7 +178,7 @@ impl UserPicture {
     ) -> Result<HttpResponse, ErrorResponse> {
         // make sure to always create a new picture with a new id for more efficient caching
         let mut user = User::find(user_id).await?;
-        if let Some(picture_id) = user.picture_id.clone() {
+        if let Some(picture_id) = user.picture_id.take() {
             Self::remove(picture_id, user.id.clone()).await?;
         }
 
