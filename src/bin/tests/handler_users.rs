@@ -1400,3 +1400,71 @@ async fn test_admin_update_keeps_concurrent_picture_change() -> Result<(), Box<d
 
     Ok(())
 }
+
+/// An admin update that changes the email of a user drops the user cached under the old email.
+#[tokio::test]
+async fn test_admin_email_change_drops_cached_old_email() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "email-change@userstest.io";
+    const NEW_EMAIL: &str = "email-changed@userstest.io";
+
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let url_by_email = |email: &str| format!("{backend}/users/email/{email}");
+
+    // a left-over of a prior run under the new email
+    let res = client
+        .get(url_by_email(NEW_EMAIL))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    if res.status() == 200 {
+        let id = res.json::<UserResponse>().await?.id;
+        let res = client
+            .delete(format!("{backend}/users/{id}"))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
+    let user = create_login_user(&client, &admin, EMAIL, "Email", PWD).await?;
+    let url_user = format!("{backend}/users/{}", user.id);
+
+    // the lookup by email caches the user under it
+    let res = client
+        .get(url_by_email(EMAIL))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .put(&url_user)
+        .headers(admin.clone())
+        .json(&update_request(&user, |upd| {
+            upd.email = NEW_EMAIL.to_string();
+            upd.email_verified = true;
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .get(url_by_email(EMAIL))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 404);
+    let res = client
+        .get(url_by_email(NEW_EMAIL))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    assert_eq!(res.json::<UserResponse>().await?.id, user.id);
+
+    let res = client.delete(&url_user).headers(admin).send().await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
