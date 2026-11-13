@@ -463,8 +463,9 @@ fn update_request(
 }
 
 const EMAIL: &str = "consent-user@consenttest.io";
-// satisfies the stricter policy of `zzb_handler_password_policy` as well
-const PWD: &str = "Consent-TEST.1234!#$";
+/// The password of the users these tests log in with. It satisfies the stricter policy of
+/// `zzb_handler_password_policy` as well.
+const LOGIN_PWD: &str = "Login-TEST.1234!#$";
 
 /// The refresh of a revoked refresh token fails on the missing row.
 async fn assert_refresh_not_found(client: &Client, refresh_token: String) {
@@ -560,7 +561,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .put(format!("{backend}/users/{}", user.id))
         .headers(admin.clone())
         .json(&update_request(&user, |upd| {
-            upd.password = Some(PWD.to_string());
+            upd.password = Some(LOGIN_PWD.to_string());
             upd.email_verified = true;
         }))
         .send()
@@ -577,7 +578,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     let res = client.delete(&url_delete).send().await?;
     assert_eq!(res.status(), 401);
 
-    let user_headers = session_headers_with(EMAIL, PWD).await;
+    let user_headers = session_headers_with(EMAIL, LOGIN_PWD).await;
     let res = client
         .get(format!("{backend}/users/{admin_id}/consents"))
         .headers(user_headers.clone())
@@ -643,7 +644,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     }
 
     // --- revocation drops the refresh tokens of the user for the client
-    let ts = password_token_set(&client, EMAIL, PWD).await;
+    let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
 
     time::sleep(Duration::from_secs(2)).await;
     let res = refresh(&client, ts.refresh_token.unwrap()).await;
@@ -685,7 +686,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
 
     // an admin, then idempotent
-    let ts = password_token_set(&client, EMAIL, PWD).await;
+    let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
     let res = client
         .delete(&url_delete)
         .headers(admin.clone())
@@ -717,7 +718,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     );
 
     // --- a revoke with a `resource` drops the refresh tokens for the client as a whole
-    let ts = password_token_set(&client, EMAIL, PWD).await;
+    let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
     let res = client
         .delete(format!(
             "{url}?client_id={CLIENT_ID}&resource=https%3A%2F%2Fapi.example.com"
@@ -782,7 +783,7 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
         .put(format!("{backend}/users/{}", user.id))
         .headers(admin.clone())
         .json(&update_request(&user, |upd| {
-            upd.password = Some(PWD.to_string());
+            upd.password = Some(LOGIN_PWD.to_string());
             upd.email_verified = true;
         }))
         .send()
@@ -880,7 +881,7 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
     assert_eq!(delete().await, StatusCode::OK);
 
     // with an admin session as well, the revoke is the key's
-    let ts = password_token_set(&client, &user.email, PWD).await;
+    let ts = password_token_set(&client, &user.email, LOGIN_PWD).await;
     let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
     let (status, deleted) = delete_with_session().await;
     assert_eq!(status, StatusCode::OK);
@@ -969,16 +970,16 @@ async fn assert_admin_update_survives_logins(
 /// survives the logins.
 #[tokio::test]
 async fn test_admin_update_survives_concurrent_logins() -> Result<(), Box<dyn Error>> {
-    const EMAIL: &str = "update-logins@consenttest.io";
+    const EMAIL: &str = "update-logins@userstest.io";
 
     let admin = get_auth_headers().await?;
     let client = Client::new();
-    let user = create_login_user(&client, &admin, EMAIL, "Login", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Login", LOGIN_PWD).await?;
 
     assert_admin_update_survives_logins(&client, &admin, &user, async || {
         let mut prepared = Vec::new();
         for _ in 0..6 {
-            prepared.push(prepare_login(EMAIL, PWD).await);
+            prepared.push(prepare_login(EMAIL, LOGIN_PWD).await);
         }
         prepared
             .into_iter()
@@ -1005,17 +1006,17 @@ async fn test_admin_update_survives_concurrent_logins() -> Result<(), Box<dyn Er
 /// survives the logins.
 #[tokio::test]
 async fn test_admin_update_survives_concurrent_password_grants() -> Result<(), Box<dyn Error>> {
-    const EMAIL: &str = "update-grants@consenttest.io";
+    const EMAIL: &str = "update-grants@userstest.io";
 
     let admin = get_auth_headers().await?;
     let client = Client::new();
-    let user = create_login_user(&client, &admin, EMAIL, "Login", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Login", LOGIN_PWD).await?;
 
     assert_admin_update_survives_logins(&client, &admin, &user, async || {
         (0..6)
             .map(|_| {
                 tokio::spawn(async {
-                    password_token_set(&Client::new(), EMAIL, PWD).await;
+                    password_token_set(&Client::new(), EMAIL, LOGIN_PWD).await;
                 })
             })
             .collect()
@@ -1037,7 +1038,7 @@ async fn test_admin_update_survives_concurrent_password_grants() -> Result<(), B
 /// before.
 #[tokio::test]
 async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dyn Error>> {
-    const EMAIL: &str = "pam-logins@consenttest.io";
+    const EMAIL: &str = "pam-logins@userstest.io";
     const PAM_USERNAME: &str = "pamlogins";
     const HOSTNAME: &str = "pam-logins-host";
 
@@ -1065,7 +1066,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
             assert_eq!(res.status(), 200);
         }
     }
-    let user = create_login_user(&client, &admin, EMAIL, "Pam", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Pam", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
 
     let res = client
@@ -1128,7 +1129,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
                     "host_id": host_id,
                     "host_secret": host_secret,
                     "username": PAM_USERNAME,
-                    "password": PWD,
+                    "password": LOGIN_PWD,
                 }));
                 tokio::spawn(async move { assert_eq!(req.send().await.unwrap().status(), 200) })
             })
@@ -1173,18 +1174,18 @@ async fn upload_picture(
 /// logins: a login saves only its login state, not the copy of the user it read before.
 #[tokio::test]
 async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Error>> {
-    const EMAIL: &str = "picture-logins@consenttest.io";
+    const EMAIL: &str = "picture-logins@userstest.io";
 
     let admin = get_auth_headers().await?;
     let backend = get_backend_url();
     let client = Client::new();
-    let user = create_login_user(&client, &admin, EMAIL, "Login", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Login", LOGIN_PWD).await?;
 
     let url_user = format!("{backend}/users/{}", user.id);
     for round in 0..3 {
         let mut prepared = Vec::new();
         for _ in 0..6 {
-            prepared.push(prepare_login(EMAIL, PWD).await);
+            prepared.push(prepare_login(EMAIL, LOGIN_PWD).await);
         }
         let logins = prepared
             .into_iter()
@@ -1228,13 +1229,13 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
 /// the password grant, wait for their hash survives the logins, and every failure is counted.
 #[tokio::test]
 async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box<dyn Error>> {
-    const EMAIL: &str = "picture-failed-logins@consenttest.io";
+    const EMAIL: &str = "picture-failed-logins@userstest.io";
     const WRONG_PWD: &str = "Wrong-TEST.1234!#$";
 
     let admin = get_auth_headers().await?;
     let backend = get_backend_url();
     let client = Client::new();
-    let user = create_login_user(&client, &admin, EMAIL, "Login", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Login", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
 
     for (round, authorize) in [true, true, false, false].into_iter().enumerate() {
@@ -1278,7 +1279,7 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
         assert!(found.last_failed_login.is_some());
 
         // a successful login resets the failed logins of the user and of this IP
-        password_token_set(&client, EMAIL, PWD).await;
+        password_token_set(&client, EMAIL, LOGIN_PWD).await;
     }
 
     let res = client.delete(&url_user).headers(admin).send().await?;
@@ -1291,17 +1292,17 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
 /// and drops them once the save disables the user: they stay invalid after it is enabled again.
 #[tokio::test]
 async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(), Box<dyn Error>> {
-    const EMAIL: &str = "disable-drops@consenttest.io";
+    const EMAIL: &str = "disable-drops@userstest.io";
 
     let admin = get_auth_headers().await?;
     let backend = get_backend_url();
     let client = Client::new();
-    let user = create_login_user(&client, &admin, EMAIL, "Disable", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Disable", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
     let url_session = format!("{backend}/oidc/sessioninfo");
 
-    let ts = password_token_set(&client, EMAIL, PWD).await;
-    let session = session_headers_with(EMAIL, PWD).await;
+    let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
+    let session = session_headers_with(EMAIL, LOGIN_PWD).await;
 
     let save = async |enabled: bool| {
         let res = client
@@ -1350,7 +1351,7 @@ async fn test_admin_update_keeps_concurrent_picture_change() -> Result<(), Box<d
 
     let admin = get_auth_headers().await?;
     let client = Client::new();
-    let user = create_login_user(&client, &admin, EMAIL, "Picture", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Picture", LOGIN_PWD).await?;
     let url_user = format!("{}/users/{}", get_backend_url(), user.id);
     let uploaded = upload_picture(&client, &url_user, &admin).await?;
 
@@ -1369,7 +1370,7 @@ async fn test_admin_update_keeps_concurrent_picture_change() -> Result<(), Box<d
                 .put(&url_user)
                 .headers(admin.clone())
                 .json(&update_request(&user, |upd| {
-                    upd.password = Some(format!("{PWD}{round}"));
+                    upd.password = Some(format!("{LOGIN_PWD}{round}"));
                     upd.email_verified = true;
                 }))
                 .send(),
@@ -1433,7 +1434,7 @@ async fn test_admin_email_change_drops_cached_old_email() -> Result<(), Box<dyn 
             .await?;
         assert_eq!(res.status(), 204);
     }
-    let user = create_login_user(&client, &admin, EMAIL, "Email", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Email", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
 
     // the lookup by email caches the user under it
@@ -1486,8 +1487,8 @@ async fn test_picture_change_keeps_concurrent_admin_update() -> Result<(), Box<d
     let admin = get_auth_headers().await?;
     let backend = get_backend_url();
     let client = Client::new();
-    let user = create_login_user(&client, &admin, EMAIL, "Picture", PWD).await?;
-    let other = create_login_user(&client, &admin, OTHER_EMAIL, "Other", PWD).await?;
+    let user = create_login_user(&client, &admin, EMAIL, "Picture", LOGIN_PWD).await?;
+    let other = create_login_user(&client, &admin, OTHER_EMAIL, "Other", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
     let url_other = format!("{backend}/users/{}", other.id);
     let other_picture = upload_picture(&client, &url_other, &admin).await?;
