@@ -1105,22 +1105,40 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .unwrap()
         .to_string();
 
-    // a failed PAM login is counted, and the successful ones below reset the count
-    let res = client
-        .post(format!("{backend}/pam/login"))
-        .json(&json!({
-            "host_id": host_id,
-            "host_secret": host_secret,
-            "username": PAM_USERNAME,
-            "password": "Wrong-TEST.1234!#$",
-        }))
-        .send()
-        .await?;
-    assert_eq!(res.status(), 401);
-    let res = client.get(&url_user).headers(admin.clone()).send().await?;
-    assert_eq!(res.status(), 200);
-    let found = res.json::<UserResponse>().await?;
-    assert_eq!(found.failed_login_attempts, Some(1));
+    // A failed PAM login is counted, and a successful one resets the count. The reset is checked
+    // on its own, before the race below: an admin save there writes back the count of the copy
+    // it read, so a seeded count read before a login reset it could come back.
+    let pam_login = async |password: &str| {
+        client
+            .post(format!("{backend}/pam/login"))
+            .json(&json!({
+                "host_id": host_id,
+                "host_secret": host_secret,
+                "username": PAM_USERNAME,
+                "password": password,
+            }))
+            .send()
+            .await
+            .unwrap()
+            .status()
+    };
+    let failed_logins = async || {
+        let res = client
+            .get(&url_user)
+            .headers(admin.clone())
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 200);
+        res.json::<UserResponse>()
+            .await
+            .unwrap()
+            .failed_login_attempts
+    };
+    assert_eq!(pam_login("Wrong-TEST.1234!#$").await, 401);
+    assert_eq!(failed_logins().await, Some(1));
+    assert_eq!(pam_login(LOGIN_PWD).await, 200);
+    assert_eq!(failed_logins().await, None);
 
     assert_admin_update_survives_logins(&client, &admin, &user, async || {
         (0..6)
