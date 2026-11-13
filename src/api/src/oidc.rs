@@ -816,7 +816,7 @@ pub async fn get_logout(
         }
 
         Ok(
-            logout::get_logout_html(req, params, principal.into_inner().session.unwrap())
+            logout::get_logout_html(req, principal.into_inner().session.unwrap())
                 .await
                 .unwrap_or_else(|_| {
                     HttpResponse::build(StatusCode::from_u16(302).unwrap())

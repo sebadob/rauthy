@@ -74,6 +74,49 @@ impl JwtToken {
         buf: &mut Vec<u8>,
         ignore_nbf: bool,
     ) -> Result<(), ErrorResponse> {
+        Self::validate_into(
+            token,
+            expected_type,
+            allowed_clock_skew_seconds,
+            buf,
+            ignore_nbf,
+            false,
+        )
+        .await
+    }
+
+    /// Validates an `id_token_hint` for an RP Initiated Logout. Works like
+    /// `validate_claims_into()`, except that an expired ID token is accepted. The signature,
+    /// `iss`, `typ`, `iat` and `nbf` are checked as usual.
+    ///
+    /// https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
+    /// > The OP SHOULD accept ID Tokens when the RP identified by the ID Token's aud claim
+    /// > and/or sid claim has a current session or had a recent session at the OP, even when
+    /// > the exp time has passed.
+    pub async fn validate_id_token_hint_into(
+        token: &str,
+        allowed_clock_skew_seconds: Duration,
+        buf: &mut Vec<u8>,
+    ) -> Result<(), ErrorResponse> {
+        Self::validate_into(
+            token,
+            Some(JwtTokenType::Id),
+            allowed_clock_skew_seconds,
+            buf,
+            false,
+            true,
+        )
+        .await
+    }
+
+    async fn validate_into(
+        token: &str,
+        expected_type: Option<JwtTokenType>,
+        allowed_clock_skew_seconds: Duration,
+        buf: &mut Vec<u8>,
+        ignore_nbf: bool,
+        ignore_exp: bool,
+    ) -> Result<(), ErrorResponse> {
         debug_assert!(buf.is_empty());
 
         if token.len() > RauthyConfig::get().vars.access.token_len_limit as usize {
@@ -146,6 +189,7 @@ impl JwtToken {
             expected_type,
             allowed_clock_skew_seconds,
             ignore_nbf,
+            ignore_exp,
         )?;
 
         Ok(())
@@ -172,6 +216,7 @@ impl ValidationClaims<'_> {
         expected_type: Option<JwtTokenType>,
         allowed_clock_skew: Duration,
         ignore_nbf: bool,
+        ignore_exp: bool,
     ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         let skew = allowed_clock_skew.as_secs() as i64;
@@ -182,7 +227,7 @@ impl ValidationClaims<'_> {
                 "Token was issued in the future",
             ));
         }
-        if self.exp + skew < now {
+        if !ignore_exp && self.exp + skew < now {
             return Err(ErrorResponse::new(
                 ErrorResponseType::JwtToken,
                 "Token has expired",
@@ -309,6 +354,7 @@ mod tests {
             Some(JwtTokenType::Bearer),
             Duration::from_secs(0),
             false,
+            false,
         )?;
 
         ValidationClaims {
@@ -323,6 +369,7 @@ mod tests {
             Some(JwtTokenType::Bearer),
             Duration::from_secs(2),
             false,
+            false,
         )?;
 
         let res = ValidationClaims {
@@ -336,6 +383,7 @@ mod tests {
             iss,
             Some(JwtTokenType::Bearer),
             Duration::from_secs(0),
+            false,
             false,
         );
         assert_eq!(
@@ -358,6 +406,7 @@ mod tests {
             Some(JwtTokenType::Bearer),
             Duration::from_secs(0),
             false,
+            false,
         );
         assert_eq!(
             res,
@@ -378,6 +427,7 @@ mod tests {
             iss,
             Some(JwtTokenType::Bearer),
             Duration::from_secs(0),
+            false,
             false,
         );
         assert_eq!(
@@ -400,6 +450,7 @@ mod tests {
             Some(JwtTokenType::Bearer),
             Duration::from_secs(5),
             false,
+            false,
         );
         assert_eq!(res, Ok(()));
 
@@ -410,7 +461,13 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Id), Duration::from_secs(0), false);
+        .validate(
+            iss,
+            Some(JwtTokenType::Id),
+            Duration::from_secs(0),
+            false,
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -431,6 +488,7 @@ mod tests {
             Some(JwtTokenType::Bearer),
             Duration::from_secs(0),
             false,
+            false,
         );
         assert_eq!(
             res,
@@ -439,6 +497,101 @@ mod tests {
                 "Invalid `iss`"
             ))
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_validation_claims_expired_id_token_hint() -> Result<(), ErrorResponse> {
+        // An expired ID token is still a valid `id_token_hint` for an RP Initiated Logout, as
+        // long as it was issued by us. Everything apart from `exp` must still be checked.
+        let now = Utc::now().timestamp();
+        let iss = "http://localhost:8080/auth/v1";
+        let skew = Duration::from_secs(600);
+
+        let expired = ValidationClaims {
+            iat: now - 86400,
+            exp: now - 84600,
+            nbf: now - 86400,
+            iss,
+            typ: JwtTokenType::Id,
+        };
+        assert_eq!(
+            expired.validate(iss, Some(JwtTokenType::Id), skew, false, false),
+            Err(ErrorResponse::new(
+                ErrorResponseType::JwtToken,
+                "Token has expired"
+            ))
+        );
+        expired.validate(iss, Some(JwtTokenType::Id), skew, false, true)?;
+
+        assert_eq!(
+            expired.validate(
+                "https://evil.example/auth/v1",
+                Some(JwtTokenType::Id),
+                skew,
+                false,
+                true
+            ),
+            Err(ErrorResponse::new(
+                ErrorResponseType::JwtToken,
+                "Invalid `iss`"
+            ))
+        );
+
+        let expired_bearer = ValidationClaims {
+            typ: JwtTokenType::Bearer,
+            ..expired
+        };
+        assert_eq!(
+            expired_bearer.validate(iss, Some(JwtTokenType::Id), skew, false, true),
+            Err(ErrorResponse::new(
+                ErrorResponseType::JwtToken,
+                "Invalid `typ`"
+            ))
+        );
+
+        let future = ValidationClaims {
+            iat: now + 3600,
+            exp: now + 5400,
+            nbf: now + 3600,
+            iss,
+            typ: JwtTokenType::Id,
+        };
+        assert_eq!(
+            future.validate(iss, Some(JwtTokenType::Id), skew, false, true),
+            Err(ErrorResponse::new(
+                ErrorResponseType::JwtToken,
+                "Token was issued in the future"
+            ))
+        );
+
+        // The signature is checked before the claims, so a forged or tampered hint is still
+        // rejected, expired or not.
+        let kp = ed25519_compact::KeyPair::generate();
+        let signing_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::EdDSA,
+            bytes: kp.sk.to_der().to_vec(),
+        };
+        let claims = serde_json::json!({
+            "iss": iss,
+            "iat": now - 86400,
+            "exp": now - 84600,
+            "nbf": now - 86400,
+            "typ": "Id",
+        });
+        let token = JwtToken::build(&signing_kp, &claims, JwtHeaderType::Jwt)?;
+        let mut buf = Vec::new();
+        signing_kp.verify_token(&token, &mut buf)?;
+
+        let other_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::EdDSA,
+            bytes: ed25519_compact::KeyPair::generate().sk.to_der().to_vec(),
+        };
+        buf.clear();
+        assert!(other_kp.verify_token(&token, &mut buf).is_err());
 
         Ok(())
     }
