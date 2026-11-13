@@ -1100,6 +1100,23 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .unwrap()
         .to_string();
 
+    // a failed PAM login is counted, and the successful ones below reset the count
+    let res = client
+        .post(format!("{backend}/pam/login"))
+        .json(&json!({
+            "host_id": host_id,
+            "host_secret": host_secret,
+            "username": PAM_USERNAME,
+            "password": "Wrong-TEST.1234!#$",
+        }))
+        .send()
+        .await?;
+    assert_eq!(res.status(), 401);
+    let res = client.get(&url_user).headers(admin.clone()).send().await?;
+    assert_eq!(res.status(), 200);
+    let found = res.json::<UserResponse>().await?;
+    assert_eq!(found.failed_login_attempts, Some(1));
+
     assert_admin_update_survives_logins(&client, &admin, &user, async || {
         (0..6)
             .map(|_| {
