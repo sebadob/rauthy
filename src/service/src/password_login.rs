@@ -45,15 +45,14 @@ pub async fn password_login(
 
             // check if the password hash should be upgraded
             let hash_uptodate = user.is_argon2_uptodate(&RauthyConfig::get().argon2_params)?;
-            let new_hash = if !hash_uptodate {
+            if !hash_uptodate {
                 info!("Updating Argon2ID params for user '{}'", &user.email);
-                Some(HashPassword::hash_password(password).await?)
+                let new_hash = HashPassword::hash_password(password).await?;
+                user.save_login_success_with_rehash(&new_hash).await?;
             } else {
                 password.zeroize();
-                None
-            };
-
-            user.save_login_success(new_hash.as_deref()).await?;
+                user.save_login_success().await?;
+            }
 
             if client.is_dynamic() {
                 ClientDyn::update_used(&client.id).await?;

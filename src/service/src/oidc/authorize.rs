@@ -165,7 +165,7 @@ pub async fn post_authorize(
         LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
         // In case of a webauthn login, the info will be updated on ceremony auth_finish.
-        user.save_login_success(None).await?;
+        user.save_login_success().await?;
     }
     // If the password was correct, we don't want a login delay anymore.
     // It should only prevent username enumeration and brute force, not degrade the UX.

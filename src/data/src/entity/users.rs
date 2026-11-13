@@ -1266,17 +1266,48 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     }
 
     /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
-    /// in this copy and in the database, and replaces a rehashed password with `new_password`
-    /// in the database only: this copy keeps the hash the login validated.
+    /// in this copy and in the database. It writes no other column.
     /// Unlike [`Self::save`], it does not write back the other columns of this copy, which a
     /// login may have read long before, e.g. before it spent its time on the password hash, so
-    /// a concurrent change of the user (a picture upload, an admin update) is kept.
-    /// `new_password` replaces only the hash this copy holds, the one the login validated: a
-    /// password changed meanwhile is kept. The cached user is dropped under the email of this
-    /// copy, and under the stored one, if a concurrent update changed it.
-    pub async fn save_login_success(
+    /// a concurrent change of the user (a picture upload, an admin update) is kept. The cached
+    /// user is dropped under the email of this copy, and under the stored one, if a concurrent
+    /// update changed it.
+    pub async fn save_login_success(&mut self) -> Result<(), ErrorResponse> {
+        self.last_login = Some(Utc::now().timestamp());
+        self.last_failed_login = None;
+        self.failed_login_attempts = None;
+
+        let sql = r#"
+UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL
+WHERE id = $2
+RETURNING email"#;
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(self.last_login, &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(sql, &[&self.last_login, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// [`Self::save_login_success`] for a login that rehashed the password with upgraded
+    /// Argon2ID params: in the same single update, it also replaces the stored password with
+    /// `new_hash`, in the database only, and only while the stored hash is still the one this
+    /// copy holds, the one the login validated: a password changed meanwhile is kept. This copy
+    /// keeps the validated hash.
+    pub async fn save_login_success_with_rehash(
         &mut self,
-        new_password: Option<&str>,
+        new_hash: &str,
     ) -> Result<(), ErrorResponse> {
         self.last_login = Some(Utc::now().timestamp());
         self.last_failed_login = None;
@@ -1285,7 +1316,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         // SQLite numbers `$n` in the order of first appearance, so they appear in order
         let sql = r#"
 UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL,
-password = CASE WHEN password = $2 THEN COALESCE($3, password) ELSE password END
+password = CASE WHEN password = $2 THEN $3 ELSE password END
 WHERE id = $4
 RETURNING email"#;
 
@@ -1293,12 +1324,7 @@ RETURNING email"#;
             DB::hql()
                 .execute_returning(
                     sql,
-                    params!(
-                        self.last_login,
-                        &self.password,
-                        new_password.map(String::from),
-                        &self.id
-                    ),
+                    params!(self.last_login, &self.password, new_hash, &self.id),
                 )
                 .await?
                 .into_iter()
@@ -1308,7 +1334,7 @@ RETURNING email"#;
         } else {
             DB::pg_query_rows(
                 sql,
-                &[&self.last_login, &self.password, &new_password, &self.id],
+                &[&self.last_login, &self.password, &new_hash, &self.id],
                 1,
             )
             .await?

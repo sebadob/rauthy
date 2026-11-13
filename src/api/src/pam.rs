@@ -706,7 +706,7 @@ pub async fn post_login(
 
     // TODO should we even do this user update here? The PAM user belongs to this user, but on the
     //  other hand, these metrics are for all non-PAM logins.
-    user.save_login_success(None).await?;
+    user.save_login_success().await?;
 
     info!("New PAM login for user {}", user.email);
 

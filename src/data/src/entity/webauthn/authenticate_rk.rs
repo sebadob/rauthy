@@ -167,7 +167,7 @@ pub async fn auth_finish_discover(
 
             session.is_mfa = true;
             session.set_authenticated(&user).await?;
-            user.save_login_success(None).await?;
+            user.save_login_success().await?;
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id.clone())?;
 

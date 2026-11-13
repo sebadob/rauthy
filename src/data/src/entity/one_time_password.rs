@@ -684,7 +684,7 @@ pub async fn auth_finish(
 
             if is_login && let Some(mut session) = session {
                 session.set_authenticated(&user).await?;
-                user.save_login_success(None).await?;
+                user.save_login_success().await?;
             }
 
             info!(
