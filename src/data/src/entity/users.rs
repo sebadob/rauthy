@@ -1401,7 +1401,14 @@ email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
 WHERE id = $4
 RETURNING email, email_verified, enabled"#;
 
-        let stored: Option<(String, bool, bool)> = if is_hiqlite() {
+        /// The columns the reset returns from the stored row.
+        struct StoredReset {
+            email: String,
+            email_verified: bool,
+            enabled: bool,
+        }
+
+        let stored: Option<StoredReset> = if is_hiqlite() {
             DB::hql()
                 .execute_returning(
                     sql,
@@ -1411,12 +1418,10 @@ RETURNING email, email_verified, enabled"#;
                 .into_iter()
                 .next()
                 .transpose()?
-                .map(|mut row| {
-                    (
-                        row.get("email"),
-                        row.get("email_verified"),
-                        row.get("enabled"),
-                    )
+                .map(|mut row| StoredReset {
+                    email: row.get("email"),
+                    email_verified: row.get("email_verified"),
+                    enabled: row.get("enabled"),
                 })
         } else {
             DB::pg_query_rows(
@@ -1431,24 +1436,22 @@ RETURNING email, email_verified, enabled"#;
             )
             .await?
             .first()
-            .map(|row| {
-                (
-                    row.get("email"),
-                    row.get("email_verified"),
-                    row.get("enabled"),
-                )
+            .map(|row| StoredReset {
+                email: row.get("email"),
+                email_verified: row.get("email_verified"),
+                enabled: row.get("enabled"),
             })
         };
 
         let stored_email = match stored {
-            Some((email, email_verified, enabled)) => {
-                self.email_verified = email_verified;
-                if !enabled {
+            Some(stored) => {
+                self.email_verified = stored.email_verified;
+                if !stored.enabled {
                     // like `save` does for a disabled user, judged by the stored row, which a
                     // concurrent update may have disabled
                     drop_tokens_of_disabled(&self.id).await?;
                 }
-                Some(email)
+                Some(stored.email)
             }
             None => None,
         };
