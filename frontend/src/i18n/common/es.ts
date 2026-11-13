@@ -213,6 +213,12 @@ export const I18nEs: I18n = {
         login: 'Iniciar sesión',
         mfaAck: 'Confirmado',
         mfaOpenApp: 'Abre la aplicación para continuar',
+        mfaSelectionTitle: 'Autenticación en dos pasos',
+        mfaSelectionDesc: 'Elige tu método de verificación:',
+        usePasskey: 'Usar clave de acceso',
+        passkeyDesc: 'Rápido y seguro con tu clave de seguridad',
+        useEmailCode: 'Usar código por correo electrónico',
+        emailCodeDesc: 'Recibe un código de un solo uso por correo electrónico',
         navigateToAccount: 'Panel de la cuenta',
         needsUserUpdate: `Falta información en esta cuenta. Debe actualizar estos datos antes de
             continuar con el inicio de sesión.`,

@@ -8,7 +8,7 @@ use actix_web::http::header::{
 };
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, web};
 use rauthy_api_types::tos::ToSAwaitLoginResponse;
-use rauthy_api_types::users::{OtpLoginResponse, WebauthnLoginResponse};
+use rauthy_api_types::users::MfaLoginResponse;
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
@@ -17,6 +17,7 @@ use rauthy_data::entity::auth_providers::NewFederatedUserCreated;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::principal::Principal;
+use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::entity::sessions::Session;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rust_embed::Embed;
@@ -165,7 +166,7 @@ pub async fn map_auth_step(
             }))
         }
 
-        AuthStep::AwaitWebauthn(res) => {
+        AuthStep::AwaitMfa(res) => {
             let mut builder = HttpResponse::Ok();
             builder
                 .insert_header(fed_cm_header)
@@ -175,44 +176,23 @@ pub async fn map_auth_step(
                 builder.insert_header(origin);
             }
 
-            // if there is no mfa_cookie present, set a new one
+            // Set appropriate MFA cookie based on available methods
+            // Prefer WebAuthn cookie if available, otherwise OTP
             if let Ok(mfa_cookie) = MfaCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
             {
                 if mfa_cookie.email != res.email {
-                    builder.cookie(MfaCookie::new_webauthn(res.email.clone()).build()?);
+                    builder.cookie(MfaCookie::new_mfa(res.email.clone(), res.require_webauthn, res.require_otp).build()?);
                 }
             } else {
-                builder.cookie(MfaCookie::new_webauthn(res.email.clone()).build()?);
+                builder.cookie(MfaCookie::new_mfa(res.email.clone(), res.require_webauthn, res.require_otp).build()?);
             }
 
-            Ok(builder.json(&WebauthnLoginResponse {
+            Ok(builder.json(&MfaLoginResponse {
                 code: res.code,
-                exp: res.exp,
-            }))
-        }
-
-        AuthStep::AwaitOtpCode(res) => {
-            let mut builder = HttpResponse::Ok();
-            builder
-                .insert_header(fed_cm_header)
-                .insert_header(res.header_csrf);
-
-            if let Some(origin) = res.header_origin {
-                builder.insert_header(origin);
-            }
-
-            // if there is no mfa_cookie present, set a new one
-            if let Ok(mfa_cookie) = MfaCookie::parse_validate(&ApiCookie::from_req(req, COOKIE_MFA))
-            {
-                if mfa_cookie.email != res.email {
-                    builder.cookie(MfaCookie::new_otp(res.email.clone()).build()?);
-                }
-            } else {
-                builder.cookie(MfaCookie::new_otp(res.email.clone()).build()?);
-            }
-
-            Ok(builder.json(&OtpLoginResponse {
-                code: res.code,
+                exp: RauthyConfig::get().vars.webauthn.req_exp.as_secs(),
+                email: res.email,
+                require_webauthn: res.require_webauthn,
+                require_otp: res.require_otp,
                 active_otps: res.active_otps,
             }))
         }

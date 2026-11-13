@@ -210,6 +210,12 @@ export const I18nNl: I18n = {
         login: 'Inloggen',
         mfaAck: 'Bevestigd',
         mfaOpenApp: 'Open de app om verder te gaan',
+        mfaSelectionTitle: 'Twee-factor-authenticatie',
+        mfaSelectionDesc: 'Kies je verificatiemethode:',
+        usePasskey: 'Passkey gebruiken',
+        passkeyDesc: 'Snel en veilig met je beveiligingssleutel',
+        useEmailCode: 'E-mailcode gebruiken',
+        emailCodeDesc: 'Ontvang een eenmalige code via e-mail',        navigateToAccount: 'Account Dashboard',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Sommige informatie voor dit account ontbreekt. U moet deze waarden
             bijwerken voordat u kunt doorgaan met inloggen.`,

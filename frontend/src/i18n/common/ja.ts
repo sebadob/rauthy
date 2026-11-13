@@ -196,6 +196,12 @@ export const I18nJa: I18n = {
         login: 'ログイン',
         mfaAck: '確認しました',
         mfaOpenApp: 'アプリを開いて続行',
+        mfaSelectionTitle: '2 要素認証',
+        mfaSelectionDesc: '認証方法を選択してください：',
+        usePasskey: 'パスキーを使用',
+        passkeyDesc: 'パスキーを使った、迅速で安全な認証',
+        useEmailCode: 'メールコードを使用',
+        emailCodeDesc: 'メールでワンタイムコードを受け取ります',
         navigateToAccount: 'アカウント画面',
         needsUserUpdate:
             'このアカウントには足りない情報があります。ログインを続けるには、先に入力してください。',

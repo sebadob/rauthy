@@ -16,14 +16,13 @@ use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
-use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
+use rauthy_data::entity::mfa_login::{MfaLoginReq, MfaToSAwaitData};
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::{AccountType, User};
-use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{
-    AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
+    AuthStep, AuthStepAwaitMfa, AuthStepLoggedIn, AwaitToSAccept,
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::ops::Add;
@@ -192,11 +191,15 @@ pub async fn post_authorize(
     client.validate_flow(GrantType::AuthorizationCode)?;
     let header_origin = client.get_validated_origin_header(req)?;
 
-    // Webauthn overrides otp.
+    // Check which MFA methods are available.
     // If we had a Resident Key authentication already, there is no need for another Webauthn
     // request.
+    let config = RauthyConfig::get();
+    let allow_select_mfa = !(user.is_admin() && config.vars.mfa.admin_passkey_only)
+        && config.vars.mfa.optional_select_mfa;
+
     let require_webauthn = !is_rk_authenticated && user.has_webauthn_enabled();
-    let require_otp = !require_webauthn && user.has_otp_enabled().await;
+    let require_otp = (allow_select_mfa || !require_webauthn) && !is_rk_authenticated && user.has_otp_enabled().await;
     if require_webauthn || require_otp {
         *user_needs_mfa = true;
         session.set_mfa(true).await?;
@@ -335,11 +338,19 @@ pub(crate) async fn finish_authorize(
 
     let config = RauthyConfig::get();
     let mut code_lifetime = Duration::from_secs(client.auth_code_lifetime as u64);
-    if data.require_webauthn {
-        code_lifetime = code_lifetime.add(config.vars.webauthn.req_exp);
-    }
-    if data.require_otp {
-        code_lifetime = code_lifetime.add(config.vars.otp.exp);
+    if data.require_webauthn || data.require_otp {
+        // Use max TTL to allow time for either method when both are available
+        if data.require_webauthn && data.require_otp {
+            let max_exp = std::cmp::max(
+                config.vars.webauthn.req_exp,
+                config.vars.otp.exp,
+            );
+            code_lifetime = code_lifetime.add(max_exp);
+        } else if data.require_webauthn {
+            code_lifetime = code_lifetime.add(config.vars.webauthn.req_exp);
+        } else {
+            code_lifetime = code_lifetime.add(config.vars.otp.exp);
+        }
     }
     let need_tos_accept = user.needs_tos_update().await?;
     if need_tos_accept {
@@ -394,48 +405,24 @@ pub(crate) async fn finish_authorize(
     let header_loc = code.build_location_header(data.state.as_deref());
 
     // check if we need to validate the 2nd factor
-    // if user.has_webauthn_enabled() && RauthyConfig::get().vars.lifetimes.session_renew_mfa {
-    if data.require_webauthn {
-        // Webauthn-enabled account
-
-        let step = AuthStepAwaitWebauthn {
-            code: get_rand(48),
-            header_csrf: Session::get_csrf_header(&session.csrf_token),
-            header_origin: data.header_origin,
-            email: user.email,
-            exp: config.vars.webauthn.req_exp.as_secs(),
-            session: session.clone(),
-        };
-
-        WebauthnLoginReq {
-            code: step.code.clone(),
-            user_id: user.id,
-            header_loc,
-            header_origin: step
-                .header_origin
-                .as_ref()
-                .map(|h| h.1.to_str().unwrap().to_string()),
-            tos_await_data: need_tos_accept.then_some(WebauthnToSAwaitData {
-                auth_code: code.id,
-                auth_code_lifetime: client.auth_code_lifetime,
-            }),
-            needs_user_update,
-        }
-        .save()
-        .await?;
-
-        Ok(AuthStep::AwaitWebauthn(step))
-    } else if data.require_otp {
-        // OneTimePassword enabled account
-        let step = AuthStepAwaitOtp {
+    if data.require_webauthn || data.require_otp {
+        // MFA is required - return unified response with available methods
+        let step = AuthStepAwaitMfa {
             code: get_rand(48),
             header_csrf: Session::get_csrf_header(&session.csrf_token),
             header_origin: data.header_origin,
             email: user.email.clone(),
-            active_otps: user.get_otp_kind().await?,
+            require_webauthn: data.require_webauthn,
+            require_otp: data.require_otp,
+            active_otps: if data.require_otp {
+                user.get_otp_kind().await?
+            } else {
+                Vec::new()
+            },
+            session: session.clone(),
         };
 
-        OtpLoginReq {
+        MfaLoginReq {
             code: step.code.clone(),
             user_id: user.id,
             header_loc,
@@ -443,16 +430,18 @@ pub(crate) async fn finish_authorize(
                 .header_origin
                 .as_ref()
                 .map(|h| h.1.to_str().unwrap().to_string()),
-            tos_await_data: need_tos_accept.then_some(OtpToSAwaitData {
+            tos_await_data: need_tos_accept.then_some(MfaToSAwaitData {
                 auth_code: code.id,
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
             needs_user_update,
+            has_webauthn: data.require_webauthn,
+            has_otp: data.require_otp,
         }
         .save()
         .await?;
 
-        Ok(AuthStep::AwaitOtpCode(step))
+        Ok(AuthStep::AwaitMfa(step))
     } else {
         // password only account
         session.set_authenticated(&user).await?;

@@ -2428,6 +2428,28 @@ msc3861_enable = false
 # overwritten by: ADMIN_FORCE_MFA
 admin_force_mfa = false
 
+# If 'true', users with both WebAuthn passkeys and OTP configured
+# will see a selection screen where they can choose their preferred
+# MFA method. If 'false', the original behavior is used where
+# WebAuthn is forced and OTP is only shown if no WebAuthn exists.
+#
+# For admin users this option has no effect if 'admin_passkey_only =
+# false'.
+#
+# default: false
+# overwritten by: OPTIONAL_SELECT_MFA
+#optional_select_mfa = false
+
+# If 'true', forces the WebAuthn-first policy for admin users.
+# This means admins with both WebAuthn and OTP configured will be
+# forced to use WebAuthn and won't see the selection screen, even if
+# 'optional_select_mfa = true'.  This provides additional security for
+# the admin interface.
+#
+# default: true
+# overwritten by: ADMIN_PASSKEY_ONLY
+#admin_passkey_only = true
+
 [otp]
 # Enable E-Mail or HMAC-based One Time Passwords as 2FA.
 #
