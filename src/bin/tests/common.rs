@@ -13,9 +13,6 @@ use reqwest::{Response, header};
 use spow::pow::Pow;
 use std::error::Error;
 use std::sync::OnceLock;
-use std::time::Duration;
-use tokio::task::JoinHandle;
-use tokio::time;
 
 #[macro_export]
 macro_rules! aw {
@@ -522,67 +519,4 @@ pub async fn create_login_user(
     assert_eq!(res.status(), 200);
 
     Ok(user)
-}
-
-/// In three rounds, starts concurrent logins of `user` through `start_logins` and, while they wait
-/// for their password hash, changes the user's name and roles as an admin. Asserts after each
-/// round that the admin change survived the logins, which save only their login state.
-pub async fn assert_admin_update_survives_logins(
-    client: &reqwest::Client,
-    admin: &HeaderMap,
-    user: &UserResponse,
-    start_logins: impl AsyncFn() -> Vec<JoinHandle<()>>,
-) -> Result<(), Box<dyn Error>> {
-    let url_user = format!("{}/users/{}", get_backend_url(), user.id);
-
-    for round in 0..3 {
-        let given_name = format!("Admin round {round}");
-        let roles = if round % 2 == 0 {
-            vec!["admin".to_string(), "user".to_string()]
-        } else {
-            vec!["user".to_string()]
-        };
-
-        let logins = start_logins().await;
-        // update while the logins wait for their password hash, one at a time
-        time::sleep(Duration::from_millis(20)).await;
-        let res = client
-            .put(&url_user)
-            .headers(admin.clone())
-            .json(&UpdateUserRequest {
-                email: user.email.clone(),
-                given_name: Some(given_name.clone()),
-                family_name: user.family_name.clone(),
-                language: Some(Language::En),
-                password: None,
-                roles: roles.clone(),
-                groups: user.groups.clone(),
-                enabled: true,
-                email_verified: true,
-                user_expires: None,
-                user_values: None,
-            })
-            .send()
-            .await?;
-        assert_eq!(res.status(), 200);
-        for login in logins {
-            login.await?;
-        }
-
-        let res = client.get(&url_user).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 200);
-        let found = res.json::<UserResponse>().await?;
-        assert_eq!(
-            found.given_name.as_deref(),
-            Some(given_name.as_str()),
-            "round {round}"
-        );
-        let mut found_roles = found.roles.clone();
-        found_roles.sort();
-        assert_eq!(found_roles, roles, "round {round}");
-        assert!(found.last_login.is_some());
-        assert_eq!(found.failed_login_attempts, None);
-    }
-
-    Ok(())
 }
