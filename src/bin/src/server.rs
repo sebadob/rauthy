@@ -579,6 +579,7 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_timezones)
                 .service(generic::post_update_language)
                 .service(generic::get_version)
+                .service(generic::get_instance_label)
                 .service(generic::get_whoami)
                 .service(kv::get_kv_ns)
                 .service(kv::post_kv_ns)

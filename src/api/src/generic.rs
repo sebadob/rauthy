@@ -6,7 +6,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
-    AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
+    AppVersionResponse, Argon2ParamsResponse, InstanceLabelResponse, EncKeyMigrateRequest, EncKeysResponse,
     HealthResponse, I18nConfigResponse, LoginTimeResponse, PasswordHashTimesRequest,
     PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
 };
@@ -601,6 +601,21 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
         },
     };
     Ok(HttpResponse::Ok().json(resp))
+}
+
+/// Returns the configured Instance Label
+#[utoipa::path(
+    get,
+    path = "/instance_label",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok", body = InstanceLabelResponse),
+    ),
+)]
+#[get("/instance_label")]
+pub async fn get_instance_label() -> Result<HttpResponse, ErrorResponse> {
+    let label = RauthyConfig::get().vars.server.instance_label.as_deref();
+    Ok(HttpResponse::Ok().json(InstanceLabelResponse { label }))
 }
 
 /// Returns the remote IP that Rauthy has extracted for this client
