@@ -1066,6 +1066,34 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
             assert_eq!(res.status(), 200);
         }
     }
+    // then the user of a left-over PAM user, which takes the PAM user with it, under whatever
+    // email a prior run gave it: `create_login_user` finds a left-over only under `EMAIL`
+    let res = client
+        .get(format!("{backend}/pam/users"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let pam_users = res.json::<Vec<Value>>().await?;
+    if let Some(pam_user) = pam_users.iter().find(|u| u["name"] == PAM_USERNAME) {
+        let res = client
+            .get(format!("{backend}/users"))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+        let users = res.json::<Vec<UserResponseSimple>>().await?;
+        let left_over = users
+            .iter()
+            .find(|u| pam_user["email"] == u.email.as_str())
+            .ok_or("no user for the left-over PAM user")?;
+        let res = client
+            .delete(format!("{backend}/users/{}", left_over.id))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
     let user = create_login_user(&client, &admin, EMAIL, "Pam", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
 
