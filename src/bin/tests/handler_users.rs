@@ -1335,3 +1335,68 @@ async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(
 
     Ok(())
 }
+
+/// An admin update that sets a password, and so reads the user long before it saves it, keeps a
+/// picture removed or uploaded meanwhile: a full-row save does not write `picture_id`.
+#[tokio::test]
+async fn test_admin_update_keeps_concurrent_picture_change() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "update-picture@userstest.io";
+
+    let admin = get_auth_headers().await?;
+    let client = Client::new();
+    let user = create_login_user(&client, &admin, EMAIL, "Picture", PWD).await?;
+    let url_user = format!("{}/users/{}", get_backend_url(), user.id);
+    let uploaded = upload_picture(&client, &url_user, &admin).await?;
+
+    // round 0 removes the picture, round 1 uploads a new one
+    for round in 0..2 {
+        // logins ahead of the update in the hashing queue, so the change lands while it waits
+        let logins = (0..3)
+            .map(|_| {
+                tokio::spawn(async {
+                    password_token_set(&Client::new(), USERNAME, PASSWORD).await;
+                })
+            })
+            .collect::<Vec<_>>();
+        let update = tokio::spawn(
+            client
+                .put(&url_user)
+                .headers(admin.clone())
+                .json(&update_request(&user, |upd| {
+                    upd.password = Some(format!("{PWD}{round}"));
+                    upd.email_verified = true;
+                }))
+                .send(),
+        );
+        time::sleep(Duration::from_millis(20)).await;
+        let picture_id = if round == 0 {
+            let res = client
+                .delete(format!("{url_user}/picture/{uploaded}"))
+                .headers(admin.clone())
+                .send()
+                .await?;
+            assert_eq!(res.status(), 200);
+            None
+        } else {
+            Some(upload_picture(&client, &url_user, &admin).await?)
+        };
+        assert!(
+            !update.is_finished(),
+            "round {round}: the picture change must land while the update waits for its hash"
+        );
+        assert_eq!(update.await??.status(), 200, "round {round}");
+        for login in logins {
+            login.await?;
+        }
+
+        let res = client.get(&url_user).headers(admin.clone()).send().await?;
+        assert_eq!(res.status(), 200);
+        let found = res.json::<UserResponse>().await?;
+        assert_eq!(found.picture_id, picture_id, "round {round}");
+    }
+
+    let res = client.delete(&url_user).headers(admin).send().await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
