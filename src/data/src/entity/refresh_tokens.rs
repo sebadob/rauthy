@@ -797,7 +797,45 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
     /// A fresh schema `<prefix>_..` with all Postgres migrations and [`DISCARD_ROWS`], set as the
     /// `search_path` of the returned connection.
     async fn pg_db(prefix: &str) -> (deadpool_postgres::Object, String) {
-        let (cl, schema) = crate::database::pg_test_schema(prefix).await;
+        use deadpool_postgres::{Config, Runtime};
+        use tokio_postgres::NoTls;
+
+        let url = std::env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let schema = format!("{prefix}_{}_{nanos}", std::process::id());
+        let cfg = Config {
+            url: Some(url),
+            ..Default::default()
+        };
+        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+
+        let dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
+        let mut files = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .map(|p| {
+                let name = p.file_name().unwrap().to_str().unwrap();
+                let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
+                (nr, p)
+            })
+            .collect::<Vec<_>>();
+        files.sort();
+
+        let cl = pool.get().await.unwrap();
+        cl.batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema};"
+        ))
+        .await
+        .unwrap();
+        for (_, path) in files {
+            cl.batch_execute(&std::fs::read_to_string(path).unwrap())
+                .await
+                .unwrap();
+        }
         cl.batch_execute(DISCARD_ROWS).await.unwrap();
         (cl, schema)
     }

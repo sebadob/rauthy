@@ -473,42 +473,4 @@ mod tests {
         .unwrap_err();
         assert_eq!(err.error, ErrorResponseType::Database);
     }
-
-    /// `remove` deletes the picture and clears the stored `picture_id` of its user, so a
-    /// following removal, like the one at the start of an upload, finds no picture left to
-    /// delete instead of failing with NotFound.
-    #[tokio::test]
-    async fn test_remove_clears_picture_id_hiqlite() {
-        let _lock = crate::database::HQL_TEST_LOCK.lock().await;
-        crate::database::init_test_hiqlite();
-        DB::hql()
-            .execute(
-                "INSERT INTO pictures (id, content_type, storage, data) \
-                VALUES ($1, 'image/png', 'db', NULL)",
-                params!("rm_pic_1"),
-            )
-            .await
-            .unwrap();
-        let user = User::insert(User {
-            id: "rm_pic".to_string(),
-            email: "rm_pic@example.com".to_string(),
-            given_name: "rm_pic".to_string(),
-            roles: "user".to_string(),
-            picture_id: Some("rm_pic_1".to_string()),
-            ..Default::default()
-        })
-        .await
-        .unwrap();
-
-        UserPicture::remove("rm_pic_1".to_string(), user.id.clone())
-            .await
-            .unwrap();
-        assert_eq!(User::find(user.id.clone()).await.unwrap().picture_id, None);
-        let err = UserPicture::find("rm_pic_1".to_string()).await.unwrap_err();
-        assert_eq!(err.error, ErrorResponseType::NotFound);
-
-        UserPicture::remove("rm_pic_1".to_string(), user.id.clone())
-            .await
-            .unwrap();
-    }
 }

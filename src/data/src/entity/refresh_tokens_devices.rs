@@ -313,8 +313,47 @@ mod tests {
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_invalidate_for_user_device_refresh_race_postgres() {
-        let (pool, schema) = crate::database::pg_test_pool("rtd_race").await;
-        let setup = crate::database::pg_test_conn(&pool, &schema).await;
+        use deadpool_postgres::{Config, Runtime};
+        use tokio_postgres::NoTls;
+
+        let url = std::env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let schema = format!("rtd_race_{}_{nanos}", std::process::id());
+        let cfg = Config {
+            url: Some(url),
+            ..Default::default()
+        };
+        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+
+        let dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
+        let mut files = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .map(|p| {
+                let name = p.file_name().unwrap().to_str().unwrap();
+                let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
+                (nr, p)
+            })
+            .collect::<Vec<_>>();
+        files.sort();
+
+        let setup = pool.get().await.unwrap();
+        setup
+            .batch_execute(&format!(
+                "CREATE SCHEMA {schema}; SET search_path TO {schema};"
+            ))
+            .await
+            .unwrap();
+        for (_, path) in files {
+            setup
+                .batch_execute(&std::fs::read_to_string(path).unwrap())
+                .await
+                .unwrap();
+        }
         setup
             .batch_execute(
                 r#"
@@ -343,7 +382,13 @@ VALUES ('j_src', 'u1', 2), ('j_new', 'u1', 2), ('j_u1', 'u1', 2);
             .unwrap();
         drop(setup);
 
-        let conn = async || crate::database::pg_test_conn(&pool, &schema).await;
+        let conn = async || {
+            let cl = pool.get().await.unwrap();
+            cl.batch_execute(&format!("SET search_path TO {schema}"))
+                .await
+                .unwrap();
+            cl
+        };
         let mut invalidator = conn().await;
         let refresher = conn().await;
         let monitor = conn().await;
