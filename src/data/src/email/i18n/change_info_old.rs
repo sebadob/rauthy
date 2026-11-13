@@ -23,6 +23,7 @@ impl I18nEmailChangeInfoOld<'_> {
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_en(),
             Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
             Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
@@ -149,6 +150,18 @@ impl I18nEmailChangeInfoOld<'_> {
             validity: "Deze link is om veiligheidsredenen slechts korte tijd geldig.",
             expires: "Link vervalt:",
             button_text: "Adreswijziging blokkeren",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            subject: "Prośba o zmianę adresu e-mail",
+            header: "Prośba o zmianę adresu e-mail dla",
+            change_info: "Poproszono o zmianę Twojego adresu e-mail. Nowy adres:",
+            click_link: "Jeśli to nie Ty prosiłeś o tę zmianę, kliknij poniższy link",
+            validity: "Ze względów bezpieczeństwa ten link jest ważny tylko przez krótki czas.",
+            expires: "Link wygasa:",
+            button_text: "Zablokuj zmianę adresu",
         }
     }
 

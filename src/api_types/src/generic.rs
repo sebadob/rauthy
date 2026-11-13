@@ -43,6 +43,7 @@ pub enum Language {
     Ko,
     Nb,
     Nl,
+    Pl,
     Pt,
     Ru,
     Uk,
