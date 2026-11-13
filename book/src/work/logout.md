@@ -76,7 +76,7 @@ In both situations, you at least need a valid `id_token` which has been returned
 `/token` endpoint after a successful login or token refresh. The `id_token` does not need to be
 unexpired. Many clients store it at login and only use it at logout, which can be days later, so
 Rauthy accepts an expired `id_token_hint` as long as it has been issued by Rauthy itself. The
-signature, `iss` and `typ` are always checked.
+signature, `iss`, `typ`, `iat` and `nbf` are always checked.
 
 The *RP Initiated Logout* will always trigger a Backchannel Logout on configured clients that are
 associated to the `sid` from the `id_token`.

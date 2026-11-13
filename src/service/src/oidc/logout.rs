@@ -36,28 +36,9 @@ const LOGOUT_TOKEN_CLOCK_SKEW: Duration = Duration::from_secs(600);
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(
     req: HttpRequest,
-    logout_request: LogoutRequest,
     session: Session,
 ) -> Result<HttpResponse, ErrorResponse> {
     let theme_ts = ThemeCssFull::find_theme_ts_rauthy().await?;
-    if logout_request.id_token_hint.is_none() {
-        return HtmlCached::Logout(session.csrf_token)
-            .handle(req, theme_ts, false)
-            .await;
-    }
-
-    // check if the provided token hint is valid
-    let token_raw = logout_request.id_token_hint.unwrap();
-    let mut buf = Vec::with_capacity(512);
-    JwtToken::validate_id_token_hint_into(&token_raw, LOGOUT_TOKEN_CLOCK_SKEW, &mut buf).await?;
-    let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
-
-    // from here on, the token_hint contains a valid ID token -> skip the logout confirmation
-    if let Some(target) = logout_request.post_logout_redirect_uri {
-        let client = Client::find(claims.common.azp.to_string()).await?;
-        client.validate_post_logout_redirect_uri(&target)?;
-    }
-
     HtmlCached::Logout(session.csrf_token)
         .handle(req, theme_ts, false)
         .await

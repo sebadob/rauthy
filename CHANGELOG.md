@@ -256,7 +256,7 @@ gets a `404` instead of succeeding a second time.
   ended up on a JSON error and was not logged out. Clients like Outline store the `id_token` at
   login and send it as the hint when the user logs out, which is usually long after the token
   expired. The hint is now accepted as long as Rauthy issued it, as RP-Initiated Logout 1.0
-  section 2 recommends. The signature, `iss` and `typ` are still validated.
+  section 2 recommends. The signature, `iss`, `typ`, `iat` and `nbf` are still validated.
 - Changing the password from the account page cleared the given and family name and all user
   values, like phone, address and timezone, because the request only contained the password and
   the self-update replaces the whole profile with the request. The password form now sends the
