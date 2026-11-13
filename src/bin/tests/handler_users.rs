@@ -1266,3 +1266,67 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
 
     Ok(())
 }
+
+/// An admin save of a user keeps its sessions and refresh tokens while the user stays enabled,
+/// and drops them once the save disables the user: they stay invalid after it is enabled again.
+#[tokio::test]
+async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(), Box<dyn Error>> {
+    const EMAIL: &str = "disable-drops@consenttest.io";
+
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let user = create_login_user(&client, &admin, EMAIL, "Disable", PWD).await?;
+    let url_user = format!("{backend}/users/{}", user.id);
+    let url_session = format!("{backend}/oidc/sessioninfo");
+
+    let ts = password_token_set(&client, EMAIL, PWD).await;
+    let session = session_headers_with(EMAIL, PWD).await;
+
+    let save = async |enabled: bool| {
+        let res = client
+            .put(&url_user)
+            .headers(admin.clone())
+            .json(&UpdateUserRequest {
+                email: user.email.clone(),
+                given_name: user.given_name.clone(),
+                family_name: user.family_name.clone(),
+                language: Some(Language::En),
+                password: None,
+                roles: user.roles.clone(),
+                groups: user.groups.clone(),
+                enabled,
+                email_verified: true,
+                user_expires: None,
+                user_values: None,
+            })
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 200, "save with enabled: {enabled}");
+    };
+
+    // a save of the enabled user keeps both
+    save(true).await;
+    let res = client
+        .get(&url_session)
+        .headers(session.clone())
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let res = refresh(&client, ts.refresh_token.clone().unwrap()).await;
+    assert_eq!(res.status(), 200);
+    let ts = res.json::<TokenSet>().await?;
+
+    // a save that disables the user drops both, for good
+    save(false).await;
+    save(true).await;
+    let res = client.get(&url_session).headers(session).send().await?;
+    assert_eq!(res.status(), 401);
+    assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
+
+    let res = client.delete(&url_user).headers(admin).send().await?;
+    assert_eq!(res.status(), 204);
+
+    Ok(())
+}
