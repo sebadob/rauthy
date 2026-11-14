@@ -214,10 +214,7 @@ pub async fn auth_finish(
                 }
 
                 session.set_authenticated(&user).await?;
-                user.last_login = Some(Utc::now().timestamp());
-                user.last_failed_login = None;
-                user.failed_login_attempts = None;
-                user.save(None).await?;
+                user.save_login_success().await?;
             }
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;

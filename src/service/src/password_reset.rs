@@ -192,8 +192,7 @@ pub async fn handle_put_user_password_reset<'a>(
 
     // all good
     ml.invalidate().await?;
-    user.email_verified = true;
-    user.save(None).await?;
+    user.save_password_reset().await?;
 
     let ip = match real_ip_from_req(&req).ok() {
         None => {

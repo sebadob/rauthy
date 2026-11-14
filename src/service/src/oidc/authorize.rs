@@ -2,7 +2,6 @@ use crate::user_values_validator::UserValuesValidator;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use chrono::Utc;
 use rauthy_api_types::oidc::{GrantType, LoginRefreshRequest, LoginRequest};
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::sha256;
@@ -152,9 +151,7 @@ pub async fn post_authorize(
             let ip = real_ip_from_req(req)?;
             CredStuffDetect::trigger(ip, &user.email, Some(&pwd)).await;
 
-            user.last_failed_login = Some(Utc::now().timestamp());
-            user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or_default() + 1);
-            user.save(None).await?;
+            user.save_login_failure().await?;
 
             *user_failed_logins = user.failed_login_attempts;
 
@@ -168,10 +165,7 @@ pub async fn post_authorize(
         LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
         // In case of a webauthn login, the info will be updated on ceremony auth_finish.
-        user.last_login = Some(Utc::now().timestamp());
-        user.last_failed_login = None;
-        user.failed_login_attempts = None;
-        user.save(None).await?;
+        user.save_login_success().await?;
     }
     // If the password was correct, we don't want a login delay anymore.
     // It should only prevent username enumeration and brute force, not degrade the UX.

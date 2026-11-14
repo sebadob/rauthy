@@ -1,5 +1,9 @@
 #![allow(dead_code)]
+use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::{GrantType, LoginRequest, SessionInfoResponse, TokenRequest};
+use rauthy_api_types::users::{
+    NewUserRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
+};
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
@@ -80,9 +84,9 @@ pub async fn get_token_set() -> TokenSet {
     ts
 }
 
-/// A password grant token set for `email` on the init client.
-pub async fn password_token_set(client: &reqwest::Client, email: &str, password: &str) -> TokenSet {
-    let res = client
+/// A password grant for `email` on the init client, whatever its status.
+pub async fn password_grant(client: &reqwest::Client, email: &str, password: &str) -> Response {
+    client
         .post(format!("{}/oidc/token", get_backend_url()))
         .form(&TokenRequest {
             grant_type: GrantType::Password,
@@ -94,7 +98,12 @@ pub async fn password_token_set(client: &reqwest::Client, email: &str, password:
         })
         .send()
         .await
-        .unwrap();
+        .unwrap()
+}
+
+/// A password grant token set for `email` on the init client.
+pub async fn password_token_set(client: &reqwest::Client, email: &str, password: &str) -> TokenSet {
+    let res = password_grant(client, email, password).await;
     assert_eq!(res.status(), 200, "password grant for {email}");
     res.json::<TokenSet>().await.unwrap()
 }
@@ -228,6 +237,47 @@ pub async fn session_headers_for_client(
 /// authenticated session headers (cookie + CSRF). Mirrors [`session_headers`] but with
 /// caller-provided credentials, used to obtain a delegated group-admin session.
 pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
+    prepare_login(email, password).await.send().await
+}
+
+/// A password login to the `rauthy` client with its session and proof of work done, whose
+/// `POST /oidc/authorize` is only sent by [`PreparedLogin::send`].
+pub struct PreparedLogin {
+    url_auth: String,
+    headers: HeaderMap,
+    req: LoginRequest,
+}
+
+impl PreparedLogin {
+    /// Sends the login and returns its authenticated session headers.
+    pub async fn send(self) -> HeaderMap {
+        let email = self.req.email.clone().unwrap_or_default();
+        let headers = self.headers.clone();
+        let res = self.response().await;
+        let status = res.status();
+        if status != 202 {
+            let body = res.text().await.unwrap_or_default();
+            panic!("login for {email} failed: {status} - {body}");
+        }
+        headers
+    }
+
+    /// Sends the login and returns its response, whatever its status.
+    pub async fn response(self) -> Response {
+        reqwest::Client::new()
+            .post(&self.url_auth)
+            .headers(self.headers)
+            .json(&self.req)
+            .send()
+            .await
+            .unwrap()
+    }
+}
+
+/// Opens a session, solves its proof of work and builds the login without sending it, so callers
+/// can send several at once through [`PreparedLogin::send`], or [`PreparedLogin::response`] for a
+/// login expected to fail.
+pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
@@ -246,7 +296,7 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
     assert!(res.status().is_success());
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
 
-    let req_login = LoginRequest {
+    let req = LoginRequest {
         email: Some(email.to_string()),
         password: Some(password.to_string()),
         pow: get_solved_pow().await,
@@ -262,19 +312,11 @@ pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
         fwda: None,
     };
 
-    let res = client
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await
-        .unwrap();
-    let status = res.status();
-    if status != 202 {
-        let body = res.text().await.unwrap_or_default();
-        panic!("group-admin login for {email} failed: {status} - {body}");
+    PreparedLogin {
+        url_auth,
+        headers,
+        req,
     }
-    headers
 }
 
 /// extractor for the POST `/oidc/session` endpoint
@@ -410,4 +452,71 @@ pub async fn get_solved_pow() -> String {
     let res = reqwest::Client::new().post(&url).send().await.unwrap();
     let pow = res.text().await.unwrap();
     Pow::work(&pow).unwrap()
+}
+
+/// Creates `email` with the role `user`, `given_name` and `password`, deleting a left-over of a
+/// prior run first.
+pub async fn create_login_user(
+    client: &reqwest::Client,
+    admin: &HeaderMap,
+    email: &str,
+    given_name: &str,
+    password: &str,
+) -> Result<UserResponse, Box<dyn Error>> {
+    let backend = get_backend_url();
+
+    let res = client
+        .get(format!("{backend}/users"))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let users = res.json::<Vec<UserResponseSimple>>().await?;
+    if let Some(user) = users.iter().find(|u| u.email == email) {
+        let res = client
+            .delete(format!("{backend}/users/{}", user.id))
+            .headers(admin.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 204);
+    }
+
+    let res = client
+        .post(format!("{backend}/users"))
+        .headers(admin.clone())
+        .json(&NewUserRequest {
+            given_name: Some(given_name.to_string()),
+            family_name: None,
+            email: email.to_string(),
+            preferred_username: None,
+            language: Language::En,
+            roles: vec!["user".to_string()],
+            groups: None,
+            user_expires: None,
+            tz: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+    let user = res.json::<UserResponse>().await?;
+    let res = client
+        .put(format!("{backend}/users/{}", user.id))
+        .headers(admin.clone())
+        .json(&UpdateUserRequest {
+            email: user.email.clone(),
+            given_name: user.given_name.clone(),
+            family_name: user.family_name.clone(),
+            language: Some(Language::En),
+            password: Some(password.to_string()),
+            roles: user.roles.clone(),
+            groups: user.groups.clone(),
+            enabled: true,
+            email_verified: true,
+            user_expires: None,
+            user_values: None,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    Ok(user)
 }

@@ -4912,6 +4912,7 @@ dependencies = [
  "dotenvy",
  "ed25519-compact",
  "flume",
+ "futures",
  "josekit",
  "num_cpus",
  "openssl",
