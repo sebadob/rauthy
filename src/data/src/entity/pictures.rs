@@ -178,7 +178,7 @@ impl UserPicture {
     ) -> Result<HttpResponse, ErrorResponse> {
         // make sure to always create a new picture with a new id for more efficient caching
         let mut user = User::find(user_id).await?;
-        if let Some(picture_id) = user.picture_id {
+        if let Some(picture_id) = user.picture_id.take() {
             Self::remove(picture_id, user.id.clone()).await?;
         }
 
@@ -277,15 +277,14 @@ impl UserPicture {
             }
         };
 
-        user.picture_id = Some(new_id);
-        user.save(None).await?;
+        user.set_picture_id(Some(&new_id)).await?;
 
-        Ok(HttpResponse::Ok().body(user.picture_id.unwrap()))
+        Ok(HttpResponse::Ok().body(new_id))
     }
 
     pub async fn remove(id: String, user_id: String) -> Result<(), ErrorResponse> {
         let mut user = User::find(user_id).await?;
-        if let Some(picture_id) = user.picture_id {
+        if let Some(picture_id) = user.picture_id.as_deref() {
             if id != picture_id {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -294,8 +293,7 @@ impl UserPicture {
             }
             Self::delete_with_data(id).await?;
 
-            user.picture_id = None;
-            user.save(None).await?;
+            user.set_picture_id(None).await?;
         }
 
         Ok(())

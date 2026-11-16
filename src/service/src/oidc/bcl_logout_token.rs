@@ -259,6 +259,12 @@ impl LogoutToken<'_> {
                 "`iat` is too long ago",
             ));
         }
+        if self.iat > now + allow_clock_skew {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "`iat` is in the future",
+            ));
+        }
         if self.exp < exp_limit {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -444,7 +450,22 @@ mod tests {
         lt.validate_claims_with(header.clone(), lifetime, skew)
             .expect("exp expired within the skew must be accepted");
         lt.exp = now - skew - 1;
-        lt.validate_claims_with(header, lifetime, skew)
+        lt.validate_claims_with(header.clone(), lifetime, skew)
             .expect_err("exp beyond the skew must be rejected");
+
+        // `iat` must not lie in the future beyond the skew
+        lt.iat = now + skew;
+        lt.exp = lt.iat + lifetime;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("iat in the future within the skew must be accepted");
+        // providers like Authentik issue `exp = iat + 1h`, which must keep working
+        lt.iat = now;
+        lt.exp = now + 3600;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("a long `exp` with a fresh `iat` must be accepted");
+        lt.iat = now + 3600;
+        lt.exp = now + 3660;
+        lt.validate_claims_with(header, lifetime, skew)
+            .expect_err("iat in the future beyond the skew must be rejected");
     }
 }

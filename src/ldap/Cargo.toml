@@ -1,0 +1,21 @@
+[package]
+name = "rauthy-ldap"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+rauthy-api-types = { path = "../api_types" }
+rauthy-data = { path = "../data" }
+rauthy-error = { path = "../error" }
+rauthy-service = { path = "../service" }
+
+futures = { workspace = true }
+ldap3_proto = { workspace = true }
+rustls = { workspace = true }
+tokio = { workspace = true }
+tokio-rustls = { workspace = true }
+tokio-util = { workspace = true, features = ["codec"] }
+tracing = { workspace = true }
+zeroize = { workspace = true }
