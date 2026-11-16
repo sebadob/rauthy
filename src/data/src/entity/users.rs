@@ -167,8 +167,17 @@ UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#;
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#;
+
+/// Drops the sessions and refresh tokens of the disabled user `id`.
+async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
+    Session::invalidate_for_user(id).await?;
+    RefreshToken::invalidate_for_user(id).await?;
+    // TODO trigger backchannel logout and SCIM updates as well?
+    //  -> compare with old value beforehand somehow, probably in calling fn before updates
+    Ok(())
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -218,6 +227,7 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+    /// Updated only by [`Self::set_picture_id`]: [`Self::save`] does not write it.
     pub picture_id: Option<String>,
 }
 
@@ -1111,7 +1121,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 self.user_expires,
                 self.auth_provider_id,
                 self.federation_uid,
-                self.picture_id,
                 self.id
             ),
         ));
@@ -1150,7 +1159,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                 &self.user_expires,
                 &self.auth_provider_id,
                 &self.federation_uid,
-                &self.picture_id,
                 &self.id,
             ],
         )
@@ -1159,6 +1167,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         Ok(())
     }
 
+    /// Writes every column of this copy but `id`, `created_at` and `picture_id`, which only
+    /// [`Self::set_picture_id`] updates, then drops the cached user, also under `old_email`.
     pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
             User::is_email_free(self.email.clone()).await?;
@@ -1189,7 +1199,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         self.user_expires,
                         &self.auth_provider_id,
                         &self.federation_uid,
-                        &self.picture_id,
                         &self.id
                     ),
                 )
@@ -1215,7 +1224,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &self.user_expires,
                     &self.auth_provider_id,
                     &self.federation_uid,
-                    &self.picture_id,
                     &self.id,
                 ],
             )
@@ -1223,23 +1231,242 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         }
 
         if !self.enabled {
-            Session::invalidate_for_user(&self.id).await?;
-            RefreshToken::invalidate_for_user(&self.id).await?;
-            // TODO trigger backchannel logout and SCIM updates as well?
-            //  -> compare with old value beforehand somehow, probably in calling fn before updates
+            drop_tokens_of_disabled(&self.id).await?;
         }
 
-        if let Some(email) = old_email {
+        // `self` may be a copy read before a concurrent change of a column this save does not
+        // write, like `picture_id`: drop the cached user instead of caching this copy
+        self.invalidate_cache_also(old_email.as_deref()).await
+    }
+
+    /// Sets the `picture_id` of this user alone, in the database and in this copy, then drops
+    /// the cached user, under the email of this copy and under the stored one, if a concurrent
+    /// update changed it. A full-row [`Self::save`] never writes `picture_id`: it works on a copy
+    /// that may predate a concurrent picture change.
+    pub async fn set_picture_id(&mut self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE users SET picture_id = $1 WHERE id = $2 RETURNING email";
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(picture_id.map(String::from), &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(sql, &[&picture_id, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+
+        self.picture_id = picture_id.map(String::from);
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
+    /// in this copy and in the database. It writes no other column.
+    /// Unlike [`Self::save`], it does not write back the other columns of this copy, which a
+    /// login may have read long before, e.g. before it spent its time on the password hash, so
+    /// a concurrent change of the user (a picture upload, an admin update) is kept. The cached
+    /// user is dropped under the email of this copy, and under the stored one, if a concurrent
+    /// update changed it.
+    pub async fn save_login_success(&mut self) -> Result<(), ErrorResponse> {
+        self.last_login = Some(Utc::now().timestamp());
+        self.last_failed_login = None;
+        self.failed_login_attempts = None;
+
+        let sql = r#"
+UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL
+WHERE id = $2
+RETURNING email"#;
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(self.last_login, &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(sql, &[&self.last_login, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// [`Self::save_login_success`] for a login that rehashed the password with upgraded
+    /// Argon2ID params: in the same single update, it also replaces the stored password with
+    /// `new_hash`, in the database only, and only while the stored hash is still the one this
+    /// copy holds, the one the login validated: a password changed meanwhile is kept. This copy
+    /// keeps the validated hash.
+    pub async fn save_login_success_with_rehash(
+        &mut self,
+        new_hash: &str,
+    ) -> Result<(), ErrorResponse> {
+        self.last_login = Some(Utc::now().timestamp());
+        self.last_failed_login = None;
+        self.failed_login_attempts = None;
+
+        // SQLite numbers `$n` in the order of first appearance, so they appear in order
+        let sql = r#"
+UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL,
+password = CASE WHEN password = $2 THEN $3 ELSE password END
+WHERE id = $4
+RETURNING email"#;
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    sql,
+                    params!(self.last_login, &self.password, new_hash, &self.id),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(
+                sql,
+                &[&self.last_login, &self.password, &new_hash, &self.id],
+                1,
+            )
+            .await?
+            .first()
+            .map(|row| row.get("email"))
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a failed login: sets `last_failed_login` to now and increments
+    /// `failed_login_attempts` in the database, then sets both in this copy, the counter to the
+    /// stored one. Like [`Self::save_login_success`], it writes no other column, and the counter
+    /// counts every failed login, also those that run at the same time. For a user deleted
+    /// meanwhile, the counter of this copy is incremented instead.
+    pub async fn save_login_failure(&mut self) -> Result<(), ErrorResponse> {
+        self.last_failed_login = Some(Utc::now().timestamp());
+
+        let sql = r#"
+UPDATE users SET last_failed_login = $1,
+failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
+WHERE id = $2
+RETURNING email, failed_login_attempts"#;
+
+        let stored: Option<(String, i64)> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(self.last_failed_login, &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| (row.get("email"), row.get("failed_login_attempts")))
+        } else {
+            DB::pg_query_rows(sql, &[&self.last_failed_login, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| (row.get("email"), row.get("failed_login_attempts")))
+        };
+
+        let (stored_email, attempts) = match stored {
+            Some((email, attempts)) => (Some(email), attempts),
+            None => (None, self.failed_login_attempts.unwrap_or_default() + 1),
+        };
+        self.failed_login_attempts = Some(attempts);
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a password reset: writes the `password` and `password_expires` that
+    /// [`Self::apply_password_rules`] set in this copy, and sets `email_verified` while the
+    /// stored email is still the one of this copy, the one the reset was sent to; this copy
+    /// takes the stored `email_verified`. Unlike [`Self::save`], it does not write back the
+    /// other columns of this copy, which the reset read before it spent its time on the password
+    /// hash, so a concurrent change of the user (an admin update, a failed login) is kept. The
+    /// cached user is dropped under the email of this copy, and under the stored one, if a
+    /// concurrent update changed it. Like [`Self::save`], it drops the sessions and refresh
+    /// tokens of a user the stored row has disabled.
+    pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
+        // the reset proves the email it was sent to, `$3`: `email_verified` is set only while
+        // the stored email is still that one
+        let sql = r#"
+UPDATE users SET password = $1, password_expires = $2,
+email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
+WHERE id = $4
+RETURNING email, email_verified, enabled"#;
+
+        /// The columns the reset returns from the stored row.
+        struct StoredReset {
+            email: String,
+            email_verified: bool,
+            enabled: bool,
+        }
+
+        let stored: Option<StoredReset> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    sql,
+                    params!(&self.password, self.password_expires, &self.email, &self.id),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| StoredReset {
+                    email: row.get("email"),
+                    email_verified: row.get("email_verified"),
+                    enabled: row.get("enabled"),
+                })
+        } else {
+            DB::pg_query_rows(
+                sql,
+                &[
+                    &self.password,
+                    &self.password_expires,
+                    &self.email,
+                    &self.id,
+                ],
+                1,
+            )
+            .await?
+            .first()
+            .map(|row| StoredReset {
+                email: row.get("email"),
+                email_verified: row.get("email_verified"),
+                enabled: row.get("enabled"),
+            })
+        };
+
+        let stored_email = match stored {
+            Some(stored) => {
+                self.email_verified = stored.email_verified;
+                if !stored.enabled {
+                    // like `save` does for a disabled user, judged by the stored row, which a
+                    // concurrent update may have disabled
+                    drop_tokens_of_disabled(&self.id).await?;
+                }
+                Some(stored.email)
+            }
+            None => None,
+        };
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Drops the cached user under its id and the email of this copy, and under `other_email`
+    /// too, if it differs: the email before a change, or the stored one a write returned, which
+    /// a concurrent update may have changed.
+    async fn invalidate_cache_also(&self, other_email: Option<&str>) -> Result<(), ErrorResponse> {
+        Self::invalidate_cache(&self.id, &self.email).await?;
+        if let Some(email) = other_email.filter(|email| *email != self.email) {
             let idx = format!("{IDX_USERS}_{email}");
-            client.delete(Cache::User, idx).await?;
+            DB::hql().delete(Cache::User, idx).await?;
         }
-
-        let idx = format!("{IDX_USERS}_{}", self.id);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
-
-        let idx = format!("{IDX_USERS}_{}", self.email);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
-
         Ok(())
     }
 
