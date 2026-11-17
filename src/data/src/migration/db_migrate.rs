@@ -34,6 +34,7 @@ use crate::entity::theme::{ThemeCss, ThemeCssFull};
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use crate::entity::user_consents::UserConsent;
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
@@ -636,6 +637,11 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .collect_vec();
     inserts::fido_mds_entry_certs(before).await?;
 
+    // USER CONSENTS
+    debug!("Migrating table: user_consents");
+    let before = query_sqlite::<UserConsent>(&conn, "SELECT * FROM user_consents").await?;
+    inserts::user_consents(before).await?;
+
     Ok(())
 }
 
@@ -1017,6 +1023,11 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     })
     .collect::<Vec<_>>();
     inserts::fido_mds_entry_certs(before).await?;
+
+    // USER CONSENTS
+    debug!("Migrating table: user_consents");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_consents", &[], 0).await?;
+    inserts::user_consents(before).await?;
 
     Ok(())
 }

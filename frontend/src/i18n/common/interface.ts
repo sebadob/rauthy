@@ -119,6 +119,20 @@ export interface I18n {
             notAvailable: string;
             preferredUsername: string;
         };
+        privacy: {
+            clientId: string;
+            connectedApps: string;
+            connectedAppsDesc: string;
+            granted: string;
+            noConnectedApps: string;
+            privacy: string;
+            resource: string;
+            revoke: string;
+            revokeDesc: string;
+            scopes: string;
+            updated: string;
+            userAgent: string;
+        };
         providerLink: string;
         providerLinkDesc: string;
         providerUnlink: string;
@@ -266,6 +280,7 @@ export interface I18n {
     passwordReset: {
         accountLogin: string;
         badFormat: string;
+        continueSignIn: string;
         fidoLink: string;
         generate: string;
         newAccDesc1: string;

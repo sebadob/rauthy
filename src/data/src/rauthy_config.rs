@@ -1,6 +1,7 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::email::mailer_callback::EMailCallback;
+use crate::entity::consent_sources::ConsentSource;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
 use crate::fido_mds::masks::{AttachmentHintMask, KeyProtectionMask, MdsCertLevel};
@@ -11,11 +12,12 @@ use cryptr::EncKeys;
 use hiqlite::NodeConfig;
 use rauthy_common::constants::CookieMode;
 use rauthy_common::logging::LogLevelAccess;
-use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME};
+use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME, RE_RESOURCE};
 use regex::Regex;
 use serde::Serialize;
 use spow::pow::Pow;
 use std::borrow::Cow;
+use std::collections::{BTreeMap, btree_map};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -228,6 +230,16 @@ impl RauthyConfig {
         if slf.vars.dev.dev_mode {
             warn!("You started with DEV Mode enabled. Do NOT use this in production!");
         }
+        if !slf.vars.consent.enable && !slf.vars.consent.sources.is_empty() {
+            warn!(
+                "{} `[[consent.sources]]` configured, but `consent.enable` is `false` - they \
+                are validated, but not used",
+                slf.vars.consent.sources.len()
+            );
+        }
+        if slf.vars.consent.danger_allow_private_addresses {
+            warn!("`consent.danger_allow_private_addresses` is enabled");
+        }
     }
 
     pub fn init_static(self) {
@@ -277,6 +289,7 @@ pub struct Vars {
     pub http_client: VarsHttpClient,
     pub i18n: VarsI18n,
     pub lifetimes: VarsLifetimes,
+    pub ldap: VarsLdap,
     pub logging: VarsLogging,
     pub matrix: VarsMatrix,
     pub mfa: VarsMfa,
@@ -359,7 +372,12 @@ impl Default for Vars {
                 generated_secrets_ttl: Duration::from_secs(600),
                 reconcile: false,
             },
-            consent: VarsConsent { enable: false },
+            consent: VarsConsent {
+                enable: false,
+                content_cache_ttl: 3600,
+                danger_allow_private_addresses: false,
+                sources: BTreeMap::default(),
+            },
             cred_stuff_detect: VarsCredStuff {
                 blacklist_duration: Duration::from_secs(24 * 3600),
                 blacklist_threshold: 15,
@@ -438,6 +456,7 @@ impl Default for Vars {
                 microsoft_graph_uri: None,
                 root_ca: None,
                 tz_fmt: VarsEmailTzFmt {
+                    cs: "%-d. %-m. %Y %T (%Z)".into(),
                     de: "%d.%m.%Y %T (%Z)".into(),
                     en: "%m/%d/%Y %T (%Z)".into(),
                     es: "%d/%m/%Y %T (%Z)".into(),
@@ -510,11 +529,13 @@ impl Default for Vars {
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
+                level_consent_revoked: EventLevel::Notice,
                 level_scim_task_failed: EventLevel::Critical,
                 level_email_send_error: EventLevel::Critical,
                 level_suspicious_request: EventLevel::Notice,
                 level_new_login_location: EventLevel::Notice,
                 level_token_issued: EventLevel::Info,
+                level_ldap_login: EventLevel::Info,
                 level_failed_logins_25: EventLevel::Critical,
                 level_failed_logins_20: EventLevel::Critical,
                 level_failed_logins_15: EventLevel::Warning,
@@ -557,6 +578,7 @@ impl Default for Vars {
             },
             i18n: VarsI18n {
                 filter_lang_common: vec![
+                    "cs".into(),
                     "de".into(),
                     "en".into(),
                     "es".into(),
@@ -571,6 +593,7 @@ impl Default for Vars {
                     "zhhans".into(),
                 ],
                 filter_lang_admin: vec![
+                    "cs".into(),
                     "de".into(),
                     "en".into(),
                     "es".into(),
@@ -616,6 +639,17 @@ impl Default for Vars {
                 email: VarsOtpEmail {
                     enable: true,
                 },
+            },
+            ldap: VarsLdap {
+                enable: false,
+                listen_address: "0.0.0.0".into(),
+                port: 6360,
+                base_dn: "dc=rauthy,dc=local".into(),
+                cert_path: None,
+                key_path: None,
+                plain_text: false,
+                disable_ip_brute_force_protection: false,
+                max_connections: 1000,
             },
             pam: VarsPam {
                 remote_password_len: 24,
@@ -665,6 +699,17 @@ impl Default for Vars {
             },
             templates: VarsTemplates {
                 password_new: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Nové heslo".into(),
+                        header: "Nové heslo –".into(),
+                        text: None,
+                        click_link: Some("Kliknutím na odkaz níže přejdete k nastavení hesla.".into()),
+                        validity: Some("Z bezpečnostních důvodů platí odkaz jen krátkou dobu.".into()),
+                        expires: Some("Odkaz platí do:".into()),
+                        button: Some("Nastavit heslo".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     de: VarsTemplate
                     {
                         subject: "Neues Passwort".into(),
@@ -831,6 +876,17 @@ impl Default for Vars {
                     },
                 },
                 password_reset: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Žádost o obnovení hesla".into(),
+                        header: "Žádost o obnovení hesla –".into(),
+                        text: None,
+                        click_link: Some("Kliknutím na odkaz níže přejdete k obnovení hesla.".into()),
+                        validity: Some("Z bezpečnostních důvodů platí odkaz jen krátkou dobu.".into()),
+                        expires: Some("Odkaz platí do:".into()),
+                        button: Some("Obnovit heslo".into()),
+                        footer: Some("Pokud odkaz vypršel, můžete si vyžádat nový.".into()),
+                        button_text_request_new: Some("Vyžádat nový odkaz".into()),
+                    },
                     de: VarsTemplate {
                         subject: "Passwort Reset angefordert".into(),
                         header: "Passwort Reset angefordert für".into(),
@@ -990,6 +1046,22 @@ impl Default for Vars {
                     },
                 },
                 email_registered_already: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "E-mail je již registrován".into(),
+                        header: "E-mail je již registrován – ".into(),
+                        text: Some(r#"Někdo se pokusil zaregistrovat nový účet s vaší e-mailovou adresou,
+ačkoli účet s touto adresou již existuje. Pokud jste to byli vy a šlo o omyl,
+můžete tuto zprávu ignorovat. Pokud jste zapomněli heslo, můžete si ho
+obnovit pomocí odkazu níže.
+Pokud jste se registrovat nepokoušeli, nemusíte se obávat.
+Váš účet nebyl napaden a žádná data neunikla."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Vyžádat odkaz na obnovení hesla".into()),
+                    },
                     de: VarsTemplate {
                         subject: "E-Mail bereits registriert".into(),
                         header: "E-Mail bereits registriert - ".into(),
@@ -1183,6 +1255,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                     },
                 },
                 email_otp: VarsTemplatesLanguages {
+                    cs: VarsTemplate {
+                        subject: "Jednorázový kód".into(),
+                        header: "Jednorázový kód –".into(),
+                        text: Some("Váš jednorázový kód:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
                     de: VarsTemplate {
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
@@ -1359,6 +1442,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 tz: UserValueConfigValue::Optional,
                 revalidate_during_login: false,
                 name_order_reverse: false,
+                password_reset_redirect_timeout: 5,
                 preferred_username: VarsUserPreferredUsername {
                     preferred_username: UserValueConfigValue::Optional,
                     immutable: true,
@@ -1455,6 +1539,7 @@ impl Vars {
         slf.parse_http_client(&mut table);
         slf.parse_i18n(&mut table);
         slf.parse_lifetimes(&mut table);
+        slf.parse_ldap(&mut table);
         slf.parse_logging(&mut table);
         slf.parse_matrix(&mut table);
         slf.parse_mfa(&mut table);
@@ -1849,6 +1934,58 @@ impl Vars {
 
         if let Some(v) = t_bool(&mut table, "consent", "enable", "CONSENT_ENABLE") {
             self.consent.enable = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "consent",
+            "content_cache_ttl",
+            "CONSENT_CONTENT_CACHE_TTL",
+        ) {
+            if v == 0 {
+                panic!("`consent.content_cache_ttl` must be at least 1");
+            }
+            self.consent.content_cache_ttl = v;
+        }
+        if let Some(v) = t_bool(
+            &mut table,
+            "consent",
+            "danger_allow_private_addresses",
+            "CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES",
+        ) {
+            self.consent.danger_allow_private_addresses = v;
+        }
+
+        if let Some(value) = table.remove("sources") {
+            let Value::Array(arr) = value else {
+                panic!("{}", err_t("sources", "consent", "Array"));
+            };
+            for entry in arr {
+                let Value::Table(mut table) = entry else {
+                    panic!("{}", err_t("<entry>", "consent.sources", "Table"));
+                };
+
+                let resource = t_str(&mut table, "consent.sources", "resource", "")
+                    .expect("`resource` is mandatory for `[[consent.sources]]`");
+                let source = t_str(&mut table, "consent.sources", "source", "")
+                    .expect("`source` is mandatory for `[[consent.sources]]`");
+                let name = t_str(&mut table, "consent.sources", "name", "")
+                    .expect("`name` is mandatory for `[[consent.sources]]`");
+                check_table_empty(table, "consent.sources");
+
+                let entry = match VarsConsentSource::new(resource, &source, name) {
+                    Ok(entry) => entry,
+                    Err(err) => panic!("Invalid `[[consent.sources]]`: {err}"),
+                };
+                match self.consent.sources.entry(entry.resource.clone()) {
+                    btree_map::Entry::Vacant(slot) => {
+                        slot.insert(entry);
+                    }
+                    btree_map::Entry::Occupied(slot) => panic!(
+                        "Invalid `[[consent.sources]]`: duplicate `resource` '{}'",
+                        slot.key()
+                    ),
+                }
+            }
         }
 
         check_table_empty(table, "consent");
@@ -2298,6 +2435,9 @@ impl Vars {
         // [email.tz_fmt]
         let mut tz_fmt = t_table(&mut table, "tz_fmt");
 
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "cs", "TZ_FMT_CS") {
+            self.email.tz_fmt.cs = v.into();
+        }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "de", "TZ_FMT_DE") {
             self.email.tz_fmt.de = v.into();
         }
@@ -2775,6 +2915,15 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "events",
+            "level_consent_revoked",
+            "EVENT_LEVEL_CONSENT_REVOKED",
+        ) {
+            self.events.level_consent_revoked =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for consent_revoked");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
             "level_scim_task_failed",
             "EVENT_LEVEL_SCIM_TASK_FAILED",
         ) {
@@ -2807,6 +2956,15 @@ impl Vars {
         ) {
             self.events.level_token_issued =
                 EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_token_issued");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
+            "level_ldap_login",
+            "EVENT_LEVEL_LDAP_LOGIN",
+        ) {
+            self.events.level_ldap_login =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for level_ldap_login");
         }
 
         if let Some(v) = t_str(
@@ -3294,6 +3452,61 @@ impl Vars {
         check_table_empty(table, "mfa");
     }
 
+    fn parse_ldap(&mut self, table: &mut toml::Table) {
+        let mut table = t_table(table, "ldap");
+
+        if let Some(v) = t_bool(&mut table, "ldap", "enable", "LDAP_ENABLE") {
+            self.ldap.enable = v;
+        }
+        if let Some(v) = t_str(&mut table, "ldap", "listen_address", "LDAP_LISTEN_ADDRESS") {
+            self.ldap.listen_address = v;
+        }
+        if let Some(v) = t_u16(&mut table, "ldap", "port", "LDAP_PORT") {
+            self.ldap.port = v;
+        }
+        if let Some(v) = t_str(&mut table, "ldap", "base_dn", "LDAP_BASE_DN") {
+            self.ldap.base_dn = v.to_lowercase();
+        }
+        // shortcut: does not handle escaped `,` / `=`, which no sane base DN contains
+        let base_dn_valid = self.ldap.base_dn.split(',').all(|rdn| {
+            rdn.split_once('=')
+                .is_some_and(|(k, v)| !k.trim().is_empty() && !v.trim().is_empty())
+        });
+        if !base_dn_valid {
+            panic!("ldap.base_dn '{}' is not a valid DN", self.ldap.base_dn);
+        }
+        self.ldap.cert_path = t_str(&mut table, "ldap", "cert_path", "LDAP_TLS_CERT");
+        self.ldap.key_path = t_str(&mut table, "ldap", "key_path", "LDAP_TLS_KEY");
+        if self.ldap.cert_path.is_some() != self.ldap.key_path.is_some() {
+            panic!("ldap.cert_path and ldap.key_path must be set together");
+        }
+        if let Some(v) = t_bool(&mut table, "ldap", "plain_text", "LDAP_PLAIN_TEXT") {
+            self.ldap.plain_text = v;
+        }
+
+        if let Some(v) = t_bool(
+            &mut table,
+            "ldap",
+            "disable_ip_brute_force_protection",
+            "LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION",
+        ) {
+            self.ldap.disable_ip_brute_force_protection = v;
+        }
+        if let Some(v) = t_u32(
+            &mut table,
+            "ldap",
+            "max_connections",
+            "LDAP_MAX_CONNECTIONS",
+        ) {
+            if v == 0 {
+                panic!("ldap.max_connections must be greater than 0");
+            }
+            self.ldap.max_connections = v;
+        }
+
+        check_table_empty(table, "ldap");
+    }
+
     fn parse_pam(&mut self, table: &mut toml::Table) {
         let mut table = t_table(table, "pam");
 
@@ -3553,6 +3766,13 @@ impl Vars {
                         self.templates.password_reset.en.clone()
                     }
                 }
+                "cs" => {
+                    if is_password_new {
+                        self.templates.password_new.cs.clone()
+                    } else {
+                        self.templates.password_reset.cs.clone()
+                    }
+                }
                 "de" => {
                     if is_password_new {
                         self.templates.password_new.de.clone()
@@ -3668,6 +3888,13 @@ impl Vars {
                         self.templates.password_new.en = tpl;
                     } else {
                         self.templates.password_reset.en = tpl;
+                    }
+                }
+                "cs" => {
+                    if is_password_new {
+                        self.templates.password_new.cs = tpl;
+                    } else {
+                        self.templates.password_reset.cs = tpl;
                     }
                 }
                 "de" => {
@@ -3957,6 +4184,14 @@ impl Vars {
         ) {
             self.user_values.name_order_reverse = v;
         }
+        if let Some(v) = t_u16(
+            &mut table,
+            "user_values",
+            "password_reset_redirect_timeout",
+            "PASSWORD_RESET_REDIRECT_TIMEOUT",
+        ) {
+            self.user_values.password_reset_redirect_timeout = v;
+        }
 
         let mut pref_username = t_table(&mut table, "preferred_username");
 
@@ -4148,6 +4383,7 @@ impl Vars {
             &self.lifetimes.jwk_autorotate_cron,
         );
         self.validate_ephemeral_clients();
+        self.validate_ldap();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
@@ -4221,6 +4457,12 @@ impl Vars {
 }
 
 impl Vars {
+    fn validate_ldap(&self) {
+        if self.ldap.plain_text && !self.server.proxy_mode {
+            panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
+        }
+    }
+
     /// Only enforced for an enabled feature and an explicitly set `default_scopes`.
     fn validate_ephemeral_clients(&self) {
         let eph = &self.ephemeral_clients;
@@ -4318,6 +4560,61 @@ pub struct VarsBootstrap {
 #[derive(Debug)]
 pub struct VarsConsent {
     pub enable: bool,
+    /// At least 1.
+    pub content_cache_ttl: u32,
+    /// Allows remote consent sources on non-public addresses. Independent of
+    /// `ephemeral_clients.danger_allow_private_addresses`.
+    pub danger_allow_private_addresses: bool,
+    /// `[[consent.sources]]` registry, keyed by `resource`.
+    pub sources: BTreeMap<String, VarsConsentSource>,
+}
+
+impl VarsConsent {
+    /// The registry entry for `resource`, if any.
+    pub fn source_for(&self, resource: &str) -> Option<&VarsConsentSource> {
+        self.sources.get(resource)
+    }
+
+    /// `true` if an ephemeral client must request a `resource`: `consent.enable` is set and
+    /// `[[consent.sources]]` is not empty.
+    pub fn requires_resource(&self) -> bool {
+        self.enable && !self.sources.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VarsConsentSource {
+    pub resource: String,
+    pub source: ConsentSource,
+    pub name: String,
+}
+
+impl VarsConsentSource {
+    pub fn new(resource: String, source: &str, name: String) -> Result<Self, String> {
+        // RFC 8707 §2: absolute URI without a fragment. Matched verbatim against the request
+        // `resource`, so it must also pass the same `RE_RESOURCE` validation.
+        match reqwest::Url::parse(&resource) {
+            Ok(url) if url.fragment().is_none() && RE_RESOURCE.is_match(&resource) => {}
+            _ => {
+                return Err(format!(
+                    "`resource` '{resource}' must be an absolute URI without a fragment, \
+                    matching `{}`",
+                    RE_RESOURCE.as_str()
+                ));
+            }
+        }
+        let source = ConsentSource::parse(source)
+            .map_err(|err| format!("`source` for '{resource}': {err}"))?;
+        if name.trim().is_empty() {
+            return Err(format!("`name` for '{resource}' must not be empty"));
+        }
+
+        Ok(Self {
+            resource,
+            source,
+            name,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -4435,6 +4732,7 @@ pub struct VarsEmailJobs {
 
 #[derive(Debug)]
 pub struct VarsEmailTzFmt {
+    pub cs: Cow<'static, str>,
     pub de: Cow<'static, str>,
     pub en: Cow<'static, str>,
     pub es: Cow<'static, str>,
@@ -4556,11 +4854,13 @@ pub struct VarsEvents {
     pub level_backchannel_logout_failed: EventLevel,
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,
+    pub level_consent_revoked: EventLevel,
     pub level_scim_task_failed: EventLevel,
     pub level_email_send_error: EventLevel,
     pub level_suspicious_request: EventLevel,
     pub level_new_login_location: EventLevel,
     pub level_token_issued: EventLevel,
+    pub level_ldap_login: EventLevel,
 
     pub level_failed_logins_25: EventLevel,
     pub level_failed_logins_20: EventLevel,
@@ -4664,6 +4964,24 @@ pub struct VarsOtpEmail {
 }
 
 #[derive(Debug)]
+pub struct VarsLdap {
+    pub enable: bool,
+    pub listen_address: String,
+    pub port: u16,
+    /// Always lowercase.
+    pub base_dn: String,
+    /// `None` reuses the `[tls]` certificate.
+    pub cert_path: Option<String>,
+    pub key_path: Option<String>,
+    /// Serves plain LDAP without TLS, only allowed with `server.proxy_mode`.
+    pub plain_text: bool,
+    /// Skips the per-IP brute-force checks for user binds, the per-user counter still applies.
+    pub disable_ip_brute_force_protection: bool,
+    /// Open connections at most, further ones wait until one is closed.
+    pub max_connections: u32,
+}
+
+#[derive(Debug)]
 pub struct VarsPam {
     pub remote_password_len: u8,
     pub remote_password_ttl: Duration,
@@ -4734,6 +5052,7 @@ pub struct VarsTemplates {
 
 #[derive(Debug)]
 pub struct VarsTemplatesLanguages {
+    pub cs: VarsTemplate,
     pub de: VarsTemplate,
     pub en: VarsTemplate,
     pub es: VarsTemplate,
@@ -4814,6 +5133,7 @@ pub struct VarsUserValuesConfig {
     pub tz: UserValueConfigValue,
     pub revalidate_during_login: bool,
     pub name_order_reverse: bool,
+    pub password_reset_redirect_timeout: u16,
     pub preferred_username: VarsUserPreferredUsername,
 }
 
@@ -5219,6 +5539,194 @@ mod tests {
         assert!(vars.consent.enable);
     }
 
+    fn parse_consent(toml_src: &str) -> Vars {
+        let mut table: toml::Table = toml::from_str(toml_src).unwrap();
+        let mut vars = Vars::default();
+        vars.parse_consent(&mut table);
+        vars
+    }
+
+    #[test]
+    fn consent_sources() {
+        let vars = parse_consent("[consent]\nenable = true");
+        assert_eq!(vars.consent.content_cache_ttl, 3600);
+        assert!(vars.consent.sources.is_empty());
+        assert!(!vars.consent.requires_resource());
+
+        let vars = parse_consent(
+            r#"
+[consent]
+enable = true
+content_cache_ttl = 600
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'Example API'
+
+[[consent.sources]]
+resource = 'urn:example:data'
+source = 'https://consent.example.com/data'
+name = 'Data'
+"#,
+        );
+        assert_eq!(vars.consent.content_cache_ttl, 600);
+        assert_eq!(
+            vars.consent.sources.values().cloned().collect::<Vec<_>>(),
+            vec![
+                VarsConsentSource {
+                    resource: "https://api.example.com".to_string(),
+                    source: ConsentSource::Local,
+                    name: "Example API".to_string(),
+                },
+                VarsConsentSource {
+                    resource: "urn:example:data".to_string(),
+                    source: ConsentSource::Remote(
+                        reqwest::Url::parse("https://consent.example.com/data").unwrap()
+                    ),
+                    name: "Data".to_string(),
+                },
+            ]
+        );
+        assert_eq!(
+            vars.consent.source_for("urn:example:data").unwrap().name,
+            "Data"
+        );
+        assert!(
+            vars.consent
+                .source_for("https://other.example.com")
+                .is_none()
+        );
+        assert!(vars.consent.requires_resource());
+
+        // without `consent.enable` no `resource` is required
+        let vars = parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'Example API'
+"#,
+        );
+        assert!(!vars.consent.requires_resource());
+    }
+
+    #[test]
+    fn consent_source_entry_validation() {
+        let entry = |resource: &str, source: &str, name: &str| {
+            VarsConsentSource::new(resource.to_string(), source, name.to_string())
+        };
+        assert!(entry("https://api.example.com", "local", "API").is_ok());
+
+        // resource: absolute URI, no fragment
+        assert!(entry("api.example.com", "local", "API").is_err());
+        assert!(entry("/api", "local", "API").is_err());
+        assert!(entry("https://api.example.com/#x", "local", "API").is_err());
+        // source: `local` or https URL
+        assert!(entry("https://api.example.com", "remote", "API").is_err());
+        assert!(
+            entry(
+                "https://api.example.com",
+                "http://consent.example.com",
+                "API"
+            )
+            .is_err()
+        );
+        // resource: must also match `RE_RESOURCE`, like the request `resource`
+        assert!(entry("https://api.example.com/a b", "local", "API").is_err());
+        assert!(entry("https://api.example.com/ä", "local", "API").is_err());
+        assert!(entry("https://api.example.com/[x]", "local", "API").is_err());
+        // source: no `lang` query key, Rauthy appends it
+        assert!(
+            entry(
+                "https://api.example.com",
+                "https://consent.example.com/api?lang=en",
+                "API"
+            )
+            .is_err()
+        );
+        assert!(
+            entry(
+                "https://api.example.com",
+                "https://consent.example.com/api?v=1",
+                "API"
+            )
+            .is_ok()
+        );
+        // name: non-empty
+        assert!(entry("https://api.example.com", "local", " ").is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "duplicate `resource` 'https://api.example.com'")]
+    fn consent_sources_duplicate_panics() {
+        parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'A'
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'B'
+"#,
+        );
+    }
+
+    #[test]
+    fn consent_danger_allow_private_addresses() {
+        let vars = parse_consent("[consent]\nenable = true");
+        assert!(!vars.consent.danger_allow_private_addresses);
+        let vars = parse_consent("[consent]\ndanger_allow_private_addresses = true");
+        assert!(vars.consent.danger_allow_private_addresses);
+        assert!(!vars.ephemeral_clients.danger_allow_private_addresses);
+    }
+
+    #[test]
+    #[should_panic(expected = "`consent.content_cache_ttl` must be at least 1")]
+    fn consent_content_cache_ttl_zero_panics() {
+        parse_consent("[consent]\ncontent_cache_ttl = 0");
+    }
+
+    #[test]
+    #[should_panic(expected = "`name` is mandatory")]
+    fn consent_sources_missing_name_panics() {
+        parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+"#,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Unknown data in section: 'consent.sources'")]
+    fn consent_sources_unknown_key_panics() {
+        parse_consent(
+            r#"
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'local'
+name = 'A'
+url = 'https://consent.example.com'
+"#,
+        );
+    }
+
+    #[test]
+    fn consent_revoked_event_level() {
+        let mut vars = Vars::default();
+        assert_eq!(vars.events.level_consent_revoked, EventLevel::Notice);
+
+        let mut table: toml::Table =
+            toml::from_str("[events]\nlevel_consent_revoked = 'critical'").unwrap();
+        vars.parse_events(&mut table, &mut RauthySecrets::default());
+        assert_eq!(vars.events.level_consent_revoked, EventLevel::Critical);
+    }
+
     #[test]
     fn user_registration_allow_open_redirect() {
         let mut vars = Vars::default();
@@ -5235,6 +5743,48 @@ mod tests {
     fn test_t_str_vec_rejects_string() {
         let mut table: toml::Table = toml::from_str("domain_blacklist = 'x'").unwrap();
         t_str_vec(&mut table, "user_registration", "domain_blacklist", "");
+    }
+
+    #[test]
+    fn ldap() {
+        let mut vars = Vars::default();
+        vars.parse_ldap(&mut toml::Table::new());
+        assert!(!vars.ldap.enable);
+        assert_eq!(vars.ldap.port, 6360);
+        assert!(vars.ldap.cert_path.is_none());
+        assert!(!vars.ldap.disable_ip_brute_force_protection);
+        assert_eq!(vars.ldap.max_connections, 1000);
+
+        let mut table: toml::Table = toml::from_str(
+            "[ldap]\nenable = true\nport = 636\nbase_dn = 'DC=Example,DC=com'\ncert_path = 'c'\nkey_path = 'k'\nplain_text = true\ndisable_ip_brute_force_protection = true\nmax_connections = 10",
+        )
+        .unwrap();
+        vars.parse_ldap(&mut table);
+        assert!(vars.ldap.enable);
+        assert_eq!(vars.ldap.port, 636);
+        assert_eq!(vars.ldap.base_dn, "dc=example,dc=com");
+        assert_eq!(vars.ldap.cert_path.as_deref(), Some("c"));
+        assert!(vars.ldap.plain_text);
+        assert!(vars.ldap.disable_ip_brute_force_protection);
+        assert_eq!(vars.ldap.max_connections, 10);
+    }
+
+    #[test]
+    #[should_panic(expected = "requires server.proxy_mode")]
+    fn ldap_plain_text_without_proxy_mode() {
+        let mut vars = Vars::default();
+        vars.ldap.plain_text = true;
+        vars.server.proxy_mode = true;
+        vars.validate_ldap();
+        vars.server.proxy_mode = false;
+        vars.validate_ldap();
+    }
+
+    #[test]
+    #[should_panic(expected = "not a valid DN")]
+    fn ldap_invalid_base_dn() {
+        let mut table: toml::Table = toml::from_str("[ldap]\nbase_dn = 'rauthy.local'").unwrap();
+        Vars::default().parse_ldap(&mut table);
     }
 
     #[test]

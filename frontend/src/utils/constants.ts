@@ -17,11 +17,13 @@ export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 export const EVENT_LEVELS = ['info', 'notice', 'warning', 'critical'];
 export const EVENT_TYPES = [
     '-',
+    'ConsentRevoked',
     'ForcedLogout',
     'InvalidLogins',
     'IpBlacklisted',
     'IpBlacklistRemoved',
     'JwksRotated',
+    'LdapLogin',
     'LoginNewLocation',
     'NewUserRegistered',
     'NewRauthyAdmin',

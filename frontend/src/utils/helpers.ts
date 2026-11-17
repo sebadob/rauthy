@@ -11,7 +11,7 @@ import {
     PROVIDER_TOKEN,
     REDIRECT_URI,
 } from './constants.js';
-import { decode, encode } from 'base64-arraybuffer';
+import { encode } from 'base64-arraybuffer';
 import type { PasswordPolicyResponse } from '#api/types/password_policy.ts';
 import type { EventLevel } from '#api/types/events.ts';
 import { generateNonce, generatePKCE } from '#utils/pkce.ts';
@@ -341,6 +341,3 @@ export function promiseTimeout<T>(prom: Promise<T>, time: number): Promise<T | u
         }),
     ]).finally(() => clearTimeout(timer));
 }
-
-// async sleep in ms
-export const sleepAwait = async (ms: number) => await new Promise(x => setTimeout(x, ms));

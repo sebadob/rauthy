@@ -59,6 +59,7 @@ impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
             ErrorResponseType::BadRequest
+            | ErrorResponseType::ConsentRequired
             | ErrorResponseType::InvalidClientMetadata
             | ErrorResponseType::InvalidGrant
             | ErrorResponseType::InvalidTarget
@@ -593,5 +594,40 @@ impl From<ring::error::Unspecified> for ErrorResponse {
             ErrorResponseType::BadRequest,
             format!("ring::error::Unspecified: {value:?}"),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// OIDC Core §3.1.2.6: `consent_required` is an authorization error response, a 400 like the
+    /// other OAuth error codes.
+    #[test]
+    fn test_consent_required_status() {
+        let err = ErrorResponse::new(ErrorResponseType::ConsentRequired, "consent required");
+        assert_eq!(err.status_code(), StatusCode::BAD_REQUEST);
+        assert_eq!(err.error_response().status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            serde_json::to_value(&err.error).unwrap(),
+            serde_json::json!("consent_required")
+        );
+    }
+
+    /// bincode encodes the variant index. A new variant goes at the end to keep the indices
+    /// stable, in case an error is ever cached with bincode: otherwise cached values would decode
+    /// as another error after an upgrade.
+    #[test]
+    fn test_error_type_bincode_index() {
+        let encode = |ty: ErrorResponseType| {
+            bincode_next::serde::encode_to_vec(&ty, bincode_next::config::legacy()).unwrap()
+        };
+        assert_eq!(encode(ErrorResponseType::CSRFTokenError), [3, 0, 0, 0]);
+        assert_eq!(encode(ErrorResponseType::NotFound), [19, 0, 0, 0]);
+        assert_eq!(
+            encode(ErrorResponseType::WWWAuthenticate(String::new())),
+            [30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(encode(ErrorResponseType::ConsentRequired), [31, 0, 0, 0]);
     }
 }

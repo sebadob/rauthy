@@ -165,6 +165,8 @@ pub enum EventType {
     TokenIssued,
     CredentialStuffing,
     EmailSendError,
+    ConsentRevoked,
+    LdapLogin,
 }
 
 impl Display for EventType {
@@ -194,6 +196,8 @@ impl Display for EventType {
             Self::TokenIssued => write!(f, "JWT Token issued"),
             Self::CredentialStuffing => write!(f, "Possible credential stuffing"),
             Self::EmailSendError => write!(f, "E-Mail send error"),
+            Self::ConsentRevoked => write!(f, "User consent revoked"),
+            Self::LdapLogin => write!(f, "LDAP login"),
         }
     }
 }
@@ -227,6 +231,8 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::TokenIssued => Self::TokenIssued,
             rauthy_api_types::events::EventType::CredentialStuffing => Self::CredentialStuffing,
             rauthy_api_types::events::EventType::EmailSendError => Self::EmailSendError,
+            rauthy_api_types::events::EventType::ConsentRevoked => Self::ConsentRevoked,
+            rauthy_api_types::events::EventType::LdapLogin => Self::LdapLogin,
         }
     }
 }
@@ -258,6 +264,8 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::TokenIssued => Self::TokenIssued,
             EventType::CredentialStuffing => Self::CredentialStuffing,
             EventType::EmailSendError => Self::EmailSendError,
+            EventType::ConsentRevoked => Self::ConsentRevoked,
+            EventType::LdapLogin => Self::LdapLogin,
         }
     }
 }
@@ -289,6 +297,8 @@ impl EventType {
             Self::TokenIssued => "TokenIssued",
             Self::CredentialStuffing => "CredentialStuffing",
             Self::EmailSendError => "EmailSendError",
+            Self::ConsentRevoked => "ConsentRevoked",
+            Self::LdapLogin => "LdapLogin",
         }
     }
 
@@ -321,6 +331,8 @@ impl EventType {
             EventType::TokenIssued => 21,
             EventType::CredentialStuffing => 22,
             EventType::EmailSendError => 23,
+            EventType::ConsentRevoked => 24,
+            EventType::LdapLogin => 25,
         }
     }
 }
@@ -352,6 +364,8 @@ impl From<String> for EventType {
             "TokenIssued" => Self::TokenIssued,
             "CredentialStuffing" => Self::CredentialStuffing,
             "EmailSendError" => Self::EmailSendError,
+            "ConsentRevoked" => Self::ConsentRevoked,
+            "LdapLogin" => Self::LdapLogin,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -394,6 +408,8 @@ impl From<i64> for EventType {
             21 => EventType::TokenIssued,
             22 => EventType::CredentialStuffing,
             23 => EventType::EmailSendError,
+            24 => EventType::ConsentRevoked,
+            25 => EventType::LdapLogin,
             _ => EventType::Test,
         }
     }
@@ -505,6 +521,8 @@ impl From<&Event> for Notification {
                 value.ip.as_deref().unwrap_or_default()
             )),
             EventType::EmailSendError => value.text.clone(),
+            EventType::ConsentRevoked => value.text.clone(),
+            EventType::LdapLogin => value.text.clone(),
         };
 
         Self {
@@ -702,6 +720,29 @@ impl Event {
             Some(ip),
             None,
             None,
+        )
+    }
+
+    /// `revoked_by` names who revoked the consent: the user themselves, an admin by email, or
+    /// an API key by name (see [`ConsentRevokedBy`]).
+    pub fn consent_revoked(
+        user_email: &str,
+        client_id: &str,
+        resource: &str,
+        revoked_by: ConsentRevokedBy<'_>,
+        ip: IpAddr,
+    ) -> Self {
+        let text = consent_revoked_text(user_email, client_id, resource, revoked_by);
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_consent_revoked
+                .clone(),
+            EventType::ConsentRevoked,
+            Some(ip.to_string()),
+            None,
+            Some(text),
         )
     }
 
@@ -949,6 +990,16 @@ impl Event {
         )
     }
 
+    pub fn ldap_login(client_id: &str, email: &str, ip: IpAddr) -> Self {
+        Self::new(
+            RauthyConfig::get().vars.events.level_ldap_login.clone(),
+            EventType::LdapLogin,
+            Some(ip.to_string()),
+            None,
+            Some(format!("{client_id} {email}")),
+        )
+    }
+
     pub fn token_issued(flow: &str, client_id: &str, email: Option<&str>) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_token_issued.clone(),
@@ -1061,6 +1112,8 @@ impl Event {
             EventType::LoginNewLocation => self.text.clone().unwrap_or_default(),
             EventType::TokenIssued => self.text.clone().unwrap_or_default(),
             EventType::EmailSendError => self.text.clone().unwrap_or_default(),
+            EventType::ConsentRevoked => self.text.clone().unwrap_or_default(),
+            EventType::LdapLogin => self.text.clone().unwrap_or_default(),
         }
     }
 
@@ -1090,5 +1143,89 @@ impl From<Event> for EventResponse {
             data: e.data,
             text: e.text,
         }
+    }
+}
+
+/// Who revoked a consent, for [`Event::consent_revoked`]
+#[derive(Debug, Clone, Copy)]
+pub enum ConsentRevokedBy<'a> {
+    User,
+    /// The email of the admin
+    Admin(&'a str),
+    /// The name of the API key
+    ApiKey(&'a str),
+}
+
+/// The text of [`Event::consent_revoked`].
+fn consent_revoked_text(
+    user_email: &str,
+    client_id: &str,
+    resource: &str,
+    revoked_by: ConsentRevokedBy<'_>,
+) -> String {
+    let target = if resource.is_empty() {
+        format!("`{client_id}`")
+    } else {
+        format!("`{client_id}` / `{resource}`")
+    };
+    let by = match revoked_by {
+        ConsentRevokedBy::User => "the user".to_string(),
+        ConsentRevokedBy::Admin(admin) => format!("admin `{admin}`"),
+        ConsentRevokedBy::ApiKey(name) => format!("API key `{name}`"),
+    };
+    format!("Consent of `{user_email}` for client {target} revoked by {by}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn consent_revoked_round_trip() {
+        let typ = EventType::ConsentRevoked;
+        assert_eq!(typ.value(), 24);
+        assert_eq!(EventType::from(typ.value()), typ);
+        assert_eq!(EventType::from(typ.value() as i64), typ);
+        assert_eq!(typ.as_str(), "ConsentRevoked");
+        assert_eq!(EventType::from(typ.as_str().to_string()), typ);
+        assert_eq!(typ.to_string(), "User consent revoked");
+        assert_eq!(
+            EventType::from(rauthy_api_types::events::EventType::from(typ.clone())),
+            typ
+        );
+    }
+
+    #[test]
+    fn consent_revoked_text_by_target() {
+        assert_eq!(
+            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::User),
+            "Consent of `u@example.com` for client `c1` revoked by the user"
+        );
+        assert_eq!(
+            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::ApiKey("k1")),
+            "Consent of `u@example.com` for client `c1` revoked by API key `k1`"
+        );
+        let text = consent_revoked_text(
+            "u@example.com",
+            "c1",
+            "https://api.example.com",
+            ConsentRevokedBy::Admin("admin@example.com"),
+        );
+        assert_eq!(
+            text,
+            "Consent of `u@example.com` for client `c1` / `https://api.example.com` revoked \
+            by admin `admin@example.com`"
+        );
+
+        // the text is what the event shows
+        let event = Event::new(
+            EventLevel::Notice,
+            EventType::ConsentRevoked,
+            Some("127.0.0.1".to_string()),
+            None,
+            Some(text.clone()),
+        );
+        assert_eq!(event.fmt_data(), text);
     }
 }

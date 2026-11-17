@@ -141,6 +141,21 @@ export const I18nJa: I18n = {
             notAvailable: 'この名前は使えません。',
             preferredUsername: 'ユーザー名',
         },
+        privacy: {
+            clientId: 'Client ID',
+            connectedApps: '連携中のアプリ',
+            connectedAppsDesc: 'アカウントへのアクセスに同意したアプリケーション。',
+            granted: '許可日時',
+            noConnectedApps: 'まだどのアプリケーションにもアクセスを許可していません。',
+            privacy: 'プライバシー',
+            resource: 'リソース',
+            revoke: 'アクセスを取り消す',
+            revokeDesc:
+                '取り消すと同意が削除され、アプリケーションはアクセスを更新できなくなります。削除された Refresh Token で発行された Access Token は、userinfo と introspection で無効になります。Token を自分で検証するアプリケーションは、有効期限が切れるまでそれを受け入れる場合があります。アプリケーションは改めて同意を求める必要があります。',
+            scopes: 'Scope',
+            updated: '更新日時',
+            userAgent: 'ユーザーエージェント',
+        },
         providerLink: '外部アカウントと連携',
         providerLinkDesc:
             'このアカウントを、次のいずれかのログインプロバイダーと連携できます。\n有効にすると、選んだプロバイダーのログイン画面に移動します。\nログインに成功し、メールアドレスが一致すれば、アカウントが連携されます。',
@@ -298,6 +313,7 @@ export const I18nJa: I18n = {
     passwordReset: {
         accountLogin: 'アカウントにログイン',
         badFormat: '形式が正しくありません',
+        continueSignIn: 'サインインに進む',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: '生成',
         newAccDesc1:
@@ -313,7 +329,7 @@ export const I18nJa: I18n = {
         required: '必須',
         save: '保存',
         success1: 'パスワードを更新しました。',
-        success2: 'まもなく移動します。',
+        success2: '{{ secs }} 秒後に移動します。',
         success3: '移動しない場合は、こちらをクリックしてください:',
         successPasskey1: '新しい Passkey を登録しました。',
         successPasskey2:

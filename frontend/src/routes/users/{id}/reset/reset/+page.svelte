@@ -39,6 +39,11 @@
     let accountTypeNew = $state('');
     let redirectUri = $state('');
     let success = $state(false);
+    // Falls back to the previous fixed timeout if the template value is missing.
+    let redirectTimeout = $derived(tplData?.redirect_timeout ?? 5);
+    // The success link leads back to the client when it sent a `redirect_uri`,
+    // otherwise to the account dashboard.
+    let redirectsToClient = $derived(!!redirectUri && redirectUri !== '/auth/v1/account');
     let accepted = $state(false);
 
     let mfaPurpose: undefined | MfaPurpose = $state();
@@ -67,14 +72,16 @@
     });
 
     $effect(() => {
-        if (success) {
-            setTimeout(() => {
+        if (success && redirectTimeout > 0) {
+            let timer = setTimeout(() => {
                 if (redirectUri) {
                     window.location.replace(normalizeClientUri(redirectUri));
                 } else {
                     navigateToAccount();
                 }
-            }, 5000);
+            }, redirectTimeout * 1000);
+
+            return () => clearTimeout(timer);
         }
     });
 
@@ -300,13 +307,18 @@
         {#if success}
             <p>
                 {t.passwordReset.success1}
-                <br />
-                {t.passwordReset.success2}
-                <br />
-                <br />
-                {t.passwordReset.success3}
+                {#if redirectTimeout > 0}
+                    <br />
+                    {t.passwordReset.success2.replace('{{ secs }}', redirectTimeout.toString())}
+                    <br />
+                    <br />
+                    {t.passwordReset.success3}
+                {:else}
+                    <br />
+                    <br />
+                {/if}
                 <A href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}>
-                    Account
+                    {redirectsToClient ? t.passwordReset.continueSignIn : 'Account'}
                 </A>
             </p>
         {:else if tplData}

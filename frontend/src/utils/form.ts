@@ -32,8 +32,6 @@ export function unixTsFromLocalDateTime(date: string, time: string) {
     return ts / 1000 - new Date().getTimezoneOffset();
 }
 
-export const DAY_MILLIS = 1000 * 60 * 60 * 24;
-
 export interface Day {
     day: number;
     month: number;
@@ -102,15 +100,6 @@ export function getWeeksInMonth(date: CalendarDate, locale: string): Week[] {
 }
 
 /**
- * Converts the DateTime string inside the given URLSearchParams to a Unix timestamp
- */
-export function formParamsDateToTs(key: string, params: URLSearchParams) {
-    let ts = unixTsFromLocalDate(params.get(key) || '');
-    params.set(key, ts?.toString() || '');
-    return params;
-}
-
-/**
  * Returns `now` in Date only correct format for input element
  * Date will be `local` and probably needs to be combined with the `<TZ>` component.
  */
@@ -151,16 +140,4 @@ export function fmtTimeInput(date?: Date) {
     }
 
     return `${hr}:${mn}`;
-}
-
-/**
- * Converts the given `params` into an object that makes the TS compiler happy.
- * CAUTION: It does NOT check the integrity! Uses unchecked typecasting!
- */
-export function paramsInto<T>(params: URLSearchParams): T {
-    let res: any = {};
-    for (let p of params) {
-        res[p[0]] = p[1] || undefined;
-    }
-    return res as T;
 }

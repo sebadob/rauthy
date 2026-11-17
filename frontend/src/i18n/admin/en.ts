@@ -63,6 +63,11 @@ export let I18nAdminEn: I18nAdmin = {
         confidential: 'Confidential',
         confidentialNoSecret: 'This is a non-confidential client and therefore has not secret.',
         config: 'Client Configuration',
+        consent: {
+            builtIn: 'Built-in',
+            desc: `Where the content of the consent screen comes from, when 'consent.enable' is set. Built-in shows the requested scopes. A URL must serve the consent content as JSON. A '[[consent.sources]]' entry for the requested resource takes precedence. Not active yet: it is only stored until the consent screen lands.`,
+            source: 'Consent Source',
+        },
         delete1: 'Are you sure you want to delete this client?',
         descAuthCode: `The validity for auth codes can be adjusted for increased security. Auth codes
             can be used only once and are valid for 60 seconds by default. The shorter the validity, the
@@ -93,7 +98,7 @@ export let I18nAdminEn: I18nAdmin = {
             client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 
-                <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,
+                <code>{base_uri}/Users/{id}</code> can be derived correctly.`,
             desc: 'If this client supports {{ SCIM_LINK }}, you can activate it here.',
             enable: 'Enable SCIMv2',
             groupSync: 'Synchronize Groups',

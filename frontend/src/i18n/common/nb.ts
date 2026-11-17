@@ -150,6 +150,22 @@ export const I18nNb: I18n = {
             notAvailable: 'This name is not available.',
             preferredUsername: 'Preferred Username',
         },
+        privacy: {
+            clientId: 'Klient-ID',
+            connectedApps: 'Tilkoblede apper',
+            connectedAppsDesc:
+                'Applikasjoner du har gitt samtykke til å få tilgang til kontoen din.',
+            granted: 'Gitt',
+            noConnectedApps: 'Ingen applikasjon har fått tilgang ennå.',
+            privacy: 'Personvern',
+            resource: 'Ressurs',
+            revoke: 'Trekk tilbake tilgang',
+            revokeDesc:
+                'Tilbaketrekking fjerner samtykket, og applikasjonen kan ikke lenger fornye tilgangen sin. Tilgangstokener som ble utstedt med de slettede oppdateringstokenene, trekkes tilbake ved userinfo og introspeksjon. Applikasjoner som validerer tokenene sine selv, kan fortsatt godta dem til de utløper. Applikasjonen må be om samtykket ditt på nytt.',
+            scopes: 'Scopes',
+            updated: 'Oppdatert',
+            userAgent: 'Brukeragent',
+        },
         providerLink: 'Koble konto',
         providerLinkDesc: `Denne kontoen kan kobles til en av følgende innloggingsleverandører. 
             Etter aktivering blir du videresendt til leverandørens innloggingsside. Ved vellykket 
@@ -312,6 +328,7 @@ export const I18nNb: I18n = {
     passwordReset: {
         accountLogin: 'Konto pålogging',
         badFormat: 'Ugyldig format',
+        continueSignIn: 'Fortsett til pålogging',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generer',
         newAccDesc1: 'Du har valget mellom to kontotyper: Passordløs eller tradisjonell passord.',
@@ -329,7 +346,7 @@ export const I18nNb: I18n = {
         required: 'Påkrevd',
         save: 'Lagre',
         success1: 'Passordet ble vellykket tilbakestilt.',
-        success2: 'Du vil bli videresendt snart.',
+        success2: 'Du vil bli videresendt om {{ secs }} sekunder.',
         success3: 'Hvis du ikke blir videresendt, vennligst klikk her:',
         successPasskey1: 'Den nye passkeyen ble vellykket registrert.',
         successPasskey2: `Vennligst logg inn direkte på kontoen din og registrer minst én annen 

@@ -93,6 +93,23 @@ export interface UserAttrValuesUpdateRequest {
     values: UserAttrValueRequest[];
 }
 
+export interface UserConsentDeleteResponse {
+    /// `false` if there was no consent to delete
+    consent_deleted: boolean;
+    refresh_tokens_deleted: number;
+}
+
+export interface UserConsentResponse {
+    client_id: string;
+    client_name?: string;
+    /// null for a consent without a resource
+    resource?: string;
+    scopes: string[];
+    created: number;
+    updated: number;
+    user_agent?: string;
+}
+
 export type UserAccountTypeResponse =
     'new' | 'password' | 'passkey' | 'federated' | 'federated_passkey' | 'federated_password';
 

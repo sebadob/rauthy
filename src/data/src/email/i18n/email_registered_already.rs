@@ -33,6 +33,7 @@ impl I18nEmailRegisteredAlready<'_> {
     pub fn build(lang: &Language) -> Self {
         let tpls = &RauthyConfig::get().vars.templates.email_registered_already;
         match lang {
+            Language::Cs => (&tpls.cs).into(),
             Language::De => (&tpls.de).into(),
             Language::En => (&tpls.en).into(),
             Language::Es => (&tpls.es).into(),

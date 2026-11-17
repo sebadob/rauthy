@@ -880,14 +880,102 @@ backup_keep_for_local = '3d'
 #HQL_DANGER_RAFT_STATE_RESET=true
 
 [consent]
-# Set to `true` to enable user consent for clients. This feature is
-# still in progress. Currently, it only makes a client deletion also
-# delete all legacy refresh tokens (issued before refresh tokens were
-# bound to a client) of all users.
+# Not active yet: until the consent screen lands, consent content
+# (`[[consent.sources]]` and the client consent sources) is only
+# validated and stored, never fetched or shown, whatever `enable`
+# is.
+#
+# Set to `true` to enable user consent for clients. Without it,
+# configured `[[consent.sources]]` log a warning at startup.
+# This feature is still in progress. Currently, it makes a client
+# deletion also delete all legacy refresh tokens (issued before
+# refresh tokens were bound to a client) of all users, and a user's
+# consent revoke also delete that user's legacy refresh tokens.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
 #enable = false
+
+# Lifetime in seconds of cached consent content fetched from a
+# remote consent source (see `[[consent.sources]]` below and the
+# per-client consent source in the Admin UI). Must be at least 1.
+# A failed fetch is cached as well, for `min(content_cache_ttl, 60)`
+# seconds, so an unavailable source is not requested on every
+# lookup.
+#
+# default: 3600
+# overwritten by: CONSENT_CONTENT_CACHE_TTL
+#content_cache_ttl = 3600
+
+# Remote consent sources that resolve to a loopback, private,
+# link-local or otherwise non-public address are rejected by
+# default, like ephemeral client documents. Consent sources are
+# configured by an admin, so this is independent of
+# `ephemeral_clients.danger_allow_private_addresses`. Set to `true`
+# when your consent service runs on an internal address.
+#
+# Consent source fetches follow redirects only to https, with the
+# same address checks, never use system proxies and time out after
+# 3 seconds.
+#
+# default: false
+# overwritten by: CONSENT_DANGER_ALLOW_PRIVATE_ADDRESSES
+#danger_allow_private_addresses = false
+
+#[[consent.sources]]
+# The consent source per RFC 8707 resource indicator, with
+# precedence over the client's own consent source.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different resources. Each `resource` may only exist
+# once.
+#
+# The resource indicator, an absolute URI without a fragment.
+# It is matched verbatim against the requested `resource` and
+# must only contain the characters allowed there:
+# [a-zA-Z0-9,.:/_\-&?=~!$'()*+%@]
+#resource = 'https://api.example.com'
+# Either `local` for the built-in consent content (the requested
+# scopes), or an `https://` URL of at most 1024 bytes of the
+# `resource` characters above, without userinfo, fragment or a
+# `lang` query key in any case or form (`LANG`, `lang[]`,
+# `lang.x`, `l%61ng`, ...). Rauthy fetches
+# `GET <url>?lang=<BCP47 language>` and expects:
+# {
+#   "name": "Example API",
+#   "scopes": {
+#     "data.read": {
+#       "title": "Read your data",
+#       "description": "...",
+#       "warning": false
+#     }
+#   },
+#   "intro": "...",
+#   "terms_url": "https://example.com/terms"
+# }
+# The `lang=en` response is required and the default: the
+# response for the user's language is used, the `lang=en` one
+# if that is unavailable.
+# The version of the consent content is the hash of the content
+# as shown: the name, intro, terms_url and the requested scopes
+# with their title, description and warning (the warnings of
+# the `lang=en` response are shown in every language). Any edit
+# to a shown field asks for consent again, an edit to a scope
+# that was not requested does not. A user who switches the
+# language may be asked again.
+# If the `lang=en` response is unavailable or invalid, the
+# built-in content is used instead.
+# These fallbacks change the version as well and may ask again:
+# the built-in content while `lang=en` is unavailable or
+# invalid, and the `lang=en` content while the translation is
+# unavailable.
+# This is the planned contract: nothing compares the version
+# with the one a consent was given for yet.
+#source = 'local'
+# The name of the resource shown on the consent screen. It wins
+# over the `name` of a remote consent document, which is only
+# used for a client's own consent source from the Admin UI.
+#name = 'Example API'
 
 [cred_stuff_detection]
 ## This section contains values for the credential stuffing
@@ -1421,6 +1509,9 @@ smtp_url = 'localhost'
 # You can generally use all options from
 # https://docs.rs/chrono/0.4.42/chrono/format/strftime/index.html
 #
+# default: '%-d. %-m. %Y %T (%Z)'
+# overwritten by: TZ_FMT_CS
+#cs = '%-d. %-m. %Y %T (%Z)'
 # default: '%d.%m.%Y %T (%Z)'
 # overwritten by: TZ_FMT_DE
 #de = '%d.%m.%Y %T (%Z)'
@@ -1838,6 +1929,13 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user consent
+# for a client has been revoked, either by the user
+# themselves, by an admin or through an API key.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_REVOKED
+level_consent_revoked = 'notice'
 # The level for the generated Event after a SCIM
 # update task ultimately failed after exceeding
 # all retries.
@@ -1857,6 +1955,12 @@ level_suspicious_request = 'notice'
 # default: info
 # overwritten by: EVENT_LEVEL_TOKEN_ISSUED
 level_token_issued = 'info'
+# The level for the generated Event after a successful
+# LDAP user bind.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_LDAP_LOGIN
+level_ldap_login = 'info'
 
 # The level for the generated Event after certain
 # amounts of false logins from an IP
@@ -2144,13 +2248,13 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr ja ko nb nl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr ja ko nb nl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_admin = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -2229,6 +2333,80 @@ filter_lang_admin = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru',
 # default: "0 30 3 1 * * *"
 # overwritten by: JWK_AUTOROTATE_CRON
 #jwk_autorotate_cron = '0 30 3 1 * * *'
+
+[ldap]
+# Enables a minimal, read-only LDAPS server for clients that can
+# only log in via an LDAP bind, like the Jellyfin LDAP plugin.
+# Only implicit TLS (LDAPS) is supported, no StartTLS.
+# See the book chapter "LDAP" for the directory layout.
+#
+# default: false
+# overwritten by: LDAP_ENABLE
+#enable = false
+
+# The address the LDAPS server listens on.
+#
+# default: '0.0.0.0'
+# overwritten by: LDAP_LISTEN_ADDRESS
+#listen_address = '0.0.0.0'
+
+# The port the LDAPS server listens on.
+#
+# default: 6360
+# overwritten by: LDAP_PORT
+#port = 6360
+
+# The base DN of the directory. Each client gets its own subtree
+# below it at `cn=<client_id>,ou=clients,<base_dn>`.
+#
+# default: 'dc=rauthy,dc=local'
+# overwritten by: LDAP_BASE_DN
+#base_dn = 'dc=rauthy,dc=local'
+
+# TLS certificate and key for the LDAPS server, in PEM format.
+# Both must be set together. If not set, the `[tls]` certificate
+# is used. Set them when Rauthy itself runs plain HTTP behind a
+# reverse proxy that does not terminate TLS for LDAP as well.
+# They are hot-reloaded like the `[tls]` certificate and use
+# `tls.poll_watch_interval` as well.
+#
+# overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
+#cert_path = 'tls/ldap.crt'
+#key_path = 'tls/ldap.key'
+
+# Serves plain LDAP without TLS instead of LDAPS, for a reverse
+# proxy that terminates TLS and forwards the raw TCP stream. As a
+# safeguard, this requires `server.proxy_mode = true`. Rauthy
+# then sees the proxy's IP for every LDAP connection, so the
+# per-IP brute-force protection applies to the proxy as a whole.
+# Never expose the plain LDAP port to anything but the proxy.
+#
+# default: false
+# overwritten by: LDAP_PLAIN_TEXT
+#plain_text = false
+
+# Disables the per-IP brute-force protection for LDAP user binds:
+# no credential stuffing detection, no per-IP failed login counter
+# and no IP blacklisting because of failed user binds. Apps like
+# Jellyfin send the binds of all users from a single IP, so a few
+# failed logins from different users would otherwise block the
+# app's IP for everyone. The per-user failed login counter and its
+# login delays still apply, and an already blacklisted IP is still
+# refused. Service binds keep the per-IP protection.
+# CAUTION: a client connecting directly to the LDAPS port can then
+# try passwords across many users without an IP limit. Only enable
+# it when the LDAPS port is reachable for your apps only.
+#
+# default: false
+# overwritten by: LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION
+#disable_ip_brute_force_protection = false
+
+# The maximum number of open LDAP connections. Further ones wait
+# until a connection is closed.
+#
+# default: 1000
+# overwritten by: LDAP_MAX_CONNECTIONS
+#max_connections = 1000
 
 [logging]
 # This is the log level for stdout logs
@@ -2951,6 +3129,16 @@ storage_type = 'db'
 # default: false
 # overwritten by: USER_VALUES_NAME_ORDER_REVERSE
 #name_order_reverse = false
+
+# Seconds after a successful password reset until the reset
+# page redirects the user, either to the `redirect_uri` of the
+# reset request or to the account dashboard. Set to `0` to
+# disable the redirect: the success message then stays visible
+# with a link to continue.
+#
+# default: 5
+# overwritten by: PASSWORD_RESET_REDIRECT_TIMEOUT
+#password_reset_redirect_timeout = 5
 
 [user_values.preferred_username]
 

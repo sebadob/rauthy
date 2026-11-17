@@ -2,6 +2,21 @@
 
 ## UNRELEASED
 
+### Breaking
+
+#### Upgrade: full restart of all nodes
+
+This release binds refresh tokens to their client and adds user consent (`[consent]`). It needs a
+full restart of all nodes, independent of `consent.enable`.
+
+- If you run a HA cluster, you **MUST** stop all nodes with the old version before you start the
+  new one. Do **NOT** do a **ROLLING RELEASE**. Mixed versions in one cluster are not supported.
+- A rollback to an older version after the upgrade is not supported. **CREATE A BACKUP BEFORE YOU
+  UPGRADE!**
+- There is no backfill of consent grants for existing users. As long as `consent.enable` is
+  `false` (the default), nothing changes for existing logins and refresh tokens. See the
+  `[consent]` section in the config reference before you enable it.
+
 ### Security
 
 #### Additional `device_code` checks
@@ -42,6 +57,11 @@ never used Forward Auth.
 
 ### Changes
 
+#### Added I18n: Czech
+
+Czech (`cs`) translations are now available for the UI (common and admin) and for e-mails. The
+e-mail date format can be set with `email.tz_fmt.cs` (`TZ_FMT_CS`).
+
 #### Always Show *Password Forgotten*
 
 The 'Password forgotten?' link on the login page only shows up after a failed login. With the new
@@ -50,6 +70,31 @@ from the start, even before the password input is shown. The default is `false`,
 current behavior.
 Older versions refuse to start with an unknown config key, so in a mixed-version cluster set it
 via `PASSWORD_RESET_LINK_ALWAYS` until every node is upgraded.
+
+#### Password Reset Redirect Timeout
+
+After a successful password reset, the reset page redirected after a fixed 5 seconds, so a user
+who missed the confirmation could think the reset had sent them back to where they started. The
+new `user_values.password_reset_redirect_timeout` (`PASSWORD_RESET_REDIRECT_TIMEOUT`) sets the
+timeout in seconds, and `0` disables the redirect, which keeps the confirmation visible with a
+link to continue. That link now reads *Continue to sign in* when it leads back to the client, and
+the message shows the actual number of seconds. The default is `5`, which keeps the current
+behavior.
+
+```toml
+[user_values]
+# Seconds after a successful password reset until the reset
+# page redirects the user, either to the `redirect_uri` of the
+# reset request or to the account dashboard. Set to `0` to
+# disable the redirect: the success message then stays visible
+# with a link to continue.
+#
+# default: 5
+# overwritten by: PASSWORD_RESET_REDIRECT_TIMEOUT
+password_reset_redirect_timeout = 5
+```
+
+[#1722](https://github.com/sebadob/rauthy/issues/1722)
 
 #### Opt-in Bootstrap Reconcile
 
@@ -74,6 +119,117 @@ reconcile = false
 
 [#1847](https://github.com/sebadob/rauthy/issues/1847)
 
+#### Read-only LDAP Server
+
+Rauthy can now serve apps that can only log in with an LDAP bind, like the Jellyfin LDAP plugin,
+with a minimal, read-only LDAPS server. It is disabled by default and configured in the new
+`[ldap]` section. Each LDAP app is a client with the `password` flow enabled and gets its own
+subtree at `cn=<client_id>,ou=clients,<base_dn>`. User binds run the same checks as the `password`
+grant. See the book chapter *LDAP* for details.
+
+Apps send the binds of all users from a single IP. If the LDAPS port is only reachable for your
+apps, `disable_ip_brute_force_protection` makes user binds skip the per-IP checks, so a few failed
+logins do not block the app's IP for everyone. It is disabled by default.
+
+If a reverse proxy terminates TLS for LDAP as well, `plain_text` serves plain LDAP instead. It
+requires `server.proxy_mode = true`.
+
+Each user who should log in via LDAP needs a PAM username, which is published as their `uid`. PAM
+usernames are always lowercase and therefore unique for the case-insensitive LDAP `uid`. Users
+without one are not part of the directory.
+
+For a confidential client, a user bind only succeeds on a connection that did a successful service
+bind with the client secret before. Public clients accept user binds right away. Each successful
+user bind creates a new `LdapLogin` event:
+
+```toml
+[events]
+# The level for the generated Event after a successful
+# LDAP user bind.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_LDAP_LOGIN
+level_ldap_login = 'info'
+```
+
+```toml
+[ldap]
+# Enables a minimal, read-only LDAPS server for clients that can
+# only log in via an LDAP bind, like the Jellyfin LDAP plugin.
+# Only implicit TLS (LDAPS) is supported, no StartTLS.
+# See the book chapter "LDAP" for the directory layout.
+#
+# default: false
+# overwritten by: LDAP_ENABLE
+enable = false
+
+# The address the LDAPS server listens on.
+#
+# default: '0.0.0.0'
+# overwritten by: LDAP_LISTEN_ADDRESS
+listen_address = '0.0.0.0'
+
+# The port the LDAPS server listens on.
+#
+# default: 6360
+# overwritten by: LDAP_PORT
+port = 6360
+
+# The base DN of the directory. Each client gets its own subtree
+# below it at `cn=<client_id>,ou=clients,<base_dn>`.
+#
+# default: 'dc=rauthy,dc=local'
+# overwritten by: LDAP_BASE_DN
+base_dn = 'dc=rauthy,dc=local'
+
+# TLS certificate and key for the LDAPS server, in PEM format.
+# Both must be set together. If not set, the `[tls]` certificate
+# is used. Set them when Rauthy itself runs plain HTTP behind a
+# reverse proxy that does not terminate TLS for LDAP as well.
+# They are hot-reloaded like the `[tls]` certificate and use
+# `tls.poll_watch_interval` as well.
+#
+# overwritten by: LDAP_TLS_CERT, LDAP_TLS_KEY
+#cert_path = 'tls/ldap.crt'
+#key_path = 'tls/ldap.key'
+
+# Serves plain LDAP without TLS instead of LDAPS, for a reverse
+# proxy that terminates TLS and forwards the raw TCP stream. As a
+# safeguard, this requires `server.proxy_mode = true`. Rauthy
+# then sees the proxy's IP for every LDAP connection, so the
+# per-IP brute-force protection applies to the proxy as a whole.
+# Never expose the plain LDAP port to anything but the proxy.
+#
+# default: false
+# overwritten by: LDAP_PLAIN_TEXT
+plain_text = false
+
+# Disables the per-IP brute-force protection for LDAP user binds:
+# no credential stuffing detection, no per-IP failed login counter
+# and no IP blacklisting because of failed user binds. Apps like
+# Jellyfin send the binds of all users from a single IP, so a few
+# failed logins from different users would otherwise block the
+# app's IP for everyone. The per-user failed login counter and its
+# login delays still apply, and an already blacklisted IP is still
+# refused. Service binds keep the per-IP protection.
+# CAUTION: a client connecting directly to the LDAPS port can then
+# try passwords across many users without an IP limit. Only enable
+# it when the LDAPS port is reachable for your apps only.
+#
+# default: false
+# overwritten by: LDAP_DISABLE_IP_BRUTE_FORCE_PROTECTION
+disable_ip_brute_force_protection = false
+
+# The maximum number of open LDAP connections. Further ones wait
+# until a connection is closed.
+#
+# default: 1000
+# overwritten by: LDAP_MAX_CONNECTIONS
+max_connections = 1000
+```
+
+[#1851](https://github.com/sebadob/rauthy/issues/1851)
+
 #### Externally Provisioned Client Secrets
 
 `PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is
@@ -93,6 +249,11 @@ locations in this case. A click provides a fresh user activation, and the App re
 authorization code. Http(s) redirects are unchanged and remain automatic.
 
 [#1827](https://github.com/sebadob/rauthy/pull/1827)
+
+#### Concurrent User Deletes
+
+When the same user is deleted by two requests at the same time, the one that loses the race now
+gets a `404` instead of succeeding a second time.
 
 ### Bugfix
 

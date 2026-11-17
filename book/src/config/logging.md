@@ -305,6 +305,9 @@ enum EventType {
   LoginNewLocation,
   TokenIssued,
   CredentialStuffing,
+  EmailSendError,
+  ConsentRevoked,
+  LdapLogin,
 }
 ```
 
@@ -495,6 +498,13 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user consent
+# for a client has been revoked, either by the user
+# themselves, by an admin or through an API key.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_REVOKED
+level_consent_revoked = 'notice'
 # The level for the generated Event after a SCIM
 # update task ultimately failed after exceeding
 # all retries.
@@ -514,6 +524,12 @@ level_suspicious_request = 'notice'
 # default: info
 # overwritten by: EVENT_LEVEL_TOKEN_ISSUED
 level_token_issued = 'info'
+# The level for the generated Event after a successful
+# LDAP user bind.
+#
+# default: info
+# overwritten by: EVENT_LEVEL_LDAP_LOGIN
+level_ldap_login = 'info'
 
 # The level for the generated Event after certain
 # amounts of false logins from an IP

@@ -63,6 +63,7 @@ pub enum Cache {
     EmailRateLimit,
     CredStuffDetect,
     OneTimePassword,
+    ConsentContent,
 }
 
 pub struct DB;
@@ -485,4 +486,131 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
             rustls::SignatureScheme::ML_DSA_87,
         ]
     }
+}
+
+/// A fresh schema `<prefix>_..` on `RAUTHY_TEST_PG_URL` with all Postgres migrations, set as the
+/// `search_path` of the returned connection. Drop the returned schema at the end of the test.
+#[cfg(test)]
+pub(crate) async fn pg_test_schema(prefix: &str) -> (PgClient, String) {
+    let (pool, schema) = pg_test_pool(prefix).await;
+    (pg_test_conn(&pool, &schema).await, schema)
+}
+
+/// [`pg_test_schema`] for tests that need more than one connection, see [`pg_test_conn`].
+#[cfg(test)]
+pub(crate) async fn pg_test_pool(prefix: &str) -> (deadpool_postgres::Pool, String) {
+    use deadpool_postgres::{Config, Runtime};
+    use tokio_postgres::NoTls;
+
+    let url = env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let schema = format!("{prefix}_{}_{nanos}", std::process::id());
+    let cfg = Config {
+        url: Some(url),
+        ..Default::default()
+    };
+    let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
+    let mut files = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .map(|p| {
+            let name = p.file_name().unwrap().to_str().unwrap();
+            let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
+            (nr, p)
+        })
+        .collect::<Vec<_>>();
+    files.sort();
+
+    let cl = pool.get().await.unwrap();
+    cl.batch_execute(&format!(
+        "CREATE SCHEMA {schema}; SET search_path TO {schema};"
+    ))
+    .await
+    .unwrap();
+    for (_, path) in files {
+        cl.batch_execute(&std::fs::read_to_string(path).unwrap())
+            .await
+            .unwrap();
+    }
+    (pool, schema)
+}
+
+/// A connection of `pool` with `schema` as its `search_path`.
+#[cfg(test)]
+pub(crate) async fn pg_test_conn(pool: &deadpool_postgres::Pool, schema: &str) -> PgClient {
+    let cl = pool.get().await.unwrap();
+    cl.batch_execute(&format!("SET search_path TO {schema}"))
+        .await
+        .unwrap();
+    cl
+}
+
+/// Starts a single hiqlite node with all migrations for the tests of this crate, once per test
+/// binary, and sets the database type to hiqlite. The node runs on a runtime of its own, so that
+/// it outlives the runtime of the test that started it.
+#[cfg(test)]
+pub(crate) fn init_test_hiqlite() {
+    static INIT: std::sync::Once = std::sync::Once::new();
+
+    INIT.call_once(|| {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            rt.block_on(async move {
+                let _ = rauthy_common::DB_TYPE.set(rauthy_common::DbType::Hiqlite);
+
+                let free_port = || {
+                    std::net::TcpListener::bind("127.0.0.1:0")
+                        .unwrap()
+                        .local_addr()
+                        .unwrap()
+                        .port()
+                };
+                let nanos = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos();
+                let data_dir = env::temp_dir()
+                    .join(format!("rauthy_data_test_{}_{nanos}", std::process::id()))
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+                let config = hiqlite::NodeConfig {
+                    node_id: 1,
+                    nodes: vec![hiqlite::Node {
+                        id: 1,
+                        addr_raft: format!("127.0.0.1:{}", free_port()),
+                        addr_api: format!("127.0.0.1:{}", free_port()),
+                    }],
+                    listen_addr_api: "127.0.0.1".into(),
+                    listen_addr_raft: "127.0.0.1".into(),
+                    data_dir: data_dir.into(),
+                    cache_storage_disk: false,
+                    secret_raft: "test_secret_raft_1234".to_string(),
+                    secret_api: "test_secret_api_12345".to_string(),
+                    enc_keys: cryptr::EncKeys::generate().unwrap(),
+                    ..Default::default()
+                };
+
+                let client = hiqlite::start_node_with_cache::<Cache>(config)
+                    .await
+                    .unwrap();
+                client.wait_until_healthy_db().await;
+                client.migrate::<MigrationsHiqlite>().await.unwrap();
+                let _ = HIQLITE_CLIENT.set(client);
+                tx.send(()).unwrap();
+
+                std::future::pending::<()>().await;
+            });
+        });
+        rx.recv().unwrap();
+    });
 }

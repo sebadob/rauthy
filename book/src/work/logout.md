@@ -135,14 +135,15 @@ token_lifetime = '30s'
 # overwritten by: LOGOUT_TOKEN_ALLOW_CLOCK_SKEW
 allow_clock_skew = '5s'
 
-# The maximum allowed lifetime for Logout Tokens. This value is
+# The maximum allowed age for Logout Tokens. This value is
 # a security check for upstream auth providers. If Rauthy
-# receives a Logout Token, it will check and validate, that the
-# difference between `iat` and `exp` is not greater than
-# `allowed_token_lifetime`. This means Rauthy will reject Logout
-# Tokens from clients with a way too long validity and therefore
-# poor implementations. The RFC states that tokens should be
-# valid for at most 120 seconds.
+# receives a Logout Token, it will reject it when its `iat` is
+# older than `allowed_token_lifetime` plus `allow_clock_skew`.
+# A token whose `iat` lies more than `allow_clock_skew` in the
+# future is rejected as well. The `exp` claim is only checked
+# for expiry, not against this value, so providers issuing
+# tokens with a longer validity keep working. The RFC
+# recommends a validity of at most 120 seconds.
 #
 # type: duration
 # default: '120s'

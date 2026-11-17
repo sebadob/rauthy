@@ -288,6 +288,7 @@
             use_pkce: true,
             name: '',
             client_id: '',
+            client_secret: '',
             client_secret_basic: true,
             client_secret_post: false,
             auto_onboarding: false,

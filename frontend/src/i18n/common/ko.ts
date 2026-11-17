@@ -144,6 +144,21 @@ export const I18nKo: I18n = {
             notAvailable: 'This name is not available.',
             preferredUsername: 'Preferred Username',
         },
+        privacy: {
+            clientId: '클라이언트 ID',
+            connectedApps: '연결된 앱',
+            connectedAppsDesc: '계정 접근에 동의한 애플리케이션입니다.',
+            granted: '허용일',
+            noConnectedApps: '아직 접근 권한을 받은 애플리케이션이 없습니다.',
+            privacy: '개인정보',
+            resource: '리소스',
+            revoke: '접근 권한 취소',
+            revokeDesc:
+                '취소하면 동의가 삭제되고 애플리케이션은 더 이상 접근 권한을 갱신할 수 없습니다. 삭제된 리프레시 토큰과 함께 발급된 액세스 토큰은 userinfo와 인트로스펙션에서 취소됩니다. 토큰을 직접 검증하는 애플리케이션은 만료될 때까지 이를 계속 받아들일 수 있습니다. 애플리케이션은 다시 동의를 요청해야 합니다.',
+            scopes: '스코프',
+            updated: '업데이트',
+            userAgent: '사용자 에이전트',
+        },
         providerLink: '계정 연결',
         providerLinkDesc: `이 계정은 다음 로그인 공급자 중 하나에 연결할 수 있습니다.\n 프로세스를 활성화하면 
             선택한 공급자의 로그인 페이지로 리디렉션이 트리거됩니다. 로그인에 성공하고 이메일 주소가 일치하면 이 
@@ -305,6 +320,7 @@ export const I18nKo: I18n = {
     passwordReset: {
         accountLogin: '계정 로그인',
         badFormat: '잘못된 형식',
+        continueSignIn: '로그인으로 계속',
         fidoLink: 'https://fidoalliance.org/fido2/?lang=ko',
         generate: '생성',
         newAccDesc1: `계정 종류는 비밀번호가 없는 계정 또는 기존의 비밀번호가 있는 계정 중 하나를 선택할 수 
@@ -321,7 +337,7 @@ export const I18nKo: I18n = {
         required: '필수',
         save: '저장',
         success1: '비밀번호가 성공적으로 변경되었습니다.',
-        success2: '곧 리다이렉트됩니다.',
+        success2: '{{ secs }}초 후에 리다이렉트됩니다.',
         success3: '만약 리다이렉트가 되지 않으면, 여기를 클릭해 주세요:',
         successPasskey1: '새로운 패스키가 성공적으로 등록되었습니다.',
         successPasskey2: `계정에 로그인하여 가능한 한 빨리 두 번째 백업 키를 등록해 주세요.\n패스키 전용 계정은 

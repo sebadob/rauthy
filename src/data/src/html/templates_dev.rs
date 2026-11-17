@@ -158,6 +158,10 @@ impl HtmlTemplate {
                     magic_link_id: ml.id.clone(),
                     needs_mfa: user.has_webauthn_enabled(),
                     password_policy: PasswordPolicyResponse::from(password_policy),
+                    redirect_timeout: RauthyConfig::get()
+                        .vars
+                        .user_values
+                        .password_reset_redirect_timeout,
                     user_id: user.id,
                 };
 

@@ -153,6 +153,22 @@ export const I18nEs: I18n = {
             notAvailable: 'Este nombre no está disponible.',
             preferredUsername: 'Nombre de usuario preferido',
         },
+        privacy: {
+            clientId: 'Client ID',
+            connectedApps: 'Aplicaciones conectadas',
+            connectedAppsDesc:
+                'Aplicaciones a las que ha dado su consentimiento para acceder a su cuenta.',
+            granted: 'Concedido',
+            noConnectedApps: 'Todavía no se ha concedido acceso a ninguna aplicación.',
+            privacy: 'Privacidad',
+            resource: 'Recurso',
+            revoke: 'Revocar acceso',
+            revokeDesc:
+                'La revocación elimina el consentimiento y la aplicación ya no puede renovar su acceso. Los Access Tokens emitidos con los Refresh Tokens eliminados se revocan en userinfo e introspection. Las aplicaciones que validan sus tokens por sí mismas pueden seguir aceptándolos hasta que caduquen. La aplicación tendrá que volver a pedir su consentimiento.',
+            scopes: 'Scopes',
+            updated: 'Actualizado',
+            userAgent: 'Agente de usuario',
+        },
         providerLink: 'Federar cuenta',
         providerLinkDesc: `Puede vincular esta cuenta a uno de los siguientes proveedores de inicio de
             sesión.\nDespués de activar esta función, se le redirigirá a la página de inicio de sesión
@@ -321,6 +337,7 @@ export const I18nEs: I18n = {
     passwordReset: {
         accountLogin: 'Inicio de sesión en la cuenta',
         badFormat: 'Formato no válido',
+        continueSignIn: 'Continuar al inicio de sesión',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generar',
         newAccDesc1:
@@ -338,7 +355,7 @@ export const I18nEs: I18n = {
         required: 'Obligatorio',
         save: 'Guardar',
         success1: 'La contraseña se ha actualizado correctamente.',
-        success2: 'Se le redirigirá en unos instantes.',
+        success2: 'Se le redirigirá en {{ secs }} segundos.',
         success3: 'Si no se le redirige, haga clic aquí:',
         successPasskey1: 'Su nueva Passkey se ha registrado correctamente.',
         successPasskey2: `Inicie sesión en su cuenta y registre una segunda clave de respaldo\nlo antes

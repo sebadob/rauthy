@@ -156,6 +156,22 @@ export const I18nDe: I18n = {
             notAvailable: 'Dieser Name ist nicht verfügbar.',
             preferredUsername: 'Bevorzugter Benutzername',
         },
+        privacy: {
+            clientId: 'Client ID',
+            connectedApps: 'Verbundene Apps',
+            connectedAppsDesc:
+                'Anwendungen, denen Sie den Zugriff auf Ihren Account erlaubt haben.',
+            granted: 'Erteilt',
+            noConnectedApps: 'Bisher wurde keiner Anwendung Zugriff gewährt.',
+            privacy: 'Datenschutz',
+            resource: 'Ressource',
+            revoke: 'Zugriff widerrufen',
+            revokeDesc:
+                'Der Widerruf entfernt die Zustimmung und die Anwendung kann ihren Zugriff nicht mehr erneuern. Access Tokens, die mit den gelöschten Refresh Tokens ausgestellt wurden, werden bei Userinfo und Introspection widerrufen. Anwendungen, die ihre Tokens selbst validieren, können sie bis zu ihrem Ablauf weiterhin akzeptieren. Die Anwendung muss erneut um Ihre Zustimmung bitten.',
+            scopes: 'Scopes',
+            updated: 'Aktualisiert',
+            userAgent: 'User Agent',
+        },
         providerLink: 'Account Verbinden',
         providerLinkDesc: `Dieser Account kann mit einem der folgenden Login Provider\nverbunden 
             werden. Nach der Aktivierung des Prozesses wird eine Weiterleitung auf die Login Seite\n
@@ -324,6 +340,7 @@ export const I18nDe: I18n = {
     passwordReset: {
         accountLogin: 'Account Login',
         badFormat: 'Ungültiges Format',
+        continueSignIn: 'Weiter zur Anmeldung',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generieren',
         newAccDesc1: `Sie haben die Option zwischen zwei Account Typen zu wählen: Passwortlos 
@@ -342,7 +359,7 @@ export const I18nDe: I18n = {
         required: 'Notwendig',
         save: 'Speichern',
         success1: 'Das Passwort wurde erfolgreich zurückgesetzt.',
-        success2: 'Sie werden in Kürze weitergeleitet.',
+        success2: 'Sie werden in {{ secs }} Sekunden weitergeleitet.',
         success3: 'Sollte Sie nicht weitergeleitet werden, klicken Sie bitte hier:',
         successPasskey1: 'Der neue Passkey wurde erfolgreich registriert.',
         successPasskey2: `Bitte loggen Sie sich direkt in Ihren Account ein und registrieren\nSie 
