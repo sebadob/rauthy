@@ -25,10 +25,10 @@ impl FailedBackchannelLogout {
         let sid = sid.unwrap_or_default();
 
         let sql = r#"
-INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
+INSERT INTO failed_backchannel_logouts AS f (client_id, sub, sid, retry_count)
 VALUES ($1, $2, $3, 0)
 ON CONFLICT (client_id, sub, sid)
-DO UPDATE SET retry_count = retry_count + 1"#;
+DO UPDATE SET retry_count = f.retry_count + 1"#;
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(client_id, sub, sid)).await?;

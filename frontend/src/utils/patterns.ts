@@ -21,7 +21,7 @@ export const PATTERN_CLIENT_URI =
     "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[\\/?][a-zA-Z0-9.:\\/_\\-&?=~!$'\\(\\)*+%@]*)?$";
 // export const PATTERN_DATE_STR = '[0-9]{4}\\-[0-9]{2}-[0-9]{2}$';
 // export const PATTERN_CODE_CHALLENGE = '^[a-zA-Z0-9\\-._~]{43,128}$';
-export const PATTERN_CONTACT = '^[a-zA-Z0-9\\+.@\\/:-]{0,48}$';
+export const PATTERN_CONTACT = '^[a-zA-Z0-9+.@\\/:\\-]{0,48}$';
 export const PATTERN_CSS_VALUE_LOOSE = '^[a-z0-9\\-,.#\\(\\)%\\/\\s]+$';
 // export const PATTERN_FLOW = '^(authorization_code|client_credentials|password|refresh_token)$';
 export const PATTERN_GROUP = '^[a-zA-Z0-9\\-_\\/,:*\\p{Zs}]{2,64}$';
@@ -40,4 +40,9 @@ export const PATTERN_URI = "^[a-zA-Z0-9,.:\\/_\\-&?=~#!$'\\(\\)*+%@]*$";
 // Like PATTERN_URI but without `#`: an RFC 8707 resource indicator must be an absolute URI
 // without a fragment (RFC 8707 §2). Matches the backend `RE_RESOURCE`.
 export const PATTERN_RESOURCE = "^[a-zA-Z0-9,.:\\/_\\-&?=~!$'\\(\\)*+%@]*$";
+// A client consent source URL, mirrors the backend `validate_consent_source_url`: like
+// PATTERN_RESOURCE, but https only, no userinfo (`@` before the first `/` or `?`) and no `lang`
+// query key, which Rauthy appends on each fetch. Use it together with `maxLength=1024`.
+export const PATTERN_CONSENT_URL =
+    "^(?![^?]*\\?(?:[^&]*&)*lang(?:[=&]|$))https:\\/\\/[a-zA-Z0-9,.:_\\-&=~!$'\\(\\)*+%]+(?:[\\/?][a-zA-Z0-9,.:\\/_\\-&?=~!$'\\(\\)*+%@]*)?$";
 export const PATTERN_USER_NAME = "^[\\p{L}\\p{M}\\p{N}\\p{Zs}'.\\-]{1,32}$";

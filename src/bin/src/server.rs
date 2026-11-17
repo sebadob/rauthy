@@ -34,6 +34,7 @@ use std::cmp::max;
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
@@ -152,6 +153,9 @@ pub async fn run(
     DB::hql().clear_cache(Cache::Html).await?;
     // whole App cache to make sure config changes are always updated
     DB::hql().clear_cache(Cache::App).await?;
+    // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
+    // anymore. They are rebuilt from their document on the next request.
+    DB::hql().clear_cache(Cache::ClientEphemeral).await?;
 
     #[cfg(debug_assertions)]
     {
@@ -159,7 +163,6 @@ pub async fn run(
         DB::hql().clear_cache(Cache::DeviceCode).await?;
         DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
         DB::hql().clear_cache(Cache::ClientDynamic).await?;
-        DB::hql().clear_cache(Cache::ClientEphemeral).await?;
         DB::hql().clear_cache(Cache::ClientSecret).await?;
         DB::hql().clear_cache(Cache::DPoPNonce).await?;
         DB::hql().clear_cache(Cache::JwksRemote).await?;
@@ -172,6 +175,7 @@ pub async fn run(
         DB::hql().clear_cache(Cache::User).await?;
         DB::hql().clear_cache(Cache::Webauthn).await?;
         DB::hql().clear_cache(Cache::PAM).await?;
+        DB::hql().clear_cache(Cache::ConsentContent).await?;
     }
 
     {
@@ -192,6 +196,18 @@ pub async fn run(
     }
 
     rauthy_schedulers::spawn();
+
+    if RauthyConfig::get().vars.ldap.enable {
+        let ldap = &RauthyConfig::get().vars.ldap;
+        let tls = match (&ldap.key_path, &ldap.cert_path) {
+            _ if ldap.plain_text => None,
+            (Some(key), Some(cert)) => {
+                Some(tls::load_server_config(key.clone(), cert.clone()).await)
+            }
+            _ => Some(tls::load_tls().await),
+        };
+        tokio::spawn(rauthy_ldap::run(tls.map(Arc::new)));
+    }
 
     if RauthyConfig::get().vars.server.metrics_enable {
         server_with_metrics().await?;

@@ -470,6 +470,7 @@ impl UserConsent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database::pg_test_conn;
     use pretty_assertions::assert_eq;
     use tokio_postgres::types::ToSql;
 
@@ -1018,45 +1019,8 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
     /// the device refresh token `rtd_src`, and a legacy refresh token of u1. u2 has the device d3
     /// of c1 with the device refresh token `rtd_u2_d3`.
     async fn pg_race_setup() -> (deadpool_postgres::Pool, String) {
-        use deadpool_postgres::{Config, Runtime};
-        use tokio_postgres::NoTls;
-
-        let url = std::env::var("RAUTHY_TEST_PG_URL").expect("RAUTHY_TEST_PG_URL is not set");
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let schema = format!("uc_race_{}_{nanos}", std::process::id());
-        let cfg = Config {
-            url: Some(url),
-            ..Default::default()
-        };
-        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
-
-        let dir =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/postgres");
-        let mut files = std::fs::read_dir(dir)
-            .unwrap()
-            .map(|e| e.unwrap().path())
-            .map(|p| {
-                let name = p.file_name().unwrap().to_str().unwrap();
-                let nr: u32 = name[1..].split("__").next().unwrap().parse().unwrap();
-                (nr, p)
-            })
-            .collect::<Vec<_>>();
-        files.sort();
-
-        let cl = pool.get().await.unwrap();
-        cl.batch_execute(&format!(
-            "CREATE SCHEMA {schema}; SET search_path TO {schema};"
-        ))
-        .await
-        .unwrap();
-        for (_, path) in files {
-            cl.batch_execute(&std::fs::read_to_string(path).unwrap())
-                .await
-                .unwrap();
-        }
+        let (pool, schema) = crate::database::pg_test_pool("uc_race").await;
+        let cl = pg_test_conn(&pool, &schema).await;
         cl.batch_execute(
             r#"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
@@ -1085,14 +1049,6 @@ VALUES ('u1', 'c1', '', 'openid', 'hash', 1, 1, '127.0.0.1');
         .await
         .unwrap();
         (pool, schema)
-    }
-
-    async fn pg_conn(pool: &deadpool_postgres::Pool, schema: &str) -> deadpool_postgres::Object {
-        let cl = pool.get().await.unwrap();
-        cl.batch_execute(&format!("SET search_path TO {schema}"))
-            .await
-            .unwrap();
-        cl
     }
 
     /// Waits until `task` finished, or the backend `pid` waits for a lock.
@@ -1199,9 +1155,9 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
     /// of c1, and before it commits.
     async fn pg_rotation_race(source_delete: &'static str) {
         let (pool, schema) = pg_race_setup().await;
-        let mut revoker = pg_conn(&pool, &schema).await;
-        let refresher = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut revoker = pg_test_conn(&pool, &schema).await;
+        let refresher = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         let pid: i32 = refresher
             .query_one("SELECT pg_backend_pid()", &[])
             .await
@@ -1277,10 +1233,10 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_revoke_same_client_refresh_race_postgres() {
         let (pool, schema) = pg_race_setup().await;
-        let mut revoker = pg_conn(&pool, &schema).await;
-        let mut holder = pg_conn(&pool, &schema).await;
-        let refresher = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut revoker = pg_test_conn(&pool, &schema).await;
+        let mut holder = pg_test_conn(&pool, &schema).await;
+        let refresher = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         // `rt_block` first, so that the revoke reaches it before `rt_src`
         monitor
             .batch_execute(
@@ -1376,7 +1332,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_block', 'u1', 2), ('j_r
     async fn test_revoke_list_postgres() {
         for drop_legacy in [false, true] {
             let (pool, schema) = pg_race_setup().await;
-            let mut cl = pg_conn(&pool, &schema).await;
+            let mut cl = pg_test_conn(&pool, &schema).await;
             cl.batch_execute(&format!(
                 r#"
 DELETE FROM user_consents;
@@ -1571,9 +1527,9 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
         let case =
             format!("first: {first:?}, second: {second:?}, dropped: {dropped}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first_cl = pg_conn(&pool, &schema).await;
-        let mut second_cl = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first_cl = pg_test_conn(&pool, &schema).await;
+        let mut second_cl = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         // `rt_legacy` after `rt_c1`, so that a single delete of all refresh tokens of u1 takes
         // `rt_c1` first, in the opposite order of the revoke and `Client::delete`
         monitor
@@ -1712,9 +1668,9 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             delete_first: {delete_first}, split: {split}"
         );
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         first
             .batch_execute(
                 r#"
@@ -1873,9 +1829,9 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
     ) {
         let case = format!("id: {id}, discard_first: {discard_first}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         monitor.execute(INSERT_RT_NEW, &[]).await.unwrap();
         let pid: i32 = second
             .query_one("SELECT pg_backend_pid()", &[])
@@ -1998,9 +1954,9 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         let case =
             format!("side: {side:?}, id: {id}, discard_first: {discard_first}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         monitor
             .batch_execute(
                 r#"
@@ -2124,9 +2080,9 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
 
         let case = format!("device: {device}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         let pid: i32 = second
             .query_one("SELECT pg_backend_pid()", &[])
             .await
@@ -2219,9 +2175,9 @@ VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"#
 
         let case = format!("split: {split}");
         let (pool, schema) = pg_race_setup().await;
-        let mut first = pg_conn(&pool, &schema).await;
-        let mut second = pg_conn(&pool, &schema).await;
-        let monitor = pg_conn(&pool, &schema).await;
+        let mut first = pg_test_conn(&pool, &schema).await;
+        let mut second = pg_test_conn(&pool, &schema).await;
+        let monitor = pg_test_conn(&pool, &schema).await;
         monitor
             .batch_execute("UPDATE users SET picture_id = 'p1' WHERE id = 'u1'")
             .await

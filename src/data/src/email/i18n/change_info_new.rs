@@ -14,6 +14,7 @@ pub struct I18nEmailChangeInfoNew<'a> {
 impl I18nEmailChangeInfoNew<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
@@ -31,6 +32,17 @@ impl I18nEmailChangeInfoNew<'_> {
 }
 
 impl I18nEmailChangeInfoNew<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Žádost o změnu e-mailu",
+            header: "Žádost o změnu e-mailu –",
+            click_link: "Kliknutím na odkaz níže potvrdíte svou e-mailovou adresu.",
+            validity: "Z bezpečnostních důvodů platí odkaz jen krátkou dobu.",
+            expires: "Odkaz platí do:",
+            button_text: "Potvrdit e-mail",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "E-Mail Wechsel Anfrage",

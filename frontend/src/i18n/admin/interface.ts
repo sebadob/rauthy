@@ -55,6 +55,11 @@ export interface I18nAdmin {
         confidential: string;
         confidentialNoSecret: string;
         config: string;
+        consent: {
+            builtIn: string;
+            desc: string;
+            source: string;
+        };
         delete1: string;
         descAuthCode: string;
         descClientUri: string;

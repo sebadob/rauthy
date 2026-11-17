@@ -23,6 +23,7 @@ export const EVENT_TYPES = [
     'IpBlacklisted',
     'IpBlacklistRemoved',
     'JwksRotated',
+    'LdapLogin',
     'LoginNewLocation',
     'NewUserRegistered',
     'NewRauthyAdmin',

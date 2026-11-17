@@ -76,6 +76,7 @@ async fn admin_update_client(
         allowed_resources: c.allowed_resources,
         default_aud: c.default_aud,
         scim: c.scim,
+        consent: c.consent,
     };
     modify(&mut req);
 
