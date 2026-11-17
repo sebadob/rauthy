@@ -34,8 +34,8 @@ pub fn refresh_consent_check(consent_exempt: bool, has_did: bool) -> ConsentChec
     }
 }
 
-/// Whether a refresh is checked against the user's consent grant.
-fn needs_check(enable: bool, consent: ConsentCheck) -> bool {
+/// Whether a token is checked against the user's consent grant.
+pub(crate) fn needs_check(enable: bool, consent: ConsentCheck) -> bool {
     enable && consent == ConsentCheck::Required
 }
 
@@ -52,13 +52,32 @@ pub async fn check_code_exchange(
     client_id: &str,
     resource: Option<&str>,
 ) -> Result<(), ErrorResponse> {
-    if !RauthyConfig::get().vars.consent.enable {
+    check_code_exchange_with(
+        RauthyConfig::get().vars.consent.enable,
+        user_id,
+        client_id,
+        || UserConsent::find(user_id, client_id, grant_resource(resource)),
+    )
+    .await
+}
+
+/// [`check_code_exchange`] with `consent.enable` and the grant lookup passed in.
+async fn check_code_exchange_with<F, Fut>(
+    enable: bool,
+    user_id: &str,
+    client_id: &str,
+    find: F,
+) -> Result<(), ErrorResponse>
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Result<Option<UserConsent>, ErrorResponse>>,
+{
+    if !enable {
         return Ok(());
     }
 
-    let grant = UserConsent::find(user_id, client_id, grant_resource(resource)).await?;
-    if grant.is_none() {
-        warn!("no consent grant for the authorization code");
+    if find().await?.is_none() {
+        warn!(user_id, client_id, "no consent grant for the client");
         return Err(invalid_grant("no consent grant for this client"));
     }
     Ok(())
@@ -99,10 +118,10 @@ impl RefreshGrant {
     /// the refresh was made with and revokes its access token, in one transaction
     /// (`RefreshToken::discard`, `RefreshTokenDevice::discard`, in the order `PG_DISCARD_STEPS`
     /// and `DiscardSql::hql` give per database), and the refresh fails with
-    /// `invalid_grant`. If that fails, nothing is gone and the error is returned: the next
-    /// refresh with the token finds the grant still missing and discards it again. A missing grant is
-    /// permanent for that token: it may have escaped a revocation, and must not come back once
-    /// the user consents again.
+    /// `invalid_grant`. The token may have escaped a revocation, and must not come back once the
+    /// user consents again. If the discard fails, nothing is gone and the error is returned: the
+    /// next refresh with the token discards it again, but only while the grant is still missing.
+    /// Device refresh tokens are always `ConsentCheck::Exempt`, so they are never discarded here.
     pub async fn require<F, Fut>(
         grant: Option<Self>,
         discard_source: F,
@@ -280,6 +299,42 @@ mod tests {
 
         // a failed delete is reported instead of `invalid_grant`
         let err = RefreshGrant::require(None, || async {
+            Err(ErrorResponse::new(ErrorResponseType::Database, "down"))
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Database);
+    }
+
+    #[tokio::test]
+    async fn test_check_code_exchange() {
+        let lookups = RefCell::new(0);
+        let find = |found: Option<UserConsent>| {
+            *lookups.borrow_mut() += 1;
+            async { Ok(found) }
+        };
+
+        // no grant -> `invalid_grant`
+        let err = check_code_exchange_with(true, "u1", "c1", || find(None))
+            .await
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::InvalidGrant);
+        assert_eq!(*lookups.borrow(), 1);
+
+        // with a grant
+        check_code_exchange_with(true, "u1", "c1", || find(Some(grant("openid"))))
+            .await
+            .unwrap();
+        assert_eq!(*lookups.borrow(), 2);
+
+        // `consent.enable` off -> no lookup at all
+        check_code_exchange_with(false, "u1", "c1", || find(None))
+            .await
+            .unwrap();
+        assert_eq!(*lookups.borrow(), 2);
+
+        // a lookup error is returned as is
+        let err = check_code_exchange_with(true, "u1", "c1", || async {
             Err(ErrorResponse::new(ErrorResponseType::Database, "down"))
         })
         .await
