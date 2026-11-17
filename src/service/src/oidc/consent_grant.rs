@@ -116,7 +116,7 @@ impl RefreshGrant {
 
     /// The grant from [`Self::lookup`]. Without one, `discard_source` deletes the refresh token
     /// the refresh was made with and revokes its access token, in one transaction
-    /// (`RefreshToken::discard`, `RefreshTokenDevice::discard`, in the order `PG_DISCARD_STEPS`
+    /// (`RefreshToken::discard`, in the order `PG_DISCARD_STEPS`
     /// and `DiscardSql::hql` give per database), and the refresh fails with
     /// `invalid_grant`. The token may have escaped a revocation, and must not come back once the
     /// user consents again. If the discard fails, nothing is gone and the error is returned: the

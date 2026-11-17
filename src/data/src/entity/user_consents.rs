@@ -1775,7 +1775,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             .unwrap();
     }
 
-    /// The refresh tokens `RefreshToken::discard` and `RefreshTokenDevice::discard` drop in
+    /// The refresh tokens the discard statements of both tables drop in
     /// [`test_discard_revoke_race_postgres`]: the replacement `rt_new` for c1, and the device
     /// refresh token `rtd_src` of c1.
     const DISCARD_RACE_TOKENS: [(bool, &str); 2] = [(false, "rt_new"), (true, "rtd_src")];

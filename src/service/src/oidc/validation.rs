@@ -186,21 +186,14 @@ pub async fn validate_and_refresh_token(
 
     if let RotationSource::Device(_, device_id) = &source {
         let device = require_device(DeviceEntity::find(device_id).await, || {
-            source.delete_after(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid refresh token",
-            ))
+            source.delete_after(invalid_refresh_token())
         })
         .await?;
         if !device.is_for_client(&client) {
-            // cascades to the device's refresh tokens
-            if let Err(err) = DeviceEntity::invalidate(device_id).await {
-                error!(?err, "deleting device authorized for a deleted client");
-            }
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid refresh token",
-            ));
+            return Err(invalidate_device(DeviceEntity::invalidate(device_id), || {
+                source.delete_after(invalid_refresh_token())
+            })
+            .await);
         }
     }
 
@@ -210,10 +203,10 @@ pub async fn validate_and_refresh_token(
     };
 
     let consent = claims_consent_check(&claims);
-    // after the refresh token row checks and before the rotation. A missing grant is permanent
-    // for this token like the failed row checks above, so the source is deleted and its access
-    // token revoked: it may have escaped a revocation and must not come back once the user
-    // consents again. A failed lookup keeps it.
+    // after the refresh token row checks and before the rotation. Without the grant, the source
+    // is deleted and its access token revoked: it may have escaped a revocation and must not
+    // come back once the user consents again. A failed lookup keeps it. A device source is
+    // always exempt, so it is never discarded here.
     let grant = RefreshGrant::lookup(consent, &client, &user.id, claims.resource).await?;
     let grant = RefreshGrant::require(grant, || source.discard()).await?;
     let rt_scope = grant.scope(rt_scope, &client.get_default_scopes())?;
@@ -357,6 +350,28 @@ where
     }
 }
 
+fn invalid_refresh_token() -> ErrorResponse {
+    ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid refresh token")
+}
+
+/// The device of a device refresh token is authorized for a deleted client: `invalidate` deletes
+/// the device, which cascades to its refresh tokens. If that fails, `delete_source` still deletes
+/// the refresh token the refresh was made with. Returns the error to answer with.
+async fn invalidate_device<I, D, Fut>(invalidate: I, delete_source: D) -> ErrorResponse
+where
+    I: Future<Output = Result<(), ErrorResponse>>,
+    D: FnOnce() -> Fut,
+    Fut: Future<Output = ErrorResponse>,
+{
+    match invalidate.await {
+        Ok(()) => invalid_refresh_token(),
+        Err(err) => {
+            error!(?err, "deleting device authorized for a deleted client");
+            delete_source().await
+        }
+    }
+}
+
 /// Awaits `delete` and returns `err`, the cause of the failed refresh. A failed `delete` is
 /// logged, it must not mask `err`.
 async fn delete_after<D>(delete: D, err: ErrorResponse) -> ErrorResponse
@@ -372,34 +387,19 @@ where
     err
 }
 
-/// How a rotation ends, from the refresh token of the new token set.
-#[derive(Debug, PartialEq)]
-enum RotationEnd<'a> {
-    /// The validation id of the replacement refresh token
-    Replace(&'a str),
-    /// No replacement: the source is consumed
-    Consume,
-}
-
-/// `replacement` is the refresh token of the new token set. Only a device token can be rotated
-/// without a replacement.
-fn rotation_end(device: bool, replacement: Option<&str>) -> Result<RotationEnd<'_>, ErrorResponse> {
-    match replacement {
-        Some(replacement) => replacement
-            .len()
-            .checked_sub(REFRESH_TOKEN_VALIDATION_LEN)
-            .and_then(|start| replacement.get(start..))
-            .map(RotationEnd::Replace)
-            .ok_or_else(|| {
-                ErrorResponse::new(ErrorResponseType::Internal, "Invalid rotated refresh token")
-            }),
-        // nothing to fence: the device token is consumed, as before without a replacement
-        None if device => Ok(RotationEnd::Consume),
-        None => Err(ErrorResponse::new(
-            ErrorResponseType::Internal,
-            "Missing rotated refresh token",
-        )),
-    }
+/// The validation id of `replacement`, the refresh token of the new token set, if there is one.
+fn rotation_end(replacement: Option<&str>) -> Result<Option<&str>, ErrorResponse> {
+    let Some(replacement) = replacement else {
+        return Ok(None);
+    };
+    replacement
+        .len()
+        .checked_sub(REFRESH_TOKEN_VALIDATION_LEN)
+        .and_then(|start| replacement.get(start..))
+        .map(Some)
+        .ok_or_else(|| {
+            ErrorResponse::new(ErrorResponseType::Internal, "Invalid rotated refresh token")
+        })
 }
 
 /// The refresh token a refresh is made with. It is kept until its replacement exists, so that a
@@ -438,29 +438,33 @@ impl RotationSource<'_> {
         delete_after(self.delete(), err).await
     }
 
-    /// Deletes the source for good and revokes the access token issued with it, in one
+    /// Deletes a `Token` source for good and revokes the access token issued with it, in one
     /// transaction, see [`RefreshToken::discard`]: on Postgres the row is deleted first and the
     /// access token it named revoked after (`PG_DISCARD_STEPS`), on hiqlite the access token is
-    /// revoked while the row still names it, then the row deleted.
+    /// revoked while the row still names it, then the row deleted. A `Device` source is always
+    /// `ConsentCheck::Exempt` and never discarded.
     async fn discard(&self) -> Result<(), ErrorResponse> {
         match self {
             Self::Token(rt) => RefreshToken::discard(&rt.id).await,
-            Self::Device(rt, _) => RefreshTokenDevice::discard(&rt.id).await,
+            Self::Device(..) => Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "a device refresh token is never discarded",
+            )),
         }
     }
 
-    /// `replacement` is the refresh token of the new token set.
+    /// `replacement` is the refresh token of the new token set. Only a device token can be
+    /// rotated without a replacement.
     async fn finish_rotation(&self, replacement: Option<&str>) -> Result<(), ErrorResponse> {
-        let end = rotation_end(matches!(self, Self::Device(..)), replacement)?;
-        match (self, end) {
-            (Self::Token(rt), RotationEnd::Replace(id)) => rt.finish_rotation(id).await,
-            (Self::Device(rt, _), RotationEnd::Replace(id)) => rt.finish_rotation(id).await,
-            (Self::Device(rt, _), RotationEnd::Consume) => rt.delete_checked().await,
-            // `rotation_end` never consumes a `Token`
-            (Self::Token(_), RotationEnd::Consume) => Err(ErrorResponse::new(
+        match (self, rotation_end(replacement)?) {
+            (Self::Token(rt), Some(id)) => rt.finish_rotation(id).await,
+            (Self::Token(_), None) => Err(ErrorResponse::new(
                 ErrorResponseType::Internal,
                 "Missing rotated refresh token",
             )),
+            (Self::Device(rt, _), Some(id)) => rt.finish_rotation(id).await,
+            // nothing to fence: the device token is consumed, as before without a replacement
+            (Self::Device(rt, _), None) => rt.delete_checked().await,
         }
     }
 }
@@ -620,24 +624,36 @@ mod tests {
         let id = "v".repeat(REFRESH_TOKEN_VALIDATION_LEN);
         let token = format!("{pad}{id}");
 
-        // device arms: replaced like a regular token, or consumed without a replacement
-        assert_eq!(
-            rotation_end(true, Some(&token)).unwrap(),
-            RotationEnd::Replace(&id)
-        );
-        assert_eq!(rotation_end(true, None).unwrap(), RotationEnd::Consume);
-        // token arms: a replacement is required
-        assert_eq!(
-            rotation_end(false, Some(&token)).unwrap(),
-            RotationEnd::Replace(&id)
-        );
-        let e = rotation_end(false, None).unwrap_err();
-        assert_eq!(e.error, ErrorResponseType::Internal);
+        assert_eq!(rotation_end(Some(&token)).unwrap(), Some(id.as_str()));
+        assert_eq!(rotation_end(None).unwrap(), None);
         // a replacement shorter than its validation id
-        for device in [true, false] {
-            let e = rotation_end(device, Some("short")).unwrap_err();
-            assert_eq!(e.error, ErrorResponseType::Internal);
-        }
+        let e = rotation_end(Some("short")).unwrap_err();
+        assert_eq!(e.error, ErrorResponseType::Internal);
+    }
+
+    /// A failed device invalidation still deletes the source refresh token.
+    #[tokio::test]
+    async fn test_invalidate_device() {
+        let deleted = Cell::new(0);
+        let delete_source = || {
+            deleted.set(deleted.get() + 1);
+            async { err(ErrorResponseType::Unauthorized) }
+        };
+        let e = invalidate_device(async { Ok(()) }, delete_source).await;
+        assert_eq!(e.error, ErrorResponseType::Unauthorized);
+        assert_eq!(deleted.get(), 0, "the invalidation took the source with it");
+
+        let delete_source = || {
+            deleted.set(deleted.get() + 1);
+            async { err(ErrorResponseType::Unauthorized) }
+        };
+        let e = invalidate_device(
+            async { Err(err(ErrorResponseType::Database)) },
+            delete_source,
+        )
+        .await;
+        assert_eq!(e.error, ErrorResponseType::Unauthorized);
+        assert_eq!(deleted.get(), 1);
     }
 
     /// A device refresh token is exempt from the consent check: issued with `consent_exempt`,

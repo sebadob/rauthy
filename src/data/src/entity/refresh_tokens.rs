@@ -31,9 +31,8 @@ WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)"#,
     pg_delete: "DELETE FROM refresh_tokens WHERE id = $1 RETURNING access_token_jti",
 };
 
-/// The statements that discard a refresh token of one table: [`SQL_RT_DISCARD`], or
-/// [`SQL_RTD_DISCARD`](crate::entity::refresh_tokens_devices::SQL_RTD_DISCARD). All of them are
-/// idempotent.
+/// The statements that discard a refresh token of one table, like [`SQL_RT_DISCARD`]. All of
+/// them are idempotent.
 pub(crate) struct DiscardSql {
     /// hiqlite, in order: revokes the access token while the row still names it, then deletes
     /// the row. hiqlite's `txn` returns only the number of affected rows of each statement, not
@@ -459,7 +458,7 @@ pub(crate) enum PgDiscardStep {
 /// (`DeviceEntity::delete_refresh_tokens`, `DeviceEntity::invalidate`, and of
 /// `RefreshTokenDevice` `delete`, `delete_checked`, `invalidate_all`,
 /// `invalidate_all_for_user` and `invalidate_with_refresh_tokens_for_user`), the FK cascade and
-/// the expiry cleanup. `RefreshTokenDevice::discard` revokes like this discard does.
+/// the expiry cleanup.
 pub(crate) const PG_DISCARD_STEPS: [PgDiscardStep; 2] =
     [PgDiscardStep::Delete, PgDiscardStep::RevokeAccessToken];
 
@@ -923,9 +922,8 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
             .unwrap();
     }
 
-    /// `pg_discard_txn`, the Postgres path of `RefreshToken::discard` and
-    /// `RefreshTokenDevice::discard`, with a revoke that fails after the delete: both roll back
-    /// together.
+    /// `pg_discard_txn`, the Postgres path of `RefreshToken::discard`, for both tables, with a
+    /// revoke that fails after the delete: both roll back together.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_discard_atomic_postgres() {
