@@ -200,21 +200,6 @@ impl RefreshTokenDevice {
         Ok(())
     }
 
-    /// Finds and delete the refresh token in an atomic operation.
-    pub async fn find_delete(id: &str) -> Result<Self, ErrorResponse> {
-        let sql = "DELETE FROM refresh_tokens_devices WHERE id = $1 RETURNING *";
-
-        let slf = if is_hiqlite() {
-            DB::hql()
-                .execute_returning_map_one(sql, params!(id))
-                .await?
-        } else {
-            DB::pg_query_one(sql, &[&id]).await?
-        };
-
-        Ok(slf)
-    }
-
     pub async fn find_opt(id: &str) -> Result<Option<Self>, ErrorResponse> {
         let sql = "SELECT * FROM refresh_tokens_devices WHERE id = $1";
 

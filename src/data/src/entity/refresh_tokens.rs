@@ -457,7 +457,7 @@ pub(crate) enum PgDiscardStep {
 /// [`RefreshToken::invalidate_for_user`], [`RefreshToken::delete_by_sid`],
 /// [`RefreshToken::delete_by_user_client`], the device deletes
 /// (`DeviceEntity::delete_refresh_tokens`, `DeviceEntity::invalidate`, and of
-/// `RefreshTokenDevice` `delete`, `delete_checked`, `find_delete`, `invalidate_all`,
+/// `RefreshTokenDevice` `delete`, `delete_checked`, `invalidate_all`,
 /// `invalidate_all_for_user` and `invalidate_with_refresh_tokens_for_user`), the FK cascade and
 /// the expiry cleanup. `RefreshTokenDevice::discard` revokes like this discard does.
 pub(crate) const PG_DISCARD_STEPS: [PgDiscardStep; 2] =
