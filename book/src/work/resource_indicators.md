@@ -84,6 +84,48 @@ good reason. It can lead to an easy privilege escalation, because an ephemeral c
 mint tokens for an arbitrary audience.
 ```
 
+### Consent sources
+
+With `consent.enable`, a consent source is resolved per client and `resource`. This is not active
+yet, it is used once the consent screen lands. A `[[consent.sources]]` entry for the requested
+`resource` wins, then the client's own consent source from the Admin UI, then the built-in `local`
+one:
+
+```toml
+[consent]
+enable = true
+
+[[consent.sources]]
+resource = 'https://api.example.com'
+source = 'https://consent.example.com/api'
+name = 'Example API'
+```
+
+Ephemeral clients have no stored configuration, so their consent comes from this registry or the
+built-in source.
+
+The registry `name` is shown on the consent screen and wins over the `name` of a remote consent
+document. The remote `name` is only used for a client's own consent source from the Admin UI.
+
+A remote source is fetched via `GET <url>?lang=<BCP47 language>` with the same SSRF protection as
+ephemeral client documents, but with its own connection limit and a 3 second timeout, so a slow
+consent source cannot hold up ephemeral client lookups. Non-public addresses are only allowed with
+`consent.danger_allow_private_addresses`, independent of the ephemeral client setting. The content
+is cached for `consent.content_cache_ttl` seconds.
+
+The `lang=en` response is required and the default: the content is taken from the response for
+the user's language, or the `lang=en` one if that is unavailable. The version of the consent content
+is the hash of the content as shown: the name, `intro`, `terms_url` and the requested scopes with
+their title, description and warning (the warnings of the `lang=en` response are shown in every
+language). Any edit to a shown field asks for consent again, an edit to a scope that was not
+requested does not. A user who switches the language may be asked again. If the `lang=en`
+response is unavailable or returns an invalid document, the built-in content is used instead. These
+fallbacks change the version as well and may ask again: the built-in content while `lang=en` is
+unavailable or invalid, and the `lang=en` content while the translation is unavailable. This is the
+planned contract: nothing compares the version with the one a consent was given for yet. A
+failed fetch is cached for `min(content_cache_ttl, 60)` seconds per language, so an unavailable
+source is not requested on every lookup.
+
 ## Introspection
 
 The token introspection endpoint (`POST /oidc/introspect`) reflects the restricted `aud`

@@ -53,6 +53,12 @@ pub enum ErrorResponseType {
     Unauthorized,
     NotAccepted,
     WWWAuthenticate(String),
+    // Appended at the end to keep variant indices stable, in case an error is ever cached with
+    // bincode, which encodes the variant index.
+    /// OIDC Core §3.1.2.6: the authorization requires user consent that cannot be obtained.
+    /// Serialized as the OIDC error code `consent_required`.
+    #[serde(rename = "consent_required")]
+    ConsentRequired,
 }
 
 impl Display for ErrorResponseType {

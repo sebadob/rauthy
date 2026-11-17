@@ -54,7 +54,7 @@ services:
       - LOCAL_TEST=true
       - SMTP_URL=mailcrab
       - SMTP_PORT=1025
-      - SMTP_DANGER_INSECURE=true
+      - SMTP_TLS_MODE=danger-insecure
     volumes:
       - data:/app/data
     ports:

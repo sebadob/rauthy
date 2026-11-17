@@ -1,13 +1,20 @@
-use crate::common::{CLIENT_ID, CLIENT_SECRET, check_status, get_backend_url};
+use crate::common::{
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, check_status, get_auth_headers, get_backend_url,
+    password_token_set,
+};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::oidc::{GrantType, TokenRequest};
-use rauthy_api_types::users::PasswordResetRequest;
+use rauthy_api_types::users::{PasswordResetRequest, UserResponse};
 use rauthy_common::constants::PWD_CSRF_HEADER;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header;
 use reqwest::header::{HeaderMap, HeaderValue};
+use serde_json::json;
 use std::error::Error;
+use std::panic;
+use std::time::Duration;
+use tokio::time;
 
 mod common;
 
@@ -109,14 +116,67 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     assert_eq!(err.error, ErrorResponseType::Unauthorized);
     assert_eq!(err.message, "CSRF Token is missing");
 
-    // correct headers - all should be good now
-    let res = client
-        .put(&url_put)
-        .json(&req)
-        .headers(correct_headers.clone())
-        .send()
-        .await?;
-    assert_eq!(res.status().as_u16(), 202);
+    // correct headers - all should be good now, and an admin change of the user made while the
+    // reset waits for its password hash survives the reset, which saves only its own columns
+    // and verifies the email the reset was sent to
+    let admin = get_auth_headers().await?;
+    let url_user = format!("{backend_url}/users/{user_id}");
+    let res = patch_user(&client, &admin, &url_user, "email_verified", json!(false)).await?;
+    assert_eq!(res.status(), 200);
+    assert!(!res.json::<UserResponse>().await?.email_verified);
+    // logins ahead of the reset in the hashing queue, so the change lands while it waits
+    let logins = (0..3)
+        .map(|_| {
+            tokio::spawn(async {
+                password_token_set(&reqwest::Client::new(), USERNAME, PASSWORD).await;
+            })
+        })
+        .collect::<Vec<_>>();
+    let reset = tokio::spawn(
+        client
+            .put(&url_put)
+            .json(&req)
+            .headers(correct_headers.clone())
+            .send(),
+    );
+    time::sleep(Duration::from_millis(20)).await;
+    // in a task of its own, so that test_admin gets its name and verified email back below
+    // whatever it asserts
+    let checks = tokio::spawn({
+        let (client, admin, url_user) = (client.clone(), admin.clone(), url_user.clone());
+        async move {
+            let res = patch_user(&client, &admin, &url_user, "given_name", json!("Reset")).await?;
+            assert_eq!(res.status(), 200);
+            assert!(
+                !reset.is_finished(),
+                "the admin change must land while the reset waits for its password hash"
+            );
+            assert_eq!(reset.await??.status().as_u16(), 202);
+            for login in logins {
+                login.await?;
+            }
+            let res = client.get(&url_user).headers(admin).send().await?;
+            assert_eq!(res.status(), 200);
+            let found = res.json::<UserResponse>().await?;
+            assert_eq!(found.given_name.as_deref(), Some("Reset"));
+            assert!(found.email_verified);
+            Ok::<_, Box<dyn Error + Send + Sync>>(())
+        }
+    })
+    .await;
+    for (key, value) in [
+        ("given_name", json!("Admin")),
+        ("email_verified", json!(true)),
+    ] {
+        let res = patch_user(&client, &admin, &url_user, key, value).await?;
+        assert_eq!(res.status(), 200);
+    }
+    match checks {
+        Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
+        Err(err) => return Err(err.into()),
+        Ok(Err(err)) => return Err(err as Box<dyn Error>),
+        Ok(Ok(())) => {}
+    }
 
     // now test logging in with the new password
     let url = format!("{}/oidc/token", get_backend_url());
@@ -147,4 +207,23 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     assert_eq!(err.message, "This link has expired already");
 
     Ok(())
+}
+
+/// Puts the attribute `key` of the user at `url_user` to `value` through an admin PATCH.
+async fn patch_user(
+    client: &reqwest::Client,
+    admin: &HeaderMap,
+    url_user: &str,
+    key: &str,
+    value: serde_json::Value,
+) -> reqwest::Result<reqwest::Response> {
+    client
+        .patch(url_user)
+        .headers(admin.clone())
+        .json(&json!({
+            "put": [{ "key": key, "value": value }],
+            "del": [],
+        }))
+        .send()
+        .await
 }

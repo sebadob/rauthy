@@ -10,6 +10,7 @@ use tracing::debug;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize, strum::EnumIter)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
+    Cs,
     De,
     #[default]
     En,
@@ -27,10 +28,11 @@ pub enum Language {
 }
 
 impl Language {
-    pub fn all_available() -> [&'static str; 27] {
+    pub fn all_available() -> [&'static str; 29] {
         [
-            "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja", "ja-JP", "ko",
-            "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pl", "pl-PL", "pt", "pt-PT", "ru",
+            "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja",
+            "ja-JP", "ko", "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pl", "pl-PL", "pt",
+            "pt-PT", "ru",
             "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
         ]
     }
@@ -38,6 +40,7 @@ impl Language {
     pub fn as_str(&self) -> &'static str {
         // must return results that work with serde::Deserialize from lowercase
         match self {
+            Language::Cs => "cs",
             Language::De => "de",
             Language::En => "en",
             Language::Es => "es",
@@ -61,6 +64,7 @@ impl Language {
     /// reads the first two characters back, so this changes nothing else.
     pub fn html_lang(&self) -> &'static str {
         match self {
+            Language::Cs => "cs-CZ",
             Language::De => "de-DE",
             Language::En => "en-US",
             Language::Es => "es-ES",
@@ -74,6 +78,15 @@ impl Language {
             Language::Ru => "ru-RU",
             Language::Uk => "uk-UA",
             Language::ZhHans => "zh-Hans",
+        }
+    }
+
+    /// The bare BCP 47 language tag, without a region, e.g. for the `lang` query of a remote
+    /// consent source.
+    pub fn as_bcp47(&self) -> &'static str {
+        match self {
+            Language::ZhHans => "zh-Hans",
+            lang => lang.as_str(),
         }
     }
 }
@@ -99,6 +112,7 @@ impl From<String> for Language {
 impl From<&str> for Language {
     fn from(value: &str) -> Self {
         match value {
+            "cs" | "cs-CZ" => Self::Cs,
             "en" | "en-US" => Self::En,
             "de" | "de-DE" => Self::De,
             "es" | "es-ES" => Self::Es,
@@ -148,6 +162,7 @@ impl TryFrom<&HttpRequest> for Language {
 impl From<rauthy_api_types::generic::Language> for Language {
     fn from(value: rauthy_api_types::generic::Language) -> Self {
         match value {
+            rauthy_api_types::generic::Language::Cs => Self::Cs,
             rauthy_api_types::generic::Language::De => Self::De,
             rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::Es => Self::Es,
@@ -168,6 +183,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
 impl From<Language> for rauthy_api_types::generic::Language {
     fn from(value: Language) -> Self {
         match value {
+            Language::Cs => Self::Cs,
             Language::De => Self::De,
             Language::En => Self::En,
             Language::Es => Self::Es,

@@ -1304,7 +1304,6 @@ impl AuthProviderIdClaims<'_> {
 
         let now = Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
-            let mut old_email = None;
             let mut forbidden_error = None;
 
             // validate federation_uid
@@ -1322,10 +1321,7 @@ impl AuthProviderIdClaims<'_> {
             }
 
             if let Some(err) = forbidden_error {
-                user.last_failed_login = Some(now);
-                user.failed_login_attempts =
-                    Some(user.failed_login_attempts.unwrap_or_default() + 1);
-                user.save(old_email).await?;
+                user.save_login_failure().await?;
 
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1333,7 +1329,7 @@ impl AuthProviderIdClaims<'_> {
                 ));
             }
 
-            old_email = self.apply_provider_email(&mut user, email);
+            let old_email = self.apply_provider_email(&mut user, email);
 
             // check other existing values and possibly update them
             let given_name = self.given_name();
