@@ -5110,6 +5110,7 @@ dependencies = [
  "actix-multipart",
  "actix-web",
  "argon2",
+ "bincode-next",
  "chacha20poly1305",
  "chrono",
  "cryptr",

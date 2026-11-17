@@ -32,6 +32,7 @@ async fn create_client(id: &str) -> Result<(), Box<dyn Error>> {
             confidential: false,
             redirect_uris: vec![REDIRECT_URI.to_string()],
             post_logout_redirect_uris: None,
+            consent: None,
         })
         .send()
         .await?;
@@ -73,6 +74,7 @@ async fn create_client(id: &str) -> Result<(), Box<dyn Error>> {
             allowed_resources: c.allowed_resources,
             default_aud: c.default_aud,
             scim: c.scim,
+            consent: c.consent,
         })
         .send()
         .await?;

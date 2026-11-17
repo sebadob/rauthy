@@ -43,6 +43,7 @@ fn client_update() -> UpdateClientRequest {
         allowed_resources: None,
         default_aud: None,
         scim: None,
+        consent: None,
     }
 }
 
@@ -106,6 +107,7 @@ async fn test_logout_redirect() -> Result<(), Box<dyn Error>> {
             confidential: true,
             redirect_uris: vec!["http://localhost:8080/callback".to_string()],
             post_logout_redirect_uris: None,
+            consent: None,
         })
         .send()
         .await?;
