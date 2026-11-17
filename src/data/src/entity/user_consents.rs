@@ -175,9 +175,9 @@ impl UserConsent {
 }
 
 /// The `resource` column of a consent: `''` stands for "no resource", because the column is part
-/// of the primary key. It never leaves this module: [`UserConsent::into_response`] maps it back
+/// of the primary key. It never leaves the database: [`UserConsent::into_response`] maps it back
 /// to `None`.
-fn resource_key(resource: Option<&str>) -> &str {
+pub(crate) fn resource_key(resource: Option<&str>) -> &str {
     resource.unwrap_or_default()
 }
 
