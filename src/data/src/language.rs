@@ -32,8 +32,7 @@ impl Language {
         [
             "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja",
             "ja-JP", "ko", "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pl", "pl-PL", "pt",
-            "pt-PT", "ru",
-            "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
+            "pt-PT", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
         ]
     }
 
