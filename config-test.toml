@@ -67,6 +67,17 @@ max_hash_threads = 1
 danger_unencrypted = true
 danger_insecure = true
 
+[[id_jag.audiences]]
+audience = 'https://as.downstream.example.com/'
+clients = ['exchange_id_jag_test']
+resources = ['https://mcp.downstream.example.com/mcp']
+scopes = ['chat.read', 'chat.history']
+
+[[id_jag.audiences]]
+audience = 'https://as-eddsa.downstream.example.com/'
+clients = ['exchange_id_jag_test']
+alg = 'EdDSA'
+
 [logging]
 level = 'debug'
 log_file = 'src/bin/tests/test_data/rauthy.log'

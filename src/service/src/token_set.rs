@@ -1,6 +1,6 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
-use rauthy_api_types::oidc::{ActClaim, Audience, JktClaim};
+use rauthy_api_types::oidc::{ActClaim, Audience, JktClaim, TokenType};
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
@@ -16,7 +16,7 @@ use rauthy_data::entity::webids::WebId;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
-    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtIdJagClaims, JwtTokenType,
     validate_no_reserved_collision,
 };
 use rauthy_jwt::token::{JwtHeaderType, JwtToken};
@@ -151,6 +151,9 @@ pub struct TokenSet {
     /// Granted scope, RFC 6749 §5.1; always equals the access token's `scope` claim.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
+    /// RFC 8693 §2.2.1, only set for a token exchange.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issued_token_type: Option<TokenType>,
 }
 
 impl TokenSet {
@@ -643,6 +646,7 @@ impl TokenSet {
             expires_in: client.access_token_lifetime,
             refresh_token: None,
             scope: Some(scope),
+            issued_token_type: None,
         })
     }
 
@@ -724,6 +728,57 @@ impl TokenSet {
             expires_in: lifetime as i32,
             refresh_token: None,
             scope: Some(scope.0.into_owned()),
+            issued_token_type: Some(TokenType::AccessToken),
+        })
+    }
+
+    /// Builds the ID-JAG for a token exchange. The `email` is only added if the `subject`
+    /// ID token carried it, and only while it is verified. Always signed with RS256, the only
+    /// algorithm every Resource Authorization Server must support.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn for_id_jag(
+        user: &User,
+        client: &Client,
+        exp: i64,
+        dpop_fingerprint: Option<DpopFingerprint>,
+        subject: &JwtIdClaims<'_>,
+        sid: String,
+        audience: &str,
+        alg: JwkKeyPairAlg,
+        resource: Option<&str>,
+        scope: Option<&str>,
+    ) -> Result<Self, ErrorResponse> {
+        let now = Utc::now().timestamp();
+        let issued = IssuedToken::create(Some(&user.id), None, Some(sid), exp).await?;
+        let claims = JwtIdJagClaims {
+            iss: &RauthyConfig::get().issuer,
+            sub: &user.id,
+            aud: audience,
+            client_id: &client.id,
+            jti: &issued.jti,
+            iat: now,
+            exp,
+            resource,
+            scope,
+            auth_time: subject.auth_time,
+            amr: &subject.amr,
+            email: (subject.email.is_some() && user.email_verified).then_some(user.email.as_str()),
+            cnf: dpop_fingerprint
+                .as_ref()
+                .map(|jkt| JktClaim { jkt: &jkt.0 }),
+        };
+
+        let kp = JwkKeyPair::find_latest(alg).await?;
+        let token = JwtToken::build(&kp, &claims, JwtHeaderType::IdJag)?;
+
+        Ok(Self {
+            access_token: token,
+            token_type: JwtTokenType::NA,
+            id_token: None,
+            expires_in: (exp - now) as i32,
+            refresh_token: None,
+            scope: scope.map(String::from),
+            issued_token_type: Some(TokenType::IdJag),
         })
     }
 
@@ -880,6 +935,7 @@ impl TokenSet {
             expires_in: client.access_token_lifetime,
             refresh_token,
             scope: Some(scope),
+            issued_token_type: None,
         })
     }
 }

@@ -47,6 +47,8 @@ pub struct WellKnown {
     pub claims_parameter_supported: bool,
     pub authorization_response_iss_parameter_supported: bool,
     pub client_id_metadata_document_supported: bool,
+    pub identity_chaining_requested_token_types_supported: Vec<String>,
+    pub id_jag_signing_alg_values_supported: Vec<String>,
 }
 
 #[tokio::test]
@@ -67,6 +69,17 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
             .any(|m| m == "none")
     );
     assert!(content.client_id_metadata_document_supported);
+    // `config-test.toml` has an `[[id_jag.audiences]]` entry
+    assert_eq!(
+        content.identity_chaining_requested_token_types_supported,
+        vec!["urn:ietf:params:oauth:token-type:id-jag"]
+    );
+    assert!(
+        content
+            .id_jag_signing_alg_values_supported
+            .iter()
+            .any(|alg| alg == "RS256")
+    );
     // don't test the rest for now as it might change soon again
 
     Ok(())
