@@ -1,3 +1,4 @@
+use crate::oidc::consent_grant;
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use rauthy_api_types::oidc::{Audience, JktClaim};
@@ -94,6 +95,20 @@ pub enum AuthCodeFlow {
 pub enum ConsentCheck {
     Required,
     Exempt,
+}
+
+/// The [`RefreshTokenGrant`] a refresh token is inserted with: `Required` only for a
+/// `ConsentCheck::Required` token with `consent.enable`.
+fn refresh_token_grant(
+    consent_check: ConsentCheck,
+    enable: bool,
+    resource: Option<&str>,
+) -> RefreshTokenGrant<'_> {
+    if consent_grant::needs_check(enable, consent_check) {
+        RefreshTokenGrant::Required { resource }
+    } else {
+        RefreshTokenGrant::Unchecked
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -598,11 +613,7 @@ impl TokenSet {
                 sid.map(|s| s.0),
                 Some(jti.0),
                 client,
-                if consent_check == ConsentCheck::Required && config.vars.consent.enable {
-                    RefreshTokenGrant::Required { resource }
-                } else {
-                    RefreshTokenGrant::Unchecked
-                },
+                refresh_token_grant(consent_check, config.vars.consent.enable, resource),
             )
             .await?;
         }
@@ -884,6 +895,30 @@ impl TokenSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_refresh_token_grant() {
+        let res = Some("https://api.example.com");
+        for resource in [None, res] {
+            // (consent_check, enable) -> grant
+            for (consent_check, enable, expected) in [
+                (
+                    ConsentCheck::Required,
+                    true,
+                    RefreshTokenGrant::Required { resource },
+                ),
+                (ConsentCheck::Required, false, RefreshTokenGrant::Unchecked),
+                (ConsentCheck::Exempt, true, RefreshTokenGrant::Unchecked),
+                (ConsentCheck::Exempt, false, RefreshTokenGrant::Unchecked),
+            ] {
+                assert_eq!(
+                    refresh_token_grant(consent_check, enable, resource),
+                    expected,
+                    "{consent_check:?}, enable: {enable}, resource: {resource:?}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn test_at_hash() {
