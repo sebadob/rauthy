@@ -924,13 +924,25 @@ rate_limit_db_burst = 200000
 # token exchange tokens are exempt), a client deletion also delete
 # all legacy refresh tokens (issued before refresh tokens were bound
 # to a client) of all users, and a user's consent revoke also delete
-# that user's legacy refresh tokens. Until the consent screen lands,
-# no grant can be given, so every `authorization_code` and FedCM
-# login fails while it is enabled.
+# that user's legacy refresh tokens.
+#
+# Until the consent screen lands, no grant can be given. While it is
+# enabled:
+# - every `authorization_code` login, the Admin UI included, and
+#   every FedCM login fails: the user signs in, but the client's
+#   token request (code exchange / FedCM) is rejected with
+#   `invalid_grant` "no consent grant for this client", and rauthy
+#   logs a warning
+# - every non-exempt refresh token is deleted, and its access token
+#   revoked, on its next refresh. Turning the flag off again does not
+#   restore them.
+# - the password / device code exemption does not cover refresh
+#   tokens issued before this version, nor device refresh tokens
+#   that were already rotated. Those need a new login.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
-enable = true
+#enable = false
 
 # Lifetime in seconds of cached consent content fetched from a
 # remote consent source (see `[[consent.sources]]` below and the
