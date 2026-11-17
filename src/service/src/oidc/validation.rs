@@ -1,4 +1,4 @@
-use crate::oidc::consent_grant::{RefreshGrant, refresh_consent_check};
+use crate::oidc::consent_grant::{RefreshGrant, consent_as_invalid_grant, refresh_consent_check};
 use crate::token_set::{
     AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, DpopFingerprint, SessionId, TokenScopes,
     TokenSet,
@@ -247,7 +247,7 @@ pub async fn validate_and_refresh_token(
     .await;
     let ts = match result {
         Ok(ts) => ts,
-        Err(err) => return Err(source.delete_after(err).await),
+        Err(err) => return Err(source.delete_after(consent_as_invalid_grant(err)).await),
     };
     source.finish_rotation(ts.refresh_token.as_deref()).await?;
 

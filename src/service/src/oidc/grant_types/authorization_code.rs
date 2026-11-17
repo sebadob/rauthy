@@ -179,7 +179,9 @@ pub async fn grant_type_authorization_code(
         (None, granted) => granted.map(String::from),
     };
 
-    consent_grant::check_code_exchange(&code.user_id, &client.id, code.resource.as_deref()).await?;
+    consent_grant::check_code_exchange(&code.user_id, &client.id, code.resource.as_deref())
+        .await
+        .map_err(consent_grant::consent_as_invalid_grant)?;
 
     let user = User::find(code.user_id.clone()).await?;
     user.check_enabled()?;
@@ -199,7 +201,8 @@ pub async fn grant_type_authorization_code(
         // a revoke after the check above: the refresh token is only inserted with the grant
         ConsentCheck::Required,
     )
-    .await?;
+    .await
+    .map_err(consent_grant::consent_as_invalid_grant)?;
 
     // update session metadata
     if let Some(sid) = code.session_id.clone() {

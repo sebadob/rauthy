@@ -103,7 +103,7 @@ pub enum RefreshTokenGrant<'a> {
 // CRUD
 impl RefreshToken {
     /// With [`RefreshTokenGrant::Required`], the row is only inserted while the user's consent
-    /// grant exists, checked in the insert itself, else this fails with `invalid_grant`. A grant
+    /// grant exists, checked in the insert itself, else this fails with `ConsentRequired`. A grant
     /// revoked before the insert keeps it out. A revoke after the insert deletes it, since it
     /// deletes the grant and then the refresh tokens of the client in one transaction: on
     /// hiqlite, both are single raft log entries applied in order. On Postgres, the insert holds
@@ -212,7 +212,7 @@ WHERE EXISTS (
 
         if resource.is_some() && rows == 0 {
             return Err(ErrorResponse::new(
-                ErrorResponseType::InvalidGrant,
+                ErrorResponseType::ConsentRequired,
                 "no consent grant for this client",
             ));
         }

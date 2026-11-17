@@ -43,10 +43,23 @@ fn invalid_grant(msg: &'static str) -> ErrorResponse {
     ErrorResponse::new(ErrorResponseType::InvalidGrant, msg)
 }
 
-/// Authorization code exchange: the grant the code was issued under must still exist. It may have
-/// been revoked between code issue and exchange. This read only fails early: a revoke that
-/// commits after it is covered by the insert of the refresh token, which requires the grant
-/// (`ConsentCheck::Required`). FedCM checks the grant with its own `require_consent`.
+/// A missing consent grant (`ConsentRequired`, from [`check_code_exchange`] or the insert of a
+/// `ConsentCheck::Required` refresh token) as the `invalid_grant` of the token endpoint. Any
+/// other error is returned as is.
+pub fn consent_as_invalid_grant(err: ErrorResponse) -> ErrorResponse {
+    if err.error == ErrorResponseType::ConsentRequired {
+        ErrorResponse::new(ErrorResponseType::InvalidGrant, err.message)
+    } else {
+        err
+    }
+}
+
+/// Authorization code exchange and FedCM: the grant must still exist. It may have been revoked
+/// between code issue and exchange, and FedCM has no consent step at all. This read only fails
+/// early: a revoke that commits after it is covered by the insert of the refresh token, which
+/// requires the grant (`ConsentCheck::Required`). Without the grant, this fails with
+/// `ConsentRequired`, which the caller maps to its own denial, see
+/// [`consent_as_invalid_grant`].
 pub async fn check_code_exchange(
     user_id: &str,
     client_id: &str,
@@ -78,7 +91,10 @@ where
 
     if find().await?.is_none() {
         warn!(user_id, client_id, "no consent grant for the client");
-        return Err(invalid_grant("no consent grant for this client"));
+        return Err(ErrorResponse::new(
+            ErrorResponseType::ConsentRequired,
+            "no consent grant for this client",
+        ));
     }
     Ok(())
 }
@@ -314,11 +330,15 @@ mod tests {
             async { Ok(found) }
         };
 
-        // no grant -> `invalid_grant`
+        // no grant -> `ConsentRequired`, `invalid_grant` at the token endpoint
         let err = check_code_exchange_with(true, "u1", "c1", || find(None))
             .await
             .unwrap_err();
-        assert_eq!(err.error, ErrorResponseType::InvalidGrant);
+        assert_eq!(err.error, ErrorResponseType::ConsentRequired);
+        assert_eq!(
+            consent_as_invalid_grant(err).error,
+            ErrorResponseType::InvalidGrant
+        );
         assert_eq!(*lookups.borrow(), 1);
 
         // with a grant
@@ -340,6 +360,22 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err.error, ErrorResponseType::Database);
+    }
+
+    #[test]
+    fn test_consent_as_invalid_grant() {
+        let err = consent_as_invalid_grant(ErrorResponse::new(
+            ErrorResponseType::ConsentRequired,
+            "no consent grant for this client",
+        ));
+        assert_eq!(err.error, ErrorResponseType::InvalidGrant);
+        assert_eq!(err.message, "no consent grant for this client");
+        for typ in [ErrorResponseType::Database, ErrorResponseType::InvalidGrant] {
+            assert_eq!(
+                consent_as_invalid_grant(ErrorResponse::new(typ.clone(), "x")).error,
+                typ
+            );
+        }
     }
 
     #[test]
