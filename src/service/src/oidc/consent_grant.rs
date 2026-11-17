@@ -143,7 +143,7 @@ fn validate_refresh_resource(
     vars: &VarsConsent,
 ) -> Result<(), ErrorResponse> {
     client
-        .validate_consent_resource_with(resource, vars)
+        .validate_consent_resource(resource, vars)
         .map_err(|_| {
             warn!("refresh token without a `resource` for a client that requires one");
             invalid_grant("a `resource` is required")

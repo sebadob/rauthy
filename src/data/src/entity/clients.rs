@@ -1217,13 +1217,8 @@ impl Client {
 
     /// With `consent.enable` and a non-empty `[[consent.sources]]`, a `resource` is required
     /// for an ephemeral client. Only its presence is checked here, whether it is allowed is up
-    /// to [`Client::validate_resource_request`]. Not enforced yet, it is used once the consent
-    /// screen and grant check land.
-    pub fn validate_consent_resource(&self, resource: Option<&str>) -> Result<(), ErrorResponse> {
-        self.validate_consent_resource_with(resource, &RauthyConfig::get().vars.consent)
-    }
-
-    pub fn validate_consent_resource_with(
+    /// to [`Client::validate_resource_request`].
+    pub fn validate_consent_resource(
         &self,
         resource: Option<&str>,
         vars: &VarsConsent,
@@ -2911,21 +2906,21 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         };
         let vars = consent_vars(true);
 
-        let err = eph.validate_consent_resource_with(None, &vars).unwrap_err();
+        let err = eph.validate_consent_resource(None, &vars).unwrap_err();
         assert_eq!(err.error, ErrorResponseType::ConsentRequired);
         assert!(
-            eph.validate_consent_resource_with(Some("https://api.example.com"), &vars)
+            eph.validate_consent_resource(Some("https://api.example.com"), &vars)
                 .is_ok()
         );
-        assert!(client.validate_consent_resource_with(None, &vars).is_ok());
+        assert!(client.validate_consent_resource(None, &vars).is_ok());
 
         let empty = VarsConsent {
             sources: BTreeMap::default(),
             ..consent_vars(true)
         };
-        assert!(eph.validate_consent_resource_with(None, &empty).is_ok());
+        assert!(eph.validate_consent_resource(None, &empty).is_ok());
         assert!(
-            eph.validate_consent_resource_with(None, &consent_vars(false))
+            eph.validate_consent_resource(None, &consent_vars(false))
                 .is_ok()
         );
     }
