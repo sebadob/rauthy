@@ -12,6 +12,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::net::IpAddr;
+use std::str::FromStr;
 use tracing::{debug, warn};
 
 /// Prefix for the session id inside the forward-auth cookie. The upstream app sees that cookie, so
@@ -183,11 +184,11 @@ pub struct ForwardAuthCallbackState {
     pub danger_cookie_insecure: bool,
 }
 
-impl TryFrom<&str> for ForwardAuthCallbackState {
-    type Error = ErrorResponse;
+impl FromStr for ForwardAuthCallbackState {
+    type Err = ErrorResponse;
 
     #[inline]
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let decoded = base64_url_no_pad_decode(s)?;
         let decrypted = EncValue::try_from_bytes(decoded)?.decrypt()?;
         deserialize(decrypted.as_ref())

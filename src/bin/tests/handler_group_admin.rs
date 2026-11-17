@@ -460,8 +460,8 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     let managed = expect_status_json!(res, 200, UserResponse);
     let groups = managed.groups.unwrap_or_default();
-    assert!(groups.contains(&"gatest".to_string()));
-    assert!(groups.contains(&"gaother".to_string()));
+    assert!(groups.iter().any(|i| i == "gatest"));
+    assert!(groups.iter().any(|i| i == "gaother"));
 
     // a groups-only PATCH that does NOT bring the user into scope is still rejected
     let outsider2 = create_user(

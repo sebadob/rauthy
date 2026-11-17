@@ -16,10 +16,10 @@ impl Display for ContinuationToken {
     }
 }
 
-impl TryFrom<&str> for ContinuationToken {
-    type Error = ErrorResponse;
+impl FromStr for ContinuationToken {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         if value.len() < 16 {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

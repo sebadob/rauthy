@@ -81,3 +81,9 @@ pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
 ring = { workspace = true }
 tokio-test = "*"
+
+[lints.rust]
+warnings = "deny"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }

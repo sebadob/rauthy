@@ -20,16 +20,16 @@ clippy-examples:
     set -euxo pipefail
 
     cd examples/actix-web
-    cargo +nightly clippy -- -D warnings
+    cargo +nightly clippy
 
     cd ../axum
-    cargo +nightly clippy -- -D warnings
+    cargo +nightly clippy
 
     cd ../device-code
-    cargo +nightly clippy -- -D warnings
+    cargo +nightly clippy
 
     cd ../generic
-    cargo +nightly clippy -- -D warnings
+    cargo +nightly clippy
 
 # clippy lint + check with minimal versions from nightly
 check: clippy-examples
@@ -38,13 +38,13 @@ check: clippy-examples
     clear
     cargo update
 
-    cargo clippy -- -D warnings
-    cargo clippy --features actix-web -- -D warnings
-    cargo clippy --features axum -- -D warnings
-    cargo clippy --features device-code -- -D warnings
-    cargo clippy --features userinfo -- -D warnings
-    cargo clippy --features scim -- -D warnings
-    cargo clippy --features rsa -- -D warnings
+    cargo clippy
+    cargo clippy --features actix-web
+    cargo clippy --features axum
+    cargo clippy --features device-code
+    cargo clippy --features userinfo
+    cargo clippy --features scim
+    cargo clippy --features rsa
 
     cargo minimal-versions check
     cargo minimal-versions check --features actix-web

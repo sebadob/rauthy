@@ -12,6 +12,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::Add;
+use std::str::FromStr;
 use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::warn;
@@ -28,14 +29,14 @@ impl TryFrom<&String> for MagicLinkUsage {
     type Error = ErrorResponse;
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
+        Self::from_str(value.as_str())
     }
 }
 
-impl TryFrom<&str> for MagicLinkUsage {
-    type Error = ErrorResponse;
+impl FromStr for MagicLinkUsage {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let (ty, v) = value.split_once('$').unwrap_or((value, ""));
         let slf = match ty {
             "email_change" => MagicLinkUsage::EmailChange(v.to_string()),

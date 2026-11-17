@@ -796,7 +796,7 @@ mod tests {
             .into_iter()
             .map(|a| a.name)
             .collect::<Vec<_>>();
-        assert!(names.contains(&"race_attr_create".to_string()), "{names:?}");
+        assert!(names.iter().any(|i| i == "race_attr_create"), "{names:?}");
     }
 
     /// The list a `find_all` filled before a `delete` is gone once that `delete` returned, and
@@ -828,10 +828,7 @@ mod tests {
             .into_iter()
             .map(|a| a.name)
             .collect::<Vec<_>>();
-        assert!(
-            !names.contains(&"race_attr_delete".to_string()),
-            "{names:?}"
-        );
+        assert!(!names.iter().any(|i| i == "race_attr_delete"), "{names:?}");
     }
 
     /// A rename clears the cache entry of the previous name, which the row no longer has, and
@@ -918,6 +915,6 @@ mod tests {
             .into_iter()
             .map(|v| v.key)
             .collect::<Vec<_>>();
-        assert!(!keys.contains(&"race_value_delete".to_string()), "{keys:?}");
+        assert!(!keys.iter().any(|i| i == "race_value_delete"), "{keys:?}");
     }
 }
