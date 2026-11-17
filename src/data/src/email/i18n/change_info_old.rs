@@ -15,6 +15,7 @@ pub struct I18nEmailChangeInfoOld<'a> {
 impl I18nEmailChangeInfoOld<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
@@ -53,6 +54,18 @@ impl I18nEmailChangeInfoOld<'_> {
             validity: "Por motivos de seguridad, este enlace solo es válido durante un breve período de tiempo.",
             expires: "El enlace caduca el:",
             button_text: "Bloquear cambio de dirección",
+        }
+    }
+
+    fn build_cs() -> Self {
+        Self {
+            subject: "Žádost o změnu e-mailu",
+            header: "Žádost o změnu e-mailu –",
+            change_info: "Byla vyžádána změna vaší e-mailové adresy. Nová adresa:",
+            click_link: "Pokud jste o tuto změnu nežádali, klikněte na odkaz níže.",
+            validity: "Z bezpečnostních důvodů platí odkaz jen krátkou dobu.",
+            expires: "Odkaz platí do:",
+            button_text: "Zablokovat změnu adresy",
         }
     }
 
