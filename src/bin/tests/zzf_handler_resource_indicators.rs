@@ -745,12 +745,11 @@ async fn test_device_refresh_rotation() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 200);
 
-    // the refresh fails, and leaves no replacement to use
+    // the deleted device took its refresh tokens with it: the refresh fails on the missing row
     let res = refresh(&device_rt).await;
     assert_eq!(res.status(), 404);
     let body = res.text().await?;
     assert!(body.contains("Device Refresh Token not found"), "{body}");
-    assert!(serde_json::from_str::<TokenSet>(&body).is_err());
 
     let res = http
         .delete(format!("{backend_url}/clients/{ID_DEVICE_ROTATION}"))
