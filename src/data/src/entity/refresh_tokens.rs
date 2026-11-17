@@ -127,8 +127,9 @@ impl RefreshToken {
         client: &Client,
         grant: RefreshTokenGrant<'_>,
     ) -> Result<(), ErrorResponse> {
-        // the column list of both inserts with the values `$1` to `$10`, and `$11` the grant
-        // `resource`
+        // the column list of both inserts with the values `$1` to `$10`. The grant check binds
+        // its own `$11` to `$13` (user, client, resource): Postgres rejects `$2` / `$9` used for
+        // both, it deduces `text` from the `SELECT` list and `varchar` from the `WHERE`.
         macro_rules! insert {
             ($values:literal) => {
                 concat!(
@@ -156,7 +157,7 @@ SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_
                     r#"
 SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 WHERE EXISTS (
-    SELECT 1 FROM user_consents WHERE user_id = $2 AND client_id = $9 AND resource = $11
+    SELECT 1 FROM user_consents WHERE user_id = $11 AND client_id = $12 AND resource = $13
 )"#
                 ),
                 Some(resource_key(resource)),
@@ -166,7 +167,7 @@ WHERE EXISTS (
                     r#"
 SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 WHERE EXISTS (
-    SELECT 1 FROM user_consents WHERE user_id = $2 AND client_id = $9 AND resource = $11
+    SELECT 1 FROM user_consents WHERE user_id = $11 AND client_id = $12 AND resource = $13
     FOR KEY SHARE
 )"#
                 ),
@@ -177,7 +178,7 @@ WHERE EXISTS (
         let rows = if is_hiqlite() {
             let mut params = params!(
                 id,
-                user_id,
+                user_id.as_str(),
                 nbf,
                 exp,
                 scope,
@@ -188,6 +189,8 @@ WHERE EXISTS (
                 client.created_micros
             );
             if let Some(resource) = resource {
+                params.push(user_id.as_str().into());
+                params.push(client.id.as_str().into());
                 params.push(resource.into());
             }
             DB::hql().execute(sql, params).await?
@@ -205,6 +208,8 @@ WHERE EXISTS (
                 &client.created_micros,
             ];
             if let Some(resource) = &resource {
+                params.push(&user_id);
+                params.push(&client.id);
                 params.push(resource);
             }
             DB::pg_execute(sql, &params).await?
