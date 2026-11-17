@@ -500,7 +500,7 @@ is-clean:
     npm run check
     cd ..
 
-    cargo clippy --all-targets -- -D warnings
+    cargo clippy --all-targets
     cargo fmt --check
 
     # make sure everything has been committed

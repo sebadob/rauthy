@@ -39,3 +39,6 @@ validator = { workspace = true }
 
 [dev-dependencies]
 bincode-next = { workspace = true }
+
+[lints]
+workspace = true

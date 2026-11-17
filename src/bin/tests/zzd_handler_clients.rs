@@ -409,17 +409,16 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     assert_eq!(client.id_token_alg, JwkKeyPairAlg::RS256);
     assert_eq!(client.auth_code_lifetime, 60);
     assert_eq!(client.access_token_lifetime, 900);
-    assert!(client.scopes.contains(&"openid".to_string()));
-    assert!(client.scopes.contains(&"email".to_string()));
-    assert!(client.default_scopes.contains(&"email".to_string()));
-    assert!(client.default_scopes.contains(&"email".to_string()));
+    assert!(client.scopes.iter().any(|i: &String| i == "openid"));
+    assert!(client.scopes.iter().any(|i: &String| i == "email"));
+    assert!(client.default_scopes.iter().any(|i: &String| i == "email"));
     let challenges = client.challenges.clone().unwrap();
-    assert!(challenges.contains(&"S256".to_string()));
-    assert!(challenges.contains(&"plain".to_string()));
+    assert!(challenges.iter().any(|i: &String| i == "S256"));
+    assert!(challenges.iter().any(|i: &String| i == "plain"));
     assert_eq!(client.client_uri, Some("rauthy.io".to_string()));
     let contacts = client.contacts.expect("contacts to exist");
-    assert!(contacts.contains(&"batman@localhost.de".to_string()));
-    assert!(contacts.contains(&"@alfred:matrix.org".to_string()));
+    assert!(contacts.iter().any(|i: &String| i == "batman@localhost.de"));
+    assert!(contacts.iter().any(|i: &String| i == "@alfred:matrix.org"));
 
     // delete the client again
     let res = reqwest::Client::new()

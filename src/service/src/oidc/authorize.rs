@@ -26,6 +26,7 @@ use rauthy_data::{
 };
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::ops::Add;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::time;
@@ -344,7 +345,7 @@ pub(crate) async fn finish_authorize(
     let state = data.state.as_deref();
     let state_hash = if data.is_forward_auth == Some(true) {
         let state = state.unwrap_or_default();
-        let cb = ForwardAuthCallbackState::try_from(state)?;
+        let cb = ForwardAuthCallbackState::from_str(state)?;
         if client.id != cb.client_id {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

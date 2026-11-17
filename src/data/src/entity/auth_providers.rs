@@ -57,10 +57,10 @@ impl AuthProviderType {
     }
 }
 
-impl TryFrom<&str> for AuthProviderType {
-    type Error = ErrorResponse;
+impl FromStr for AuthProviderType {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let slf = match value {
             "custom" => Self::Custom,
             "github" => Self::GitHub,
@@ -80,7 +80,7 @@ impl TryFrom<&str> for AuthProviderType {
 impl From<String> for AuthProviderType {
     /// Defaults to Self::OIDC in case of an error
     fn from(value: String) -> Self {
-        Self::try_from(value.as_str()).unwrap_or(Self::Custom)
+        Self::from_str(value.as_str()).unwrap_or(Self::Custom)
     }
 }
 
@@ -128,10 +128,10 @@ pub struct AuthProviderLinkCookie {
     pub user_email: String,
 }
 
-impl TryFrom<&str> for AuthProviderLinkCookie {
-    type Error = ErrorResponse;
+impl FromStr for AuthProviderLinkCookie {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let bytes = base64_decode(value)?;
         let slf = deserialize::<AuthProviderLinkCookie>(bytes.as_slice())?;
         Ok(slf)

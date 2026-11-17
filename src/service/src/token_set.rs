@@ -37,10 +37,10 @@ pub enum AtHashAlg {
     Sha512,
 }
 
-impl TryFrom<&str> for AtHashAlg {
-    type Error = ErrorResponse;
+impl FromStr for AtHashAlg {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let slf = match value {
             "RS256" => Self::Sha256,
             "RS384" => Self::Sha384,
@@ -75,7 +75,7 @@ impl AtHash {
     pub fn for_client(access_token: &[u8], client: &Client) -> Result<Self, ErrorResponse> {
         Ok(Self::build(
             access_token,
-            AtHashAlg::try_from(client.id_token_alg.as_str())?,
+            AtHashAlg::from_str(client.id_token_alg.as_str())?,
         ))
     }
 }

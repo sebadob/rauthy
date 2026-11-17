@@ -288,8 +288,8 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     assert!(resp.grant_types.contains(&GrantType::RefreshToken));
     assert!(!resp.grant_types.contains(&GrantType::ClientCredentials));
     let contacts = resp.contacts.expect("contacts to be set");
-    assert!(contacts.contains(&"batman@localhost.de".to_string()));
-    assert!(contacts.contains(&"@alfred:matrix.org".to_string()));
+    assert!(contacts.iter().any(|i: &String| i == "batman@localhost.de"));
+    assert!(contacts.iter().any(|i: &String| i == "@alfred:matrix.org"));
     assert_eq!(
         &resp.client_uri.expect("client_uri to be set"),
         "dyn.rauthy.io"

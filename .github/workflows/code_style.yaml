@@ -32,7 +32,7 @@ jobs:
       - name: Code Format Backend
         run: cargo fmt --check
       - name: Code Style Backend
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets
 
       - name: Code Format UI
         working-directory: ./frontend

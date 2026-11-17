@@ -2372,13 +2372,9 @@ impl User {
         let curr_params =
             argon2::Params::try_from(&hash).expect("Could not extract params from hash");
 
-        if curr_params.m_cost() == params.m_cost()
+        Ok(curr_params.m_cost() == params.m_cost()
             && curr_params.t_cost() == params.t_cost()
-            && curr_params.p_cost() == params.p_cost()
-        {
-            return Ok(true);
-        }
-        Ok(false)
+            && curr_params.p_cost() == params.p_cost())
     }
 
     #[inline]
@@ -2886,11 +2882,11 @@ mod tests {
 
         let pictures = hql_picture_ids().await;
         assert!(
-            pictures.contains(&"del_pic_old".to_string()),
+            pictures.iter().any(|i: &String| i == "del_pic_old"),
             "{pictures:?}"
         );
         assert!(
-            !pictures.contains(&"del_pic_new".to_string()),
+            !pictures.iter().any(|i: &String| i == "del_pic_new"),
             "{pictures:?}"
         );
     }
