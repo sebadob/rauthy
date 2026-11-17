@@ -43,6 +43,14 @@ const INJECTING_STATE_ENC: &str = "orig%26iss%3Dhttps%3A%2F%2Fattacker.example.c
 /// `init_client` requires PKCE - without a challenge, `/authorize` would fail for another reason
 const CHALLENGE_PLAIN: &str = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
 
+fn assert_not_consent_exempt(refresh_token: &str) {
+    let claims = decode_claims(refresh_token);
+    assert!(
+        claims.get("consent_exempt").is_none_or(|v| v == false),
+        "{claims}"
+    );
+}
+
 // This is a very long running test - run it manually as a single test
 // maybe moving it into its own module would work, so it does not block the others
 #[tokio::test]
@@ -463,6 +471,24 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     assert!(scope.split_whitespace().any(|s| s == "openid"));
     let access_claims = decode_claims(&ts.access_token);
     assert_eq!(ts.scope.as_deref(), access_claims["scope"].as_str());
+
+    // an authorization_code refresh token is never consent-exempt, nor is its rotation
+    let refresh_token = ts.refresh_token.clone().unwrap();
+    assert_not_consent_exempt(&refresh_token);
+    let req = TokenRequest {
+        grant_type: GrantType::RefreshToken,
+        client_id: Some(CLIENT_ID.to_string()),
+        client_secret: Some(CLIENT_SECRET.to_string()),
+        refresh_token: Some(refresh_token),
+        ..Default::default()
+    };
+    let res = reqwest::Client::new()
+        .post(&url_token)
+        .form(&req)
+        .send()
+        .await?;
+    let rotated = check_status(res, 200).await?.json::<TokenSet>().await?;
+    assert_not_consent_exempt(&rotated.refresh_token.unwrap());
 
     // verify 'nonce' existing in id token
     let id_token = ts.id_token.unwrap();
