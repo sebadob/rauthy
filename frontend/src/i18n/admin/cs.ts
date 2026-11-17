@@ -63,6 +63,11 @@ export let I18nAdminCs: I18nAdmin = {
         confidential: 'Důvěrný',
         confidentialNoSecret: 'Tento klient není důvěrný, a proto nemá tajemství.',
         config: 'Nastavení klienta',
+        consent: {
+            builtIn: 'Vestavěný',
+            desc: `Odkud pochází obsah obrazovky souhlasu, pokud je nastaven 'consent.enable'. Vestavěný zobrazuje požadované rozsahy. URL musí obsah souhlasu poskytovat jako JSON. Položka '[[consent.sources]]' pro požadovaný zdroj má přednost. Zatím není aktivní: hodnota se jen ukládá, dokud obrazovka souhlasu nevznikne.`,
+            source: 'Zdroj souhlasu',
+        },
         delete1: 'Opravdu chcete tohoto klienta smazat?',
         descAuthCode: `Platnost autorizačních kódů lze kvůli bezpečnosti upravit. Kód lze použít
             jen jednou a ve výchozím nastavení platí 60 sekund. Čím kratší platnost, tím
