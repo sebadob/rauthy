@@ -94,8 +94,9 @@ impl Display for GrantType {
 /// [`GrantType`]: `urn:ietf:params:oauth:token-type:*` rather than
 /// `urn:ietf:params:oauth:grant-type:*`, so the two are not interchangeable.
 ///
-/// Rauthy only ever accepts and issues an access token, but every RFC-defined type is listed so
-/// that "a token type we do not support" can be told apart from "not a token type at all".
+/// Rauthy accepts and issues access tokens, and issues an ID-JAG for an ID token, but every
+/// RFC-defined type is listed so that "a token type we do not support" can be told apart from
+/// "not a token type at all".
 ///
 /// Unlike [`GrantType`], this is deliberately *not* the wire type of `subject_token_type`,
 /// `actor_token_type` and `requested_token_type`. Those stay `Option<String>` and are parsed
@@ -116,6 +117,9 @@ pub enum TokenType {
     Saml2,
     #[serde(rename = "urn:ietf:params:oauth:token-type:jwt")]
     Jwt,
+    /// draft-ietf-oauth-identity-assertion-authz-grant
+    #[serde(rename = "urn:ietf:params:oauth:token-type:id-jag")]
+    IdJag,
 }
 
 impl TokenType {
@@ -128,6 +132,7 @@ impl TokenType {
             Self::Saml1 => "urn:ietf:params:oauth:token-type:saml1",
             Self::Saml2 => "urn:ietf:params:oauth:token-type:saml2",
             Self::Jwt => "urn:ietf:params:oauth:token-type:jwt",
+            Self::IdJag => "urn:ietf:params:oauth:token-type:id-jag",
         }
     }
 }
@@ -143,6 +148,7 @@ impl FromStr for TokenType {
             "urn:ietf:params:oauth:token-type:saml1" => Self::Saml1,
             "urn:ietf:params:oauth:token-type:saml2" => Self::Saml2,
             "urn:ietf:params:oauth:token-type:jwt" => Self::Jwt,
+            "urn:ietf:params:oauth:token-type:id-jag" => Self::IdJag,
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -435,13 +441,14 @@ pub struct TokenRequest {
     pub resource: Option<String>,
 
     /// RFC 8693 token exchange: the token that represents the identity on whose behalf the
-    /// request is made. Rauthy only accepts an access token here.
+    /// request is made. Rauthy accepts an access token here, or an ID token for an ID-JAG.
     ///
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub subject_token: Option<String>,
-    /// RFC 8693 token exchange: the type of the `subject_token`. Rauthy only accepts
-    /// `urn:ietf:params:oauth:token-type:access_token`.
+    /// RFC 8693 token exchange: the type of the `subject_token`. Rauthy accepts
+    /// `urn:ietf:params:oauth:token-type:access_token`, and
+    /// `urn:ietf:params:oauth:token-type:id_token` for an ID-JAG.
     ///
     /// Validation: max length is 256
     #[validate(length(max = 256))]
@@ -459,20 +466,23 @@ pub struct TokenRequest {
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub actor_token_type: Option<String>,
-    /// RFC 8693 token exchange: the type of token the client wants back. Rauthy only issues
-    /// `urn:ietf:params:oauth:token-type:access_token`, which is also the default.
+    /// RFC 8693 token exchange: the type of token the client wants back. Rauthy issues
+    /// `urn:ietf:params:oauth:token-type:access_token`, which is also the default, and
+    /// `urn:ietf:params:oauth:token-type:id-jag`.
     ///
     /// Validation: max length is 256
     #[validate(length(max = 256))]
     pub requested_token_type: Option<String>,
     /// RFC 8693 token exchange: the target of the exchanged token. Validated against the
-    /// client's `allowed_resources`, exactly like `resource`.
+    /// client's `allowed_resources`, exactly like `resource`. For an ID-JAG, the required issuer
+    /// of the Resource Authorization Server from `[[id_jag.audiences]]`.
     ///
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub audience: Option<String>,
     /// RFC 8693 token exchange: the scopes for the exchanged token. May only narrow the
-    /// scopes of the `subject_token`, never widen them.
+    /// scopes of the `subject_token`, never widen them. For an ID-JAG, the scopes of the
+    /// Resource Authorization Server allowed in `[[id_jag.audiences]]`.
     ///
     /// Validation: `[a-zA-Z0-9-_/:\s*]{0,512}`
     #[validate(regex(path = "*RE_SCOPE_SPACE", code = "[a-zA-Z0-9-_/:\\s*]{0,512}"))]
