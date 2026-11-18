@@ -57,6 +57,11 @@ never used Forward Auth.
 
 ### Changes
 
+#### Added I18n: Czech
+
+Czech (`cs`) translations are now available for the UI (common and admin) and for e-mails. The
+e-mail date format can be set with `email.tz_fmt.cs` (`TZ_FMT_CS`).
+
 #### Always Show *Password Forgotten*
 
 The 'Password forgotten?' link on the login page only shows up after a failed login. With the new
