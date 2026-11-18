@@ -240,10 +240,10 @@ INSERT INTO clients
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
 access_token_lifetime, scopes, default_scopes, challenge, force_mfa, client_uri, contacts,
 backchannel_logout_uri, restrict_group_prefix, claims, claims_at_root, allowed_resources,
-default_aud, created_micros, consent)
+default_aud, created_micros, consent, actor_same_client)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-$22, $23, $24, $25, $26, $27, $28)"#;
+$22, $23, $24, $25, $26, $27, $28, $29)"#;
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -280,7 +280,8 @@ $22, $23, $24, $25, $26, $27, $28)"#;
                         b.allowed_resources,
                         b.default_aud,
                         b.created_micros,
-                        b.consent
+                        b.consent,
+                        b.actor_same_client
                     ),
                 )
                 .await?;
@@ -319,6 +320,7 @@ $22, $23, $24, $25, $26, $27, $28)"#;
                     &b.default_aud,
                     &b.created_micros,
                     &b.consent,
+                    &b.actor_same_client,
                 ],
             )
             .await?;

@@ -305,6 +305,7 @@ async fn to_entity(
         claims_at_root: existing.is_some_and(|e| e.claims_at_root),
         allowed_resources: existing.and_then(|e| e.allowed_resources.clone()),
         default_aud: existing.and_then(|e| e.default_aud.clone()),
+        actor_same_client: existing.is_some_and(|e| e.actor_same_client),
         created_micros: existing
             .map(|e| e.created_micros)
             .unwrap_or_else(|| Some(Utc::now().timestamp_micros())),

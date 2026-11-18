@@ -38,10 +38,12 @@ export let I18nAdminJa: I18nAdmin = {
     clients: {
         allowedResources: '許可するリソース',
         defaultAud: '既定の Audience',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources:
             'この Client が要求できる RFC 8707 の Resource Indicator（任意）。空にすると、「resource」リクエストパラメーターはすべて「invalid_target」で拒否されます。',
         descDefaultAud:
             '「resource」リクエストパラメーターに関係なく、この Client の Token に常に追加される Audience。',
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout:
             'この Client が {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
         branding: {
