@@ -283,9 +283,9 @@ async fn serve(
         let tls = match (&ldap.key_path, &ldap.cert_path) {
             _ if ldap.plain_text => None,
             (Some(key), Some(cert)) => {
-                Some(tls::load_server_config(key.clone(), cert.clone()).await)
+                Some(tls::load_server_config(key.clone(), cert.clone()).await?)
             }
-            _ => Some(tls::load_tls().await),
+            _ => Some(tls::load_tls().await?),
         };
         tokio::spawn(rauthy_ldap::run(tls.map(Arc::new)));
     }
@@ -321,26 +321,31 @@ async fn server_with_metrics() -> std::io::Result<()> {
         .build()
         .unwrap();
 
-    thread::spawn(move || {
-        let vars = &RauthyConfig::get().vars.server;
-        if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
-            let msg = format!("Error parsing METRICS_ADDR: {err}");
-            error!(msg);
-            panic!("{}", msg);
-        }
-        let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
+    // Parse and bind here instead of inside the thread, where an error could only panic.
+    let vars = &RauthyConfig::get().vars.server;
+    Ipv4Addr::from_str(&vars.metrics_addr)
+        .map_err(|err| std::io::Error::other(format!("Error parsing METRICS_ADDR: {err}")))?;
+    let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
+    let listener = std::net::TcpListener::bind(&addr_full).map_err(|err| {
+        std::io::Error::new(
+            err.kind(),
+            format!("Cannot bind the metrics server to {addr_full}: {err}"),
+        )
+    })?;
 
+    thread::spawn(move || {
         info!("Metrics available on: http://{addr_full}/metrics");
         // TODO create single threaded runtime specifically -> probably use tokio
-        System::new()
-            .block_on(
-                HttpServer::new(move || App::new().wrap(metrics.clone()))
-                    .workers(1)
-                    .bind(addr_full)
-                    .unwrap()
-                    .run(),
-            )
-            .unwrap();
+        let res = System::new().block_on(async move {
+            HttpServer::new(move || App::new().wrap(metrics.clone()))
+                .workers(1)
+                .listen(listener)?
+                .run()
+                .await
+        });
+        if let Err(err) = res {
+            error!("The metrics server stopped: {err}");
+        }
     });
 
     let metrics_collector = PrometheusMetricsBuilder::new("rauthy")
@@ -425,7 +430,7 @@ async fn server_with_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
@@ -442,7 +447,7 @@ async fn server_with_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
@@ -525,7 +530,7 @@ async fn server_without_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
@@ -542,7 +547,7 @@ async fn server_without_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
