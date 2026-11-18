@@ -25,6 +25,7 @@ use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
+use rauthy_data::events::health_watch::is_storage_ready;
 use rauthy_data::ipgeo;
 use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -494,17 +495,25 @@ pub async fn get_health() -> impl Responder {
 }
 
 /// Ready endpoint for kubernetes / docker ready checks.
+///
+/// Returns `503` when the health watcher confirmed that the database or cache is not healthy.
+/// This does not do any additional lookups and is therefore cheap to call.
 #[utoipa::path(
     get,
     path = "/ready",
     tag = "health",
     responses(
         (status = 200, description = "Ok"),
+        (status = 503, description = "ServiceUnavailable"),
     ),
 )]
 #[get("/ready")]
 pub async fn get_ready() -> impl Responder {
-    HttpResponse::Ok().finish()
+    if is_storage_ready() {
+        HttpResponse::Ok().finish()
+    } else {
+        HttpResponse::ServiceUnavailable().finish()
+    }
 }
 
 /// Catch all - redirects from root to the "real root" /auth/v1/

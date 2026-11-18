@@ -2,8 +2,18 @@ use crate::database::DB;
 use crate::entity::is_db_alive;
 use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tracing::debug;
+
+/// The last confirmed storage state from the health watcher, which is answered by `/ready`.
+/// It starts `true` to keep the startup behavior unchanged until the first check was done.
+static STORAGE_READY: AtomicBool = AtomicBool::new(true);
+
+#[inline]
+pub fn is_storage_ready() -> bool {
+    STORAGE_READY.load(Ordering::Relaxed)
+}
 
 pub async fn watch_health() {
     debug!("Rauthy health watcher started");
@@ -22,25 +32,24 @@ pub async fn watch_health() {
 
         let cache_healthy = DB::hql().is_healthy_cache().await.is_ok();
 
-        let db_healthy = if !is_db_alive().await {
-            // wait for a few seconds and try again before alerting
-            tokio::time::sleep(Duration::from_secs(10)).await;
-
-            // do not send
-            if !is_db_alive().await && was_healthy_after_startup {
-                tx_events
-                    .send_async(Event::rauthy_unhealthy_db())
-                    .await
-                    .unwrap();
-                false
-            } else {
-                true
-            }
-        } else {
+        let db_healthy = if is_db_alive().await {
             true
+        } else {
+            // wait for a few seconds and try again to not flap on e.g. a leader switch
+            tokio::time::sleep(Duration::from_secs(10)).await;
+            is_db_alive().await
         };
 
+        // only alert about a DB that was healthy before
+        if !db_healthy && was_healthy_after_startup {
+            tx_events
+                .send_async(Event::rauthy_unhealthy_db())
+                .await
+                .unwrap();
+        }
+
         let is_good_now = db_healthy && cache_healthy;
+        STORAGE_READY.store(is_good_now, Ordering::Relaxed);
         if !was_healthy_after_startup && is_good_now {
             was_healthy_after_startup = true;
         }
