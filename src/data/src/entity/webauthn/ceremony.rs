@@ -11,7 +11,7 @@ use webauthn_rs_proto::{
 };
 
 #[inline]
-pub(super) fn requires_uv(account_type: AccountType, force_uv: bool) -> bool {
+pub(super) fn requires_uv(account_type: &AccountType, force_uv: bool) -> bool {
     force_uv
         || !matches!(
             account_type,
@@ -274,8 +274,8 @@ mod tests {
     #[case(AccountType::Federated, true)]
     #[case(AccountType::FederatedPasskey, true)]
     fn account_policy(#[case] account_type: AccountType, #[case] expected: bool) {
-        assert_eq!(requires_uv(account_type.clone(), false), expected);
-        assert!(requires_uv(account_type, true));
+        assert_eq!(requires_uv(&account_type.clone(), false), expected);
+        assert!(requires_uv(&account_type, true));
     }
 
     #[rstest]

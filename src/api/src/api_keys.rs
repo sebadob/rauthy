@@ -10,7 +10,7 @@ use validator::Validate;
 /// Returns all API Keys
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/api_keys",
@@ -38,7 +38,7 @@ pub async fn get_api_keys(principal: ReqPrincipal) -> Result<HttpResponse, Error
 /// Create a new API Key
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/api_keys",
@@ -58,7 +58,7 @@ pub async fn post_api_key(
     principal.validate_api_key_or_admin_session(AccessGroup::ApiKeys, AccessRights::Create)?;
     payload.validate()?;
 
-    let access = payload.access.into_iter().map(|a| a.into()).collect();
+    let access = payload.access.into_iter().map(Into::into).collect();
     let secret = ApiKeyEntity::create(payload.name, payload.exp, access).await?;
 
     Ok(HttpResponse::Ok()
@@ -69,7 +69,7 @@ pub async fn post_api_key(
 /// Update an API Key
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/api_keys/{name}",
@@ -98,7 +98,7 @@ pub async fn put_api_key(
         ));
     }
 
-    let access = payload.access.into_iter().map(|a| a.into()).collect();
+    let access = payload.access.into_iter().map(Into::into).collect();
     ApiKeyEntity::update(&name, payload.exp, access).await?;
 
     Ok(HttpResponse::Ok().finish())
@@ -107,7 +107,7 @@ pub async fn put_api_key(
 /// Delete an API Key
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/api_keys/{name}",
@@ -134,7 +134,7 @@ pub async fn delete_api_key(
 /// Endpoint for testing an API Key and getting its Access Rights
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/api_keys/{name}/test",
@@ -153,13 +153,13 @@ pub async fn get_api_key_test(
     let p = principal.into_inner();
     if let Some(api_key) = p.api_key {
         let name = name.into_inner();
-        if name != api_key.name {
+        if name == api_key.name {
+            Ok(HttpResponse::Ok().json(ApiKeyResponse::from(api_key)))
+        } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Wrong API Key given",
             ))
-        } else {
-            Ok(HttpResponse::Ok().json(ApiKeyResponse::from(api_key)))
         }
     } else {
         Err(ErrorResponse::new(
@@ -172,7 +172,7 @@ pub async fn get_api_key_test(
 /// Generate a new secret for the given API Key
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/api_keys/{name}/secret",

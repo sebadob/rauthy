@@ -34,7 +34,7 @@ impl From<tokio_postgres::Row> for EmailJob {
         Self {
             id: row.get("id"),
             scheduled: row.get("scheduled"),
-            status: EmailJobStatus::from(row.get::<_, i16>("status") as i64),
+            status: EmailJobStatus::from(i64::from(row.get::<_, i16>("status"))),
             updated: row.get("updated"),
             last_user_ts: row.get("last_user_ts"),
             filter: row.get::<_, String>("filter").parse().unwrap(),
@@ -92,6 +92,7 @@ pub enum EmailJobStatus {
 }
 
 impl EmailJobStatus {
+    #[must_use]
     pub fn value(&self) -> i16 {
         match self {
             EmailJobStatus::Open => 0,
@@ -192,10 +193,10 @@ impl EmailJob {
         .to_string();
         let content_type = EmailContentType::from(payload.content_type).to_string();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO email_jobs (id, scheduled, status, updated, filter, content_type, subject, body)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING *"#;
+RETURNING *";
 
         let slf = if is_hiqlite() {
             DB::hql()
@@ -262,9 +263,9 @@ RETURNING *"#;
     /// In HA deployments, only the current leader should look for orphaned jobs and pick them
     /// up to avoid duplicate emails because of possible race conditions.
     pub async fn find_orphaned_or_schedule() -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM email_jobs
-WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
+WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)";
 
         let now = Utc::now().timestamp();
         let threshold = now
@@ -285,15 +286,15 @@ WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
     }
 
     /// Updates:
-    /// - scheduled
-    /// - status
-    /// - updated
-    /// - last_user_ts
+    /// - `scheduled`
+    /// - `status`
+    /// - `updated`
+    /// - `last_user_ts`
     pub async fn save(&mut self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 UPDATE email_jobs
 SET scheduled = $1, status = $2, updated = $3, last_user_ts = $4
-WHERE id = $5"#;
+WHERE id = $5";
 
         self.updated = Utc::now().timestamp();
         let status = self.status.value();
@@ -337,7 +338,7 @@ impl EmailJob {
             EmailContentType::Markdown => {
                 Cow::from(markdown::render_sanitized_markdown(&self.body))
             }
-            EmailContentType::Html => Cow::from(self.body.to_string()),
+            EmailContentType::Html => Cow::from(self.body.clone()),
         };
 
         Ok(Some(email::custom::build_custom_html_email(&body).await?))
@@ -354,6 +355,7 @@ impl EmailJob {
     }
 
     #[inline]
+    #[allow(clippy::similar_names)]
     async fn task_execute(mut self) -> Result<(), ErrorResponse> {
         let (batch_size, delay) = {
             let vars = &RauthyConfig::get().vars.email.jobs;
@@ -441,7 +443,7 @@ impl EmailJob {
                     )
                     .await
                     {
-                        Ok(_) => {
+                        Ok(()) => {
                             trace!(
                                 "E-Mail to {} sent to Mailer-Task (internally) successfully",
                                 user.email

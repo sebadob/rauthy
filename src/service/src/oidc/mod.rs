@@ -23,7 +23,7 @@ pub mod token_revocation;
 pub mod userinfo;
 pub mod validation;
 
-/// Main entrance function for returning a whole new [TokenSet](crate::models::response::TokenSet)
+/// Main entrance function for returning a whole new [`TokenSet`](crate::models::response::TokenSet)
 pub async fn get_token_set(
     req_data: TokenRequest,
     browser_id: BrowserId,

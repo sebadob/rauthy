@@ -19,6 +19,7 @@ const ENDS_WITH_TARGETS: [&str; 9] = [
 const CONTAINS_TARGETS: [&str; 2] = ["../", "/wp-"];
 
 /// Scans the given url path for common scan targets from bots and attackers.
+#[must_use]
 pub fn is_scan_target(request_path: &str) -> bool {
     // chrome can make this request to the backend when dev tools are open
     if request_path.ends_with("/com.chrome.devtools.json") {

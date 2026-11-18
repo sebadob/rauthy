@@ -288,7 +288,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .send()
         .await?;
     assert_eq!(res.status(), 202);
-    let (code, _state) = code_state_from_headers(res)?;
+    let (code, _state) = code_state_from_headers(&res)?;
 
     let token_req = TokenRequest {
         grant_type: GrantType::AuthorizationCode,
@@ -339,7 +339,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .send()
         .await?;
     assert_eq!(res.status(), 202);
-    let (code_refresh, _state) = code_state_from_headers(res)?;
+    let (code_refresh, _state) = code_state_from_headers(&res)?;
 
     let token_req = TokenRequest {
         grant_type: GrantType::AuthorizationCode,

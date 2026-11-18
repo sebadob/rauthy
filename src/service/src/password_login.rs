@@ -32,7 +32,7 @@ pub async fn password_login(
     };
 
     match user.validate_password(password.clone()).await {
-        Ok(_) => {
+        Ok(()) => {
             // Very important to do these checks only AFTER a possibly existing password for the user was
             // validated to never leak data. The errors of these 2 checks are forwarded to the UI for better
             // UX, to inform the user about an issue with their account while their password was ok.
@@ -45,13 +45,13 @@ pub async fn password_login(
 
             // check if the password hash should be upgraded
             let hash_uptodate = user.is_argon2_uptodate(&RauthyConfig::get().argon2_params)?;
-            if !hash_uptodate {
+            if hash_uptodate {
+                password.zeroize();
+                user.save_login_success().await?;
+            } else {
                 info!("Updating Argon2ID params for user '{}'", &user.email);
                 let new_hash = HashPassword::hash_password(password).await?;
                 user.save_login_success_with_rehash(&new_hash).await?;
-            } else {
-                password.zeroize();
-                user.save_login_success().await?;
             }
 
             if client.is_dynamic() {

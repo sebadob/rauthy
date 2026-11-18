@@ -70,9 +70,9 @@ impl AuthorizedKey {
             None
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO ssh_auth_keys (pam_uid, ts_added, expires, typ, data, comment)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         let now = Utc::now().timestamp();
         if is_hiqlite() {
@@ -82,7 +82,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         } else {
             DB::pg_execute(
                 sql,
-                &[&(pam_uid as i64), &now, &expires, &typ, &data, &comment],
+                &[&i64::from(pam_uid), &now, &expires, &typ, &data, &comment],
             )
             .await?;
         }
@@ -92,11 +92,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
     /// Note: If you already know the `PamUser.id`, use `find_by_pam_uid()`
     pub async fn find_by_username(username: String) -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM ssh_auth_keys WHERE pam_uid = (
     SELECT id FROM pam_users WHERE name = $1
 )
-"#;
+";
 
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(username)).await?
@@ -113,7 +113,7 @@ SELECT * FROM ssh_auth_keys WHERE pam_uid = (
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(pam_uid)).await?
         } else {
-            DB::pg_query(sql, &[&(pam_uid as i64)], 1).await?
+            DB::pg_query(sql, &[&i64::from(pam_uid)], 1).await?
         };
 
         Ok(res)
@@ -127,7 +127,7 @@ SELECT * FROM ssh_auth_keys WHERE pam_uid = (
                 .query_map_one(sql, params!(pam_uid, ts_added))
                 .await?
         } else {
-            DB::pg_query_one(sql, &[&(pam_uid as i64), &ts_added]).await?
+            DB::pg_query_one(sql, &[&i64::from(pam_uid), &ts_added]).await?
         };
 
         Ok(slf)
@@ -137,7 +137,7 @@ SELECT * FROM ssh_auth_keys WHERE pam_uid = (
         let sql = "SELECT * FROM ssh_auth_keys WHERE expires IS NOT NULL AND expires < $1";
 
         let now = Utc::now()
-            .sub(chrono::Duration::days(expired_days_ago as i64))
+            .sub(chrono::Duration::days(i64::from(expired_days_ago)))
             .timestamp();
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(now)).await?
@@ -157,11 +157,11 @@ SELECT * FROM ssh_auth_keys WHERE pam_uid = (
             && self.expires.is_some();
 
         // a conflict may happen if config for blacklisting has changed in the meantime
-        let sql_blacklist = r#"
+        let sql_blacklist = r"
 INSERT INTO ssh_auth_keys_used (used_key_hash, ts_added)
 VALUES ($1, $2)
 ON CONFLICT (used_key_hash) DO NOTHING
-"#;
+";
         let sql_delete = "DELETE FROM ssh_auth_keys WHERE pam_uid = $1 AND ts_added = $2";
 
         if is_hiqlite() {
@@ -184,7 +184,12 @@ ON CONFLICT (used_key_hash) DO NOTHING
                 let now = Utc::now().timestamp();
                 DB::pg_txn_append(&txn, sql_blacklist, &[&hash, &now]).await?;
             }
-            DB::pg_txn_append(&txn, sql_delete, &[&(self.pam_uid as i64), &self.ts_added]).await?;
+            DB::pg_txn_append(
+                &txn,
+                sql_delete,
+                &[&i64::from(self.pam_uid), &self.ts_added],
+            )
+            .await?;
 
             txn.commit().await?;
         }
@@ -220,7 +225,7 @@ ON CONFLICT (used_key_hash) DO NOTHING
         if is_hiqlite() {
             DB::hql().execute(sql, params!(pam_uid)).await?;
         } else {
-            DB::pg_execute(sql, &[&(pam_uid as i64)]).await?;
+            DB::pg_execute(sql, &[&i64::from(pam_uid)]).await?;
         }
         Ok(())
     }
@@ -270,7 +275,7 @@ impl AuthorizedKey {
             ));
         }
 
-        let (typ, rest) = trimmed.split_once(" ").unwrap_or_default();
+        let (typ, rest) = trimmed.split_once(' ').unwrap_or_default();
         if !(typ.starts_with("ssh-") || typ.starts_with("ecdsa-") || typ.starts_with("sk-"))
             || typ.len() > 40
         {
@@ -280,7 +285,7 @@ impl AuthorizedKey {
             ));
         }
 
-        let (data, comment) = rest.split_once(" ").unwrap_or((rest, ""));
+        let (data, comment) = rest.split_once(' ').unwrap_or((rest, ""));
         if data.len() < 48 || !RE_BASE64_NO_PAD.is_match(data) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

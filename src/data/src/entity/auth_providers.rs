@@ -47,6 +47,7 @@ pub enum AuthProviderType {
 }
 
 impl AuthProviderType {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::Custom => "custom",
@@ -78,7 +79,7 @@ impl FromStr for AuthProviderType {
 }
 
 impl From<String> for AuthProviderType {
-    /// Defaults to Self::OIDC in case of an error
+    /// Defaults to `Self::OIDC` in case of an error
     fn from(value: String) -> Self {
         Self::from_str(value.as_str()).unwrap_or(Self::Custom)
     }
@@ -145,6 +146,7 @@ impl AuthProviderLinkCookie {
         Ok(ApiCookie::build(PROVIDER_LINK_COOKIE, value, 300))
     }
 
+    #[must_use]
     pub fn deletion_cookie<'a>() -> Cookie<'a> {
         ApiCookie::build(PROVIDER_LINK_COOKIE, "", 0)
     }
@@ -186,14 +188,14 @@ impl AuthProvider {
         let slf = Self::try_from_id_req(new_store_id(), payload)?;
         let typ = slf.typ.as_str();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 auth_providers (id, name, enabled, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, jwks_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value,
 mfa_claim_path, mfa_claim_value, use_pkce, client_secret_basic, client_secret_post, auto_onboarding,
 auto_link)
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)"#;
+($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)";
 
         if is_hiqlite() {
             DB::hql()
@@ -252,7 +254,7 @@ VALUES
                 ],
             )
             .await?;
-        };
+        }
 
         Self::invalidate_cache_all().await?;
 
@@ -356,14 +358,14 @@ VALUES
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let typ = self.typ.as_str();
 
-        let sql = r#"
+        let sql = r"
 UPDATE auth_providers
 SET name = $1, enabled = $2, issuer = $3, typ = $4, authorization_endpoint = $5,
 token_endpoint = $6, userinfo_endpoint = $7, jwks_endpoint = $8, client_id = $9, secret = $10,
 scope = $11, admin_claim_path = $12, admin_claim_value = $13, mfa_claim_path = $14,
 mfa_claim_value = $15, use_pkce = $16, client_secret_basic = $17, client_secret_post = $18,
 auto_onboarding = $19, auto_link = $20
-WHERE id = $21"#;
+WHERE id = $21";
 
         if is_hiqlite() {
             DB::hql()
@@ -435,6 +437,7 @@ WHERE id = $21"#;
 
 impl AuthProvider {
     #[inline(always)]
+    #[must_use]
     pub fn cache_idx(id: &str) -> String {
         format!("{IDX_AUTH_PROVIDER}_{id}")
     }
@@ -443,14 +446,14 @@ impl AuthProvider {
         scope
             .split(' ')
             // filter this way to catch multiple spaces in a row
-            .filter_map(|s| if !s.is_empty() { Some(s.trim()) } else { None })
+            .filter_map(|s| if s.is_empty() { None } else { Some(s.trim()) })
             .collect::<Vec<&str>>()
             .join("+")
     }
 
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
         let scope = Self::cleanup_scope(&req.scope);
-        let secret = Self::secret_encrypted(&req.client_secret)?;
+        let secret = Self::secret_encrypted(req.client_secret.as_deref())?;
 
         Ok(Self {
             id,
@@ -540,7 +543,7 @@ impl AuthProvider {
         let scopes_supported = well_known
             .scopes_supported
             .iter()
-            .map(|s| s.as_str())
+            .map(String::as_str)
             .collect::<Vec<&str>>();
         let mut scope = String::with_capacity(24);
         if scopes_supported.contains(&"openid") {
@@ -582,7 +585,7 @@ impl AuthProvider {
         })
     }
 
-    fn secret_encrypted(secret: &Option<String>) -> Result<Option<Vec<u8>>, ErrorResponse> {
+    fn secret_encrypted(secret: Option<&str>) -> Result<Option<Vec<u8>>, ErrorResponse> {
         if let Some(secret) = &secret {
             Ok(Some(
                 EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec(),
@@ -740,7 +743,7 @@ impl AuthProviderCallback {
                 builder = builder.basic_auth(
                     &provider.client_id,
                     AuthProvider::secret_cleartext(&provider.secret)?,
-                )
+                );
             }
 
             builder
@@ -947,8 +950,7 @@ impl AuthProviderTemplate {
         for provider in providers {
             let updated = Logo::find_cached(&provider.id, &LogoType::AuthProvider)
                 .await
-                .map(|l| l.updated)
-                .unwrap_or(0);
+                .map_or(0, |l| l.updated);
 
             slf.push(Self {
                 id: provider.id,
@@ -1136,7 +1138,7 @@ impl AuthProviderIdClaims<'_> {
         // Any json number would become a String too, which is what we need for compatibility.
         let claims_user_id = match claims_user_id_json {
             Value::Number(num) => num.to_string(),
-            Value::String(s) => s.to_string(),
+            Value::String(s) => s.clone(),
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1145,77 +1147,71 @@ impl AuthProviderIdClaims<'_> {
             }
         };
 
-        let (user_opt, new_federated_user) = match User::find_by_federation(
-            &provider.id,
-            &claims_user_id,
-        )
-        .await
+        let (user_opt, new_federated_user) = if let Ok(user) =
+            User::find_by_federation(&provider.id, &claims_user_id).await
         {
-            Ok(user) => {
-                debug!("found already existing user by federation lookup: {user:?}");
-                (Some(user), NewFederatedUserCreated::No)
-            }
-            Err(_) => {
-                debug!("did not find already existing user by federation lookup");
-                if let Ok(mut user) = User::find_by_email(email.clone()).await {
-                    if let Some(link) = link_cookie {
-                        if link.provider_id != provider.id {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "bad provider_id in link cookie",
-                            ));
-                        }
-
-                        if link.user_id != user.id {
-                            // In this case, the link cookie exists from another user session.
-                            // It is possible to build this situation manually with access to
-                            // multiple accounts.
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "bad user_id in link cookie",
-                            ));
-                        }
-
-                        // finally, this is our condition we allow linking for existing accs
-                        if link.user_email != user.email {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                "Invalid E-Mail",
-                            ));
-                        }
-
-                        // If we got here, everything was fine, and we can create the link.
-                        // No need to `.save()` here, will be done later anyway with other updates.
-                        user.auth_provider_id = Some(provider.id.clone());
-                        user.federation_uid = Some(claims_user_id.clone());
-
-                        (Some(user), NewFederatedUserCreated::No)
-                    } else if provider.auto_link
-                        && user.federation_uid.is_none()
-                        && user.auth_provider_id.is_none()
-                    {
-                        user.auth_provider_id = Some(provider.id.clone());
-                        user.federation_uid = Some(claims_user_id.clone());
-
-                        (Some(user), NewFederatedUserCreated::No)
-                    } else {
+            debug!("found already existing user by federation lookup: {user:?}");
+            (Some(user), NewFederatedUserCreated::No)
+        } else {
+            debug!("did not find already existing user by federation lookup");
+            if let Ok(mut user) = User::find_by_email(email.clone()).await {
+                if let Some(link) = link_cookie {
+                    if link.provider_id != provider.id {
                         return Err(ErrorResponse::new(
-                            ErrorResponseType::Forbidden,
-                            format!(
-                                "User with email '{}' already exists but is not linked to this provider.",
-                                user.email
-                            ),
+                            ErrorResponseType::BadRequest,
+                            "bad provider_id in link cookie",
                         ));
                     }
-                } else if !provider.auto_onboarding {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::NotFound,
-                        "User not found",
-                    ));
+
+                    if link.user_id != user.id {
+                        // In this case, the link cookie exists from another user session.
+                        // It is possible to build this situation manually with access to
+                        // multiple accounts.
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            "bad user_id in link cookie",
+                        ));
+                    }
+
+                    // finally, this is our condition we allow linking for existing accs
+                    if link.user_email != user.email {
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::BadRequest,
+                            "Invalid E-Mail",
+                        ));
+                    }
+
+                    // If we got here, everything was fine, and we can create the link.
+                    // No need to `.save()` here, will be done later anyway with other updates.
+                    user.auth_provider_id = Some(provider.id.clone());
+                    user.federation_uid = Some(claims_user_id.clone());
+
+                    (Some(user), NewFederatedUserCreated::No)
+                } else if provider.auto_link
+                    && user.federation_uid.is_none()
+                    && user.auth_provider_id.is_none()
+                {
+                    user.auth_provider_id = Some(provider.id.clone());
+                    user.federation_uid = Some(claims_user_id.clone());
+
+                    (Some(user), NewFederatedUserCreated::No)
                 } else {
-                    // a new user will be created further down
-                    (None, NewFederatedUserCreated::Yes)
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        format!(
+                            "User with email '{}' already exists but is not linked to this provider.",
+                            user.email
+                        ),
+                    ));
                 }
+            } else if !provider.auto_onboarding {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "User not found",
+                ));
+            } else {
+                // a new user will be created further down
+                (None, NewFederatedUserCreated::Yes)
             }
         };
         debug!("user_opt:\n{:?}", user_opt);
@@ -1244,10 +1240,10 @@ impl AuthProviderIdClaims<'_> {
                         // We actually need this allocation to String to get bigger compatibility.
                         // This way, we can accept not only string, but we would for instance
                         // also interpret a given bool as string.
-                        let value = if !value.is_string() {
-                            format!("\"{value}\"")
-                        } else {
+                        let value = if value.is_string() {
                             value.to_string()
+                        } else {
+                            format!("\"{value}\"")
                         };
                         if value == admin_value {
                             should_be_rauthy_admin = Some(true);
@@ -1285,10 +1281,10 @@ impl AuthProviderIdClaims<'_> {
                         // We actually need this allocation to String to get bigger compatibility.
                         // This way, we can accept not only string, but we would for instance
                         // also interpret a given bool as string.
-                        let value = if !value.is_string() {
-                            format!("\"{value}\"")
-                        } else {
+                        let value = if value.is_string() {
                             value.to_string()
+                        } else {
+                            format!("\"{value}\"")
                         };
                         if value == mfa_value {
                             provider_mfa_login = ProviderMfaLogin::Yes;
@@ -1360,7 +1356,7 @@ impl AuthProviderIdClaims<'_> {
                     }
                 } else if roles.contains(&"rauthy_admin") {
                     if roles.len() == 1 {
-                        user.roles = "".to_string();
+                        user.roles = String::new();
                     } else {
                         user.roles = roles.into_iter().filter(|r| r != &"rauthy_admin").join(",");
                     }
@@ -1380,25 +1376,22 @@ impl AuthProviderIdClaims<'_> {
                 email: email.clone(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().map(String::from),
-                roles: should_be_rauthy_admin
-                    .map(|should_be_admin| {
-                        if should_be_admin {
-                            "rauthy_admin".to_string()
-                        } else {
-                            String::default()
-                        }
-                    })
-                    .unwrap_or_default(),
+                roles: should_be_rauthy_admin.map_or_default(|should_be_admin| {
+                    if should_be_admin {
+                        "rauthy_admin".to_string()
+                    } else {
+                        String::default()
+                    }
+                }),
                 enabled: true,
                 email_verified: self.email_verified.unwrap_or(false),
                 last_login: Some(now),
                 language: self
                     .locale
                     .as_ref()
-                    .map(|l| Language::from(l.as_ref()))
-                    .unwrap_or_default(),
+                    .map_or_default(|l| Language::from(l.as_ref())),
                 auth_provider_id: Some(provider.id.clone()),
-                federation_uid: Some(claims_user_id.to_string()),
+                federation_uid: Some(claims_user_id.clone()),
                 ..Default::default()
             };
             User::create_federated(new_user).await?
@@ -1454,7 +1447,7 @@ impl AuthProviderIdClaims<'_> {
         let preferred_username = if let Some(username) = &self.preferred_username {
             Some(username.to_string())
         } else {
-            self.login.as_ref().map(|l| l.to_string())
+            self.login.as_ref().map(ToString::to_string)
         };
         if let Some(username) = preferred_username {
             // Check via local read first, which is a lot cheaper than write through the Raft.
@@ -1583,9 +1576,8 @@ mod tests {
         assert_eq!(old_email.as_deref(), Some("old@example.com"));
     }
 
-    // exists only to understand the query syntax and experiment with it
     #[test]
-    #[ignore]
+    #[ignore = "exists only to understand the query syntax and experiment with it"]
     fn test_json_path() {
         let value = serde_json::json!({
             "foo": {

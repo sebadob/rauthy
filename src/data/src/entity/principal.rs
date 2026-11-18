@@ -62,6 +62,7 @@ impl Principal {
     }
 
     #[inline(always)]
+    #[must_use]
     pub fn is_admin(&self) -> bool {
         self.roles.iter().any(|r| r.as_str() == RAUTHY_ADMIN_ROLE)
     }
@@ -69,6 +70,7 @@ impl Principal {
     /// `true` if this principal holds at least one delegated group-admin role
     /// (`rauthy_admin:<prefix>`), regardless of whether it is also a full admin.
     #[inline]
+    #[must_use]
     pub fn is_group_admin(&self) -> bool {
         self.roles
             .iter()
@@ -76,9 +78,10 @@ impl Principal {
     }
 
     /// `true` if this principal acts purely as a delegated group admin: it is a group
-    /// admin, but neither a full `rauthy_admin` nor authenticated via an ApiKey. Used
+    /// admin, but neither a full `rauthy_admin` nor authenticated via an `ApiKey`. Used
     /// to apply the group-admin field-level restrictions only when they should apply.
     #[inline]
+    #[must_use]
     pub fn is_session_group_admin(&self) -> bool {
         self.api_key.is_none() && !self.is_admin() && self.is_group_admin()
     }
@@ -205,7 +208,7 @@ impl Principal {
 
     /// Per-target check for the group-admin path: errors unless this group admin may manage
     /// a user with the given `target_roles` / `target_groups` (see
-    /// [`Self::group_admin_can_manage`]). A no-op for full admins and ApiKeys, so it is safe
+    /// [`Self::group_admin_can_manage`]). A no-op for full admins and `ApiKeys`, so it is safe
     /// to call unconditionally after [`Self::validate_api_key_or_group_admin`].
     ///
     /// `target_roles` / `target_groups` are the comma-split roles and groups of the user
@@ -241,7 +244,7 @@ impl Principal {
     /// an ordinary user that is simply not a member of any group this admin manages yet. The
     /// Admin UI uses this distinct status to offer adding the user to a managed group, after
     /// which the details become visible. A target that is itself any kind of admin still
-    /// yields a `403`. No-op for full admins and ApiKeys.
+    /// yields a `403`. No-op for full admins and `ApiKeys`.
     pub fn validate_group_admin_can_view<'a, R, G>(
         &self,
         target_roles: R,
@@ -273,7 +276,7 @@ impl Principal {
     /// becomes manageable because of the membership the change itself adds. The companion
     /// [`Self::validate_group_admin_user_change`] still guarantees that only managed groups and
     /// no roles were touched, so this cannot be used to escalate. No-op for full admins and
-    /// ApiKeys.
+    /// `ApiKeys`.
     pub fn validate_group_admin_can_manage_change<'a, CR, CG>(
         &self,
         current_roles: CR,
@@ -290,8 +293,8 @@ impl Principal {
         }
         if self.group_admin_can_manage(current_roles, current_groups)
             || self.group_admin_can_manage(
-                new_roles.iter().map(|r| r.as_str()),
-                new_groups.iter().map(|g| g.as_str()),
+                new_roles.iter().map(String::as_str),
+                new_groups.iter().map(String::as_str),
             )
         {
             return Ok(());
@@ -300,8 +303,8 @@ impl Principal {
         // group admin, so the resulting roles classify the failure the same as the current
         // ones would: an admin target yields the clearer message.
         match self.group_admin_access(
-            new_roles.iter().map(|r| r.as_str()),
-            new_groups.iter().map(|g| g.as_str()),
+            new_roles.iter().map(String::as_str),
+            new_groups.iter().map(String::as_str),
         ) {
             GroupAdminAccess::TargetIsAdmin => Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -322,7 +325,7 @@ impl Principal {
     /// the submitted groups *inside* the scope are applied on top. Submitted groups outside
     /// the admin's scope are ignored (the admin can never add a group it does not manage).
     ///
-    /// Returns `submitted` unchanged for full admins and ApiKeys.
+    /// Returns `submitted` unchanged for full admins and `ApiKeys`.
     pub fn group_admin_scoped_groups<'a, CG>(
         &self,
         current_groups: CG,
@@ -354,7 +357,7 @@ impl Principal {
 
     /// Validates that an update of an existing user is allowed for a group admin.
     ///
-    /// No-op for full `rauthy_admin`s and ApiKeys. For a group admin it enforces the
+    /// No-op for full `rauthy_admin`s and `ApiKeys`. For a group admin it enforces the
     /// v1 field-level guards:
     /// - the roles must match the target's current roles (a group admin can never modify
     ///   any role), and
@@ -382,7 +385,7 @@ impl Principal {
         let new_roles: BTreeSet<&str> = new_roles
             .iter()
             .filter(|r| !r.is_empty())
-            .map(|r| r.as_str())
+            .map(String::as_str)
             .collect();
         if current_roles != new_roles {
             return Err(ErrorResponse::new(
@@ -398,7 +401,7 @@ impl Principal {
         let new_groups: BTreeSet<&str> = new_groups
             .iter()
             .filter(|g| !g.is_empty())
-            .map(|g| g.as_str())
+            .map(String::as_str)
             .collect();
         for changed in current_groups.symmetric_difference(&new_groups) {
             if !self.group_admin_matches(changed) {
@@ -413,7 +416,7 @@ impl Principal {
 
     /// Validates that creating a new user is allowed for a group admin.
     ///
-    /// No-op for full `rauthy_admin`s and ApiKeys. For a group admin it enforces that
+    /// No-op for full `rauthy_admin`s and `ApiKeys`. For a group admin it enforces that
     /// the new user gets no role assigned and is placed into at least one, and only,
     /// groups this admin manages (so the created account stays within the admin's
     /// scope and cannot be elevated).
@@ -434,14 +437,12 @@ impl Principal {
         }
 
         // the new user must be placed into at least one group, so it stays in scope
-        let groups: Vec<&str> = new_groups
-            .map(|g| {
-                g.iter()
-                    .filter(|s| !s.is_empty())
-                    .map(|s| s.as_str())
-                    .collect()
-            })
-            .unwrap_or_default();
+        let groups: Vec<&str> = new_groups.map_or_default(|g| {
+            g.iter()
+                .filter(|s| !s.is_empty())
+                .map(String::as_str)
+                .collect()
+        });
         if groups.is_empty() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -461,19 +462,20 @@ impl Principal {
 
     #[inline(always)]
     pub fn is_user(&self, id: &str) -> Result<(), ErrorResponse> {
-        if self.user_id() != Ok(id) {
+        if self.user_id() == Ok(id) {
+            Ok(())
+        } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "You are not allowed to modify this user",
             ))
-        } else {
-            Ok(())
         }
     }
 
     #[inline(always)]
+    #[must_use]
     pub fn has_mfa_active(&self) -> bool {
-        self.session.as_ref().map(|s| s.is_mfa).unwrap_or(false)
+        self.session.as_ref().is_some_and(|s| s.is_mfa)
     }
 
     /// Returns the `user_id` linked to this session. Will `Err` if this principal does not
@@ -495,8 +497,8 @@ impl Principal {
         access_rights: AccessRights,
     ) -> Result<(), ErrorResponse> {
         if let Some(api_key) = &self.api_key {
-            match api_key.validate_access(&access_group, &access_rights) {
-                Ok(_) => Ok(()),
+            match api_key.validate_access(access_group, access_rights) {
+                Ok(()) => Ok(()),
                 Err(_) => Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
                     format!(
@@ -551,9 +553,9 @@ impl Principal {
         Ok(())
     }
 
-    /// Validates an ApiKey OR a valid admin session.
-    /// If both are given, the ApiKey will have the higher priority since it is more specific.
-    /// Returns an error with an invalid ApiKey even when a valid session exists.
+    /// Validates an `ApiKey` OR a valid admin session.
+    /// If both are given, the `ApiKey` will have the higher priority since it is more specific.
+    /// Returns an error with an invalid `ApiKey` even when a valid session exists.
     #[inline(always)]
     pub fn validate_api_key_or_admin_session(
         &self,
@@ -561,11 +563,11 @@ impl Principal {
         access_rights: AccessRights,
     ) -> Result<(), ErrorResponse> {
         match self.validate_api_key(access_group, access_rights) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
 
             Err(err) => {
                 if err.error == ErrorResponseType::Forbidden {
-                    // in this case, return the Error from the ApiKey with the hint
+                    // in this case, return the Error from the `ApiKey` with the hint
                     // for the needed permissions in any case -> better DX and debugging
                     // without real security issues
                     Err(err)
@@ -591,7 +593,7 @@ impl Principal {
         }
     }
 
-    /// Validates the given user_id against this Principal.
+    /// Validates the given `user_id` against this Principal.
     pub fn validate_user_session(&self, user_id: &str) -> Result<(), ErrorResponse> {
         let session = self.validate_session_auth()?;
         if session.user_id.as_deref() == Some(user_id) {
@@ -662,7 +664,7 @@ mod tests {
 
     fn principal(roles: &[&str]) -> Principal {
         Principal {
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
             ..Default::default()
         }
     }
@@ -771,7 +773,7 @@ mod tests {
     }
 
     fn s(v: &[&str]) -> Vec<String> {
-        v.iter().map(|x| x.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     #[test]

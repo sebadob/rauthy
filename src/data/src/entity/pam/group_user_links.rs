@@ -39,7 +39,7 @@ impl PamGroupUserLink {
         let res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_map(sql, params!(gid)).await?
         } else {
-            DB::pg_query(sql, &[&(gid as i64)], 4).await?
+            DB::pg_query(sql, &[&i64::from(gid)], 4).await?
         };
 
         Ok(res)
@@ -51,7 +51,7 @@ impl PamGroupUserLink {
         let res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_map(sql, params!(uid)).await?
         } else {
-            DB::pg_query(sql, &[&(uid as i64)], 4).await?
+            DB::pg_query(sql, &[&i64::from(uid)], 4).await?
         };
 
         Ok(res)

@@ -12,7 +12,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
 
-    let url = format!("{}/password_policy", backend_url);
+    let url = format!("{backend_url}/password_policy");
 
     // get current rules
     let res = reqwest::Client::new()
@@ -123,7 +123,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         .json(&upd_req)
         .send()
         .await?;
-    println!("{:?}", res);
+    println!("{res:?}");
     res = check_status(res, 400).await?;
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::BadRequest);

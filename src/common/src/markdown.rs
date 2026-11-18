@@ -1,5 +1,6 @@
 use pulldown_cmark::{Options, Parser};
 
+#[must_use]
 pub fn render_sanitized_markdown(markdown: &str) -> String {
     let parser = Parser::new_ext(markdown, Options::all());
     // this capacity is not exactly right, but it is a lot closer than just `String::new()`

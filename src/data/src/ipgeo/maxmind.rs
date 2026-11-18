@@ -54,8 +54,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
             let etag_header = res
                 .headers()
                 .get("etag")
-                .map(|v| v.to_str().unwrap_or_default())
-                .unwrap_or_default();
+                .map_or_default(|v| v.to_str().unwrap_or_default());
             if etag == etag_header {
                 info!("Maxmind DB is up to date");
 
@@ -101,8 +100,7 @@ pub async fn update_db() -> Result<(), ErrorResponse> {
     let etag = res
         .headers()
         .get("etag")
-        .map(|v| v.to_str().unwrap_or_default())
-        .unwrap_or_default()
+        .map_or_default(|v| v.to_str().unwrap_or_default())
         .to_string();
     debug!("New GeoLite ETAG: {etag}");
 
@@ -195,7 +193,7 @@ fn decompress(input_file: &str, output_dir: &str, db_file: &str) -> Result<(), E
 
         // for maxmind, we will always have a single directory
         if is_first {
-            if path_str.ends_with("/")
+            if path_str.ends_with('/')
                 && let Some(stripped) = path_str.strip_suffix("/")
             {
                 prefix = Some(stripped.to_string());
@@ -205,11 +203,14 @@ fn decompress(input_file: &str, output_dir: &str, db_file: &str) -> Result<(), E
             is_first = false;
         }
 
-        if path_str.ends_with(".mmdb") {
+        if std::path::Path::new(path_str)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("mmdb"))
+        {
             entry.unpack(db_file)?;
         } else {
             entry.unpack(format!("{output_dir}/{path_str}"))?;
-        };
+        }
     }
 
     Ok(())

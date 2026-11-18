@@ -30,6 +30,7 @@ pub const PASSWORD: &str = "123SuperSafe";
 
 /// Decodes the (unverified) JWT payload, so a test can assert on any claim.
 #[allow(dead_code)]
+#[must_use]
 pub fn decode_claims(access_token: &str) -> serde_json::Value {
     let payload_b64 = access_token
         .split('.')
@@ -44,7 +45,7 @@ pub async fn check_status(res: Response, code: u16) -> Result<Response, Box<dyn 
     if res.status() != code {
         let status = res.status();
         let err = res.text().await?;
-        panic!("Status: {} - Content: {:?}", status, err);
+        panic!("Status: {status} - Content: {err:?}");
     }
     assert_eq!(res.status(), code);
     Ok(res)
@@ -61,17 +62,20 @@ pub async fn get_auth_headers() -> Result<HeaderMap, Box<dyn Error>> {
     }
 }
 
+#[must_use]
 pub fn get_backend_url() -> String {
     "http://localhost:8081/auth/v1".to_string()
 }
 
 #[allow(dead_code)]
+#[must_use]
 pub fn get_issuer() -> String {
     get_backend_url()
 }
 
 /// The RFC 9207 `iss` value as it appears on the wire: full issuer with trailing `/`,
 /// form-urlencoded independently of the server-side encoder.
+#[must_use]
 pub fn get_issuer_urlencoded() -> String {
     format!(
         "{}%2F",
@@ -164,19 +168,13 @@ pub async fn session_headers_for_client(
     let client = reqwest::Client::new();
 
     let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
-    let query = format!(
-        "client_id={client_id}&redirect_uri={}&response_type=code",
-        redirect_uri
-    );
+    let query = format!("client_id={client_id}&redirect_uri={redirect_uri}&response_type=code");
     let challenge_s256 = base64_url_encode(sha256!(challenge_plain.as_bytes()));
-    let query_pkce = format!(
-        "{}&code_challenge={}&code_challenge_method=S256",
-        query, challenge_s256
-    );
-    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
+    let query_pkce = format!("{query}&code_challenge={challenge_s256}&code_challenge_method=S256");
+    let url_auth = format!("{backend_url}/oidc/authorize?{query_pkce}");
 
     // we need a session in Init state
-    let url_session = format!("{}/oidc/session", backend_url);
+    let url_session = format!("{backend_url}/oidc/session");
     let res = client.post(&url_session).send().await.unwrap();
     assert!(res.status().is_success());
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
@@ -206,7 +204,7 @@ pub async fn session_headers_for_client(
         .unwrap();
     assert_eq!(res.status(), 202);
 
-    let (code, _state) = code_state_from_headers(res).unwrap();
+    let (code, _state) = code_state_from_headers(&res).unwrap();
     let req_token = TokenRequest {
         grant_type: GrantType::AuthorizationCode,
         code: Some(code),
@@ -217,16 +215,17 @@ pub async fn session_headers_for_client(
         ..Default::default()
     };
 
-    let url_token = format!("{}/oidc/token", backend_url);
+    let url_token = format!("{backend_url}/oidc/token");
     let res = client
         .post(&url_token)
         .form(&req_token)
         .send()
         .await
         .unwrap();
-    if res.status() != 200 {
-        panic!("Error getting session headers: {res:?}");
-    }
+    assert!(
+        res.status() == 200,
+        "Error getting session headers: {res:?}"
+    );
 
     let ts = res.json::<TokenSet>().await.unwrap();
 
@@ -282,16 +281,15 @@ pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
     let client = reqwest::Client::new();
 
     let challenge_plain = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
-    let redirect_uri = format!("{}/oidc/callback", backend_url);
+    let redirect_uri = format!("{backend_url}/oidc/callback");
     let challenge_s256 = base64_url_encode(sha256!(challenge_plain.as_bytes()));
     let query_pkce = format!(
-        "client_id=rauthy&redirect_uri={}&response_type=code&code_challenge={}\
-        &code_challenge_method=S256",
-        redirect_uri, challenge_s256
+        "client_id=rauthy&redirect_uri={redirect_uri}&response_type=code&code_challenge={challenge_s256}\
+        &code_challenge_method=S256"
     );
-    let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
+    let url_auth = format!("{backend_url}/oidc/authorize?{query_pkce}");
 
-    let url_session = format!("{}/oidc/session", backend_url);
+    let url_session = format!("{backend_url}/oidc/session");
     let res = client.post(&url_session).send().await.unwrap();
     assert!(res.status().is_success());
     let headers = cookie_csrf_headers_from_res_direct(res).await.unwrap();
@@ -301,7 +299,7 @@ pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
         password: Some(password.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
-        redirect_uri: redirect_uri.to_string(),
+        redirect_uri: redirect_uri.clone(),
         scopes: None,
         state: None,
         nonce: Some("MySuperNonce".to_string()),
@@ -348,7 +346,7 @@ pub async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Bo
     for cookie in res.headers().get_all(header::SET_COOKIE) {
         let (cookie, _) = cookie.to_str()?.split_once(';').unwrap();
         if cookie.starts_with("__Host-RauthySession=") {
-            println!("Extracted session cookie: {:?}", cookie);
+            println!("Extracted session cookie: {cookie:?}");
             let mut headers = HeaderMap::new();
             headers.append(header::COOKIE, HeaderValue::from_str(cookie)?);
 
@@ -357,7 +355,7 @@ pub async fn cookie_csrf_headers_from_res(res: Response) -> Result<HeaderMap, Bo
                 .split_once("<template id=\"tpl_csrf_token\">")
                 .unwrap();
             let (csrf_token, _) = content_split.split_once("</template>").unwrap();
-            println!("Extracted CSRF Token: {}", csrf_token);
+            println!("Extracted CSRF Token: {csrf_token}");
             headers.append(CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
 
             return Ok(headers);
@@ -373,7 +371,7 @@ fn location_url(res: &Response) -> Result<reqwest::Url, Box<dyn Error>> {
         .get(header::LOCATION)
         .ok_or("missing Location header")?
         .to_str()?;
-    println!("Location Header: {}", loc_header);
+    println!("Location Header: {loc_header}");
 
     let url = reqwest::Url::parse(loc_header)?;
     if url.fragment().is_some() {
@@ -430,8 +428,8 @@ pub fn authorization_response_params_decoded(
         .collect())
 }
 
-pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>), Box<dyn Error>> {
-    let params = authorization_response_params(&res)?;
+pub fn code_state_from_headers(res: &Response) -> Result<(String, Option<String>), Box<dyn Error>> {
+    let params = authorization_response_params(res)?;
     let get = |key: &str| {
         params
             .iter()
@@ -443,6 +441,7 @@ pub fn code_state_from_headers(res: Response) -> Result<(String, Option<String>)
     Ok((code, get("state")))
 }
 
+#[must_use]
 pub fn init_client_bcl_uri() -> String {
     "http://localhost:8081/auth/v1/dev/backchannel_logout".to_string()
 }

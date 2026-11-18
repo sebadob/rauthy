@@ -57,7 +57,7 @@ pub async fn send_login_location(
     let link_account = format!("{pub_url}/auth/v1/account");
     let location = location.as_deref().unwrap_or_default();
 
-    let i18n = I18nEmailLoginLocation::build(&user.language);
+    let i18n = I18nEmailLoginLocation::build(user.language);
     let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EmailLoginLocationTxt {
         email_sub_prefix,
@@ -93,7 +93,7 @@ pub async fn send_login_location(
     let req = EMail {
         typ: EmailType::LoginLocation,
         recipient_name: user.email_recipient_name(),
-        address: user.email.to_string(),
+        address: user.email.clone(),
         subject: format!("{email_sub_prefix} - {}", i18n.subject),
         text: Some(
             text.render()
@@ -110,7 +110,7 @@ pub async fn send_login_location(
         .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 user.email, error = ?e,

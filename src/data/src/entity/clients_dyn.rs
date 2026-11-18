@@ -77,6 +77,7 @@ impl ClientDyn {
 
 impl ClientDyn {
     #[inline]
+    #[must_use]
     pub fn get_cache_entry(id: &str) -> String {
         format!("client_dyn_{id}")
     }
@@ -93,25 +94,22 @@ impl ClientDyn {
             .as_secs() as i64;
         let ts: Option<i64> = client.get(Cache::IpRateLimit, ip.to_string()).await?;
 
-        match ts {
-            Some(ts) => {
-                let retry_at = ts + ttl;
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::TooManyRequests(retry_at),
-                    format!("You hit a rate limit. You may try again at: {retry_at}"),
-                ));
-            }
-            None => {
-                let now = Utc::now().timestamp();
-                client
-                    .put(Cache::IpRateLimit, ip.to_string(), &now, Some(ttl))
-                    .await?;
-            }
+        if let Some(ts) = ts {
+            let retry_at = ts + ttl;
+            return Err(ErrorResponse::new(
+                ErrorResponseType::TooManyRequests(retry_at),
+                format!("You hit a rate limit. You may try again at: {retry_at}"),
+            ));
         }
+        let now = Utc::now().timestamp();
+        client
+            .put(Cache::IpRateLimit, ip.to_string(), &now, Some(ttl))
+            .await?;
 
         Ok(())
     }
 
+    #[must_use]
     pub fn registration_client_uri(id: &str) -> String {
         format!("{}clients_dyn/{}", RauthyConfig::get().issuer, id)
     }
@@ -122,16 +120,16 @@ impl ClientDyn {
     }
 
     pub fn validate_token(&self, bearer: &str) -> Result<(), ErrorResponse> {
-        if !constant_time_eq::constant_time_eq(
+        if constant_time_eq::constant_time_eq(
             self.registration_token_plain()?.as_bytes(),
             bearer.as_bytes(),
         ) {
+            Ok(())
+        } else {
             Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid_token".to_string()),
                 "Invalid registration_token",
             ))
-        } else {
-            Ok(())
         }
     }
 }

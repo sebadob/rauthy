@@ -1,3 +1,4 @@
+#[must_use]
 pub fn sanitize_html(input: &str) -> String {
     ammonia::Builder::default()
         .add_generic_attributes(&["align", "cellpadding", "cellspacing", "id", "style"])

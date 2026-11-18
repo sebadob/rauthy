@@ -32,16 +32,17 @@ pub struct DeviceEntity {
 
 impl DeviceEntity {
     /// `false` if `client` was deleted and recreated since the device was authorized.
+    #[must_use]
     pub fn is_for_client(&self, client: &Client) -> bool {
         self.client_id == client.id && self.client_created_micros == client.created_micros
     }
 
     pub async fn insert(self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO devices
 (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name,
 client_created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
         if is_hiqlite() {
             DB::hql()
@@ -107,9 +108,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
             .sub(chrono::Duration::try_hours(1).unwrap())
             .timestamp();
 
-        let sql = r#"
+        let sql = r"
 DELETE FROM devices
-WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
+WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql().execute(sql, params!(exp)).await?
@@ -194,7 +195,7 @@ impl From<DeviceEntity> for DeviceResponse {
 pub struct DeviceAuthCode {
     pub client_id: String,
     pub device_code: String,
-    /// Will be Some(user_id) once a user has been validated the auth request
+    /// Will be `Some(user_id)` once a user has been validated the auth request
     pub verified_by: Option<String>,
     /// We need the additional `exp` here because a verification from a
     /// user will reset the lifetime, which means without the additional
@@ -240,7 +241,7 @@ struct DeviceAuthCodeV037 {
 }
 
 impl DeviceAuthCode {
-    /// DeviceAuthCode's live inside the cache only
+    /// `DeviceAuthCode`'s live inside the cache only
     pub async fn new(
         scopes: Option<String>,
         client_id: String,
@@ -370,21 +371,25 @@ impl DeviceAuthCode {
 impl DeviceAuthCode {
     /// `false` if `client` was deleted and recreated since the code was issued.
     #[inline]
+    #[must_use]
     pub fn is_for_client(&self, client: &Client) -> bool {
         self.client_id == client.id && self.client_created_micros == client.created_micros
     }
 
     /// Validates the given `user_code`
     #[inline]
+    #[must_use]
     pub fn user_code(&self) -> &str {
         let len = RauthyConfig::get().vars.device_grant.user_code_length as usize;
         &self.device_code[..len]
     }
 
+    #[must_use]
     pub fn verification_uri(&self) -> String {
         format!("{}/auth/v1/device", RauthyConfig::get().pub_url_with_scheme)
     }
 
+    #[must_use]
     pub fn verification_uri_complete(&self) -> String {
         format!(
             "{}/auth/v1/device?code={}",

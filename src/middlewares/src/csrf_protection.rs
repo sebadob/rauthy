@@ -76,13 +76,11 @@ where
                     let dest = req
                         .headers()
                         .get("sec-fetch-dest")
-                        .map(|h| h.to_str().unwrap_or_default())
-                        .unwrap_or_default();
+                        .map_or_default(|h| h.to_str().unwrap_or_default());
                     let mode = req
                         .headers()
                         .get("sec-fetch-mode")
-                        .map(|h| h.to_str().unwrap_or_default())
-                        .unwrap_or_default();
+                        .map_or_default(|h| h.to_str().unwrap_or_default());
 
                     debug!("sec-fetch-dest: {dest}, sec-fetch-mode: {mode}");
 

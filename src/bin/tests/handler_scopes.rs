@@ -12,7 +12,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
-    let url = format!("{}/scopes", backend_url);
+    let url = format!("{backend_url}/scopes");
     let res = client
         .get(&url)
         .headers(auth_headers.clone())
@@ -42,7 +42,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
     assert_eq!(scope.name, new_scope.scope);
 
     // link the scope to a client and check
-    let url_client = format!("{}/clients/init_client", backend_url);
+    let url_client = format!("{backend_url}/clients/init_client");
     let res = client
         .get(&url_client)
         .headers(auth_headers.clone())

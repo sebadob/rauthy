@@ -93,7 +93,7 @@ impl HtmlCached {
     }
 
     #[inline]
-    fn cache_key(&self, lang: &Language, encoding: &str) -> String {
+    fn cache_key(&self, lang: Language, encoding: &str) -> String {
         format!("{}_{}_{encoding}", self.as_str(), lang.as_str())
     }
 
@@ -123,7 +123,7 @@ impl HtmlCached {
         debug!(language = ?lang);
         let cache_key = if with_cache {
             if let Some(bytes) = DB::hql()
-                .get_bytes(Cache::Html, self.cache_key(&lang, encoding))
+                .get_bytes(Cache::Html, self.cache_key(lang, encoding))
                 .await?
             {
                 return Ok(HttpResponse::Ok()
@@ -132,7 +132,7 @@ impl HtmlCached {
                     .insert_header(HEADER_HTML)
                     .body(bytes));
             }
-            self.cache_key(&lang, encoding)
+            self.cache_key(lang, encoding)
         } else {
             String::default()
         };
@@ -141,7 +141,7 @@ impl HtmlCached {
             Self::Account => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
                 AccountHtml::build(
-                    &lang,
+                    lang,
                     theme_ts,
                     &[
                         HtmlTemplate::AuthProviders(providers),
@@ -152,38 +152,38 @@ impl HtmlCached {
                     ],
                 )
             }
-            Self::Admin => AdminHtml::build(&lang, theme_ts),
-            Self::AdminApiKeys => AdminApiKeysHtml::build(&lang, theme_ts),
-            Self::AdminAttributes => AdminAttributesHtml::build(&lang, theme_ts),
-            Self::AdminBlacklist => AdminBlacklistHtml::build(&lang, theme_ts),
-            Self::AdminClients => AdminClientsHtml::build(&lang, theme_ts),
-            Self::AdminEvents => AdminEventsHtml::build(&lang, theme_ts),
-            Self::AdminKV => AdminKVHtml::build(&lang, theme_ts),
-            Self::AdminGroups => AdminGroupsHtml::build(&lang, theme_ts),
-            Self::AdminProviders => ProvidersHtml::build(&lang, theme_ts),
-            Self::AdminRoles => AdminRolesHtml::build(&lang, theme_ts),
-            Self::AdminScopes => AdminScopesHtml::build(&lang, theme_ts),
-            Self::AdminPAM => AdminPAMHtml::build(&lang, theme_ts),
-            Self::AdminSessions => AdminSessionsHtml::build(&lang, theme_ts),
-            Self::AdminUsers => AdminUsersHtml::build(&lang, theme_ts),
-            Self::AuthProviderCallback => ProviderCallbackHtml::build(&lang, theme_ts),
-            Self::ConfigArgon2 => AdminConfigArgon2Html::build(&lang, theme_ts),
-            Self::ConfigBackups => AdminConfigBackupsHtml::build(&lang, theme_ts),
-            Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&lang, theme_ts),
-            Self::ConfigJwks => AdminConfigJwksHtml::build(&lang, theme_ts),
-            Self::ConfigPolicy => AdminConfigPolicyHtml::build(&lang, theme_ts),
-            Self::Device => DeviceHtml::build(&lang, theme_ts),
-            Self::Docs => AdminDocsHtml::build(&lang, theme_ts),
-            Self::FedCM => FedCMHtml::build(&lang, theme_ts),
-            Self::Index => IndexHtml::build(&lang, theme_ts),
-            Self::Logout(csrf_token) => LogoutHtml::build(csrf_token, &lang, theme_ts),
+            Self::Admin => AdminHtml::build(lang, theme_ts),
+            Self::AdminApiKeys => AdminApiKeysHtml::build(lang, theme_ts),
+            Self::AdminAttributes => AdminAttributesHtml::build(lang, theme_ts),
+            Self::AdminBlacklist => AdminBlacklistHtml::build(lang, theme_ts),
+            Self::AdminClients => AdminClientsHtml::build(lang, theme_ts),
+            Self::AdminEvents => AdminEventsHtml::build(lang, theme_ts),
+            Self::AdminKV => AdminKVHtml::build(lang, theme_ts),
+            Self::AdminGroups => AdminGroupsHtml::build(lang, theme_ts),
+            Self::AdminProviders => ProvidersHtml::build(lang, theme_ts),
+            Self::AdminRoles => AdminRolesHtml::build(lang, theme_ts),
+            Self::AdminScopes => AdminScopesHtml::build(lang, theme_ts),
+            Self::AdminPAM => AdminPAMHtml::build(lang, theme_ts),
+            Self::AdminSessions => AdminSessionsHtml::build(lang, theme_ts),
+            Self::AdminUsers => AdminUsersHtml::build(lang, theme_ts),
+            Self::AuthProviderCallback => ProviderCallbackHtml::build(lang, theme_ts),
+            Self::ConfigArgon2 => AdminConfigArgon2Html::build(lang, theme_ts),
+            Self::ConfigBackups => AdminConfigBackupsHtml::build(lang, theme_ts),
+            Self::ConfigEncryption => AdminConfigEncryptionHtml::build(lang, theme_ts),
+            Self::ConfigJwks => AdminConfigJwksHtml::build(lang, theme_ts),
+            Self::ConfigPolicy => AdminConfigPolicyHtml::build(lang, theme_ts),
+            Self::Device => DeviceHtml::build(lang, theme_ts),
+            Self::Docs => AdminDocsHtml::build(lang, theme_ts),
+            Self::FedCM => FedCMHtml::build(lang, theme_ts),
+            Self::Index => IndexHtml::build(lang, theme_ts),
+            Self::Logout(csrf_token) => LogoutHtml::build(csrf_token, lang, theme_ts),
             Self::PasswordReset => {
                 let logo_updated = Logo::find_updated("rauthy", &LogoType::Client).await?;
-                UserPasswordResetHtml::build(&lang, theme_ts, logo_updated)
+                UserPasswordResetHtml::build(lang, theme_ts, logo_updated)
             }
             Self::UserRegistration => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
-                UserRegisterHtml::build(&lang, theme_ts, HtmlTemplate::AuthProviders(providers))
+                UserRegisterHtml::build(lang, theme_ts, HtmlTemplate::AuthProviders(providers))
             }
         };
 

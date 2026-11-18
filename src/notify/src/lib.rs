@@ -20,6 +20,7 @@ pub enum NotificationLevel {
 }
 
 impl NotificationLevel {
+    #[must_use]
     pub fn as_hex_color(&self) -> &str {
         match self {
             NotificationLevel::Info => "#388c51",
@@ -29,6 +30,7 @@ impl NotificationLevel {
         }
     }
 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             NotificationLevel::Info => "INFO",

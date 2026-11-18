@@ -104,9 +104,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let dataset = MdsDataset::from_str(jwt.trim()).map_err(|err| err.to_string())?;
-    let next_update = chrono::DateTime::from_timestamp(dataset.next_update_ts, 0)
-        .map(|dt| dt.date_naive().to_string())
-        .unwrap_or_else(|| dataset.next_update_ts.to_string());
+    let next_update = chrono::DateTime::from_timestamp(dataset.next_update_ts, 0).map_or_else(
+        || dataset.next_update_ts.to_string(),
+        |dt| dt.date_naive().to_string(),
+    );
     println!(
         "Prepared blob no. {}, nextUpdate {}: {} entries, {} distinct root certs",
         dataset.blob_no,

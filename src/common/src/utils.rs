@@ -23,6 +23,7 @@ macro_rules! sha256 {
     };
 }
 
+#[must_use]
 pub fn get_local_hostname() -> String {
     let hostname_os = gethostname();
     hostname_os
@@ -40,11 +41,13 @@ pub fn get_rand(count: usize) -> String {
         .collect::<String>()
 }
 
+#[must_use]
 pub fn get_rand_between(lower: u64, upper: u64) -> u64 {
     rand::rng().random_range(lower..upper)
 }
 
 #[inline(always)]
+#[must_use]
 pub fn base64_encode(input: &[u8]) -> String {
     B64_STD.encode(input)
 }
@@ -65,6 +68,7 @@ pub fn base64_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), ErrorRespon
 
 // Returns the given input as a base64 URL Encoded String
 #[inline(always)]
+#[must_use]
 pub fn base64_url_encode(input: &[u8]) -> String {
     let b64 = B64_STD.encode(input);
     b64.chars()
@@ -78,13 +82,14 @@ pub fn base64_url_encode(input: &[u8]) -> String {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn base64_url_no_pad_encode(input: &[u8]) -> String {
     B64_URL_SAFE_NO_PAD.encode(input)
 }
 
 #[inline(always)]
 pub fn base64_url_no_pad_encode_buf(input: &[u8], buf: &mut String) {
-    B64_URL_SAFE_NO_PAD.encode_string(input, buf)
+    B64_URL_SAFE_NO_PAD.encode_string(input, buf);
 }
 
 #[inline(always)]
@@ -112,6 +117,7 @@ pub fn base64_url_no_pad_decode_buf(b64: &str, buf: &mut Vec<u8>) -> Result<(), 
 }
 
 #[inline(always)]
+#[must_use]
 pub fn new_store_id() -> String {
     get_rand(24)
 }
@@ -201,6 +207,7 @@ fn check_trusted_proxy(peer_ip: &IpAddr, use_dummy_addr: bool) -> Result<(), Err
     ))
 }
 
+#[must_use]
 pub fn build_trusted_proxies(proxies: &[String]) -> Vec<cidr::IpCidr> {
     let mut proxies = proxies
         .iter()
@@ -267,6 +274,7 @@ where
 }
 
 /// Removes `item` from a comma-separated list, comparing whole entries only.
+#[must_use]
 pub fn csv_remove(list: &str, item: &str) -> String {
     list.split(',')
         .filter(|e| e.trim() != item)
@@ -276,6 +284,7 @@ pub fn csv_remove(list: &str, item: &str) -> String {
 
 /// Renames every entry equal to `old` in a comma-separated list to `new`, comparing whole
 /// entries only.
+#[must_use]
 pub fn csv_rename(list: &str, old: &str, new: &str) -> String {
     list.split(',')
         .map(|e| if e.trim() == old { new } else { e })

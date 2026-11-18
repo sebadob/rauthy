@@ -13,7 +13,8 @@ pub struct I18nEmailChangeInfoOld<'a> {
 }
 
 impl I18nEmailChangeInfoOld<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
@@ -22,6 +23,7 @@ impl I18nEmailChangeInfoOld<'_> {
             Language::Fr => Self::build_fr(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
+            #[allow(clippy::match_same_arms)]
             Language::Nb => Self::build_en(),
             Language::Nl => Self::build_nl(),
             Language::Pt => Self::build_pt(),

@@ -22,7 +22,9 @@ pub async fn watch_health() {
 
         let cache_healthy = DB::hql().is_healthy_cache().await.is_ok();
 
-        let db_healthy = if !is_db_alive().await {
+        let db_healthy = if is_db_alive().await {
+            true
+        } else {
             // wait for a few seconds and try again before alerting
             tokio::time::sleep(Duration::from_secs(10)).await;
 
@@ -36,8 +38,6 @@ pub async fn watch_health() {
             } else {
                 true
             }
-        } else {
-            true
         };
 
         let is_good_now = db_healthy && cache_healthy;

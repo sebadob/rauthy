@@ -39,22 +39,21 @@ use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
-use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 use zeroize::Zeroize;
 
-pub const SQL_INSERT: &str = r#"
+pub const SQL_INSERT: &str = r"
 INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
 post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
 auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
 client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
 default_aud, created_micros, consent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22, $23, $24, $25, $26)"#;
+$18, $19, $20, $21, $22, $23, $24, $25, $26)";
 
-static SQL_SAVE: &str = r#"
+static SQL_SAVE: &str = r"
 UPDATE clients
 SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, redirect_uris = $6,
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
@@ -62,7 +61,7 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
     claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26
-WHERE id = $27"#;
+WHERE id = $27";
 
 /**
 # OIDC Client
@@ -168,6 +167,7 @@ impl Debug for Client {
 // CRUD
 impl Client {
     #[inline]
+    #[must_use]
     pub fn cache_idx(id: &str) -> String {
         format!("client_{id}")
     }
@@ -273,10 +273,10 @@ impl Client {
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        let sql_2 = r#"
+        let sql_2 = r"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
         if is_hiqlite() {
             DB::hql()
@@ -373,7 +373,7 @@ VALUES ($1, $2, $3, $4)"#;
             .await?;
 
             txn.commit().await?;
-        };
+        }
         Self::delete_cache_for(&client.id).await?;
 
         let client_dyn = ClientDyn {
@@ -487,7 +487,7 @@ VALUES ($1, $2, $3, $4)"#;
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         if let Some(slf) = Self::find_cached(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
-        };
+        }
 
         let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
@@ -558,8 +558,8 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(uris)
     }
 
-    /// Accepts either a pre-registered client_id or a URL as such.
-    /// If allowed, it will dynamically build an ephemeral client and cache it, it the client_id
+    /// Accepts either a pre-registered `client_id` or a URL as such.
+    /// If allowed, it will dynamically build an ephemeral client and cache it, it the `client_id`
     /// is a URL. Otherwise, it will do a classic fetch from the database.
     /// This function should be used in places where we would possibly accept an ephemeral client.
     pub async fn find_maybe_ephemeral(id: String) -> Result<Self, ErrorResponse> {
@@ -815,10 +815,10 @@ VALUES ($1, $2, $3, $4)"#;
         new_kid: String,
         old_kid: &str,
     ) -> Result<bool, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 UPDATE clients
 SET secret = $1, secret_kid = $2
-WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
+WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -870,10 +870,10 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
             client_dyn.registration_token = registration_token;
         }
 
-        let sql = r#"
+        let sql = r"
 UPDATE clients_dyn
 SET registration_token = $1, token_endpoint_auth_method = $2, last_used = $3
-WHERE id = $4"#;
+WHERE id = $4";
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(2);
@@ -938,7 +938,7 @@ WHERE id = $4"#;
         if let Some(hours) = cache_current_hours
             && let Some(plain) = self.get_secret_cleartext()?
         {
-            let ttl = hours as i64;
+            let ttl = i64::from(hours);
             // Remember the secret under the client id as well, so that `delete()` can remove it.
             // Otherwise, it would authenticate a client recreated with the same id.
             let idx = Self::cached_secrets_idx(&self.id);
@@ -1018,6 +1018,7 @@ WHERE id = $4"#;
 }
 
 impl Client {
+    #[must_use]
     pub fn allow_refresh_token(&self) -> bool {
         self.is_flow_enabled(GrantType::RefreshToken)
     }
@@ -1048,6 +1049,7 @@ impl Client {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_allowed_origins(&self) -> Option<Vec<String>> {
         if let Some(origins) = &self.allowed_origins {
             let mut res = Vec::with_capacity(1);
@@ -1185,6 +1187,7 @@ impl Client {
     /// The consent source for a login to this client with the optional RFC 8707 `resource`.
     /// `None` only without `consent.enable`. Precedence: `[[consent.sources]]` entry for the
     /// `resource`, the client's own `consent`, `Local`. Not called yet, the consent screen will.
+    #[must_use]
     pub fn consent_source(&self, resource: Option<&str>) -> Option<ConsentSource> {
         self.consent_source_with(resource, &RauthyConfig::get().vars.consent)
     }
@@ -1238,6 +1241,7 @@ impl Client {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_challenges(&self) -> Option<Vec<String>> {
         self.challenge.as_ref()?;
 
@@ -1250,6 +1254,7 @@ impl Client {
         Some(res)
     }
 
+    #[must_use]
     pub fn get_contacts(&self) -> Option<Vec<String>> {
         if let Some(contacts) = &self.contacts {
             let mut res = Vec::with_capacity(1);
@@ -1277,6 +1282,7 @@ impl Client {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_default_scopes(&self) -> Vec<String> {
         let mut res = Vec::new();
         self.default_scopes
@@ -1290,15 +1296,17 @@ impl Client {
         JwkKeyPairAlg::from_str(self.id_token_alg.as_str())
     }
 
-    /// The enabled flows for this client. Values are validated as [GrantType] on the way in, so
+    /// The enabled flows for this client. Values are validated as [`GrantType`] on the way in, so
     /// anything unparsable here is corrupted data and gets skipped rather than failing the read.
     #[inline]
+    #[must_use]
     pub fn get_flows(&self) -> Vec<GrantType> {
         self.flows_enabled
             .split(',')
-            .filter_map(|f| match GrantType::from_str(f.trim()) {
-                Ok(flow) => Some(flow),
-                Err(_) => {
+            .filter_map(|f| {
+                if let Ok(flow) = GrantType::from_str(f.trim()) {
+                    Some(flow)
+                } else {
                     warn!(
                         client_id = self.id,
                         flow = f,
@@ -1311,6 +1319,7 @@ impl Client {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_post_logout_uris(&self) -> Option<Vec<String>> {
         if let Some(uris) = &self.post_logout_redirect_uris {
             let mut res = Vec::with_capacity(1);
@@ -1326,6 +1335,7 @@ impl Client {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_redirect_uris(&self) -> Vec<String> {
         if self.redirect_uris.is_empty() {
             Vec::default()
@@ -1338,6 +1348,7 @@ impl Client {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_scopes(&self) -> Vec<String> {
         let mut res = Vec::new();
         self.scopes
@@ -1347,16 +1358,19 @@ impl Client {
     }
 
     #[inline]
+    #[must_use]
     pub fn get_scope_as_str(&self) -> String {
         self.scopes.replace(',', " ")
     }
 
     #[inline]
+    #[must_use]
     pub fn is_dynamic(&self) -> bool {
         self.id.starts_with("dyn$")
     }
 
     #[inline]
+    #[must_use]
     pub fn is_ephemeral(&self) -> bool {
         // A non-dynamic client_id can never be a valid URL because of payload validation
         Url::from_str(&self.id).is_ok()
@@ -1408,7 +1422,7 @@ impl Client {
             .default_scopes
             .split(',')
             .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<_>>();
 
         let Some(scopes) = scopes else {
@@ -1451,7 +1465,7 @@ impl Client {
     ///
     /// The "rauthy" client is the exception for this check to makes logging into the account
     /// possible without MFA. The force MFA for the Rauthy admin UI is done in
-    /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
+    /// `Principal::validate_admin_session()` depending on the `ADMIN_FORCE_MFA` config variable.
     #[inline]
     pub async fn validate_mfa(
         &self,
@@ -1484,11 +1498,10 @@ impl Client {
         req: &HttpRequest,
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
         let pub_url_with_scheme = RauthyConfig::get().pub_url_with_scheme.as_str();
-        let additional_allowed_origin_schemes = RauthyConfig::get()
+        let additional_allowed_origin_schemes = &*RauthyConfig::get()
             .vars
             .server
-            .additional_allowed_origin_schemes
-            .deref();
+            .additional_allowed_origin_schemes;
         self.get_validated_origin_header_with(
             req,
             pub_url_with_scheme,
@@ -1502,15 +1515,10 @@ impl Client {
         pub_url_with_scheme: &str,
         additional_allowed_origin_schemes: &[String],
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
-        let origin = match extract_external_origin(
-            req,
-            pub_url_with_scheme,
-            additional_allowed_origin_schemes,
-        )? {
-            Some(o) => o,
-            None => {
-                return Ok(None);
-            }
+        let Some(origin) =
+            extract_external_origin(req, pub_url_with_scheme, additional_allowed_origin_schemes)?
+        else {
+            return Ok(None);
         };
 
         let err_msg = || {
@@ -1613,7 +1621,7 @@ impl Client {
                 write!(path_query, "{}?{}", url.path(), q)?;
             } else {
                 write!(path_query, "{}", url.path())?;
-            };
+            }
 
             if is_wildcard_prefix_match(&path_query, &req_path_query)
                 || path_query == req_path_query
@@ -1771,6 +1779,7 @@ impl Client {
     /// `true` if the given flow is listed in `flows_enabled`. Matches on whole CSV entries, so a
     /// flow name can never be satisfied by being a substring of a different one.
     #[inline]
+    #[must_use]
     pub fn is_flow_enabled(&self, flow: GrantType) -> bool {
         self.flows_enabled
             .split(',')
@@ -1889,10 +1898,10 @@ pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens_devices
 WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
             true,
         ),
     ];
@@ -1918,34 +1927,34 @@ pub(crate) fn hql_delete_statements(drop_legacy: bool) -> Vec<(&'static str, boo
     let mut stmts = vec![
         (SQL_CONSENT_DELETE_BY_CLIENT, true),
         (
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
 WHERE jti IN (
     SELECT access_token_jti FROM refresh_tokens_devices
     WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
-)"#,
+)",
             true,
         ),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens_devices
-WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#,
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)",
             true,
         ),
     ];
     if drop_legacy {
         stmts.push((
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#,
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)",
             false,
         ));
         stmts.push(("DELETE FROM refresh_tokens WHERE client_id IS NULL", false));
     }
     stmts.push((
-        r#"
+        r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#,
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)",
         true,
     ));
     stmts.push(("DELETE FROM refresh_tokens WHERE client_id = $1", true));
@@ -1955,7 +1964,7 @@ WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"
 
 /// Validates a dynamic-client redirect URI.
 /// Rejects backchannel callbacks for dynamic clients.
-fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
+fn validate_no_backchannel_logout_uri(opt: Option<&str>) -> Result<(), ErrorResponse> {
     if opt.is_some() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -1967,15 +1976,9 @@ fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorR
 
 pub fn validate_dyn_client_redirect_uri(url: &str) -> Result<(), ErrorResponse> {
     let uri = validate_redirect_uri(url, false, true)?;
-    let loopback = uri
-        .host_str()
-        .map(|h| {
-            h.eq_ignore_ascii_case("localhost")
-                || h.parse::<IpAddr>()
-                    .map(|ip| ip.is_loopback())
-                    .unwrap_or(false)
-        })
-        .unwrap_or(false);
+    let loopback = uri.host_str().is_some_and(|h| {
+        h.eq_ignore_ascii_case("localhost") || h.parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
+    });
     if uri.scheme() != "https" && !(uri.scheme() == "http" && loopback) {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -1990,6 +1993,7 @@ pub fn validate_dyn_client_redirect_uri(url: &str) -> Result<(), ErrorResponse> 
 /// A `#` is not a boundary: redirect URIs and post-logout redirect URIs with a fragment are
 /// rejected by their shape check before they are matched.
 #[inline]
+#[must_use]
 pub fn is_wildcard_prefix_match(registered: &str, requested: &str) -> bool {
     let Some(prefix) = registered.strip_suffix('*') else {
         return false;
@@ -2076,6 +2080,7 @@ impl Client {
 }
 
 impl Client {
+    #[must_use]
     pub fn into_response(self, scim: Option<ClientScim>) -> ClientResponse {
         let redirect_uris = self.get_redirect_uris();
         let post_logout_redirect_uris = self.get_post_logout_uris();
@@ -2349,7 +2354,7 @@ impl Client {
         let added = requested
             .iter()
             .filter(|g| !current.contains(g))
-            .map(|g| g.as_str())
+            .map(GrantType::as_str)
             .collect::<Vec<_>>();
         if added.is_empty() {
             Ok(())
@@ -2397,10 +2402,10 @@ impl Client {
                 .filter_map(|uri| {
                     Url::parse(uri).ok().and_then(|url| {
                         let origin = url.origin().unicode_serialization();
-                        if origin != "null" {
-                            Some(origin.trim_end_matches('/').to_string())
-                        } else {
+                        if origin == "null" {
                             None
+                        } else {
+                            Some(origin.trim_end_matches('/').to_string())
                         }
                     })
                 })
@@ -2423,7 +2428,7 @@ impl Client {
             .join(",");
 
         // Dynamic registration accepts only validated redirect URIs and no backchannel callback.
-        validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
+        validate_no_backchannel_logout_uri(req.backchannel_logout_uri.as_deref())?;
 
         let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
         for uri in req.redirect_uris {
@@ -2570,19 +2575,12 @@ pub(crate) mod tests {
     #[test]
     fn test_validate_no_backchannel_logout_uri() {
         // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)
-        assert!(validate_no_backchannel_logout_uri(&None).is_ok());
+        assert!(validate_no_backchannel_logout_uri(None).is_ok());
         assert!(
-            validate_no_backchannel_logout_uri(&Some("https://app.example.com/logout".to_string()))
-                .is_err()
+            validate_no_backchannel_logout_uri(Some("https://app.example.com/logout")).is_err()
         );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("https://169.254.169.254/".to_string()))
-                .is_err()
-        );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("http://127.0.0.1:8080/".to_string()))
-                .is_err()
-        );
+        assert!(validate_no_backchannel_logout_uri(Some("https://169.254.169.254/")).is_err());
+        assert!(validate_no_backchannel_logout_uri(Some("http://127.0.0.1:8080/")).is_err());
     }
 
     #[test]
@@ -2728,7 +2726,7 @@ pub(crate) mod tests {
         for drop_legacy in [false, true] {
             let mut conn = sqlite_full_schema();
             conn.execute_batch(
-                r#"
+                r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -2755,7 +2753,7 @@ VALUES ('rtd_c1', 'd1', 'u1', 1, 2, 'j_d1'),
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
        ('j_d1', 'u1', 2), ('j_d2', 'u1', 2);
-"#,
+",
             )
             .unwrap();
 
@@ -2988,7 +2986,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
 
         let mut only_unknown = vec!["urn:ietf:params:oauth:grant-type:jwt-bearer".to_string()];
         retain_supported_grant_types(&mut only_unknown);
-        assert!(only_unknown.is_empty());
+        assert_eq!(only_unknown, [] as [std::string::String; 0]);
     }
 
     #[test]
@@ -3130,7 +3128,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             confidential: false,
             secret: None,
             secret_kid: None,
-            redirect_uris: "".to_string(),
+            redirect_uris: String::new(),
             post_logout_redirect_uris: None,
             allowed_origins: Some(
                 "http://localhost:8082,sample://localhost,tauri://localhost".to_string(),
@@ -3416,7 +3414,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
     }
 
     fn strs(v: &[&str]) -> Vec<String> {
-        v.iter().map(|s| s.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     #[test]

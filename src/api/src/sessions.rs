@@ -24,7 +24,7 @@ use validator::Validate;
 /// Returns all existing sessions
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/sessions",
@@ -54,9 +54,9 @@ pub async fn get_sessions(
     // sessions will be dynamically paginated based on the same setting as users
     let user_count = User::count().await?;
     let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
-    if user_count >= ssp_threshold as i64 {
-        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
-        let offset = params.offset.unwrap_or(0) as i64;
+    if user_count >= i64::from(ssp_threshold) {
+        let page_size = i64::from(max(params.page_size.unwrap_or(20), ssp_threshold));
+        let offset = i64::from(params.offset.unwrap_or(0));
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
             Some(ContinuationToken::from_str(token.as_str())?)
@@ -99,7 +99,7 @@ pub async fn get_sessions(
                 exp: s.exp,
                 last_seen: s.last_seen,
                 remote_ip: s.remote_ip.as_deref(),
-            })
+            });
         }
 
         Ok(HttpResponse::Ok().json(resp))
@@ -111,7 +111,7 @@ pub async fn get_sessions(
 /// **Important:** Since JWT Tokens are stateless, it cannot invalidate already existing tokens.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/sessions",
@@ -154,7 +154,7 @@ pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, Er
 ///**Important:** Since JWT Tokens are stateless, it cannot invalidate already existing tokens.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/sessions/{user_id}",
@@ -194,7 +194,7 @@ pub async fn delete_sessions_for_user(
 ///**Important:** Since JWT Tokens are stateless, it cannot invalidate already existing tokens.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/sessions/id/{session_id}",

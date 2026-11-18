@@ -111,6 +111,7 @@ impl Client {
         let config = OAuthClientConfig {
             client_metadata,
             keys: None,
+            #[allow(clippy::default_trait_access)]
             resolver: OAuthResolverConfig {
                 did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
                     plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
@@ -166,7 +167,7 @@ impl Client {
                 AuthProvider::create(payload).await?;
             }
             _ => {}
-        };
+        }
 
         Ok(())
     }

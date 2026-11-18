@@ -51,12 +51,12 @@ pub async fn send_email_change_info_new(
         magic_link.user_id,
         magic_link.id,
     );
-    let exp = email_ts_prettify(magic_link.exp, &user.language, user_tz);
+    let exp = email_ts_prettify(magic_link.exp, user.language, user_tz);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
         .await
         .unwrap_or_default();
 
-    let i18n = I18nEmailChangeInfoNew::build(&user.language);
+    let i18n = I18nEmailChangeInfoNew::build(user.language);
     let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EMailChangeInfoNewTxt {
         email_sub_prefix,
@@ -101,7 +101,7 @@ pub async fn send_email_change_info_new(
         .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 new_email, error = ?e,

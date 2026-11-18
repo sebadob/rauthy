@@ -20,10 +20,10 @@ fn group_admin_email_scope(principal: &ReqPrincipal, filter: &EmailJobFilter) ->
     }
 }
 
-/// Get all EmailJobs
+/// Get all `EmailJobs`
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 /// - group admin (only jobs scoped to a group it manages)
 #[utoipa::path(
     get,
@@ -62,7 +62,7 @@ pub async fn get_email_jobs(principal: ReqPrincipal) -> Result<HttpResponse, Err
 /// Send out a custom email to users
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 /// - group admin (only an `in_group` filter for a group it manages)
 #[utoipa::path(
     post,
@@ -89,8 +89,7 @@ pub async fn post_send_email(
             && payload
                 .filter_value
                 .as_deref()
-                .map(|g| principal.group_admin_manages_any([g]))
-                .unwrap_or(false);
+                .is_some_and(|g| principal.group_admin_manages_any([g]));
         if !allowed {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
@@ -115,7 +114,7 @@ pub async fn post_send_email(
 /// Cancel a long-running E-Mail job early
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 /// - group admin (only jobs scoped to a group it manages)
 #[utoipa::path(
     post,

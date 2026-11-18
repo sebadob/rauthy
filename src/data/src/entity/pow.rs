@@ -17,7 +17,7 @@ impl PowEntity {
 
         let pow = Pow::with_difficulty(
             difficulty,
-            min(cfg.pow.exp.as_secs(), u32::MAX as u64) as u32,
+            min(cfg.pow.exp.as_secs(), u64::from(u32::MAX)) as u32,
         )?;
 
         DB::hql()
@@ -32,7 +32,7 @@ impl PowEntity {
         Ok(pow)
     }
 
-    /// Checks re-usages of PoWs and prevents a future re-use. The challenge is
+    /// Checks re-usages of `PoWs` and prevents a future re-use. The challenge is
     /// consumed atomically: `get_remove` claims it in one raft entry, so two
     /// concurrent requests cannot both consume it.
     pub async fn check_prevent_reuse(challenge: String) -> Result<(), ErrorResponse> {

@@ -69,7 +69,7 @@ impl From<tokio_postgres::Row> for ThemeCssFull {
         Self {
             client_id: row.get("client_id"),
             last_update: row.get("last_update"),
-            version: version as i64,
+            version: i64::from(version),
             light,
             dark,
             border_radius: row.get("border_radius"),
@@ -136,15 +136,15 @@ impl ThemeCssFull {
             return Ok(slf);
         }
 
-        let slf: Self = if !is_rauthy {
+        let slf: Self = if is_rauthy {
+            Self::default()
+        } else {
             if is_hiqlite() {
                 DB::hql().query_map_optional(sql, params!("rauthy")).await?
             } else {
                 DB::pg_query_opt(sql, &[&"rauthy"]).await?
             }
             .unwrap_or_default()
-        } else {
-            Self::default()
         };
 
         Ok(slf)
@@ -219,12 +219,12 @@ impl ThemeCssFull {
         let light = light.as_bytes();
         let dark = dark.as_bytes();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (client_id) DO UPDATE
 SET last_update = $2, version = $3, light = $4, dark = $5, border_radius = $6
-"#;
+";
 
         if is_hiqlite() {
             DB::hql()
@@ -455,6 +455,7 @@ impl ThemeCss {
         Ok(())
     }
 
+    #[must_use]
     pub fn as_bytes(&self) -> Vec<u8> {
         serialize(self).unwrap()
     }

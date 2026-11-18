@@ -86,9 +86,9 @@ impl OneTimePassword {
             is_active: false,
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO one_time_password (id, user_id, name, secret, last_used, kind, is_active)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
         if is_hiqlite() {
             DB::hql()
@@ -130,7 +130,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -141,7 +141,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
             DB::hql().execute(sql, params!(id)).await?;
         } else {
             DB::pg_execute(sql, &[&id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -252,7 +252,15 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
 impl OneTimePassword {
     const DIGITS_POWER: [u32; 9] = [
-        1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000,
+        1,
+        10,
+        100,
+        1_000,
+        10_000,
+        100_000,
+        1_000_000,
+        10_000_000,
+        100_000_000,
     ];
 
     fn generate_otp(secret: &[u8], step: i64, digest_len: u16, code_len: u8) -> String {
@@ -260,6 +268,7 @@ impl OneTimePassword {
         let algorithm = match digest_len {
             256 => hmac::HMAC_SHA256,
             384 => hmac::HMAC_SHA384,
+            #[allow(clippy::match_same_arms)]
             512 => hmac::HMAC_SHA512,
             _ => hmac::HMAC_SHA512,
         };
@@ -291,7 +300,7 @@ impl OneTimePassword {
         self.save().await
     }
 
-    pub async fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
+    pub fn validate(&self, code: &str) -> Result<(), ErrorResponse> {
         match self.kind {
             OtpKind::Email => {
                 if Utc::now().timestamp() - self.last_used
@@ -321,7 +330,7 @@ impl OneTimePassword {
                     "unimplemented",
                 ));
             }
-        };
+        }
 
         Ok(())
     }
@@ -351,7 +360,7 @@ impl OneTimePassword {
                     "unimplemented",
                 ));
             }
-        };
+        }
         Ok(())
     }
 
@@ -377,7 +386,7 @@ impl OneTimePassword {
                     "unimplemented",
                 ));
             }
-        };
+        }
         Ok(())
     }
 }
@@ -445,9 +454,7 @@ impl OtpAdditionalData {
             Self::Login(d) => d.delete().await,
             // The service req data is not deleted here, but actually further down the road
             // after the service req has been made.
-            Self::Service(_) => Ok(()),
-            Self::Test(_) => Ok(()),
-            Self::LoginToSAwait(_) => Ok(()),
+            Self::Service(_) | Self::Test(_) | Self::LoginToSAwait(_) => Ok(()),
         }
     }
 
@@ -562,6 +569,7 @@ pub struct OtpServiceReq {
 
 // CRUD
 impl OtpServiceReq {
+    #[must_use]
     pub fn new(user_id: String) -> Self {
         Self {
             code: get_rand(48),
@@ -676,8 +684,8 @@ pub async fn auth_finish(
     };
 
     let otp = OneTimePassword::find(&auth_data.otp_id).await?;
-    match otp.validate(&payload.otp_code).await {
-        Ok(_) => {
+    match otp.validate(&payload.otp_code) {
+        Ok(()) => {
             let mut user = User::find(user_id.clone()).await?;
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
@@ -752,7 +760,7 @@ mod tests {
             "90693936"
         );
 
-        t = 1111111109 / steps;
+        t = 1_111_111_109 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "68084774"
@@ -762,7 +770,7 @@ mod tests {
             "25091201"
         );
 
-        t = 1111111111 / steps;
+        t = 1_111_111_111 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "67062674"
@@ -772,7 +780,7 @@ mod tests {
             "99943326"
         );
 
-        t = 1234567890 / steps;
+        t = 1_234_567_890 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "91819424"
@@ -782,7 +790,7 @@ mod tests {
             "93441116"
         );
 
-        t = 2000000000 / steps;
+        t = 2_000_000_000 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "90698825"
@@ -792,7 +800,7 @@ mod tests {
             "38618901"
         );
 
-        t = 20000000000 / steps;
+        t = 20_000_000_000 / steps;
         assert_eq!(
             OneTimePassword::generate_otp(&seed32, t, 256, 8),
             "77737706"

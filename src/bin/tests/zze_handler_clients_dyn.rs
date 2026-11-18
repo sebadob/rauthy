@@ -95,7 +95,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
-    let url = format!("{}/clients_dyn", backend_url);
+    let url = format!("{backend_url}/clients_dyn");
     let mut payload = DynamicClientRequest {
         redirect_uris: vec![GOOD_REDIRECT_URI.to_string()],
         grant_types: vec![GrantType::AuthorizationCode, GrantType::RefreshToken],

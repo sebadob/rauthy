@@ -27,7 +27,7 @@ const HEADER_ALLOW_CREDENTIALS: (&str, &str) = ("access-control-allow-credential
 
 /// GET accounts linked to the users
 ///
-/// https://fedidcg.github.io/FedCM/#idp-api
+/// <https://fedidcg.github.io/FedCM/#idp-api>
 #[utoipa::path(
     get,
     path = "/fed_cm/accounts",
@@ -64,7 +64,7 @@ pub async fn get_fed_cm_accounts(req: HttpRequest) -> Result<HttpResponse, Error
 
 /// GET metadata for the FedCM client
 ///
-/// https://fedidcg.github.io/FedCM/#idp-api
+/// <https://fedidcg.github.io/FedCM/#idp-api>
 #[utoipa::path(
     get,
     path = "/fed_cm/client_meta",
@@ -109,7 +109,7 @@ pub async fn get_fed_cm_client_meta(
 
 /// The FedCM IdP configuration
 ///
-/// https://fedidcg.github.io/FedCM/#idp-api
+/// <https://fedidcg.github.io/FedCM/#idp-api>
 #[utoipa::path(
     get,
     path = "/fed_cm/config",
@@ -190,7 +190,7 @@ pub async fn get_fed_client_config() -> HttpResponse {
 
 /// GET the current FedCM login state for the user
 ///
-/// https://fedidcg.github.io/FedCM/#idp-api
+/// <https://fedidcg.github.io/FedCM/#idp-api>
 #[utoipa::path(
     get,
     path = "/fed_cm/status",
@@ -222,7 +222,7 @@ pub async fn get_fed_cm_status(req: HttpRequest) -> HttpResponse {
 
 /// POST ID assertion
 ///
-/// https://fedidcg.github.io/FedCM/#idp-api
+/// <https://fedidcg.github.io/FedCM/#idp-api>
 #[utoipa::path(
     post,
     path = "/fed_cm/token",
@@ -313,7 +313,7 @@ pub async fn post_fed_cm_token(
 
 /// The `.well-known` endpoint for FedCM clients
 ///
-/// https://fedidcg.github.io/FedCM/#idp-api
+/// <https://fedidcg.github.io/FedCM/#idp-api>
 #[utoipa::path(
     get,
     path = "/.well-known/web-identity",
@@ -426,16 +426,13 @@ async fn login_status_from_req(req: &HttpRequest) -> (FedCMLoginStatus, String) 
             (FedCMLoginStatus::LoggedOut, String::default())
         }
         Some(sid) => {
-            let session = match Session::find(sid).await {
-                Ok(s) => s,
-                Err(_) => {
-                    debug!("FedCM session not found -> user_id is logged-out",);
-                    return (FedCMLoginStatus::LoggedOut, String::default());
-                }
+            let Ok(session) = Session::find(sid).await else {
+                debug!("FedCM session not found -> user_id is logged-out",);
+                return (FedCMLoginStatus::LoggedOut, String::default());
             };
 
             if session.is_valid(
-                RauthyConfig::get().vars.fedcm.session_timeout as i64,
+                i64::from(RauthyConfig::get().vars.fedcm.session_timeout),
                 real_ip_from_req(req).ok(),
                 req.path(),
             ) {

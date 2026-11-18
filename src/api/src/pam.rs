@@ -42,7 +42,7 @@ use zeroize::Zeroize;
 /// GET all user emails that are not yet linked to a PAM account
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/pam/emails_unlinked",
@@ -217,7 +217,7 @@ pub async fn post_getent(
 /// GET PAM groups
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/pam/groups",
@@ -244,7 +244,7 @@ pub async fn get_pam_groups(principal: ReqPrincipal) -> Result<HttpResponse, Err
 /// Create a new PAM group
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/pam/groups",
@@ -272,7 +272,7 @@ pub async fn post_pam_groups(
 /// GET linked hosts count in group
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/pam/groups/{id}/hosts_count",
@@ -299,7 +299,7 @@ pub async fn get_pam_group_hosts_count(
 /// DELETE a PAM group
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/pam/groups/{id}",
@@ -325,7 +325,7 @@ pub async fn delete_pam_group(
 /// GET PAM all hosts
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/pam/hosts",
@@ -352,7 +352,7 @@ pub async fn get_hosts(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
 /// Create a new PAM host
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/pam/hosts",
@@ -426,7 +426,7 @@ pub async fn get_hosts_user_access(principal: ReqPrincipal) -> Result<HttpRespon
 /// GET detailed information for a PAM host
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/pam/hosts/{id}",
@@ -452,7 +452,7 @@ pub async fn get_host_details(
 /// Retrieve the secret for a PAM host
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/pam/hosts/{id}/secret",
@@ -482,7 +482,7 @@ pub async fn post_host_secret(
 /// Create a new random secret for a PAM host
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/pam/hosts/{id}/secret",
@@ -509,7 +509,7 @@ pub async fn put_host_secret(
 /// Update a PAM host
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/pam/hosts/{id}",
@@ -538,7 +538,7 @@ pub async fn put_host(
 /// DELETE a PAM host
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/pam/hosts/{id}",
@@ -609,6 +609,21 @@ pub async fn post_host_whoami(
 pub async fn post_login(
     Json(payload): Json<PamLoginRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    #[inline]
+    async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
+        user.save_login_failure().await?;
+
+        // Note: We don't want to increase the FailedLoginCounter for the IP here, because
+        // this could be abused for DoS and block remote hosts with enough failed login attempts.
+
+        warn!(?err, "Failed PAM login for user {}", user.email);
+
+        let sec = max(user.failed_login_attempts.unwrap_or(1), 5) as u64;
+        tokio::time::sleep(Duration::from_secs(sec)).await;
+
+        Err(err)
+    }
+
     payload.validate()?;
     if payload.password.is_none()
         && payload.webauthn_code.is_none()
@@ -635,21 +650,6 @@ pub async fn post_login(
     let mut user = User::find_by_email(pam_user.email.clone()).await?;
     user.check_expired()?;
     user.check_enabled()?;
-
-    #[inline]
-    async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
-        user.save_login_failure().await?;
-
-        // Note: We don't want to increase the FailedLoginCounter for the IP here, because
-        // this could be abused for DoS and block remote hosts with enough failed login attempts.
-
-        warn!(?err, "Failed PAM login for user {}", user.email);
-
-        let sec = max(user.failed_login_attempts.unwrap_or(1), 5) as u64;
-        tokio::time::sleep(Duration::from_secs(sec)).await;
-
-        Err(err)
-    }
 
     if let Some(password) = payload.password {
         // Note: Theoretically, we could have a TOCTOU here if an admin decides to switch this
@@ -856,7 +856,7 @@ pub async fn post_preflight(
 /// GET all PAM users
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/pam/users",
@@ -882,7 +882,7 @@ pub async fn get_pam_users(principal: ReqPrincipal) -> Result<HttpResponse, Erro
 /// Create a new PAM user
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/pam/users",
@@ -905,7 +905,7 @@ pub async fn post_pam_users(
     let pam_user = PamUser::insert(payload.username, user.email).await?;
 
     if let Some(mut groups) = payload.groups {
-        for g in groups.iter_mut() {
+        for g in &mut groups {
             g.uid = pam_user.id;
         }
         // update_groups does delete-all + re-insert, so include the user's
@@ -1040,7 +1040,7 @@ pub async fn get_pam_users_authorized_keys(
         };
         let mut bytes = base64_decode(b64)?;
         let data = String::from_utf8_lossy(bytes.as_ref());
-        let Some((host_id, host_secret)) = data.split_once(":") else {
+        let Some((host_id, host_secret)) = data.split_once(':') else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "'Authorization' invalid format",
@@ -1061,7 +1061,7 @@ pub async fn get_pam_users_authorized_keys(
 /// GET detailed information for a PAM user
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/pam/users/{uid}",
@@ -1117,7 +1117,7 @@ pub async fn get_pam_user(
 /// Update a PAM user
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/pam/users/{uid}",
@@ -1151,7 +1151,7 @@ pub async fn put_pam_user(
 /// Delete a PAM user
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/pam/users/{uid}",
@@ -1180,7 +1180,7 @@ pub async fn delete_pam_user(
 /// Update a PAM user
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/pam/users/{uid}/authorized_key/{ts_added}",

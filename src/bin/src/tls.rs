@@ -70,7 +70,7 @@ async fn check_generate_tls() {
         loop {
             let secs = exp.unix_timestamp() - OffsetDateTime::now_utc().unix_timestamp() - 3600;
             if secs > 0 {
-                tokio::time::sleep(Duration::from_secs(secs as u64)).await;
+                tokio::time::sleep(Duration::from_secs(secs.cast_unsigned())).await;
             } else {
                 panic!("too short lifetime for self-signed end-entity TLS certificates");
             }

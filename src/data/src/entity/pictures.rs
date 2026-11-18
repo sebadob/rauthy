@@ -82,6 +82,7 @@ impl From<&str> for PictureStorage {
 }
 
 impl PictureStorage {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::DB => "db",
@@ -102,16 +103,16 @@ pub struct UserPicture {
 
 // CRUD
 impl UserPicture {
-    /// Inserts a new UserPicture for a user and returns the generated `id`.
+    /// Inserts a new `UserPicture` for a user and returns the generated `id`.
     async fn insert(
         content_type: String,
         storage: PictureStorage,
         data: Option<Vec<u8>>,
     ) -> Result<String, ErrorResponse> {
         let id = new_store_id();
-        let sql = r#"
+        let sql = r"
 INSERT INTO pictures (id, content_type, storage, data)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
         if is_hiqlite() {
             DB::hql()
@@ -124,7 +125,7 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(id)
     }
 
-    /// Deletes the UserPicture in the DB - does NOT delete the file on the storage.
+    /// Deletes the `UserPicture` in the DB - does NOT delete the file on the storage.
     async fn delete(id: String) -> Result<(), ErrorResponse> {
         let sql = "DELETE FROM pictures WHERE id = $1";
         if is_hiqlite() {
@@ -321,7 +322,7 @@ impl UserPicture {
                 match fs::remove_file(&path).await {
                     Ok(()) => {}
                     Err(err) if err.kind() == io::ErrorKind::NotFound => {
-                        debug!(path, "Local picture already removed")
+                        debug!(path, "Local picture already removed");
                     }
                     Err(err) => error!(path, ?err, "Error cleaning up local picture"),
                 }
@@ -331,7 +332,7 @@ impl UserPicture {
                     .delete(&Self::file_name(&slf.id, &slf.content_type))
                     .await
                 {
-                    error!(object_id = slf.id, ?err, "Error cleaning up s3 picture")
+                    error!(object_id = slf.id, ?err, "Error cleaning up s3 picture");
                 }
             }
             // an unknown `storage` of a stored picture: its data cannot be found, but the row
@@ -341,7 +342,7 @@ impl UserPicture {
                     picture_id = slf.id,
                     storage = slf.storage,
                     "Unknown storage of a picture, its data is not cleaned up"
-                )
+                );
             }
         }
 
@@ -399,11 +400,10 @@ impl UserPicture {
                 info!("Using Database as User Picture Storage");
             }
             PictureStorage::File => {
-                if RauthyConfig::get().is_ha_cluster {
-                    panic!(
-                        "You can only use local file storage for User Pictures for a single instance"
-                    );
-                }
+                assert!(
+                    !RauthyConfig::get().is_ha_cluster,
+                    "You can only use local file storage for User Pictures for a single instance"
+                );
 
                 // make sure the path exists and is available
                 let cfg = &RauthyConfig::get().vars.user_pictures;

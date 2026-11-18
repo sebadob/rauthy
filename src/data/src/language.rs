@@ -27,6 +27,7 @@ pub enum Language {
 }
 
 impl Language {
+    #[must_use]
     pub fn all_available() -> [&'static str; 27] {
         [
             "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja",
@@ -35,6 +36,7 @@ impl Language {
         ]
     }
 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         // must return results that work with serde::Deserialize from lowercase
         match self {
@@ -59,6 +61,7 @@ impl Language {
     /// would mean another variant: a bare `pt` is Brazilian Portuguese to
     /// browsers and CLDR, and `zhhans` is not a valid tag. The frontend only
     /// reads the first two characters back, so this changes nothing else.
+    #[must_use]
     pub fn html_lang(&self) -> &'static str {
         match self {
             Language::Cs => "cs-CZ",
@@ -79,6 +82,7 @@ impl Language {
 
     /// The bare BCP 47 language tag, without a region, e.g. for the `lang` query of a remote
     /// consent source.
+    #[must_use]
     pub fn as_bcp47(&self) -> &'static str {
         match self {
             Language::ZhHans => "zh-Hans",

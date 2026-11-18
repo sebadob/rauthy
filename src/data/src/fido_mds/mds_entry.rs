@@ -45,7 +45,7 @@ impl From<tokio_postgres::Row> for MdsEntrySimple {
             key_protection: row.get::<_, i64>("key_protection").into(),
             attachment_hint: row.get::<_, i64>("attachment_hint").into(),
             attestation_types: row.get::<_, i64>("attestation_types").into(),
-            cert_level: (row.get::<_, i16>("cert_level") as i64).into(),
+            cert_level: i64::from(row.get::<_, i16>("cert_level")).into(),
         }
     }
 }

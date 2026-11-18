@@ -24,9 +24,9 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
+                    r"
 INSERT INTO user_attr_config (name, desc, default_value, user_editable)
-VALUES ($1, $2, $3, $4)"#,
+VALUES ($1, $2, $3, $4)",
                     params!(attr.name, attr.desc, default_value, user_editable),
                 )
                 .await?;
@@ -38,7 +38,7 @@ VALUES ($1, $2, $3, $4)"#,
                 &[&attr.name, &attr.desc, &default_value, &user_editable],
             )
             .await?;
-        };
+        }
     }
 
     info!("Migrated {len} user_attributes.");

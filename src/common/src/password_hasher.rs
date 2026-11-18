@@ -166,9 +166,8 @@ mod tests {
     use std::time::{Duration, Instant};
     use tokio::time;
 
-    // pretty intensive test -> ignored by default
     #[tokio::test]
-    #[ignore]
+    #[ignore = "pretty intensive test -> ignored by default"]
     async fn test_limiter() {
         let argon2_params = argon2::Params::new(32768, 3, 2, None).unwrap();
         let _ = ARGON2_PARAMS.set(argon2_params);
@@ -197,7 +196,7 @@ mod tests {
             time_taken += start.elapsed().as_millis();
             time_taken /= 2;
         }
-        println!("time_taken: {}", time_taken);
+        println!("time_taken: {time_taken}");
 
         // now do the same with 3 concurrent hashes
         let start = Instant::now();

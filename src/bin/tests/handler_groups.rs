@@ -13,7 +13,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
 
-    let url = format!("{}/groups", backend_url);
+    let url = format!("{backend_url}/groups");
     let res = reqwest::Client::new()
         .get(&url)
         .headers(auth_headers.clone())
@@ -39,7 +39,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     assert_eq!(group.name, "My Group 123");
 
     // assign the group to a user, so the rename below must rewrite the membership
-    let url_users = format!("{}/users", backend_url);
+    let url_users = format!("{backend_url}/users");
     let res = reqwest::Client::new()
         .post(&url_users)
         .headers(auth_headers.clone())

@@ -12,7 +12,7 @@ use validator::Validate;
 /// Returns all blacklisted IP's
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/blacklist",
@@ -44,7 +44,7 @@ pub async fn get_blacklist(principal: ReqPrincipal) -> Result<HttpResponse, Erro
 /// Manually blacklist an IP
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/blacklist",
@@ -78,7 +78,7 @@ pub async fn post_blacklist(
 /// Manually delete a blacklisted IP
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/blacklist/{ip}",

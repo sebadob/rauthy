@@ -49,7 +49,7 @@ impl UserAttrConfigEntity {
             ));
         }
 
-        let typ = new_attr.typ.as_ref().map(|t| t.as_str());
+        let typ = new_attr.typ.as_ref().map(UserAttrConfigTyp::as_str);
         let user_editable = new_attr.user_editable.unwrap_or(false);
         let default_value = if let Some(bytes) = &new_attr.default_value {
             Some(serde_json::to_vec(bytes)?)
@@ -60,9 +60,9 @@ impl UserAttrConfigEntity {
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    r#"
+                    r"
 INSERT INTO user_attr_config (name, desc, default_value, typ, user_editable)
-VALUES ($1, $2, $3, $4, $5)"#,
+VALUES ($1, $2, $3, $4, $5)",
                     params!(
                         &new_attr.name,
                         &new_attr.desc,
@@ -86,7 +86,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 ],
             )
             .await?;
-        };
+        }
 
         Self::clear_cache_all().await?;
 
@@ -281,7 +281,9 @@ VALUES ($1, $2, $3, $4, $5)"#,
         let mut scope_updates = Vec::new();
 
         // we only need to update pre-computed data in other places if the name changes
-        let user_attr_ids_cleanup = if name != req_data.name {
+        let user_attr_ids_cleanup = if name == req_data.name {
+            Vec::default()
+        } else {
             let sql = "SELECT user_id FROM user_attr_values WHERE key = $1";
 
             let user_attr_cache_clear_idxs = if is_hiqlite() {
@@ -334,11 +336,9 @@ VALUES ($1, $2, $3, $4, $5)"#,
             }
 
             user_attr_cache_clear_idxs
-        } else {
-            Vec::default()
         };
 
-        let typ = &slf.typ.as_ref().map(|t| t.as_str());
+        let typ = &slf.typ.as_ref().map(UserAttrConfigTyp::as_str);
 
         if is_hiqlite() {
             let mut txn = Vec::with_capacity(scope_updates.len() + 1);
@@ -353,10 +353,10 @@ VALUES ($1, $2, $3, $4, $5)"#,
             }
 
             txn.push((
-                r#"
+                r"
 UPDATE user_attr_config
 SET name  = $1, desc = $2, default_value = $3, typ = $4, user_editable = $5
-WHERE name = $6"#,
+WHERE name = $6",
                 params!(
                     &slf.name,
                     &slf.desc,
@@ -419,6 +419,7 @@ impl UserAttrConfigEntity {
         Ok(set)
     }
 
+    #[must_use]
     pub fn names_hash_set(mut slf: Vec<Self>) -> HashSet<String> {
         let mut res = HashSet::with_capacity(slf.len());
         slf.drain(..).for_each(|s| {
@@ -442,7 +443,7 @@ impl From<UserAttrConfigEntity> for UserAttrConfigValueResponse {
     }
 }
 
-/// The value for a pre-defined UserAttrConfig with all `serde_json::Value` being valid values.
+/// The value for a pre-defined `UserAttrConfig` with all `serde_json::Value` being valid values.
 /// Important: There is no further input validation / restriction
 #[derive(Clone, Debug, Serialize, Deserialize, FromPgRow)]
 pub struct UserAttrValueEntity {
@@ -457,7 +458,7 @@ impl UserAttrValueEntity {
         Ok(())
     }
 
-    /// You MUST `UserAttrValueEntity::clear_cache()` for returned UserCacheKeys
+    /// You MUST `UserAttrValueEntity::clear_cache()` for returned `UserCacheKeys`
     /// after successful txn commit!
     pub async fn delete_all_by_key(
         key: &str,
@@ -481,7 +482,7 @@ impl UserAttrValueEntity {
         Ok(cache_idxs)
     }
 
-    /// You MUST `UserAttrValueEntity::clear_cache()` for returned UserCacheKeys
+    /// You MUST `UserAttrValueEntity::clear_cache()` for returned `UserCacheKeys`
     /// after successful txn commit!
     pub async fn delete_all_by_key_append(
         key: &str,
@@ -624,10 +625,10 @@ impl UserAttrValueEntity {
                 } else {
                     let v = serde_json::to_vec(&value.value)?;
                     txn.push((
-                        r#"
+                        r"
 INSERT INTO user_attr_values (user_id, key, value)
 VALUES ($1, $2, $3)
-ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
+ON CONFLICT(user_id, key) DO UPDATE SET value = $3",
                         params!(user_id, value.key, v),
                     ));
                 }
@@ -656,10 +657,10 @@ ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
                     let v = serde_json::to_vec(&value.value)?;
                     DB::pg_txn_append(
                         &txn,
-                        r#"
+                        r"
     INSERT INTO user_attr_values (user_id, key, value)
     VALUES ($1, $2, $3)
-    ON CONFLICT(user_id, key) DO UPDATE SET value = $3"#,
+    ON CONFLICT(user_id, key) DO UPDATE SET value = $3",
                         &[&user_id, &value.key, &v],
                     )
                     .await?;

@@ -93,7 +93,7 @@ async fn check_client_auth(
     client_id: String,
     buf: &mut Vec<u8>,
 ) -> Result<Client, ErrorResponse> {
-    debug_assert!(buf.is_empty());
+    debug_assert_eq!(buf.as_slice(), [0_u8; 0]);
 
     let claims_client = find_enabled_client(client_id).await?;
 
@@ -125,12 +125,12 @@ async fn check_client_auth(
         let claims = serde_json::from_slice::<JwtAccessClaims>(buf)?;
 
         // If a different client was used for authentication, make sure it exists and is enabled.
-        if claims.common.azp != claims_client.id {
+        if claims.common.azp == claims_client.id {
+            Ok(claims_client)
+        } else {
             let client = find_enabled_client(claims.common.azp.to_string()).await?;
             // no need to validate the secret - the valid token was the authentication
             Ok(client)
-        } else {
-            Ok(claims_client)
         }
     } else if let Some(basic) = header.strip_prefix("Basic ") {
         base64_decode_buf(basic, buf)?;
@@ -142,10 +142,10 @@ async fn check_client_auth(
             ));
         };
 
-        let client = if id_header != claims_client.id {
-            find_enabled_client(id_header.to_string()).await?
-        } else {
+        let client = if id_header == claims_client.id {
             claims_client
+        } else {
+            find_enabled_client(id_header.to_string()).await?
         };
         client.validate_secret(secret.to_string(), req).await?;
         buf.zeroize();

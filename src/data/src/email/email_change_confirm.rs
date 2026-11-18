@@ -36,7 +36,7 @@ pub async fn send_email_confirm_change(
     email_changed_to: &str,
     was_admin_action: bool,
 ) {
-    let i18n = I18nEmailConfirmChange::build(&user.language);
+    let i18n = I18nEmailConfirmChange::build(user.language);
     let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EMailConfirmChangeTxt {
         email_sub_prefix,
@@ -83,7 +83,7 @@ pub async fn send_email_confirm_change(
         .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 email_addr, error = ?e,

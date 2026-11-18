@@ -53,6 +53,7 @@ impl From<String> for LogoRes {
 }
 
 impl LogoRes {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             LogoRes::Small => "small",
@@ -100,7 +101,7 @@ impl Logo {
                     DB::pg_execute(sql, &[&id]).await?;
                 }
             }
-        };
+        }
 
         DB::hql()
             .delete(Cache::App, Self::cache_idx(typ, id))
@@ -150,7 +151,7 @@ impl Logo {
                     DB::pg_execute(sql, &[&id, &res]).await?;
                 }
             }
-        };
+        }
 
         DB::hql()
             .delete(Cache::App, Self::cache_idx(typ, id))
@@ -378,18 +379,18 @@ impl Logo {
 
         let sql = match typ {
             LogoType::Client => {
-                r#"
+                r"
 INSERT INTO client_logos (client_id, res, content_type, data, updated)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(client_id, res) DO UPDATE
-SET content_type = $3, data = $4, updated = $5"#
+SET content_type = $3, data = $4, updated = $5"
             }
             LogoType::AuthProvider => {
-                r#"
+                r"
 INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4, updated = $5"#
+SET content_type = $3, data = $4, updated = $5"
             }
         };
 
@@ -453,28 +454,28 @@ SET content_type = $3, data = $4, updated = $5"#
         let sql = match typ {
             LogoType::Client => {
                 if use_svg_fallback {
-                    r#"
+                    r"
 SELECT client_id AS id, res, content_type, data, updated
 FROM client_logos
-WHERE client_id = $1 AND (res = $2 OR res = $3)"#
+WHERE client_id = $1 AND (res = $2 OR res = $3)"
                 } else {
-                    r#"
+                    r"
 SELECT client_id AS id, res, content_type, data, updated
 FROM client_logos
-WHERE client_id = $1 AND res = $2"#
+WHERE client_id = $1 AND res = $2"
                 }
             }
             LogoType::AuthProvider => {
                 if use_svg_fallback {
-                    r#"
+                    r"
 SELECT auth_provider_id AS id, res, content_type, data, updated
 FROM auth_provider_logos
-WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"#
+WHERE auth_provider_id = $1 AND (res = $2 OR res = $3)"
                 } else {
-                    r#"
+                    r"
 SELECT auth_provider_id AS id, res, content_type, data, updated
 FROM auth_provider_logos
-WHERE auth_provider_id = $1 AND res = $2"#
+WHERE auth_provider_id = $1 AND res = $2"
                 }
             }
         };

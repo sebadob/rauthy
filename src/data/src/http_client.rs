@@ -23,19 +23,19 @@ fn tls_config(vars: &Vars) -> (tls::Version, Vec<Certificate>) {
         "1.2" => tls::Version::TLS_1_2,
         "1.1" => {
             warn!(
-                r#"
+                r"
     You are allowing TLS 1.1 for the global HTTP client.
     Only do this, if you know what you are doing!
-    "#
+    "
             );
             tls::Version::TLS_1_1
         }
         "1.0" => {
             warn!(
-                r#"
+                r"
     You are allowing TLS 1.0 for the global HTTP client.
     Only do this, if you know what you are doing!
-    "#
+    "
             );
             tls::Version::TLS_1_0
         }
@@ -272,11 +272,11 @@ impl GuardedFetcher {
                 format!("too many concurrent {label} lookups"),
             )
         };
-        let _permit =
-            match tokio::time::timeout(FETCH_ACQUIRE_TIMEOUT, self.semaphore.acquire()).await {
-                Ok(Ok(permit)) => permit,
-                Ok(Err(_)) | Err(_) => return Err(too_many()),
-            };
+        let Ok(Ok(_permit)) =
+            tokio::time::timeout(FETCH_ACQUIRE_TIMEOUT, self.semaphore.acquire()).await
+        else {
+            return Err(too_many());
+        };
 
         let mut res = self
             .client
@@ -462,13 +462,13 @@ static FORBIDDEN: LazyLock<ForbiddenRanges> = LazyLock::new(|| {
 /// is checked as IPv4.
 pub(crate) fn is_forbidden_addr(addr: IpAddr) -> bool {
     match addr {
-        IpAddr::V4(v4) => is_forbidden_v4(&v4),
+        IpAddr::V4(v4) => is_forbidden_v4(v4),
         IpAddr::V6(v6) => is_forbidden_v6(&v6),
     }
 }
 
-fn is_forbidden_v4(addr: &Ipv4Addr) -> bool {
-    FORBIDDEN.v4.iter().any(|cidr| cidr.contains(addr))
+fn is_forbidden_v4(addr: Ipv4Addr) -> bool {
+    FORBIDDEN.v4.iter().any(|cidr| cidr.contains(&addr))
 }
 
 fn is_forbidden_v6(addr: &Ipv6Addr) -> bool {
@@ -482,14 +482,18 @@ fn is_forbidden_v6(addr: &Ipv6Addr) -> bool {
         .iter()
         .any(|cidr| cidr.contains(addr))
     {
-        Some(Ipv4Addr::from(((seg[6] as u32) << 16) | seg[7] as u32))
+        Some(Ipv4Addr::from(
+            (u32::from(seg[6]) << 16) | u32::from(seg[7]),
+        ))
     } else if FORBIDDEN.six_to_four.contains(addr) {
-        Some(Ipv4Addr::from(((seg[1] as u32) << 16) | seg[2] as u32))
+        Some(Ipv4Addr::from(
+            (u32::from(seg[1]) << 16) | u32::from(seg[2]),
+        ))
     } else {
         // IPv4-mapped (::ffff:a.b.c.d) and IPv4-compatible (::a.b.c.d)
         addr.to_ipv4()
     };
-    embedded_v4.is_some_and(|v4| is_forbidden_v4(&v4))
+    embedded_v4.is_some_and(is_forbidden_v4)
 }
 
 impl AddrPolicy {
@@ -707,11 +711,11 @@ mod tests {
 
     fn assert_err(
         res: Result<Vec<u8>, ErrorResponse>,
-        expected: ErrorResponseType,
+        expected: &ErrorResponseType,
     ) -> ErrorResponse {
         match res {
             Err(err) => {
-                assert_eq!(err.error, expected, "{err:?}");
+                assert_eq!(&err.error, expected, "{err:?}");
                 err
             }
             Ok(body) => panic!("expected {expected:?}, got {} bytes", body.len()),
@@ -719,7 +723,7 @@ mod tests {
     }
 
     fn assert_bad_request(res: Result<Vec<u8>, ErrorResponse>) -> ErrorResponse {
-        assert_err(res, ErrorResponseType::BadRequest)
+        assert_err(res, &ErrorResponseType::BadRequest)
     }
 
     #[test]
@@ -889,9 +893,8 @@ mod tests {
 
         tokio::spawn(async move {
             loop {
-                let (mut socket, _) = match listener.accept().await {
-                    Ok(s) => s,
-                    Err(_) => return,
+                let Ok((mut socket, _)) = listener.accept().await else {
+                    return;
                 };
                 let hits_conn = hits_srv.clone();
                 let routes = routes.clone();
@@ -930,9 +933,11 @@ mod tests {
     }
 
     fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
+        use std::fmt::Write as _;
+
         let mut res = format!("HTTP/1.1 {status}\r\n");
         for (k, v) in headers {
-            res.push_str(&format!("{k}: {v}\r\n"));
+            let _ = write!(res, "{k}: {v}\r\n");
         }
         res.push_str("Connection: close\r\n\r\n");
         let mut bytes = res.into_bytes();
@@ -1072,7 +1077,7 @@ mod tests {
         assert_eq!(err.message, "consent source document not available");
         let err = assert_err(
             fetcher.fetch_bounded(url("/server-error"), max).await,
-            ErrorResponseType::Connection,
+            &ErrorResponseType::Connection,
         );
         assert_eq!(err.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
 

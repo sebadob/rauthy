@@ -87,7 +87,7 @@ fn build_log(req: &ServiceRequest) -> Result<Option<String>, ErrorResponse> {
 
     let log = match RauthyConfig::get().log_level_access {
         LogLevelAccess::Debug => {
-            format!("{:?}", req)
+            format!("{req:?}")
         }
         LogLevelAccess::Verbose => {
             format!(

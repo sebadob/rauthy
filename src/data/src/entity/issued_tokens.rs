@@ -57,18 +57,17 @@ impl IssuedToken {
             };
             if slf.insert().await.is_ok() {
                 return Ok(slf);
-            } else {
-                debug!("Conflicting `jti` generated");
             }
+            debug!("Conflicting `jti` generated");
         }
     }
 
     #[inline]
     async fn insert(&self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO issued_tokens (jti, user_id, did, sid, exp)
 VALUES ($1, $2, $3, $4, $5)
-"#;
+";
         if is_hiqlite() {
             DB::hql()
                 .execute(
@@ -172,13 +171,13 @@ VALUES ($1, $2, $3, $4, $5)
         };
 
         if let Some(slf) = opt {
-            if slf.revoked != Some(true) {
-                Ok(())
-            } else {
+            if slf.revoked == Some(true) {
                 Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     "token was revoked",
                 ))
+            } else {
+                Ok(())
             }
         } else {
             Err(ErrorResponse::new(

@@ -45,16 +45,17 @@ use crate::fido_mds::mds_entry::MdsEntrySimple;
 use crate::fido_mds::metadata::MdsMetadata;
 use cryptr::EncValue;
 use hiqlite::macros::params;
+use rauthy_api_types::users::UserAttrConfigTyp;
 use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use std::cmp::max;
 
 pub async fn api_keys(data_before: Vec<ApiKeyEntity>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM api_keys";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO
 api_keys (name, secret, created, expires, enc_key_id, access)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -95,11 +96,11 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
 pub async fn auth_provider_logos(data_before: Vec<Logo>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM auth_provider_logos";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO auth_provider_logos (auth_provider_id, res, content_type, data, updated)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT(auth_provider_id, res) DO UPDATE
-SET content_type = $3, data = $4, updated = $5"#;
+SET content_type = $3, data = $4, updated = $5";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -126,7 +127,7 @@ SET content_type = $3, data = $4, updated = $5"#;
 
 pub async fn auth_providers(data_before: Vec<AuthProvider>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM auth_providers";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO
 auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
@@ -134,7 +135,7 @@ mfa_claim_value, use_pkce, client_secret_basic, client_secret_post, jwks_endpoin
 auto_link)
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
-)"#;
+)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -205,9 +206,9 @@ VALUES (
 
 pub async fn client_logos(data_before: Vec<Logo>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM client_logos";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO client_logos (client_id, res, content_type, data, updated)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -234,7 +235,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
 pub async fn clients(data_before: Vec<Client>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM clients";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO clients
 (id, name, enabled, confidential, secret, secret_kid, redirect_uris, post_logout_redirect_uris,
 allowed_origins, flows_enabled, access_token_alg, id_token_alg, auth_code_lifetime,
@@ -243,7 +244,7 @@ backchannel_logout_uri, restrict_group_prefix, claims, claims_at_root, allowed_r
 default_aud, created_micros, consent)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-$22, $23, $24, $25, $26, $27, $28)"#;
+$22, $23, $24, $25, $26, $27, $28)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -329,10 +330,10 @@ $22, $23, $24, $25, $26, $27, $28)"#;
 
 pub async fn clients_dyn(data_before: Vec<ClientDyn>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM clients_dyn";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO
 clients_dyn (id, created, last_used, registration_token, token_endpoint_auth_method)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -371,9 +372,9 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
 pub async fn clients_scim(data_before: Vec<ClientScim>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM clients_scim";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO clients_scim (client_id, bearer_token, base_endpoint, sync_groups, group_sync_prefix)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -432,11 +433,11 @@ pub async fn config(data_before: Vec<ConfigEntity>) -> Result<(), ErrorResponse>
 
 pub async fn devices(data_before: Vec<DeviceEntity>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM devices";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO devices
 (id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name,
 client_created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -483,9 +484,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
 pub async fn email_jobs(data_before: Vec<EmailJob>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM email_jobs";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO email_jobs (id, scheduled, status, updated, filter, content_type, subject, body)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -530,9 +531,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
 
 pub async fn events(data_before: Vec<Event>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM events";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -577,9 +578,9 @@ pub async fn failed_backchannel_logouts(
     data_before: Vec<FailedBackchannelLogout>,
 ) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM failed_backchannel_logouts";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -600,9 +601,9 @@ VALUES ($1, $2, $3, $4)"#;
 
 pub async fn failed_scim_tasks(data_before: Vec<FailedScimTask>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM failed_scim_tasks";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO failed_scim_tasks (client_id, action, retry_count)
-VALUES ($1, $2, $3)"#;
+VALUES ($1, $2, $3)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -630,9 +631,9 @@ VALUES ($1, $2, $3)"#;
 
 pub async fn fido_mds_certs(data_before: Vec<(Vec<u8>, Vec<u8>)>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM fido_mds_certs";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO fido_mds_certs (hash, cert_der)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -650,10 +651,10 @@ VALUES ($1, $2)"#;
 
 pub async fn fido_mds_entries(data_before: Vec<MdsEntrySimple>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM fido_mds_entries";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO fido_mds_entries
 (aaguid, description, key_protection, attachment_hint, attestation_types, cert_level)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -664,10 +665,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
                     params!(
                         b.aaguid,
                         b.description,
-                        b.key_protection.bits() as i64,
-                        b.attachment_hint.bits() as i64,
-                        b.attestation_types.bits() as i64,
-                        b.cert_level.as_u8() as i16
+                        i64::from(b.key_protection.bits()),
+                        i64::from(b.attachment_hint.bits()),
+                        i64::from(b.attestation_types.bits()),
+                        i16::from(b.cert_level.as_u8())
                     ),
                 )
                 .await?;
@@ -675,10 +676,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            let key_protection = b.key_protection.bits() as i64;
-            let attachment_hint = b.attachment_hint.bits() as i64;
-            let attestation_types = b.attestation_types.bits() as i64;
-            let cert_level = b.cert_level.as_u8() as i16;
+            let key_protection = i64::from(b.key_protection.bits());
+            let attachment_hint = i64::from(b.attachment_hint.bits());
+            let attestation_types = i64::from(b.attestation_types.bits());
+            let cert_level = i16::from(b.cert_level.as_u8());
             DB::pg_execute(
                 sql_2,
                 &[
@@ -700,9 +701,9 @@ pub async fn fido_mds_entry_certs(
     data_before: Vec<(Vec<u8>, Vec<u8>)>,
 ) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM fido_mds_entry_certs";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO fido_mds_entry_certs (aaguid, cert_hash)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -720,9 +721,9 @@ VALUES ($1, $2)"#;
 
 pub async fn fido_mds_metadata(data_before: Vec<MdsMetadata>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM fido_mds_metadata";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO fido_mds_metadata (current_blob_no, next_update)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -762,9 +763,9 @@ pub async fn groups(data_before: Vec<Group>) -> Result<(), ErrorResponse> {
 
 pub async fn issued_tokens(data_before: Vec<IssuedToken>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM issued_tokens";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO issued_tokens (jti, user_id, did, sid, exp, revoked)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -791,9 +792,9 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
 pub async fn jwks(data_before: Vec<Jwk>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM jwks";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -832,9 +833,9 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
 pub async fn kv_access(data_before: Vec<KVAccess>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM kv_access";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO kv_access (id, ns, secret, enabled, name)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -854,9 +855,9 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
 pub async fn kv_ns(data_before: Vec<KVNamespace>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM kv_ns";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO kv_ns (ns, public)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -874,9 +875,9 @@ VALUES ($1, $2)"#;
 
 pub async fn kv_values(data_before: Vec<KVValue>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM kv_values";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO kv_values (ns, key, encrypted, value)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -896,9 +897,9 @@ VALUES ($1, $2, $3, $4)"#;
 
 pub async fn login_locations(data_before: Vec<LoginLocation>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM login_locations";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO login_locations (user_id, browser_id, ip, last_seen, user_agent, location)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -940,10 +941,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
 pub async fn magic_links(data_before: Vec<MagicLink>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM magic_links";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO magic_links
 (id, user_id, csrf_token, cookie, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -986,10 +987,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
 pub async fn one_time_password(data_before: Vec<OneTimePassword>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM one_time_password";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO one_time_password
 (id, user_id, name, secret, last_use, kind, is_active)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1041,9 +1042,9 @@ pub async fn pam_groups(data_before: Vec<PamGroup>) -> Result<(), ErrorResponse>
     let sql_5 = "DELETE FROM pam_hosts";
     let sql_6 = "DELETE FROM pam_groups";
 
-    let sql_7 = r#"
+    let sql_7 = r"
 INSERT INTO pam_groups (id, name, typ)
-VALUES ($1, $2, $3)"#;
+VALUES ($1, $2, $3)";
 
     let mut highest_id = 0;
     for group in &data_before {
@@ -1076,10 +1077,10 @@ VALUES ($1, $2, $3)"#;
         if highest_id == 99999 {
             DB::hql()
                 .execute(
-                    r#"
+                    r"
         INSERT INTO sqlite_sequence (name, seq)
         VALUES ($1, $2)
-        "#,
+        ",
                     params!("pam_groups", highest_id),
                 )
                 .await?;
@@ -1093,10 +1094,10 @@ VALUES ($1, $2, $3)"#;
         DB::pg_execute(sql_6, &[]).await?;
 
         for b in data_before {
-            DB::pg_execute(sql_7, &[&(b.id as i64), &b.name, &b.typ.as_str()]).await?;
+            DB::pg_execute(sql_7, &[&i64::from(b.id), &b.name, &b.typ.as_str()]).await?;
         }
 
-        highest_id = max(highest_id + 1, 100000);
+        highest_id = max(highest_id + 1, 100_000);
         let stmt = format!("ALTER SEQUENCE pam_groups_id_seq RESTART WITH {highest_id}");
         DB::pg_execute(&stmt, &[]).await?;
     }
@@ -1104,9 +1105,9 @@ VALUES ($1, $2, $3)"#;
 }
 
 pub async fn pam_hosts(data_before: Vec<PamHost>) -> Result<(), ErrorResponse> {
-    let sql_1 = r#"
+    let sql_1 = r"
 INSERT INTO pam_hosts (id, hostname, gid, secret, force_mfa, local_password_only, notes)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     if is_hiqlite() {
         for b in data_before {
@@ -1132,7 +1133,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
                 &[
                     &b.id,
                     &b.hostname,
-                    &(b.gid as i64),
+                    &i64::from(b.gid),
                     &b.secret,
                     &b.force_mfa,
                     &b.local_password_only,
@@ -1146,9 +1147,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 }
 
 pub async fn pam_hosts_aliases(data_before: Vec<(String, String)>) -> Result<(), ErrorResponse> {
-    let sql_1 = r#"
+    let sql_1 = r"
 INSERT INTO pam_hosts_aliases (host_id, alias)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         for b in data_before {
@@ -1163,9 +1164,9 @@ VALUES ($1, $2)"#;
 }
 
 pub async fn pam_hosts_ips(data_before: Vec<(String, String)>) -> Result<(), ErrorResponse> {
-    let sql_1 = r#"
+    let sql_1 = r"
 INSERT INTO pam_hosts_ips (host_id, ip)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         for b in data_before {
@@ -1180,9 +1181,9 @@ VALUES ($1, $2)"#;
 }
 
 pub async fn pam_users(data_before: Vec<PamUser>) -> Result<(), ErrorResponse> {
-    let sql_1 = r#"
+    let sql_1 = r"
 INSERT INTO pam_users (id, name, gid, email, shell, home_dir)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
     let mut highest_id = 0;
     for user in &data_before {
@@ -1211,10 +1212,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
         if highest_id == 99999 {
             DB::hql()
                 .execute(
-                    r#"
+                    r"
     INSERT INTO sqlite_sequence (name, seq)
     VALUES ($1, $2)
-    "#,
+    ",
                     params!("pam_users", highest_id),
                 )
                 .await?;
@@ -1224,9 +1225,9 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::pg_execute(
                 sql_1,
                 &[
-                    &(b.id as i64),
+                    &i64::from(b.id),
                     &b.name,
-                    &(b.gid as i64),
+                    &i64::from(b.gid),
                     &b.email,
                     &b.shell,
                     &b.home_dir,
@@ -1235,7 +1236,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             .await?;
         }
 
-        highest_id = max(highest_id + 1, 100000);
+        highest_id = max(highest_id + 1, 100_000);
         let stmt = format!("ALTER SEQUENCE pam_users_id_seq RESTART WITH {highest_id}");
         DB::pg_execute(&stmt, &[]).await?;
     }
@@ -1243,9 +1244,9 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 }
 
 pub async fn pam_rel_groups_users(data_before: Vec<(i64, i64, bool)>) -> Result<(), ErrorResponse> {
-    let sql_1 = r#"
+    let sql_1 = r"
 INSERT INTO pam_rel_groups_users (gid, uid, wheel)
-VALUES ($1, $2, $3)"#;
+VALUES ($1, $2, $3)";
 
     if is_hiqlite() {
         for b in data_before {
@@ -1261,11 +1262,11 @@ VALUES ($1, $2, $3)"#;
 
 pub async fn passkeys(data_before: Vec<PasskeyEntity>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM passkeys";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO passkeys
 (user_id, name, passkey_user_id, passkey, credential_id, registered, last_used, user_verified,
 resident_key, aaguid)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1314,9 +1315,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
 
 pub async fn pictures(data_before: Vec<UserPicture>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM pictures";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO pictures (id, content_type, storage, data)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1338,9 +1339,9 @@ VALUES ($1, $2, $3, $4)"#;
 
 pub async fn pwd_exp_mails(data_before: Vec<PasswordExpMail>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM pwd_exp_mails";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO pwd_exp_mails (user_id, mail_sent_ts)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1382,11 +1383,11 @@ pub async fn recent_passwords(
 
 pub async fn refresh_tokens(data_before: Vec<RefreshToken>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM refresh_tokens";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
 client_created_micros)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1437,10 +1438,10 @@ pub async fn refresh_tokens_devices(
     data_before: Vec<RefreshTokenDevice>,
 ) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM refresh_tokens_devices";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO refresh_tokens_devices
 (id, device_id, user_id, nbf, exp, scope, access_token_jti)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1503,9 +1504,9 @@ pub async fn roles(data_before: Vec<Role>) -> Result<(), ErrorResponse> {
 
 pub async fn scopes(data_before: Vec<Scope>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM scopes";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id, claims_at_root)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1544,10 +1545,10 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
 pub async fn sessions(data_before: Vec<Session>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM sessions";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO
 sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1594,9 +1595,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
 pub async fn ssh_auth_keys(data_before: Vec<AuthorizedKey>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM ssh_auth_keys";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO ssh_auth_keys (pam_uid, ts_added, expires, typ, data, comment)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1614,7 +1615,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::pg_execute(
                 sql_2,
                 &[
-                    &(b.pam_uid as i64),
+                    &i64::from(b.pam_uid),
                     &b.ts_added,
                     &b.expires,
                     &b.typ,
@@ -1630,10 +1631,10 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
 pub async fn ssh_auth_keys_used(data_before: Vec<(String, i64)>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM ssh_auth_keys_used";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO ssh_auth_keys_used (used_key_hash, ts_added)
 VALUES ($1, $2)
-"#;
+";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1651,9 +1652,9 @@ VALUES ($1, $2)
 
 pub async fn themes(data_before: Vec<ThemeCssFull>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM themes";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO themes (client_id, last_update, version, light, dark, border_radius)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1694,9 +1695,9 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
 
 pub async fn tos(data_before: Vec<ToS>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM tos";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO tos (ts, author, is_html, opt_until, content)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1723,9 +1724,9 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
 pub async fn tos_user_accept(data_before: Vec<ToSUserAccept>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM tos_user_accept";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO tos_user_accept (user_id, tos_ts, accept_ts, location)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1752,7 +1753,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
-            let typ = b.typ.as_ref().map(|t| t.as_str());
+            let typ = b.typ.as_ref().map(UserAttrConfigTyp::as_str);
             DB::hql()
                 .execute(
                     sql_2,
@@ -1763,7 +1764,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
     } else {
         DB::pg_execute(sql_1, &[]).await?;
         for b in data_before {
-            let typ = b.typ.as_ref().map(|t| t.as_str());
+            let typ = b.typ.as_ref().map(UserAttrConfigTyp::as_str);
             DB::pg_execute(
                 sql_2,
                 &[&b.name, &b.desc, &b.default_value, &typ, &b.user_editable],
@@ -1796,10 +1797,10 @@ pub async fn user_attr_values(data_before: Vec<UserAttrValueEntity>) -> Result<(
 
 pub async fn user_consents(data_before: Vec<UserConsent>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM user_consents";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO user_consents
 (user_id, client_id, resource, scopes, content_hash, created, updated, ip, user_agent)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1846,11 +1847,11 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
 pub async fn user_login_states(data_before: Vec<UserLoginState>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM user_login_states";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO user_login_states(timestamp, user_id, client_id, session_id)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (user_id, client_id, session_id)
-DO NOTHING"#;
+DO NOTHING";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1881,12 +1882,12 @@ pub async fn users(data_before: Vec<User>) -> Result<(), ErrorResponse> {
     // during a migration
     let sql_1 = "DELETE FROM user_login_states";
     let sql_2 = "DELETE FROM users";
-    let sql_3 = r#"
+    let sql_3 = r"
 INSERT INTO users
 (id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
 password_expires, created_at, last_login, last_failed_login, failed_login_attempts, language,
 webauthn_user_id, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -1957,10 +1958,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $
 
 pub async fn users_values(data_before: Vec<UserValues>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM users_values";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO
 users_values (id, birthdate, phone, street, zip, city, country, preferred_username, tz)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
@@ -2007,9 +2008,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
 pub async fn user_revoke(data_before: Vec<UserRevoke>) -> Result<(), ErrorResponse> {
     let sql_1 = "DELETE FROM user_revoke";
-    let sql_2 = r#"
+    let sql_2 = r"
 INSERT INTO user_revoke (user_id, code)
-VALUES ($1, $2)"#;
+VALUES ($1, $2)";
 
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;

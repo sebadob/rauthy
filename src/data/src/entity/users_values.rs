@@ -32,10 +32,10 @@ impl UserValues {
         values: UserValuesRequest,
         preferred_username: Option<String>,
     ) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 users_values (id, birthdate, phone, street, zip, city, country, preferred_username, tz)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
 
         if is_hiqlite() {
             DB::hql()
@@ -153,13 +153,13 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
         values: UserValuesRequest,
     ) -> Result<Option<Self>, ErrorResponse> {
         let idx = Self::cache_idx(&user_id);
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 users_values (id, birthdate, phone, street, zip, city, country, tz)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT(id) DO UPDATE
 SET birthdate = $2, phone = $3, street = $4, zip = $5, city = $6, country = $7, tz = $8
-RETURNING *"#;
+RETURNING *";
 
         let values: Self = if is_hiqlite() {
             DB::hql()
@@ -207,13 +207,13 @@ RETURNING *"#;
         preferred_username: String,
     ) -> Result<Option<Self>, ErrorResponse> {
         let idx = Self::cache_idx(&user_id);
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 users_values (id, preferred_username)
 VALUES ($1, $2)
 ON CONFLICT(id) DO UPDATE
 SET preferred_username = $2
-RETURNING *"#;
+RETURNING *";
 
         let values: Self = if is_hiqlite() {
             DB::hql()
@@ -270,11 +270,11 @@ RETURNING *"#;
 
     pub async fn delete_preferred_username(user_id: String) -> Result<(), ErrorResponse> {
         let idx = Self::cache_idx(&user_id);
-        let sql = r#"
+        let sql = r"
 UPDATE users_values
 SET preferred_username = null
 WHERE id = $1
-RETURNING *"#;
+RETURNING *";
 
         let values: Self = if is_hiqlite() {
             DB::hql()

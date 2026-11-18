@@ -85,19 +85,16 @@ pub async fn reconcile(clients: Vec<Client>) -> Result<(), ErrorResponse> {
     let mut updated = 0;
 
     for client in clients {
-        match existing.get(client.id.as_str()).copied() {
-            Some(e) => {
-                let entity = to_entity(&client, &scopes, Some(e)).await?;
-                if &entity != e {
-                    entity.save().await?;
-                    updated += 1;
-                }
+        if let Some(e) = existing.get(client.id.as_str()).copied() {
+            let entity = to_entity(&client, &scopes, Some(e)).await?;
+            if &entity != e {
+                entity.save().await?;
+                updated += 1;
             }
-            None => {
-                let entity = to_entity(&client, &scopes, None).await?;
-                insert(&entity).await?;
-                created += 1;
-            }
+        } else {
+            let entity = to_entity(&client, &scopes, None).await?;
+            insert(&entity).await?;
+            created += 1;
         }
         upsert_scim(client).await?;
     }
@@ -191,11 +188,10 @@ async fn to_entity(
                 }
             };
 
-            if plain.len() != SECRET_LEN_CLIENTS {
-                panic!(
-                    "Given client secret too short. Expected exactly {SECRET_LEN_CLIENTS} characters."
-                );
-            }
+            assert!(
+                plain.len() == SECRET_LEN_CLIENTS,
+                "Given client secret too short. Expected exactly {SECRET_LEN_CLIENTS} characters."
+            );
 
             // keep the stored value when the secret did not change, so an unchanged client
             // compares equal and is not written again
@@ -235,11 +231,12 @@ async fn to_entity(
             ));
         }
     }
-    let redirect_uris = opt_vec_to_csv(&Some(client.redirect_uris.clone())).unwrap();
+    let redirect_uris = opt_vec_to_csv(Some(client.redirect_uris.as_slice())).unwrap();
     // empty values are stored as `NULL`, like `ClientEntity::save()` does
     let post_logout_redirect_uris =
-        opt_vec_to_csv(&client.post_logout_redirect_uris).filter(|v| !v.is_empty());
-    let allowed_origins = opt_vec_to_csv(&client.allowed_origins).filter(|v| !v.is_empty());
+        opt_vec_to_csv(client.post_logout_redirect_uris.as_deref()).filter(|v| !v.is_empty());
+    let allowed_origins =
+        opt_vec_to_csv(client.allowed_origins.as_deref()).filter(|v| !v.is_empty());
 
     let flows_enabled = GrantType::csv(&client.flows_enabled);
     let challenge = if secret.is_none() {
@@ -255,22 +252,18 @@ async fn to_entity(
 
     let default_scopes = "openid, address, email, groups, phone, profile";
     for scope in &client.scopes {
-        if !scopes.contains(scope) {
-            panic!(
-                "Given client scope '{}' does not exist. Expected one of: {:?}\nor default scopes: {}",
-                scope, scopes, default_scopes
-            );
-        }
+        assert!(
+            scopes.contains(scope),
+            "Given client scope '{scope}' does not exist. Expected one of: {scopes:?}\nor default scopes: {default_scopes}"
+        );
     }
     let scopes = client.scopes.join(",");
 
     for scope in &client.default_scopes {
-        if !scopes.contains(scope) {
-            panic!(
-                "Given client scope '{}' does not exist. Expected one of: {:?}\nor default scopes: {}",
-                scope, scopes, default_scopes
-            );
-        }
+        assert!(
+            scopes.contains(scope),
+            "Given client scope '{scope}' does not exist. Expected one of: {scopes:?}\nor default scopes: {default_scopes}"
+        );
     }
     let default_scopes = client.default_scopes.join(",");
 
@@ -306,8 +299,7 @@ async fn to_entity(
         allowed_resources: existing.and_then(|e| e.allowed_resources.clone()),
         default_aud: existing.and_then(|e| e.default_aud.clone()),
         created_micros: existing
-            .map(|e| e.created_micros)
-            .unwrap_or_else(|| Some(Utc::now().timestamp_micros())),
+            .map_or_else(|| Some(Utc::now().timestamp_micros()), |e| e.created_micros),
         consent: existing.and_then(|e| e.consent.clone()),
     })
 }
@@ -387,8 +379,8 @@ async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
 }
 
 #[cold]
-fn opt_vec_to_csv(input: &Option<Vec<String>>) -> Option<String> {
-    input.as_ref().map(|v| {
+fn opt_vec_to_csv(input: Option<&[String]>) -> Option<String> {
+    input.map(|v| {
         v.iter()
             .filter_map(|v| {
                 let trimmed = v.trim();

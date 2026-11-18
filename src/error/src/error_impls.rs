@@ -48,6 +48,7 @@ impl ErrorResponse {
         Self::new(ErrorResponseType::Internal, message)
     }
 
+    #[must_use]
     pub fn error_response_html(&self, body: String) -> HttpResponse {
         HttpResponseBuilder::new(self.status_code())
             .append_header(HEADER_HTML)
@@ -284,9 +285,13 @@ impl From<hiqlite::Error> for ErrorResponse {
             hiqlite::Error::ClientWriteError(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
-            hiqlite::Error::Connect(err) => (ErrorResponseType::Connection, err.to_string().into()),
+            hiqlite::Error::Connect(err)
+            | hiqlite::Error::Request(err)
+            | hiqlite::Error::S3(err)
+            | hiqlite::Error::Timeout(err)
+            | hiqlite::Error::WebSocket(err) => (ErrorResponseType::Connection, err.clone().into()),
             hiqlite::Error::ConstraintViolation(err) => {
-                (ErrorResponseType::BadRequest, err.to_string().into())
+                (ErrorResponseType::BadRequest, err.clone().into())
             }
             hiqlite::Error::LeaderChange(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
@@ -294,15 +299,9 @@ impl From<hiqlite::Error> for ErrorResponse {
             hiqlite::Error::QueryReturnedNoRows(err) => {
                 (ErrorResponseType::NotFound, err.to_string().into())
             }
-            hiqlite::Error::Request(err) => (ErrorResponseType::Connection, err.to_string().into()),
-            hiqlite::Error::S3(err) => (ErrorResponseType::Connection, err.to_string().into()),
             hiqlite::Error::Sqlite(err) => (ErrorResponseType::Database, err.to_string().into()),
-            hiqlite::Error::Timeout(err) => (ErrorResponseType::Connection, err.to_string().into()),
             hiqlite::Error::Transaction(err) => {
                 (ErrorResponseType::Database, err.to_string().into())
-            }
-            hiqlite::Error::WebSocket(err) => {
-                (ErrorResponseType::Connection, err.to_string().into())
             }
             err => (ErrorResponseType::Database, err.to_string().into()),
         };
@@ -401,7 +400,7 @@ impl From<reqwest::header::ToStrError> for ErrorResponse {
         debug!("reqwest::header::ToStrError: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("Request headers contained non ASCII characters: {value:?}",),
+            format!("Request headers contained non ASCII characters: {value:?}"),
         )
     }
 }

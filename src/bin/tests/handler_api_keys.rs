@@ -12,6 +12,7 @@ use std::ops::Sub;
 mod common;
 
 #[tokio::test]
+#[allow(clippy::similar_names)]
 async fn test_api_keys() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
     let auth_headers = get_auth_headers().await?;
@@ -37,10 +38,10 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), StatusCode::OK);
     let secret = res.text().await.unwrap();
-    eprintln!("api key secret: {}", secret);
+    eprintln!("api key secret: {secret}");
     assert!(secret.starts_with(&payload.name));
     // the header needs to be in format: 'API-Key my_apy_key'
-    let key_header = format!("API-Key {}", secret);
+    let key_header = format!("API-Key {secret}");
 
     // creating the same key fails -> duplicate name
     let res = client
@@ -92,7 +93,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), StatusCode::OK);
     let manager_secret = res.text().await?;
-    let manager_header = format!("API-Key {}", manager_secret);
+    let manager_header = format!("API-Key {manager_secret}");
 
     let managed_payload = ApiKeyRequest {
         name: "api-key-managed".to_string(),

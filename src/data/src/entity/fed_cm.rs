@@ -32,6 +32,7 @@ pub struct FedCMAccount {
 }
 
 impl FedCMAccount {
+    #[must_use]
     pub fn build(user: User) -> Self {
         let name = user.email_recipient_name();
         let login_hint = format!("login_hint={}", user.email);
@@ -73,6 +74,7 @@ pub struct FedCMClientMetadata {
 }
 
 impl FedCMClientMetadata {
+    #[must_use]
     pub fn new() -> Self {
         // Self {
         //     // Rauthy does not track any policy or ToS
@@ -175,6 +177,7 @@ pub enum FedCMLoginStatus {
 }
 
 impl FedCMLoginStatus {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             FedCMLoginStatus::LoggedIn => "logged-in",
@@ -182,6 +185,7 @@ impl FedCMLoginStatus {
         }
     }
 
+    #[must_use]
     pub fn as_header_pair(&self) -> (&str, &str) {
         ("Set-Login", self.as_str())
     }

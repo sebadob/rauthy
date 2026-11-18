@@ -26,10 +26,10 @@ impl ToSUserAccept {
         let accept_ts = Utc::now().timestamp();
         let location = format!("{} {}", ip, location.unwrap_or_default());
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO tos_user_accept (user_id, tos_ts, accept_ts, location)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT DO NOTHING"#;
+ON CONFLICT DO NOTHING";
         if is_hiqlite() {
             DB::hql()
                 .execute(sql, params!(&user_id, tos_ts, accept_ts, &location))
@@ -56,9 +56,9 @@ ON CONFLICT DO NOTHING"#;
     }
 
     pub async fn find_all(user_id: String) -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT * FROM tos_user_accept
-WHERE user_id = $1"#;
+WHERE user_id = $1";
 
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!(user_id)).await?
@@ -75,12 +75,12 @@ WHERE user_id = $1"#;
         }
 
         let cache_idx = Self::cache_idx(&user_id);
-        let sql = r#"
+        let sql = r"
 SELECT * FROM tos_user_accept
 WHERE user_id = $1
 ORDER BY tos_ts DESC
 LIMIT 1
-"#;
+";
 
         let slf = if is_hiqlite() {
             DB::hql().query_as_optional(sql, params!(user_id)).await?

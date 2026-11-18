@@ -25,7 +25,7 @@ use validator::Validate;
 /// Returns all ToS
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/tos",
@@ -52,7 +52,7 @@ pub async fn get_tos(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRespo
 /// Create and publish new ToS
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/tos",
@@ -139,7 +139,7 @@ pub async fn get_tos_latest(
 /// GET user accept status for all existing ToS
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/tos/user/{id}",
@@ -269,7 +269,7 @@ async fn handle_tos_accept_deny(
     }
 
     auth_code
-        .danger_save_reset_exp(code_await.auth_code_lifetime as i64)
+        .danger_save_reset_exp(i64::from(code_await.auth_code_lifetime))
         .await?;
 
     let mut builder = if code_await.needs_user_update {

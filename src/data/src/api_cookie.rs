@@ -12,22 +12,22 @@ use tracing::warn;
 pub struct ApiCookie;
 
 impl ApiCookie {
-    pub fn build<'c, 'b, N, V>(name: N, value: V, max_age: i64) -> Cookie<'c>
+    pub fn build<'c, 'b, N, V>(name: &N, value: V, max_age: i64) -> Cookie<'c>
     where
-        N: Into<Cow<'c, str>> + Display,
+        N: Display + ?Sized,
         V: Into<Cow<'b, str>> + Display,
     {
         Self::build_with_same_site(name, value, max_age, SameSite::Lax)
     }
 
     pub fn build_with_same_site<'c, 'b, N, V>(
-        name: N,
+        name: &N,
         value: V,
         max_age: i64,
         same_site: SameSite,
     ) -> Cookie<'c>
     where
-        N: Into<Cow<'c, str>> + Display,
+        N: Display + ?Sized,
         V: Into<Cow<'b, str>> + Display,
     {
         let access = &RauthyConfig::get().vars.access;
@@ -60,9 +60,9 @@ impl ApiCookie {
             .finish()
     }
 
-    pub fn from_req<'c, N>(req: &HttpRequest, cookie_name: N) -> Option<String>
+    pub fn from_req<N>(req: &HttpRequest, cookie_name: &N) -> Option<String>
     where
-        N: Into<Cow<'c, str>> + Display,
+        N: Display + ?Sized,
     {
         let name = match RauthyConfig::get().vars.access.cookie_mode {
             CookieMode::Host => format!("__Host-{cookie_name}"),
@@ -73,9 +73,9 @@ impl ApiCookie {
         Self::cookie_into_value(req.cookie(&name))
     }
 
-    pub fn from_svc_req<'c, N>(req: &ServiceRequest, cookie_name: N) -> Option<String>
+    pub fn from_svc_req<N>(req: &ServiceRequest, cookie_name: &N) -> Option<String>
     where
-        N: Into<Cow<'c, str>> + Display,
+        N: Display + ?Sized,
     {
         let name = match RauthyConfig::get().vars.access.cookie_mode {
             CookieMode::Host => format!("__Host-{cookie_name}"),
@@ -85,6 +85,7 @@ impl ApiCookie {
         Self::cookie_into_value(req.cookie(&name))
     }
 
+    #[must_use]
     pub fn cookie_into_value(cookie: Option<Cookie>) -> Option<String> {
         match cookie {
             None => None,

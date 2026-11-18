@@ -42,9 +42,10 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = RauthyConfig::get().vars.i18n.filter_lang_common
         .iter()
         .map(|v| {
-                if !["cs", "de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
-                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en cs de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}");
-                }
+                assert!(
+                    ["cs", "de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()),
+                    "Invalid config for `i18n.filter_lang_common`.\nAllowed values: en cs de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}"
+                );
                 Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
@@ -55,11 +56,9 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .filter_lang_admin
         .iter()
         .map(|v| {
-            if !["cs", "de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
-                panic!(
-                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en cs de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}",
-                );
-            }
+            assert!(["cs", "de", "en", "es", "fr", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()), 
+                "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en cs de es fr ja ko nb nl pt ru uk zhhans\nfound: {v}",
+            );
             Language::from(v.as_ref()).into()
         })
         .collect::<Vec<_>>();
@@ -115,7 +114,7 @@ pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpRespons
 /// Only the Key ID's are returned and never the key itself.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/encryption/keys",
@@ -145,7 +144,7 @@ pub async fn get_enc_keys(principal: ReqPrincipal) -> Result<HttpResponse, Error
 /// Migration of secrets to the new encryption key
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/encryption/migrate",
@@ -200,7 +199,7 @@ pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
 /// The `login time` is the time it takes to complete a full login workflow incl password hashing.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/login_time",
@@ -239,7 +238,7 @@ pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, Err
 /// Does multiple argon2id computations to find the best settings for the given target values.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/password_hash_times",
@@ -288,7 +287,7 @@ pub async fn get_password_policy(principal: ReqPrincipal) -> Result<HttpResponse
 /// Update the currently configured password policy
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/password_policy",
@@ -310,7 +309,7 @@ pub async fn put_password_policy(
     payload.validate()?;
 
     let mut rules = PasswordPolicy::find().await?;
-    rules.apply_req(payload);
+    rules.apply_req(&payload);
     rules.save().await?;
     Ok(HttpResponse::Ok().json(PasswordPolicyResponse::from(rules)))
 }
@@ -372,7 +371,7 @@ pub async fn get_search(
         principal.validate_group_admin_session()?;
     }
 
-    let limit = params.limit.unwrap_or(100) as i64;
+    let limit = i64::from(params.limit.unwrap_or(100));
     match params.ty {
         SearchParamsType::Session => {
             let res = Session::search(&params.idx, &params.q, limit)
@@ -521,7 +520,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
     let vars = &RauthyConfig::get().vars.suspicious_requests;
     if vars.log && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
-        warn!("Suspicious request path '{}' from {}", path, ip)
+        warn!("Suspicious request path '{}' from {}", path, ip);
     }
 
     if !vars.blacklist.is_zero()
@@ -542,7 +541,9 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
         }
 
         let location = ipgeo::get_location_from_db(ip)?;
-        Event::suspicious_request(path, ip, location).send().await?;
+        Event::suspicious_request(path, ip, location.as_deref())
+            .send()
+            .await?;
 
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
@@ -588,7 +589,7 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
                 current: RAUTHY_VERSION.to_string(),
                 last_check: Some(latest.timestamp),
                 latest: Some(latest.latest_version.to_string()),
-                latest_url: Some(latest.release_url.to_string()),
+                latest_url: Some(latest.release_url.clone()),
                 update_available,
             }
         }
@@ -622,9 +623,7 @@ pub async fn get_whoami(req: HttpRequest) -> String {
     if RauthyConfig::get().vars.access.whoami_headers {
         let mut s = String::with_capacity(32);
 
-        let ip = real_ip_from_req(&req)
-            .map(|ip| ip.to_string())
-            .unwrap_or_default();
+        let ip = real_ip_from_req(&req).map_or_default(|ip| ip.to_string());
         let _ = writeln!(s, "{ip}\n");
 
         for (k, v) in req.headers() {
@@ -646,8 +645,6 @@ pub async fn get_whoami(req: HttpRequest) -> String {
 
         s
     } else {
-        real_ip_from_req(&req)
-            .map(|ip| ip.to_string())
-            .unwrap_or_default()
+        real_ip_from_req(&req).map_or_default(|ip| ip.to_string())
     }
 }

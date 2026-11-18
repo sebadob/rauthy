@@ -65,8 +65,10 @@ fn template_value<'a>(html: &'a str, id: &str) -> &'a str {
     let start = format!(r#"<template id="{id}">"#);
     html.split_once(&start)
         .and_then(|(_, rest)| rest.split_once("</template>"))
-        .map(|(value, _)| value)
-        .unwrap_or_else(|| panic!("template {id} missing from authorize HTML"))
+        .map_or_else(
+            || panic!("template {id} missing from authorize HTML"),
+            |(value, _)| value,
+        )
 }
 
 /// Rebuilds the full `UpdateClientRequest` from a GET response (so we don't depend on
@@ -151,7 +153,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
 
-    let url = format!("{}/clients", backend_url);
+    let url = format!("{backend_url}/clients");
     let res = reqwest::Client::new()
         .get(&url)
         .headers(auth_headers.clone())
@@ -161,7 +163,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
 
     let clients = res.json::<Vec<ClientResponse>>().await?;
     let client = clients.iter().find(|c| c.id == "rauthy").unwrap();
-    println!("{:?}", client);
+    println!("{client:?}");
     assert_eq!(client.id, "rauthy");
     assert_eq!(client.name, Some("Rauthy".to_string()));
     assert_eq!(client.enabled, true);
@@ -390,7 +392,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
     if res.status() != 200 {
         let err = res.text().await?;
         // let err = aw!(res.json::<ErrorResponse>())?;
-        panic!("{:?}", err);
+        panic!("{err:?}");
     }
     assert_eq!(res.status(), 200);
 
@@ -581,6 +583,7 @@ async fn test_client_consent_round_trip() -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test]
+#[allow(clippy::similar_names)]
 async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Error>> {
     const LOGO: &[u8] = include_bytes!("../../../assets/logo/rauthy_dark_small.png");
     const FAVICON: &[u8] = include_bytes!("../../../assets/logo/rauthy_light_small.png");
@@ -647,8 +650,8 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     let res = client.get(&authorize_url).send().await?;
     assert_eq!(res.status(), 200);
     let html = res.text().await?;
-    assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
-    assert!(template_value(&html, "tpl_client_favicon_updated").is_empty());
+    assert_ne!(template_value(&html, "tpl_client_logo_updated"), "");
+    assert_eq!(template_value(&html, "tpl_client_favicon_updated"), "");
 
     let res = client
         .put(&favicon_url)
@@ -696,8 +699,8 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     let res = client.get(&authorize_url).send().await?;
     assert_eq!(res.status(), 200);
     let html = res.text().await?;
-    assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
-    assert!(!template_value(&html, "tpl_client_favicon_updated").is_empty());
+    assert_ne!(template_value(&html, "tpl_client_logo_updated"), "");
+    assert_ne!(template_value(&html, "tpl_client_favicon_updated"), "");
 
     let res = client.delete(&favicon_url).send().await?;
     assert_eq!(res.status(), 401);
@@ -735,8 +738,8 @@ async fn test_client_favicon_is_independent_from_logo() -> Result<(), Box<dyn Er
     let res = client.get(&authorize_url).send().await?;
     assert_eq!(res.status(), 200);
     let html = res.text().await?;
-    assert!(!template_value(&html, "tpl_client_logo_updated").is_empty());
-    assert!(template_value(&html, "tpl_client_favicon_updated").is_empty());
+    assert_ne!(template_value(&html, "tpl_client_logo_updated"), "");
+    assert_eq!(template_value(&html, "tpl_client_favicon_updated"), "");
 
     let res = client
         .delete(&client_url)
@@ -755,7 +758,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
 
     // get the current client secret
-    let url = format!("{}/clients/init_client/secret", backend_url);
+    let url = format!("{backend_url}/clients/init_client/secret");
     let res = client
         .post(&url)
         .headers(auth_headers.clone())
@@ -768,7 +771,7 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
     assert_eq!(resp.secret.unwrap(), CLIENT_SECRET);
 
     // be sure that this endpoint is idempotent
-    let url = format!("{}/clients/init_client/secret", backend_url);
+    let url = format!("{backend_url}/clients/init_client/secret");
     let res = client
         .post(&url)
         .headers(auth_headers.clone())
@@ -786,11 +789,11 @@ async fn test_client_secret() -> Result<(), Box<dyn Error>> {
         client_secret: Some(secret.clone()),
         ..Default::default()
     };
-    let url_token = format!("{}/oidc/token", backend_url);
+    let url_token = format!("{backend_url}/oidc/token");
     let res = client.post(&url_token).form(&token_req).send().await?;
     assert_eq!(res.status(), 200);
     let ts = res.json::<TokenSet>().await?;
-    assert!(!ts.access_token.is_empty());
+    assert_ne!(ts.access_token, "");
 
     // generate a new secret
     let res = client
@@ -897,11 +900,11 @@ async fn test_client_credentials_custom_claims() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
 
-    let url = format!("{}/clients", backend_url);
+    let url = format!("{backend_url}/clients");
     let client_id = "claims_client";
-    let url_id = format!("{}/clients/{}", backend_url, client_id);
-    let url_secret = format!("{}/clients/{}/secret", backend_url, client_id);
-    let url_token = format!("{}/oidc/token", backend_url);
+    let url_id = format!("{backend_url}/clients/{client_id}");
+    let url_secret = format!("{backend_url}/clients/{client_id}/secret");
+    let url_token = format!("{backend_url}/oidc/token");
 
     // pre-cleanup so a failed earlier run does not block creation
     let _ = client

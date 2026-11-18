@@ -51,7 +51,7 @@ pub async fn handle_get_pwd_reset<'a>(
                 .password_reset_redirect_timeout,
             user_id,
         };
-        PwdResetHtml::build(&lang, ThemeCssFull::find_theme_ts_rauthy().await?, tpl)
+        PwdResetHtml::build(lang, ThemeCssFull::find_theme_ts_rauthy().await?, tpl)
     };
 
     // generate a cookie value and save it to the magic link
@@ -218,9 +218,10 @@ pub async fn handle_put_user_password_reset<'a>(
 
     // check if we got a custom `redirect_uri` during registration
     let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
-        MagicLinkUsage::NewUser(redirect_uri) => redirect_uri,
-        MagicLinkUsage::PasswordReset(redirect_uri) => redirect_uri,
-        _ => None,
+        MagicLinkUsage::NewUser(redirect_uri) | MagicLinkUsage::PasswordReset(redirect_uri) => {
+            redirect_uri
+        }
+        MagicLinkUsage::EmailChange(_) => None,
     };
 
     // delete the cookie

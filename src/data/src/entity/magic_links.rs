@@ -41,17 +41,17 @@ impl FromStr for MagicLinkUsage {
         let slf = match ty {
             "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
             "new_user" => {
-                if !v.is_empty() {
-                    MagicLinkUsage::NewUser(Some(v.to_string()))
-                } else {
+                if v.is_empty() {
                     MagicLinkUsage::NewUser(None)
+                } else {
+                    MagicLinkUsage::NewUser(Some(v.to_string()))
                 }
             }
             "password_reset" => {
-                if !v.is_empty() {
-                    MagicLinkUsage::PasswordReset(Some(v.to_string()))
-                } else {
+                if v.is_empty() {
                     MagicLinkUsage::PasswordReset(None)
+                } else {
+                    MagicLinkUsage::PasswordReset(Some(v.to_string()))
                 }
             }
             _ => {
@@ -137,9 +137,9 @@ impl MagicLink {
             usage: usage.to_string(),
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO magic_links (id, user_id, csrf_token, exp, used, usage)
-VALUES ($1, $2, $3, $4, $5, $6)"#;
+VALUES ($1, $2, $3, $4, $5, $6)";
 
         if is_hiqlite() {
             DB::hql()
@@ -179,7 +179,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -212,7 +212,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -266,14 +266,13 @@ impl MagicLink {
                 if !binding_matches {
                     if cookie_binding {
                         return Err(err);
-                    } else {
-                        let ip = real_ip_from_req(req)?;
-                        warn!(
-                            ?ip,
-                            "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding \
-                            cookie",
-                        );
                     }
+                    let ip = real_ip_from_req(req)?;
+                    warn!(
+                        ?ip,
+                        "PASSWORD_RESET_COOKIE_BINDING disabled -> ignoring invalid binding \
+                            cookie",
+                    );
                 }
             } else if cookie_binding {
                 return Err(err);
@@ -341,6 +340,7 @@ pub struct IdxMagicLinkPasswordUser {
 }
 
 impl IdxMagicLinkPasswordUser {
+    #[must_use]
     pub fn from_magic_link(ml: &MagicLink) -> Self {
         Self {
             user_id: ml.user_id.clone(),

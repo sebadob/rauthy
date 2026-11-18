@@ -47,7 +47,7 @@ pub async fn send_email_registered_already(user: &User) {
         .await
         .unwrap_or_default();
 
-    let i18n = I18nEmailRegisteredAlready::build(&user.language);
+    let i18n = I18nEmailRegisteredAlready::build(user.language);
     let email_sub_prefix = &RauthyConfig::get().vars.email.sub_prefix;
     let text = EmailRegisteredAlreadyTxt {
         email_sub_prefix,
@@ -88,7 +88,7 @@ pub async fn send_email_registered_already(user: &User) {
         .send_timeout((req, EMailCallback::None), Duration::from_secs(10))
         .await;
     match res {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(ref e) => {
             error!(
                 error = ?e,

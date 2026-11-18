@@ -44,7 +44,7 @@ pub struct WellKnown {
     pub authorization_response_iss_parameter_supported: bool,
     /// SEP-991 / draft-jonesmichael-oauth-cimd. Signals that this AS accepts
     /// clients identified by a Client ID Metadata Document URL (Rauthy already
-    /// implements this via `ephemeral_from_url`). ChatGPT's custom-connector UI
+    /// implements this via `ephemeral_from_url`). `ChatGPT`'s custom-connector UI
     /// greys out the CIMD option until the AS discovery doc carries this flag.
     pub client_id_metadata_document_supported: bool,
 }
@@ -76,7 +76,7 @@ impl WellKnown {
         Ok(json)
     }
 
-    /// Rebuilds the WellKnown, serializes it as json and updates it inside the cache.
+    /// Rebuilds the `WellKnown`, serializes it as json and updates it inside the cache.
     /// Should be called after any update on the Scopes.
     pub async fn rebuild() -> Result<(), ErrorResponse> {
         let scopes = Scope::find_all()
@@ -94,6 +94,7 @@ impl WellKnown {
 }
 
 impl WellKnown {
+    #[must_use]
     pub fn new(scopes_supported: Vec<String>) -> Self {
         let issuer = &RauthyConfig::get().issuer;
 

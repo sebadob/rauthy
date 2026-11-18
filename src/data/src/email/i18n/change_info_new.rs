@@ -12,7 +12,8 @@ pub struct I18nEmailChangeInfoNew<'a> {
 }
 
 impl I18nEmailChangeInfoNew<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),

@@ -15,7 +15,7 @@ use validator::Validate;
 /// Returns all KV namespaces
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/kv/ns",
@@ -42,7 +42,7 @@ pub async fn get_kv_ns(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
 /// Create a new KV namespace
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/kv/ns/{ns}",
@@ -68,7 +68,7 @@ pub async fn post_kv_ns(
 /// Updates a KV namespace
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/kv/ns/{ns}",
@@ -95,7 +95,7 @@ pub async fn put_kv_ns(
 /// Deletes a KV namespace
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/kv/ns/{ns}",
@@ -120,7 +120,7 @@ pub async fn delete_kv_ns(
 /// Returns all access keys for the given KV namespace.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/kv/ns/{ns}/access",
@@ -150,7 +150,7 @@ pub async fn get_kv_ns_access(
 /// Create an access key for the given KV namespace.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/kv/ns/{ns}/access",
@@ -177,7 +177,7 @@ pub async fn post_kv_ns_access(
 /// Update an access key for the given KV namespace.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/kv/ns/{ns}/access/{id}",
@@ -213,7 +213,7 @@ pub async fn put_kv_ns_access(
 /// Delete an access key for the given KV namespace.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/kv/ns/{ns}/access/{id}",
@@ -247,7 +247,7 @@ pub async fn delete_kv_ns_access(
 /// Rotate a secret for an access key for the given KV namespace
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/kv/ns/{ns}/access/{id}/secret",
@@ -281,7 +281,7 @@ pub async fn post_kv_ns_access_secret(
 /// Returns all key / values for the given KV namespace.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/kv/ns/{ns}/values",
@@ -303,7 +303,7 @@ pub async fn get_kv_ns_values(
     let values = KVValue::find_all(ns.into_inner(), params.into_inner()).await?;
     let mut resp = Vec::with_capacity(values.len());
     for value in values {
-        resp.push(value.try_into_response()?)
+        resp.push(value.try_into_response()?);
     }
 
     Ok(HttpResponse::Ok().json(resp))
@@ -312,7 +312,7 @@ pub async fn get_kv_ns_values(
 /// Create a key / value for the given KV namespace
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/kv/ns/{ns}/values",
@@ -346,7 +346,7 @@ pub async fn post_kv_ns_values(
 /// Update a value for the given KV namespace + key
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/kv/ns/{ns}/values",
@@ -380,7 +380,7 @@ pub async fn put_kv_ns_values(
 /// Delete a key / value for the given KV namespace
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/kv/ns/{ns}/values/{key}",
@@ -484,7 +484,7 @@ pub async fn get_kv_values_ext(
     let values = KVValue::find_all(access.ns, params.into_inner()).await?;
     let mut resp = Vec::with_capacity(values.len());
     for value in values {
-        resp.push(value.try_into_response()?)
+        resp.push(value.try_into_response()?);
     }
 
     Ok(HttpResponse::Ok().json(resp))

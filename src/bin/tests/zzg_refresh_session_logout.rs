@@ -39,7 +39,7 @@ async fn refresh(http: &reqwest::Client, tokens: &TokenSet, secret: &str) -> req
 }
 
 // TODO: races against test_session_logout_revokes_rotated_tokens
-#[ignore]
+#[ignore = "races against test_session_logout_revokes_rotated_tokens"]
 #[tokio::test]
 async fn test_refresh_preserves_session_id() -> Result<(), Box<dyn Error>> {
     let secret = client_secret().await;
@@ -103,7 +103,7 @@ async fn test_concurrent_refresh_has_one_winner() -> Result<(), Box<dyn Error>> 
 }
 
 // TODO: races against test_refresh_preserves_session_id
-#[ignore]
+#[ignore = "races against test_refresh_preserves_session_id"]
 #[tokio::test]
 async fn test_logout_before_refresh_rejects_rotation() -> Result<(), Box<dyn Error>> {
     let secret = client_secret().await;
@@ -132,7 +132,7 @@ async fn test_logout_before_refresh_rejects_rotation() -> Result<(), Box<dyn Err
 }
 
 // TODO: races against test_refresh_preserves_session_id
-#[ignore]
+#[ignore = "races against test_refresh_preserves_session_id"]
 #[tokio::test]
 async fn test_session_logout_revokes_rotated_tokens() -> Result<(), Box<dyn Error>> {
     let secret = client_secret().await;
@@ -192,7 +192,7 @@ async fn test_session_logout_revokes_rotated_tokens() -> Result<(), Box<dyn Erro
 }
 
 // TODO: races against test_refresh_preserves_session_id
-#[ignore]
+#[ignore = "races against test_refresh_preserves_session_id"]
 #[tokio::test]
 async fn test_concurrent_logout_revokes_returned_refresh() -> Result<(), Box<dyn Error>> {
     let secret = client_secret().await;

@@ -32,9 +32,9 @@ fn sql_invalidate_for_user(devices: bool) -> &'static [&'static str] {
 /// [`SQL_RT_DISCARD`](crate::entity::refresh_tokens::SQL_RT_DISCARD).
 pub(crate) const SQL_RTD_DISCARD: DiscardSql = DiscardSql {
     hql: [
-        r#"
+        r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti = (SELECT access_token_jti FROM refresh_tokens_devices WHERE id = $1)"#,
+WHERE jti = (SELECT access_token_jti FROM refresh_tokens_devices WHERE id = $1)",
         "DELETE FROM refresh_tokens_devices WHERE id = $1",
     ],
     pg_delete: "DELETE FROM refresh_tokens_devices WHERE id = $1 RETURNING access_token_jti",
@@ -246,12 +246,12 @@ impl RefreshTokenDevice {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO refresh_tokens_devices
 (id, device_id, user_id, nbf, exp, scope, access_token_jti)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT(id) DO UPDATE
-SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_jti = $7"#;
+SET device_id = $2, user_id = $3, nbf = $4, exp = $5, scope = $6, access_token_jti = $7";
 
         if is_hiqlite() {
             DB::hql()
@@ -317,7 +317,7 @@ mod tests {
         let setup = crate::database::pg_test_conn(&pool, &schema).await;
         setup
             .batch_execute(
-                r#"
+                r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -337,7 +337,7 @@ VALUES ('rt_u1', 'u1', 1, 2, 'j_u1', 'c1'),
        ('rt_u2', 'u2', 1, 2, 'j_u2_rt', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_src', 'u1', 2), ('j_new', 'u1', 2), ('j_u1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -361,9 +361,9 @@ VALUES ('j_src', 'u1', 2), ('j_new', 'u1', 2), ('j_u1', 'u1', 2);
         // `TokenSet::from_user` inserts the replacement
         refresher
             .execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
-VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#,
+VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')",
                 &[],
             )
             .await

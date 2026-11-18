@@ -60,7 +60,7 @@ impl SelfSignedCA {
 
         info!("Generating new Self-Signed CA");
         let nbf = now.sub(Duration::from_secs(60));
-        let exp = now.add(Duration::from_secs(24 * 3600 * 3650));
+        let exp = now.add(Duration::from_hours(24 * 3650));
 
         let kp = Self::generate_key_pair().await;
         let key_pair = EncValue::encrypt(kp.serialize_pem().as_bytes())?
@@ -75,12 +75,12 @@ impl SelfSignedCA {
         };
         let slf_bytes = serialize(&slf)?;
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO config (id, data)
 VALUES ($1, $2)
 ON CONFLICT (id) DO UPDATE
 SET data = $2
-"#;
+";
         if is_hiqlite() {
             DB::hql().execute(sql, params!("ca", slf_bytes)).await?;
         } else {
@@ -92,7 +92,7 @@ SET data = $2
 
     pub async fn create_end_entity(&self) -> Result<SelfSignedCert, ErrorResponse> {
         let pub_url = &RauthyConfig::get().vars.server.pub_url;
-        let name = if let Some((name, _)) = pub_url.rsplit_once(":") {
+        let name = if let Some((name, _)) = pub_url.rsplit_once(':') {
             name
         } else {
             pub_url

@@ -18,7 +18,7 @@ use tracing::error;
 static EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
 
 /// Logout Token for OIDC backchannel logout specified in
-/// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
+/// <https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken>
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LogoutToken<'a> {
     // default claims
@@ -43,6 +43,7 @@ pub struct LogoutToken<'a> {
 }
 
 impl LogoutToken<'_> {
+    #[must_use]
     pub fn new<'a>(
         issuer: &'a str,
         aud: &'a str,
@@ -103,13 +104,13 @@ impl LogoutToken<'_> {
     }
 
     /// Parse and validate the token as specified in
-    /// https://openid.net/specs/openid-connect-backchannel-1_0.html#Validation
+    /// <https://openid.net/specs/openid-connect-backchannel-1_0.html#Validation>
     pub async fn from_str_validated<'a>(
         logout_token: &'a str,
         buf: &'a mut Vec<u8>,
     ) -> Result<LogoutToken<'a>, ErrorResponse> {
         let (header, slf) = LogoutToken::build_from_str(logout_token, buf)?;
-        let (kid, alg) = slf.validate_claims(header)?;
+        let (kid, alg) = slf.validate_claims(&header)?;
 
         let provider = AuthProvider::find_by_iss(slf.iss.to_string())
             .await
@@ -169,7 +170,7 @@ impl LogoutToken<'_> {
     ) -> Result<(serde_json::Value, LogoutToken<'a>), ErrorResponse> {
         // Before we can actually validate the token, we need to decode it and take a peek at the
         // issuer, so we can validate that we do have the issuer configured as an upstream provider.
-        let mut split = logout_token.split(".");
+        let mut split = logout_token.split('.');
 
         let header = match split.next() {
             None => {
@@ -200,7 +201,7 @@ impl LogoutToken<'_> {
     #[inline]
     fn validate_claims(
         &self,
-        header: serde_json::Value,
+        header: &serde_json::Value,
     ) -> Result<(String, JwkKeyPairAlg), ErrorResponse> {
         let lifetime = RauthyConfig::get()
             .vars
@@ -218,21 +219,19 @@ impl LogoutToken<'_> {
     #[inline]
     fn validate_claims_with(
         &self,
-        header: serde_json::Value,
+        header: &serde_json::Value,
         token_lifetime: i64,
         allow_clock_skew: i64,
     ) -> Result<(String, JwkKeyPairAlg), ErrorResponse> {
         let alg = JwkKeyPairAlg::from_str(
             header
                 .get("alg")
-                .map(|a| a.as_str().unwrap_or_default())
-                .unwrap_or_default(),
+                .map_or_default(|a| a.as_str().unwrap_or_default()),
         )?;
 
         let kid = header
             .get("kid")
-            .map(|a| a.as_str().unwrap_or_default())
-            .unwrap_or_default()
+            .map_or_default(|a| a.as_str().unwrap_or_default())
             .to_string();
         if kid.is_empty() {
             return Err(ErrorResponse::new(
@@ -394,7 +393,7 @@ mod tests {
         let mut buf = Vec::with_capacity(256);
 
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime, skew).unwrap();
+        lt.validate_claims_with(&header, lifetime, skew).unwrap();
         assert_eq!(lt.typ.unwrap().as_str(), "logout+jwt");
         assert_eq!(lt.aud, aud);
         assert_eq!(lt.sub.unwrap(), sub);
@@ -407,7 +406,7 @@ mod tests {
 
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime, skew).unwrap();
+        lt.validate_claims_with(&header, lifetime, skew).unwrap();
         assert_eq!(lt.sid.unwrap(), sid);
         assert!(lt.sub.is_none());
 
@@ -417,14 +416,14 @@ mod tests {
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime, skew).unwrap();
+        lt.validate_claims_with(&header, lifetime, skew).unwrap();
 
         let token = LogoutToken::new(iss, aud, None, Some(sid), lifetime)
             .into_token_with_kp(&kp_512)
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime, skew).unwrap();
+        lt.validate_claims_with(&header, lifetime, skew).unwrap();
 
         // no sub + sid - expect failure
         let token = LogoutToken::new(iss, aud, None, None, lifetime)
@@ -432,7 +431,7 @@ mod tests {
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime, skew)
+        lt.validate_claims_with(&header, lifetime, skew)
             .expect_err("empty sub and sid");
 
         // clock skew must make `exp` more lenient, not stricter
@@ -444,28 +443,28 @@ mod tests {
         let now = Utc::now().timestamp();
         lt.iat = now - 10;
         lt.exp = now + 1;
-        lt.validate_claims_with(header.clone(), lifetime, skew)
+        lt.validate_claims_with(&header, lifetime, skew)
             .expect("exp within the skew must be accepted");
         lt.exp = now - 2;
-        lt.validate_claims_with(header.clone(), lifetime, skew)
+        lt.validate_claims_with(&header, lifetime, skew)
             .expect("exp expired within the skew must be accepted");
         lt.exp = now - skew - 1;
-        lt.validate_claims_with(header.clone(), lifetime, skew)
+        lt.validate_claims_with(&header, lifetime, skew)
             .expect_err("exp beyond the skew must be rejected");
 
         // `iat` must not lie in the future beyond the skew
         lt.iat = now + skew;
         lt.exp = lt.iat + lifetime;
-        lt.validate_claims_with(header.clone(), lifetime, skew)
+        lt.validate_claims_with(&header, lifetime, skew)
             .expect("iat in the future within the skew must be accepted");
         // providers like Authentik issue `exp = iat + 1h`, which must keep working
         lt.iat = now;
         lt.exp = now + 3600;
-        lt.validate_claims_with(header.clone(), lifetime, skew)
+        lt.validate_claims_with(&header, lifetime, skew)
             .expect("a long `exp` with a fresh `iat` must be accepted");
         lt.iat = now + 3600;
         lt.exp = now + 3660;
-        lt.validate_claims_with(header, lifetime, skew)
+        lt.validate_claims_with(&header, lifetime, skew)
             .expect_err("iat in the future beyond the skew must be rejected");
     }
 }

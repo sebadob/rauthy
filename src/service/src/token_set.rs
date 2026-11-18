@@ -44,8 +44,7 @@ impl FromStr for AtHashAlg {
         let slf = match value {
             "RS256" => Self::Sha256,
             "RS384" => Self::Sha384,
-            "RS512" => Self::Sha512,
-            "EdDSA" | "Ed25519" => Self::Sha512,
+            "RS512" | "EdDSA" | "Ed25519" => Self::Sha512,
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
@@ -60,7 +59,8 @@ impl FromStr for AtHashAlg {
 pub struct AtHash(pub String);
 
 impl AtHash {
-    pub fn build(access_token: &[u8], alg: AtHashAlg) -> Self {
+    #[must_use]
+    pub fn build(access_token: &[u8], alg: &AtHashAlg) -> Self {
         let hash = match alg {
             AtHashAlg::Sha256 => digest::digest(&digest::SHA256, access_token),
             AtHashAlg::Sha384 => digest::digest(&digest::SHA384, access_token),
@@ -75,7 +75,7 @@ impl AtHash {
     pub fn for_client(access_token: &[u8], client: &Client) -> Result<Self, ErrorResponse> {
         Ok(Self::build(
             access_token,
-            AtHashAlg::from_str(client.id_token_alg.as_str())?,
+            &AtHashAlg::from_str(client.id_token_alg.as_str())?,
         ))
     }
 }
@@ -91,16 +91,19 @@ pub struct AuthTime(i64);
 
 impl AuthTime {
     #[inline]
+    #[must_use]
     pub fn now() -> Self {
         Self(Utc::now().timestamp())
     }
 
     #[inline]
+    #[must_use]
     pub fn given(ts: i64) -> Self {
         Self(ts)
     }
 
     #[inline]
+    #[must_use]
     pub fn get(&self) -> i64 {
         self.0
     }
@@ -422,7 +425,7 @@ impl TokenSet {
                 }
 
                 if let Some(zone) = &uv.tz {
-                    claims.zoneinfo = Some(zone)
+                    claims.zoneinfo = Some(zone);
                 }
             }
 
@@ -608,7 +611,7 @@ impl TokenSet {
             None,
             client,
             dpop_fingerprint,
-            client.access_token_lifetime as i64,
+            i64::from(client.access_token_lifetime),
             TokenScopes::new(scope.as_str()),
             None,
             None,
@@ -732,7 +735,9 @@ impl TokenSet {
 
         let scps;
         let attrs;
-        let (customs_access, customs_id) = if !cust.is_empty() {
+        let (customs_access, customs_id) = if cust.is_empty() {
+            (None, None)
+        } else {
             scps = Some(Scope::find_all().await?);
 
             let mut customs_access = Vec::with_capacity(cust.len());
@@ -774,8 +779,6 @@ impl TokenSet {
             };
 
             (access, id)
-        } else {
-            (None, None)
         };
 
         // set the correct lifetime
@@ -789,10 +792,10 @@ impl TokenSet {
                 ));
             }
 
-            let client_lt = client.access_token_lifetime.unsigned_abs() as i64;
+            let client_lt = i64::from(client.access_token_lifetime.unsigned_abs());
             if client_lt < diff { client_lt } else { diff }
         } else {
-            client.access_token_lifetime.unsigned_abs() as i64
+            i64::from(client.access_token_lifetime.unsigned_abs())
         };
 
         let token_type = if dpop_fingerprint.is_some() {
@@ -871,13 +874,13 @@ mod tests {
         let ref_token =
             b"YmJiZTAwYmYtMzgyOC00NzhkLTkyOTItNjJjNDM3MGYzOWIy9sFhvH8K_x8UIHj1osisS57f5DduL";
 
-        let sha256 = AtHash::build(ref_token, AtHashAlg::Sha256);
+        let sha256 = AtHash::build(ref_token, &AtHashAlg::Sha256);
         assert_eq!(&sha256.0, "xsZZrUssMXjL3FBlzoSh2g");
 
-        let sha384 = AtHash::build(ref_token, AtHashAlg::Sha384);
+        let sha384 = AtHash::build(ref_token, &AtHashAlg::Sha384);
         assert_eq!(&sha384.0, "adt46pcdiB-l6eTNifgoVM-5AIJAxq84");
 
-        let sha512 = AtHash::build(ref_token, AtHashAlg::Sha512);
+        let sha512 = AtHash::build(ref_token, &AtHashAlg::Sha512);
         assert_eq!(&sha512.0, "p2LHG4H-8pYDc0hyVOo3iIHvZJUqe9tbj3jESOuXbkY");
     }
 
@@ -889,6 +892,6 @@ mod tests {
             ..Default::default()
         };
         let at_hash = AtHash::for_client(b"token", &client).unwrap();
-        assert_eq!(at_hash.0, AtHash::build(b"token", AtHashAlg::Sha512).0);
+        assert_eq!(at_hash.0, AtHash::build(b"token", &AtHashAlg::Sha512).0);
     }
 }

@@ -11,7 +11,7 @@ use validator::Validate;
 /// Returns all existing *groups*
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/groups",
@@ -39,7 +39,7 @@ pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
 /// Adds a new group to the database
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/groups",
@@ -71,7 +71,7 @@ pub async fn post_group(
 /// Modifies a groups name
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/groups/{id}",
@@ -106,7 +106,7 @@ pub async fn put_group(
 /// It will be deleted from all currently assigned users too and this operation cannot be reverted.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/groups/{id}",

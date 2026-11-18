@@ -64,6 +64,7 @@ pub struct ConsentScope {
 }
 
 /// What the user is asked to consent to for a login.
+#[allow(clippy::unsafe_derive_deserialize)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct ConsentContent {
     /// `local` as well for an unavailable `remote` source.
@@ -144,7 +145,7 @@ impl ConsentContent {
             warn!(
                 "Consent source {url} unavailable for client {}, using `local`: {}",
                 client.id, err.message
-            )
+            );
         }) else {
             return Some(Self::build(None, name, scopes));
         };
@@ -270,14 +271,12 @@ struct RemoteDocs {
 impl RemoteDocs {
     /// `en` is `None` if `display` is the `en` document.
     fn new(display: RemoteConsent, en: Option<RemoteConsent>) -> Self {
-        let en_warnings = en
-            .map(|en| {
-                en.scopes
-                    .into_iter()
-                    .filter_map(|(name, scope)| scope.warning.then_some(name))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let en_warnings = en.map_or_default(|en| {
+            en.scopes
+                .into_iter()
+                .filter_map(|(name, scope)| scope.warning.then_some(name))
+                .collect()
+        });
         Self {
             display,
             en_warnings,
@@ -500,7 +499,7 @@ impl ConsentCache for HqlConsentCache {
                 Cache::ConsentContent,
                 idx.to_string(),
                 &value,
-                Some(ttl as i64),
+                Some(i64::from(ttl)),
             )
             .await?;
         Ok(())
@@ -525,13 +524,12 @@ impl InFlight {
     /// Joins the shared lookup for `idx`, or starts a new one.
     fn join(&self, idx: &str) -> InFlightLookup<'_> {
         let mut map = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        let cell = match map.get(idx).and_then(Weak::upgrade) {
-            Some(cell) => cell,
-            None => {
-                let cell = SharedLookup::default();
-                map.insert(idx.to_string(), Arc::downgrade(&cell));
-                cell
-            }
+        let cell = if let Some(cell) = map.get(idx).and_then(Weak::upgrade) {
+            cell
+        } else {
+            let cell = SharedLookup::default();
+            map.insert(idx.to_string(), Arc::downgrade(&cell));
+            cell
         };
         InFlightLookup {
             in_flight: self,
@@ -636,7 +634,7 @@ mod tests {
     use tokio::net::TcpListener;
 
     fn strs(v: &[&str]) -> Vec<String> {
-        v.iter().map(|s| s.to_string()).collect()
+        v.iter().map(ToString::to_string).collect()
     }
 
     const REMOTE: &str = r#"{
@@ -1281,26 +1279,29 @@ mod tests {
     }
 
     impl ConsentCache for MemCache {
-        async fn get(&self, idx: &str) -> Result<Option<Option<RemoteConsent>>, ErrorResponse> {
+        fn get(
+            &self,
+            idx: &str,
+        ) -> impl Future<Output = Result<Option<Option<RemoteConsent>>, ErrorResponse>> {
             let n = self.reads.fetch_add(1, Ordering::SeqCst);
             if self.fail_reads_from.is_some_and(|from| n >= from) {
-                return Err(ErrorResponse::new(
+                return std::future::ready(Err(ErrorResponse::new(
                     ErrorResponseType::Internal,
                     "cache unavailable",
-                ));
+                )));
             }
-            Ok(self.value(idx))
+            std::future::ready(Ok(self.value(idx)))
         }
 
-        async fn put(
+        fn put(
             &self,
             idx: &str,
             value: Option<&RemoteConsent>,
             _ttl: u32,
-        ) -> Result<(), ErrorResponse> {
+        ) -> impl Future<Output = Result<(), ErrorResponse>> {
             self.puts.fetch_add(1, Ordering::SeqCst);
             self.insert(idx, value.cloned());
-            Ok(())
+            std::future::ready(Ok(()))
         }
     }
 

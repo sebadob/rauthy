@@ -22,7 +22,7 @@ async fn test_backchannel_logout() -> Result<(), Box<dyn Error>> {
 
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();
-    let url = format!("{}/dev/logout", backend_url);
+    let url = format!("{backend_url}/dev/logout");
 
     // We can trigger a backchannel logout in quite a few ways.
     // The default logout endpoint with a `LogoutToken` has a restriction though, that the issuer

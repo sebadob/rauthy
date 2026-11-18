@@ -11,22 +11,22 @@ use serde::Deserialize;
 use std::net::IpAddr;
 use tokio_postgres::IsolationLevel;
 
-const SQL_FIND: &str = r#"
+const SQL_FIND: &str = r"
 SELECT * FROM user_consents
-WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
+WHERE user_id = $1 AND client_id = $2 AND resource = $3";
 const SQL_FIND_FOR_USER: &str =
     "SELECT * FROM user_consents WHERE user_id = $1 ORDER BY updated DESC";
 const SQL_FIND_FOR_USER_RESOURCE: &str =
     "SELECT * FROM user_consents WHERE user_id = $1 AND resource = $2 ORDER BY updated DESC";
-const SQL_UPSERT: &str = r#"
+const SQL_UPSERT: &str = r"
 INSERT INTO user_consents
 (user_id, client_id, resource, scopes, content_hash, created, updated, ip, user_agent)
 VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
 ON CONFLICT(user_id, client_id, resource) DO UPDATE
-SET scopes = $4, content_hash = $5, updated = $6, ip = $7, user_agent = $8"#;
-const SQL_DELETE: &str = r#"
+SET scopes = $4, content_hash = $5, updated = $6, ip = $7, user_agent = $8";
+const SQL_DELETE: &str = r"
 DELETE FROM user_consents
-WHERE user_id = $1 AND client_id = $2 AND resource = $3"#;
+WHERE user_id = $1 AND client_id = $2 AND resource = $3";
 pub(crate) const SQL_CONSENT_DELETE_BY_CLIENT: &str =
     "DELETE FROM user_consents WHERE client_id = $1";
 
@@ -285,7 +285,7 @@ enum PgRevokeStep {
 /// same order, so that they and a revoke running at the same time are serialized instead of
 /// deadlocking.
 fn pg_revoke_steps(drop_legacy: bool) -> &'static [PgRevokeStep] {
-    use PgRevokeStep::*;
+    use PgRevokeStep::{Consent, DeviceTokens, LegacyTokens, LockTokens, RefreshTokens};
     if drop_legacy {
         &[
             Consent,
@@ -326,9 +326,9 @@ impl PgRevoke {
             }
             PgRevokeStep::LockTokens => {
                 txn.query(
-                    r#"
+                    r"
 SELECT 1 FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
-FOR UPDATE"#,
+FOR UPDATE",
                     &[&user_id, &client_id],
                 )
                 .await?;
@@ -336,29 +336,29 @@ FOR UPDATE"#,
             }
             PgRevokeStep::DeviceTokens => {
                 txn.query(
-                    r#"
+                    r"
 DELETE FROM refresh_tokens_devices
 WHERE user_id = $1
   AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
                     &[&user_id, &client_id],
                 )
                 .await?
             }
             PgRevokeStep::RefreshTokens => {
                 txn.query(
-                    r#"
+                    r"
 DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id = $2
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
                     &[&user_id, &client_id],
                 )
                 .await?
             }
             PgRevokeStep::LegacyTokens => {
                 txn.query(
-                    r#"
+                    r"
 DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id IS NULL
-RETURNING access_token_jti"#,
+RETURNING access_token_jti",
                     &[&user_id],
                 )
                 .await?
@@ -391,11 +391,11 @@ RETURNING access_token_jti"#,
 
 /// The parameters a statement of [`hql_revoke`] binds.
 enum RevokeParams {
-    /// `$1` user_id, `$2` client_id
+    /// `$1` `user_id`, `$2` `client_id`
     Ids,
-    /// `$1` user_id, `$2` client_id, `$3` drop_legacy
+    /// `$1` `user_id`, `$2` `client_id`, `$3` `drop_legacy`
     Legacy,
-    /// `$1` user_id, `$2` client_id, `$3` resource
+    /// `$1` `user_id`, `$2` `client_id`, `$3` `resource`
     Resource,
 }
 
@@ -415,7 +415,7 @@ fn hql_revoke() -> [(&'static str, RevokeParams); 4] {
     [
         (SQL_DELETE, RevokeParams::Resource),
         (
-            r#"
+            r"
 UPDATE issued_tokens SET revoked = true
 WHERE jti IN (
     SELECT access_token_jti FROM refresh_tokens
@@ -424,14 +424,14 @@ WHERE jti IN (
     SELECT access_token_jti FROM refresh_tokens_devices
     WHERE user_id = $1
       AND device_id IN (SELECT id FROM devices WHERE client_id = $2)
-)"#,
+)",
             RevokeParams::Legacy,
         ),
         (SQL_RTD_DELETE_BY_USER_CLIENT, RevokeParams::Ids),
         (
-            r#"
+            r"
 DELETE FROM refresh_tokens
-WHERE user_id = $1 AND (client_id = $2 OR ($3 AND client_id IS NULL))"#,
+WHERE user_id = $1 AND (client_id = $2 OR ($3 AND client_id IS NULL))",
             RevokeParams::Legacy,
         ),
     ]
@@ -444,6 +444,7 @@ const HQL_REVOKE_ROWS: [RevokeRows; 4] = [
 ];
 
 impl UserConsent {
+    #[must_use]
     pub fn into_response(self, client_name: Option<String>) -> UserConsentResponse {
         UserConsentResponse {
             scopes: self.scopes_vec(),
@@ -521,7 +522,7 @@ mod tests {
             consent("c1", "", "openid,email", 1, 1).scopes_vec(),
             vec!["openid".to_string(), "email".to_string()]
         );
-        assert!(consent("c1", "", "", 1, 1).scopes_vec().is_empty());
+        assert_eq!(consent("c1", "", "", 1, 1).scopes_vec(), [] as [String; 0]);
     }
 
     /// `None` is stored as `''`, and `into_response` maps `''` back to `None`.
@@ -599,7 +600,10 @@ mod tests {
             vec![consent("c1", "", "openid,email", 1, 4)]
         );
         assert_eq!(query(SQL_FIND, &[&"u2", &"c1", &""])[0].user_id, "u2");
-        assert!(query(SQL_FIND, &[&"u3", &"c1", &""]).is_empty());
+        assert_eq!(
+            query(SQL_FIND, &[&"u3", &"c1", &""]),
+            [] as [UserConsent; 0]
+        );
         let keys = |v: Vec<UserConsent>| -> Vec<(String, String)> {
             v.into_iter().map(|c| (c.client_id, c.resource)).collect()
         };
@@ -636,7 +640,7 @@ mod tests {
 
         conn.execute("DELETE FROM users WHERE id = 'u1'", [])
             .unwrap();
-        assert!(query(SQL_FIND_FOR_USER, &[&"u1"]).is_empty());
+        assert_eq!(query(SQL_FIND_FOR_USER, &[&"u1"]), [] as [UserConsent; 0]);
         assert_eq!(query(SQL_FIND_FOR_USER, &[&"u2"]).len(), 1);
     }
 
@@ -696,7 +700,7 @@ mod tests {
     ) {
         let mut conn = sqlite_full_schema();
         conn.execute_batch(
-            r#"
+            r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -726,7 +730,7 @@ INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
        ('j_u2_legacy', 'u2', 2), ('j_u2_c1', 'u2', 2), ('j_d1', 'u1', 2),
        ('j_d2', 'u1', 2), ('j_other', 'u1', 2), ('j_u2_d3', 'u2', 2);
-"#,
+",
         )
         .unwrap();
         let params = rusqlite::params!["u1", "c1", "", "openid", "hash", 1, "127.0.0.1", "ua"];
@@ -805,7 +809,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         for drop_legacy in [false, true] {
             let mut conn = sqlite_full_schema();
             conn.execute_batch(
-                r#"
+                r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -813,7 +817,7 @@ UPDATE tu SET id = 'u2', email = 'u2@example.com';
 INSERT INTO users SELECT * FROM tu;
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
-"#,
+",
             )
             .unwrap();
             for (user_id, client_id, resource, ts) in [
@@ -881,8 +885,8 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
                     "{c}"
                 );
             }
-            assert!(list(&conn, None).is_empty());
-            assert!(list(&conn, Some(RES)).is_empty());
+            assert_eq!(list(&conn, None), [] as [(String, String); 0]);
+            assert_eq!(list(&conn, Some(RES)), [] as [(String, String); 0]);
             let u2: Vec<String> = conn
                 .prepare("SELECT client_id FROM user_consents WHERE user_id = 'u2'")
                 .unwrap()
@@ -915,12 +919,12 @@ VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
         let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
         let cl = pool.get().await.unwrap();
         cl.batch_execute(&format!(
-            r#"
+            r"
 CREATE SCHEMA {schema};
 SET search_path TO {schema};
 CREATE TABLE users (id VARCHAR NOT NULL PRIMARY KEY);
 INSERT INTO users (id) VALUES ('u1'), ('u2');
-{MIGRATION_PG}"#
+{MIGRATION_PG}"
         ))
         .await
         .unwrap();
@@ -954,7 +958,10 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
             vec![consent("c1", "", "openid,email", 1, 4)]
         );
         assert_eq!(query(SQL_FIND, &[&"u2", &"c1", &""]).await[0].user_id, "u2");
-        assert!(query(SQL_FIND, &[&"u3", &"c1", &""]).await.is_empty());
+        assert_eq!(
+            query(SQL_FIND, &[&"u3", &"c1", &""]).await,
+            [] as [UserConsent; 0]
+        );
         let keys = |v: Vec<UserConsent>| -> Vec<(String, String)> {
             v.into_iter().map(|c| (c.client_id, c.resource)).collect()
         };
@@ -1007,7 +1014,10 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
         cl.execute("DELETE FROM users WHERE id = 'u1'", &[])
             .await
             .unwrap();
-        assert!(query(SQL_FIND_FOR_USER, &[&"u1"]).await.is_empty());
+        assert_eq!(
+            query(SQL_FIND_FOR_USER, &[&"u1"]).await,
+            [] as [UserConsent; 0]
+        );
         assert_eq!(query(SQL_FIND_FOR_USER, &[&"u2"]).await.len(), 1);
 
         cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
@@ -1022,7 +1032,7 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
         let (pool, schema) = crate::database::pg_test_pool("uc_race").await;
         let cl = pg_test_conn(&pool, &schema).await;
         cl.batch_execute(
-            r#"
+            r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -1044,7 +1054,7 @@ VALUES ('j_src', 'u1', 2), ('j_new', 'u1', 2), ('j_legacy', 'u1', 2), ('j_u2_d3'
 INSERT INTO user_consents
 (user_id, client_id, resource, scopes, content_hash, created, updated, ip)
 VALUES ('u1', 'c1', '', 'openid', 'hash', 1, 1, '127.0.0.1');
-"#,
+",
         )
         .await
         .unwrap();
@@ -1125,9 +1135,9 @@ VALUES ('u1', 'c1', '', 'openid', 'hash', 1, 1, '127.0.0.1');
             .collect()
     }
 
-    const INSERT_RT_NEW: &str = r#"
+    const INSERT_RT_NEW: &str = r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
-VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
+VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')";
 
     /// A device refresh of c1 runs while the consent is revoked: after the revoke deleted the
     /// `refresh_tokens` of c1, the refresh inserts its replacement there and deletes its source
@@ -1197,10 +1207,9 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
         .await;
 
         assert!(res.is_err(), "the rotation must fail");
-        assert!(
-            pg_ids(&monitor, "SELECT id FROM refresh_tokens")
-                .await
-                .is_empty()
+        assert_eq!(
+            pg_ids(&monitor, "SELECT id FROM refresh_tokens").await,
+            [] as [String; 0]
         );
         // the device of u2 for c1 stays
         assert_eq!(
@@ -1240,13 +1249,13 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#;
         // `rt_block` first, so that the revoke reaches it before `rt_src`
         monitor
             .batch_execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_block', 'u1', 1, 2, 'j_block', 'c1');
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_src', 'u1', 1, 2, 'j_rt_src', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_block', 'u1', 2), ('j_rt_src', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -1334,7 +1343,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_block', 'u1', 2), ('j_r
             let (pool, schema) = pg_race_setup().await;
             let mut cl = pg_test_conn(&pool, &schema).await;
             cl.batch_execute(&format!(
-                r#"
+                r"
 DELETE FROM user_consents;
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
@@ -1345,7 +1354,7 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
        ('u1', 'c1', '{RES}', 'openid', 'h', 2, 2, '127.0.0.1'),
        ('u1', 'c2', '', 'openid', 'h', 3, 3, '127.0.0.1'),
        ('u2', 'c1', '', 'openid', 'h', 4, 4, '127.0.0.1');
-"#
+"
             ))
             .await
             .unwrap();
@@ -1395,8 +1404,8 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
                     "{c} {r}"
                 );
             }
-            assert!(list(&cl, None).await.is_empty());
-            assert!(list(&cl, Some(RES)).await.is_empty());
+            assert_eq!(list(&cl, None).await, [] as [(String, String); 0]);
+            assert_eq!(list(&cl, Some(RES)).await, [] as [(String, String); 0]);
             assert_eq!(
                 pg_ids(
                     &cl,
@@ -1534,14 +1543,14 @@ VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
         // `rt_c1` first, in the opposite order of the revoke and `Client::delete`
         monitor
             .batch_execute(
-                r#"
+                r"
 DELETE FROM refresh_tokens WHERE id = 'rt_legacy';
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_legacy', 'u1', 1, 2, 'j_legacy', NULL);
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -1673,11 +1682,11 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         let monitor = pg_test_conn(&pool, &schema).await;
         first
             .batch_execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -1959,11 +1968,11 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         let monitor = pg_test_conn(&pool, &schema).await;
         monitor
             .batch_execute(
-                r#"
+                r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
 VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1');
 INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
-"#,
+",
             )
             .await
             .unwrap();
@@ -2104,13 +2113,13 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             delete.step(&txn, *step, "u1").await.unwrap();
         }
         let insert_replacement = if device {
-            r#"
+            r"
 INSERT INTO refresh_tokens_devices (id, device_id, user_id, nbf, exp, access_token_jti)
-VALUES ('rtd_r', 'd1', 'u1', 1, 2, 'j_r')"#
+VALUES ('rtd_r', 'd1', 'u1', 1, 2, 'j_r')"
         } else {
-            r#"
+            r"
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
-VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"#
+VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"
         };
         // the access token is issued before its refresh token is inserted
         second

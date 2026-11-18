@@ -9,7 +9,8 @@ pub struct I18nEmailConfirmChange<'a> {
 }
 
 impl I18nEmailConfirmChange<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),

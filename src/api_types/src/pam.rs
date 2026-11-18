@@ -117,7 +117,7 @@ pub enum Getent {
     GroupId(u32),
     Hosts,
     Hostname(String),
-    /// Validation: IpAddr
+    /// Validation: `IpAddr`
     #[schema(value_type = str)]
     HostIp(IpAddr),
 }
@@ -150,7 +150,7 @@ pub struct PamHostUpdateRequest {
     pub force_mfa: bool,
     pub local_password_only: bool,
     pub notes: Option<String>,
-    /// Validation: IpAddr
+    /// Validation: `IpAddr`
     #[schema(value_type = str)]
     pub ips: Vec<IpAddr>,
     /// Validation: `^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$`

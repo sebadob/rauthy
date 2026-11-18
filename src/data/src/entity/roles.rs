@@ -88,7 +88,7 @@ impl Role {
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
@@ -192,7 +192,7 @@ impl Role {
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
@@ -230,6 +230,7 @@ impl Role {
         Ok(res)
     }
 
+    #[must_use]
     pub fn value(&self) -> Option<serde_json::Value> {
         self.meta
             .as_ref()

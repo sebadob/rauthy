@@ -22,6 +22,7 @@ pub struct WebId {
 
 impl WebId {
     #[inline]
+    #[must_use]
     pub fn resolve_webid_uri(user_id: &str) -> String {
         format!(
             "{}/auth/{user_id}/profile#me",
@@ -30,11 +31,12 @@ impl WebId {
     }
 
     #[inline]
+    #[must_use]
     pub fn resolve_webid_card_uri(user_id: &str, pub_url: &str) -> String {
         format!("{pub_url}/auth/{user_id}/profile")
     }
 
-    /// Returns the WebId from the database, if it exists, and a default otherwise.
+    /// Returns the `WebId` from the database, if it exists, and a default otherwise.
     pub async fn find(user_id: String) -> Result<Self, ErrorResponse> {
         let client = DB::hql();
         if let Some(slf) = client.get(Cache::User, Self::cache_idx(&user_id)).await? {
@@ -68,11 +70,11 @@ impl WebId {
     }
 
     pub async fn upsert(web_id: WebId) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO webids (user_id, custom_triples, expose_email)
 VALUES ($1, $2, $3)
 ON CONFLICT(user_id) DO UPDATE
-SET custom_triples = $2, expose_email = $3"#;
+SET custom_triples = $2, expose_email = $3";
 
         if is_hiqlite() {
             DB::hql()
@@ -143,8 +145,8 @@ impl WebId {
 
         Ok(Self {
             user_id,
-            custom_triples,
             expose_email,
+            custom_triples,
         })
     }
 
@@ -293,18 +295,18 @@ mod tests {
     #[rstest]
     #[case(None)]
     #[case(Some(
-        r#"
+        r"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
 <http://localhost:8080/auth/v1> .
-"#
+"
     ))]
     #[case(Some(
-        r#"
+        r"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
 <http://localhost:8080/auth/v1>; .
-"#
+"
     ))]
     fn test_custom_triple_validation(#[case] custom_data_turtle: Option<&str>) {
         let user_id = "SomeId123".to_owned();
@@ -318,15 +320,15 @@ mod tests {
     #[rstest]
     #[case(
         Some(
-            r#"
+            r"
 <http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me>
 <http://www.w3.org/ns/solid/terms#oidcIssuer>
 <http://localhost:8080/auth/v1> .
-"#
+"
         ),
         "<http://localhost:8081/auth/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
     )]
-    #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
+    #[ignore = "this is currently ignored, because setting the PUB_URL here interferes with other tests in CI"]
     fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {
         let resp = WebIdResponse {
             webid: WebId::try_new(

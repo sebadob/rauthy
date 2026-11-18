@@ -246,15 +246,15 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .find(|u| u.email == "init_admin@localhost")
         .unwrap()
         .id;
-    eprintln!("user id for picture tests: {}", user_id);
+    eprintln!("user id for picture tests: {user_id}");
 
     // upload a picture
     let url_user = format!("{}/users/{}", get_backend_url(), user_id);
     let url_picture = format!("{url_user}/picture");
     let picture_id = upload_picture(&client, &url_user, &auth_headers).await?;
-    assert!(!picture_id.is_empty());
+    assert_ne!(picture_id, "");
 
-    let url = format!("{}/{}", url_picture, picture_id);
+    let url = format!("{url_picture}/{picture_id}");
 
     // make sure we get 401 without authn
     let res = client.get(&url).send().await?;
@@ -292,7 +292,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), StatusCode::OK);
     let secret = res.text().await.unwrap();
     // the header needs to be in format: 'API-Key my_apy_key'
-    let key_header = format!("API-Key {}", secret);
+    let key_header = format!("API-Key {secret}");
     let res = client
         .get(&url)
         .header(AUTHORIZATION, key_header)
@@ -332,7 +332,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
     // make sure access with token for another user fails
     let url_user_admin = format!("{}/users/{}", get_backend_url(), user_id_admin);
     let picture_id = upload_picture(&client, &url_user_admin, &auth_headers).await?;
-    assert!(!picture_id.is_empty());
+    assert_ne!(picture_id, "");
 
     let url_admin = format!(
         "{}/users/{}/picture/{}",
@@ -940,7 +940,7 @@ async fn assert_admin_update_survives_logins(
             .headers(admin.clone())
             .json(&update_request(user, |upd| {
                 upd.given_name = Some(given_name.clone());
-                upd.roles = roles.clone();
+                upd.roles.clone_from(&roles);
                 upd.email_verified = true;
             }))
             .send()

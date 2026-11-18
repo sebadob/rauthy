@@ -88,9 +88,9 @@ impl MdsAuthenticator {
             authenticators.retain(|a| {
                 verify_mds_attestation(
                     &a.entry,
-                    &config.force_passkey_cert_level,
-                    &config.force_passkey_protection,
-                    &config.force_passkey_attachment,
+                    config.force_passkey_cert_level.as_ref(),
+                    config.force_passkey_protection.as_ref(),
+                    config.force_passkey_attachment.as_ref(),
                 )
                 .is_ok()
             });
@@ -133,11 +133,11 @@ struct MdsAaguidCertRow {
 
 impl MdsAaguidCertRow {
     pub async fn find_all() -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT e.aaguid, c.cert_der
 FROM fido_mds_entry_certs e
 JOIN fido_mds_certs c ON c.hash = e.cert_hash
-ORDER BY e.aaguid, c.hash"#;
+ORDER BY e.aaguid, c.hash";
 
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!()).await?

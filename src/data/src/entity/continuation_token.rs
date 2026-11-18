@@ -43,10 +43,12 @@ impl FromStr for ContinuationToken {
 }
 
 impl ContinuationToken {
+    #[must_use]
     pub fn new(id: String, ts: i64) -> Self {
         Self { id, ts }
     }
 
+    #[must_use]
     pub fn into_header_pair(self) -> (HeaderName, HeaderValue) {
         // these header values will always be valid
         let name = HeaderName::from_str("x-continuation-token").unwrap();

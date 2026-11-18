@@ -192,10 +192,11 @@ mod tests {
 
     #[test]
     fn test_find_existing_entry() {
-        let existing = [("id1", "admin"), ("id2", "user")];
         fn key<'a>(e: &'a (&str, &str)) -> (&'a str, &'a str) {
             (e.0, e.1)
         }
+
+        let existing = [("id1", "admin"), ("id2", "user")];
 
         // by id, also when the name changed -> a rename
         assert_eq!(

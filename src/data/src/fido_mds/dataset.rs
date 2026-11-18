@@ -113,27 +113,27 @@ impl MdsDataset {
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
         // we always want to have a single row in metadata
         let sql_meta_delete = "DELETE FROM fido_mds_metadata";
-        let sql_meta = r#"
+        let sql_meta = r"
 INSERT INTO fido_mds_metadata (current_blob_no, next_update)
 VALUES ($1, $2)
-"#;
-        let sql_cert = r#"
+";
+        let sql_cert = r"
 INSERT INTO fido_mds_certs (hash, cert_der) VALUES ($1, $2)
 ON CONFLICT (hash) DO UPDATE SET cert_der = $2
-"#;
-        let sql_entry = r#"
+";
+        let sql_entry = r"
 INSERT INTO fido_mds_entries (
     aaguid, description, key_protection, attachment_hint, attestation_types, cert_level
 )
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (aaguid) DO UPDATE SET description = $2, key_protection = $3, attachment_hint = $4,
 attestation_types = $5, cert_level = $6
-"#;
-        let sql_join = r#"
+";
+        let sql_join = r"
 INSERT INTO fido_mds_entry_certs (aaguid, cert_hash)
 VALUES ($1, $2)
 ON CONFLICT (aaguid, cert_hash) DO NOTHING
-"#;
+";
 
         if is_hiqlite() {
             let mut txn: Vec<(&str, Params)> =
@@ -151,10 +151,10 @@ ON CONFLICT (aaguid, cert_hash) DO NOTHING
                     params!(
                         e.aaguid.as_bytes().to_vec(),
                         e.description.clone(),
-                        e.key_protection.bits() as i64,
-                        e.attachment_hint.bits() as i64,
-                        e.attestation_types.bits() as i64,
-                        e.cert_level.as_u8() as i64
+                        i64::from(e.key_protection.bits()),
+                        i64::from(e.attachment_hint.bits()),
+                        i64::from(e.attestation_types.bits()),
+                        i64::from(e.cert_level.as_u8())
                     ),
                 ));
                 for h in &e.cert_hashes {
@@ -186,10 +186,10 @@ ON CONFLICT (aaguid, cert_hash) DO NOTHING
             }
             for e in &self.entries {
                 let aaguid = e.aaguid.as_bytes().as_slice();
-                let kp = e.key_protection.bits() as i64;
-                let ah = e.attachment_hint.bits() as i64;
-                let at = e.attestation_types.bits() as i64;
-                let lvl = e.cert_level.as_u8() as i16;
+                let kp = i64::from(e.key_protection.bits());
+                let ah = i64::from(e.attachment_hint.bits());
+                let at = i64::from(e.attestation_types.bits());
+                let lvl = i16::from(e.cert_level.as_u8());
                 txn.execute(&st_entry, &[&aaguid, &e.description, &kp, &ah, &at, &lvl])
                     .await?;
                 for h in &e.cert_hashes {

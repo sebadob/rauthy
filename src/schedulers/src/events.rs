@@ -8,7 +8,7 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error};
 
-/// Cleans up all Events that exceed the configured EVENT_CLEANUP_THRESHOLD
+/// Cleans up all Events that exceed the configured `EVENT_CLEANUP_THRESHOLD`
 pub async fn events_cleanup() {
     let mut interval = tokio::time::interval(Duration::from_secs(3600));
 
@@ -43,7 +43,7 @@ pub async fn events_cleanup() {
                 }
                 Err(err) => error!(?err, "Events cleanup"),
             }
-        };
+        }
 
         // For some reason, the interval could `.tick()` multiple times,
         // if it finished too quickly.

@@ -107,7 +107,7 @@ impl HtmlTemplate {
                 // valid magic link automatically in DEV mode and return proper values directly.
                 // At a valid session should have been created before to make this work.
                 warn!(
-                    r#"
+                    r"
 
     The password reset form during local development does not behave like you would expect it to in
     production! To make working on this form less annoying and skip the magic link request / send
@@ -120,7 +120,7 @@ impl HtmlTemplate {
     This means it will always reset the password for the user with the current session, not any other
     user from a possibly existing magic link, for development speed.
 
-                "#
+                "
                 );
 
                 let user_id = session

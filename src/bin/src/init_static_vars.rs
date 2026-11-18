@@ -1,7 +1,17 @@
-use rauthy_common::compression::*;
-use rauthy_common::constants::*;
-use rauthy_common::password_hasher::*;
-use rauthy_common::regex::*;
+use rauthy_common::compression::compress_br;
+use rauthy_common::constants::{
+    APP_START, BUILD_TIME, DEV_MODE, DPOP_TOKEN_ENDPOINT, PEER_IP_HEADER_NAME, PROXY_MODE,
+    TRUSTED_PROXIES,
+};
+use rauthy_common::password_hasher::{ARGON2_PARAMS, HASH_AWAIT_WARN_SECS, HASH_CHANNELS};
+use rauthy_common::regex::{
+    RE_ALNUM, RE_ALNUM_48, RE_ALNUM_64, RE_API_KEY, RE_APP_ID, RE_ATTR, RE_ATTR_DESC, RE_BASE64,
+    RE_BASE64_NO_PAD, RE_CITY, RE_CLIENT_ID, RE_CLIENT_ID_STRICT, RE_CLIENT_NAME, RE_CLIENT_URI,
+    RE_CODE_CHALLENGE, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_CONTACT, RE_CSS_VALUE_LOOSE,
+    RE_DATE_STR, RE_GROUPS, RE_KV_KEY, RE_LOWERCASE, RE_LOWERCASE_SPACE, RE_MFA_CODE, RE_ORIGIN,
+    RE_PHONE, RE_ROLES_SCOPES, RE_SCOPE_SPACE, RE_SEARCH, RE_STREET, RE_TOKEN_68,
+    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI, RE_USER_NAME,
+};
 use rauthy_common::utils::build_trusted_proxies;
 use rauthy_common::{DB_TYPE, DbType, HTTP_CLIENT};
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -28,7 +38,7 @@ pub async fn trigger() {
         } else {
             format!("^(http|https|{additional_schemes})://[a-z0-9.:-]+$")
         };
-        RE_ORIGIN.set(Regex::new(&pattern).unwrap()).unwrap()
+        RE_ORIGIN.set(Regex::new(&pattern).unwrap()).unwrap();
     }
 
     {
@@ -38,7 +48,7 @@ pub async fn trigger() {
             "https"
         };
         let uri = format!("{scheme}://{}/auth/v1/oidc/token", vars.server.pub_url);
-        DPOP_TOKEN_ENDPOINT.set(uri).unwrap()
+        DPOP_TOKEN_ENDPOINT.set(uri).unwrap();
     }
 
     DEV_MODE.set(vars.dev.dev_mode).unwrap();

@@ -20,7 +20,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
 
     // make sure there are currently no cust attrs defined
-    let url_attrs = format!("{}/users/attr", backend_url);
+    let url_attrs = format!("{backend_url}/users/attr");
     let res = client
         .get(&url_attrs)
         .headers(auth_headers.clone())
@@ -55,7 +55,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         attr_include_id: None,
         claims_at_root: false,
     };
-    let url_scopes = format!("{}/scopes", backend_url);
+    let url_scopes = format!("{backend_url}/scopes");
     let res = client
         .post(&url_scopes)
         .headers(auth_headers.clone())
@@ -97,7 +97,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
 
     // get the current client config and then add a default mapping
     // we do these changes for the rauthy client to be able to re-use the original login data
-    let url_client = format!("{}/clients/rauthy", backend_url);
+    let url_client = format!("{backend_url}/clients/rauthy");
     let res = client
         .get(&url_client)
         .headers(auth_headers.clone())
@@ -158,7 +158,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         }],
     };
     // init_admin id: m4PJ3TnyP32LA8hzY23deme3
-    let url_user_attr = format!("{}/users/m4PJ3TnyP32LA8hzY23deme3/attr", backend_url);
+    let url_user_attr = format!("{backend_url}/users/m4PJ3TnyP32LA8hzY23deme3/attr");
     let res = client
         .put(&url_user_attr)
         .headers(auth_headers.clone())
@@ -312,7 +312,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
 
     // delete the custom attr and make sure its properly cleaned up everywhere
     // add a new attr
-    let url_attr_del = format!("{}/users/attr/cust2", backend_url);
+    let url_attr_del = format!("{backend_url}/users/attr/cust2");
     let res = client
         .delete(&url_attr_del)
         .headers(auth_headers.clone())

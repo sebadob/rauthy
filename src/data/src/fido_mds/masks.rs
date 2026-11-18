@@ -11,9 +11,9 @@ use tracing::warn;
 /// maximum seen across all reports rather than read off the latest one. FIDO only ever recertifies
 /// upward, so the maximum is the current level in practice.
 ///
-/// https://fidoalliance.org/security-certification-authenticator-security-levels/
+/// <https://fidoalliance.org/security-certification-authenticator-security-levels/>
 ///
-/// https://fidoalliance.org/certification/authenticator-certification-levels/
+/// <https://fidoalliance.org/certification/authenticator-certification-levels/>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum MdsCertLevel {
@@ -45,6 +45,7 @@ impl From<i64> for MdsCertLevel {
 
 impl MdsCertLevel {
     #[inline]
+    #[must_use]
     pub fn as_u8(self) -> u8 {
         self as u8
     }
@@ -107,6 +108,7 @@ macro_rules! mds_bitmask {
 
             /// Sets the bit of `flag`.
             #[inline]
+            #[must_use]
             pub fn insert(self, flag: $flag) -> Self {
                 Self(self.0 | flag as u32)
             }

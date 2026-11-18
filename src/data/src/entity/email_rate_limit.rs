@@ -32,7 +32,7 @@ impl EmailRateLimit {
 impl EmailRateLimit {
     fn key(&self) -> String {
         match self {
-            Self::RegisteredAlready { email } => format!("reg_{}", email),
+            Self::RegisteredAlready { email } => format!("reg_{email}"),
         }
     }
 }

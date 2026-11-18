@@ -33,9 +33,7 @@ pub fn validate_claims(value: &serde_json::Value) -> Result<(), ValidationError>
         return Err(ValidationError::new("`claims` must be a JSON object"));
     }
 
-    let len = serde_json::to_vec(value)
-        .map(|v| v.len())
-        .unwrap_or(usize::MAX);
+    let len = serde_json::to_vec(value).map_or(usize::MAX, |v| v.len());
     if len > CLIENT_CLAIMS_MAX_LEN {
         return Err(
             ValidationError::new("claims_max_len").with_message(Cow::Owned(format!(

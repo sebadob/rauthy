@@ -135,7 +135,7 @@ mod tests {
 
         assert_eq!(ds.blob_no, 271);
         // 2026-08-01T00:00:00Z
-        assert_eq!(ds.next_update_ts, 1785542400);
+        assert_eq!(ds.next_update_ts, 1_785_542_400);
 
         // kept: entries 1, 2, 6, 7. dropped: 3 (revoked), 4 (no cert), 5 (no aaguid), 8 (compromised)
         assert_eq!(ds.entries.len(), 4);

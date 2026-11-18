@@ -11,10 +11,10 @@ use tokio_postgres::IsolationLevel;
 
 pub(crate) const SQL_RT_DELETE_BY_USER_CLIENT: &str =
     "DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id = $2";
-pub(crate) const SQL_RTD_DELETE_BY_USER_CLIENT: &str = r#"
+pub(crate) const SQL_RTD_DELETE_BY_USER_CLIENT: &str = r"
 DELETE FROM refresh_tokens_devices
 WHERE user_id = $1
-  AND device_id IN (SELECT id FROM devices WHERE client_id = $2)"#;
+  AND device_id IN (SELECT id FROM devices WHERE client_id = $2)";
 
 pub(crate) const SQL_PG_IT_REVOKE_JTIS: &str =
     "UPDATE issued_tokens SET revoked = true WHERE jti = ANY($1)";
@@ -22,9 +22,9 @@ pub(crate) const SQL_PG_IT_REVOKE_JTIS: &str =
 /// The statements of [`RefreshToken::discard`], run in one transaction by [`discard_txn`].
 pub(crate) const SQL_RT_DISCARD: DiscardSql = DiscardSql {
     hql: [
-        r#"
+        r"
 UPDATE issued_tokens SET revoked = true
-WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)"#,
+WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)",
         "DELETE FROM refresh_tokens WHERE id = $1",
     ],
     pg_delete: "DELETE FROM refresh_tokens WHERE id = $1 RETURNING access_token_jti",
@@ -81,6 +81,7 @@ impl Debug for RefreshToken {
 impl RefreshToken {
     /// `false` if the token was issued for another client, or for a deleted one with the same id.
     /// Legacy tokens without `client_id` match any client.
+    #[must_use]
     pub fn is_for_client(&self, client: &Client) -> bool {
         match &self.client_id {
             None => true,
@@ -106,14 +107,14 @@ impl RefreshToken {
         access_token_jti: Option<String>,
         client: &Client,
     ) -> Result<(), ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
 client_created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8,
-    client_id = $9, client_created_micros = $10"#;
+    client_id = $9, client_created_micros = $10";
 
         if is_hiqlite() {
             DB::hql()
@@ -578,7 +579,7 @@ mod tests {
             db.borrow().rows.keys().collect::<Vec<_>>(),
             vec!["replacement"]
         );
-        assert!(db.borrow().revoked.is_empty());
+        assert_eq!(db.borrow().revoked, [] as [String; 0]);
 
         // any other error of the source delete is returned as is, the replacement stays
         let err = finish_rotation_with(
@@ -652,7 +653,7 @@ mod tests {
         assert!(!rt.is_for_client(&client("client_2", Some(1))));
     }
 
-    const DISCARD_ROWS: &str = r#"
+    const DISCARD_ROWS: &str = r"
 CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
 UPDATE tu SET id = 'u1', email = 'u1@example.com';
 INSERT INTO users SELECT * FROM tu;
@@ -661,7 +662,7 @@ VALUES ('rt_1', 'u1', 1, 2, 'j_1'), ('rt_2', 'u1', 1, 2, 'j_2'),
        ('rt_no_jti', 'u1', 1, 2, NULL);
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_1', 'u1', 2), ('j_2', 'u1', 2), ('j_other', 'u1', 2);
-"#;
+";
     const SELECT_RT_IDS: &str = "SELECT id FROM refresh_tokens ORDER BY id";
     const SELECT_RTD_IDS: &str = "SELECT id FROM refresh_tokens_devices ORDER BY id";
     const SELECT_REVOKED: &str = "SELECT jti FROM issued_tokens WHERE revoked ORDER BY jti";
@@ -669,7 +670,7 @@ VALUES ('j_1', 'u1', 2), ('j_2', 'u1', 2), ('j_other', 'u1', 2);
     /// Rows for the fault injection of [`DISCARD_FAIL_SQLITE`] / [`DISCARD_FAIL_PG`]: a refresh
     /// token and a device refresh token whose discard fails in its second statement (`*_fail`),
     /// and a device refresh token that can be discarded. Run after [`DISCARD_ROWS`].
-    const DISCARD_FAIL_ROWS: &str = r#"
+    const DISCARD_FAIL_ROWS: &str = r"
 INSERT INTO devices (id, client_id, user_id, created, access_exp, peer_ip, name)
 VALUES ('d1', (SELECT id FROM clients ORDER BY id LIMIT 1), 'u1', 1, 2, '127.0.0.1', 'd1');
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti)
@@ -678,17 +679,17 @@ INSERT INTO refresh_tokens_devices (id, device_id, user_id, nbf, exp, access_tok
 VALUES ('rtd_1', 'd1', 'u1', 1, 2, 'jd_1'), ('rtd_fail', 'd1', 'u1', 1, 2, 'jd_fail');
 INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_fail', 'u1', 2), ('jd_1', 'u1', 2), ('jd_fail', 'u1', 2);
-"#;
+";
     /// The delete of a `*_fail` row aborts: the second statement of the hiqlite discard.
-    const DISCARD_FAIL_SQLITE: &str = r#"
+    const DISCARD_FAIL_SQLITE: &str = r"
 CREATE TRIGGER rt_fail BEFORE DELETE ON refresh_tokens
 WHEN OLD.id LIKE '%_fail' BEGIN SELECT RAISE(ABORT, 'injected'); END;
 CREATE TRIGGER rtd_fail BEFORE DELETE ON refresh_tokens_devices
 WHEN OLD.id LIKE '%_fail' BEGIN SELECT RAISE(ABORT, 'injected'); END;
-"#;
+";
     /// The revoke of the access token of a `*_fail` row aborts: the second statement of the
     /// Postgres discard.
-    const DISCARD_FAIL_PG: &str = r#"
+    const DISCARD_FAIL_PG: &str = r"
 CREATE FUNCTION fail_revoke() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.jti LIKE '%\_fail' THEN RAISE EXCEPTION 'injected'; END IF;
@@ -696,7 +697,7 @@ BEGIN
 END $$;
 CREATE TRIGGER it_fail BEFORE UPDATE ON issued_tokens
 FOR EACH ROW EXECUTE FUNCTION fail_revoke();
-"#;
+";
 
     /// An in-memory database with all hiqlite migrations and [`DISCARD_ROWS`].
     fn sqlite_db() -> rusqlite::Connection {
@@ -761,7 +762,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
                 exec(sql, id);
             }
         }
-        assert!(ids(SELECT_RT_IDS).is_empty());
+        assert_eq!(ids(SELECT_RT_IDS), [] as [String; 0]);
         assert_eq!(ids(SELECT_REVOKED), vec!["j_1", "j_2"]);
     }
 
@@ -837,10 +838,10 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
                 .any(|i: &String| i == "j_2");
             match step {
                 PgDiscardStep::Delete => {
-                    assert!(!row && !revoked, "after statement {i}: {row} {revoked}")
+                    assert!(!row && !revoked, "after statement {i}: {row} {revoked}");
                 }
                 PgDiscardStep::RevokeAccessToken => {
-                    assert!(!row && revoked, "after statement {i}: {row} {revoked}")
+                    assert!(!row && revoked, "after statement {i}: {row} {revoked}");
                 }
             }
         }
@@ -856,7 +857,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         for id in ["rt_1", "rt_no_jti", "rt_unknown"] {
             pg_discard_txn(&mut cl, &SQL_RT_DISCARD, id).await.unwrap();
         }
-        assert!(pg_ids(&cl, SELECT_RT_IDS).await.is_empty());
+        assert_eq!(pg_ids(&cl, SELECT_RT_IDS).await, [] as [String; 0]);
         assert_eq!(pg_ids(&cl, SELECT_REVOKED).await, vec!["j_1", "j_2"]);
 
         cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))

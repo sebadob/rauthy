@@ -14,11 +14,17 @@
 use crate::language::Language;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights};
 use rauthy_api_types::clients::ScimClientRequestResponse;
-use rauthy_api_types::cust_validation::*;
+use rauthy_api_types::cust_validation::{
+    validate_vec_challenge, validate_vec_contact, validate_vec_groups, validate_vec_origin,
+    validate_vec_roles, validate_vec_scopes, validate_vec_uri,
+};
 use rauthy_api_types::oidc::GrantType;
 use rauthy_api_types::oidc::JwkKeyPairAlg;
 use rauthy_api_types::users::{UserAttrValueRequest, UserValuesRequest};
-use rauthy_common::regex::*;
+use rauthy_common::regex::{
+    RE_API_KEY, RE_ATTR, RE_ATTR_DESC, RE_CLIENT_ID_STRICT, RE_CLIENT_NAME, RE_GROUPS,
+    RE_PREFERRED_USERNAME, RE_URI, RE_USER_NAME,
+};
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Debug, Formatter};
@@ -100,10 +106,10 @@ impl Validate for ApiKey {
         }
 
         if let Some(exp) = self.exp
-            && exp < 1719784800
+            && exp < 1_719_784_800
         {
             let mut err = ValidationError::new("range");
-            err.add_param(std::borrow::Cow::from("min"), &1719784800);
+            err.add_param(std::borrow::Cow::from("min"), &1_719_784_800);
             err.add_param(std::borrow::Cow::from("value"), &exp);
             errors.add("exp", err);
         }
@@ -305,7 +311,7 @@ pub struct User {
     pub enabled: bool,
     pub email_verified: bool,
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub user_expires: Option<i64>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,

@@ -41,10 +41,10 @@ impl DbVersion {
             };
             let data = serialize(&slf)?;
 
-            let sql = r#"
+            let sql = r"
 INSERT INTO config (id, data)
 VALUES ('db_version', $1)
-ON CONFLICT(id) DO UPDATE SET data = $1"#;
+ON CONFLICT(id) DO UPDATE SET data = $1";
 
             if is_hiqlite() {
                 DB::hql().execute(sql, params!(data)).await?;
@@ -100,13 +100,12 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
         // version check before doing any major or minor release
         // TODO when upgrading to `0.38`, the `LOWEST_COMPATIBLE_VERSION` MUST be `0.37` because
         //  of the hiqlite WAL format rework
-        if app_version.major != 0 || app_version.minor != 37 {
-            panic!(
-                "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: \
-                {RAUTHY_VERSION}\\n Also make sure that `LOWEST_COMPATIBLE_VERSION` is still \
-                correctly set",
-            );
-        }
+        assert!(
+            app_version.major == 0 && app_version.minor == 37,
+            "\nDbVersion::check_app_version needs adjustment for the new RAUTHY_VERSION: \
+            {RAUTHY_VERSION}\\n Also make sure that `LOWEST_COMPATIBLE_VERSION` is still \
+            correctly set",
+        );
 
         // warn on prerelease usage
         if !app_version.pre.is_empty() {
@@ -120,14 +119,13 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
         if let Some(db_version) = db_version {
             let lowest_compatible_version = Version::parse(LOWEST_COMPATIBLE_VERSION).unwrap();
 
-            if db_version < &lowest_compatible_version {
-                panic!(
-                    "Your database is too old for this upgrade.\n\
-                    Rauthy {app_version} needs at least a DB version {lowest_compatible_version}\n\
-                    Please check https://github.com/sebadob/rauthy/releases for additional \
-                    information.",
-                );
-            }
+            assert!(
+                db_version >= &lowest_compatible_version,
+                "Your database is too old for this upgrade.\n\
+                Rauthy {app_version} needs at least a DB version {lowest_compatible_version}\n\
+                Please check https://github.com/sebadob/rauthy/releases for additional \
+                information.",
+            );
 
             return Ok(());
         }
@@ -148,12 +146,11 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
             .await
             .is_err()
         };
-        if is_db_v0_15_0 {
-            panic!(
-                "Your database is Rauthy v0.15.0. You need to upgrade to Rauthy v0.16 first.\n\
-                Please check https://github.com/sebadob/rauthy/releases for additional information."
-            );
-        }
+        assert!(
+            !is_db_v0_15_0,
+            "Your database is Rauthy v0.15.0. You need to upgrade to Rauthy v0.16 first.\n\
+            Please check https://github.com/sebadob/rauthy/releases for additional information."
+        );
 
         // To check for any DB older than 0.15.0, we check for the existence of the 'clients' table
         // which is there since the very beginning.
@@ -173,12 +170,11 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
             .await
             .is_err()
         };
-        if is_db_pre_v0_15_0 {
-            panic!(
-                "Your database is older than Rauthy v0.15.0. You need to upgrade to Rauthy v0.15 first.\n\
-                Please check https://github.com/sebadob/rauthy/releases for additional information."
-            );
-        }
+        assert!(
+            !is_db_pre_v0_15_0,
+            "Your database is older than Rauthy v0.15.0. You need to upgrade to Rauthy v0.15 first.\n\
+            Please check https://github.com/sebadob/rauthy/releases for additional information."
+        );
 
         // Since we did not find the clients table, we can assume, that the DB is really empty.
         Ok(())
@@ -186,6 +182,7 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
 }
 
 impl DbVersion {
+    #[must_use]
     pub fn app_version() -> Version {
         Version::from_str(RAUTHY_VERSION).expect("bad format for RAUTHY_VERSION")
     }

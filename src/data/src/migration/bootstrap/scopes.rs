@@ -106,10 +106,15 @@ fn build_values(attr_names: &[String], scope: &Scope) -> (Option<String>, Option
     let attr_include_access = build_attrs(
         attr_names,
         scope,
-        &scope.attr_include_access,
+        scope.attr_include_access.as_deref(),
         "attr_include_access",
     );
-    let attr_include_id = build_attrs(attr_names, scope, &scope.attr_include_id, "attr_include_id");
+    let attr_include_id = build_attrs(
+        attr_names,
+        scope,
+        scope.attr_include_id.as_deref(),
+        "attr_include_id",
+    );
 
     // `claims_at_root` is only meaningful for custom scopes; normalize it so a
     // default OIDC scope can never be stored as requesting root emission.
@@ -120,9 +125,9 @@ fn build_values(attr_names: &[String], scope: &Scope) -> (Option<String>, Option
 }
 
 async fn insert(attr_names: &[String], scope: Scope) -> Result<(), ErrorResponse> {
-    let sql = r#"
+    let sql = r"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id, claims_at_root)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
     let (attr_include_access, attr_include_id, claims_at_root) = build_values(attr_names, &scope);
     let id = scope.id.unwrap_or_else(new_store_id);
@@ -160,23 +165,19 @@ VALUES ($1, $2, $3, $4, $5)"#;
 fn build_attrs(
     attr_names: &[String],
     scope: &Scope,
-    attrs: &Option<Vec<String>>,
+    attrs: Option<&[String]>,
     debug_name: &str,
 ) -> Option<String> {
     if let Some(names) = attrs {
         for name in names {
-            if name.is_empty() {
-                panic!(
-                    "Invalid bootstrap data for {:?}. Empty User Attribute name in `{}`",
-                    scope, debug_name
-                );
-            }
-            if !attr_names.contains(name) {
-                panic!(
-                    "Invalid bootstrap data for {:?}. User Attribute name in `{}` does not exist",
-                    scope, debug_name
-                );
-            }
+            assert!(
+                !name.is_empty(),
+                "Invalid bootstrap data for {scope:?}. Empty User Attribute name in `{debug_name}`"
+            );
+            assert!(
+                attr_names.contains(name),
+                "Invalid bootstrap data for {scope:?}. User Attribute name in `{debug_name}` does not exist"
+            );
         }
         Some(names.join(","))
     } else {

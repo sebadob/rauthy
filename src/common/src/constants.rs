@@ -26,6 +26,7 @@ impl From<&str> for CookieMode {
 }
 
 impl CookieMode {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             CookieMode::Host => "host",

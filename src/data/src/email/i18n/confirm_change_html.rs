@@ -10,7 +10,8 @@ pub struct I18nEmailConfirmChangeHtml<'a> {
 }
 
 impl I18nEmailConfirmChangeHtml<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),

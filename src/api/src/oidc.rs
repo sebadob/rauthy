@@ -61,7 +61,7 @@ use validator::Validate;
 
 /// OIDC Authorization HTML
 ///
-/// Starts the authorization_code flow. Log in with username / password.<br>
+/// Starts the `authorization_code` flow. Log in with username / password.<br>
 /// If one does not exist, a new session will be opened with the 'Init' state and set's a cookie.
 #[utoipa::path(
     get,
@@ -100,7 +100,7 @@ pub async fn get_authorize(
             error!("Client used invalid request parameters: {:?}", err.message);
             let status = err.status_code();
             let body = Error1Html::build(
-                &lang,
+                lang,
                 ThemeCssFull::find_theme_ts_rauthy().await?,
                 status,
                 err.message,
@@ -117,12 +117,7 @@ pub async fn get_authorize(
     let theme_ts = ThemeCssFull::find_theme_ts(client_id_theme.to_string()).await?;
 
     // check prompt and max_age to possibly force a new session
-    let force_new_session = if params
-        .prompt
-        .as_ref()
-        .map(|p| p.contains("login"))
-        .unwrap_or(false)
-    {
+    let force_new_session = if params.prompt.as_ref().is_some_and(|p| p.contains("login")) {
         true
     } else if let Some(max_age) = params.max_age {
         if let Some(session) = &principal.session {
@@ -161,11 +156,7 @@ pub async fn get_authorize(
 
     // check for `prompt=none` and redirect if we don't have a valid session
     if !force_new_session
-        && params
-            .prompt
-            .as_ref()
-            .map(|p| p.contains("none"))
-            .unwrap_or(false)
+        && params.prompt.as_ref().is_some_and(|p| p.contains("none"))
         && principal.validate_session_auth().is_err()
     {
         // RFC 9207 - error responses carry `iss` as well
@@ -210,16 +201,21 @@ pub async fn get_authorize(
     let prompt_consent = params
         .prompt
         .as_ref()
-        .map(|p| p.contains("consent"))
-        .unwrap_or(false);
+        .is_some_and(|p| p.contains("consent"));
     if !force_new_session && !prompt_consent && principal.validate_session_auth().is_ok() {
         let csrf = principal.get_session_csrf_token()?;
 
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
         templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
 
-        let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
-        build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
+        let body = AuthorizeHtml::build(lang, client_id_theme, theme_ts, &templates);
+        Ok(build_authorize_resp(
+            &accept_encoding,
+            body,
+            None,
+            origin_header,
+            &browser_id,
+        ))
     } else {
         // check if we can re-use a still valid session or need to create a new one
         let session = if principal.session.is_some() {
@@ -241,31 +237,31 @@ pub async fn get_authorize(
 
         if let Err(err) = session.upsert().await {
             let status = err.status_code();
-            let body = Error1Html::build(&lang, theme_ts, status, err.message);
+            let body = Error1Html::build(lang, theme_ts, status, err.message);
             return Ok(ErrorHtml::response(body, status));
         }
 
         templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
         templates.push(HtmlTemplate::LoginAction(action));
 
-        let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
-        build_authorize_resp(
-            accept_encoding,
+        let body = AuthorizeHtml::build(lang, client_id_theme, theme_ts, &templates);
+        Ok(build_authorize_resp(
+            &accept_encoding,
             body,
             Some(&session),
             origin_header,
-            browser_id,
-        )
+            &browser_id,
+        ))
     }
 }
 
 fn build_authorize_resp(
-    accept_encoding: web::Header<header::AcceptEncoding>,
+    accept_encoding: &web::Header<header::AcceptEncoding>,
     body: String,
     session: Option<&Session>,
     origin_header: Option<(HeaderName, HeaderValue)>,
-    browser_id: BrowserId,
-) -> Result<HttpResponse, ErrorResponse> {
+    browser_id: &BrowserId,
+) -> HttpResponse {
     let (body, encoding) = if accept_encoding.contains(&"gzip".parse().unwrap()) {
         // for dynamic, fast compression, gzip wins over brotli
         (compress_gzip_dyn(body), "gzip")
@@ -303,12 +299,12 @@ fn build_authorize_resp(
             ));
     }
 
-    Ok(builder.body(body))
+    builder.body(body)
 }
 
-/// POST login credentials to proceed with the authorization_code flow
+/// POST login credentials to proceed with the `authorization_code` flow
 ///
-/// This is the 2nd step of the authorization_code flow.<br>
+/// This is the 2nd step of the `authorization_code` flow.<br>
 /// The already validated params from the GET /auth/v1/oidc/authorize + Username + Password + CSRF Token
 /// + *rauthy-session* Cookie will be validated. On success, it will return an empty body but with
 /// **Location** and possibly **Allowed-Origins** header set.<br>
@@ -474,7 +470,7 @@ pub async fn get_callback_html(
     principal.validate_session_auth_or_init()?;
 
     let lang = Language::try_from(&req).unwrap_or_default();
-    let body = CallbackHtml::build(&lang, ThemeCssFull::find_theme_ts_rauthy().await?);
+    let body = CallbackHtml::build(lang, ThemeCssFull::find_theme_ts_rauthy().await?);
     Ok(HttpResponse::Ok().insert_header(HEADER_HTML).body(body))
 }
 
@@ -588,17 +584,14 @@ pub async fn post_device_auth(
                     error!(?err, "inserting IP into the cache for rate-limiting",);
                 }
             }
-        };
+        }
     }
 
-    let client = match Client::find(payload.client_id).await {
-        Ok(client) => client,
-        Err(_) => {
-            return HttpResponse::NotFound().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidClient,
-                error_description: Some(Cow::from("`client_id` does not exist")),
-            });
-        }
+    let Ok(client) = Client::find(payload.client_id).await else {
+        return HttpResponse::NotFound().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidClient,
+            error_description: Some(Cow::from("`client_id` does not exist")),
+        });
     };
 
     if !client.enabled {
@@ -864,7 +857,7 @@ pub async fn post_logout(
 /// secure new JWKs.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/oidc/rotate_jwk",
@@ -878,7 +871,7 @@ pub async fn post_logout(
 pub async fn rotate_jwk(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
 
-    JWKS::rotate().await.map(|_| HttpResponse::Ok().finish())
+    JWKS::rotate().await.map(|()| HttpResponse::Ok().finish())
 }
 
 /// Create a new session
@@ -920,9 +913,9 @@ pub async fn post_session(
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),
@@ -978,9 +971,9 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(
@@ -1027,9 +1020,9 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
-        user_id: session.user_id.as_deref().map(|v| v.into()),
-        roles: session.roles.as_deref().map(|v| v.into()),
-        groups: session.groups.as_deref().map(|v| v.into()),
+        user_id: session.user_id.as_deref().map(Into::into),
+        roles: session.roles.as_deref().map(Into::into),
+        groups: session.groups.as_deref().map(Into::into),
         exp: OffsetDateTime::from_unix_timestamp(session.exp).unwrap(),
         timeout,
         state: SessionState::from(session.state()?),
@@ -1305,7 +1298,7 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
             auth_header(&headers.roles, &info.roles.join(","))?,
             auth_header(
                 &headers.groups,
-                &info.groups.map(|g| g.join(",")).unwrap_or_default(),
+                &info.groups.map_or_default(|g| g.join(",")),
             )?,
             auth_header(&headers.email, &info.email.unwrap_or_default())?,
             auth_header(

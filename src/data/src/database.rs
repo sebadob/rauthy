@@ -4,7 +4,10 @@ use crate::migration::db_migrate_dev::migrate_dev_data;
 use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
-use hiqlite::macros::{CacheVariants, embed::*};
+use hiqlite::macros::{
+    CacheVariants,
+    embed::{Embed, rust_embed},
+};
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use rustls::pki_types::CertificateDer;
@@ -69,11 +72,12 @@ pub enum Cache {
 pub struct DB;
 
 impl DB {
-    /// Builds the NodeConfig and starts the Hiqlite node
+    /// Builds the `NodeConfig` and starts the Hiqlite node
     pub async fn init(config: hiqlite::NodeConfig) -> Result<(), ErrorResponse> {
-        if HIQLITE_CLIENT.get().is_some() {
-            panic!("DB::init() must only be called once at startup");
-        }
+        assert!(
+            HIQLITE_CLIENT.get().is_none(),
+            "DB::init() must only be called once at startup"
+        );
 
         // Note: At the time of writing, I have not included the option to not start the DB
         // layer when the feature is enabled, as this would mean many adoptions and additional
@@ -259,16 +263,16 @@ impl DB {
             if config.is_ha_cluster {
                 // TODO does this error make sense or might we be able to do it anyway?
                 error!(
-                    r#"
+                    r"
     You cannot use 'MIGRATE_DB_FROM' with a multi replica deployment.
     You need to change your config to only have a single node in `HQL_NODES`, before you can then
     activate 'MIGRATE_DB_FROM' again. This will prevent you from overlaps and conflicts.
     After the migration has been done, you remove the 'MIGRATE_DB_FROM' and add more nodes again.
-                "#
+                "
                 );
             } else {
                 warn!(
-                    r#"
+                    r"
 
     Migrating data from 'MIGRATE_DB_FROM'
     This will overwrite possibly existing data in the current database!
@@ -276,7 +280,7 @@ impl DB {
 
     Proceeding in 10 seconds...
 
-                "#
+                "
                 );
 
                 sleep(Duration::from_secs(10)).await;
@@ -293,7 +297,7 @@ impl DB {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
                     );
-                };
+                }
             }
         } else if config.vars.dev.dev_mode && config.is_primary_node {
             migrate_dev_data().await.expect("Migrating DEV DATA");

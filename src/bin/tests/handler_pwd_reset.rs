@@ -59,12 +59,12 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     // get the password reset cookie
     let set_cookie = res.headers().get(header::SET_COOKIE).unwrap();
     let (cookie, _) = set_cookie.to_str()?.split_once(';').unwrap();
-    println!("Extracted pwd_reset_cookie: {:?}", cookie);
+    println!("Extracted pwd_reset_cookie: {cookie:?}");
     let mut correct_headers = HeaderMap::new();
     let mut cookie_only_headers = HeaderMap::new();
     correct_headers.append(header::COOKIE, HeaderValue::from_str(cookie)?);
     cookie_only_headers.append(header::COOKIE, HeaderValue::from_str(cookie)?);
-    println!("Headers with cookie: {:?}", correct_headers);
+    println!("Headers with cookie: {correct_headers:?}");
 
     // check that we got the html document
     let html = res.text().await?;
@@ -73,10 +73,10 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
 
     // extract the csrf token from the html
     let (_, content_split) = html.split_once("\"csrf_token\":\"").unwrap();
-    let (csrf_token, _) = content_split.split_once("\"").unwrap();
+    let (csrf_token, _) = content_split.split_once('"').unwrap();
     println!("Extracted csrf token: {csrf_token}");
     correct_headers.append(PWD_CSRF_HEADER, HeaderValue::from_str(csrf_token)?);
-    println!("Headers with cookie + csrf: {:?}", correct_headers);
+    println!("Headers with cookie + csrf: {correct_headers:?}");
 
     let url_put = format!("{backend_url}/users/{user_id}/reset");
 
@@ -185,13 +185,13 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
         username: Some(username.to_string()),
-        password: Some(req.password.to_string()),
+        password: Some(req.password.clone()),
         ..Default::default()
     };
     let res = client.post(&url).form(&body).send().await?;
     assert_eq!(res.status(), 200);
     let ts = res.json::<TokenSet>().await?;
-    assert!(!ts.access_token.is_empty());
+    assert_ne!(ts.access_token, "");
     assert!(ts.id_token.is_some());
 
     // test was used

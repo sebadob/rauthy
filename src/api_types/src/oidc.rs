@@ -41,6 +41,7 @@ pub enum GrantType {
 
 impl GrantType {
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::AuthorizationCode => "authorization_code",
@@ -53,10 +54,11 @@ impl GrantType {
     }
 
     /// Joins the given flows into the CSV format used for `clients.flows_enabled`.
+    #[must_use]
     pub fn csv(flows: &[Self]) -> String {
         flows
             .iter()
-            .map(|f| f.as_str())
+            .map(GrantType::as_str)
             .collect::<Vec<_>>()
             .join(",")
     }
@@ -120,6 +122,7 @@ pub enum TokenType {
 
 impl TokenType {
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::AccessToken => "urn:ietf:params:oauth:token-type:access_token",
@@ -334,7 +337,7 @@ pub struct LoginRefreshRequest {
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct LogoutRequest {
     /// Valid `id_token` issued by Rauthy to do an RP Initiated Logout.
-    /// https://openid.net/specs/openid-connect-rpinitiated-1_0.html
+    /// <https://openid.net/specs/openid-connect-rpinitiated-1_0.html>
     ///
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
@@ -346,7 +349,7 @@ pub struct LogoutRequest {
     #[validate(length(max = 2048))]
     pub state: Option<String>,
     /// Logout Token used for OIDC Backchannel Logout
-    /// https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken
+    /// <https://openid.net/specs/openid-connect-backchannel-1_0.html#LogoutToken>
     ///
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
@@ -590,6 +593,7 @@ pub enum JwkKeyPairType {
 pub struct JWKSPublicKeyCerts {
     pub kty: JwkKeyPairType,
     #[serde(rename = "use")]
+    #[allow(clippy::pub_underscore_fields)]
     pub _use: &'static str,
     pub alg: JwkKeyPairAlg,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -684,6 +688,7 @@ impl<'a> Audience<'a> {
     /// Builds the most specific representation for the given audiences: a `Single` for
     /// exactly one value, otherwise a `Multiple`. The input is expected to be
     /// de-duplicated already by the caller.
+    #[must_use]
     pub fn from_values(mut values: Vec<Cow<'a, str>>) -> Self {
         if values.len() == 1 {
             Self::Single(values.swap_remove(0))
@@ -693,6 +698,7 @@ impl<'a> Audience<'a> {
     }
 
     /// `true` if there is no audience value at all, or all values are empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Single(s) => s.is_empty(),
@@ -701,6 +707,7 @@ impl<'a> Audience<'a> {
     }
 
     /// `true` if `needle` is one of the contained audiences.
+    #[must_use]
     pub fn contains(&self, needle: &str) -> bool {
         match self {
             Self::Single(s) => s == needle,

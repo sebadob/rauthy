@@ -30,7 +30,8 @@ impl From<&'static VarsTemplate> for I18nEmailRegisteredAlready<'_> {
 }
 
 impl I18nEmailRegisteredAlready<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         let tpls = &RauthyConfig::get().vars.templates.email_registered_already;
         match lang {
             Language::Cs => (&tpls.cs).into(),

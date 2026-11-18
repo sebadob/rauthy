@@ -38,12 +38,12 @@ pub async fn bootstrap() -> Result<(), ErrorResponse> {
         .map(|a| a.name)
         .collect::<Vec<_>>();
 
-    let sql = r#"
+    let sql = r"
 INSERT INTO users (
     id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
     password_expires, created_at, language, user_expires
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)";
 
     // We want to fake the `created_at` a tiny bit. We modify the value slightly so that every
     // user has a unique value for that field. That may be important / interesting for testing and
@@ -78,17 +78,23 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#;
         };
 
         for role in &user.roles {
-            if !roles.contains(role) {
-                panic!("Role `{}` for user '{}' not found.", role, user.email)
-            }
+            assert!(
+                roles.contains(role),
+                "Role `{}` for user '{}' not found.",
+                role,
+                user.email
+            );
         }
         let roles = user.roles.join(",");
 
         let groups = if let Some(g) = user.groups {
             for group in &g {
-                if !groups.contains(group) {
-                    panic!("Group `{}` for user '{}' not found.", group, user.email)
-                }
+                assert!(
+                    groups.contains(group),
+                    "Group `{}` for user '{}' not found.",
+                    group,
+                    user.email
+                );
             }
             Some(g.join(","))
         } else {
@@ -159,17 +165,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#;
         }
 
         if let Some(values) = user.attributes {
-            let sql = r#"
+            let sql = r"
         INSERT INTO user_attr_values (user_id, key, value)
-        VALUES ($1, $2, $3)"#;
+        VALUES ($1, $2, $3)";
 
             for attr in values {
-                if !attrs.contains(&attr.key) {
-                    panic!(
-                        "User attribute `{}` for user '{}' not found.",
-                        attr.key, user.email
-                    )
-                }
+                assert!(
+                    attrs.contains(&attr.key),
+                    "User attribute `{}` for user '{}' not found.",
+                    attr.key,
+                    user.email
+                );
 
                 let v = serde_json::to_vec(&attr.value)?;
                 if is_hiqlite() {

@@ -11,6 +11,7 @@ pub struct NotifierSlack {
 }
 
 impl NotifierSlack {
+    #[must_use]
     pub fn new(webhook_url: String) -> Self {
         Self { webhook_url }
     }
@@ -65,7 +66,7 @@ impl SlackMessageApi<'_> {
     }
 }
 
-/// Matches the SlackAPIs message fields
+/// Matches the `SlackAPIs` message fields
 #[derive(Debug, Serialize)]
 pub struct SlackMessageField {
     title: String,
@@ -73,6 +74,7 @@ pub struct SlackMessageField {
 }
 
 impl SlackMessageField {
+    #[must_use]
     pub fn new(title: String, value: String) -> Self {
         Self { title, value }
     }

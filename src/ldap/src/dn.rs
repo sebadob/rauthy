@@ -99,7 +99,7 @@ pub fn is_within(dn: &str, base: &str) -> bool {
 
 /// Number of RDNs of a normalized DN.
 pub fn depth(dn: &str) -> usize {
-    parse(dn).map(|r| r.len()).unwrap_or(0)
+    parse(dn).map_or(0, |r| r.len())
 }
 
 pub fn client_base(client_id: &str, base_dn: &str) -> String {

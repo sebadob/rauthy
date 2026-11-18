@@ -34,7 +34,7 @@ pub async fn reg_start(
     };
     let exclude_creds = {
         let pks = PasskeyEntity::find_cred_ids_for_user(&user.id).await?;
-        if !pks.is_empty() { Some(pks) } else { None }
+        if pks.is_empty() { None } else { Some(pks) }
     };
 
     let cfg = &RauthyConfig::get().vars.webauthn;
@@ -47,7 +47,7 @@ pub async fn reg_start(
     }
     // New-user magic links may remove an initialized password at finish.
     let require_uv =
-        requires_uv(user.account_type(), cfg.force_uv) || payload.magic_link_id.is_some();
+        requires_uv(&user.account_type(), cfg.force_uv) || payload.magic_link_id.is_some();
 
     let attestation_ca_list = if cfg.optimistic_attestation || force_mds_attestation() {
         MdsAuthenticator::get_ca_list().await?
@@ -66,7 +66,8 @@ pub async fn reg_start(
     ) {
         Ok((mut ccr, reg_state)) => {
             // timeout expected in ms
-            ccr.public_key.timeout = Some(min(cfg.req_exp.as_millis(), u32::MAX as u128) as u32);
+            ccr.public_key.timeout =
+                Some(min(cfg.req_exp.as_millis(), u128::from(u32::MAX)) as u32);
 
             let cache_idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
             let reg_data = WebauthnReg {
@@ -105,17 +106,14 @@ pub async fn reg_finish(
     let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
-    let reg_data = match DB::hql()
+    let Some(reg_data) = DB::hql()
         .get_remove::<_, _, WebauthnReg>(Cache::Webauthn, idx)
         .await?
-    {
-        None => {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Webauthn Registration Request not found",
-            ));
-        }
-        Some(data) => data,
+    else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Webauthn Registration Request not found",
+        ));
     };
 
     let cfg = &RauthyConfig::get().vars.webauthn;
@@ -149,7 +147,7 @@ pub async fn reg_finish(
         Ok(pk) => {
             let cred = Credential::from(pk.clone());
 
-            if (requires_uv(user.account_type(), cfg.force_uv) || is_new_user)
+            if (requires_uv(&user.account_type(), cfg.force_uv) || is_new_user)
                 && !cred.user_verified
             {
                 warn!(
@@ -180,7 +178,7 @@ pub async fn reg_finish(
                     )
                     .await
                     {
-                        Ok(_) => Some(aaguid),
+                        Ok(()) => Some(aaguid),
                         Err(err) => {
                             warn!("Cannot verify FIDO device attestation: {}", err.message);
                             None
@@ -232,22 +230,20 @@ pub async fn reg_finish(
 
             let is_rk = {
                 let props = match cred.extensions.cred_props {
-                    ExtnState::Set(props) => props.rk,
-                    ExtnState::Unsolicited(props) => props.rk,
-                    ExtnState::Unsigned(props) => props.rk,
+                    ExtnState::Set(props)
+                    | ExtnState::Unsolicited(props)
+                    | ExtnState::Unsigned(props) => props.rk,
                     ExtnState::NotRequested | ExtnState::Ignored => None,
                 };
-                match props {
-                    Some(v) => Some(v),
-                    None => {
-                        // If the authenticator did not send any cred props, we fall back to other
-                        // possibly known values. This improves compatibility for e.g. MacOS.
-                        let fallback = payload.allow_rk_hint.unwrap_or(
-                            RauthyConfig::get().vars.webauthn.passkey_reg_type_str()
-                                == "resident_key",
-                        );
-                        Some(fallback)
-                    }
+                if let Some(v) = props {
+                    Some(v)
+                } else {
+                    // If the authenticator did not send any cred props, we fall back to other
+                    // possibly known values. This improves compatibility for e.g. MacOS.
+                    let fallback = payload.allow_rk_hint.unwrap_or(
+                        RauthyConfig::get().vars.webauthn.passkey_reg_type_str() == "resident_key",
+                    );
+                    Some(fallback)
                 }
             };
 
@@ -272,7 +268,7 @@ pub async fn reg_finish(
                 format!("{err}"),
             ));
         }
-    };
+    }
 
     Ok(())
 }

@@ -8,10 +8,10 @@ use tracing::{debug, error, info};
 
 pub async fn orphaned_email_jobs() {
     let dur = RauthyConfig::get().vars.email.jobs.scheduler_interval;
-    let dur = if !dur.is_zero() {
-        dur
-    } else {
+    let dur = if dur.is_zero() {
         Duration::from_secs(10)
+    } else {
+        dur
     };
     let mut interval = tokio::time::interval(dur);
 

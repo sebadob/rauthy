@@ -34,6 +34,7 @@ impl FromStr for PamGroupType {
 }
 
 impl PamGroupType {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::Immutable => "immutable",
@@ -65,12 +66,12 @@ impl From<tokio_postgres::Row> for PamGroup {
 
 impl PamGroup {
     pub async fn insert(name: String, typ: PamGroupType) -> Result<Self, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 INSERT INTO pam_groups (name, typ)
 VALUES ($1, $2)
 ON CONFLICT (name) DO NOTHING
 RETURNING *
-"#;
+";
 
         let slf: Self = if is_hiqlite() {
             DB::hql()
@@ -101,7 +102,7 @@ RETURNING *
         let slf = if is_hiqlite() {
             DB::hql().query_map_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one(sql, &[&(id as i64)]).await?
+            DB::pg_query_one(sql, &[&i64::from(id)]).await?
         };
 
         Ok(slf)
@@ -136,8 +137,7 @@ RETURNING *
             PamGroupType::User => {
                 Some("User groups are automatically managed and cannot be deleted")
             }
-            PamGroupType::Generic => None,
-            PamGroupType::Local => None,
+            PamGroupType::Generic | PamGroupType::Local => None,
         } {
             return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
         }
@@ -147,7 +147,7 @@ RETURNING *
         if is_hiqlite() {
             DB::hql().execute(sql, params!(id)).await?
         } else {
-            DB::pg_execute(sql, &[&(id as i64)]).await?
+            DB::pg_execute(sql, &[&i64::from(id)]).await?
         };
 
         Ok(())
@@ -156,11 +156,11 @@ RETURNING *
 
 impl PamGroup {
     pub async fn build_members_response(self) -> Result<PamGroupMembersResponse, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT name FROM pam_rel_groups_users pu
 JOIN pam_users u ON pu.uid = u.id
 WHERE pu.gid = $1
-"#;
+";
 
         let members = if is_hiqlite() {
             DB::hql()
@@ -170,7 +170,7 @@ WHERE pu.gid = $1
                 .map(|mut r| r.get("name"))
                 .collect::<Vec<String>>()
         } else {
-            DB::pg_query_rows(sql, &[&(self.id as i64)], 4)
+            DB::pg_query_rows(sql, &[&i64::from(self.id)], 4)
                 .await?
                 .into_iter()
                 .map(|r| r.get("name"))

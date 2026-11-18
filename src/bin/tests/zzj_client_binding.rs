@@ -131,7 +131,7 @@ async fn auth_code(client_id: &str) -> Result<String, Box<dyn Error>> {
         .await?;
     assert_eq!(res.status(), 202);
 
-    let (code, _) = code_state_from_headers(res)?;
+    let (code, _) = code_state_from_headers(&res)?;
     Ok(code)
 }
 

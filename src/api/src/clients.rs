@@ -34,7 +34,7 @@ use validator::Validate;
 /// `GET /clients/{id}` requests.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/clients",
@@ -55,9 +55,9 @@ pub async fn get_clients(principal: ReqPrincipal) -> Result<HttpResponse, ErrorR
     let clients = Client::find_all().await?;
 
     let mut res = Vec::new();
-    clients
-        .into_iter()
-        .for_each(|c| res.push(c.into_response(None)));
+    for c in clients {
+        res.push(c.into_response(None));
+    }
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -65,7 +65,7 @@ pub async fn get_clients(principal: ReqPrincipal) -> Result<HttpResponse, ErrorR
 /// Returns a single OIDC clients by its *id* with all information's, except for the client secret.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/clients/{id}",
@@ -97,7 +97,7 @@ pub async fn get_client_by_id(
 /// sensitive endpoint.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/clients/{id}/secret",
@@ -125,7 +125,7 @@ pub async fn get_client_secret(
 /// Adds a new OIDC client to the database.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/clients",
@@ -204,7 +204,7 @@ pub async fn post_clients_dyn(
         .headers()
         .get(ORIGIN)
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
+        .map(ToString::to_string);
 
     Client::create_dynamic(payload, origin_header)
         .await
@@ -284,7 +284,7 @@ pub async fn put_clients_dyn(
 /// Modifies an OIDC client
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/clients/{id}",
@@ -408,7 +408,7 @@ async fn extract_multipart_data(
 /// Upload a custom logo for the login page for this client
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/clients/{id}/logo",
@@ -441,7 +441,7 @@ pub async fn put_client_logo(
 /// Deletes a custom logo for this client
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
 delete,
     path = "/clients/{id}/logo",
@@ -560,7 +560,7 @@ pub async fn delete_client_favicon(
 /// was not the case yet.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/clients/{id}/secret",
@@ -583,7 +583,7 @@ pub async fn put_generate_client_secret(
     let payload = if let Some(p) = payload {
         p.into_inner()
     } else {
-        Default::default()
+        ClientSecretRequest::default()
     };
     payload.validate()?;
 
@@ -595,7 +595,7 @@ pub async fn put_generate_client_secret(
 /// Deletes an OIDC client
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/clients/{id}",

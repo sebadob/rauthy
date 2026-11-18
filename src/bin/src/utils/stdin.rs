@@ -11,8 +11,7 @@ pub(crate) async fn read_line_stdin() -> Result<String, StdError> {
 
         let res = match stdin.lines().next_line().await {
             Ok(Some(line)) => Some(line),
-            Ok(None) => None,
-            Err(_) => None,
+            Ok(None) | Err(_) => None,
         };
         tx.send_async(res).await.unwrap();
     });
@@ -37,9 +36,8 @@ pub(crate) async fn read_line_stdin_yes() -> Result<bool, StdError> {
             return Ok(true);
         } else if v == "no" || v == "n" {
             return Ok(false);
-        } else {
-            eprintln!("{}", "Please answer with '(y)es' or '(n)o'.".red());
         }
+        eprintln!("{}", "Please answer with '(y)es' or '(n)o'.".red());
     }
 }
 
@@ -81,7 +79,7 @@ impl PromptPassword {
                 tokio::task::spawn_blocking(move || rpassword::prompt_password(msg)).await??;
 
             match self.validate(&password) {
-                Ok(_) => {
+                Ok(()) => {
                     return Ok(password);
                 }
                 Err(policy) => {

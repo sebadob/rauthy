@@ -19,10 +19,10 @@ pub async fn anti_lockout() -> Result<(), ErrorResponse> {
             .pub_url
             .split_once(':')
             .expect("PUB_URL must have a port");
-        let origin = if ip != "localhost" {
-            format!("https://{ip}:5173")
-        } else {
+        let origin = if ip == "localhost" {
             "http://localhost:5173".to_string()
+        } else {
+            format!("https://{ip}:5173")
         };
 
         (

@@ -107,7 +107,7 @@ impl DPoPNonce {
     }
 }
 
-/// https://datatracker.ietf.org/doc/html/rfc9449
+/// <https://datatracker.ietf.org/doc/html/rfc9449>
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DPoPProof {
     pub header: DPoPHeader,
@@ -187,7 +187,7 @@ impl DPoPProof {
                 // In that case we assume the same 'alg' as in the main header itself
                 // and try validating with that one.
                 if header.jwk.alg.is_none() {
-                    header.jwk.alg = Some(header.alg.clone());
+                    header.jwk.alg = Some(header.alg);
                 }
 
                 match rest.split_once('.') {
@@ -220,7 +220,7 @@ impl DPoPProof {
         self.header.jwk.fingerprint()
     }
 
-    /// Tries to extract a DPoP header from the given HttpRequest and validates the given JWK
+    /// Tries to extract a DPoP header from the given `HttpRequest` and validates the given JWK
     /// if it exists.
     pub async fn opt_validated_from(
         req: &HttpRequest,
@@ -236,12 +236,7 @@ impl DPoPProof {
             None => Ok(None),
             Some(v) => {
                 let b64 = v.to_str()?;
-                if !RE_TOKEN_68.is_match(b64) {
-                    Err(ErrorResponse::new(
-                        ErrorResponseType::DPoP(origin),
-                        "DPoP header must be in Token68 format",
-                    ))
-                } else {
+                if RE_TOKEN_68.is_match(b64) {
                     let slf = Self::try_from_str(origin.as_deref(), b64)?;
 
                     if let Err(msg) = slf.validate(b64) {
@@ -255,6 +250,11 @@ impl DPoPProof {
                     }
 
                     Ok(Some(slf))
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::DPoP(origin),
+                        "DPoP header must be in Token68 format",
+                    ))
                 }
             }
         }
@@ -367,7 +367,7 @@ impl DPoPProof {
                 err.message.to_string()
             });
             return Err(latest);
-        };
+        }
 
         Ok(())
     }
@@ -412,7 +412,7 @@ mod tests {
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().clone(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };
@@ -438,6 +438,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::similar_names)]
     fn test_dpop_validation_rsa() {
         // manually build up a dpop token
         let mut rng = rand_08::thread_rng();
@@ -469,7 +470,7 @@ mod tests {
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().clone(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };
@@ -479,14 +480,14 @@ mod tests {
         let header_b64 = base64_url_no_pad_encode(header_json.as_bytes());
         let claims_json = serde_json::to_string(&claims).unwrap();
         let claims_b64 = base64_url_no_pad_encode(claims_json.as_bytes());
-        let mut token_raw = format!("{}.{}", header_b64, claims_b64);
+        let mut token_raw = format!("{header_b64}.{claims_b64}");
 
         let hash = hmac_sha256::Hash::hash(token_raw.as_bytes());
         let signature = rsa_sk
             .sign(rsa::Pkcs1v15Sign::new::<Sha256>(), hash.as_slice())
             .unwrap();
         let sig_b64 = base64_url_no_pad_encode(&signature);
-        write!(token_raw, ".{}", sig_b64).unwrap();
+        write!(token_raw, ".{sig_b64}").unwrap();
 
         // now we have our token like it should come in with the DPoP header -> try to verify it
         let dpop = DPoPProof::try_from_str(None, token_raw.as_str()).unwrap();

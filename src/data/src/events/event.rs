@@ -118,6 +118,7 @@ impl From<i64> for EventLevel {
 }
 
 impl EventLevel {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             EventLevel::Info => "INFO",
@@ -127,6 +128,7 @@ impl EventLevel {
         }
     }
 
+    #[must_use]
     pub fn value(&self) -> i16 {
         match self {
             EventLevel::Info => 0,
@@ -271,6 +273,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
 }
 
 impl EventType {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::InvalidLogins => "InvalidLogins",
@@ -305,6 +308,7 @@ impl EventType {
     // CAUTION: DO NOT change the order of these values! If new types should be added, always
     // add them to the end! To save space in the DB, these are not saved as String's but
     // as integers instead and deserialization of older events will fail, if the order is mixed up!
+    #[must_use]
     pub fn value(&self) -> i16 {
         match self {
             EventType::InvalidLogins => 0,
@@ -377,7 +381,7 @@ impl From<String> for EventType {
 
 impl From<i16> for EventType {
     fn from(value: i16) -> Self {
-        Self::from(value as i64)
+        Self::from(i64::from(value))
     }
 }
 
@@ -398,6 +402,7 @@ impl From<i64> for EventType {
             11 => EventType::SecretsMigrated,
             12 => EventType::UserEmailChange,
             13 => EventType::UserPasswordReset,
+            #[allow(clippy::match_same_arms)]
             14 => EventType::Test,
             15 => EventType::BackchannelLogoutFailed,
             16 => EventType::ScimTaskFailed,
@@ -486,18 +491,25 @@ impl From<&Event> for Notification {
                 value.text.as_deref().unwrap_or_default(),
                 value.ip.as_deref().unwrap_or_default()
             )),
-            EventType::NewRauthyVersion => value.text.clone(),
+            EventType::NewRauthyVersion
+            | EventType::RauthyStarted
+            | EventType::RauthyHealthy
+            | EventType::RauthyUnhealthy
+            | EventType::UserEmailChange
+            | EventType::UserPasswordReset
+            | EventType::Test
+            | EventType::UserLoginRevoke
+            | EventType::SuspiciousApiScan
+            | EventType::LoginNewLocation
+            | EventType::TokenIssued
+            | EventType::EmailSendError
+            | EventType::ConsentRevoked
+            | EventType::LdapLogin => value.text.clone(),
             EventType::PossibleBruteForce => Some(format!(
                 "From IP: `{}`",
                 value.ip.as_deref().unwrap_or_default()
             )),
-            EventType::RauthyStarted => value.text.clone(),
-            EventType::RauthyHealthy => value.text.clone(),
-            EventType::RauthyUnhealthy => value.text.clone(),
             EventType::SecretsMigrated => value.ip.clone(),
-            EventType::UserEmailChange => value.text.clone(),
-            EventType::UserPasswordReset => value.text.clone(),
-            EventType::Test => value.text.clone(),
             EventType::BackchannelLogoutFailed => Some(format!(
                 "Backchannel logout retries ({}) exceeded for: {}",
                 value.data.unwrap_or_default(),
@@ -512,17 +524,10 @@ impl From<&Event> for Notification {
                 "User `{}` was force-logged-out",
                 value.text.as_deref().unwrap_or_default()
             )),
-            EventType::UserLoginRevoke => value.text.clone(),
-            EventType::SuspiciousApiScan => value.text.clone(),
-            EventType::LoginNewLocation => value.text.clone(),
-            EventType::TokenIssued => value.text.clone(),
             EventType::CredentialStuffing => Some(format!(
                 "Potential credential stuffing detected from IP: '{}'",
                 value.ip.as_deref().unwrap_or_default()
             )),
-            EventType::EmailSendError => value.text.clone(),
-            EventType::ConsentRevoked => value.text.clone(),
-            EventType::LdapLogin => value.text.clone(),
         };
 
         Self {
@@ -557,9 +562,9 @@ impl Event {
         let level = self.level.value();
         let typ = self.typ.value();
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO events (id, timestamp, level, typ, ip, data, text)
-VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
         if is_hiqlite() {
             DB::hql()
@@ -610,10 +615,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
 
         let res = if let Some(typ) = typ {
             let typ = typ.value();
-            let sql = r#"
+            let sql = r"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3 AND typ = $4
-ORDER BY timestamp DESC"#;
+ORDER BY timestamp DESC";
 
             if is_hiqlite() {
                 DB::hql()
@@ -623,10 +628,10 @@ ORDER BY timestamp DESC"#;
                 DB::pg_query(sql, &[&from, &until, &level, &typ], 32).await?
             }
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT * FROM events
 WHERE timestamp >= $1 AND timestamp <= $2 AND level >= $3
-ORDER BY timestamp DESC"#;
+ORDER BY timestamp DESC";
 
             if is_hiqlite() {
                 DB::hql()
@@ -652,12 +657,14 @@ ORDER BY timestamp DESC"#;
         Ok(res)
     }
 
+    #[must_use]
     pub fn as_json(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
 }
 
 impl Event {
+    #[must_use]
     pub fn new(
         level: EventLevel,
         typ: EventType,
@@ -679,7 +686,8 @@ impl Event {
         }
     }
 
-    /// The EventLevel will change depending on the amount of invalid logins
+    /// The `EventLevel` will change depending on the amount of invalid logins
+    #[must_use]
     pub fn invalid_login(failed_logins: u32, ip: String) -> Self {
         let events = &RauthyConfig::get().vars.events;
         let level = match failed_logins {
@@ -694,11 +702,12 @@ impl Event {
             level.clone(),
             EventType::InvalidLogins,
             Some(ip),
-            Some(failed_logins as i64),
+            Some(i64::from(failed_logins)),
             None,
         )
     }
 
+    #[must_use]
     pub fn backchannel_logout_failed(client_id: &str, user_id: &str, retries: i64) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -713,6 +722,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn brute_force(ip: String) -> Self {
         Self::new(
             EventLevel::Critical,
@@ -725,6 +735,7 @@ impl Event {
 
     /// `revoked_by` names who revoked the consent: the user themselves, an admin by email, or
     /// an API key by name (see [`ConsentRevokedBy`]).
+    #[must_use]
     pub fn consent_revoked(
         user_email: &str,
         client_id: &str,
@@ -746,6 +757,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn cred_stuff(ip: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_cred_stuff.clone(),
@@ -756,6 +768,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn email_send_err(typ: mailer::EmailType, address: &str) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -770,6 +783,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn force_logout(user_email: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_force_logout.clone(),
@@ -780,6 +794,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn ip_blacklisted(exp: DateTime<Utc>, ip: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_ip_blacklisted.clone(),
@@ -790,6 +805,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn ip_blacklist_removed(ip: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_ip_blacklisted.clone(),
@@ -800,6 +816,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn new_login_location(user: &User, loc: &LoginLocation) -> Self {
         let text = if let Some(location) = &loc.location {
             format!("{} / {} / {}", user.email, loc.user_agent, location)
@@ -820,6 +837,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn new_user(email: String, ip: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_new_user.clone(),
@@ -830,6 +848,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn new_rauthy_admin(email: String, ip: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_rauthy_admin.clone(),
@@ -840,6 +859,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn new_rauthy_version(version_url: String) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_rauthy_version.clone(),
@@ -850,6 +870,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn jwks_rotated() -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_jwks_rotate.clone(),
@@ -860,12 +881,9 @@ impl Event {
         )
     }
 
-    pub fn user_login_revoke(
-        user_email: &str,
-        bad_ip: IpAddr,
-        bad_location: Option<String>,
-    ) -> Self {
-        let loc = bad_location.as_deref().unwrap_or("Unknown Location");
+    #[must_use]
+    pub fn user_login_revoke(user_email: &str, bad_ip: IpAddr, bad_location: Option<&str>) -> Self {
+        let loc = bad_location.unwrap_or("Unknown Location");
         let text = format!("User `{user_email}` revoked illegal login from {bad_ip} ({loc})");
 
         Self::new(
@@ -881,6 +899,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn rauthy_started() -> Self {
         let text = format!("Rauthy has been started on host {}", get_local_hostname());
         Self::new(
@@ -892,6 +911,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn rauthy_healthy() -> Self {
         let text = format!("Rauthy is healthy now on host {}", get_local_hostname());
         Self::new(
@@ -903,6 +923,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn rauthy_unhealthy_cache() -> Self {
         let text = format!(
             "The HA Cache layer is unhealthy on host {}",
@@ -921,6 +942,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn rauthy_unhealthy_db() -> Self {
         Self::new(
             RauthyConfig::get()
@@ -935,6 +957,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn scim_task_failed(client_id: &str, action: &ScimAction, retries: i32) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -944,11 +967,12 @@ impl Event {
                 .clone(),
             EventType::BackchannelLogoutFailed,
             None,
-            Some(retries as i64),
+            Some(i64::from(retries)),
             Some(format!("{client_id} / {action:?}")),
         )
     }
 
+    #[must_use]
     pub fn secrets_migrated(ip: IpAddr) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -963,8 +987,9 @@ impl Event {
         )
     }
 
-    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<String>) -> Self {
-        let loc = location.as_deref().unwrap_or("Unknown Location");
+    #[must_use]
+    pub fn suspicious_request(path: &str, ip: IpAddr, location: Option<&str>) -> Self {
+        let loc = location.unwrap_or("Unknown Location");
         let text = format!("Suspicious request to '{path}' from {ip} ({loc})");
 
         Self::new(
@@ -980,6 +1005,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn test(ip: IpAddr) -> Self {
         Self::new(
             EventLevel::Info,
@@ -990,6 +1016,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn ldap_login(client_id: &str, email: &str, ip: IpAddr) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_ldap_login.clone(),
@@ -1000,6 +1027,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn token_issued(flow: &str, client_id: &str, email: Option<&str>) -> Self {
         Self::new(
             RauthyConfig::get().vars.events.level_token_issued.clone(),
@@ -1015,6 +1043,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn user_email_change(text: String, ip: Option<IpAddr>) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -1029,6 +1058,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn user_password_reset(text: String, ip: Option<String>) -> Self {
         Self::new(
             RauthyConfig::get()
@@ -1043,6 +1073,7 @@ impl Event {
         )
     }
 
+    #[must_use]
     pub fn fmt_data(&self) -> String {
         match self.typ {
             EventType::InvalidLogins => format!("Counter: {}", self.data.unwrap_or_default()),
@@ -1056,11 +1087,12 @@ impl Event {
                 "Potential CredentialStuffing from IP: '{}'",
                 self.ip.as_deref().unwrap_or_default()
             ),
-            EventType::JwksRotated => String::default(),
-            EventType::NewUserRegistered => {
-                format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
+            EventType::JwksRotated | EventType::PossibleBruteForce | EventType::SecretsMigrated => {
+                String::default()
             }
-            EventType::NewRauthyAdmin => {
+            EventType::NewUserRegistered
+            | EventType::NewRauthyAdmin
+            | EventType::UserEmailChange => {
                 format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
             }
             EventType::NewRauthyVersion => {
@@ -1070,13 +1102,8 @@ impl Event {
                 )
             }
             // PossibleBruteForce is currently not in use
-            EventType::PossibleBruteForce => String::default(),
-            EventType::RauthyStarted => self.text.clone().unwrap(),
-            EventType::RauthyHealthy => self.text.clone().unwrap(),
-            EventType::RauthyUnhealthy => self.text.clone().unwrap(),
-            EventType::SecretsMigrated => String::default(),
-            EventType::UserEmailChange => {
-                format!("User E-Mail: {}", self.text.as_deref().unwrap_or_default())
+            EventType::RauthyStarted | EventType::RauthyHealthy | EventType::RauthyUnhealthy => {
+                self.text.clone().unwrap()
             }
             EventType::UserPasswordReset => {
                 format!(
@@ -1107,20 +1134,20 @@ impl Event {
                     self.text.as_deref().unwrap_or_default()
                 )
             }
-            EventType::UserLoginRevoke => self.text.clone().unwrap_or_default(),
-            EventType::SuspiciousApiScan => self.text.clone().unwrap_or_default(),
-            EventType::LoginNewLocation => self.text.clone().unwrap_or_default(),
-            EventType::TokenIssued => self.text.clone().unwrap_or_default(),
-            EventType::EmailSendError => self.text.clone().unwrap_or_default(),
-            EventType::ConsentRevoked => self.text.clone().unwrap_or_default(),
-            EventType::LdapLogin => self.text.clone().unwrap_or_default(),
+            EventType::UserLoginRevoke
+            | EventType::SuspiciousApiScan
+            | EventType::LoginNewLocation
+            | EventType::TokenIssued
+            | EventType::EmailSendError
+            | EventType::ConsentRevoked
+            | EventType::LdapLogin => self.text.clone().unwrap_or_default(),
         }
     }
 
     #[inline(always)]
     pub async fn send(self) -> Result<(), ErrorResponse> {
         match RauthyConfig::get().tx_events.send_async(self).await {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => {
                 error!(?err, "Event::send()");
                 Err(ErrorResponse::new(
@@ -1186,7 +1213,7 @@ mod tests {
         let typ = EventType::ConsentRevoked;
         assert_eq!(typ.value(), 24);
         assert_eq!(EventType::from(typ.value()), typ);
-        assert_eq!(EventType::from(typ.value() as i64), typ);
+        assert_eq!(EventType::from(i64::from(typ.value())), typ);
         assert_eq!(typ.as_str(), "ConsentRevoked");
         assert_eq!(EventType::from(typ.as_str().to_string()), typ);
         assert_eq!(typ.to_string(), "User consent revoked");

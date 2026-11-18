@@ -162,13 +162,13 @@ impl PgDelete {
     }
 }
 
-static SQL_SAVE: &str = r#"
+static SQL_SAVE: &str = r"
 UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
 auth_provider_id = $16, federation_uid = $17
-WHERE id = $18"#;
+WHERE id = $18";
 
 /// Drops the sessions and refresh tokens of the disabled user `id`.
 async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
@@ -266,13 +266,13 @@ impl Debug for User {
 // CRUD
 // Keyset cursors over a composite key: `created_at` alone (seconds) is not unique, so a
 // plain comparison on it skips users at batch boundaries (same reasoning as `find_paginated`).
-const SQL_FIND_BATCH: &str = r#"
+const SQL_FIND_BATCH: &str = r"
 SELECT * FROM users
 WHERE (created_at, email) > ($1, $2)
 ORDER BY created_at ASC, email ASC
-LIMIT $3"#;
+LIMIT $3";
 
-const SQL_FIND_FOR_SCIM_SYNC: &str = r#"
+const SQL_FIND_FOR_SCIM_SYNC: &str = r"
 SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
     created_at, language, picture_id, birthdate, phone, street, zip, city, country,
     preferred_username, tz
@@ -280,7 +280,7 @@ FROM users u
 LEFT JOIN users_values uv ON u.id = uv.id
 WHERE (u.created_at, u.id) > ($1, $2)
 ORDER BY u.created_at ASC, u.id ASC
-LIMIT $3"#;
+LIMIT $3";
 
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
@@ -475,14 +475,14 @@ impl User {
             let res = DB::hql()
                 .txn([
                     (
-                        r#"
+                        r"
 UPDATE issued_tokens SET revoked = true
 WHERE user_id = $1
    OR jti IN (
        SELECT access_token_jti FROM refresh_tokens WHERE user_id = $1
        UNION
        SELECT access_token_jti FROM refresh_tokens_devices WHERE user_id = $1
-   )"#,
+   )",
                         params!(&self.id),
                     ),
                     ("DELETE FROM users WHERE id = $1", params!(&self.id)),
@@ -689,10 +689,10 @@ WHERE user_id = $1
     }
 
     pub async fn find_all_simple() -> Result<Vec<UserResponseSimple>, ErrorResponse> {
-        let sql = r#"
+        let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at ASC"#;
+ORDER BY created_at ASC";
 
         let res = if is_hiqlite() {
             DB::hql().query_as(sql, params!()).await?
@@ -711,7 +711,7 @@ ORDER BY created_at ASC"#;
         from_created_at: i64,
         batch_size: u16,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let batch_size = batch_size as i64;
+        let batch_size = i64::from(batch_size);
         let res = if is_hiqlite() {
             DB::hql()
                 .query_as(
@@ -817,13 +817,13 @@ ORDER BY created_at ASC"#;
             // not unique, so without the `id` tie-breaker, rows with an equal `created_at`
             // would be duplicated or skipped across pages.
             if backwards {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE (created_at, id) < ($1, $2)
 ORDER BY created_at DESC, id DESC
 LIMIT $3
-OFFSET $4"#;
+OFFSET $4";
 
                 let mut res: Vec<UserResponseSimple> = if is_hiqlite() {
                     DB::hql()
@@ -836,13 +836,13 @@ OFFSET $4"#;
                 res.reverse();
                 res
             } else {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE (created_at, id) > ($1, $2)
 ORDER BY created_at ASC, id ASC
 LIMIT $3
-OFFSET $4"#;
+OFFSET $4";
 
                 if is_hiqlite() {
                     DB::hql()
@@ -856,12 +856,12 @@ OFFSET $4"#;
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let sql = r#"
+            let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at DESC, id DESC
 LIMIT $1
-OFFSET $2"#;
+OFFSET $2";
 
             let mut res = if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
@@ -871,12 +871,12 @@ OFFSET $2"#;
             res.reverse();
             res
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 ORDER BY created_at ASC, id ASC
 LIMIT $1
-OFFSET $2"#;
+OFFSET $2";
 
             if is_hiqlite() {
                 DB::hql().query_as(sql, params!(page_size, offset)).await?
@@ -894,11 +894,11 @@ OFFSET $2"#;
 
     pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
-        let sql = r#"
+        let sql = r"
 INSERT INTO users
 (id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
 last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)";
 
         if is_hiqlite() {
             DB::hql()
@@ -1027,7 +1027,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         } else {
             let rows = DB::pg_query_rows(
                 SQL_FIND_FOR_SCIM_SYNC,
-                &[&last_created_ts, &last_user_id, &(limit as i32)],
+                &[&last_created_ts, &last_user_id, &i32::from(limit)],
                 limit as usize,
             )
             .await?;
@@ -1277,10 +1277,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
         self.last_failed_login = None;
         self.failed_login_attempts = None;
 
-        let sql = r#"
+        let sql = r"
 UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL
 WHERE id = $2
-RETURNING email"#;
+RETURNING email";
 
         let stored_email: Option<String> = if is_hiqlite() {
             DB::hql()
@@ -1314,11 +1314,11 @@ RETURNING email"#;
         self.failed_login_attempts = None;
 
         // SQLite numbers `$n` in the order of first appearance, so they appear in order
-        let sql = r#"
+        let sql = r"
 UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL,
 password = CASE WHEN password = $2 THEN $3 ELSE password END
 WHERE id = $4
-RETURNING email"#;
+RETURNING email";
 
         let stored_email: Option<String> = if is_hiqlite() {
             DB::hql()
@@ -1353,11 +1353,11 @@ RETURNING email"#;
     pub async fn save_login_failure(&mut self) -> Result<(), ErrorResponse> {
         self.last_failed_login = Some(Utc::now().timestamp());
 
-        let sql = r#"
+        let sql = r"
 UPDATE users SET last_failed_login = $1,
 failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
 WHERE id = $2
-RETURNING email, failed_login_attempts"#;
+RETURNING email, failed_login_attempts";
 
         let stored: Option<(String, i64)> = if is_hiqlite() {
             DB::hql()
@@ -1393,20 +1393,20 @@ RETURNING email, failed_login_attempts"#;
     /// concurrent update changed it. Like [`Self::save`], it drops the sessions and refresh
     /// tokens of a user the stored row has disabled.
     pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
-        // the reset proves the email it was sent to, `$3`: `email_verified` is set only while
-        // the stored email is still that one
-        let sql = r#"
-UPDATE users SET password = $1, password_expires = $2,
-email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
-WHERE id = $4
-RETURNING email, email_verified, enabled"#;
-
         /// The columns the reset returns from the stored row.
         struct StoredReset {
             email: String,
             email_verified: bool,
             enabled: bool,
         }
+
+        // the reset proves the email it was sent to, `$3`: `email_verified` is set only while
+        // the stored email is still that one
+        let sql = r"
+UPDATE users SET password = $1, password_expires = $2,
+email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
+WHERE id = $4
+RETURNING email, email_verified, enabled";
 
         let stored: Option<StoredReset> = if is_hiqlite() {
             DB::hql()
@@ -1481,12 +1481,12 @@ RETURNING email, email_verified, enabled"#;
 
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE id LIKE $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2";
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
@@ -1495,12 +1495,12 @@ LIMIT $2"#;
                 }
             }
             SearchParamsIdx::Email => {
-                let sql = r#"
+                let sql = r"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
 WHERE email LIKE $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2";
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
@@ -1602,7 +1602,7 @@ LIMIT $2"#;
             match put.key.as_str() {
                 "email" => upd_req.email = put.value.as_str().unwrap_or_default().to_string(),
                 "password" => {
-                    upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string())
+                    upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string());
                 }
                 "given_name" => upd_req.given_name = put.value.as_str().map(String::from),
                 "family_name" => upd_req.family_name = put.value.as_str().map(String::from),
@@ -1610,30 +1610,21 @@ LIMIT $2"#;
                     let lang = rauthy_api_types::generic::Language::from(Language::from(
                         put.value.as_str().unwrap_or_default(),
                     ));
-                    upd_req.language = Some(lang)
+                    upd_req.language = Some(lang);
                 }
                 "roles" => {
-                    upd_req.roles = put
-                        .value
-                        .as_array()
-                        .map(|arr| {
-                            arr.iter()
-                                .map(|v| v.as_str().unwrap_or_default().to_string())
-                                .collect()
-                        })
-                        .unwrap_or_default()
+                    upd_req.roles = put.value.as_array().map_or_default(|arr| {
+                        arr.iter()
+                            .map(|v| v.as_str().unwrap_or_default().to_string())
+                            .collect()
+                    });
                 }
                 "groups" => {
-                    upd_req.groups = Some(
-                        put.value
-                            .as_array()
-                            .map(|arr| {
-                                arr.iter()
-                                    .map(|v| v.as_str().unwrap_or_default().to_string())
-                                    .collect()
-                            })
-                            .unwrap_or_default(),
-                    )
+                    upd_req.groups = Some(put.value.as_array().map_or_default(|arr| {
+                        arr.iter()
+                            .map(|v| v.as_str().unwrap_or_default().to_string())
+                            .collect()
+                    }));
                 }
                 "enabled" => upd_req.enabled = put.value.as_bool().unwrap_or(true),
                 "email_verified" => upd_req.email_verified = put.value.as_bool().unwrap_or(true),
@@ -1702,10 +1693,10 @@ LIMIT $2"#;
             }
         }
 
-        if uv != UserValuesRequest::default() {
-            upd_req.user_values = Some(uv);
-        } else {
+        if uv == UserValuesRequest::default() {
             upd_req.user_values = None;
+        } else {
+            upd_req.user_values = Some(uv);
         }
 
         Ok((upd_req, preferred_username))
@@ -1724,10 +1715,10 @@ LIMIT $2"#;
             Some(user) => user,
         };
         upd_user.email = upd_user.email.to_lowercase();
-        let old_email = if user.email != upd_user.email {
-            Some(user.email.clone())
-        } else {
+        let old_email = if user.email == upd_user.email {
             None
+        } else {
+            Some(user.email.clone())
         };
 
         user.email = upd_user.email;
@@ -1852,7 +1843,9 @@ LIMIT $2"#;
         let email_updated = if let Some(email) = upd_user.email.map(|email| email.to_lowercase()) {
             // if the email should be updated, we do not do it directly -> send out confirmation
             // email to old AND new address
-            if email != user.email {
+            if email == user.email {
+                false
+            } else {
                 // invalidate possibly other existing MagicLinks of the same type
                 MagicLink::invalidate_all_email_change(&user.id).await?;
 
@@ -1872,8 +1865,6 @@ LIMIT $2"#;
                 .await;
 
                 true
-            } else {
-                false
             }
         } else {
             false
@@ -1968,6 +1959,7 @@ LIMIT $2"#;
 
 impl User {
     #[inline]
+    #[must_use]
     pub fn account_type(&self) -> AccountType {
         if self.federation_uid.is_some() {
             if self.password.is_some() {
@@ -2101,7 +2093,7 @@ impl User {
         } else {
             let password_expires = rules.valid_days.map(|d| {
                 OffsetDateTime::now_utc()
-                    .add(::time::Duration::days(d as i64))
+                    .add(::time::Duration::days(i64::from(d)))
                     .unix_timestamp()
             });
             self.password_expires = password_expires;
@@ -2184,7 +2176,7 @@ impl User {
         // build response HTML
         let lang = Language::try_from(&req).unwrap_or_default();
         let html = UserEmailChangeConfirmHtml::build(
-            &lang,
+            lang,
             ThemeCssFull::find_theme_ts_rauthy().await?,
             &[
                 HtmlTemplate::EmailOld(old_email),
@@ -2213,16 +2205,18 @@ impl User {
         self.roles = csv_rename(&self.roles, old, new);
     }
 
+    #[must_use]
     pub fn email_recipient_name(&self) -> String {
         if let Some(n) = &self.family_name {
             format!("{} {n}", self.given_name)
         } else {
-            self.given_name.to_string()
+            self.given_name.clone()
         }
     }
 
     /// The `name` claim for the `id_token` and `/userinfo`. With
     /// `user_values.name_order_reverse`, the family name comes first.
+    #[must_use]
     pub fn full_name(&self) -> String {
         let mut parts = [
             self.given_name.as_str(),
@@ -2267,11 +2261,13 @@ impl User {
     }
 
     #[inline]
+    #[must_use]
     pub fn groups_iter(&self) -> Split<'_, char> {
         self.groups.as_deref().unwrap_or_default().split(',')
     }
 
     #[inline]
+    #[must_use]
     pub fn get_roles(&self) -> Vec<String> {
         let mut res = Vec::new();
         if !self.roles.is_empty() {
@@ -2283,6 +2279,7 @@ impl User {
     }
 
     #[inline]
+    #[must_use]
     pub fn roles_iter(&self) -> Split<'_, char> {
         self.roles.as_str().split(',')
     }
@@ -2312,6 +2309,7 @@ impl User {
     }
 
     #[inline(always)]
+    #[must_use]
     pub fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
     }
@@ -2347,9 +2345,7 @@ impl User {
             user_expires: self.user_expires,
             account_type,
             webauthn_user_id: self.webauthn_user_id,
-            user_values: user_values
-                .map(UserValuesResponse::from)
-                .unwrap_or_default(),
+            user_values: user_values.map_or_default(UserValuesResponse::from),
             auth_provider_id: self.auth_provider_id,
             federation_uid: self.federation_uid,
             picture_id: self.picture_id,
@@ -2378,6 +2374,7 @@ impl User {
     }
 
     #[inline]
+    #[must_use]
     pub fn is_admin(&self) -> bool {
         self.roles_iter().any(|r| r == RAUTHY_ADMIN_ROLE)
     }
@@ -2425,6 +2422,7 @@ impl User {
         Ok(needs_update)
     }
 
+    #[must_use]
     pub fn picture_uri(&self) -> Option<String> {
         self.picture_id.as_ref().map(|pic_id| {
             format!(
@@ -2444,10 +2442,10 @@ impl User {
     }
 
     pub fn push_role(&mut self, role: &str) {
-        if !self.roles.is_empty() {
-            self.roles = format!("{},{role}", self.roles);
-        } else {
+        if self.roles.is_empty() {
             role.clone_into(&mut self.roles);
+        } else {
+            self.roles = format!("{},{role}", self.roles);
         }
     }
 
@@ -2636,7 +2634,7 @@ mod tests {
         // new sessions should always be in state 1 -> initializing
         assert_eq!(session.state, SessionState::Init);
 
-        assert!(!session.csrf_token.is_empty());
+        assert_ne!(session.csrf_token, "");
 
         assert_eq!(session.groups_as_vec(), Ok(vec!["admin", "user"]));
         assert_eq!(
@@ -2812,7 +2810,7 @@ mod tests {
     /// A hiqlite delete whose transaction committed but whose result was lost, or whose re-run
     /// deleted no row, counts as done once the leader no longer has the user, if the user was
     /// there before it. While the user is still there, or was gone before, the original error or
-    /// NotFound stands.
+    /// `NotFound` stands.
     #[test]
     fn test_hql_delete_recovered() {
         let lost = || ErrorResponse::new(ErrorResponseType::Connection, "lost");
@@ -2830,7 +2828,7 @@ mod tests {
         assert!(!hql_delete_recovered(Ok(0), false, true).unwrap());
     }
 
-    /// A delete through a stale copy of a user another delete already removed returns NotFound
+    /// A delete through a stale copy of a user another delete already removed returns `NotFound`
     /// and leaves the user count alone, but still clears the cache entries a concurrent
     /// `User::save` may have put back.
     #[tokio::test]
@@ -2894,6 +2892,7 @@ mod tests {
     /// Inserts for the user `{user_id}` an access token `{user_id}_at`, a refresh token
     /// `{user_id}_rt` and a device refresh token `{user_id}_rtd`, whose access tokens are
     /// `{user_id}_rt_at` and `{user_id}_rtd_at`.
+    #[allow(clippy::similar_names)]
     async fn hql_insert_tokens(user_id: &str) {
         let (at, rt_at, rtd_at) = (
             format!("{user_id}_at"),
@@ -3045,7 +3044,7 @@ mod tests {
     fn test_batch_cursors_reach_every_user() {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            r#"
+            r"
 CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, email_verified INT,
     given_name TEXT, family_name TEXT, roles TEXT, groups TEXT, enabled INT,
     created_at INT NOT NULL, language TEXT, picture_id TEXT);
@@ -3054,7 +3053,7 @@ CREATE TABLE users_values (id TEXT PRIMARY KEY, birthdate TEXT, phone TEXT, stre
 INSERT INTO users (id, email, created_at) VALUES
     ('a', 'anna@x', 100), ('b', 'zoe@x', 200), ('c', 'bob@x', 300),
     ('d', 'carl@x', 400), ('e', 'zack@x', 500);
-"#,
+",
         )
         .unwrap();
 

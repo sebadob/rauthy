@@ -45,6 +45,7 @@ pub struct ScimAddress {
 }
 
 impl ScimAddress {
+    #[must_use]
     pub fn try_build(values: &UserValues) -> Option<ScimAddress> {
         let mut slf = ScimAddress {
             street_address: None,
@@ -59,7 +60,7 @@ impl ScimAddress {
         }
 
         if let Some(zip) = &values.zip {
-            slf.postal_code = Some(zip.to_string());
+            slf.postal_code = Some(zip.clone());
 
             if let Some(city) = &values.city {
                 slf.locality = Some(city.clone());
@@ -89,6 +90,7 @@ pub struct ScimGroupValue {
     /// `_ref` MUST be the URI of the corresponding "Group"
     /// resources to which the user belongs, basically the PUT URI.
     #[serde(rename = "$ref", skip_serializing_if = "Option::is_none")]
+    #[allow(clippy::pub_underscore_fields)]
     pub _ref: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<String>,
@@ -162,7 +164,7 @@ impl Default for ScimUser {
             id: None,
             external_id: None,
             user_name: String::default(),
-            name: Default::default(),
+            name: Option::default(),
             display_name: None,
             preferred_language: None,
             locale: None,

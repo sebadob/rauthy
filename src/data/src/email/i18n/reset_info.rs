@@ -11,7 +11,8 @@ pub struct I18nEmailResetInfo<'a> {
 }
 
 impl I18nEmailResetInfo<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),

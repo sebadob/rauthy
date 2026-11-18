@@ -20,11 +20,11 @@ pub struct ThemeCss {
     /// Validation: 3 HSL values: deg, sat, lum
     pub error: [u16; 3],
 
-    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
+    /// Validation: `PATTERN_CSS_VALUE_LOOSE` - valid CSS value
     pub btn_text: String,
-    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
+    /// Validation: `PATTERN_CSS_VALUE_LOOSE` - valid CSS value
     pub theme_sun: String,
-    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
+    /// Validation: `PATTERN_CSS_VALUE_LOOSE` - valid CSS value
     pub theme_moon: String,
 }
 
@@ -71,7 +71,7 @@ pub struct ThemeRequestResponse {
     pub client_id: String,
     pub light: ThemeCss,
     pub dark: ThemeCss,
-    /// Validation: PATTERN_CSS_VALUE_LOOSE - valid CSS value
+    /// Validation: `PATTERN_CSS_VALUE_LOOSE` - valid CSS value
     pub border_radius: String,
 }
 

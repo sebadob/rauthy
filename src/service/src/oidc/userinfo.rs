@@ -76,7 +76,9 @@ pub async fn get_userinfo(
 
         // make sure the original client still exists and is enabled
         // skip this check if the client is ephemeral
-        if !(claims.azp.starts_with("http://") || claims.azp.starts_with("https://")) {
+        if claims.azp.starts_with("http://") || claims.azp.starts_with("https://") {
+            None
+        } else {
             let client = Client::find(claims.azp.to_string()).await.map_err(|_| {
                 ErrorResponse::new(
                     ErrorResponseType::WWWAuthenticate("client-not-found".to_string()),
@@ -90,8 +92,6 @@ pub async fn get_userinfo(
                 ));
             }
             client.get_validated_origin_header(&req)?
-        } else {
-            None
         }
     } else {
         None
@@ -150,7 +150,7 @@ pub async fn get_userinfo(
         && let Some(values) = UserValues::find(&user.id).await?
     {
         if has_addr {
-            userinfo.address = AddressClaim::try_build(&user, &values).map(|claim| claim.into());
+            userinfo.address = AddressClaim::try_build(&user, &values).map(Into::into);
         }
 
         if has_profile {

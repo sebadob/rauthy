@@ -71,7 +71,7 @@ impl JWKSPublicKey {
                     return Ok(());
                 }
             }
-        };
+        }
 
         warn!("JWT Token validation error");
         Err(ErrorResponse::new(

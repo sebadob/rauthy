@@ -2,11 +2,80 @@ use crate::{
     api_keys, atproto, auth_providers, backup, blacklist, clients, email, events, fed_cm, generic,
     groups, kv, oidc, pam, roles, scopes, sessions, themes, tos, users,
 };
-use rauthy_api_types::*;
+use rauthy_api_types::{PatchOp, PatchValue};
 use rauthy_api_types::{
-    api_keys::*, auth_providers::*, backup::*, blacklist::*, clients::*, email_jobs::*, events::*,
-    fed_cm::*, forward_auth::*, generic::*, groups::*, kv::*, oidc::*, pam::*, roles::*, scopes::*,
-    sessions::*, themes::*, tos::*, users::*,
+    api_keys::{
+        AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest, ApiKeyResponse, ApiKeysResponse,
+    },
+    auth_providers::{
+        AuthProviderType, ProviderCallbackRequest, ProviderLinkedUserResponse,
+        ProviderLoginRequest, ProviderLookupRequest, ProviderLookupResponse, ProviderRequest,
+        ProviderResponse,
+    },
+    backup::{BackupListing, BackupListings},
+    blacklist::{BlacklistResponse, BlacklistedIp, IpBlacklistRequest},
+    clients::{
+        ClientResponse, ClientSecretRequest, ClientSecretResponse,
+        ClientValidateRedirectUriRequest, DynamicClientRequest, DynamicClientResponse,
+        NewClientRequest, UpdateClientRequest,
+    },
+    email_jobs::{
+        EmailContentType, EmailJobFilterType, EmailJobRequest, EmailJobResponse, EmailJobStatus,
+    },
+    events::{EventLevel, EventResponse, EventType, EventsListenParams, EventsRequest},
+    fed_cm::{FedCMAssertionRequest, FedCMClientMetadataRequest},
+    forward_auth::{ForwardAuthCallbackParams, ForwardAuthParams},
+    generic::{
+        AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
+        HealthResponse, I18nConfigResponse, Language, LoginTimeResponse, LogoParams,
+        PaginationParams, PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse,
+    },
+    groups::{GroupRequest, GroupResponse},
+    kv::{
+        KVAccessRequest, KVAccessResponse, KVAccessTestResponse, KVNamespaceRequest,
+        KVNamespaceResponse, KVParams, KVValueRequest, KVValueResponse,
+    },
+    oidc::{
+        AddressClaim, AuthRequest, BackchannelLogoutRequest, CertsParams, DeviceAcceptedRequest,
+        DeviceCodeResponse, DeviceGrantRequest, GrantType, JWKSCerts, JWKSPublicKeyCerts, JktClaim,
+        JwkKeyPairAlg, JwkKeyPairType, LoginRefreshRequest, LoginRequest, LogoutRequest,
+        OAuth2ErrorResponse, OAuth2ErrorTypeResponse, PasswordResetResponse, SessionInfoResponse,
+        TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
+    },
+    pam::{
+        PamGetentRequest, PamGetentResponse, PamGroupCreateRequest, PamGroupHostsCountResponse,
+        PamGroupMembersResponse, PamGroupResponse, PamGroupType, PamGroupUserLink,
+        PamHostAccessResponse, PamHostCreateRequest, PamHostDetailsResponse, PamHostSecretResponse,
+        PamHostSimpleResponse, PamHostUpdateRequest, PamHostWhoamiRequest, PamLoginRequest,
+        PamMfaFinishRequest, PamMfaStartRequest, PamPasswordResponse, PamPreflightRequest,
+        PamPreflightResponse, PamSshAuthKeyRequest, PamUnlinkedEmailsResponse,
+        PamUserCreateRequest, PamUserDetailsResponse, PamUserResponse, PamUserUpdateRequest,
+    },
+    roles::{RoleRequest, RoleResponse},
+    scopes::{ScopeRequest, ScopeResponse},
+    sessions::{SessionResponse, SessionState},
+    themes::{ThemeCss, ThemeRequestResponse},
+    tos::{
+        ToSAcceptRequest, ToSAwaitLoginResponse, ToSLatestResponse, ToSRequest, ToSResponse,
+        ToSUserAcceptResponse,
+    },
+    users::{
+        DeviceRequest, MfaAwaitRequest, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
+        NewUserRegistrationRequest, NewUserRequest, OtpActivateRequest, OtpAuthFinishRequest,
+        OtpAuthResendRequest, OtpAuthStartRequest, OtpAuthStartResponse, OtpCreateRequest,
+        OtpDeleteRequest, OtpGetResponse, OtpLoginFinishResponse, OtpLoginResponse,
+        PasskeyResponse, PasswordResetRequest, PreferredUsernameRequest, RequestResetRequest,
+        ResidentKeyToken, UpdateUserRequest, UpdateUserSelfRequest, UserAccountTypeResponse,
+        UserAttrConfigRequest, UserAttrConfigResponse, UserAttrConfigValueResponse,
+        UserAttrValueRequest, UserAttrValueResponse, UserAttrValuesResponse,
+        UserAttrValuesUpdateRequest, UserConsentDeleteParams, UserConsentDeleteResponse,
+        UserConsentResponse, UserConsentsParams, UserEditableAttrResponse,
+        UserEditableAttrsResponse, UserPictureConfig, UserResponse, UserValuesRequest,
+        UserValuesResponse, Userinfo, WebId, WebIdRequest, WebIdResponse,
+        WebauthnAuthFinishRequest, WebauthnAuthStartRequest, WebauthnAuthStartResponse,
+        WebauthnDeleteRequest, WebauthnLoginFinishResponse, WebauthnLoginResponse,
+        WebauthnRegFinishRequest, WebauthnRegStartRequest,
+    },
 };
 use rauthy_common::constants::{PROXY_MODE, RAUTHY_VERSION};
 use rauthy_data::ListenScheme;

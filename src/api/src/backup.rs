@@ -18,7 +18,7 @@ use tracing::error;
 /// This will only work if the configured database is a Hiqlite.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/backup",
@@ -65,7 +65,7 @@ pub async fn get_backups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorR
 /// This will only work if the configured database is a Hiqlite.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/backup",
@@ -104,7 +104,7 @@ fn validate_hiqlite() -> Result<(), ErrorResponse> {
 /// This will only work if the configured database is a Hiqlite.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/backup/local/{filename}",
@@ -159,7 +159,7 @@ pub async fn get_backup_local(
 /// This will only work if the configured database is a Hiqlite and you have S3 backups configured.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/backup/s3/{object}",

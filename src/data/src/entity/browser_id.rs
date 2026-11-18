@@ -52,14 +52,17 @@ impl BrowserId {
             .finish()
     }
 
+    #[must_use]
     pub fn as_str(&self) -> Option<&str> {
         self.0.as_deref()
     }
 
+    #[must_use]
     pub fn inner(self) -> Option<String> {
         self.0
     }
 
+    #[must_use]
     pub fn needs_set_new(&self) -> BrowserIdSetNew {
         if self.0.is_some() {
             BrowserIdSetNew::No

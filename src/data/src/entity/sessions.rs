@@ -106,6 +106,7 @@ impl From<SessionState> for rauthy_api_types::sessions::SessionState {
 }
 
 impl SessionState {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             SessionState::Init => "init",
@@ -207,13 +208,13 @@ impl Session {
 
         if let Some(token) = continuation_token {
             if backwards {
-                let sql = r#"
+                let sql = r"
 SELECT *
 FROM sessions
 WHERE exp >= $1 AND id != $2 AND state = $3
 ORDER BY exp ASC
 LIMIT $4
-OFFSET $5"#;
+OFFSET $5";
 
                 let mut rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
@@ -234,13 +235,13 @@ OFFSET $5"#;
                 }
                 res = Some(rows);
             } else {
-                let sql = r#"
+                let sql = r"
 SELECT *
 FROM sessions
 WHERE exp <= $1 AND id != $2 AND state = $3
 ORDER BY exp DESC
 LIMIT $4
-OFFSET $5"#;
+OFFSET $5";
 
                 let rows: Vec<Self> = if is_hiqlite() {
                     DB::hql()
@@ -259,17 +260,17 @@ OFFSET $5"#;
                     latest_ts = s.exp;
                 }
                 res = Some(rows);
-            };
+            }
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
-            let sql = r#"
+            let sql = r"
 SELECT *
 FROM sessions
 WHERE state = $1
 ORDER BY exp ASC
 LIMIT $2
-OFFSET $3"#;
+OFFSET $3";
 
             let mut rows: Vec<Self> = if is_hiqlite() {
                 DB::hql()
@@ -285,13 +286,13 @@ OFFSET $3"#;
             }
             res = Some(rows);
         } else {
-            let sql = r#"
+            let sql = r"
 SELECT *
 FROM sessions
 WHERE state = $1
 ORDER BY exp DESC
 LIMIT $2
-OFFSET $3"#;
+OFFSET $3";
 
             let rows: Vec<Self> = if is_hiqlite() {
                 DB::hql()
@@ -305,7 +306,7 @@ OFFSET $3"#;
                 latest_ts = s.exp;
             }
             res = Some(rows);
-        };
+        }
 
         let res = res
             .expect("sessions paginated should always be at least an empty Vec<_> at this point");
@@ -372,14 +373,14 @@ OFFSET $3"#;
             ));
         }
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO
 sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen, remote_ip)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
     remote_ip = $10
-WHERE sessions.exp > $11"#;
+WHERE sessions.exp > $11";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -475,7 +476,7 @@ WHERE sessions.exp > $11"#;
             SearchParamsIdx::Ip => {
                 "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2"
             }
-            _ => {
+            SearchParamsIdx::Email => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
                     "supported search idx for users: id / session_id, user_id, ip",
@@ -514,14 +515,14 @@ WHERE sessions.exp > $11"#;
         self.validate_user_expiry(user)?;
         self.user_id = Some(user.id.clone());
         self.roles = Some(user.roles.clone());
-        self.groups = user.groups.clone();
+        self.groups.clone_from(&user.groups);
 
         // This function MUST NOT use `self.upsert()`, because it might insert
         // a new session during a race-condition.
-        let sql = r#"
+        let sql = r"
 UPDATE sessions
 SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5
-WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
+WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)";
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -574,7 +575,8 @@ WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
 }
 
 impl Session {
-    /// exp_in will be the time in seconds when the session will expire
+    /// `exp_in` will be the time in seconds when the session will expire
+    #[must_use]
     pub fn new(exp_in: Duration, remote_ip: Option<IpAddr>) -> Self {
         let id = get_rand(32);
         let csrf_token = get_rand(32);
@@ -594,7 +596,7 @@ impl Session {
         }
     }
 
-    /// exp_in will be the time in seconds when the session will expire
+    /// `exp_in` will be the time in seconds when the session will expire
     pub fn try_new(
         user: &User,
         exp_in: u32,
@@ -615,14 +617,13 @@ impl Session {
                     ErrorResponseType::Forbidden,
                     "User has expired",
                 ));
-            } else {
-                let target = now
-                    .add(chrono::Duration::seconds(exp_in as i64))
-                    .timestamp();
-                if ts < target { ts } else { target }
             }
+            let target = now
+                .add(chrono::Duration::seconds(i64::from(exp_in)))
+                .timestamp();
+            if ts < target { ts } else { target }
         } else {
-            now.add(chrono::Duration::seconds(exp_in as i64))
+            now.add(chrono::Duration::seconds(i64::from(exp_in)))
                 .timestamp()
         };
 
@@ -640,16 +641,18 @@ impl Session {
         })
     }
 
+    #[must_use]
     pub fn client_cookie(&self) -> cookie::Cookie<'_> {
         let max_age = self.exp - Utc::now().timestamp();
         ApiCookie::build(COOKIE_SESSION, Cow::from(&self.id), max_age)
     }
 
+    #[must_use]
     pub fn client_cookie_fed_cm(&self) -> cookie::Cookie<'_> {
         ApiCookie::build_with_same_site(
             COOKIE_SESSION_FED_CM,
             Cow::from(&self.id),
-            RauthyConfig::get().vars.fedcm.session_lifetime as i64,
+            i64::from(RauthyConfig::get().vars.fedcm.session_lifetime),
             SameSite::None,
         )
     }
@@ -666,7 +669,7 @@ impl Session {
         Ok(session_req.into_inner().unwrap())
     }
 
-    /// Extracts the session from an `Option<Session>` coming from an HttpRequest, validates the
+    /// Extracts the session from an `Option<Session>` coming from an `HttpRequest`, validates the
     /// CSRF token from the Header and then returns the Session.
     pub fn extract_validate_csrf(
         session_req: web::ReqData<Option<Session>>,
@@ -677,6 +680,7 @@ impl Session {
         Ok(s)
     }
 
+    #[must_use]
     pub fn get_csrf_header(token: &str) -> (HeaderName, HeaderValue) {
         (
             HeaderName::from_str(CSRF_HEADER).unwrap(),
@@ -800,13 +804,13 @@ impl Session {
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
         if self.groups.is_none() {
             return Ok(Vec::default());
-        };
+        }
         let mut res = Vec::new();
         self.groups
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|g| g.trim())
+            .map(str::trim)
             .for_each(|g| res.push(g));
         Ok(res)
     }
@@ -823,7 +827,7 @@ impl Session {
             .as_ref()
             .unwrap()
             .split(',')
-            .map(|r| r.to_string())
+            .map(ToString::to_string)
             .collect())
     }
 
@@ -886,7 +890,6 @@ mod tests {
     use crate::entity::sessions::{Session, SessionState};
     use actix_web::test::TestRequest;
     use rauthy_common::constants::CSRF_HEADER;
-    use rauthy_error::ErrorResponse;
     use std::net::IpAddr;
     use std::str::FromStr;
     use std::time::Duration;
@@ -910,7 +913,7 @@ mod tests {
     }
 
     #[test]
-    fn test_session_validation() -> Result<(), ErrorResponse> {
+    fn test_session_validation() {
         let mut s = Session::new(Duration::from_secs(3600), None);
 
         let path_exep_1 = "/auth/v1/oidc/authorize";
@@ -928,8 +931,6 @@ mod tests {
 
         s.state = SessionState::Auth;
         assert!(s.is_valid(600, Some(ip), "/"));
-
-        Ok(())
     }
 
     #[test]

@@ -77,9 +77,9 @@ impl LatestAppVersion {
         };
         let data = serialize(&slf)?;
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO config (id, data) VALUES ('latest_version', $1)
-ON CONFLICT(id) DO UPDATE SET data = $1"#;
+ON CONFLICT(id) DO UPDATE SET data = $1";
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(data)).await?;
@@ -142,12 +142,10 @@ ON CONFLICT(id) DO UPDATE SET data = $1"#;
                     ))
                 }?;
 
-                let html_url = json
-                    .get("html_url")
-                    .map(|v| v.as_str().unwrap_or_default().to_string())
-                    .unwrap_or_else(|| {
-                        format!("https://github.com/sebadob/rauthy/releases/tag/v{tag_name}")
-                    });
+                let html_url = json.get("html_url").map_or_else(
+                    || format!("https://github.com/sebadob/rauthy/releases/tag/v{tag_name}"),
+                    |v| v.as_str().unwrap_or_default().to_string(),
+                );
 
                 Ok((tag_name, html_url))
             }

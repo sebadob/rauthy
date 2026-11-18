@@ -43,9 +43,9 @@ pub struct ApiKeyRequest {
     #[validate(regex(path = "*RE_API_KEY", code = "^[a-zA-Z0-9_-/]{2,24}$"))]
     pub name: String,
     // TODO max validation for inner i64 is broken in the current validator crate
-    // #[validate(range(min = 1719784800, max = 4070905200))]
+    // #[validate(range(min = 1_719_784_800, max = 4_070_905_200))]
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub exp: Option<i64>,
     pub access: Vec<ApiKeyAccess>,
 }

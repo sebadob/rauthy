@@ -8,7 +8,20 @@ use chrono::Utc;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::{PaginationParams, PasswordPolicyResponse};
 use rauthy_api_types::oidc::PasswordResetResponse;
-use rauthy_api_types::users::*;
+use rauthy_api_types::users::{
+    DeviceRequest, DeviceResponse, MfaModTokenRequest, MfaModTokenResponse, MfaPurpose,
+    NewUserRegistrationRequest, NewUserRequest, OtpActivateRequest, OtpAuthFinishRequest,
+    OtpAuthResendRequest, OtpAuthStartRequest, OtpAuthStartResponse, OtpCreateRequest,
+    OtpDeleteRequest, OtpGetResponse, OtpKind, PasskeyResponse, PasswordResetRequest,
+    PreferredUsernameRequest, RequestResetRequest, UpdateUserRequest, UpdateUserSelfRequest,
+    UserAttrConfigRequest, UserAttrConfigResponse, UserAttrConfigValueResponse,
+    UserAttrValueResponse, UserAttrValuesResponse, UserAttrValuesUpdateRequest,
+    UserConsentDeleteParams, UserConsentDeleteResponse, UserConsentResponse, UserConsentsParams,
+    UserEditableAttrResponse, UserEditableAttrsResponse, UserPictureConfig, UserResponse,
+    UserResponseSimple, UserRevokeParams, WebIdRequest, WebIdResponse, WebauthnAuthFinishRequest,
+    WebauthnAuthStartRequest, WebauthnAuthStartResponse, WebauthnDeleteRequest,
+    WebauthnRegFinishRequest, WebauthnRegStartRequest,
+};
 use rauthy_common::constants::{
     COOKIE_MFA, HEADER_ALLOW_ALL_ORIGINS, HEADER_HTML, HEADER_JSON, PWD_CSRF_HEADER,
     PWD_RESET_COOKIE, TEXT_TURTLE,
@@ -81,7 +94,7 @@ use validator::Validate;
 /// If the backend is in server side pagination mode, it will return an HTTP 206.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/users",
@@ -107,9 +120,9 @@ pub async fn get_users(
 
     let user_count = User::count().await?;
     let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
-    if user_count >= ssp_threshold as i64 {
-        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
-        let offset = params.offset.unwrap_or(0) as i64;
+    if user_count >= i64::from(ssp_threshold) {
+        let page_size = i64::from(max(params.page_size.unwrap_or(20), ssp_threshold));
+        let offset = i64::from(params.offset.unwrap_or(0));
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
             Some(ContinuationToken::from_str(token.as_str())?)
@@ -146,7 +159,7 @@ pub async fn get_users(
 /// Adds a new user to the database
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/users",
@@ -224,7 +237,7 @@ pub async fn get_cust_attr(principal: ReqPrincipal) -> Result<HttpResponse, Erro
 
     UserAttrConfigEntity::find_all().await.map(|values| {
         HttpResponse::Ok().json(UserAttrConfigResponse {
-            values: values.into_iter().map(|v| v.into()).collect(),
+            values: values.into_iter().map(Into::into).collect(),
         })
     })
 }
@@ -361,7 +374,7 @@ pub async fn get_user_picture_config(
 
     Ok(HttpResponse::Ok().json(UserPictureConfig {
         upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
-        content_len_limit: RauthyConfig::get().vars.user_pictures.upload_limit_mb as u32
+        content_len_limit: u32::from(RauthyConfig::get().vars.user_pictures.upload_limit_mb)
             * 1024
             * 1024,
     }))
@@ -933,10 +946,10 @@ pub async fn get_user_picture(
 ) -> Result<HttpResponse, ErrorResponse> {
     let (user_id, picture_id) = path.into_inner();
 
-    let cors_header = if !RauthyConfig::get().vars.user_pictures.public {
-        validate_user_picture_access(&req, principal, &user_id).await?
-    } else {
+    let cors_header = if RauthyConfig::get().vars.user_pictures.public {
         None
+    } else {
+        validate_user_picture_access(&req, principal, &user_id).await?
     };
 
     {
@@ -1150,7 +1163,7 @@ pub async fn delete_user_device(
 /// `resource` filters by resource, an empty value returns consents without a resource.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 /// - a group admin, for a user it manages
 /// - the user itself
 /// - an API key with `users: read`
@@ -1205,7 +1218,7 @@ pub async fn get_user_consents(
 /// The request is idempotent: `consent_deleted` is `false` when there was no consent to delete.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 /// - a group admin, for a user it manages
 /// - the user itself
 /// - an API key with `users: delete`
@@ -1352,7 +1365,7 @@ pub async fn get_user_email_confirm(
         Err(err) => {
             let status = err.status_code();
             let body = Error3Html::build(
-                &lang,
+                lang,
                 ThemeCssFull::find_theme_ts_rauthy()
                     .await
                     .unwrap_or_else(|_| Utc::now().timestamp()),
@@ -1388,8 +1401,7 @@ pub async fn get_user_password_reset(
     let accept = req
         .headers()
         .get(ACCEPT)
-        .map(|v| v.to_str().unwrap_or("text/html"))
-        .unwrap_or("text/html");
+        .map_or("text/html", |v| v.to_str().unwrap_or("text/html"));
     let no_html = accept == "application/json";
 
     match password_reset::handle_get_pwd_reset(req, user_id, reset_id, no_html).await {
@@ -1400,7 +1412,7 @@ pub async fn get_user_password_reset(
                     Err(err) => {
                         let status = err.status_code();
                         let body = Error3Html::build(
-                            &lang,
+                            lang,
                             ThemeCssFull::find_theme_ts_rauthy()
                                 .await
                                 .unwrap_or_else(|_| Utc::now().timestamp()),
@@ -1429,7 +1441,7 @@ pub async fn get_user_password_reset(
             debug!("Error during get_user_password_reset: {:?}", err);
             let status = err.status_code();
             let body = Error3Html::build(
-                &lang,
+                lang,
                 ThemeCssFull::find_theme_ts_rauthy()
                     .await
                     .unwrap_or_else(|_| Utc::now().timestamp()),
@@ -1513,10 +1525,10 @@ pub async fn get_user_revoke(
         .unwrap_or_default();
 
     let html = match user_revoke_handle(user_id, code, params.ip).await {
-        Ok(_) => UserRevokeHtml::build(&lang, theme_ts),
+        Ok(()) => UserRevokeHtml::build(lang, theme_ts),
         Err(err) => {
             debug!("Error during user revoke: {err}");
-            Error3Html::build(&lang, theme_ts, err.status_code(), "Code not found")
+            Error3Html::build(lang, theme_ts, err.status_code(), "Code not found")
         }
     };
 
@@ -1546,7 +1558,7 @@ async fn user_revoke_handle(
     UserRevoke::delete(user.id).await?;
 
     let location = ipgeo::get_location_from_db(bad_ip)?;
-    Event::user_login_revoke(&user.email, bad_ip, location)
+    Event::user_login_revoke(&user.email, bad_ip, location.as_deref())
         .send()
         .await?;
 
@@ -1706,7 +1718,7 @@ pub async fn put_user_otp(
     token.validate(principal.user_id()?, ip)?;
 
     let mut otp = OneTimePassword::find_by_id_for_user(&payload.otp_id, &user_id).await?;
-    otp.validate(&payload.otp_code).await?;
+    otp.validate(&payload.otp_code)?;
     otp.activate().await?;
     Ok(HttpResponse::Ok().finish())
 }
@@ -2002,9 +2014,9 @@ pub async fn post_webauthn_auth_start(
                             ErrorResponseType::BadRequest,
                             "Malformed magic link binding cookie".to_string(),
                         ));
-                    };
+                    }
                 }
-            };
+            }
 
             id.into_inner()
         }
@@ -2179,7 +2191,7 @@ pub async fn post_webauthn_auth_finish_login(
 /// Deletes the WebAuthn Device for this user in the given slot
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 /// - API key with Users + Delete
 /// - group admin for a user it manages
 /// - authenticated and logged in user for this very {id}
@@ -2310,7 +2322,7 @@ pub async fn post_webauthn_reg_start(
 ///
 /// **Permissions**
 /// - authenticated and logged-in user for this very {id}
-/// - valid MagicLink code during password reset
+/// - valid `MagicLink` code during password reset
 #[utoipa::path(
     post,
     path = "/users/{id}/webauthn/register/finish",
@@ -2535,7 +2547,7 @@ pub async fn post_user_password_request_reset(
         Ok(user) => user
             .request_password_reset(payload.redirect_uri)
             .await
-            .map(|_| HttpResponse::Ok().status(StatusCode::OK).finish()),
+            .map(|()| HttpResponse::Ok().status(StatusCode::OK).finish()),
         Err(_) => {
             // always return OK, no matter what, for username enumeration prevention
             Ok(HttpResponse::Ok().status(StatusCode::OK).finish())
@@ -2546,7 +2558,7 @@ pub async fn post_user_password_request_reset(
 /// Returns a single user by its *email*
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/users/email/{email}",
@@ -2578,7 +2590,7 @@ pub async fn get_user_by_email(
 /// Modifies a user
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/users/{id}",
@@ -2633,7 +2645,7 @@ pub async fn put_user_by_id(
 /// Modifies a user via a patch operation
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     patch,
     path = "/users/{id}",
@@ -2955,7 +2967,7 @@ pub async fn post_user_self_convert_passkey(
     Ok(HttpResponse::Ok().finish())
 }
 
-/// Retrieve the UserValues config.
+/// Retrieve the `UserValues` config.
 ///
 /// This is the same config as the one being inserted into the HTML `<template>` during registration
 /// or user values editing.
@@ -3089,7 +3101,7 @@ pub async fn put_user_self_preferred_username(
 /// Deletes a user
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/users/{id}",
@@ -3131,7 +3143,7 @@ mod tests {
                 remote_ip: None,
             }),
             api_key: None,
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
         }
     }
 

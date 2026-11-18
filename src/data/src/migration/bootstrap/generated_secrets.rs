@@ -30,6 +30,7 @@ impl GeneratedSecretKey {
         }
     }
 
+    #[must_use]
     pub fn env_name(&self) -> String {
         sanitize_env_name(format!(
             "RAUTHY_BOOTSTRAP_{}_{}_{}",
@@ -56,6 +57,7 @@ impl GeneratedSecretEntry {
         }
     }
 
+    #[must_use]
     pub fn key(&self) -> GeneratedSecretKey {
         GeneratedSecretKey {
             kind: self.kind.clone(),
@@ -64,6 +66,7 @@ impl GeneratedSecretEntry {
         }
     }
 
+    #[must_use]
     pub fn env_name(&self) -> String {
         self.key().env_name()
     }
@@ -112,6 +115,7 @@ struct ContainerPayload {
     entries: Vec<GeneratedSecretEntry>,
 }
 
+#[must_use]
 pub fn default_file_path(data_dir: &str) -> String {
     Path::new(data_dir)
         .join(DEFAULT_FILE_NAME)
@@ -130,11 +134,12 @@ fn is_expired(deadline: i64, now: i64) -> bool {
     deadline > 0 && now >= deadline
 }
 
+#[must_use]
 pub fn deadline_from_ttl(ttl: Duration, now: i64) -> i64 {
     if ttl.is_zero() {
         0
     } else {
-        now.saturating_add(ttl.as_secs() as i64)
+        now.saturating_add(ttl.as_secs().cast_signed())
     }
 }
 

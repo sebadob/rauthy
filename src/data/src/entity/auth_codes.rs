@@ -202,6 +202,7 @@ impl AuthCode {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         user_id: String,
         client_id: String,
@@ -216,7 +217,7 @@ impl AuthCode {
         state: Option<Vec<u8>>,
         lifetime: Duration,
     ) -> Self {
-        debug_assert!(!redirect_uri.is_empty());
+        debug_assert_ne!(redirect_uri, "");
         debug_assert!(lifetime.as_secs() > 0);
 
         let id = get_rand(64);
@@ -226,7 +227,6 @@ impl AuthCode {
             id,
             exp,
             client_id,
-            client_created_micros,
             redirect_uri,
             user_id,
             session_id,
@@ -236,11 +236,13 @@ impl AuthCode {
             scopes,
             resource,
             state,
+            client_created_micros,
         }
     }
 
     /// `false` if `client` was deleted and recreated since the code was issued.
     #[inline]
+    #[must_use]
     pub fn is_for_client(&self, client: &Client) -> bool {
         self.client_id == client.id && self.client_created_micros == client.created_micros
     }
@@ -265,7 +267,7 @@ impl AuthCode {
         rfc_8252_enable: bool,
     ) -> Result<(), ErrorResponse> {
         // The `client.validate_redirect_uri()` already prevents an empty URI, this makes it obvious.
-        debug_assert!(!self.redirect_uri.is_empty());
+        debug_assert_ne!(self.redirect_uri, "");
 
         // Technically, this additional validation is not necessary, but it does not hurt either,
         // and it just an additional defense. It's a very inexpensive operation.
@@ -323,6 +325,7 @@ impl AuthCodeToSAwait {
     }
 
     #[inline]
+    #[must_use]
     pub fn generate_code() -> String {
         get_rand(64)
     }

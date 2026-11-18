@@ -10,7 +10,7 @@ use validator::Validate;
 /// Returns all existing scopes
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/scopes",
@@ -37,7 +37,7 @@ pub async fn get_scopes(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRe
 /// Adds a new scope to the database
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/scopes",
@@ -65,7 +65,7 @@ pub async fn post_scope(
 /// Modifies a scopes name
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/scopes/{id}",
@@ -96,7 +96,7 @@ pub async fn put_scope(
 /// It will be deleted from all currently assigned users too and this operation cannot be reverted.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/scopes/{id}",
@@ -116,5 +116,5 @@ pub async fn delete_scope(
 
     Scope::delete(path.as_str())
         .await
-        .map(|_| HttpResponse::Ok().finish())
+        .map(|()| HttpResponse::Ok().finish())
 }

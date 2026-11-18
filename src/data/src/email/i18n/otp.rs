@@ -20,7 +20,8 @@ impl From<&'static VarsTemplate> for I18nEmailOtp<'_> {
 }
 
 impl I18nEmailOtp<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         let tpls = &RauthyConfig::get().vars.templates.email_otp;
         match lang {
             Language::Cs => (&tpls.cs).into(),

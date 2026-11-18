@@ -6,8 +6,8 @@ use validator::Validate;
 /// Params to configure the `/clients/{id}/forward_auth` endpoint.
 ///
 /// Default values:
-/// - danger_cookie_insecure: false
-/// - redirect_state: 401
+/// - `danger_cookie_insecure`: false
+/// - `redirect_state`: 401
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct ForwardAuthParams {
     #[serde(default)]

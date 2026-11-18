@@ -54,20 +54,20 @@ impl NotifierMatrix {
         let http_client = Notification::build_client(disable_tls_validation, root_ca_path).await;
 
         let client = ruma_client::Client::builder()
-            .homeserver_url(server_url.to_string())
+            .homeserver_url(server_url.clone())
             .access_token(access_token.clone())
             .http_client(http_client)
             .await
             .map_err(|err| {
                 ErrorResponse::new(
                     ErrorResponseType::Connection,
-                    format!("Matrix connect: {:?}", err),
+                    format!("Matrix connect: {err:?}"),
                 )
             })?;
 
         if disable_tls_validation {
             warn!("Matrix Event Notifier client has TLS validation disabled");
-        };
+        }
 
         let slf = Self {
             user_id,
@@ -83,7 +83,7 @@ impl NotifierMatrix {
         // try login and check access and config
         for attempt in 1..=3 {
             match slf.login().await {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(err) if attempt == 3 => return Err(err),
                 Err(err) => {
                     warn!("{err:?} - retry in 5 seconds");
@@ -114,7 +114,7 @@ impl NotifierMatrix {
                 .map_err(|err| {
                     ErrorResponse::new(
                         ErrorResponseType::Connection,
-                        format!("Matrix refresh token: {:?}", err),
+                        format!("Matrix refresh token: {err:?}"),
                     )
                 })?;
 
@@ -151,7 +151,7 @@ impl NotifierMatrix {
             .map_err(|err| {
                 ErrorResponse::new(
                     ErrorResponseType::Connection,
-                    format!("Matrix login: {:?}", err),
+                    format!("Matrix login: {err:?}"),
                 )
             })?;
 
@@ -191,7 +191,7 @@ impl NotifierMatrix {
                 ErrorResponseType::Connection,
                 "Matrix Notifications Client is not logged in",
             ));
-        };
+        }
 
         debug!("logged in to Matrix");
         Ok(())
@@ -207,7 +207,7 @@ impl NotifierMatrix {
             .map_err(|err| {
                 ErrorResponse::new(
                     ErrorResponseType::Connection,
-                    format!("Matrix join room: {:?}", err),
+                    format!("Matrix join room: {err:?}"),
                 )
             })?;
 
@@ -233,7 +233,7 @@ impl NotifierMatrix {
                 .map_err(|err| {
                     ErrorResponse::new(
                         ErrorResponseType::Connection,
-                        format!("Matrix join room: {:?}", err),
+                        format!("Matrix join room: {err:?}"),
                     )
                 })?;
             assert_eq!(resp.room_id, self.room_id);
@@ -281,7 +281,7 @@ impl Notify for NotifierMatrix {
                 let retries = 3;
                 for i in 1..=3 {
                     match self.login().await {
-                        Ok(_) => {
+                        Ok(()) => {
                             info!("Logged in to Matrix again");
                             break;
                         }
@@ -297,7 +297,6 @@ impl Notify for NotifierMatrix {
                                 "Error logging in to Matrix on {i}. attempt: {err:?}\nRetrying in 3 seconds"
                             );
                             time::sleep(Duration::from_secs(3)).await;
-                            continue;
                         }
                     }
                 }

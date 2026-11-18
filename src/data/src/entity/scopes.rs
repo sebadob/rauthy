@@ -75,9 +75,9 @@ impl Scope {
             claims_at_root,
         };
 
-        let sql = r#"
+        let sql = r"
 INSERT INTO scopes (id, name, attr_include_access, attr_include_id, claims_at_root)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
         if is_hiqlite() {
             DB::hql()
@@ -138,7 +138,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
@@ -214,12 +214,12 @@ VALUES ($1, $2, $3, $4, $5)"#;
             .await?
             .into_iter()
             .filter(|s| {
-                if !Scope::is_custom(&s.name) {
-                    false
-                } else {
+                if Scope::is_custom(&s.name) {
                     let access = s.attr_include_access.as_deref().unwrap_or_default();
                     let id = s.attr_include_id.as_deref().unwrap_or_default();
                     access.contains(attr_name) || id.contains(attr_name)
+                } else {
+                    false
                 }
             })
             .collect::<Vec<_>>())
@@ -245,7 +245,9 @@ VALUES ($1, $2, $3, $4, $5)"#;
 
         // we only need to update clients with pre-computed values if the name
         // has been changed, but can skip them if it's about the attribute mapping
-        let clients = if scope.name != scope_req.scope {
+        let clients = if scope.name == scope_req.scope {
+            None
+        } else {
             let clients = Client::find_with_scope(&scope.name)
                 .await?
                 .into_iter()
@@ -256,8 +258,6 @@ VALUES ($1, $2, $3, $4, $5)"#;
                 })
                 .collect::<Vec<_>>();
             Some(clients)
-        } else {
-            None
         };
         let is_name_update = clients.is_some();
 
@@ -278,7 +278,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
         };
 
         if is_hiqlite() {
-            let len = clients.as_ref().map(|c| c.len()).unwrap_or_default() + 1;
+            let len = clients.as_ref().map_or_default(Vec::len) + 1;
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(len);
 
             if let Some(clients) = &clients {
@@ -287,10 +287,10 @@ VALUES ($1, $2, $3, $4, $5)"#;
                 }
             }
             txn.push((
-                r#"
+                r"
 UPDATE scopes
 SET name = $1, attr_include_access = $2, attr_include_id = $3, claims_at_root = $4
-WHERE id = $5"#,
+WHERE id = $5",
                 params!(
                     &new_scope.name,
                     &new_scope.attr_include_access,
@@ -302,7 +302,7 @@ WHERE id = $5"#,
 
             for res in DB::hql().txn(txn).await? {
                 let rows_affected = res?;
-                debug_assert!(rows_affected == 1);
+                debug_assert_eq!(rows_affected, 1);
             }
         } else {
             let mut cl = DB::pg().await?;
@@ -315,10 +315,10 @@ WHERE id = $5"#,
             }
             DB::pg_txn_append(
                 &txn,
-                r#"
+                r"
 UPDATE scopes
 SET name = $1, attr_include_access = $2, attr_include_id = $3, claims_at_root = $4
-WHERE id = $5"#,
+WHERE id = $5",
                 &[
                     &new_scope.name,
                     &new_scope.attr_include_access,
@@ -371,10 +371,10 @@ WHERE id = $5"#,
     ) -> Result<(), ErrorResponse> {
         DB::pg_txn_append(
             txn,
-            r#"
+            r"
     UPDATE scopes
     SET attr_include_access = $1, attr_include_id = $2
-    WHERE id = $3"#,
+    WHERE id = $3",
             &[&attr_include_access, &attr_include_id, &id],
         )
         .await?;
@@ -389,16 +389,17 @@ WHERE id = $5"#,
         txn: &mut Vec<(&str, Params)>,
     ) {
         txn.push((
-            r#"
+            r"
     UPDATE scopes
     SET attr_include_access = $1, attr_include_id = $2
-    WHERE id = $3"#,
+    WHERE id = $3",
             params!(attr_include_access, attr_include_id, id),
         ));
     }
 }
 
 impl Scope {
+    #[must_use]
     pub fn clean_up_attrs(
         req_attrs: Option<Vec<String>>,
         existing_attrs: &HashSet<String>,
@@ -418,6 +419,7 @@ impl Scope {
     /// Note: `groups` is not a default scope, but it will be handled like one for performance
     /// and efficiency reasons.
     #[inline]
+    #[must_use]
     pub fn extract_custom(scopes: &str) -> HashSet<&str> {
         let mut res = HashSet::new();
         for s in scopes.split(' ') {
@@ -432,6 +434,7 @@ impl Scope {
     /// Note: `groups` is not a default scope, but it will be handled like one for performance
     /// and efficiency reasons.
     #[inline]
+    #[must_use]
     pub fn is_custom(scope: &str) -> bool {
         scope != "address"
             && scope != "email"
@@ -444,8 +447,9 @@ impl Scope {
     /// Returns `true` if the `requested` scope matches the `allowed` scope.
     /// Supports hierarchical matching for URNs if Matrix support is enabled
     /// (e.g. `...:device` matches `...:device:ID`), as required by Matrix (MSC3861).
-    /// Reference: https://github.com/matrix-org/matrix-spec-proposals/pull/3861
+    /// Reference: <https://github.com/matrix-org/matrix-spec-proposals/pull/3861>
     #[inline]
+    #[must_use]
     pub fn matches(allowed: &str, requested: &str, matrix_enabled: bool) -> bool {
         if allowed == requested {
             return true;
@@ -511,7 +515,7 @@ mod tests {
         let data = json.get("custScope").unwrap().as_str().unwrap();
         assert_eq!(data, "CustomValue1337");
 
-        let wrapper = format!("{{\"custScope\":{}}}", obj);
+        let wrapper = format!("{{\"custScope\":{obj}}}");
         let json = serde_json::from_str::<HashMap<String, Value>>(&wrapper).unwrap();
         let data = json.get("custScope").unwrap().as_object().unwrap();
         let name = data.get("name").unwrap().as_str().unwrap();

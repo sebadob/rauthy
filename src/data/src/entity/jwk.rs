@@ -29,7 +29,7 @@ use tracing::{error, info, warn};
 
 /**
 The Json Web Keys are saved encrypted inside the database. The encryption is the same as for a
-Client secret -> *ChaCha20Poly1305*
+Client secret -> *`ChaCha20Poly1305`*
  */
 #[derive(Serialize, Deserialize, FromPgRow)]
 pub struct Jwk {
@@ -54,9 +54,9 @@ impl Debug for Jwk {
 impl Jwk {
     pub async fn save(&self) -> Result<(), ErrorResponse> {
         let sig_str = self.signature.as_str();
-        let sql = r#"
+        let sql = r"
 INSERT INTO jwks (kid, created_at, signature, enc_key_id, jwk)
-VALUES ($1, $2, $3, $4, $5)"#;
+VALUES ($1, $2, $3, $4, $5)";
 
         if is_hiqlite() {
             DB::hql()
@@ -90,6 +90,7 @@ VALUES ($1, $2, $3, $4, $5)"#;
 }
 
 impl Jwk {
+    #[must_use]
     pub fn new(
         kid: String,
         created_at: time::OffsetDateTime,
@@ -178,7 +179,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS256,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -199,7 +200,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS384,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -220,7 +221,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS512,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -234,7 +235,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::EdDSA,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -287,6 +288,7 @@ impl JWKS {
     }
 
     #[inline]
+    #[must_use]
     pub fn into_certs(self, fmt_rfc_9864: bool) -> JWKSCerts {
         let mut keys = Vec::with_capacity(self.keys.len());
         for k in self.keys {
@@ -368,7 +370,7 @@ impl JWKSPublicKey {
                 let pubkey = key.to_public_key();
                 Self {
                     kty: JwkKeyPairType::RSA,
-                    alg: Some(key_pair.typ.clone()),
+                    alg: Some(key_pair.typ),
                     crv: None,
                     kid: Some(key_pair.kid.clone()),
                     n: Some(base64_url_encode(&pubkey.n().to_bytes_be())),
@@ -381,7 +383,7 @@ impl JWKSPublicKey {
                 let x = base64_url_encode(key.public_key().as_slice());
                 Self {
                     kty: JwkKeyPairType::OKP,
-                    alg: Some(key_pair.typ.clone()),
+                    alg: Some(key_pair.typ),
                     crv: Some("Ed25519".to_string()),
                     kid: Some(key_pair.kid.clone()),
                     n: None,
@@ -465,7 +467,7 @@ impl JWKSPublicKey {
         res
     }
 
-    /// Creates a JWK thumbprint by https://datatracker.ietf.org/doc/html/rfc7638
+    /// Creates a JWK thumbprint by <https://datatracker.ietf.org/doc/html/rfc7638>
     pub fn fingerprint(&self) -> Result<String, ErrorResponse> {
         let s = match self.kty {
             JwkKeyPairType::RSA => {
@@ -584,6 +586,7 @@ impl JWKSPublicKey {
         }
     }
 
+    #[must_use]
     pub fn into_pub_cert(self, fmt_rfc_9864: bool) -> JWKSPublicKeyCerts {
         let kty = match self.kty {
             JwkKeyPairType::RSA => rauthy_api_types::oidc::JwkKeyPairType::RSA,
@@ -687,7 +690,7 @@ impl JwkKeyPair {
             DB::pg_query_one(sql, &[&kid]).await?
         };
 
-        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature.clone())?;
+        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature)?;
         client.put(Cache::App, idx, &kp, CACHE_TTL_APP).await?;
 
         Ok(kp)
@@ -713,11 +716,11 @@ impl JwkKeyPair {
         .as_str()
         .to_string();
 
-        let sql = r#"
+        let sql = r"
 SELECT * FROM jwks
 WHERE signature = $1
 ORDER BY created_at DESC
-LIMIT 1"#;
+LIMIT 1";
 
         let jwk_latest: Jwk = if is_hiqlite() {
             client.query_as_one(sql, params!(signature)).await?
@@ -791,7 +794,7 @@ impl JwkKeyPair {
         token: &'a str,
         buf: &mut Vec<u8>,
     ) -> Result<&'a str, ErrorResponse> {
-        debug_assert!(buf.is_empty());
+        debug_assert_eq!(buf.as_slice(), [0_u8; 0]);
 
         let (message, sig) = token
             .rsplit_once('.')
@@ -855,7 +858,7 @@ impl JwkKeyPair {
                     return Ok(message);
                 }
             }
-        };
+        }
 
         warn!("JWT Token validation error");
         Err(ErrorResponse::new(
@@ -874,6 +877,7 @@ pub enum JwkKeyPairType {
 
 impl JwkKeyPairType {
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             JwkKeyPairType::RSA => "RSA",
@@ -882,7 +886,7 @@ impl JwkKeyPairType {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,
@@ -930,6 +934,7 @@ impl postgres_types::FromSql<'_> for JwkKeyPairAlg {
 
 impl JwkKeyPairAlg {
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             JwkKeyPairAlg::RS256 => "RS256",
@@ -946,6 +951,8 @@ impl JwkKeyPairAlg {
     /// tokens carrying either spelling must validate against keys of that family. All other
     /// algorithms only match themselves exactly — no confusion between families is possible.
     #[inline]
+    #[must_use]
+    #[allow(clippy::similar_names)]
     pub fn is_compatible_with(&self, other: &Self) -> bool {
         match self {
             JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {

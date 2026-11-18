@@ -77,7 +77,7 @@ pub async fn grant_type_authorization_code(
                     HeaderName::from_str(HEADER_DPOP_NONCE).unwrap(),
                     HeaderValue::from_str(nonce)?,
                 ));
-            };
+            }
             Some(DpopFingerprint(proof.jwk_fingerprint()?))
         } else {
             None
@@ -95,18 +95,15 @@ pub async fn grant_type_authorization_code(
     }
 
     let idx = req_data.code.as_ref().unwrap().to_owned();
-    let code = match AuthCode::find_remove(idx).await? {
-        None => {
-            warn!(
-                "'auth_code' could not be found inside the cache - Host: {}",
-                real_ip_from_req(&req)?,
-            );
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "'auth_code' could not be found inside the cache",
-            ));
-        }
-        Some(code) => code,
+    let Some(code) = AuthCode::find_remove(idx).await? else {
+        warn!(
+            "'auth_code' could not be found inside the cache - Host: {}",
+            real_ip_from_req(&req)?,
+        );
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "'auth_code' could not be found inside the cache",
+        ));
     };
     // validate the oidc code
     code.validate_redirect_uri_exact(

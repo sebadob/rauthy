@@ -60,6 +60,7 @@ impl From<AddressClaim<'_>> for rauthy_api_types::oidc::AddressClaim {
 }
 
 impl AddressClaim<'_> {
+    #[must_use]
     pub fn try_build<'a>(user: &'a User, values: &'a UserValues) -> Option<AddressClaim<'a>> {
         let mut slf = AddressClaim {
             formatted: format!("{}\n", user.email_recipient_name()),
@@ -105,7 +106,7 @@ impl AddressClaim<'_> {
 impl<'a> From<&'a rauthy_api_types::oidc::AddressClaim> for AddressClaim<'a> {
     fn from(value: &rauthy_api_types::oidc::AddressClaim) -> AddressClaim<'_> {
         AddressClaim {
-            formatted: value.formatted.to_string(),
+            formatted: value.formatted.clone(),
             street_address: value.street_address.as_deref(),
             locality: value.locality.as_deref(),
             postal_code: value.postal_code.as_deref(),
@@ -271,8 +272,8 @@ pub const RESERVED_ROOT_CLAIMS: &[&str] = &[
 /// [`RESERVED_ROOT_CLAIMS`] name. On collision, returns an error listing the
 /// offending keys so the misconfigured scope can be fixed; the token is never
 /// issued with a shadowed claim.
-pub fn validate_no_reserved_collision(
-    flattened: &HashMap<String, serde_json::Value>,
+pub fn validate_no_reserved_collision<S: ::std::hash::BuildHasher>(
+    flattened: &HashMap<String, serde_json::Value, S>,
 ) -> Result<(), ErrorResponse> {
     // Hot path: this runs on every token issuance, so avoid any allocation in the
     // overwhelmingly common no-collision case. `.any()` short-circuits and collects
@@ -289,7 +290,7 @@ pub fn validate_no_reserved_collision(
     let mut collisions = flattened
         .keys()
         .filter(|k| RESERVED_ROOT_CLAIMS.contains(&k.as_str()))
-        .map(|k| k.as_str())
+        .map(String::as_str)
         .collect::<Vec<_>>();
     collisions.sort_unstable();
     Err(ErrorResponse::new(
@@ -344,6 +345,7 @@ pub enum JwtTokenType {
 }
 
 impl JwtTokenType {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::Bearer => "Bearer",
@@ -389,6 +391,7 @@ impl Display for JwtAmrValue {
 }
 
 impl JwtAmrValue {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::Pwd => "pwd",

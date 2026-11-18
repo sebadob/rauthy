@@ -10,7 +10,7 @@ use validator::Validate;
 /// Returns all existing roles
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     get,
     path = "/roles",
@@ -38,7 +38,7 @@ pub async fn get_roles(principal: ReqPrincipal) -> Result<HttpResponse, ErrorRes
 /// Adds a new role to the database
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     post,
     path = "/roles",
@@ -66,7 +66,7 @@ pub async fn post_role(
 /// Modifies a roles name
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     put,
     path = "/roles/{id}",
@@ -97,7 +97,7 @@ pub async fn put_role(
 /// It will be deleted from all currently assigned users too and this operation cannot be reverted.
 ///
 /// **Permissions**
-/// - rauthy_admin
+/// - `rauthy_admin`
 #[utoipa::path(
     delete,
     path = "/roles/{id}",
@@ -117,5 +117,5 @@ pub async fn delete_role(
 
     Role::delete(id.as_str())
         .await
-        .map(|_| HttpResponse::Ok().finish())
+        .map(|()| HttpResponse::Ok().finish())
 }

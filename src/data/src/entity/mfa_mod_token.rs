@@ -57,6 +57,7 @@ impl MfaModToken {
 
 impl MfaModToken {
     #[inline]
+    #[must_use]
     pub fn cache_idx(id: &str) -> String {
         format!("{IDX_MFA_MOD}{id}")
     }

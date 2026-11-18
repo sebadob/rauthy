@@ -80,9 +80,9 @@ pub struct NewUserRequest {
     #[validate(custom(function = "validate_vec_roles"))]
     pub roles: Vec<String>,
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
-    // #[validate(range(min = 1719784800, max = 4070905200))]
+    // #[validate(range(min = 1_719_784_800, max = 4_070_905_200))]
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub user_expires: Option<i64>,
     /// Validation: Valid Timezone in the format of `Europe/Berlin`
     #[validate(length(max = 48))]
@@ -184,9 +184,9 @@ pub struct UpdateUserRequest {
     pub enabled: bool,
     pub email_verified: bool,
     // TODO max validation for inner i64 is broken in the macro in v0.18.1
-    // #[validate(range(min = 1719784800, max = 4070905200))]
+    // #[validate(range(min = 1_719_784_800, max = 4_070_905_200))]
     /// Unix timestamp in seconds
-    #[validate(range(min = 1719784800))]
+    #[validate(range(min = 1_719_784_800))]
     pub user_expires: Option<i64>,
     #[validate(nested)]
     pub user_values: Option<UserValuesRequest>,
@@ -264,6 +264,7 @@ impl FromStr for UserAttrConfigTyp {
 }
 
 impl UserAttrConfigTyp {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             UserAttrConfigTyp::Email => "email",
@@ -342,7 +343,7 @@ pub struct UserConsentsParams {
 
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct UserRevokeParams {
-    /// Validation: IpAddr
+    /// Validation: `IpAddr`
     #[schema(value_type = str)]
     pub ip: IpAddr,
 }
@@ -454,6 +455,7 @@ pub enum OtpKind {
 }
 
 impl OtpKind {
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             OtpKind::Email => "email",

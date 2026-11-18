@@ -75,6 +75,7 @@ pub async fn compress_br(input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
 /// Brotli compression with quality for dynamic content compression.
 /// Provides a balance between compression ratio and CPU usage.
 #[inline]
+#[must_use]
 pub fn compress_br_dyn(input: String) -> BoxBody {
     let level = async_compression::Level::Precise(1);
 
@@ -99,6 +100,7 @@ pub async fn compress_gzip(input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
 }
 
 #[inline]
+#[must_use]
 pub fn compress_gzip_dyn(input: String) -> BoxBody {
     let level = async_compression::Level::Precise(2);
 

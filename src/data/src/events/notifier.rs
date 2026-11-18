@@ -100,11 +100,10 @@ impl EventNotifier {
 
             let access_token = vars.matrix_access_token.clone();
             let user_password = vars.matrix_user_password.clone();
-            if access_token.is_none() && user_password.is_none() {
-                panic!(
-                    "Specific one of: `event.matrix_access_token` or `event.matrix_user_password`"
-                );
-            }
+            assert!(
+                !(access_token.is_none() && user_password.is_none()),
+                "Specific one of: `event.matrix_access_token` or `event.matrix_user_password`"
+            );
 
             match NotifierMatrix::try_new(
                 server_url,
@@ -132,7 +131,7 @@ impl EventNotifier {
                         panic!("{msg}");
                     }
                 }
-            };
+            }
         }
 
         Ok(())

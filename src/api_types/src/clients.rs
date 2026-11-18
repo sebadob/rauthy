@@ -1,4 +1,7 @@
-use crate::cust_validation::*;
+use crate::cust_validation::{
+    validate_claims, validate_vec_challenge, validate_vec_contact, validate_vec_grant_type,
+    validate_vec_origin, validate_vec_resource, validate_vec_scopes, validate_vec_uri,
+};
 use crate::oidc::{GrantType, JwkKeyPairAlg};
 use rauthy_common::regex::{
     RE_CLIENT_ID, RE_CLIENT_ID_STRICT, RE_CLIENT_NAME, RE_CLIENT_URI, RE_GROUPS, RE_SCOPE_SPACE,
@@ -25,7 +28,7 @@ pub struct DynamicClientRequest {
     ))]
     pub client_name: Option<String>,
     /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
-    /// or `,` (RE_CLIENT_URI)
+    /// or `,` (`RE_CLIENT_URI`)
     #[validate(regex(
         path = "*RE_CLIENT_URI",
         code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
@@ -73,7 +76,7 @@ pub struct DynamicClientRequest {
     // - initiate_login_uri
     // - request_uris (may come in the future with `request_uri` during login)
     /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
-    /// or `,` (RE_CLIENT_URI)
+    /// or `,` (`RE_CLIENT_URI`)
     #[validate(regex(
         path = "*RE_CLIENT_URI",
         code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
@@ -99,7 +102,7 @@ pub struct EphemeralClientRequest {
     ))]
     pub client_name: Option<String>,
     /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
-    /// or `,` (RE_CLIENT_URI)
+    /// or `,` (`RE_CLIENT_URI`)
     #[validate(regex(
         path = "*RE_CLIENT_URI",
         code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
@@ -220,7 +223,7 @@ pub struct UpdateClientRequest {
     pub challenges: Option<Vec<String>>,
     pub force_mfa: bool,
     /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
-    /// or `,` (RE_CLIENT_URI)
+    /// or `,` (`RE_CLIENT_URI`)
     #[validate(regex(
         path = "*RE_CLIENT_URI",
         code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
@@ -278,7 +281,7 @@ pub struct ClientSecretRequest {
     #[validate(range(min = 1, max = 24))]
     pub cache_current_hours: Option<u8>,
     /// Optional externally-provisioned client secret. When given, it is written to the client
-    /// (encrypted with the active ENC_KEY) instead of generating a new random one. This makes
+    /// (encrypted with the active `ENC_KEY`) instead of generating a new random one. This makes
     /// continuous declarative provisioning against a live instance possible (the bootstrap
     /// `Plain` secret only applies to an empty database), the same way e.g. auth providers are
     /// provisioned with their `client_secret` via the API.
@@ -291,7 +294,7 @@ pub struct ClientSecretRequest {
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
 pub struct ClientValidateRedirectUriRequest {
     /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
-    /// or `,` (RE_CLIENT_URI)
+    /// or `,` (`RE_CLIENT_URI`)
     #[validate(regex(
         path = "*RE_CLIENT_URI",
         code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
@@ -305,7 +308,7 @@ pub struct ScimClientRequestResponse {
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub bearer_token: String,
     /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
-    /// or `,` (RE_CLIENT_URI)
+    /// or `,` (`RE_CLIENT_URI`)
     #[validate(regex(
         path = "*RE_CLIENT_URI",
         code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"

@@ -56,6 +56,7 @@ pub struct WebauthnServiceReq {
 
 // CRUD
 impl WebauthnServiceReq {
+    #[must_use]
     pub fn new(user_id: String) -> Self {
         Self {
             code: get_rand(48),

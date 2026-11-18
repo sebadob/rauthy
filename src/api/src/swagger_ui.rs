@@ -51,8 +51,9 @@ pub async fn get_swagger_ui(
     }
 
     match utoipa_swagger_ui::serve(path.as_str(), OPENAPI_CONFIG.clone()) {
-        Ok(swagger_file) => swagger_file
-            .map(|file| {
+        Ok(swagger_file) => swagger_file.map_or_else(
+            || Ok(HttpResponse::NotFound().finish()),
+            |file| {
                 Ok(HttpResponse::Ok()
                     .content_type(file.content_type)
                     .insert_header((
@@ -64,8 +65,8 @@ pub async fn get_swagger_ui(
                         .unwrap(),
                     ))
                     .body(file.bytes.to_vec()))
-            })
-            .unwrap_or_else(|| Ok(HttpResponse::NotFound().finish())),
+            },
+        ),
         Err(error) => Ok(HttpResponse::InternalServerError().body(error.to_string())),
     }
 }

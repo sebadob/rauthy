@@ -44,7 +44,8 @@ impl From<&'static VarsTemplate> for I18nEmailReset<'_> {
 }
 
 impl I18nEmailReset<'_> {
-    pub fn build(lang: &Language) -> Self {
+    #[must_use]
+    pub fn build(lang: Language) -> Self {
         let tpls = &RauthyConfig::get().vars.templates.password_reset;
         match lang {
             Language::Cs => (&tpls.cs).into(),

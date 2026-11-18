@@ -4,7 +4,7 @@ use chrono::Utc;
 use cryptr::EncKeys;
 use std::fmt::Write;
 
-pub async fn generate(args: ArgsGenKey) -> Result<(), StdError> {
+pub fn generate(args: ArgsGenKey) -> Result<(), StdError> {
     let kid = if let Some(kid) = args.with_key_id {
         kid
     } else {
@@ -21,7 +21,7 @@ pub async fn generate(args: ArgsGenKey) -> Result<(), StdError> {
     writeln!(out, "\n[encryption]")?;
     writeln!(out, "keys = [")?;
     for key in keys.keys_as_b64_vec() {
-        writeln!(out, "    '{}',", key)?;
+        writeln!(out, "    '{key}',")?;
     }
     writeln!(out, "]")?;
     writeln!(out, "key_active = '{}'", keys.enc_key_active)?;

@@ -32,7 +32,7 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
     let text = res.text().await.unwrap();
     let (ip, _) = text.split_once('\n').unwrap();
     let ip = ip.parse::<IpAddr>().unwrap();
-    println!("parsed ip: {:?}", ip);
+    println!("parsed ip: {ip:?}");
 
     // let's blacklist ourselves
     // The blacklisting happens async and with second precision.
