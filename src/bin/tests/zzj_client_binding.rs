@@ -36,7 +36,7 @@ async fn create_client(id: &str) -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200, "{}", res.text().await?);
+    expect_status!(res, 200);
 
     let url_id = format!("{url}/{id}");
     let c = http
@@ -78,7 +78,7 @@ async fn create_client(id: &str) -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200, "{}", res.text().await?);
+    expect_status!(res, 200);
     Ok(())
 }
 
@@ -88,7 +88,7 @@ async fn delete_client(id: &str) -> Result<(), Box<dyn Error>> {
         .headers(get_auth_headers().await?)
         .send()
         .await?;
-    assert_eq!(res.status(), 200, "{}", res.text().await?);
+    expect_status!(res, 200);
     Ok(())
 }
 
@@ -129,7 +129,7 @@ async fn auth_code(client_id: &str) -> Result<String, Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
+    let res = expect_status!(res, 202);
 
     let (code, _) = code_state_from_headers(res)?;
     Ok(code)
@@ -159,7 +159,7 @@ async fn init_client_secret() -> Result<String, Box<dyn Error>> {
         .headers(get_auth_headers().await?)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     Ok(res
         .json::<ClientSecretResponse>()
         .await?
@@ -181,7 +181,7 @@ async fn password_tokens(secret: &str) -> Result<TokenSet, Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     Ok(res.json().await?)
 }
 
@@ -209,12 +209,12 @@ async fn test_recreated_client_rejects_old_auth_code() -> Result<(), Box<dyn Err
 
     // sanity check: the flow works for this client
     let code = auth_code(id).await?;
-    assert_eq!(exchange_code(id, code).await.status(), 200);
+    expect_status!(exchange_code(id, code).await, 200);
 
     let code = auth_code(id).await?;
     delete_client(id).await?;
     create_client(id).await?;
-    assert_eq!(exchange_code(id, code).await.status(), 401);
+    expect_status!(exchange_code(id, code).await, 401);
 
     delete_client(id).await?;
     Ok(())
@@ -232,7 +232,7 @@ async fn test_client_delete_drops_its_refresh_tokens() -> Result<(), Box<dyn Err
     delete_client(id).await?;
     create_client(id).await?;
     // 404 means the row is gone, a stale row for the deleted client would be a 401
-    assert_eq!(refresh(id, None, &tokens).await.status(), 404);
+    expect_status!(refresh(id, None, &tokens).await, 404);
     assert_eq!(
         refresh(CLIENT_ID, Some(&secret), &other).await.status(),
         200
@@ -250,7 +250,7 @@ async fn test_sessionless_refresh_is_single_use() -> Result<(), Box<dyn Error>> 
     let original = password_tokens(&secret).await?;
 
     let res = refresh(CLIENT_ID, Some(&secret), &original).await;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let rotated: TokenSet = res.json().await?;
     assert_eq!(
         refresh(CLIENT_ID, Some(&secret), &original).await.status(),

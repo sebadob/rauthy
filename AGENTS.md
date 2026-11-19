@@ -114,3 +114,13 @@ Entity files contain both the struct and its DB / Cache methods (`find_*`, `crea
 - Keep this file an index (hard 80 lines, as all markdown files)
 - Module-level `//!` docs are being added incrementally on security/flow-critical modules; where
   present they are the authoritative local reference for that file.
+
+## Hard code rules
+
+- No positional-argument factory that only copies its arguments into a struct literal, and never
+  `#[allow(clippy::too_many_arguments)]` to silence it: callers write the `Self { .. }` literal
+  with named fields. Widen the field to `pub(crate)` / `pub`, or add a setter for that one field.
+- No helper with a single call site: inline it at that site.
+- Test fixtures and test-only helpers live in test code (`#[cfg(test)] mod tests`,
+  `src/bin/tests/`), never inside production modules. Data a test needs from the server goes
+  through the dev-only endpoints (`api/src/dev_only/`).

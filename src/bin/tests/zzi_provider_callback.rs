@@ -1,7 +1,6 @@
 use crate::common::{
     cookie_csrf_headers_from_res_direct, get_auth_headers, get_backend_url, get_solved_pow,
 };
-use pretty_assertions::assert_eq;
 use rauthy_api_types::auth_providers::{ProviderCallbackRequest, ProviderLoginRequest};
 use rauthy_common::sha256;
 use rauthy_common::utils::base64_url_encode;
@@ -44,7 +43,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let provider_id = res.json::<serde_json::Value>().await?["id"]
         .as_str()
         .expect("the provider id")
@@ -78,7 +77,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
+    let res = expect_status!(res, 202);
 
     let callback_cookie = res
         .headers()
@@ -117,7 +116,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
         .json(&callback("invalidVerifier"))
         .send()
         .await?;
-    assert_eq!(res.status(), 401);
+    let res = expect_status!(res, 401);
     assert!(res.text().await?.contains("invalid PKCE verifier"));
 
     // ... so that even a fully valid request cannot use it anymore
@@ -127,7 +126,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
         .json(&callback(PKCE_VERIFIER))
         .send()
         .await?;
-    assert_eq!(res.status(), 404);
+    let res = expect_status!(res, 404);
     assert!(res.text().await?.contains("Callback Code not found"));
 
     let res = http
@@ -135,7 +134,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     Ok(())
 }

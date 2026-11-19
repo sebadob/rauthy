@@ -9,7 +9,7 @@ mod common;
 async fn test_get_ping() -> Result<(), Box<dyn Error>> {
     let url = format!("{}/ping", get_backend_url());
     let res = reqwest::get(&url).await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     Ok(())
 }
 
@@ -52,8 +52,7 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
     let url = format!("{}/.well-known/openid-configuration", get_backend_url());
     let res = reqwest::get(&url).await?;
 
-    assert_eq!(res.status(), 200);
-    let content = res.json::<WellKnown>().await?;
+    let content = expect_status_json!(res, 200, WellKnown);
     // strip trailing /
     assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
     // RFC 9207
@@ -89,7 +88,7 @@ async fn test_get_well_known_oauth_rfc8414() -> Result<(), Box<dyn Error>> {
     ] {
         let res = reqwest::get(&url).await?;
 
-        assert_eq!(res.status(), 200, "unexpected status for {url}");
+        let res = expect_status!(res, 200, "unexpected status for {url}");
         assert_eq!(
             res.headers()
                 .get(reqwest::header::CONTENT_TYPE)

@@ -1,6 +1,6 @@
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
-use crate::entity::sessions::Session;
+use crate::entity::sessions::{MfaAssurance, Session};
 use crate::entity::users::User;
 use crate::entity::webauthn::auth_data::{WebauthnAdditionalData, WebauthnData};
 use crate::entity::webauthn::passkey::PasskeyEntity;
@@ -165,8 +165,9 @@ pub async fn auth_finish_discover(
                 ));
             }
 
-            session.is_mfa = true;
-            session.set_authenticated(&user).await?;
+            session
+                .set_authenticated(&user, MfaAssurance::Ceremony)
+                .await?;
             user.save_login_success().await?;
 
             LoginLocation::spawn_background_check(user.clone(), req, browser_id.clone())?;

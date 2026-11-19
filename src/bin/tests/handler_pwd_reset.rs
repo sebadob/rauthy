@@ -1,5 +1,5 @@
 use crate::common::{
-    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, check_status, get_auth_headers, get_backend_url,
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, get_auth_headers, get_backend_url,
     password_token_set,
 };
 use pretty_assertions::assert_eq;
@@ -32,26 +32,24 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     println!("test_get_pwd_reset_form with bad magic link id");
     let bad_url_get = format!("{backend_url}/users/{user_id}/reset/iDoNotExist123");
     let res = client.get(&bad_url_get).send().await?;
-    assert_eq!(res.status(), 404);
+    expect_status!(res, 404);
 
     // try with wrong user id
     println!("test_get_pwd_reset_form with wrong user id");
     let bad_url_get = format!("{backend_url}/users/2PYV3STNz3MN7VnPjJVcPQaX/reset/{reset_id}");
     let res = client.get(&bad_url_get).send().await?;
-    assert_eq!(res.status(), 400);
-    let err_html = res.text().await?;
+    let err_html = expect_status!(res, 400).text().await?;
     assert!(err_html.contains("Invalid User ID"));
 
     // correct GET
     println!("test_get_pwd_reset_form correct GET");
     let mut res = client.get(&url_get).send().await?;
-    res = check_status(res, 200).await?;
+    res = expect_status!(res, 200);
 
     // doing the same GET without the pwd_reset_cookie should fail now
     println!("test_get_pwd_reset_form without the pwd_reset_cookie");
     let res_2 = client.get(&url_get).send().await?;
-    assert_eq!(res_2.status(), 403);
-    let err_html = res_2.text().await?;
+    let err_html = expect_status!(res_2, 403).text().await?;
     assert!(
         err_html.contains("The requested password reset link is already tied to another session")
     );
@@ -87,7 +85,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         mfa_code: None,
     };
     let mut res = client.put(&url_put).json(&req).send().await?;
-    res = check_status(res, 400).await?;
+    res = expect_status!(res, 400);
     let err = res.text().await?;
     assert!(err.contains("magic_link_id"));
 
@@ -95,7 +93,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     println!("test_get_pwd_reset_form missing cookie - session already assigned");
     req.magic_link_id = reset_id.to_string();
     let res = client.put(&url_put).json(&req).send().await?;
-    assert_eq!(res.status().as_u16(), 403);
+    let res = expect_status!(res, 403);
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::Forbidden);
     assert_eq!(
@@ -111,7 +109,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         .headers(cookie_only_headers)
         .send()
         .await?;
-    assert_eq!(res.status().as_u16(), 401);
+    let res = expect_status!(res, 401);
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::Unauthorized);
     assert_eq!(err.message, "CSRF Token is missing");
@@ -122,7 +120,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     let admin = get_auth_headers().await?;
     let url_user = format!("{backend_url}/users/{user_id}");
     let res = patch_user(&client, &admin, &url_user, "email_verified", json!(false)).await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     assert!(!res.json::<UserResponse>().await?.email_verified);
     // logins ahead of the reset in the hashing queue, so the change lands while it waits
     let logins = (0..3)
@@ -146,18 +144,17 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         let (client, admin, url_user) = (client.clone(), admin.clone(), url_user.clone());
         async move {
             let res = patch_user(&client, &admin, &url_user, "given_name", json!("Reset")).await?;
-            assert_eq!(res.status(), 200);
+            expect_status!(res, 200);
             assert!(
                 !reset.is_finished(),
                 "the admin change must land while the reset waits for its password hash"
             );
-            assert_eq!(reset.await??.status().as_u16(), 202);
+            expect_status!(reset.await??, 202);
             for login in logins {
                 login.await?;
             }
             let res = client.get(&url_user).headers(admin).send().await?;
-            assert_eq!(res.status(), 200);
-            let found = res.json::<UserResponse>().await?;
+            let found = expect_status_json!(res, 200, UserResponse);
             assert_eq!(found.given_name.as_deref(), Some("Reset"));
             assert!(found.email_verified);
             Ok::<_, Box<dyn Error + Send + Sync>>(())
@@ -169,7 +166,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         ("email_verified", json!(true)),
     ] {
         let res = patch_user(&client, &admin, &url_user, key, value).await?;
-        assert_eq!(res.status(), 200);
+        expect_status!(res, 200);
     }
     match checks {
         Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
@@ -189,8 +186,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         ..Default::default()
     };
     let res = client.post(&url).form(&body).send().await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
 
@@ -201,7 +197,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         .headers(correct_headers)
         .send()
         .await?;
-    assert_eq!(res.status().as_u16(), 400);
+    let res = expect_status!(res, 400);
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert_eq!(err.message, "This link has expired already");

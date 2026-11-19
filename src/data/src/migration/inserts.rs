@@ -1552,6 +1552,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
     if is_hiqlite() {
         DB::hql().execute(sql_1, params!()).await?;
         for b in data_before {
+            let is_mfa = b.is_mfa_completed();
             DB::hql()
                 .execute(
                     sql_2,
@@ -1561,7 +1562,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                         b.user_id,
                         b.roles,
                         b.groups,
-                        b.is_mfa,
+                        is_mfa,
                         b.state.as_str(),
                         b.exp,
                         b.last_seen
@@ -1580,7 +1581,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
                     &b.user_id,
                     &b.roles,
                     &b.groups,
-                    &b.is_mfa,
+                    &b.is_mfa_completed(),
                     &b.state.as_str(),
                     &b.exp,
                     &b.last_seen,
