@@ -6,7 +6,7 @@ use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
 use hiqlite::macros::{CacheVariants, embed::*};
 use rauthy_common::{is_hiqlite, is_postgres};
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
 use semver::Version;
@@ -82,6 +82,21 @@ impl DB {
         // DB, but it simply won't do anything else than heartbeats between the nodes.
         let client = hiqlite::start_node_with_cache::<Cache>(config).await?;
 
+        // The node is running from here on. If the rest fails, it must be shut down cleanly,
+        // otherwise the next start finds an unclean shutdown and has to rebuild its state.
+        if let Err(err) = Self::init_after_start(&client).await {
+            if let Err(shutdown_err) = client.shutdown().await {
+                error!("Error shutting down the database / cache layer: {shutdown_err}");
+            }
+            return Err(err);
+        }
+
+        let _ = HIQLITE_CLIENT.set(client);
+
+        Ok(())
+    }
+
+    async fn init_after_start(client: &hiqlite::Client) -> Result<(), ErrorResponse> {
         if is_postgres() {
             Self::init_connect_postgres().await?;
         } else {
@@ -93,9 +108,6 @@ impl DB {
                 metrics = client.metrics_db().await?;
             }
         }
-
-        let _ = HIQLITE_CLIENT.set(client);
-
         Ok(())
     }
 
@@ -164,17 +176,20 @@ impl DB {
             } else if let Some(root_ca) = &vars.pg_tls_root_ca {
                 let mut root_store = rustls::RootCertStore::empty();
 
+                // This runs after Hiqlite was started, so return an error instead of panicking.
                 for res in CertificateDer::pem_slice_iter(root_ca.as_bytes()) {
-                    match res {
-                        Ok(cert) => {
-                            root_store
-                                .add(cert)
-                                .expect("Invalid `database.pg_tls_root_ca`");
-                        }
-                        Err(err) => {
-                            panic!("Cannot parse `database.pg_tls_root_ca`: {err:?}")
-                        }
-                    }
+                    let cert = res.map_err(|err| {
+                        ErrorResponse::new(
+                            ErrorResponseType::Internal,
+                            format!("Cannot parse `database.pg_tls_root_ca`: {err:?}"),
+                        )
+                    })?;
+                    root_store.add(cert).map_err(|err| {
+                        ErrorResponse::new(
+                            ErrorResponseType::Internal,
+                            format!("Invalid `database.pg_tls_root_ca`: {err}"),
+                        )
+                    })?;
                 }
 
                 rustls::ClientConfig::builder()
