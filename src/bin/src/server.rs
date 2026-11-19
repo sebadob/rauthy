@@ -15,8 +15,9 @@ use rauthy_data::email::mailer::EMail;
 use rauthy_data::email::mailer_callback::EMailCallback;
 use rauthy_data::entity;
 use rauthy_data::entity::pictures::UserPicture;
+use rauthy_data::events::event::Event;
 use rauthy_data::events::health_watch::watch_health;
-use rauthy_data::events::listener::EventListener;
+use rauthy_data::events::listener::{EventListener, EventRouterMsg};
 use rauthy_data::events::notifier::EventNotifier;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_handlers::openapi::ApiDoc;
@@ -35,6 +36,7 @@ use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{env, thread};
 use tokio::sync::mpsc;
@@ -107,8 +109,84 @@ pub async fn run(
 
     DB::init(node_config)
         .await
-        .expect("Error starting the database / cache layer");
+        .map_err(|err| format!("Cannot start the database / cache layer: {err}"))?;
+    shut_storage_down_on_panic();
 
+    // From here on, the storage layer is running and every exit path must go through the
+    // shutdown below. An early return would skip it, and the next start would find an unclean
+    // shutdown and need to rebuild its state machine from the Raft log.
+    let served = serve(
+        tx_email,
+        tx_events_router,
+        rx_events_router,
+        rx_events,
+        rx_email,
+    )
+    .await;
+
+    if let Err(err) = DB::hql().shutdown().await {
+        error!("Error shutting down the database / cache layer: {err}");
+        served?;
+        return Err(err.into());
+    }
+
+    served
+}
+
+/// How long a panic waits for the storage shutdown before the abort continues.
+/// Hiqlite bounds its own shutdown at 15s.
+const PANIC_SHUTDOWN_WAIT: Duration = Duration::from_secs(20);
+
+/// Makes a panic shut down the storage layer before the process aborts.
+///
+/// With `panic = "abort"`, a panic after `DB::init()` would otherwise kill the process with the
+/// storage layer running, which the next start treats as an unclean shutdown. The hook still
+/// panics afterward. The shutdown needs another runtime worker to make progress. If there is none,
+/// it times out and the abort continues as before.
+fn shut_storage_down_on_panic() {
+    let handle = tokio::runtime::Handle::current();
+    let previous = std::panic::take_hook();
+    let started = AtomicBool::new(false);
+
+    std::panic::set_hook(Box::new(move |info| {
+        previous(info);
+        // only try once, a panic during the shutdown itself aborts right away
+        if started.swap(true, Ordering::SeqCst) {
+            return;
+        }
+
+        eprintln!("Panic with a running storage layer - shutting it down before aborting");
+        let (tx, rx) = std::sync::mpsc::channel();
+        let handle = handle.clone();
+        let spawned = thread::Builder::new()
+            .name("panic-storage-shutdown".to_string())
+            .spawn(move || {
+                let _ = tx.send(handle.block_on(DB::hql().shutdown()));
+            });
+        if spawned.is_err() {
+            eprintln!("Cannot start the storage shutdown after a panic");
+            return;
+        }
+        match rx.recv_timeout(PANIC_SHUTDOWN_WAIT) {
+            Ok(Ok(())) => eprintln!("Storage layer shut down after the panic"),
+            Ok(Err(err)) => eprintln!("Storage shutdown after the panic failed: {err}"),
+            Err(_) => eprintln!(
+                "Storage shutdown after the panic did not finish within {}s",
+                PANIC_SHUTDOWN_WAIT.as_secs()
+            ),
+        }
+    }));
+}
+
+/// Everything that runs while the storage layer is live. Errors are returned to `run()`, which
+/// shuts down the storage layer in any case.
+async fn serve(
+    tx_email: mpsc::Sender<(EMail, EMailCallback)>,
+    tx_events_router: flume::Sender<EventRouterMsg>,
+    rx_events_router: flume::Receiver<EventRouterMsg>,
+    rx_events: flume::Receiver<Event>,
+    rx_email: mpsc::Receiver<(EMail, EMailCallback)>,
+) -> Result<(), Box<dyn Error>> {
     debug!("Starting E-Mail handler");
     tokio::spawn(mailer::sender(rx_email));
 
@@ -126,10 +204,14 @@ pub async fn run(
     }
 
     debug!("Applying database migrations");
-    let previous_db_version = DB::migrate().await.expect("Database migration error");
+    let previous_db_version = DB::migrate()
+        .await
+        .map_err(|err| format!("Database migration error: {err}"))?;
 
     debug!("Starting Events handler");
-    EventNotifier::init_notifiers(tx_email).await.unwrap();
+    EventNotifier::init_notifiers(tx_email)
+        .await
+        .map_err(|err| format!("Cannot initialize the event notifiers: {err}"))?;
     tokio::spawn(EventListener::listen(
         tx_events_router,
         rx_events_router,
@@ -147,7 +229,9 @@ pub async fn run(
         time::sleep(Duration::from_secs(1)).await;
     }
 
-    UserPicture::test_config().await.unwrap();
+    UserPicture::test_config()
+        .await
+        .map_err(|err| format!("Invalid user picture configuration: {err}"))?;
 
     // We need to clear some caches
     DB::hql().clear_cache(Cache::Html).await?;
@@ -189,10 +273,7 @@ pub async fn run(
     if RauthyConfig::get().vars.atproto.enable {
         entity::atproto::Client::init_provider()
             .await
-            .map_err(|error| {
-                error!(%error, "failed to initialize atproto provider");
-            })
-            .unwrap();
+            .map_err(|err| format!("Cannot initialize the atproto provider: {err}"))?;
     }
 
     rauthy_schedulers::spawn();
@@ -202,9 +283,9 @@ pub async fn run(
         let tls = match (&ldap.key_path, &ldap.cert_path) {
             _ if ldap.plain_text => None,
             (Some(key), Some(cert)) => {
-                Some(tls::load_server_config(key.clone(), cert.clone()).await)
+                Some(tls::load_server_config(key.clone(), cert.clone()).await?)
             }
-            _ => Some(tls::load_tls().await),
+            _ => Some(tls::load_tls().await?),
         };
         tokio::spawn(rauthy_ldap::run(tls.map(Arc::new)));
     }
@@ -214,8 +295,6 @@ pub async fn run(
     } else {
         server_without_metrics().await?;
     }
-
-    DB::hql().shutdown().await?;
 
     Ok(())
 }
@@ -242,26 +321,31 @@ async fn server_with_metrics() -> std::io::Result<()> {
         .build()
         .unwrap();
 
-    thread::spawn(move || {
-        let vars = &RauthyConfig::get().vars.server;
-        if let Err(err) = Ipv4Addr::from_str(&vars.metrics_addr) {
-            let msg = format!("Error parsing METRICS_ADDR: {err}");
-            error!(msg);
-            panic!("{}", msg);
-        }
-        let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
+    // Parse and bind here instead of inside the thread, where an error could only panic.
+    let vars = &RauthyConfig::get().vars.server;
+    Ipv4Addr::from_str(&vars.metrics_addr)
+        .map_err(|err| std::io::Error::other(format!("Error parsing METRICS_ADDR: {err}")))?;
+    let addr_full = format!("{}:{}", vars.metrics_addr, vars.metrics_port);
+    let listener = std::net::TcpListener::bind(&addr_full).map_err(|err| {
+        std::io::Error::new(
+            err.kind(),
+            format!("Cannot bind the metrics server to {addr_full}: {err}"),
+        )
+    })?;
 
+    thread::spawn(move || {
         info!("Metrics available on: http://{addr_full}/metrics");
         // TODO create single threaded runtime specifically -> probably use tokio
-        System::new()
-            .block_on(
-                HttpServer::new(move || App::new().wrap(metrics.clone()))
-                    .workers(1)
-                    .bind(addr_full)
-                    .unwrap()
-                    .run(),
-            )
-            .unwrap();
+        let res = System::new().block_on(async move {
+            HttpServer::new(move || App::new().wrap(metrics.clone()))
+                .workers(1)
+                .listen(listener)?
+                .run()
+                .await
+        });
+        if let Err(err) = res {
+            error!("The metrics server stopped: {err}");
+        }
     });
 
     let metrics_collector = PrometheusMetricsBuilder::new("rauthy")
@@ -346,7 +430,7 @@ async fn server_with_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
@@ -363,7 +447,7 @@ async fn server_with_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
@@ -446,7 +530,7 @@ async fn server_without_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
@@ -463,7 +547,7 @@ async fn server_without_metrics() -> std::io::Result<()> {
                         "{listen_addr}:{}",
                         RauthyConfig::get().vars.server.port_https
                     ),
-                    tls::load_tls().await,
+                    tls::load_tls().await?,
                 )?
                 .run()
                 .await
