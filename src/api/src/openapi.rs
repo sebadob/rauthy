@@ -104,6 +104,7 @@ use utoipa::{OpenApi, openapi};
         generic::get_ready,
         generic::ping,
         generic::get_version,
+        generic::get_instance_label,
         generic::get_whoami,
 
         groups::get_groups,
@@ -392,6 +393,7 @@ use utoipa::{OpenApi, openapi};
             ApiKeyResponse,
             ApiKeysResponse,
             AppVersionResponse,
+            InstanceLabelResponse,
             BlacklistResponse,
             BlacklistedIp,
             PasswordResetResponse,
