@@ -95,6 +95,12 @@ pub async fn auth_finish_discover(
     };
 
     let mut pk_entity = PasskeyEntity::find_rk_by_cred_id(pubkey_cred.get_credential_id()).await?;
+    // The only login that has no prior `POST /authorize` with its `enabled` and `expired`
+    // validation, because the user is only known through the discovered Resident Key. Validate
+    // them before anything is done with the credential.
+    let mut user = User::find(pk_entity.user_id.clone()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
     let cred = Credential::from(pk_entity.get_pk());
 
     // This step is a bit tricky. We need to allow the credential we just discovered in the
@@ -155,7 +161,6 @@ pub async fn auth_finish_discover(
                 ));
             }
 
-            let mut user = User::find(pk_entity.user_id.clone()).await?;
             if let Some(suid) = &session.user_id
                 && suid != &user.id
             {
