@@ -45,6 +45,7 @@ pub struct WellKnown {
     pub claims_parameter_supported: bool,
     pub authorization_response_iss_parameter_supported: bool,
     pub client_id_metadata_document_supported: bool,
+    pub identity_chaining_requested_token_types_supported: Vec<String>,
 }
 
 #[tokio::test]
@@ -64,6 +65,10 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
             .token_endpoint_auth_methods_supported
             .iter()
             .any(|m| m == "none")
+    );
+    assert_eq!(
+        content.identity_chaining_requested_token_types_supported,
+        vec!["urn:ietf:params:oauth:token-type:id-jag"]
     );
     // don't test the rest for now as it might change soon again
 

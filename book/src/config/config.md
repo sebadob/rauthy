@@ -2256,6 +2256,32 @@ filter_lang_common = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt'
 # overwritten by: FILTER_LANG_ADMIN
 filter_lang_admin = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 
+[id_jag]
+#[[id_jag.audiences]]
+# A Resource Authorization Server that the token exchange may
+# issue an ID-JAG for, with `requested_token_type`
+# `urn:ietf:params:oauth:token-type:id-jag`. Without an entry,
+# no ID-JAG is ever issued.
+#
+# NOTE: This is an array value, and you can specify it multiple
+# times for different audiences. Each `audience` may only exist
+# once.
+#
+# The issuer of the Resource Authorization Server, matched
+# verbatim against the requested `audience`.
+#audience = 'https://as.example.com/'
+# The clients that may request an ID-JAG for this `audience`.
+# They also need the `token_exchange` flow. The ID-JAG carries
+# the Rauthy `client_id`, so the client must be registered under
+# the same id at the Resource Authorization Server.
+#clients = ['mcp-client']
+# The resources that may be requested. Empty rejects any
+# `resource`.
+#resources = ['https://mcp.example.com/mcp']
+# The scopes that may be requested, with the meaning of the
+# Resource Authorization Server. Empty rejects any `scope`.
+#scopes = ['chat.read']
+
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
 # token should still be valid after usage. Keep this value small,

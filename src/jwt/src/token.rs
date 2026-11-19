@@ -25,6 +25,9 @@ pub enum JwtHeaderType {
     Jwt,
     /// `at+jwt` for Access Tokens as specified in RFC 9068.
     AtJwt,
+    /// `oauth-id-jag+jwt` for an ID-JAG. Never accepted by `validate_claims_into()`, so an ID-JAG
+    /// cannot be used against Rauthy itself.
+    IdJag,
 }
 
 impl JwtHeaderType {
@@ -32,6 +35,7 @@ impl JwtHeaderType {
         match self {
             Self::Jwt => "JWT",
             Self::AtJwt => "at+jwt",
+            Self::IdJag => "oauth-id-jag+jwt",
         }
     }
 }
@@ -235,6 +239,7 @@ mod tests {
         // RFC 9068 specifies exactly this value for Access Tokens
         assert_eq!(JwtHeaderType::AtJwt.as_str(), "at+jwt");
         assert_eq!(JwtHeaderType::Jwt.as_str(), "JWT");
+        assert_eq!(JwtHeaderType::IdJag.as_str(), "oauth-id-jag+jwt");
     }
 
     #[test]

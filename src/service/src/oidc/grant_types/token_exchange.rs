@@ -8,11 +8,12 @@ use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::scopes::Scope;
+use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_jwt::claims::{ActClaim, JwtAccessClaims, JwtTokenType};
+use rauthy_jwt::claims::{ActClaim, JwtAccessClaims, JwtIdClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
 use std::str::FromStr;
 use std::time::Duration;
@@ -75,20 +76,25 @@ pub async fn grant_type_token_exchange(
             None
         };
 
-    // Rauthy only ever issues access tokens here. `requested_token_type` is optional by RFC and
-    // defaults to an access token, so only an explicit, different request is an error. An
-    // RFC-defined type we do not issue and a value that is no token type at all are both
-    // rejected the same way, but parsing tells them apart for the log line.
-    if let Some(requested) = req_data.requested_token_type.as_deref()
-        && TokenType::from_str(requested).ok() != Some(TokenType::AccessToken)
-    {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            format!(
-                "the only supported 'requested_token_type' is '{}'",
-                TokenType::AccessToken
-            ),
-        ));
+    // `requested_token_type` is optional by RFC and defaults to an access token.
+    if let Some(requested) = req_data.requested_token_type.as_deref() {
+        match TokenType::from_str(requested).ok() {
+            Some(TokenType::AccessToken) => {}
+            Some(TokenType::IdJag) => {
+                let ts = exchange_id_jag(&client, &req_data, dpop_fingerprint).await?;
+                return Ok((ts, headers));
+            }
+            _ => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!(
+                        "'requested_token_type' must be '{}' or '{}'",
+                        TokenType::AccessToken,
+                        TokenType::IdJag
+                    ),
+                ));
+            }
+        }
     }
 
     let Some(subject_token) = req_data.subject_token.as_deref() else {
@@ -271,6 +277,174 @@ pub async fn grant_type_token_exchange(
     }
 
     Ok((ts, headers))
+}
+
+/// Issues an ID-JAG (draft-ietf-oauth-identity-assertion-authz-grant) for an ID token that was
+/// issued to the exchanging client. The `audience` is the Resource Authorization Server, and it
+/// decides together with the client, `resource` and `scope` against `[[id_jag.audiences]]`.
+async fn exchange_id_jag(
+    client: &Client,
+    req_data: &TokenRequest,
+    dpop_fingerprint: Option<DpopFingerprint>,
+) -> Result<TokenSet, ErrorResponse> {
+    if req_data.actor_token.is_some() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "an 'actor_token' is not supported for an ID-JAG",
+        ));
+    }
+
+    let Some(audience) = req_data.audience.as_deref() else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "'audience' is required for an ID-JAG",
+        ));
+    };
+    let Some(policy) = RauthyConfig::get().vars.id_jag.audiences.get(audience) else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidTarget,
+            "the 'audience' is not a configured ID-JAG audience",
+        ));
+    };
+    if !policy.clients.iter().any(|c| c == &client.id) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::AccessDenied,
+            "this client may not request an ID-JAG for this 'audience'",
+        ));
+    }
+    if let Some(resource) = req_data.resource.as_deref()
+        && !policy.resources.iter().any(|r| r == resource)
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidTarget,
+            "the 'resource' is not allowed for this 'audience'",
+        ));
+    }
+    if let Some(scope) = req_data.scope.as_deref()
+        && let Some(s) = scope
+            .split_whitespace()
+            .find(|s| !policy.scopes.iter().any(|allowed| allowed == s))
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::AccessDenied,
+            format!("the requested scope '{s}' is not allowed for this 'audience'"),
+        ));
+    }
+
+    let Some(subject_token) = req_data.subject_token.as_deref() else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "'subject_token' is missing",
+        ));
+    };
+    if req_data.subject_token_type.as_deref() != Some(TokenType::IdToken.as_str()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!(
+                "the only supported 'subject_token_type' for an ID-JAG is '{}'",
+                TokenType::IdToken
+            ),
+        ));
+    }
+
+    let mut buf = Vec::with_capacity(512);
+    if JwtToken::validate_claims_into(
+        subject_token,
+        Some(JwtTokenType::Id),
+        Duration::from_secs(0),
+        &mut buf,
+        false,
+    )
+    .await
+    .is_err()
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "the given 'subject_token' is not a valid id token",
+        ));
+    }
+    let subject = serde_json::from_slice::<JwtIdClaims>(&buf)?;
+    if subject.common.azp != client.id || !subject.common.aud.contains(&client.id) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "the 'subject_token' was not issued to this client",
+        ));
+    }
+    if let Some(cnf) = &subject.common.cnf
+        && dpop_fingerprint.as_ref().map(|f| f.0.as_str()) != Some(cnf.jkt)
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "the 'subject_token' is DPoP-bound and needs a DPoP proof with the same key",
+        ));
+    }
+
+    let Some(sub) = subject.common.sub else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "the 'subject_token' has no 'sub' claim",
+        ));
+    };
+    // An id token cannot be revoked, so it is only accepted while its session is valid.
+    let session_timeout = RauthyConfig::get().vars.lifetimes.session_timeout.as_secs() as i64;
+    let session = match subject.sid {
+        Some(sid) => match Session::find(sid.to_string()).await {
+            Ok(session) => Some(session),
+            Err(err) if err.error == ErrorResponseType::NotFound => None,
+            Err(err) => return Err(err),
+        },
+        None => None,
+    };
+    let Some(session) = session
+        .filter(|s| s.user_id.as_deref() == Some(sub) && s.is_valid(session_timeout, None, ""))
+    else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "the 'subject_token' has no valid session",
+        ));
+    };
+    let user = User::find(sub.to_string()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+    client.validate_user_groups(&user)?;
+
+    let now = Utc::now().timestamp();
+    let mut exp = (now + client.access_token_lifetime as i64)
+        .min(subject.common.exp)
+        .min(session.exp);
+    if let Some(user_expires) = user.user_expires {
+        exp = exp.min(user_expires);
+    }
+    if exp - now < 1 {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidGrant,
+            "the 'subject_token' or its user has expired",
+        ));
+    }
+
+    let ts = TokenSet::for_id_jag(
+        &user,
+        client,
+        exp,
+        dpop_fingerprint,
+        &subject,
+        audience,
+        req_data.resource.as_deref(),
+        req_data.scope.as_deref(),
+    )
+    .await?;
+
+    if RauthyConfig::get().vars.events.generate_token_issued {
+        Event::token_issued(
+            GrantType::TokenExchange.as_str(),
+            &client.id,
+            Some(user.email.as_str()),
+        )
+        .send()
+        .await?;
+    }
+
+    Ok(ts)
 }
 
 /// Validates a `subject_token` / `actor_token`. Only access tokens are accepted, and the token

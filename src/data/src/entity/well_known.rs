@@ -2,7 +2,7 @@ use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
-use rauthy_api_types::oidc::GrantType;
+use rauthy_api_types::oidc::{GrantType, TokenType};
 use rauthy_common::constants::CACHE_TTL_APP;
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
@@ -47,6 +47,9 @@ pub struct WellKnown {
     /// implements this via `ephemeral_from_url`). ChatGPT's custom-connector UI
     /// greys out the CIMD option until the AS discovery doc carries this flag.
     pub client_id_metadata_document_supported: bool,
+    /// draft-ietf-oauth-identity-assertion-authz-grant §7.1
+    pub identity_chaining_requested_token_types_supported: [&'static str; 1],
+    pub id_jag_signing_alg_values_supported: [&'static str; 1],
 }
 
 // Versioned, because the cached document is shared across the cluster and its contents change
@@ -175,6 +178,8 @@ impl WellKnown {
             claims_parameter_supported: true,
             authorization_response_iss_parameter_supported: true,
             client_id_metadata_document_supported: true,
+            identity_chaining_requested_token_types_supported: [TokenType::IdJag.as_str()],
+            id_jag_signing_alg_values_supported: ["RS256"],
         }
     }
 }

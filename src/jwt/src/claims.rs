@@ -205,6 +205,29 @@ pub struct JwtIdClaims<'a> {
     pub zoneinfo: Option<&'a str>,
 }
 
+/// The Identity Assertion JWT Authorization Grant (draft-ietf-oauth-identity-assertion-authz-grant
+/// §3.1). It has no `typ` claim, it is identified by its `oauth-id-jag+jwt` header instead.
+#[derive(Debug, Serialize)]
+pub struct JwtIdJagClaims<'a> {
+    pub iss: &'a str,
+    pub sub: &'a str,
+    pub aud: &'a str,
+    pub client_id: &'a str,
+    pub jti: &'a str,
+    pub iat: i64,
+    pub exp: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<&'a str>,
+    pub auth_time: i64,
+    pub amr: &'a [&'a str],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<JktClaim<'a>>,
+}
+
 /// JWT claim names that Rauthy may emit at the token root: the registered claims
 /// from RFC 7519, the OIDC core / standard claims, and Rauthy's own top-level
 /// fields on the access and id tokens.
@@ -341,6 +364,10 @@ pub enum JwtTokenType {
     #[serde(rename = "logout+jwt")]
     Logout,
     Refresh,
+    /// RFC 8693 §2.2.1 `token_type` for an issued token that is not an access token, like an
+    /// ID-JAG. Never used as the `typ` claim.
+    #[serde(rename = "N_A")]
+    NA,
 }
 
 impl JwtTokenType {
@@ -351,6 +378,7 @@ impl JwtTokenType {
             Self::Id => "Id",
             Self::Logout => "logout+jwt",
             Self::Refresh => "Refresh",
+            Self::NA => "N_A",
         }
     }
 }

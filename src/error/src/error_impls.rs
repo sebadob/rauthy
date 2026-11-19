@@ -58,7 +58,8 @@ impl ErrorResponse {
 impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
-            ErrorResponseType::BadRequest
+            ErrorResponseType::AccessDenied
+            | ErrorResponseType::BadRequest
             | ErrorResponseType::ConsentRequired
             | ErrorResponseType::InvalidClientMetadata
             | ErrorResponseType::InvalidGrant
@@ -629,5 +630,6 @@ mod tests {
             [30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         );
         assert_eq!(encode(ErrorResponseType::ConsentRequired), [31, 0, 0, 0]);
+        assert_eq!(encode(ErrorResponseType::AccessDenied), [32, 0, 0, 0]);
     }
 }

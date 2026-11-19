@@ -59,6 +59,10 @@ pub enum ErrorResponseType {
     /// Serialized as the OIDC error code `consent_required`.
     #[serde(rename = "consent_required")]
     ConsentRequired,
+    /// RFC 6749 §4.1.2.1: the request is valid, but the client or user may not get what it asked
+    /// for. Serialized as the RFC error code `access_denied`.
+    #[serde(rename = "access_denied")]
+    AccessDenied,
 }
 
 impl Display for ErrorResponseType {
