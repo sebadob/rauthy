@@ -722,14 +722,14 @@ pub async fn auth_finish(
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
             if is_login && let Some(mut session) = session {
-                let OtpAdditionalData::Login(req) = &auth_data.data else {
+                let OtpAdditionalData::Login(data) = &auth_data.data else {
                     unreachable!("is_login is only ever true for OtpAdditionalData::Login")
                 };
-                if req.session_id != session.id {
-                    req.delete().await?;
+                if data.session_id != session.id || &data.user_id != user_id {
+                    data.delete().await?;
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        "Session ID mismatch for login ceremony",
+                        "Session / User ID mismatch for login ceremony",
                     ));
                 }
 

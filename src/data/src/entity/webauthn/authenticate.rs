@@ -198,7 +198,7 @@ pub async fn auth_finish(
                 let WebauthnAdditionalData::Login(data) = &auth_data.data else {
                     unreachable!("is_login is only ever true for WebauthnAdditionalData::Login")
                 };
-                if data.session_id != session.id {
+                if data.session_id != session.id || data.user_id != uid {
                     // TODO If this happens, this can only be a try to attack and get into another
                     //  user account. We should probably blacklist the source IP after enough
                     //  testing. We must be sure that this can never happen by accident.
@@ -206,7 +206,7 @@ pub async fn auth_finish(
 
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        "Session ID mismatch for login ceremony",
+                        "Session / User ID mismatch for login ceremony",
                     ));
                 }
 
