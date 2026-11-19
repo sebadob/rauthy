@@ -110,6 +110,8 @@ mime_guess = "2"
 num_cpus = "1"
 openssl = { version = "0.10.79", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
+oxrdf = "0.3.5"
+oxttl = "0.2.5"
 percent-encoding = "2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
@@ -128,8 +130,6 @@ reqwest = { version = "0.13.3", default-features = false, features = [
   "rustls-no-provider",
 ] }
 ring = "0.17.13"
-rio_api = "0.8.4"
-rio_turtle = "0.8.4"
 rpassword = "7.5"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
 ruma-client = { version = "0.20", features = [
@@ -195,8 +195,3 @@ webauthn-rs = { version = "0.5", features = [
 webauthn-rs-proto = "0.5"
 webpki-roots = "1"
 zeroize = "1.8"
-
-# debugging - sort and exchange for rio if it works
-oxrdfio = "0.2.7"
-oxrdfxml = "0.2.5"
-oxttl = "0.2.5"
