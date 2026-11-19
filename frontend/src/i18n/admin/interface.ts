@@ -65,8 +65,10 @@ export interface I18nAdmin {
         descClientUri: string;
         allowedResources: string;
         defaultAud: string;
+        actorSameClient: string;
         descAllowedResources: string;
         descDefaultAud: string;
+        descActorSameClient: string;
         descGroupPrefix: string;
         descName: string;
         descOrigin: string;

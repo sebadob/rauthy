@@ -61,8 +61,9 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
-    claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26
-WHERE id = $27"#;
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26,
+    actor_same_client = $27
+WHERE id = $28"#;
 
 /**
 # OIDC Client
@@ -122,6 +123,9 @@ pub struct Client {
     /// value. `None` or an invalid value falls back to `local`, see [`Client::consent_source`].
     #[serde(default)]
     pub consent: Option<String>,
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    #[serde(default)]
+    pub actor_same_client: bool,
 }
 
 impl Debug for Client {
@@ -134,7 +138,7 @@ impl Debug for Client {
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
         client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
         claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
-        created_micros: {:?}, consent: {:?} }}",
+        created_micros: {:?}, consent: {:?}, actor_same_client: {} }}",
             self.id,
             self.name,
             self.enabled,
@@ -161,6 +165,7 @@ impl Debug for Client {
             self.default_aud,
             self.created_micros,
             self.consent,
+            self.actor_same_client,
         )
     }
 }
@@ -632,6 +637,7 @@ VALUES ($1, $2, $3, $4)"#;
                 allowed_resources,
                 default_aud,
                 &self.consent,
+                self.actor_same_client,
                 &self.id
             ),
         ));
@@ -684,6 +690,7 @@ VALUES ($1, $2, $3, $4)"#;
                 &allowed_resources,
                 &default_aud,
                 &self.consent,
+                &self.actor_same_client,
                 &self.id,
             ],
         )
@@ -737,6 +744,7 @@ VALUES ($1, $2, $3, $4)"#;
                         allowed_resources,
                         default_aud,
                         &self.consent,
+                        self.actor_same_client,
                         self.id.clone()
                     ),
                 )
@@ -771,6 +779,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &allowed_resources,
                     &default_aud,
                     &self.consent,
+                    &self.actor_same_client,
                     &self.id,
                 ],
             )
@@ -2102,6 +2111,7 @@ impl Client {
             allowed_resources,
             default_aud,
             consent: self.consent,
+            actor_same_client: self.actor_same_client,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -2194,6 +2204,7 @@ impl Client {
             // never stored, so there is no row that could be deleted and recreated
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         })
     }
 }
@@ -2239,6 +2250,7 @@ impl Default for Client {
             default_aud: None,
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         }
     }
 }
@@ -2315,6 +2327,7 @@ impl Client {
         self.default_aud = current.default_aud;
         self.created_micros = current.created_micros;
         self.consent = current.consent;
+        self.actor_same_client = current.actor_same_client;
     }
 
     /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one
@@ -3038,6 +3051,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             default_aud: None,
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -3503,6 +3517,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             default_aud: None,
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         }
     }
 
@@ -3678,6 +3693,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             default_aud: Some("https://aud.example.com".to_string()),
             created_micros: Some(1),
             consent: Some("https://consent.example.com/api".to_string()),
+            actor_same_client: true,
         }
     }
 
@@ -3733,6 +3749,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         assert_eq!(new_client.default_aud, current.default_aud);
         assert_eq!(new_client.created_micros, current.created_micros);
         assert_eq!(new_client.consent, current.consent);
+        assert_eq!(new_client.actor_same_client, current.actor_same_client);
         // still public -> the admin's PKCE setting is kept
         assert_eq!(new_client.challenge, current.challenge);
 

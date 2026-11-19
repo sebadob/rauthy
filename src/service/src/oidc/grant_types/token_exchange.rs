@@ -1,8 +1,8 @@
-use crate::token_set::{DpopFingerprint, TokenScopes, TokenSet};
+use crate::token_set::{DpopFingerprint, SessionId, TokenScopes, TokenSet};
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use chrono::Utc;
-use rauthy_api_types::oidc::{GrantType, TokenRequest, TokenType};
+use rauthy_api_types::oidc::{ActClaim, GrantType, TokenRequest, TokenType};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::dpop_proof::DPoPProof;
@@ -12,10 +12,16 @@ use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_jwt::claims::{ActClaim, JwtAccessClaims, JwtTokenType};
+use rauthy_jwt::claims::{JwtAccessClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use std::iter;
 use std::str::FromStr;
 use std::time::Duration;
+
+/// The maximum number of actors in an `act` chain. Each actor adds about 55 characters to the
+/// token, so 32 of them stay below half of the default `access.token_len_limit`. A higher value
+/// allows longer delegation chains and bigger tokens.
+const ACT_CHAIN_MAX: usize = 32;
 
 /// RFC 8693 token exchange.
 ///
@@ -110,16 +116,22 @@ pub async fn grant_type_token_exchange(
     // anyway, so extracting them here costs nothing extra and saves a second 512 byte buffer.
     let mut buf = Vec::with_capacity(512);
 
-    let (subject_sub, subject_scope, subject_exp) = {
-        let subject_claims =
+    // The subject's `act` borrows from the buffer too, so its `sub`s are copied out, outermost
+    // first.
+    let (subject_sub, subject_scope, subject_exp, subject_act, subject_issued) = {
+        let (subject_claims, subject_issued) =
             validate_exchange_token(subject_token, subject_token_type, "subject_token", &mut buf)
                 .await?;
         (
             subject_claims.common.sub.map(|s| s.to_string()),
             subject_claims.common.scope.map(|s| s.to_string()),
             subject_claims.common.exp,
+            act_chain_subs(subject_claims.act.as_ref()),
+            subject_issued,
         )
     };
+    // The exchanged token inherits the session of the `subject_token`, like a refreshed one.
+    let sid = subject_issued.and_then(|t| t.sid).map(SessionId);
 
     // An `actor_token` turns this into a delegation. By RFC, `actor_token_type` is REQUIRED as
     // soon as an `actor_token` is given.
@@ -132,8 +144,15 @@ pub async fn grant_type_token_exchange(
         };
         // the subject claims are out of scope by now, so the buffer is free to be re-used
         buf.clear();
-        let actor_claims =
+        let (actor_claims, _) =
             validate_exchange_token(actor_token, actor_token_type, "actor_token", &mut buf).await?;
+
+        if client.actor_same_client && actor_claims.common.azp != client.id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidRequest,
+                "the 'actor_token' was not issued to this client",
+            ));
+        }
 
         let Some(actor_sub) = actor_claims.common.sub else {
             return Err(ErrorResponse::new(
@@ -144,13 +163,33 @@ pub async fn grant_type_token_exchange(
 
         // A delegation chain is kept: if the actor was itself acting for someone, that history
         // stays nested inside the new `act`.
+        // The same goes for an `act` of the subject (RFC 8693 section 4.1). Only one of the two
+        // chains can be kept, so the exchange is rejected if both tokens carry one.
+        let prior = match (act_chain_from_subs(&subject_act), actor_claims.act) {
+            (Some(_), Some(_)) => {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidRequest,
+                    "the 'subject_token' and the 'actor_token' both carry an 'act' claim, which \
+                    cannot be merged into a single delegation chain",
+                ));
+            }
+            (Some(act), None) | (None, Some(act)) => Some(Box::new(act)),
+            (None, None) => None,
+        };
         Some(ActClaim {
             sub: actor_sub,
-            act: actor_claims.act.map(Box::new),
+            act: prior,
         })
     } else {
-        None
+        // Without an actor nobody is added, but an `act` of the subject is passed on unchanged.
+        act_chain_from_subs(&subject_act)
     };
+    if iter::successors(act.as_ref(), |act| act.act.as_deref()).count() > ACT_CHAIN_MAX {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::InvalidRequest,
+            format!("the 'act' chain is limited to {ACT_CHAIN_MAX} actors"),
+        ));
+    }
 
     // RFC 8693 names the exchange target `audience`; `resource` does the same job here and is
     // already part of a token request. Both are validated against `allowed_resources`, which is
@@ -255,6 +294,7 @@ pub async fn grant_type_token_exchange(
         lifetime,
         dpop_fingerprint,
         TokenScopes::new(scope),
+        sid,
         target,
         act,
     )
@@ -273,6 +313,21 @@ pub async fn grant_type_token_exchange(
     Ok((ts, headers))
 }
 
+fn act_chain_subs(act: Option<&ActClaim>) -> Vec<String> {
+    iter::successors(act, |act| act.act.as_deref())
+        .map(|act| act.sub.to_string())
+        .collect()
+}
+
+fn act_chain_from_subs(subs: &[String]) -> Option<ActClaim<'_>> {
+    subs.iter().rev().fold(None, |inner, sub| {
+        Some(ActClaim {
+            sub,
+            act: inner.map(Box::new),
+        })
+    })
+}
+
 /// Validates a `subject_token` / `actor_token`. Only access tokens are accepted, and the token
 /// must not have been revoked.
 async fn validate_exchange_token<'a>(
@@ -280,7 +335,7 @@ async fn validate_exchange_token<'a>(
     token_type: &str,
     name: &str,
     buf: &'a mut Vec<u8>,
-) -> Result<JwtAccessClaims<'a>, ErrorResponse> {
+) -> Result<(JwtAccessClaims<'a>, Option<IssuedToken>), ErrorResponse> {
     if TokenType::from_str(token_type).ok() != Some(TokenType::AccessToken) {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -308,9 +363,53 @@ async fn validate_exchange_token<'a>(
     }
     let claims = serde_json::from_slice::<JwtAccessClaims>(buf)?;
 
-    if let Some(jti) = claims.common.jti {
-        IssuedToken::validate_not_revoked(jti).await?;
+    let issued = if let Some(jti) = claims.common.jti {
+        Some(IssuedToken::validate_not_revoked(jti).await?)
+    } else {
+        None
+    };
+
+    Ok((claims, issued))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_act_chain_round_trip() {
+        assert_eq!(act_chain_from_subs(&act_chain_subs(None)), None);
+        assert_eq!(act_chain_from_subs(&[]), None);
+
+        let c = ActClaim {
+            sub: "c",
+            act: None,
+        };
+        let b = ActClaim {
+            sub: "b",
+            act: Some(Box::new(c.clone())),
+        };
+        let a = ActClaim {
+            sub: "a",
+            act: Some(Box::new(b.clone())),
+        };
+        for deep in [c, b, a] {
+            let subs = act_chain_subs(Some(&deep));
+            assert_eq!(act_chain_from_subs(&subs), Some(deep), "subs {subs:?}");
+        }
     }
 
-    Ok(claims)
+    #[test]
+    fn test_act_chain_order() {
+        let subs = ["a", "b", "c"].map(String::from);
+        let act = act_chain_from_subs(&subs).unwrap();
+        assert_eq!(act_chain_subs(Some(&act)), subs);
+
+        assert_eq!(act.sub, "a");
+        let act = act.act.unwrap();
+        assert_eq!(act.sub, "b");
+        let act = act.act.unwrap();
+        assert_eq!(act.sub, "c");
+        assert_eq!(act.act, None);
+    }
 }

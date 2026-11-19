@@ -42,8 +42,10 @@ export let I18nAdminDe: I18nAdmin = {
     clients: {
         allowedResources: 'Erlaubte Ressourcen',
         defaultAud: 'Standard-Audiences',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Optionale RFC 8707 Resource Indicators, die dieser Client anfordern darf. Eine leere Liste lehnt jeden 'resource'-Parameter mit 'invalid_target' ab.`,
         descDefaultAud: `Audiences, die immer zu den Tokens dieses Clients hinzugefügt werden, unabhängig von einem 'resource'-Parameter.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout:
             'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
         branding: {

@@ -597,6 +597,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         allowed_resources: None,
         default_aud: None,
         consent: None,
+        actor_same_client: false,
         scim: None,
     };
     let url_client = format!("{}/clients/{}", backend_url, CLIENT_ID);
@@ -1312,6 +1313,8 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
     let text = res.text().await?;
     let info = serde_json::from_str::<TokenInfo>(&text)?;
     assert!(info.active);
+    // no `act` for a token that was not issued via a token exchange with delegation
+    assert!(info.act.is_none());
 
     // with valid basic auth - client_id:client_secret
     let plain = format!("{}:{}", CLIENT_ID, CLIENT_SECRET);
