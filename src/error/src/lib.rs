@@ -59,6 +59,11 @@ pub enum ErrorResponseType {
     /// Serialized as the OIDC error code `consent_required`.
     #[serde(rename = "consent_required")]
     ConsentRequired,
+    /// RFC 6749 §5.2 / RFC 8693 §2.2.2: the request is invalid, or the `subject_token` or
+    /// `actor_token` is unacceptable based on policy. Serialized as the RFC error code
+    /// `invalid_request`.
+    #[serde(rename = "invalid_request")]
+    InvalidRequest,
 }
 
 impl Display for ErrorResponseType {

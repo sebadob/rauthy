@@ -1,6 +1,6 @@
 use actix_web::HttpRequest;
 use actix_web::http::header::{AUTHORIZATION, HeaderName, HeaderValue};
-use rauthy_api_types::oidc::TokenInfo;
+use rauthy_api_types::oidc::{ActClaim, TokenInfo};
 use rauthy_common::utils::base64_decode_buf;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
@@ -35,7 +35,10 @@ pub async fn get_token_info(
             None,
         ));
     }
-    let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;
+    let IntrospectClaims {
+        common: claims,
+        act,
+    } = serde_json::from_slice(&buf)?;
 
     if let Some(jti) = claims.jti {
         IssuedToken::validate_not_revoked(jti).await?;
@@ -64,6 +67,7 @@ pub async fn get_token_info(
         nbf: Some(claims.nbf),
         exp: Some(claims.exp),
         cnf: claims.cnf,
+        act,
     })?;
 
     buf.clear();
@@ -85,6 +89,14 @@ pub async fn get_token_info(
     };
 
     Ok((info, cors_header))
+}
+
+#[derive(serde::Deserialize)]
+struct IntrospectClaims<'a> {
+    #[serde(borrow, flatten)]
+    common: JwtCommonClaims<'a>,
+    #[serde(borrow)]
+    act: Option<ActClaim<'a>>,
 }
 
 #[inline]

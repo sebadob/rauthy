@@ -97,6 +97,7 @@ fn update_request(c: ClientResponse) -> UpdateClientRequest {
         allowed_resources: c.allowed_resources,
         default_aud: c.default_aud,
         consent: c.consent,
+        actor_same_client: c.actor_same_client,
         scim: None,
     }
 }
@@ -328,6 +329,7 @@ async fn test_clients() -> Result<(), Box<dyn Error>> {
         allowed_resources: None,
         default_aud: None,
         consent: None,
+        actor_same_client: false,
         scim: None,
     };
 

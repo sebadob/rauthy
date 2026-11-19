@@ -41,8 +41,10 @@ export let I18nAdminUk: I18nAdmin = {
     clients: {
         allowedResources: 'Дозволені ресурси',
         defaultAud: 'Аудиторії за замовчуванням',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Необов'язкові індикатори ресурсів RFC 8707, які може запитувати цей клієнт. Порожній список відхиляє будь-який параметр 'resource' з помилкою 'invalid_target'.`,
         descDefaultAud: `Аудиторії, які завжди додаються до токенів цього клієнта, незалежно від параметра 'resource'.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
             descHsl: `Наступні значення мають бути вказані як HSL-значення. Ви вказуєте лише базові кольори.

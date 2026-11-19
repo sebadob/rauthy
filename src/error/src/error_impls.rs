@@ -62,6 +62,7 @@ impl ResponseError for ErrorResponse {
             | ErrorResponseType::ConsentRequired
             | ErrorResponseType::InvalidClientMetadata
             | ErrorResponseType::InvalidGrant
+            | ErrorResponseType::InvalidRequest
             | ErrorResponseType::InvalidTarget
             | ErrorResponseType::UseDpopNonce(_) => StatusCode::BAD_REQUEST,
             ErrorResponseType::Blocked
@@ -629,5 +630,6 @@ mod tests {
             [30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         );
         assert_eq!(encode(ErrorResponseType::ConsentRequired), [31, 0, 0, 0]);
+        assert_eq!(encode(ErrorResponseType::InvalidRequest), [32, 0, 0, 0]);
     }
 }

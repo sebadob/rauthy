@@ -1,6 +1,6 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
-use rauthy_api_types::oidc::{Audience, JktClaim};
+use rauthy_api_types::oidc::{ActClaim, Audience, JktClaim};
 use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_common::utils::base64_url_no_pad_encode;
 use rauthy_data::entity::clients::Client;
@@ -16,7 +16,7 @@ use rauthy_data::entity::webids::WebId;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{
-    ActClaim, JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
+    JwtAccessClaims, JwtAmrValue, JwtCommonClaims, JwtIdClaims, JwtTokenType,
     validate_no_reserved_collision,
 };
 use rauthy_jwt::token::{JwtHeaderType, JwtToken};
@@ -632,12 +632,14 @@ impl TokenSet {
     /// refresh token: a refresh must come from the client that owns the original token, with a
     /// fresh exchange on top. There is no id token either, because an exchanged token is meant
     /// for a resource server and not for authenticating an end user.
+    #[allow(clippy::too_many_arguments)]
     pub async fn for_token_exchange(
         user: Option<&User>,
         client: &Client,
         lifetime: i64,
         dpop_fingerprint: Option<DpopFingerprint>,
         scope: TokenScopes<'_>,
+        sid: Option<SessionId>,
         resource: Option<&str>,
         act: Option<ActClaim<'_>>,
     ) -> Result<Self, ErrorResponse> {
@@ -690,7 +692,7 @@ impl TokenSet {
             lifetime,
             TokenScopes::new(scope.0.as_ref()),
             customs_access,
-            None,
+            sid,
             resource,
             act,
             DeviceCodeFlow::No,

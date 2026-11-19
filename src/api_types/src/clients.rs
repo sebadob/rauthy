@@ -267,6 +267,10 @@ pub struct UpdateClientRequest {
     /// value.
     #[serde(default)]
     pub consent: Option<String>,
+    /// RFC 8693: when `true`, an `actor_token` in a token exchange must have been issued to
+    /// this client; any other is rejected.
+    #[serde(default)]
+    pub actor_same_client: bool,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -355,6 +359,7 @@ pub struct ClientResponse {
     pub allowed_resources: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_aud: Option<Vec<String>>,
+    pub actor_same_client: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub consent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

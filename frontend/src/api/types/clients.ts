@@ -86,6 +86,8 @@ export interface UpdateClientRequest {
     /// Validation: `local` or PATTERN_CONSENT_URL, at most 1024 bytes; the backend applies the
     /// `validate_consent_source_url` rules (https, no userinfo, no fragment, no `lang` query key)
     consent?: string;
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    actor_same_client?: boolean;
     scim?: ScimClientRequestResponse;
 }
 
@@ -120,6 +122,7 @@ export interface ClientResponse {
     allowed_resources?: string[];
     default_aud?: string[];
     consent?: string;
+    actor_same_client: boolean;
     scim?: ScimClientRequestResponse;
 }
 
