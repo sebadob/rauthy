@@ -363,6 +363,12 @@ document it like the library it may become.
 - Unit tests in `#[cfg(test)] mod tests { use super::*; .. }` for private internals.
   Integration tests in `tests/` for anything reachable through the public API, and prefer
   that location when either would do. Doc examples are tests too.
+- **A database in a test is always an integration test.** Never fake a DB inside a unit test, and
+  never open a real one from a `#[cfg(test)]` module. Anything that touches a DB runs in
+  `src/bin/tests/` against a running backend: via the public API, or via dev handlers when the
+  public API cannot reach the case. This is the exception to the mockability rule below. The
+  existing fake-DB and `RAUTHY_TEST_PG_URL` unit tests are legacy: not a template, and to be
+  removed in the long run.
 - Test observable behavior and properties (monotonic, round-trips, idempotent), not
   restated constants or mirrored branches.
 - Write a failing test before fixing a bug. Cover each feature combination and each

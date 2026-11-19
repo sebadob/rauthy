@@ -490,6 +490,12 @@ impl rustls::client::danger::ServerCertVerifier for NoTlsVerifier {
 
 /// A fresh schema `<prefix>_..` on `RAUTHY_TEST_PG_URL` with all Postgres migrations, set as the
 /// `search_path` of the returned connection. Drop the returned schema at the end of the test.
+///
+/// Not for new tests, [`pg_test_pool`] and [`pg_test_conn`] included: a test that touches a DB is
+/// an integration test in `src/bin/tests/` against a running backend, via the public API, or via
+/// dev handlers when the public API cannot reach the case. These helpers only serve the existing
+/// unit tests that open Postgres from a `#[cfg(test)]` module, which are to be removed in the long
+/// run.
 #[cfg(test)]
 pub(crate) async fn pg_test_schema(prefix: &str) -> (PgClient, String) {
     let (pool, schema) = pg_test_pool(prefix).await;
