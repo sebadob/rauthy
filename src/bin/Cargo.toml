@@ -62,11 +62,11 @@ validator = { workspace = true }
 zeroize = { workspace = true }
 
 # jemalloc does not work properly on msvc targets
-[target.'cfg(all(not(target_env = "msvc"), not(target_os = "openbsd")))'.dependencies]
+[target.'cfg(all(not(target_env = "msvc"), not(target_os = "openbsd"), not(target_os = "linux")))'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-tikv-jemallocator = { workspace = true, features = [
+tikv-jemallocator = { workspace = true, optional = true, features = [
   "unprefixed_malloc_on_supported_platforms",
 ] }
 
