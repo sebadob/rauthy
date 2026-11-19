@@ -395,10 +395,9 @@ pub_url = '{}'"#,
 proxy_mode = {}
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -808,10 +807,9 @@ The default path's where Rauthy will look for TLS certificates are
             println!(
                 r#"
 Provide a list of trusted proxy CIDRs. When `proxy_mode = true`
-or `peer_ip_header_name` is set, these are mandatory to
-be able to extract the real client IP properly and safely
-to prevent IP header spoofing. All requests with a
-different source will be blocked."#
+these are mandatory to be able to extract the real client IP
+properly and safely to prevent IP header spoofing. All requests
+with a different source will be blocked."#
             );
 
             'outer: loop {

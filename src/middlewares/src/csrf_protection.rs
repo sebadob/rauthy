@@ -4,7 +4,7 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
 };
 use futures::future::LocalBoxFuture;
-use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::future::{Ready, ready};
@@ -102,7 +102,7 @@ where
                     return service.call(req).await;
                 }
 
-                let ip = real_ip_from_svc_req(&req)?;
+                let ip = real_ip_from_req(&req)?;
                 warn!(
                     "CSRF / Sec-Header violation from {ip} on path {}",
                     req.path()

@@ -44,16 +44,20 @@ be the same for each client connecting through it. However, a reverse proxy adds
 contain the clients real IP, like e.g., the `X-FORWARDED-FOR` header and maybe others (depending on
 the proxy).
 
+Rauthy uses the `X-REAL-IP` header for the real client IP and falls back to the first value of
+`X-FORWARDED-FOR` when it is missing. Any other header, like the RFC 7239 `Forwarded` header, is
+ignored. Without `proxy_mode = true`, Rauthy uses the IP of the direct connection only and looks
+at none of these headers.
+
 These headers can be spoofed from an attacker if the source IP is not validated. This is what
 Rauthy needs you to set the trusted proxies config for:
 
 ```toml
 [server]
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests with a
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -99,7 +103,8 @@ peer_ip_header_name = 'CF-Connecting-IP'
 
 The CDN usually adds some other headers than the default `X-FORWARDED-FOR` headers, like in this
 example `CF-Connecting-IP` to the request. If this is the case, you can tell Rauthy to always check
-for this header first and only use the other methods as fallback if this does not exist.
+for this header first and only use the other methods as fallback if this does not exist. This
+header has to contain a single IP address, and it is only used when `proxy_mode = true`.
 
 ### Session peer IP binding
 
