@@ -2792,6 +2792,19 @@ pub async fn put_user_self(
     let id = id.into_inner();
     principal.is_user(&id)?;
 
+    // the payload replaces the stored values, omitted `user_values` delete them
+    let (stored, preferred_username) = User::upd_req_from_db(id.clone()).await?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: preferred_username.as_deref(),
+        user_values: &payload.user_values,
+    }
+    .validate_update(&UserValuesValidator::from_update_req(
+        &stored,
+        preferred_username.as_deref(),
+    ))?;
+
     let (user, user_values, email_updated) = User::update_self_req(id, payload).await?;
 
     let cloned = user.clone();
