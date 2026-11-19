@@ -4899,7 +4899,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-web",
  "actix-web-prom",
@@ -4953,7 +4953,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-api-types"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-web",
  "hiqlite",
@@ -4973,7 +4973,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-common"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-web",
  "ammonia",
@@ -5004,7 +5004,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-data"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "accept-language",
  "actix-multipart",
@@ -5097,7 +5097,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-derive"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5106,7 +5106,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-error"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5143,7 +5143,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-handlers"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-multipart",
  "actix-web",
@@ -5181,7 +5181,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-jwt"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "chrono",
  "ed25519-compact",
@@ -5199,7 +5199,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-ldap"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "futures",
  "ldap3_proto",
@@ -5217,7 +5217,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-middlewares"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5233,7 +5233,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-notify"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "async-trait",
  "openssl",
@@ -5249,7 +5249,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-schedulers"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-web",
  "chrono",
@@ -5270,7 +5270,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-service"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "actix-web",
  "atrium-api",
@@ -5300,7 +5300,7 @@ dependencies = [
 
 [[package]]
 name = "rauthy-wasm-modules"
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 dependencies = [
  "ammonia",
  "console_error_panic_hook",
