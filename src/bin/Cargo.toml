@@ -65,6 +65,11 @@ zeroize = { workspace = true }
 [target.'cfg(all(not(target_env = "msvc"), not(target_os = "openbsd")))'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+tikv-jemallocator = { workspace = true, features = [
+  "unprefixed_malloc_on_supported_platforms",
+] }
+
 [dev-dependencies]
 rauthy-api-types = { path = "../api_types" }
 
