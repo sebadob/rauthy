@@ -304,6 +304,9 @@
         params?: URLSearchParams,
         residentKeyToken?: string,
     ) {
+        if (isLoading) {
+            return;
+        }
         if (isAtproto) {
             return providerLogin(atprotoId);
         }
@@ -783,8 +786,7 @@
                                     <Button
                                         type="submit"
                                         ariaLabel={t.authorize.login}
-                                        onclick={() => onSubmit()}
-                                        isDisabled={email.length === 0}
+                                        isDisabled={isAtproto ? !atprotoHandle : !email}
                                         {isLoading}
                                     >
                                         {t.authorize.login}

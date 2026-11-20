@@ -325,6 +325,11 @@ async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error
         .send()
         .await?;
     let has_header = res.headers().get("x-session-expired").is_some();
+    assert!(
+        res.headers()
+            .get(reqwest::header::WWW_AUTHENTICATE)
+            .is_none()
+    );
     let status = res.status();
     let body = res.text().await?;
     assert_eq!(status, 401, "expected a plain 401 - body: {body}");
@@ -347,6 +352,11 @@ async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error
         .send()
         .await?;
     let has_header = res.headers().get("x-session-expired").is_some();
+    assert!(
+        res.headers()
+            .get(reqwest::header::WWW_AUTHENTICATE)
+            .is_none()
+    );
     let status = res.status();
     let body = res.text().await?;
     assert_eq!(status, 401, "expected 401 - body: {body}");
@@ -509,6 +519,23 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         resident_key_token: None,
         fwda: None,
     };
+    // An email-only submission asks the interactive form for a password.
+    let mut email_step = req_login.clone();
+    email_step.password = None;
+    let res = reqwest::Client::new()
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&email_step)
+        .send()
+        .await?;
+    let res = expect_status!(res, 401);
+    assert!(
+        res.headers()
+            .get(reqwest::header::WWW_AUTHENTICATE)
+            .is_none()
+    );
+
+    req_login.pow = get_solved_pow().await;
     let res = reqwest::Client::new()
         .post(&url_auth)
         .headers(headers.clone())
@@ -966,8 +993,9 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
 
     body.client_secret = Some("NoNoNoSecret1337".to_string());
     let res = client.post(&url).form(&body).send().await?;
-    // should be 400 - wrong password
-    expect_status!(res, 401);
+    // A token endpoint denial keeps its HTTP challenge.
+    let res = expect_status!(res, 401);
+    assert_eq!(res.headers()[reqwest::header::WWW_AUTHENTICATE], "OAuth");
 
     body.password = Some(PASSWORD.to_string());
     let res = client.post(&url).form(&body).send().await?;

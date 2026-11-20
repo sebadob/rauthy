@@ -351,6 +351,28 @@ pub async fn post_authorize_handle(
     principal: ReqPrincipal,
     browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
+    match post_authorize_inner(req, payload, principal, browser_id).await {
+        Err(err) if err.status_code() == StatusCode::UNAUTHORIZED => {
+            let mut response = err.error_response();
+            // The interactive login uses the JSON response to advance the form. Safari retries
+            // the POST when it sees our generic HTTP auth challenge, reusing the consumed PoW.
+            if response.headers().get(header::WWW_AUTHENTICATE)
+                == Some(&HeaderValue::from_static("OAuth"))
+            {
+                response.headers_mut().remove(header::WWW_AUTHENTICATE);
+            }
+            Ok(response)
+        }
+        result => result,
+    }
+}
+
+async fn post_authorize_inner(
+    req: HttpRequest,
+    payload: LoginRequest,
+    principal: ReqPrincipal,
+    browser_id: BrowserId,
+) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_session_auth_or_init()?;
     payload.validate()?;
 

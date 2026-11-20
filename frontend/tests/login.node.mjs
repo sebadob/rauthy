@@ -101,7 +101,7 @@ for (const status of [404, 409, 413]) {
 }
 
 test('login: HTTP 401 asks for the password, then reports invalid credentials', async t => {
-    const { context, page, submit } = await openLogin(401);
+    const { context, page, requests, submit } = await openLogin(401);
     t.after(() => context.close());
     await submit();
     await page.locator('input[name=password]').waitFor();
@@ -109,6 +109,28 @@ test('login: HTTP 401 asks for the password, then reports invalid credentials', 
     await submit();
     await page.getByText('Invalid credentials', { exact: true }).waitFor();
     await page.getByText('Password forgotten?').waitFor();
+    assert.equal(requests.filter(r => r === authorizeReq).length, 2);
+});
+
+test('login: clicking submit with an invalid email does not send it', async t => {
+    const { context, page, submit } = await openLogin(401);
+    t.after(() => context.close());
+    /** @type {string[]} */
+    const submittedEmails = [];
+    page.on('request', (/** @type {any} */ request) => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname === documentPath) {
+            submittedEmails.push(request.postDataJSON().email);
+        }
+    });
+    const email = page.locator('input[name=email]');
+    await email.fill('invalid-address');
+    await submit();
+    await page.getByText('Provide valid E-Mail address').waitFor();
+
+    await email.fill('user@localhost');
+    await submit();
+    await page.locator('input[name=password]').waitFor();
+    assert.deepEqual(submittedEmails, ['user@localhost']);
 });
 
 async function waitForReloads(/** @type {string[]} */ navigations, /** @type {number} */ want) {
