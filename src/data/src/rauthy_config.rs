@@ -1490,6 +1490,7 @@ Your account has not been compromised and no data was leaked."#.into()),
                 domain_restriction: None,
                 domain_blacklist: Vec::default(),
                 allow_open_redirect: false,
+                post_reset_redirect_uri: None,
             },
             user_values: VarsUserValuesConfig {
                 given_name: UserValueConfigValue::Required,
@@ -4219,6 +4220,14 @@ impl Vars {
         ) {
             self.user_registration.allow_open_redirect = v;
         }
+        if let Some(v) = t_str(
+            &mut table,
+            "user_registration",
+            "post_reset_redirect_uri",
+            "USER_REG_POST_RESET_REDIRECT_URI",
+        ) {
+            self.user_registration.post_reset_redirect_uri = Some(v);
+        }
 
         check_table_empty(table, "user_registration");
     }
@@ -5278,6 +5287,7 @@ pub struct VarsUserRegistration {
     pub domain_restriction: Option<String>,
     pub domain_blacklist: Vec<String>,
     pub allow_open_redirect: bool,
+    pub post_reset_redirect_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

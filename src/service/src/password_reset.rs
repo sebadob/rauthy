@@ -146,8 +146,19 @@ pub async fn handle_put_user_passkey_finish(
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
     let mut res = HttpResponse::Created();
     res.cookie(cookie);
-    if let Ok(MagicLinkUsage::NewUser(Some(redirect_uri))) = MagicLinkUsage::try_from(&ml.usage) {
-        res.insert_header((LOCATION, redirect_uri));
+    let ml_redirect_uri = match MagicLinkUsage::try_from(&ml.usage) {
+        Ok(MagicLinkUsage::NewUser(redirect_uri)) => redirect_uri,
+        _ => None,
+    };
+    let redirect_uri = ml_redirect_uri.or_else(|| {
+        RauthyConfig::get()
+            .vars
+            .user_registration
+            .post_reset_redirect_uri
+            .clone()
+    });
+    if let Some(loc) = redirect_uri {
+        res.insert_header((LOCATION, loc));
     }
     Ok(res.finish())
 }
@@ -216,12 +227,19 @@ pub async fn handle_put_user_password_reset<'a>(
     // reset password exp reminder emails
     PasswordExpMail::delete(user.id).await?;
 
-    // check if we got a custom `redirect_uri` during registration
-    let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
+    // a `redirect_uri` from the magic link always has priority over the config fallback
+    let ml_redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
         MagicLinkUsage::NewUser(redirect_uri) => redirect_uri,
         MagicLinkUsage::PasswordReset(redirect_uri) => redirect_uri,
         _ => None,
     };
+    let redirect_uri = ml_redirect_uri.or_else(|| {
+        RauthyConfig::get()
+            .vars
+            .user_registration
+            .post_reset_redirect_uri
+            .clone()
+    });
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
