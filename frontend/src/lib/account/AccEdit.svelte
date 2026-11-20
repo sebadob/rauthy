@@ -187,7 +187,7 @@
                         />
                     {/if}
                     {#if config.tz !== 'hidden'}
-                        <TZSelect bind:value={user.user_values.tz} />
+                        <div><TZSelect bind:value={user.user_values.tz} /></div>
                     {/if}
                     <PreferredUsername
                         userId={user.id}
@@ -342,10 +342,22 @@
     }
 
     .formInner {
+        --ui-field-margin: 0;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
         gap: var(--ui-space);
         max-width: 48rem;
+    }
+
+    .formInner > div {
+        display: grid;
+        align-content: start;
+        gap: var(--ui-space);
+        min-width: 0;
+    }
+
+    .formInner + .bottom {
+        margin-top: var(--ui-space);
     }
 
     .selfDelete {
