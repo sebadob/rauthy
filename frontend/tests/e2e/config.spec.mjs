@@ -67,25 +67,13 @@ test.describe('config sub-navigation', () => {
         }
     });
 
-    test('deep links load every config page except ToS', async ({ page }) => {
-        for (const [, path, title] of PAGES.filter(p => p[1] !== 'tos')) {
-            await page.goto(`/auth/v1/admin/config/${path}`);
+    test('deep links load every config page', async ({ page }) => {
+        for (const [, path, title] of PAGES) {
+            const response = await page.goto(`/auth/v1/admin/config/${path}`);
+            expect(response?.status()).toBe(200);
             await expect(page).toHaveTitle(title);
             await expect(MARKER[path](page)).toBeVisible();
         }
-    });
-
-    test.describe(() => {
-        test.use({ allowErrors: [/http 404 GET \/auth\/v1\/admin\/config\/tos/] });
-        test('ToS page loads from a deep link', async ({ page }) => {
-            // UPSTREAM BUG: the backend has no HTML route for `/auth/v1/admin/config/tos`
-            // (src/api/src/html.rs, src/bin/src/server.rs), so a reload or a shared link of the
-            // ToS page answers 404 while every other config page works.
-            test.fail();
-            const res = await page.goto('/auth/v1/admin/config/tos');
-            expect(res?.status()).toBe(200);
-            await expect(MARKER.tos(page)).toBeVisible();
-        });
     });
 });
 
