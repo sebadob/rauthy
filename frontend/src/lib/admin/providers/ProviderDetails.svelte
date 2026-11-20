@@ -2,7 +2,8 @@
     import type { ProviderResponse } from '#api/types/auth_provider.ts';
     import ProviderConfig from './ProviderConfig.svelte';
     import ProviderDelete from './ProviderDelete.svelte';
-    import Tabs from '#lib/tabs/Tabs.svelte';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import IconShieldCheck from '#icons/IconShieldCheck.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
@@ -14,17 +15,15 @@
     } = $props();
 
     let ta = useI18nAdmin();
-
-    const tabs = [ta.tabs.config, ta.tabs.delete];
-    let selected = $state(tabs[0]);
 </script>
 
-<div class="flex">
-    <Tabs {tabs} bind:selected />
-</div>
+<EntityHeader title={provider.name} subtitle={ta.nav.providers}>
+    {#snippet actions()}
+        {#key provider.id}
+            <ProviderDelete {provider} {onSave} />
+        {/key}
+    {/snippet}
+    <IconShieldCheck width="28px" />
+</EntityHeader>
 
-{#if selected === ta.tabs.config}
-    <ProviderConfig bind:provider bind:onSave />
-{:else if selected === ta.tabs.delete}
-    <ProviderDelete {provider} bind:onSave />
-{/if}
+<ProviderConfig bind:provider bind:onSave />

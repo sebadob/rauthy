@@ -29,7 +29,7 @@ export function unixTsFromLocalDateTime(date: string, time: string) {
     if (isNaN(ts)) {
         return;
     }
-    return ts / 1000 - new Date().getTimezoneOffset();
+    return ts / 1000;
 }
 
 export interface Day {

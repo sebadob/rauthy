@@ -143,9 +143,9 @@ test.describe('events archive', () => {
         await expect(from.time).toHaveValue(/^\d{2}:\d{2}$/);
         const until = dateTime(page, 'Until');
         await expect(until.date).toHaveValue('');
-        await expect(main(page).getByRole('combobox', { name: 'Event Level' })).toContainText(
-            'All levels',
-        );
+        await expect(
+            main(page).getByRole('button', { name: 'Event Level', exact: true }),
+        ).toContainText('All levels');
         await expect(main(page).getByRole('combobox', { name: 'Event Type' })).toContainText('-');
         await expect(main(page).getByRole('combobox', { name: 'Order by ...' })).toContainText(
             'Timestamp',
@@ -181,15 +181,23 @@ test.describe('events archive', () => {
             ).toContainText(testEv.ip || '');
 
             // level: the registration is "info", the admin password reset "notice"
-            const level = main(page).getByRole('combobox', { name: 'Event Level' });
-            await pick(page, level, 'Notice and above');
+            const level = main(page).getByRole('button', { name: 'Event Level', exact: true });
+            await level.click();
+            const levels = page.getByRole('group', { name: 'Event Level' });
+            await levels.getByRole('checkbox', { name: 'All levels' }).uncheck();
+            await levels.getByRole('checkbox', { name: 'notice', exact: true }).check();
             await expect(reset).toBeVisible();
             await expect(registered).toBeHidden();
             await expect(testEntry).toHaveCount(0);
-            await pick(page, level, 'Critical only');
+            await levels.getByRole('checkbox', { name: 'info', exact: true }).check();
+            await levels.getByRole('checkbox', { name: 'notice', exact: true }).uncheck();
             await expect(reset).toBeHidden();
-            await pick(page, level, 'All levels');
             await expect(registered).toBeVisible();
+            await levels.getByRole('checkbox', { name: 'critical', exact: true }).check();
+            await expect(reset).toBeHidden();
+            await expect(registered).toBeVisible();
+            await levels.getByRole('checkbox', { name: 'All levels' }).check();
+            await page.keyboard.press('Escape');
 
             // type
             const type = main(page).getByRole('combobox', { name: 'Event Type' });
@@ -272,11 +280,6 @@ test.describe('events archive', () => {
     });
 
     test('an event in the "From" minute is included', async ({ page }) => {
-        // UPSTREAM BUG: `unixTsFromLocalDateTime` (frontend/src/utils/form.ts) subtracts the
-        // timezone offset in MINUTES from a timestamp in SECONDS. In Europe/Berlin (UTC+1) every
-        // "From" / "Until" is shifted 60 seconds into the future, so events of the selected
-        // minute are missing. Correct: `Date.parse(...)` already is local time, return ts / 1000.
-        test.fail();
         await page.goto(ARCHIVE);
         const ev = await createTestEvent(page);
         await setFilter(page, 'From', await localDateTime(page, ev.timestamp));
@@ -415,8 +418,10 @@ test.describe('live events panel', () => {
 
     test('is shown next to every admin page on wide screens', async ({ page }) => {
         await openWithEventsPanel(page, '/auth/v1/admin/sessions');
-        await expect(main(page).getByRole('combobox', { name: 'Event Level' })).toBeVisible();
-        await expect(main(page).getByRole('button', { name: 'Test Event' })).toBeVisible();
+        await expect(
+            main(page).getByRole('button', { name: 'Event Level', exact: true }),
+        ).toBeVisible();
+        await expect(main(page).getByRole('button', { name: 'Send test event' })).toBeVisible();
         // the stream delivers the latest events right away
         await expect(
             main(page)
@@ -428,7 +433,7 @@ test.describe('live events panel', () => {
     test('"Test" creates a test event that appears live', async ({ page }) => {
         await openWithEventsPanel(page, '/auth/v1/admin/sessions');
         const since = Date.now() - 1000;
-        await main(page).getByRole('button', { name: 'Test Event' }).click();
+        await main(page).getByRole('button', { name: 'Send test event' }).click();
         /** @type {Ev | undefined} */
         let ev;
         await expect
@@ -451,35 +456,37 @@ test.describe('live events panel', () => {
 
     test('the level selector filters the stream and is remembered', async ({ page }) => {
         await openWithEventsPanel(page, '/auth/v1/admin/sessions');
-        const level = main(page).getByRole('combobox', { name: 'Event Level' });
+        const level = main(page).getByRole('button', { name: 'Event Level', exact: true });
         await expect(level).toContainText('All levels');
         // an info event of a fresh user registration
         const user = await createUser(page, 'e2e-evtp');
         try {
             const registered = eventEntry(page, user.email, 'NewUserRegistered');
             await expect(registered).toBeVisible();
-            const stream = page.waitForRequest(r =>
-                r.url().includes('/auth/v1/events/stream?latest=50&level=warning'),
-            );
-            await pick(page, level, 'Warning and above');
-            await stream;
+            await level.click();
+            const levels = page.getByRole('group', { name: 'Event Level' });
+            await levels.getByRole('checkbox', { name: 'All levels' }).uncheck();
+            await levels.getByRole('checkbox', { name: 'notice', exact: true }).check();
+            await levels.getByRole('checkbox', { name: 'critical', exact: true }).check();
+            await expect(level).toContainText('2 / 4');
             await expect(registered).toBeHidden();
-            // FINDING (upstream): Events.svelte keeps "Test" events at every level, but the backend
-            // stream drops events below the client level (src/data/src/events/listener.rs), so
-            // a test event never reaches a "warning" stream.
 
             await page.reload();
-            await expect(main(page).getByRole('combobox', { name: 'Event Level' })).toContainText(
-                'Warning and above',
-            );
-            await pick(
-                page,
-                main(page).getByRole('combobox', { name: 'Event Level' }),
-                'All levels',
-            );
+            await expect(level).toContainText('2 / 4');
+            await level.click();
+            await expect(
+                levels.getByRole('checkbox', { name: 'notice', exact: true }),
+            ).toBeChecked();
+            await expect(
+                levels.getByRole('checkbox', { name: 'critical', exact: true }),
+            ).toBeChecked();
+            await expect(
+                levels.getByRole('checkbox', { name: 'warning', exact: true }),
+            ).not.toBeChecked();
+            await levels.getByRole('checkbox', { name: 'All levels' }).check();
             await expect(registered).toBeVisible();
         } finally {
-            await page.evaluate(() => localStorage.setItem('eventLevel', 'info'));
+            await page.evaluate(() => localStorage.removeItem('eventLevels'));
             await deleteUser(page, user.id);
         }
     });

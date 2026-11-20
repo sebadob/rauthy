@@ -43,7 +43,7 @@
     }
 </script>
 
-<div class="container">
+<div class="container" class:withTime>
     <div class="inputs-wrapper">
         <div class="inputs">
             <InputDate
@@ -66,7 +66,7 @@
             {#if withTime}
                 <InputTime
                     name={timeName}
-                    ariaLabel={label}
+                    ariaLabel={labelTime || label}
                     label={labelTime}
                     bind:value={timeValue}
                     errMsg={timeErrMsg}
@@ -107,11 +107,28 @@
         display: flex;
     }
 
-    :global(.admin-shell) .inputs-wrapper > :global(.delete) {
-        padding-bottom: 20px;
+    :global(.ui-shell) .inputs-wrapper {
+        align-items: start;
+        gap: 0.5rem;
     }
-    :global(.admin-shell) .inputs-wrapper > :global(.inputs) {
-        gap: 8px;
-        align-items: flex-start;
+    :global(.ui-shell) .delete {
+        padding: calc(var(--ui-label-height) + var(--ui-label-gap)) 0 0;
+        --ui-button-height: var(--ui-field-height);
+        --ui-button-min-height: var(--ui-field-height);
+    }
+    :global(.ui-shell) .inputs {
+        display: grid;
+        flex: 1;
+        min-width: 0;
+        grid-template-columns: minmax(0, 1fr);
+        --ui-date-width: 100%;
+    }
+    :global(.ui-shell) .withTime .inputs {
+        grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 0.65fr);
+        gap: 0.5rem;
+        --ui-time-width: 100%;
+    }
+    :global(.ui-shell) .inputs > :global(.admin-date-field) {
+        margin: 0;
     }
 </style>

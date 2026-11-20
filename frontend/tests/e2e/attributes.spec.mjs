@@ -1,3 +1,4 @@
+import { openEntityDelete, entityDelete } from './helpers/entities.mjs';
 // Characterization tests for the admin Attributes section: list, search, order, Add New,
 // description / default value / user editable, rename, Delete, and that a new attribute shows up
 // in a user's Attributes tab.
@@ -11,7 +12,6 @@ import {
     entry,
     entryKeys,
     expectInvalid,
-    expectTabSelected,
     openAddNew,
     openSubNav,
     saveAndWait,
@@ -111,8 +111,7 @@ test.describe('attributes list', () => {
         await expect(page.getByRole('textbox', { name: 'Description' })).toHaveValue(
             first.desc || '',
         );
-        await expectTabSelected(tab(page, 'Config'));
-        await expect(tab(page, 'Delete')).toBeVisible();
+        await expect(entityDelete(page)).toBeVisible();
 
         await page.reload();
         await expect(page.getByRole('textbox', { name: 'Attribute Name' })).toHaveValue(first.name);
@@ -295,17 +294,18 @@ test.describe('attribute config', () => {
         expect(await attrByName(page, name)).toBeUndefined();
     });
 
-    test('leaving the Delete tab keeps the attribute, confirming deletes it', async ({ page }) => {
-        await tab(page, 'Delete').click();
-        await expectTabSelected(tab(page, 'Delete'));
+    test('cancelling keeps the attribute, confirming deletes it', async ({ page }) => {
+        await openEntityDelete(page);
         await expect(
             page.getByText('Are you sure you want to delete this attribute?'),
         ).toBeVisible();
-        await tab(page, 'Config').click();
+        await page
+            .getByRole('dialog', { name: 'Delete' })
+            .getByRole('button', { name: 'Cancel' })
+            .click();
         await expect(page.getByRole('textbox', { name: 'Attribute Name' })).toHaveValue(name);
         expect(await attrByName(page, name)).toBeTruthy();
 
-        await tab(page, 'Delete').click();
         expect(await clickDeleteAndConfirm(page, `/users/attr/${name}`)).toBeLessThan(400);
         await expect(entry(page, name)).toHaveCount(0);
         await expect(page.getByRole('textbox', { name: 'Attribute Name' })).toHaveCount(0);
@@ -377,7 +377,6 @@ test.describe('attributes at phone size', () => {
             await saveAndWait(page, saveButton(page), 'PUT', `/users/attr/${name}`);
             expect((await attrByName(page, name))?.desc).toBe('Mobile');
 
-            await tab(page, 'Delete').click();
             expect(await clickDeleteAndConfirm(page, `/users/attr/${name}`)).toBeLessThan(400);
             expect(await attrByName(page, name)).toBeUndefined();
         } finally {

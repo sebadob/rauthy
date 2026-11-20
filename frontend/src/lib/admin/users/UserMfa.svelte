@@ -1,4 +1,7 @@
 <script lang="ts">
+    import Modal from '#lib/Modal.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import type { UserResponse } from '#api/types/user.ts';
     import { fetchDelete, fetchGet } from '#api/fetch.ts';
     import type { PasskeyResponse } from '#api/types/webauthn.ts';
@@ -9,6 +12,27 @@
     import { TPL_IS_OTP_ENABLED } from '#utils/constants.ts';
     import { deleteOtp } from '#mfa/otp/mod.ts';
     import UserOtp from '#lib/UserOtp.svelte';
+
+    const t = useI18n();
+    let showConfirm = $state(false);
+    let closeConfirm: (() => void) | undefined = $state();
+    let target: { kind: 'passkey' | 'otp'; id: string; name: string } | undefined = $state();
+    let deleting = $state(false);
+
+    function ask(kind: 'passkey' | 'otp', id: string, name: string) {
+        err = '';
+        target = { kind, id, name };
+        showConfirm = true;
+    }
+
+    async function remove() {
+        if (!target) return;
+        deleting = true;
+        if (target.kind === 'passkey') await onDelete(target.id);
+        else await onDeleteOtp(target.id);
+        deleting = false;
+        if (!err) closeConfirm?.();
+    }
 
     let {
         user,
@@ -97,7 +121,7 @@
 
     <div class="keysContainer">
         {#each passkeys as passkey (passkey.name)}
-            <UserPasskey {passkey} showDelete {onDelete} />
+            <UserPasskey {passkey} showDelete onDelete={name => ask('passkey', name, name)} />
         {/each}
     </div>
 {/if}
@@ -110,7 +134,11 @@
 
     <div class="keysContainer">
         {#each otps as otp}
-            <UserOtp {otp} showInactive={true} onDelete={onDeleteOtp} />
+            <UserOtp
+                {otp}
+                showInactive={true}
+                onDelete={id => ask('otp', id, otp.name.toString() || id)}
+            />
         {/each}
     </div>
 {/if}
@@ -120,6 +148,23 @@
         {err}
     </div>
 {/if}
+
+<Modal
+    bind:showModal={showConfirm}
+    bind:closeModal={closeConfirm}
+    ariaLabel={t.common.delete}
+    strict
+>
+    <h3>{t.common.delete}</h3>
+    <p>{target?.name}</p>
+    {#if err}<p class="err" role="alert">{err}</p>{/if}
+    <div class="flex gap-10">
+        <Button level={2} onclick={() => closeConfirm?.()} isDisabled={deleting}
+            >{t.common.cancel}</Button
+        >
+        <Button level={-1} onclick={remove} isLoading={deleting}>{t.common.delete}</Button>
+    </div>
+</Modal>
 
 <style>
     .keysContainer {

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { genKey } from '#utils/helpers.ts';
     import InputRange from '#lib/form/InputRange.svelte';
     import InputColor from '#lib/form/InputColor.svelte';
 
@@ -15,8 +14,7 @@
         l: number;
     } = $props();
 
-    const id = genKey();
-    const widthRange = '15rem';
+    const widthRange = '100%';
 
     let hsl = $derived(`hsl(${h} ${s}% ${l}%)`);
     let hex = $derived(hslToHex(h, s, l));
@@ -53,15 +51,11 @@
     }
 </script>
 
-<div class="outer">
+<div class="outer" role="group" aria-label={label}>
     <div class="container" style:border-color={hsl}>
         <div>
-            <h5>
-                <label for={id} class="font-label">
-                    {label}
-                </label>
-            </h5>
-            <div {id} class="values">
+            <h4>{label}</h4>
+            <div class="values">
                 <InputRange
                     label="Hue"
                     bind:value={h}
@@ -104,37 +98,38 @@
 </div>
 
 <style>
-    h5 {
-        margin: 0 0 0.25rem 0;
+    .outer {
+        margin-bottom: 0.75rem;
     }
 
-    label {
-        color: hsl(var(--text-high));
-        margin-left: 0.5rem;
+    .container {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 2.5rem;
+        align-items: stretch;
+        border: 1px solid;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+    }
+
+    .container > div:first-child {
+        min-width: 0;
+        padding: 0.75rem;
+    }
+
+    h4 {
+        margin: 0 0 0.5rem;
+        color: var(--ui-text);
+        font-size: var(--ui-control-font-size);
     }
 
     .color {
-        height: 8.5rem;
-        width: 3rem;
+        width: 2.5rem;
         border-radius: 0 var(--border-radius) var(--border-radius) 0;
         overflow: clip;
     }
 
-    .container {
-        height: 8.5rem;
-        display: flex;
-        gap: 0.5rem;
-        background: hsla(var(--bg-high) / 0.2);
-        border: 1px solid hsl(var(--bg-high));
-        border-radius: var(--border-radius);
-    }
-
-    .outer {
-        margin: 0.5rem 0;
-    }
-
     .values {
-        width: 17rem;
-        line-height: 1rem;
+        display: grid;
+        gap: 0.25rem;
     }
 </style>

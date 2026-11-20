@@ -6,7 +6,6 @@ import { api } from './helpers/api.mjs';
 import { unique } from './helpers/env.mjs';
 import { chooseOption } from './helpers/ui.mjs';
 import {
-    clickDeleteAndConfirm,
     countRequests,
     createClient,
     deleteClientQuietly,
@@ -144,7 +143,7 @@ test.describe('clients list', () => {
         await expect(page.getByRole('textbox', { name: 'Client Name', exact: true })).toHaveValue(
             'Init Client',
         );
-        for (const name of ['General', 'Login', 'Tokens', 'Integrations', 'Branding', 'Delete']) {
+        for (const name of ['General', 'Login', 'Tokens', 'Integrations', 'Branding']) {
             await expect(tab(page, name)).toBeVisible();
         }
         await expectTabSelected(tab(page, 'General'));
@@ -955,7 +954,7 @@ test.describe('client branding', () => {
         await createClient(page, id);
         await openClient(page, id);
         await tab(page, 'Branding').click();
-        await expect(page.getByRole('heading', { name: 'Light Theme' })).toBeVisible();
+        await expect(tab(page, 'Light Theme')).toBeVisible();
     });
     test.afterEach(async ({ page }) => {
         try {
@@ -973,39 +972,14 @@ test.describe('client branding', () => {
             v,
         );
 
-    /**
-     * The controls of one HSL color. Each color has a level-5 heading but the sliders are not
-     * grouped and named per color (FINDING: every slider is just "Hue" / "Sat" / "Lum"), so the
-     * fallback is the n-th slider in document order. Light theme colors come first.
-     * @param {import('@playwright/test').Page} page
-     * @param {'light'|'dark'} mode
-     * @param {string} name e.g. `--action`
-     */
-    function hsl(page, mode, name) {
-        const ORDER = [
-            '--text',
-            '--text-high',
-            '--bg',
-            '--bg-high',
-            '--action',
-            '--accent',
-            '--error',
-        ];
-        const idx = (mode === 'light' ? 0 : ORDER.length) + ORDER.indexOf(name);
-        const group = page.getByRole('group', { name: `${mode} ${name}` });
-        const main = page.getByRole('main');
-        const slider = (/** @type {string} */ s) =>
-            group
-                .getByRole('slider', { name: s })
-                .or(main.getByRole('slider', { name: s, exact: true }).nth(idx))
-                .first();
+    function hsl(/** @type {import("@playwright/test").Page} */ page, /** @type {string} */ name) {
+        const group = page.getByRole('group', { name, exact: true });
         return {
-            heading: main.getByRole('heading', { name, exact: true }).nth(mode === 'light' ? 0 : 1),
-            hue: slider('Hue'),
-            sat: slider('Sat'),
-            lum: slider('Lum'),
-            // the native color picker, labelled with the variable name
-            color: main.getByLabel(name, { exact: true }).nth(mode === 'light' ? 0 : 1),
+            heading: group.getByRole('heading', { name, exact: true }),
+            hue: group.getByRole('slider', { name: 'Hue' }),
+            sat: group.getByRole('slider', { name: 'Sat' }),
+            lum: group.getByRole('slider', { name: 'Lum' }),
+            color: group.getByLabel(name, { exact: true }),
         };
     }
 
@@ -1040,7 +1014,7 @@ test.describe('client branding', () => {
     test('HSL sliders and color pickers update the live preview and are saved', async ({
         page,
     }) => {
-        const action = hsl(page, 'light', '--action');
+        const action = hsl(page, '--action');
         await expect(action.heading).toBeVisible();
         await expect(action.hue).toHaveValue('34');
         await expect(action.sat).toHaveValue('100');
@@ -1060,7 +1034,7 @@ test.describe('client branding', () => {
         await expect(action.color).not.toHaveValue('#cc7400');
 
         // the color picker sets all three sliders at once
-        const error = hsl(page, 'light', '--error');
+        const error = hsl(page, '--error');
         await error.color.fill('#ff0000');
         await expect(error.hue).toHaveValue('0');
         await expect(error.sat).toHaveValue('100');
@@ -1068,9 +1042,10 @@ test.describe('client branding', () => {
         await expect.poll(() => cssVar(page, '--error')).toBe('0 100% 50%');
 
         // every other color exposes its sliders as well
-        for (const mode of /** @type {const} */ (['light', 'dark'])) {
+        for (const mode of ['Light Theme', 'Dark Theme']) {
+            await tab(page, mode).click();
             for (const name of ['--text', '--text-high', '--bg', '--bg-high', '--accent']) {
-                const c = hsl(page, mode, name);
+                const c = hsl(page, name);
                 await expect(c.hue).toBeVisible();
                 await expect(c.sat).toBeVisible();
                 await expect(c.lum).toBeVisible();
@@ -1079,7 +1054,7 @@ test.describe('client branding', () => {
         }
 
         // a dark theme value
-        const darkBg = hsl(page, 'dark', '--bg');
+        const darkBg = hsl(page, '--bg');
         await darkBg.sat.focus();
         await darkBg.sat.press('ArrowRight');
         await expect(darkBg.sat).toHaveValue('41');
@@ -1098,11 +1073,13 @@ test.describe('client branding', () => {
 
         await page.reload();
         await tab(page, 'Branding').click();
-        await expect(hsl(page, 'light', '--action').hue).toHaveValue('36');
-        await expect(hsl(page, 'dark', '--bg').sat).toHaveValue('41');
+        await expect(hsl(page, '--action').hue).toHaveValue('36');
+        await tab(page, 'Dark Theme').click();
+        await expect(hsl(page, '--bg').sat).toHaveValue('41');
     });
 
     test('full CSS values are validated and previewed', async ({ page }) => {
+        await page.getByText('Advanced CSS', { exact: true }).click();
         const btnText = page.getByRole('textbox', { name: '--btn-text', exact: true }).first();
         const sun = page.getByRole('textbox', { name: '--theme-sun', exact: true }).first();
         const moon = page.getByRole('textbox', { name: '--theme-moon', exact: true }).first();
@@ -1141,7 +1118,7 @@ test.describe('client branding', () => {
         await expectTabSelected(dark);
         await expect.poll(() => cssVar(page, '--bg')).toBe('200 40% 6%');
         // the preview follows edits of the dark theme
-        const darkBg = hsl(page, 'dark', '--bg');
+        const darkBg = hsl(page, '--bg');
         await darkBg.lum.focus();
         await darkBg.lum.press('ArrowRight');
         await expect.poll(() => cssVar(page, '--bg')).toBe('200 40% 7%');
@@ -1163,7 +1140,11 @@ test.describe('client branding', () => {
         const del = page.waitForResponse(
             r => r.request().method() === 'DELETE' && r.url().endsWith(`/theme/${id}`),
         );
-        await page.getByRole('main').getByRole('button', { name: 'Reset' }).click();
+        await page.getByRole('main').getByRole('button', { name: 'Reset theme' }).click();
+        await page
+            .getByRole('dialog', { name: 'Reset theme' })
+            .getByRole('button', { name: 'Reset theme' })
+            .click();
         expect((await del).status()).toBeLessThan(400);
         await expect(radius).toHaveValue('5px');
         expect((await api(page, 'POST', `theme/${id}`)).border_radius).toBe('5px');
@@ -1172,15 +1153,8 @@ test.describe('client branding', () => {
     test('uploads and removes a client logo and favicon', async ({ page }) => {
         const png = await makePng();
         const main = page.getByRole('main');
-        // Both upload areas are forms named "Upload" and the file inputs and the remove buttons
-        // have no distinguishing names (FINDING), so the order is the only way to tell them apart:
-        // logo first, favicon second.
-        const uploads = main.getByRole('form', { name: 'Upload' });
-        await expect(uploads).toHaveCount(2);
-        // icon-only "Delete" buttons outside the entry list (its search clear button is one too)
-        const removeButtons = main
-            .locator('button[aria-label="Delete"]:not(nav button)')
-            .filter({ hasNotText: 'Delete' });
+        const logoUpload = main.getByRole('form', { name: 'Logo', exact: true });
+        const faviconUpload = main.getByRole('form', { name: 'Favicon Upload', exact: true });
         const logoFile = { name: 'logo.png', mimeType: 'image/png', buffer: png };
 
         // no own logo yet: the preview falls back to the default logo
@@ -1189,7 +1163,7 @@ test.describe('client branding', () => {
         const up = page.waitForResponse(
             r => r.request().method() === 'PUT' && r.url().includes(`/clients/${id}/logo`),
         );
-        await uploads.nth(0).getByRole('button').setInputFiles(logoFile);
+        await logoUpload.locator('input[type=file]').setInputFiles(logoFile);
         expect((await up).status()).toBeLessThan(400);
         await expect(preview(page).getByRole('img', { name: 'Client Logo' })).toBeVisible();
         const logo = await page.request.get(`/auth/v1/clients/${id}/logo`);
@@ -1199,53 +1173,89 @@ test.describe('client branding', () => {
         const upFav = page.waitForResponse(
             r => r.request().method() === 'PUT' && r.url().includes(`/clients/${id}/favicon`),
         );
-        await uploads
-            .nth(1)
-            .getByRole('button')
+        await faviconUpload
+            .locator('input[type=file]')
             .setInputFiles({ ...logoFile, name: 'favicon.png' });
         expect((await upFav).status()).toBeLessThan(400);
         await expect(main.getByRole('img', { name: 'Client favicon preview' })).toBeVisible();
         expect((await page.request.get(`/auth/v1/clients/${id}/favicon`)).status()).toBe(200);
 
+        await main.getByRole('button', { name: 'Reset theme' }).click();
+        await page
+            .getByRole('dialog', { name: 'Reset theme' })
+            .getByRole('button', { name: 'Reset theme' })
+            .click();
+        await expect(page.getByRole('dialog', { name: 'Reset theme' })).toBeHidden();
+        await expect(preview(page).getByRole('img', { name: 'Client Logo' })).toBeVisible();
+        await expect(main.getByRole('img', { name: 'Client favicon preview' })).toBeVisible();
+
         const delLogo = page.waitForResponse(
             r => r.request().method() === 'DELETE' && r.url().includes(`/clients/${id}/logo`),
         );
-        await removeButtons.nth(0).click();
+        await main.getByRole('button', { name: 'Delete · Logo', exact: true }).click();
+        await page
+            .getByRole('dialog', { name: 'Delete · Logo' })
+            .getByRole('button', { name: 'Delete · Logo' })
+            .click();
         expect((await delLogo).status()).toBeLessThan(400);
         await expect(preview(page).getByRole('img', { name: 'Rauthy Logo' })).toBeVisible();
 
         const delFav = page.waitForResponse(
             r => r.request().method() === 'DELETE' && r.url().includes(`/clients/${id}/favicon`),
         );
-        await removeButtons.nth(1).click();
+        await main.getByRole('button', { name: 'Delete · Favicon Upload', exact: true }).click();
+        await page
+            .getByRole('dialog', { name: 'Delete · Favicon Upload' })
+            .getByRole('button', { name: 'Delete · Favicon Upload' })
+            .click();
         expect((await delFav).status()).toBeLessThan(400);
         await expect(main.getByRole('img', { name: 'Client favicon preview' })).toBeHidden();
         expect((await page.request.get(`/auth/v1/clients/${id}/favicon`)).status()).toBe(404);
     });
 });
 
+async function confirmClientDeletion(
+    /** @type {import('@playwright/test').Page} */ page,
+    /** @type {string} */ path,
+) {
+    await page.locator('.admin-entity-header').getByRole('button', { name: 'Delete' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Delete' });
+    const deleted = page.waitForResponse(
+        r => r.request().method() === 'DELETE' && r.url().endsWith(path),
+    );
+    await dialog.getByRole('button', { name: 'Delete' }).click();
+    return (await deleted).status();
+}
+
 test.describe('client delete', () => {
-    test('leaving the Delete tab keeps the client, confirming deletes it', async ({ page }) => {
+    test('cancelling the header confirmation keeps the client, confirming deletes it', async ({
+        page,
+    }) => {
         const id = unique('e2e-del');
         await page.goto(CLIENTS);
         await createClient(page, id);
         try {
             await openClient(page, id);
-            await tab(page, 'Delete').click();
-            await expectTabSelected(tab(page, 'Delete'));
+            const action = page
+                .locator('.admin-entity-header')
+                .getByRole('button', { name: 'Delete' });
+            await action.click();
+            const dialog = page.getByRole('dialog', { name: 'Delete' });
             await expect(
-                page.getByText('Are you sure you want to delete this client?'),
+                dialog.getByText('Are you sure you want to delete this client?'),
             ).toBeVisible();
+            await expect(dialog.getByText(id, { exact: true })).toBeVisible();
 
-            // "cancel": going back to General does not delete anything
-            await tab(page, 'General').click();
+            const cancel = dialog.getByRole('button', { name: 'Cancel' });
+            await expect(cancel).toBeFocused();
+            await cancel.click();
+            await expect(dialog).toBeHidden();
             await expect(
                 page.getByRole('textbox', { name: 'Client Name', exact: true }),
             ).toBeVisible();
             expect((await api(page, 'GET', `clients/${id}`)).id).toBe(id);
 
-            await tab(page, 'Delete').click();
-            expect(await clickDeleteAndConfirm(page, `/clients/${id}`)).toBeLessThan(400);
+            expect(await confirmClientDeletion(page, `/clients/${id}`)).toBeLessThan(400);
             await expect(entry(page, id)).toHaveCount(0);
             await expect(
                 page.getByRole('textbox', { name: 'Client Name', exact: true }),
@@ -1269,7 +1279,7 @@ test.describe('clients at phone size', () => {
         await expect(page.getByRole('textbox', { name: 'Client Name', exact: true })).toHaveValue(
             'Init Client',
         );
-        for (const name of ['General', 'Login', 'Tokens', 'Integrations', 'Branding', 'Delete']) {
+        for (const name of ['General', 'Login', 'Tokens', 'Integrations', 'Branding']) {
             await expect(tab(page, name)).toBeVisible();
         }
     });
@@ -1294,8 +1304,7 @@ test.describe('clients at phone size', () => {
             await saveAndWait(page, saveButton(page), 'PUT', `/clients/${id}`);
             expect((await api(page, 'GET', `clients/${id}`)).name).toBe('Mobile Client');
 
-            await tab(page, 'Delete').click();
-            expect(await clickDeleteAndConfirm(page, `/clients/${id}`)).toBeLessThan(400);
+            expect(await confirmClientDeletion(page, `/clients/${id}`)).toBeLessThan(400);
             await expect(api(page, 'GET', `clients/${id}`)).rejects.toThrow(/-> 404/);
         } finally {
             await deleteClientQuietly(page, id);

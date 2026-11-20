@@ -45,6 +45,16 @@ export let I18nAdminKo: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            theme: '테마',
+            light: '라이트 테마',
+            dark: '다크 테마',
+            preview: '미리 보기',
+            assets: '로고 및 파비콘',
+            logo: '로고',
+            advanced: '고급 CSS',
+            resetTheme: '테마 재설정',
+            resetThemeConfirm: '기본 색상과 모서리 반경을 복원할까요?',
+            assetsImmediate: '파일 변경은 즉시 적용됩니다.',
             descHsl: `HSL 값으로 입력해야 합니다. 기본 색상만 제공하면 알파 채널 및 기타 값은
                 테마에 의해 동적으로 설정됩니다.`,
             descFullCss: `다음 값은 완전히 유효한 <code>CSS 색상</code> 값이어야 합니다. 복잡한 계산이나 위에
@@ -137,6 +147,8 @@ export let I18nAdminKo: I18nAdmin = {
         },
     },
     common: {
+        date: '날짜',
+        time: '시간',
         preferences: '환경 설정',
         profile: '프로필',
         contactDetails: '연락처 정보',
@@ -286,12 +298,8 @@ export let I18nAdminKo: I18nAdmin = {
             활성화 후에는 로그아웃한 뒤 다시 로그인해야 합니다.`,
     },
     events: {
-        levelFilters: {
-            info: '모든 수준',
-            notice: 'Notice 이상',
-            warning: 'Warning 이상',
-            critical: 'Critical만',
-        },
+        allLevels: '모든 수준',
+        sendTest: '테스트 이벤트 보내기',
         eventLevel: '이벤트 레벨',
         eventType: '이벤트 타입',
     },

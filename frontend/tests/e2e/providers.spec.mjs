@@ -1,3 +1,4 @@
+import { openEntityDelete } from './helpers/entities.mjs';
 import { test, expect } from './fixtures.mjs';
 import { api } from './helpers/api.mjs';
 import { unique } from './helpers/env.mjs';
@@ -9,14 +10,12 @@ import {
     entry,
     entryList,
     expectCurrent,
-    expectTabSelected,
     listedNames,
     openAddNew,
     openEntry,
     recordRequests,
     saveButton,
     showSubNav,
-    tab,
 } from './helpers/entities.mjs';
 
 const PAGE = '/auth/v1/admin/providers';
@@ -112,7 +111,6 @@ test.describe('providers list', () => {
             await openEntry(page, b.name);
             await expect(page).toHaveURL(new RegExp(`[?&]pid=${b.id}`));
             await expectCurrent(page, b.name);
-            await expectTabSelected(page, 'Config');
             await expect(page.getByRole('main').getByText(b.id)).toBeVisible();
             await expect(field(page.getByRole('main'), 'Client Name')).toHaveValue(b.name);
 
@@ -640,15 +638,11 @@ test.describe('edit provider', () => {
             .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
         await expect.poll(async () => (await page.request.get(logoUrl)).status()).toBe(200);
 
-        // the preview shows the logo and offers to remove it
-        // FINDING: the remove button (`lib/ProviderLogo.svelte`) is an icon without a name and
-        // the logo's alt text is "-"; the fallback is the button right after the logo image.
-        const removeNamed = main.getByRole('button', { name: /(delete|remove).*logo/i });
-        const remove = removeNamed.or(
-            main.getByRole('img', { name: '-' }).locator('xpath=following-sibling::button'),
-        );
-        await expect(remove.first()).toBeVisible();
-        await remove.first().click();
+        const remove = main.getByRole('button', { name: 'Delete · Logo', exact: true });
+        await expect(remove).toBeVisible();
+        await remove.click();
+        const confirm = page.getByRole('dialog', { name: 'Delete · Logo', exact: true });
+        await confirm.getByRole('button', { name: 'Delete · Logo', exact: true }).click();
         await expect.poll(async () => (await page.request.get(logoUrl)).status()).toBe(404);
         await expect(remove).toHaveCount(0);
     });
@@ -657,7 +651,9 @@ test.describe('edit provider', () => {
 test.describe('delete provider', () => {
     test.use({ allowErrors: [NO_LOGO] });
 
-    test('delete tab asks first, switching away cancels, confirm deletes', async ({ page }) => {
+    test('header action asks first, cancelling keeps the entry, confirming deletes it', async ({
+        page,
+    }) => {
         await page.goto(PAGE);
         const p = await api(page, 'POST', 'providers/create', customPayload(unique('E2E Del')));
         try {
@@ -665,22 +661,23 @@ test.describe('delete provider', () => {
             const main = page.getByRole('main');
             await expect(field(main, 'Client Name')).toHaveValue(p.name);
 
-            await tab(page, 'Delete').click();
-            await expectTabSelected(page, 'Delete');
+            await openEntityDelete(page);
             await expect(
                 main.getByText('Are you sure you want to delete this provider?'),
             ).toBeVisible();
             // not in use by any user: no force delete needed
             await expect(main.getByRole('checkbox', { name: 'Force Delete' })).toHaveCount(0);
 
-            await tab(page, 'Config').click();
+            await page
+                .getByRole('dialog', { name: 'Delete' })
+                .getByRole('button', { name: 'Cancel' })
+                .click();
             await expect(field(main, 'Client Name')).toHaveValue(p.name);
             expect(await providerById(page, p.id)).toBeTruthy();
 
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect.poll(async () => await providerById(page, p.id)).toBeUndefined();
-            await showSubNav(page);
             await expect(entry(page, p.name)).toHaveCount(0);
         } finally {
             await deleteQuietly(page, `providers/${p.id}`);
@@ -705,7 +702,7 @@ test.describe('providers on a phone', () => {
                 .poll(async () => (await providerById(page, p.id))?.client_id)
                 .toBe('mobile-client');
 
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect.poll(async () => await providerById(page, p.id)).toBeUndefined();
         } finally {

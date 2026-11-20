@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick } from 'svelte';
     import Input from '#lib/form/Input.svelte';
     import type { UserValuesPreferredUsername } from '#api/templates/UserValuesConfig.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
@@ -52,7 +53,7 @@
 
     $effect(() => {
         if (ref) {
-            requestAnimationFrame(() => {
+            tick().then(() => {
                 ref?.focus();
             });
         }
@@ -87,7 +88,7 @@
 
 {#if config.preferred_username !== 'hidden'}
     <div class="container">
-        <div class="label font-label" data-required={required}>
+        <div class="label font-label admin-field-label" data-required={required}>
             {t.account.preferredUsername.preferredUsername}
         </div>
 
@@ -98,11 +99,7 @@
 
             <div class="btn">
                 {#if canEdit}
-                    <Button
-                        ariaLabel={t.common.edit}
-                        level={required && !preferred_username ? -1 : 3}
-                        onclick={() => (showModal = true)}
-                    >
+                    <Button ariaLabel={t.common.edit} level={3} onclick={() => (showModal = true)}>
                         {t.common.edit}
                     </Button>
 
@@ -236,5 +233,34 @@
 
     .value[data-required='true'] {
         border-bottom: 1px solid hsl(var(--error));
+    }
+
+    :global(.ui-shell) .container {
+        margin: 0;
+    }
+    :global(.ui-shell) .value {
+        align-items: center;
+        gap: 0.5rem;
+        min-height: var(--ui-field-height);
+        height: auto;
+        padding: 0 4px 0 14px;
+        border-color: var(--ui-outline);
+        font-size: var(--ui-control-font-size);
+        line-height: var(--ui-control-line-height);
+    }
+    :global(.ui-shell) .value[data-required='true'] {
+        border-color: hsl(var(--error));
+    }
+    :global(.ui-shell) .name {
+        padding: 0;
+        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+    :global(.ui-shell) .btn {
+        margin: 0;
+    }
+    :global(.ui-shell) .immutableInfo {
+        margin: 0 0.5rem 0 0;
+        transform: none;
     }
 </style>

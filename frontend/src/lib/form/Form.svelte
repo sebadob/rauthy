@@ -35,6 +35,7 @@
     } = $props();
 
     async function submit(ev: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement }) {
+        if (ev.target !== ev.currentTarget) return;
         ev.preventDefault();
         const form = ev.currentTarget;
 

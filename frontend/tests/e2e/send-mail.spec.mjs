@@ -235,10 +235,6 @@ test.describe('send e-mail', () => {
     });
 
     test('a scheduled mail carries the chosen local time', async ({ page }) => {
-        // UPSTREAM BUG: `unixTsFromLocalDateTime` (frontend/src/utils/form.ts) subtracts
-        // `getTimezoneOffset()` (minutes) from a value in seconds although `Date.parse` already
-        // used the local zone, so the job is scheduled 60 s off in Europe/Berlin.
-        test.fail();
         const sent = await mockMassMail(page);
         const dialog = await openCompose(page);
         await dialog.getByRole('checkbox', { name: 'Scheduled Dispatch' }).check();

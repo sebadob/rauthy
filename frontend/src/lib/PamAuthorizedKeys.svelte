@@ -5,11 +5,10 @@
     import Modal from '#lib/Modal.svelte';
     import InputArea from '#lib/form/InputArea.svelte';
     import Form from '#lib/form/Form.svelte';
-    import { fetchDelete, fetchPost } from '#api/fetch.ts';
+    import { fetchPost } from '#api/fetch.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import { formatDateFromTs } from '#utils/helpers.ts';
-    import IconTrash from '#icons/IconTrash.svelte';
-    import Tooltip from '#lib/Tooltip.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
 
     let {
         authorizedKeys,
@@ -45,22 +44,6 @@
             }, 5000);
         }
     });
-
-    async function deleteKey(tsAdded: number) {
-        let url = '';
-        if (isAdmin) {
-            url = `/auth/v1/pam/users/${pamUid}/authorized_key/${tsAdded}`;
-        } else {
-            url = `/auth/v1/pam/users/self/authorized_keys/${tsAdded}`;
-        }
-
-        let res = await fetchDelete(url);
-        if (res.error) {
-            error = res.error.message;
-        } else {
-            onSave();
-        }
-    }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         let payload: PamSshAuthKeyRequest = {
@@ -133,11 +116,14 @@
                         </LabeledValue>
                     </div>
                     <div class="del">
-                        <Tooltip text={t.common.delete} xOffset={-64}>
-                            <Button onclick={() => deleteKey(key.ts_added)} invisible>
-                                <IconTrash />
-                            </Button>
-                        </Tooltip>
+                        <EntityDelete
+                            url={isAdmin
+                                ? `/auth/v1/pam/users/${pamUid}/authorized_key/${key.ts_added}`
+                                : `/auth/v1/pam/users/self/authorized_keys/${key.ts_added}`}
+                            name={key.comment || key.typ}
+                            iconOnly
+                            onDelete={onSave}
+                        />
                     </div>
                 </div>
                 <LabeledValue label="Key">

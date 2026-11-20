@@ -20,16 +20,14 @@
     let {
         user = $bindable(),
         authProvider,
-        viewModePhone,
     }: {
         user: UserResponse;
         authProvider: undefined | AuthProviderTemplate;
-        viewModePhone?: boolean;
     } = $props();
 
     let t = useI18n();
 
-    let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
+    const inputWidth = 'min(100%, 22rem)';
 
     let accType = $state(user.account_type);
     let passkeys: PasskeyResponse[] = $state([]);

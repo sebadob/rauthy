@@ -1,3 +1,4 @@
+import { deleteAction } from './helpers/entities.mjs';
 // Characterization tests for the admin sessions list: loading, counts, pagination, search, sort,
 // the session details and invalidating single sessions of a dedicated test user that is logged in
 // from separate browser contexts. "Invalidate All Sessions" is never confirmed, because it would
@@ -74,8 +75,8 @@ test.describe('sessions list', () => {
             await expect(rows(page)).toHaveCount(Math.min(total, 20));
 
             const pageSize = main(page).getByRole('combobox', { name: 'Show count' });
-            await expect(pageSize).toContainText('20');
-            await pick(page, pageSize, '5');
+            await expect(pageSize).toHaveValue('20');
+            await pageSize.selectOption('5');
             await expect(rows(page)).toHaveCount(Math.min(total, 5));
 
             const pagination = main(page).getByRole('navigation', { name: 'Pagination' });
@@ -314,6 +315,7 @@ test.describe.serial('sessions of a test user', () => {
             first.info.id,
         );
         await trash.click();
+        await deleteAction(page).click();
         await expect(rows(page)).toHaveCount(0);
         await expect
             .poll(async () => (await first.page.request.get('/auth/v1/oidc/sessioninfo')).status())
@@ -330,6 +332,7 @@ test.describe.serial('sessions of a test user', () => {
         // the last "Delete" in document order is the one inside the details; the search clear
         // button carries the same name (FINDING)
         await main(page).getByRole('button', { name: 'Delete', exact: true }).last().click();
+        await deleteAction(page).click();
         await expect(rows(page)).toHaveCount(0);
         await expect
             .poll(async () => (await second.page.request.get('/auth/v1/oidc/sessioninfo')).status())
@@ -367,6 +370,7 @@ test.describe('sessions at phone size', () => {
             await del.scrollIntoViewIfNeeded();
             await expect(del).toBeInViewport();
             await del.click();
+            await deleteAction(page).click();
             await expect(rows(page)).toHaveCount(0);
             await expect
                 .poll(async () =>

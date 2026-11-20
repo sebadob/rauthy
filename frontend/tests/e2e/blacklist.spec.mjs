@@ -1,3 +1,4 @@
+import { deleteAction } from './helpers/entities.mjs';
 import { enterTime } from './helpers/ui.mjs';
 // Characterization tests for the IP blacklist: list, add dialog (validation, cancel, success),
 // search, sort, copy and delete. Only documentation ranges (RFC 5737) are ever blacklisted, never
@@ -156,12 +157,14 @@ test.describe('ip blacklist', () => {
 
             // delete (the delete icon has no accessible name, FINDING)
             await (await rowDeleteButton(page, entry1, ip1)).click();
+            await deleteAction(page).click();
             await expect(entry1).toBeHidden();
             await expect(entry2).toBeVisible();
             await expect
                 .poll(async () => (await listBlacklist(page)).some(e => e.ip === ip1))
                 .toBe(false);
             await (await rowDeleteButton(page, entry2, ip2)).click();
+            await deleteAction(page).click();
             await expect(entry2).toBeHidden();
             await expect
                 .poll(async () => (await listBlacklist(page)).some(e => e.ip === ip2))
@@ -255,9 +258,6 @@ test.describe('ip blacklist', () => {
     });
 
     test('deleting an entry asks for confirmation', async ({ page }) => {
-        // UPSTREAM BUG / UX: the delete icon removes the entry on the first click, without a
-        // confirmation (frontend/src/lib/admin/blacklist/Blacklist.svelte, `deleteIp`).
-        test.fail();
         const ip = docIp('203.0.113');
         await page.goto(BLACKLIST);
         await api(page, 'POST', 'blacklist', { ip, exp: Math.floor(Date.now() / 1000) + 3600 });
@@ -291,6 +291,7 @@ test.describe('ip blacklist', () => {
             await del.scrollIntoViewIfNeeded();
             await expect(del).toBeInViewport();
             await del.click();
+            await deleteAction(page).click();
             await expect(entry).toBeHidden();
             await expect
                 .poll(async () => (await listBlacklist(page)).some(e => e.ip === ip))

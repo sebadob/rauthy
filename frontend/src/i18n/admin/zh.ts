@@ -46,6 +46,16 @@ export let I18nAdminZh: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
+            theme: '主题',
+            light: '浅色主题',
+            dark: '深色主题',
+            preview: '预览',
+            assets: '徽标和网站图标',
+            logo: '徽标',
+            advanced: '高级 CSS',
+            resetTheme: '重置主题',
+            resetThemeConfirm: '恢复默认颜色和圆角半径？',
+            assetsImmediate: '文件更改会立即生效。',
             descHsl: `以下值必须以HSL值形式给出。您只需提供基本颜色。
             透明度通道和其他值由主题动态调整。`,
             descFullCss: `以下值必须是完全有效的CSS <code>color</code>值。
@@ -138,6 +148,8 @@ export let I18nAdminZh: I18nAdmin = {
         },
     },
     common: {
+        date: '日期',
+        time: '时间',
         preferences: '偏好设置',
         profile: '个人资料',
         contactDetails: '联系信息',
@@ -284,12 +296,8 @@ export let I18nAdminZh: I18nAdmin = {
             之后，您需要注销并重新登录。`,
     },
     events: {
-        levelFilters: {
-            info: '所有级别',
-            notice: 'Notice 及以上',
-            warning: 'Warning 及以上',
-            critical: '仅 Critical',
-        },
+        allLevels: '所有级别',
+        sendTest: '发送测试事件',
         eventLevel: '事件级别',
         eventType: '事件类型',
     },

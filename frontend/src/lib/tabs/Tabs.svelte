@@ -110,28 +110,28 @@
         background: hsl(var(--bg));
     }
 
-    :global(.admin-shell) .tabs {
+    :global(.ui-shell) .tabs {
         width: 100%;
         display: flex;
         gap: 4px;
         padding: 4px;
-        margin: 0 0 28px;
+        margin: var(--ui-tabs-margin, 0 0 28px);
         border: 0;
         border-radius: var(--border-radius);
         background: var(--ui-container);
     }
-    :global(.admin-shell) .tabs :global(.admin-control) {
+    :global(.ui-shell) .tabs :global(.admin-control) {
         flex: 1;
         height: 38px;
         min-height: 38px;
         padding: 0 10px;
         border-radius: var(--border-radius);
     }
-    :global(.admin-shell) .tabs :global(.admin-control[aria-current='step']) {
+    :global(.ui-shell) .tabs :global(.admin-control[aria-current='step']) {
         background: var(--ui-surface);
         box-shadow: 0 1px 3px #00000012;
     }
-    :global(.admin-shell) .tabs .tab {
+    :global(.ui-shell) .tabs .tab {
         padding: 0;
         background: transparent;
         color: var(--ui-muted);
@@ -142,26 +142,26 @@
         border-radius: 0;
         white-space: nowrap;
     }
-    :global(.admin-shell) .tabs .tab[data-selected='true'] {
+    :global(.ui-shell) .tabs .tab[data-selected='true'] {
         color: var(--ui-text);
         background: transparent;
         font-weight: 600;
     }
     @media (max-width: 800px) {
-        :global(.admin-shell) .tabs {
+        :global(.ui-shell) .tabs {
             justify-content: flex-start;
             gap: 0.25rem;
         }
-        :global(.admin-shell) .tabs :global(.admin-control) {
+        :global(.ui-shell) .tabs :global(.admin-control) {
             flex: 0 0 auto;
         }
     }
-    :global(.admin-shell) .tabs {
+    :global(.ui-shell) .tabs {
         width: 100%;
         flex: 1;
         min-width: 0;
     }
-    :global(.admin-shell) .tabs :global(.admin-control[data-variant]) {
+    :global(.ui-shell) .tabs :global(.admin-control[data-variant]) {
         min-width: max-content;
         padding: 0 12px;
         border-radius: var(--border-radius);

@@ -50,6 +50,16 @@ export let I18nAdminRu: I18nAdmin = {
         backchannelLogout:
             'Если этот клиент поддерживает {{ OIDC_BCL }}, вы можете указать URI здесь.',
         branding: {
+            theme: 'Тема',
+            light: 'Светлая тема',
+            dark: 'Тёмная тема',
+            preview: 'Предпросмотр',
+            assets: 'Логотип и значок сайта',
+            logo: 'Логотип',
+            advanced: 'Расширенный CSS',
+            resetTheme: 'Сбросить тему',
+            resetThemeConfirm: 'Восстановить цвета и скругление по умолчанию?',
+            assetsImmediate: 'Изменения файлов вступают в силу сразу.',
             descHsl: `Следующие значения должны быть указаны в формате HSL. Вы задаёте только базовые цвета.
             Альфа-каналы и другие значения динамически изменяются темой.`,
             descFullCss: `Следующие значения должны быть полностью допустимыми CSS-значениями <code>color</code>.
@@ -145,6 +155,8 @@ export let I18nAdminRu: I18nAdmin = {
         },
     },
     common: {
+        date: 'Дата',
+        time: 'Время',
         preferences: 'Настройки',
         profile: 'Профиль',
         contactDetails: 'Контактные данные',
@@ -300,12 +312,8 @@ export let I18nAdminRu: I18nAdmin = {
             После этого необходимо выйти и войти снова.`,
     },
     events: {
-        levelFilters: {
-            info: 'Все уровни',
-            notice: 'Notice и выше',
-            warning: 'Warning и выше',
-            critical: 'Только Critical',
-        },
+        allLevels: 'Все уровни',
+        sendTest: 'Отправить тестовое событие',
         eventLevel: 'Уровень события',
         eventType: 'Тип события',
     },

@@ -8,8 +8,7 @@
     import Button from '#lib/button/Button.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
-    import IconTrash from '#icons/IconTrash.svelte';
-    import { fetchDelete } from '#api/fetch.ts';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import { useSession } from '#state/session.svelte.ts';
 
     let {
@@ -38,15 +37,6 @@
             setTimeout(() => {
                 copyText = t.common.copyToClip;
             }, 3000);
-        }
-    }
-
-    async function deleteSession() {
-        let res = await fetchDelete(`/auth/v1/sessions/id/${session.id}`);
-        if (res.error) {
-            console.error(res.error);
-        } else {
-            onDeleted(session.id);
         }
     }
 </script>
@@ -83,13 +73,12 @@
                     </Button>
 
                     {#if isAdmin}
-                        <Button ariaLabel={t.common.delete} invisible onclick={deleteSession}>
-                            <Tooltip text={t.common.delete}>
-                                <div class="trash">
-                                    <IconTrash width="1.2rem" />
-                                </div>
-                            </Tooltip>
-                        </Button>
+                        <EntityDelete
+                            url={`/auth/v1/sessions/id/${session.id}`}
+                            name={session.id}
+                            iconOnly
+                            onDelete={() => onDeleted(session.id)}
+                        />
                     {/if}
                 </div>
             </div>
@@ -126,9 +115,11 @@
                 </LabeledValue>
             </div>
             {#if isAdmin}
-                <Button level={-1} onclick={deleteSession}>
-                    {t.common.delete}
-                </Button>
+                <EntityDelete
+                    url={`/auth/v1/sessions/id/${session.id}`}
+                    name={session.id}
+                    onDelete={() => onDeleted(session.id)}
+                />
             {/if}
         {/snippet}
     </Expandable>
@@ -168,10 +159,6 @@
 
     .expired {
         background: hsl(var(--bg-high));
-    }
-
-    .trash {
-        margin-bottom: -0.3rem;
     }
 
     .admin-session-card {
@@ -220,11 +207,6 @@
         font-size: 12px;
         line-height: 20px;
         white-space: normal;
-    }
-    .admin-session-card :global(.trash) {
-        margin: 0;
-        display: flex;
-        align-items: center;
     }
     .admin-session-details {
         display: grid;

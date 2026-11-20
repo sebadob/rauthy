@@ -1,10 +1,6 @@
 <script lang="ts">
-    import { setContext } from 'svelte';
-    setContext('rauthy-admin-ui', false);
+    import { useI18n } from '#state/i18n.svelte.ts';
     import type { ThemeCss } from '#api/types/themes.ts';
-    import Button from '#lib/button/Button.svelte';
-    import Input from '#lib/form/Input.svelte';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import RauthyLogo from '#lib/RauthyLogo.svelte';
 
     let {
@@ -21,21 +17,11 @@
 
     const hslVar = (v: number[]) => `${v[0]} ${v[1]}% ${v[2]}%`;
 
-    let isLoading = $state(false);
+    const t = useI18n();
     let showDefault = $state(false);
 
     $effect(() => {
-        if (logoUrl) {
-            showDefault = false;
-        }
-    });
-
-    $effect(() => {
-        if (isLoading) {
-            setTimeout(() => {
-                isLoading = false;
-            }, 2000);
-        }
+        if (logoUrl) showDefault = false;
     });
 </script>
 
@@ -54,103 +40,90 @@
     style:--theme-sun={theme.theme_sun}
     style:--theme-moon={theme.theme_moon}
 >
-    <div class="inner">
-        <div class="container">
-            <div class="logo" class:default={showDefault}>
-                {#if showDefault}
-                    <RauthyLogo width="100%" show={typ} />
-                {:else}
-                    <img src={logoUrl} alt="Client Logo" onerror={() => (showDefault = true)} />
-                {/if}
-            </div>
+    <div class="logo">
+        {#if showDefault}
+            <RauthyLogo width="3.5rem" show={typ} />
+        {:else}
+            <img src={logoUrl} alt="Client Logo" onerror={() => (showDefault = true)} />
+        {/if}
+    </div>
 
-            <h3>Header</h3>
-            <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam</p>
-            <p><span>--accent-color</span></p>
-
-            <Input label="Preview" placeholder="Preview" width="12.5rem" />
-
-            <div class="btn">
-                <div>
-                    <Button level={1} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br />
-                    <Button level={2} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br />
-                    <Button level={3} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br />
-                </div>
-
-                <div>
-                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}
-                        >Button
-                    </Button>
-                    <br />
-                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}
-                        >Button
-                    </Button>
-                    <br />
-                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}
-                        >Button
-                    </Button>
-                </div>
-            </div>
-
-            <a href={window.location.href} onclick={ev => ev.preventDefault()}>Link</a>
-
-            <br />
-            <ThemeSwitch />
+    <div aria-hidden="true" class="sample">
+        <h4>{t.authorize.login}</h4>
+        <div>
+            <span>{t.common.email}</span>
+            <div class="input">name@example.com</div>
+        </div>
+        <div>
+            <span>{t.common.password}</span>
+            <div class="input">••••••••••</div>
+        </div>
+        <div class="primary">{t.authorize.login}</div>
+        <div class="swatches">
+            <span style:background="hsl(var(--accent))"></span>
+            <span style:background="hsl(var(--error))"></span>
+            <span style:background="var(--theme-sun)"></span>
+            <span style:background="var(--theme-moon)"></span>
         </div>
     </div>
 </div>
 
 <style>
-    h3 {
-        color: hsl(var(--text-high));
-    }
-
-    span {
-        color: hsl(var(--accent));
-    }
-
-    .btn {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .btn > div {
-        width: 5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .container {
+    .branding-preview {
         padding: 1rem;
-        border: 1px solid hsl(var(--bg-high));
-        border-radius: var(--border-radius);
-    }
-
-    .inner {
-        padding: 1rem;
-        width: 100%;
-        max-width: 21rem;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         background: hsl(var(--bg));
         color: hsl(var(--text));
     }
 
-    .logo {
-        margin: 0 0.25rem;
-        height: 84px;
-        max-width: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+    h4 {
+        margin: 0;
+        color: hsl(var(--text-high));
     }
 
-    .logo.default {
-        width: 84px;
+    .sample {
+        display: grid;
+        gap: 0.75rem;
+        font-size: 0.8125rem;
+        line-height: 1.25rem;
+    }
+
+    .sample .input,
+    .primary {
+        margin: 0.25rem 0 0;
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--border-radius);
+    }
+
+    .sample .input {
+        border-color: hsl(var(--text) / 0.25);
+        font-size: inherit;
+    }
+
+    .primary {
+        background: hsl(var(--action));
+        color: var(--btn-text);
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .swatches {
+        display: flex;
+        gap: 6px;
+    }
+
+    .swatches span {
+        height: 10px;
+        width: 10px;
+        border-radius: var(--border-radius);
+    }
+
+    .logo {
+        height: 3.5rem;
+        margin-bottom: 0.75rem;
+        display: grid;
+        place-items: center;
     }
 
     .logo img {

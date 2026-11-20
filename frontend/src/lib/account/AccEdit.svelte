@@ -1,5 +1,7 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import IconTrash from '#icons/IconTrash.svelte';
     import { fade } from 'svelte/transition';
     import Input from '#lib/form/Input.svelte';
     import { useI18n } from '#state/i18n.svelte.js';
@@ -23,11 +25,9 @@
     let {
         config,
         user = $bindable(),
-        viewModePhone,
     }: {
         config: undefined | UserValuesConfig;
         user: UserResponse;
-        viewModePhone?: boolean;
     } = $props();
 
     if (!user.user_values.birthdate) {
@@ -48,6 +48,7 @@
 
     let canSelfDelete = $state(false);
     let showDeleteConfirm = $state(false);
+    let closeDelete: (() => void) | undefined = $state();
     let deleteConfirmValue = $state('');
 
     onMount(() => {
@@ -267,6 +268,7 @@
                 {#if canSelfDelete}
                     <div>
                         <Button level={-3} onclick={() => (showDeleteConfirm = !showDeleteConfirm)}>
+                            <IconTrash width="1rem" />
                             {t.account.deleteAccount.deleteAccount}
                         </Button>
                     </div>
@@ -288,7 +290,12 @@
         </Form>
     {/if}
 
-    {#if showDeleteConfirm}
+    <Modal
+        bind:showModal={showDeleteConfirm}
+        bind:closeModal={closeDelete}
+        ariaLabel={t.account.deleteAccount.deleteAccount}
+        strict
+    >
         <div class="selfDelete">
             <h5>{t.account.deleteAccount.deleteAccount}</h5>
             <p>
@@ -302,15 +309,18 @@
                 bind:value={deleteConfirmValue}
                 width="15rem"
             />
-            <Button
-                level={deleteConfirmValue !== t.common.delete.toUpperCase() ? -3 : -1}
-                onclick={onSubmitDelete}
-                isDisabled={deleteConfirmValue !== t.common.delete.toUpperCase()}
-            >
-                {t.common.delete}
-            </Button>
+            <div class="bottom">
+                <Button level={2} onclick={() => closeDelete?.()}>{t.common.cancel}</Button>
+                <Button
+                    level={deleteConfirmValue !== t.common.delete.toUpperCase() ? -3 : -1}
+                    onclick={onSubmitDelete}
+                    isDisabled={deleteConfirmValue !== t.common.delete.toUpperCase()}
+                >
+                    {t.common.delete}
+                </Button>
+            </div>
         </div>
-    {/if}
+    </Modal>
 </div>
 
 <style>
@@ -332,18 +342,19 @@
     }
 
     .formInner {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        gap: var(--ui-space);
+        max-width: 48rem;
     }
 
     .selfDelete {
-        margin-top: 3rem;
-        margin-bottom: 1rem;
-        padding: 0 0.5rem 1rem 0.5rem;
-        border: 1px solid hsla(var(--error) / 0.8);
-        border-radius: var(--border-radius);
-        background: hsla(var(--error) / 0.05);
+        width: min(28rem, calc(100dvw - 4rem));
+    }
+
+    .selfDelete h5 {
+        margin: 0;
+        font-size: 1rem;
     }
 
     .success {

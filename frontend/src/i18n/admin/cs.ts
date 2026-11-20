@@ -46,6 +46,16 @@ export let I18nAdminCs: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Pokud tento klient podporuje {{ OIDC_BCL }}, zadejte sem jeho URI.',
         branding: {
+            theme: 'Motiv',
+            light: 'Světlý motiv',
+            dark: 'Tmavý motiv',
+            preview: 'Náhled',
+            assets: 'Logo a ikona webu',
+            logo: 'Logo',
+            advanced: 'Pokročilé CSS',
+            resetTheme: 'Obnovit motiv',
+            resetThemeConfirm: 'Obnovit výchozí barvy a zaoblení rohů?',
+            assetsImmediate: 'Změny souborů se projeví okamžitě.',
             descHsl: `Následující hodnoty se zadávají jako HSL. Zadáváte jen základní barvy.
             Průhlednost a další hodnoty si vzhled dopočítá sám.`,
             descFullCss: `Následující hodnoty musí být platné CSS hodnoty <code>color</code>.
@@ -141,6 +151,8 @@ export let I18nAdminCs: I18nAdmin = {
         },
     },
     common: {
+        date: 'Datum',
+        time: 'Čas',
         preferences: 'Předvolby',
         profile: 'Profil',
         contactDetails: 'Kontaktní údaje',
@@ -294,12 +306,8 @@ export let I18nAdminCs: I18nAdmin = {
             Pak se odhlaste a znovu přihlaste.`,
     },
     events: {
-        levelFilters: {
-            info: 'Všechny úrovně',
-            notice: 'Notice a vyšší',
-            warning: 'Warning a vyšší',
-            critical: 'Pouze Critical',
-        },
+        allLevels: 'Všechny úrovně',
+        sendTest: 'Odeslat testovací událost',
         eventLevel: 'Úroveň události',
         eventType: 'Typ události',
     },

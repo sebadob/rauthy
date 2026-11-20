@@ -13,11 +13,13 @@
         openTop = true,
         updateBackend,
         borderless = true,
+        uppercase = false,
     }: {
         absolute?: boolean;
         openTop?: boolean;
         updateBackend?: boolean;
         borderless?: boolean;
+        uppercase?: boolean;
     } = $props();
 
     const cookieAttrs = ';Path=/;SameSite=Lax;Max-Age=157680000';
@@ -62,7 +64,7 @@
 </script>
 
 {#if languages}
-    <div class:absolute>
+    <div class:absolute class:uppercase>
         <Options
             ariaLabel={t.common.selectI18n}
             options={languages}
@@ -74,6 +76,11 @@
 {/if}
 
 <style>
+    .uppercase :global(.btnText),
+    .uppercase :global(.optPopover) {
+        text-transform: uppercase;
+    }
+
     .absolute {
         height: 1.5rem;
         position: absolute;

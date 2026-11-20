@@ -49,6 +49,16 @@ export let I18nAdminPt: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Se este Client suportar {{ OIDC_BCL }}, pode indicar aqui o URI.',
         branding: {
+            theme: 'Tema',
+            light: 'Tema claro',
+            dark: 'Tema escuro',
+            preview: 'Pré-visualização',
+            assets: 'Logótipo e favicon',
+            logo: 'Logótipo',
+            advanced: 'CSS avançado',
+            resetTheme: 'Repor tema',
+            resetThemeConfirm: 'Repor as cores e o arredondamento predefinidos?',
+            assetsImmediate: 'As alterações de ficheiros têm efeito imediato.',
             descHsl: `Os valores seguintes têm de ser indicados como valores HSL. Indique apenas as cores base.
             Os canais alfa e outros valores são ajustados dinamicamente pelo tema.`,
             descFullCss: `Os valores seguintes têm de ser valores CSS <code>color</code> totalmente válidos.
@@ -146,6 +156,8 @@ export let I18nAdminPt: I18nAdmin = {
         },
     },
     common: {
+        date: 'Data',
+        time: 'Hora',
         preferences: 'Preferências',
         profile: 'Perfil',
         contactDetails: 'Dados de contacto',
@@ -304,12 +316,8 @@ export let I18nAdminPt: I18nAdmin = {
             Depois, tem de terminar sessão e voltar a iniciar sessão.`,
     },
     events: {
-        levelFilters: {
-            info: 'Todos os níveis',
-            notice: 'Notice e superiores',
-            warning: 'Warning e superiores',
-            critical: 'Apenas Critical',
-        },
+        allLevels: 'Todos os níveis',
+        sendTest: 'Enviar evento de teste',
         eventLevel: 'Nível do evento',
         eventType: 'Tipo de evento',
     },

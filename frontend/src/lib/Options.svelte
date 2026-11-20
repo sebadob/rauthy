@@ -15,6 +15,7 @@
         offsetTop,
         offsetLeft,
         anchored,
+        placement,
         showTitle = true,
         borderless = false,
         withSearch = false,
@@ -33,6 +34,7 @@
         offsetTop?: string;
         offsetLeft?: string;
         anchored?: boolean;
+        placement?: 'above' | 'below';
         showTitle?: boolean;
         borderless?: boolean;
         withSearch?: boolean;
@@ -177,6 +179,7 @@
     {offsetTop}
     {offsetLeft}
     {anchored}
+    {placement}
     {onToggle}
     {onLeft}
     {onRight}
@@ -283,42 +286,36 @@
         overflow-y: auto;
     }
 
-    :global(.admin-shell) .admin-select-trigger:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .admin-select-trigger:not(:global(.branding-preview *)) {
         display: inline-flex;
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        min-height: 36px;
-        padding: 0 12px;
+        min-height: var(--ui-option-height, 36px);
+        padding: var(--ui-option-padding, 0 12px);
         border: 1px solid transparent;
         border-radius: var(--border-radius);
         font-family: inherit;
         font-size: var(--ui-control-font-size);
-        font-weight: 500;
+        font-weight: var(--ui-option-font-weight, 500);
         line-height: var(--ui-control-line-height);
         color: var(--ui-text);
         background: transparent;
     }
-    :global(.admin-shell)
-        .admin-select-trigger[data-border='true']:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .admin-select-trigger[data-border='true']:not(:global(.branding-preview *)) {
         border-color: var(--ui-outline);
-        padding: 0 12px;
         background: var(--ui-surface);
     }
-    :global(.admin-shell)
-        .admin-select-trigger:not(:global(.branding-preview *))
-        :global(.btnText) {
+    :global(.ui-shell) .admin-select-trigger:not(:global(.branding-preview *)) :global(.btnText) {
         margin: 0;
         line-height: var(--ui-control-line-height);
     }
-    :global(.admin-shell) .popoverOptions:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .popoverOptions:not(:global(.branding-preview *)) {
         display: flex;
         flex-direction: column;
         padding: 4px;
     }
-    :global(.admin-shell)
-        .popoverOptions:not(:global(.branding-preview *))
-        :global(.admin-control) {
+    :global(.ui-shell) .popoverOptions:not(:global(.branding-preview *)) :global(.admin-control) {
         width: 100%;
         justify-content: flex-start;
         height: auto;
@@ -326,14 +323,14 @@
         padding: 0;
         border-radius: var(--border-radius);
     }
-    :global(.admin-shell)
+    :global(.ui-shell)
         .popoverOptions:not(:global(.branding-preview *))
         :global(.admin-control)
         > :global(.children) {
         width: 100%;
         justify-content: flex-start;
     }
-    :global(.admin-shell) .optPopover:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .optPopover:not(:global(.branding-preview *)) {
         width: 100%;
         padding: 10px 12px;
         text-align: left;
@@ -341,7 +338,7 @@
         font-size: 14px;
         line-height: 20px;
     }
-    :global(.admin-shell) .optPopover[aria-selected='true']:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .optPopover[aria-selected='true']:not(:global(.branding-preview *)) {
         background: var(--ui-tonal);
         color: var(--ui-primary);
     }

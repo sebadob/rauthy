@@ -17,8 +17,7 @@
 <style>
     .admin-event-legend {
         flex-shrink: 0;
-        padding: 12px 16px;
-        border-top: 1px solid var(--ui-outline);
+        padding: 0.65rem 0.5rem;
         background: var(--ui-surface);
     }
     .admin-event-legend :global(summary) {

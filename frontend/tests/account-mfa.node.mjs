@@ -246,6 +246,7 @@ for (const scenario of SCENARIOS) {
             handle: (route, request, url) => handle(s, route, request, url),
         });
         await page.goto(`${ORIGIN}${DOCUMENT_PATH}`);
+        await page.getByRole('button', { name: 'MFA', exact: true }).click();
         await page.getByRole('button', { name: OTP_BUTTON, exact: true }).waitFor();
         if (scenario.authenticator) {
             await addVirtualAuthenticator(context, page);

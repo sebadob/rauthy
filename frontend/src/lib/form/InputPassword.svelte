@@ -237,12 +237,12 @@
         /*border: 1px solid green;*/
     }
 
-    :global(.admin-shell) .label:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .label:not(:global(.branding-preview *)) {
         padding: 0;
         margin: 0 0 6px;
         line-height: 18px;
     }
-    :global(.admin-shell)
+    :global(.ui-shell)
         input:where(
             :not([type='checkbox']):not([type='hidden']):not([type='file']):not([type='range'])
         ):not(:global(.branding-preview *)) {
@@ -261,33 +261,33 @@
         line-height: 20px;
         box-shadow: none;
     }
-    :global(.admin-shell) input:not(:global(.branding-preview *))::placeholder {
+    :global(.ui-shell) input:not(:global(.branding-preview *))::placeholder {
         color: hsl(var(--text) / 0.65);
     }
-    :global(.admin-shell) input:focus:not(:global(.branding-preview *)) {
+    :global(.ui-shell) input:focus:not(:global(.branding-preview *)) {
         outline: 2px solid var(--ui-primary);
         outline-offset: -1px;
     }
-    :global(.admin-shell) input.invalid:not(:global(.branding-preview *)) {
+    :global(.ui-shell) input.invalid:not(:global(.branding-preview *)) {
         border-color: hsl(var(--error));
     }
 
-    :global(.admin-shell) .admin-password-field:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .admin-password-field:not(:global(.branding-preview *)) {
         max-width: 100%;
         min-width: 0;
     }
-    :global(.admin-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.btn) {
+    :global(.ui-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.btn) {
         top: 4px;
         right: 4px;
         margin: 0;
     }
-    :global(.admin-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.clip) {
+    :global(.ui-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.clip) {
         right: 40px;
     }
-    :global(.admin-shell) .admin-password-field input[type] {
+    :global(.ui-shell) .admin-password-field input[type] {
         padding-right: 44px;
     }
-    :global(.admin-shell) .admin-password-field:has(:global(.clip)) input[type] {
+    :global(.ui-shell) .admin-password-field:has(:global(.clip)) input[type] {
         padding-right: 84px;
     }
 </style>

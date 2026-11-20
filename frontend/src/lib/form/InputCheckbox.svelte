@@ -103,7 +103,7 @@
         transform: translateY(0.05rem);
     }
 
-    :global(.admin-shell) .admin-checkbox:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) {
         display: inline-flex;
         align-items: center;
         gap: 10px;
@@ -114,7 +114,7 @@
         font-weight: 400;
         line-height: 20px;
     }
-    :global(.admin-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input) {
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input) {
         flex-shrink: 0;
         width: 18px;
         height: 18px;
@@ -125,19 +125,19 @@
         transform: none;
         background: transparent;
     }
-    :global(.admin-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input:checked) {
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input:checked) {
         background: var(--ui-primary);
         border-color: var(--ui-primary);
     }
-    :global(.admin-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input::before) {
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input::before) {
         width: 11px;
         height: 11px;
         background: var(--ui-on-primary);
     }
-    :global(.admin-shell) .admin-checkbox:not(:global(.branding-preview *)) > :global(span) {
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) > :global(span) {
         transform: none;
     }
-    :global(.admin-shell) .admin-checkbox[data-disabled='true']:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .admin-checkbox[data-disabled='true']:not(:global(.branding-preview *)) {
         opacity: 0.5;
     }
 </style>

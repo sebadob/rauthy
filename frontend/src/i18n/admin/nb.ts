@@ -48,6 +48,16 @@ export let I18nAdminNb: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
+            theme: 'Tema',
+            light: 'Lyst tema',
+            dark: 'Mørkt tema',
+            preview: 'Forhåndsvisning',
+            assets: 'Logo og favicon',
+            logo: 'Logo',
+            advanced: 'Avansert CSS',
+            resetTheme: 'Tilbakestill tema',
+            resetThemeConfirm: 'Gjenopprette standardfargene og hjørneradiusen?',
+            assetsImmediate: 'Filendringer trer i kraft med en gang.',
             descHsl: `Fargene må angis som HSL. Her defineres kun basisfargen.
                 Alpha kanaler og andre verdier justeres dynamisk av temaet.`,
             descFullCss: `Fargene må angis som fullstendige, gyldige CSS <code>color</code> verdier.
@@ -145,6 +155,8 @@ export let I18nAdminNb: I18nAdmin = {
         },
     },
     common: {
+        date: 'Dato',
+        time: 'Tid',
         preferences: 'Innstillinger',
         profile: 'Profil',
         contactDetails: 'Kontaktinformasjon',
@@ -302,12 +314,8 @@ export let I18nAdminNb: I18nAdmin = {
             Deretter må du logge ut og inn igjen`,
     },
     events: {
-        levelFilters: {
-            info: 'Alle nivåer',
-            notice: 'Notice og høyere',
-            warning: 'Warning og høyere',
-            critical: 'Bare Critical',
-        },
+        allLevels: 'Alle nivåer',
+        sendTest: 'Send testhendelse',
         eventLevel: 'Hendelsesnivå',
         eventType: 'Hendelsestype',
     },

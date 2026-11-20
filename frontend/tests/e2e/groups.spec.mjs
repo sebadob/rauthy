@@ -1,3 +1,4 @@
+import { openEntityDelete } from './helpers/entities.mjs';
 import { test, expect } from './fixtures.mjs';
 import { api } from './helpers/api.mjs';
 import { unique } from './helpers/env.mjs';
@@ -10,7 +11,6 @@ import {
     entry,
     entryList,
     expectCurrent,
-    expectTabSelected,
     listedNames,
     openAddNew,
     openEntry,
@@ -21,7 +21,6 @@ import {
     showSubNav,
     sortedInBrowser,
     subNav,
-    tab,
 } from './helpers/entities.mjs';
 
 const PAGE = '/auth/v1/admin/groups';
@@ -48,7 +47,6 @@ test.describe('groups list', () => {
     test('loads every group of the backend', async ({ page }) => {
         await page.goto(PAGE);
         const all = await groups(page);
-        await expect(entry(page, 'admin')).toBeVisible();
         await expect(entryList(page).getByRole('listitem')).toHaveCount(all.length);
         expect((await listedNames(page)).sort()).toEqual(all.map(g => g.name).sort());
     });
@@ -93,8 +91,8 @@ test.describe('groups list', () => {
     test('sort by name ascending / descending and by ID', async ({ page }) => {
         await page.goto(PAGE);
         const all = await groups(page);
-        await expect(entry(page, 'admin')).toBeVisible();
         const names = all.map(g => g.name);
+        await expect(entryList(page).getByRole('listitem')).toHaveCount(all.length);
 
         await expect.poll(() => listedNames(page)).toEqual(await sortedInBrowser(page, names));
         await subNav(page).getByRole('button', { name: 'Change sort to descending' }).click();
@@ -119,21 +117,23 @@ test.describe('groups list', () => {
 
     test('selecting a group shows its details and a deep link', async ({ page }) => {
         await page.goto(PAGE);
-        const user = /** @type {Group} */ ((await groups(page)).find(g => g.name === 'user'));
+        const all = await groups(page);
+        const user = /** @type {Group} */ (all.find(g => g.name === 'user'));
 
         await openEntry(page, 'user');
         await expect(page).toHaveURL(new RegExp(`[?&]gid=${user.id}`));
         await expectCurrent(page, 'user');
         await expect(nameInput(page)).toHaveValue('user');
         await expect(page.getByRole('main').getByText(user.id)).toBeVisible();
-        await expectTabSelected(page, 'Config');
 
         await page.goto(`${PAGE}?gid=${user.id}`);
         await expect(nameInput(page)).toHaveValue('user');
         await expectCurrent(page, 'user');
 
-        await openEntry(page, 'admin');
-        await expect(nameInput(page)).toHaveValue('admin');
+        const other = /** @type {Group} */ (all.find(g => g.id !== user.id));
+        expect(other).toBeDefined();
+        await openEntry(page, other.name);
+        await expect(nameInput(page)).toHaveValue(other.name);
     });
 });
 
@@ -151,7 +151,6 @@ test.describe('create group', () => {
 
     test('dialog validates the name and can be closed without saving', async ({ page }) => {
         await page.goto(PAGE);
-        await expect(entry(page, 'admin')).toBeVisible();
         const posts = recordRequests(page, 'POST', /\/auth\/v1\/groups$/);
 
         let dialog = await openAddNew(page);
@@ -190,7 +189,6 @@ test.describe('create group', () => {
         const name = unique('e2e group');
         cleanup.push(name);
         await page.goto(PAGE);
-        await expect(entry(page, 'admin')).toBeVisible();
 
         const dialog = await openAddNew(page);
         await dialog.getByRole('textbox', { name: 'Group Name' }).fill(name);
@@ -297,7 +295,9 @@ test.describe('edit group', () => {
 });
 
 test.describe('delete group', () => {
-    test('delete tab asks first, switching away cancels, confirm deletes', async ({ page }) => {
+    test('header action asks first, cancelling keeps the entry, confirming deletes it', async ({
+        page,
+    }) => {
         await page.goto(PAGE);
         const group = await api(page, 'POST', 'groups', { group: unique('e2e-group') });
         const user = await createUser(page, {
@@ -308,20 +308,21 @@ test.describe('delete group', () => {
             await page.goto(`${PAGE}?gid=${group.id}`);
             await expect(nameInput(page)).toHaveValue(group.name);
 
-            await tab(page, 'Delete').click();
-            await expectTabSelected(page, 'Delete');
+            await openEntityDelete(page);
             await expect(
                 page.getByRole('main').getByText('Are you sure you want to delete this group?'),
             ).toBeVisible();
 
-            await tab(page, 'Config').click();
+            await page
+                .getByRole('dialog', { name: 'Delete' })
+                .getByRole('button', { name: 'Cancel' })
+                .click();
             await expect(nameInput(page)).toHaveValue(group.name);
             expect(await groupById(page, group.id)).toBeTruthy();
 
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect.poll(async () => await groupById(page, group.id)).toBeUndefined();
-            await showSubNav(page);
             await expect(entry(page, group.name)).toHaveCount(0);
             await expect(nameInput(page)).toHaveCount(0);
 
@@ -354,7 +355,7 @@ test.describe('groups on a phone', () => {
             await page.goto(PAGE);
             await openEntry(page, name);
             await expectJsonValue(metaInput(page), { mobile: true });
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect
                 .poll(async () => (await groups(page)).some(g => g.name === name))

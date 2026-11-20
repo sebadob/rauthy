@@ -10,6 +10,7 @@
         onClose,
         strict = false,
         prerender = false,
+        ariaLabel,
         children,
     }: {
         showModal?: boolean;
@@ -17,6 +18,7 @@
         onClose?: () => void;
         strict?: boolean;
         prerender?: boolean;
+        ariaLabel?: string;
         children: Snippet;
     } = $props();
 
@@ -120,6 +122,7 @@ We need the onclick listener here to make easy click-outside work.
 <dialog
     bind:this={refDialog}
     aria-modal="true"
+    aria-label={ariaLabel}
     data-strict={strict}
     onclose={() => {
         showModal = false;

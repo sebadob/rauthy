@@ -1,3 +1,4 @@
+import { openEntityDelete } from './helpers/entities.mjs';
 import { enterTime } from './helpers/ui.mjs';
 import { test, expect } from './fixtures.mjs';
 import { api } from './helpers/api.mjs';
@@ -472,7 +473,7 @@ test.describe('API key secret', () => {
 });
 
 test.describe('delete API key', () => {
-    test('delete tab asks first, switching away cancels, confirm deletes', async ({
+    test('header action asks first, cancelling keeps the entry, confirming deletes it', async ({
         page,
         playwright,
         baseURL,
@@ -491,22 +492,23 @@ test.describe('delete API key', () => {
         });
         try {
             await page.goto(`${PAGE}?kn=${name}`);
-            await tab(page, 'Delete').click();
-            await expectTabSelected(page, 'Delete');
+            await openEntityDelete(page);
             await expect(
                 page
                     .getByRole('main')
                     .getByText('Are you sure, that you want to delete this API Key?'),
             ).toBeVisible();
 
-            await tab(page, 'Config').click();
+            await page
+                .getByRole('dialog', { name: 'Delete' })
+                .getByRole('button', { name: 'Cancel' })
+                .click();
             await expect(matrixBox(page.getByRole('main'), 'Roles', 'read')).toBeChecked();
             expect(await keyByName(page, name)).toBeTruthy();
 
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect.poll(async () => await keyByName(page, name)).toBeUndefined();
-            await showSubNav(page);
             await expect(entry(page, name)).toHaveCount(0);
 
             const res = await anon.get(`/auth/v1/api_keys/${name}/test`, {
@@ -536,7 +538,7 @@ test.describe('API keys on a phone', () => {
 
             await openEntry(page, name);
             await expect(matrixBox(page.getByRole('main'), 'Roles', 'delete')).toBeChecked();
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect.poll(async () => await keyByName(page, name)).toBeUndefined();
         } finally {

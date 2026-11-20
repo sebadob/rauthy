@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures.mjs';
 import { chooseOption } from './helpers/ui.mjs';
+import { ACCOUNT_EXPECTED_ERRORS } from './helpers/account.mjs';
 
 // Every admin section reachable from the main navigation, with the landing path it must open.
 // Some sections append their own query, e.g. the KV store selects its default namespace.
@@ -54,6 +55,21 @@ test.describe('admin navigation', () => {
             /** @type {string} */ (after),
         );
         await page.getByRole('button', { name: /Change Theme/ }).click();
+    });
+
+    test('opens and browses Account from the sidebar footer', async ({ page, allowErrors }) => {
+        allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
+        await page.goto('/auth/v1/admin/users');
+        await page.locator('#mainNav').getByRole('link', { name: 'User Account' }).click();
+        await expect(page).toHaveURL(/\/auth\/v1\/account/);
+        const main = page.getByRole('main');
+        await expect(main.getByRole('heading', { name: 'User Account' })).toBeVisible();
+        const password = main.getByRole('button', { name: 'Password', exact: true });
+        await password.click();
+        await expect(password).toHaveAttribute('aria-current', 'step');
+        await page.setViewportSize({ width: 390, height: 850 });
+        await expect(password).toHaveAttribute('aria-current', 'step');
+        await expect(main.getByRole('button', { name: 'Logout', exact: true })).toBeVisible();
     });
 
     test('language selector switches the UI language', async ({ page }) => {

@@ -50,6 +50,16 @@ export let I18nAdminDe: I18nAdmin = {
         backchannelLogout:
             'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
         branding: {
+            theme: 'Design',
+            light: 'Helles Design',
+            dark: 'Dunkles Design',
+            preview: 'Vorschau',
+            assets: 'Logo und Favicon',
+            logo: 'Logo',
+            advanced: 'Erweitertes CSS',
+            resetTheme: 'Design zurücksetzen',
+            resetThemeConfirm: 'Standardfarben und Eckenradius wiederherstellen?',
+            assetsImmediate: 'Dateiänderungen werden sofort wirksam.',
             descHsl: `Die folgenden Werte müssen als HSL angegeben werden. Hier wird nur die Basis-Farbe
                 definiert. Alpha Kanäle und andere Werte werden vom Theme dynamisch angepasst.`,
             descFullCss: `Die folgenden Werte müssen vollständig gültige Angaben für CSS <code>color</code> sein.
@@ -153,6 +163,8 @@ export let I18nAdminDe: I18nAdmin = {
         },
     },
     common: {
+        date: 'Datum',
+        time: 'Uhrzeit',
         preferences: 'Einstellungen',
         profile: 'Profil',
         contactDetails: 'Kontaktdaten',
@@ -314,12 +326,8 @@ export let I18nAdminDe: I18nAdmin = {
             Danach muss ein Logout und neuer Login folgen`,
     },
     events: {
-        levelFilters: {
-            info: 'Alle Stufen',
-            notice: 'Ab Notice',
-            warning: 'Ab Warning',
-            critical: 'Nur Critical',
-        },
+        allLevels: 'Alle Stufen',
+        sendTest: 'Testereignis senden',
         eventLevel: 'Event Level',
         eventType: 'Event Typ',
     },

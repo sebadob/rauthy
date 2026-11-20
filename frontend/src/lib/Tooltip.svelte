@@ -129,7 +129,11 @@
         padding: 0.33rem 0.5rem;
         background: hsl(var(--bg));
         color: hsl(var(--text-high));
-        font: inherit;
+        font-family: inherit;
+        font-size: var(--ui-control-font-size, 0.875rem);
+        font-weight: 400;
+        line-height: var(--ui-control-line-height, 1.25rem);
+        letter-spacing: normal;
         text-align: left;
         white-space: normal;
         overflow-wrap: anywhere;

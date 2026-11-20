@@ -97,20 +97,26 @@ export async function expectTabSelected(/** @type {Page} */ page, /** @type {str
         .toBe(true);
 }
 
-/**
- * The final "Delete" action on the Delete tab. It is the last button called "Delete" with a
- * visible label (the tab itself comes first), or the confirm button of a dialog if a redesign
- * adds one.
- */
+/** The action next to the entity name. */
+export function entityDelete(/** @type {Page} */ page) {
+    return page
+        .locator('.admin-entity-header')
+        .getByRole('button', { name: 'Delete', exact: true });
+}
+
+/** Opens the entity's delete confirmation and returns the dialog. */
+export async function openEntityDelete(/** @type {Page} */ page) {
+    await entityDelete(page).click();
+    const dialog = page.getByRole('dialog', { name: 'Delete', exact: true });
+    await expect(dialog).toBeVisible();
+    return dialog;
+}
+
+/** Confirms deletion in an open dialog. */
 export function deleteAction(/** @type {Page} */ page) {
-    return (
-        page
-            .getByRole('main')
-            .getByRole('button', { name: 'Delete', exact: true })
-            .filter({ hasText: 'Delete' })
-            // the first one is the tab; waiting for the second one waits for the confirmation
-            .nth(1)
-    );
+    return page
+        .getByRole('dialog', { name: 'Delete', exact: true })
+        .getByRole('button', { name: 'Delete', exact: true });
 }
 
 /** The "Save" button of the detail view (outside of dialogs). */

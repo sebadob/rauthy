@@ -3,15 +3,16 @@
     import EventsLegend from './EventsLegend.svelte';
     import Button from '#lib/button/Button.svelte';
     import { isBrowser } from '#utils/helpers.ts';
-    import type { EventLevel, EventResponse } from '#api/types/events.ts';
+    import { EVENT_LEVELS, type EventLevel, type EventResponse } from '#api/types/events.ts';
     import EventLevelFilter from './EventLevelFilter.svelte';
-    import { onDestroy } from 'svelte';
+    import { onDestroy, untrack } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { fetchPost } from '#api/fetch.ts';
     import { useTrigger } from '#state/callback.svelte.ts';
     import { useSession } from '#state/session.svelte.ts';
 
-    const latest = 50;
+    // Request the entire recent window so a sparse selection can find matching history.
+    const latest = 100;
 
     let ta = useI18nAdmin();
     let session = useSession('admin');
@@ -27,22 +28,32 @@
 
     let es: undefined | EventSource = $state();
     let events: EventResponse[] = $state([]);
-    let eventsFiltered: EventResponse[] = $state([]);
-    function storedLevel(): EventLevel {
+    function storedLevels(): EventLevel[] {
         if (isBrowser()) {
             try {
-                const value = localStorage.getItem('eventLevel')?.toLowerCase();
-                if (value === 'notice' || value === 'warning' || value === 'critical') {
-                    return value;
+                const saved = localStorage.getItem('eventLevels');
+                if (saved !== null) {
+                    const values = saved.split(',');
+                    return EVENT_LEVELS.filter(level => values.includes(level));
                 }
+
+                // Earlier versions stored a minimum level. Preserve that selection.
+                const legacy = EVENT_LEVELS.findIndex(
+                    level => level === localStorage.getItem('eventLevel')?.toLowerCase(),
+                );
+                return EVENT_LEVELS.slice(Math.max(0, legacy));
             } catch {
                 // Storage may be unavailable in a restricted browser session.
             }
         }
-        return 'info';
+        return [...EVENT_LEVELS];
     }
-    let level: EventLevel = $state(storedLevel());
-    let levelBefore = '';
+
+    let levels: EventLevel[] = $state(storedLevels());
+    let minimumLevel = $derived(EVENT_LEVELS.find(level => levels.includes(level)));
+    let eventsFiltered = $derived(events.filter(event => levels.includes(event.level)));
+    let testPending = $state(false);
+    let testError = $state('');
 
     let disposed = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -59,60 +70,38 @@
     });
 
     $effect(() => {
-        if (level !== levelBefore) {
-            levelBefore = level;
-            stream();
-        }
+        const level = minimumLevel;
+        untrack(() => stream(level));
     });
 
     $effect(() => {
-        switch (level) {
-            case 'info':
-                eventsFiltered = events;
-                break;
-            case 'notice':
-                eventsFiltered = events.filter(
-                    evt =>
-                        evt.typ === 'Test' ||
-                        evt.level === 'notice' ||
-                        evt.level === 'warning' ||
-                        evt.level === 'critical',
-                );
-                break;
-            case 'warning':
-                eventsFiltered = events.filter(
-                    evt =>
-                        evt.typ === 'Test' || evt.level === 'warning' || evt.level === 'critical',
-                );
-                break;
-            case 'critical':
-                eventsFiltered = events.filter(
-                    evt => evt.typ === 'Test' || evt.level === 'critical',
-                );
-                break;
+        try {
+            localStorage.setItem('eventLevels', levels.join(','));
+        } catch {
+            // A storage failure must not stop the live stream.
         }
     });
 
     async function sendTestEvent() {
-        await fetchPost('/auth/v1/events/test');
+        testPending = true;
+        testError = '';
+        const response = await fetchPost('/auth/v1/events/test');
+        testPending = false;
+        if (response.error) testError = response.error.message;
     }
 
-    function stream() {
+    function stream(level: EventLevel | undefined) {
         if (disposed) return;
         clearTimeout(retryTimer);
-        try {
-            localStorage.setItem('eventLevel', level);
-        } catch {
-            // A storage failure must not stop the live stream.
+        es?.close();
+        es = undefined;
+
+        if (!level) {
+            events = [];
+            return;
         }
 
-        if (es && es.readyState !== 2) {
-            es.close();
-        }
-
-        es = new EventSource(
-            `/auth/v1/events/stream?latest=${latest}&level=${level.toLowerCase()}`,
-        );
+        es = new EventSource(`/auth/v1/events/stream?latest=${latest}&level=${level}`);
 
         es.onopen = () => {
             events = [];
@@ -122,14 +111,14 @@
             // Never reconnect after the optional panel has been closed.
             if (disposed) return;
             clearTimeout(retryTimer);
-            retryTimer = setTimeout(stream, 3000);
+            retryTimer = setTimeout(() => stream(level), 3000);
         };
 
         es.onmessage = ev => {
             if (ev.data) {
                 let event: EventResponse = JSON.parse(ev.data);
                 // keep max 500 events in the UI to not consume endless amounts of memory
-                events = [event, ...events.slice(-499)];
+                events = [event, ...events.slice(0, 499)];
             }
         };
     }
@@ -142,13 +131,11 @@
         <div class="header">
             <div class="flex gap-10">
                 <b>{ta.nav.events}</b>
-                <EventLevelFilter bind:level />
+                <EventLevelFilter bind:levels />
             </div>
-
-            {#if !isGroupAdmin}
-                <Button ariaLabel="Test Event" level={3} onclick={sendTestEvent}>Test</Button>
-            {/if}
         </div>
+
+        {#if testError}<p class="err test-error" role="alert">{testError}</p>{/if}
 
         <div aria-live="polite" aria-relevant="additions" class="data">
             {#each eventsFiltered as event (event.id)}
@@ -157,7 +144,14 @@
         </div>
     </div>
 
-    <EventsLegend {wide} />
+    <div class="event-footer">
+        <EventsLegend {wide} />
+        {#if !isGroupAdmin}
+            <Button level={3} isLoading={testPending} onclick={sendTestEvent}>
+                {ta.events.sendTest}
+            </Button>
+        {/if}
+    </div>
 </div>
 
 <style>
@@ -188,8 +182,20 @@
         border-bottom: 1px solid var(--ui-outline);
     }
 
+    .event-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        border-top: 1px solid var(--ui-outline);
+        padding: 0.25rem 0.5rem;
+    }
+
     .header > .flex {
         gap: 8px;
+    }
+
+    .test-error {
+        padding-inline: var(--ui-space);
     }
 
     .data {

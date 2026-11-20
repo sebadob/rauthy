@@ -1,3 +1,4 @@
+import { openEntityDelete, entityDelete } from './helpers/entities.mjs';
 // Characterization tests for the admin Scopes section: list, search, order, Add New (incl. scope
 // names with dots, upstream issue #1311), attribute mappings into access / id tokens, immutable
 // default scopes and Delete.
@@ -12,13 +13,11 @@ import {
     entry,
     entryKeys,
     expectInvalid,
-    expectTabSelected,
     openAddNew,
     openSubNav,
     saveAndWait,
     saveButton,
     subNav,
-    tab,
     expectEntryCurrent,
 } from './helpers/clients.mjs';
 
@@ -130,7 +129,6 @@ test.describe('scopes list', () => {
         await expectEntryCurrent(entry(page, 'email'));
         await expect(page.getByRole('textbox', { name: 'Scope Name' })).toHaveValue('email');
         await expect(page.getByRole('main').getByText(email.id, { exact: true })).toBeVisible();
-        await expectTabSelected(tab(page, 'Config'));
 
         await page.reload();
         await expect(page.getByRole('textbox', { name: 'Scope Name' })).toHaveValue('email');
@@ -148,14 +146,7 @@ test.describe('scopes list', () => {
             page.getByRole('main').getByRole('button', { name: 'Save', exact: true }),
         ).toHaveCount(0);
 
-        await tab(page, 'Delete').click();
-        await expect(page.getByText('Default OIDC scopes cannot be deleted.')).toBeVisible();
-        await expect(
-            page
-                .getByRole('main')
-                .getByRole('button', { name: 'Delete', exact: true })
-                .filter({ hasText: 'Delete' }),
-        ).toHaveCount(1); // only the tab itself
+        await expect(entityDelete(page)).toBeDisabled();
     });
 });
 
@@ -347,15 +338,16 @@ test.describe('scope config', () => {
         await expect(input).toHaveValue(renamed);
     });
 
-    test('leaving the Delete tab keeps the scope, confirming deletes it', async ({ page }) => {
-        await tab(page, 'Delete').click();
-        await expectTabSelected(tab(page, 'Delete'));
+    test('cancelling keeps the scope, confirming deletes it', async ({ page }) => {
+        await openEntityDelete(page);
         await expect(page.getByText('Are you sure you want to delete this scope?')).toBeVisible();
-        await tab(page, 'Config').click();
+        await page
+            .getByRole('dialog', { name: 'Delete' })
+            .getByRole('button', { name: 'Cancel' })
+            .click();
         await expect(page.getByRole('textbox', { name: 'Scope Name' })).toBeVisible();
         expect(await scopeByName(page, name)).toBeTruthy();
 
-        await tab(page, 'Delete').click();
         expect(await clickDeleteAndConfirm(page, `/scopes/${sid}`)).toBeLessThan(400);
         await expect(entry(page, name)).toHaveCount(0);
         await expect(page.getByRole('textbox', { name: 'Scope Name' })).toHaveCount(0);
@@ -387,7 +379,6 @@ test.describe('scopes at phone size', () => {
             await saveAndWait(page, saveButton(page), 'PUT', `/scopes/${s.id}`);
             expect(/** @type {any} */ (await scopeByName(page, name)).claims_at_root).toBe(true);
 
-            await tab(page, 'Delete').click();
             expect(await clickDeleteAndConfirm(page, `/scopes/${s.id}`)).toBeLessThan(400);
             expect(await scopeByName(page, name)).toBeUndefined();
         } finally {

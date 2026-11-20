@@ -229,14 +229,7 @@
 </script>
 
 {#snippet navTile(user: UserResponseSimple)}
-    <NavButtonTile
-        onclick={() => {
-            uid.set(user.id);
-            tr.trigger('navSubSub');
-        }}
-        selected={uid.get() === user.id}
-        pictureLeft
-    >
+    <NavButtonTile onclick={() => uid.set(user.id)} selected={uid.get() === user.id} pictureLeft>
         <div class="navBtn">
             <div class="picture">
                 <UserPicture

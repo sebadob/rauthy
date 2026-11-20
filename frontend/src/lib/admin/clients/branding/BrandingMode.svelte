@@ -14,7 +14,6 @@
 </script>
 
 <div>
-    <p>{ta.clients.branding.descHsl}</p>
     <div class="hsl">
         <div>
             <HSLInputRange
@@ -65,18 +64,28 @@
         </div>
     </div>
 
-    <div>
+    <details>
+        <summary>{ta.clients.branding.advanced}</summary>
+        <p>{ta.clients.branding.descHsl}</p>
+        <p>{@html ta.clients.branding.descVariables}</p>
         <p>{@html ta.clients.branding.descFullCss}</p>
         <HSLInputText label="--btn-text" bind:value={values.btn_text} />
         <HSLInputText label="--theme-sun" bind:value={values.theme_sun} />
         <HSLInputText label="--theme-moon" bind:value={values.theme_moon} />
-    </div>
+    </details>
 </div>
 
 <style>
     .hsl {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        gap: var(--ui-space);
+    }
+    details {
+        margin-top: var(--ui-space);
+    }
+    summary {
+        cursor: pointer;
+        color: var(--ui-primary);
     }
 </style>

@@ -8,8 +8,8 @@
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
     import { fmtDateInput, fmtTimeInput } from '#utils/form.ts';
-    import IconStop from '#icons/IconStop.svelte';
-    import { fetchDelete, fetchGet, fetchPost } from '#api/fetch.ts';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import type {
         BlacklistedIp,
@@ -109,15 +109,6 @@
         }
     }
 
-    async function deleteIp(ip: string) {
-        let res = await fetchDelete(`/auth/v1/blacklist/${ip}`);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            await fetchBlacklist();
-        }
-    }
-
     function onChangeOrder(option: string, direction: 'up' | 'down') {
         let up = direction === 'up';
         if (option === orderOptions[0]) {
@@ -195,17 +186,13 @@
                         {formatDateFromTs(entry.exp)}
                     </div>
                     {#if isAdmin}
-                        <Button
+                        <EntityDelete
+                            url={`/auth/v1/blacklist/${entry.ip}`}
+                            name={entry.ip}
                             ariaLabel={`${t.common.delete}: ${entry.ip}`}
-                            invisible
-                            onclick={() => deleteIp(entry.ip)}
-                        >
-                            <Tooltip text={t.common.delete}>
-                                <div class="delete">
-                                    <IconStop width="1.25rem" />
-                                </div>
-                            </Tooltip>
-                        </Button>
+                            iconOnly
+                            onDelete={fetchBlacklist}
+                        />
                     {/if}
                 </div>
             {/snippet}
@@ -269,11 +256,6 @@
 
     .date {
         color: hsla(var(--text) / 0.8);
-    }
-
-    .delete {
-        height: 1.25rem;
-        overflow: clip;
     }
 
     .ip {

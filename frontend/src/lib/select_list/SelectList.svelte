@@ -111,7 +111,7 @@
         </Modal>
     </div>
 
-    <div class="label font-label">
+    <div class="label font-label admin-field-label">
         {@render children()}
     </div>
 </div>
@@ -174,17 +174,16 @@
     :global(.admin-shell) .admin-selection-field {
         display: flex;
         flex-direction: column;
-        margin: 0 0 16px;
+        margin: 0 0 var(--ui-space);
         padding: 0;
         border: 0;
         background: transparent;
     }
     :global(.admin-shell) .admin-selection-field > :global(.label) {
         order: -1;
-        margin-bottom: 6px;
     }
     :global(.admin-shell) .admin-selection-field > :global(.items) {
-        min-height: 44px;
+        min-height: var(--ui-field-height);
         padding: 3px 6px 3px 14px;
         border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
@@ -192,8 +191,8 @@
     }
     :global(.admin-shell) .admin-selection-field :global(.joined) {
         flex: 1;
-        font-size: 13px;
-        line-height: 22px;
+        font-size: var(--ui-control-font-size);
+        line-height: var(--ui-control-line-height);
     }
     :global(.admin-shell) .admin-selection-field :global(.edit) {
         height: auto;

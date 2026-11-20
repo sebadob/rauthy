@@ -1,3 +1,4 @@
+import { openEntityDelete, deleteAction } from './helpers/entities.mjs';
 // KV store: namespaces, values, access keys, editing and deletion.
 import { test, expect } from './fixtures.mjs';
 import { api } from './helpers/api.mjs';
@@ -168,15 +169,11 @@ test('edits namespace visibility and deletes the namespace', async ({ page }) =>
         )
         .toBe(true);
 
-    await tab(page, 'Delete').click();
+    await openEntityDelete(page);
     await expect(
         main.getByText('Do you really want to delete this namespace including all existing data?'),
     ).toBeVisible();
-    await main
-        .getByRole('button', { name: 'Delete', exact: true })
-        .filter({ hasText: 'Delete' })
-        .last()
-        .click();
+    await deleteAction(page).click();
     await expect(nsEntry(page, ns)).toHaveCount(0);
     await expect
         .poll(async () =>

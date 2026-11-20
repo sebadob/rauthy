@@ -13,7 +13,7 @@
 
     let { children }: { children: Snippet } = $props();
 
-    setContext('rauthy-admin-ui', true);
+    setContext('rauthy-ui', true);
 
     const ta = useI18nAdmin();
     const t = useI18n();
@@ -122,7 +122,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="admin-shell">
+<div class="admin-shell ui-shell">
     {#if drawerOpen}<button
             class="admin-drawer-backdrop"
             aria-label={t.common.close}

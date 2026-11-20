@@ -50,6 +50,16 @@ export let I18nAdminNl: I18nAdmin = {
         backchannelLogout:
             'Als deze client {{ OIDC_BCL }} ondersteunt, kunt u de URI hier opgeven.',
         branding: {
+            theme: 'Thema',
+            light: 'Licht thema',
+            dark: 'Donker thema',
+            preview: 'Voorbeeld',
+            assets: 'Logo en favicon',
+            logo: 'Logo',
+            advanced: 'Geavanceerde CSS',
+            resetTheme: 'Thema herstellen',
+            resetThemeConfirm: 'Standaardkleuren en hoekradius herstellen?',
+            assetsImmediate: 'Bestandswijzigingen worden direct toegepast.',
             descHsl: `De volgende waarden moeten worden opgegeven als HSL-waarden. U geeft alleen de basiskleuren op.
             Alfakanalen en andere waarden worden dynamisch gemanipuleerd door het thema.`,
             descFullCss: `De volgende waarden moeten volledig geldige CSS <code>color</code>-waarden zijn.
@@ -147,6 +157,8 @@ export let I18nAdminNl: I18nAdmin = {
         },
     },
     common: {
+        date: 'Datum',
+        time: 'Tijd',
         preferences: 'Voorkeuren',
         profile: 'Profiel',
         contactDetails: 'Contactgegevens',
@@ -307,12 +319,8 @@ export let I18nAdminNl: I18nAdmin = {
             Daarna moet u uitloggen en opnieuw inloggen.`,
     },
     events: {
-        levelFilters: {
-            info: 'Alle niveaus',
-            notice: 'Notice en hoger',
-            warning: 'Warning en hoger',
-            critical: 'Alleen Critical',
-        },
+        allLevels: 'Alle niveaus',
+        sendTest: 'Testgebeurtenis sturen',
         eventLevel: 'Gebeurtenisniveau',
         eventType: 'Gebeurtenistype',
     },

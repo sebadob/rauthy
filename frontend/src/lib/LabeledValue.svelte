@@ -38,7 +38,7 @@
 
 <div class="container admin-labeled-value">
     {#if label}
-        <div class="label font-label">
+        <div class="label font-label admin-field-label">
             {label}
         </div>
     {/if}
@@ -85,16 +85,16 @@
         padding-left: 0;
     }
 
-    :global(.admin-shell) .admin-labeled-value:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .admin-labeled-value:not(:global(.branding-preview *)) {
         margin: 0 0 12px;
     }
-    :global(.admin-shell) .input-noedit:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .input-noedit:not(:global(.branding-preview *)) {
         border: 0;
         background: transparent;
         padding: 0;
         margin: 0;
-        font-size: 13px;
-        line-height: 22px;
+        font-size: var(--ui-control-font-size);
+        line-height: var(--ui-control-line-height);
         overflow-wrap: anywhere;
     }
 </style>

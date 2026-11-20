@@ -15,7 +15,7 @@
     import KVDetails from '#lib/admin/kv/KVDetails.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
     import KVAccess from '#lib/admin/kv/KVAccess.svelte';
-    import KVDelete from '#lib/admin/kv/KVDelete.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import Form from '#lib/form/Form.svelte';
     import Input from '#lib/form/Input.svelte';
     import Button from '#lib/button/Button.svelte';
@@ -152,11 +152,23 @@
 <ContentAdmin>
     <div id="kv" aria-label={ta.common.details}>
         {#if selected}
-            <EntityHeader title={selected.name} subtitle="KV Store"
-                ><IconCircleStack width="28px" /></EntityHeader
-            >
+            <EntityHeader title={selected.name} subtitle="KV Store">
+                {#snippet actions()}
+                    {#if selected}
+                        {#key selected.name}
+                            <EntityDelete
+                                url={`/auth/v1/kv/ns/${selected.name}`}
+                                name={selected.name}
+                                message={ta.kv.delNsMsg}
+                                {onDelete}
+                            />
+                        {/key}
+                    {/if}
+                {/snippet}
+                <IconCircleStack width="28px" />
+            </EntityHeader>
             <div class="admin-tabs-wrapper">
-                <Tabs tabs={ta.kv.tabs} bind:selected={tab} />
+                <Tabs tabs={ta.kv.tabs.slice(0, 3)} bind:selected={tab} />
             </div>
 
             {#if tab === ta.kv.tabs[0]}
@@ -165,8 +177,6 @@
                 <KVAccess {ns} />
             {:else if tab === ta.kv.tabs[2]}
                 <KVNamespaceEdit ns={selected} {onSave} />
-            {:else if tab === ta.kv.tabs[3]}
-                <KVDelete {ns} {onDelete} />
             {/if}
         {/if}
     </div>

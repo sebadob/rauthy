@@ -1,25 +1,21 @@
 <script lang="ts">
-    import { normalizeClientUri, redirectToLogout } from '#utils/helpers.ts';
+    import { normalizeClientUri } from '#utils/helpers.ts';
     import AccInfo from '#lib/account/AccInfo.svelte';
     import AccEdit from '#lib/account/AccEdit.svelte';
     import AccMFA from './AccMFA.svelte';
     import AccPassword from './AccPassword.svelte';
     import AccWebId from './AccWebId.svelte';
-    import AccDevices from '#lib/account/AccDevices.svelte';
     import { useI18n } from '#state/i18n.svelte.js';
     import type { UserResponse } from '#api/types/user.ts';
     import { TPL_AUTH_PROVIDERS, TPL_USER_VALUES_CONFIG } from '#utils/constants.ts';
     import Template from '#lib/Template.svelte';
     import type { AuthProvidersTemplate } from '#api/templates/AuthProvider.ts';
-    import { onMount } from 'svelte';
+    import { onMount, setContext } from 'svelte';
     import { useParam } from '#state/param.svelte.ts';
     import Tabs from '#lib/tabs/Tabs.svelte';
     import Devices from '#lib/devices/Devices.svelte';
     import type { WebIdResponse } from '#api/types/web_id.ts';
-    import IconLogout from '#icons/IconLogout.svelte';
-    import IconUserGroup from '#icons/IconUserGroup.svelte';
     import Button from '#lib/button/Button.svelte';
-    import A from '#lib/A.svelte';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import LangSelector from '#lib/LangSelector.svelte';
     import { useSession } from '#state/session.svelte.ts';
@@ -31,6 +27,12 @@
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
     import IconHome from '#icons/IconHome.svelte';
     import IconArrowLeft from '#icons/IconArrowLeft.svelte';
+    import UserPicture from '#lib/UserPicture.svelte';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import Section from '#lib/Section.svelte';
+    import AccountActions from './AccountActions.svelte';
+
+    setContext('rauthy-ui', true);
 
     let {
         user = $bindable(),
@@ -43,7 +45,6 @@
     let t = useI18n();
     let session = useSession('account');
 
-    let innerWidth: undefined | number = $state();
     let config: undefined | UserValuesConfig = $state();
     let providers: AuthProvidersTemplate = $state([]);
     let authProvider = $derived.by(() => {
@@ -51,9 +52,6 @@
             return providers.filter(p => p.id === user.auth_provider_id)[0];
         }
     });
-
-    let viewModePhone = $derived(innerWidth && innerWidth < 560);
-    let viewModeWideCompact = $derived(innerWidth && innerWidth < 1000);
 
     // a user holding any `rauthy_admin*` role (full or delegated group admin) gets a
     // link to the Admin UI from here. This is how a group admin self-manages: it cannot manage
@@ -63,54 +61,36 @@
     let pamUser: undefined | PamUserResponse = $state();
 
     let redirectUri = useParam('redirect_uri');
+    const view = useParam('v');
     let redirectUriValidated = $state('');
 
     let selected = $state(t.account.navInfo);
-    let tabsWide = $derived.by(() => {
-        let tabs = [];
-        if (pamUser) {
-            tabs.push('PAM');
-        }
+    const tabs = $derived([
+        t.account.navInfo,
+        t.account.navEdit,
+        t.common.password,
+        t.account.navMfa,
+        t.account.devices,
+        ...(pamUser ? ['PAM'] : []),
+        ...(webIdData ? ['WebID'] : []),
+        t.account.privacy.privacy,
+        t.account.other,
+    ]);
 
-        tabs = [
-            ...tabs,
-            t.account.navMfa,
-            t.account.devices,
-            t.account.navEdit,
-            t.common.password,
-            t.account.privacy.privacy,
-        ];
-        if (!!webIdData) {
-            tabs.push('WebID');
-        }
-        tabs.push(t.account.other);
-
-        return tabs;
-    });
-    // Logout is not a tab anymore: on the compact / phone layouts it lives in the bottom
-    // control bar next to the theme, language and Admin UI controls (see `bottomControls`).
-    let tabsCompact = $derived([t.account.navInfo, ...tabsWide]);
+    const title = $derived(
+        [user.given_name, user.family_name].filter(Boolean).join(' ') || user.email,
+    );
+    const initials = $derived(
+        (user.given_name?.[0] || user.email[0]) + (user.family_name?.[0] || ''),
+    );
 
     onMount(() => {
         fetchPamUser();
-
-        if (useParam('v').get() === 'devices') {
-            selected = t.account.devices;
-        }
+        if (view.get() === 'devices') selected = t.account.devices;
     });
 
     $effect(() => {
-        if (viewModePhone || viewModeWideCompact) {
-            selected = t.account.navInfo;
-        } else if (pamUser) {
-            selected = 'PAM';
-        } else {
-            selected = t.account.navMfa;
-        }
-    });
-
-    $effect(() => {
-        if (!config) {
+        if (!config || view.get() === 'devices') {
             return;
         }
 
@@ -157,255 +137,104 @@
     }
 </script>
 
-<svelte:window bind:innerWidth />
-
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
 <Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 
-{#snippet header()}
-    <h3>{`${user.given_name || ''} ${user.family_name || ''}`}</h3>
-{/snippet}
-
-{#snippet adminLink()}
-    {#if showAdminLink}
-        <div class="adminLink">
-            <A href="/auth/v1/admin/users" hideUnderline>
-                <div title={t.account.navBackToAdmin} class="flex gap-05">
-                    <IconUserGroup />
-                    {t.account.navBackToAdmin}
-                </div>
-            </A>
-        </div>
-    {/if}
-{/snippet}
-
-{#snippet redirectBtn(position: 'absolute' | 'relative')}
-    {#if redirectUriValidated}
-        <div class="redirectHome" data-absolute={position === 'absolute'}>
-            <Button onclick={() => (window.location.href = redirectUriValidated)} invisible>
-                <div class="flex gap-05">
-                    <IconArrowLeft />
-                    <IconHome />
-                </div>
-            </Button>
-        </div>
-    {/if}
-{/snippet}
-
-<!-- theme, language, the switch-to-Admin-UI link and the logout sit together in one
-     row, matching the order and position of the same controls in the Admin UI nav so an
-     admin switching back and forth does not see them jump around -->
-{#snippet bottomControls()}
-    <ThemeSwitch />
-    <LangSelector openTop borderless />
-    {@render adminLink()}
-    <Button level={-3} onclick={redirectToLogout}>
-        <div title={t.account.navLogout} class="flex gap-05">
-            <IconLogout />
-            {t.account.navLogout}
-        </div>
-    </Button>
-{/snippet}
-
-<div class="wrapper">
-    {#if viewModePhone}
-        <div class="headerPhone">
-            {@render redirectBtn('relative')}
-            {@render header()}
-        </div>
-
-        <div class="container containerPhone">
-            <Tabs tabs={tabsCompact} bind:selected />
-
-            <div class="innerPhone">
-                {#if selected === t.account.navInfo}
-                    <AccInfo
-                        bind:user
-                        {pamUser}
-                        {providers}
-                        {authProvider}
-                        viewModePhone
-                        {webIdData}
-                    />
-                {:else if selected === 'PAM' && pamUser}
-                    <AccPAM bind:pamUser />
-                {:else if selected === t.account.navEdit}
-                    <AccEdit {config} bind:user viewModePhone />
-                {:else if selected === t.common.password}
-                    <AccPassword {user} {authProvider} viewModePhone />
-                {:else if selected === t.account.navMfa}
-                    <AccMFA bind:user />
-                {:else if selected === 'WebID'}
-                    {#if webIdData}
-                        <AccWebId bind:webIdData />
-                    {/if}
-                {:else if selected === t.account.other}
-                    <AccOther {user} />
-                {:else if selected === t.account.devices}
-                    <Devices userId={user.id} />
-                {:else if selected === t.account.privacy.privacy}
-                    <AccPrivacy {user} />
+<div class="account-shell ui-shell">
+    <div class="account">
+        <h1>{t.account.account}</h1>
+        <EntityHeader {title} subtitle={user.email}>
+            {#snippet actions()}
+                {#if redirectUriValidated}
+                    <Button
+                        ariaLabel={t.account.account}
+                        level={2}
+                        onclick={() => (window.location.href = redirectUriValidated)}
+                    >
+                        <IconArrowLeft width="1rem" />
+                        <IconHome width="1rem" />
+                    </Button>
                 {/if}
-            </div>
-        </div>
+            {/snippet}
+            <UserPicture
+                fallbackCharacters={initials}
+                userId={user.id}
+                bind:pictureId={user.picture_id}
+                size="large"
+            />
+        </EntityHeader>
 
-        <!-- on phone the controls flow as the last row of the column so they never overlap
-             the scrollable content above them -->
-        <div class="bottomBarPhone">
-            {@render bottomControls()}
-        </div>
-    {:else}
-        {@render redirectBtn('absolute')}
+        <Tabs {tabs} bind:selected />
 
-        <div class="wide">
-            {#if !viewModeWideCompact}
-                <div class="info">
-                    <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
-                </div>
+        <Section>
+            {#if selected === t.account.navInfo}
+                <AccInfo bind:user {pamUser} {providers} {authProvider} {webIdData} />
+            {:else if selected === t.account.navEdit}
+                <AccEdit {config} bind:user />
+            {:else if selected === t.common.password}
+                <AccPassword {user} {authProvider} />
+            {:else if selected === t.account.navMfa}
+                <AccMFA bind:user />
+            {:else if selected === t.account.devices}
+                <Devices userId={user.id} />
+            {:else if selected === 'PAM' && pamUser}
+                <AccPAM bind:pamUser />
+            {:else if selected === 'WebID' && webIdData}
+                <AccWebId bind:webIdData />
+            {:else if selected === t.account.privacy.privacy}
+                <AccPrivacy {user} />
+            {:else if selected === t.account.other}
+                <AccOther {user} />
             {/if}
+        </Section>
 
-            <div class="container">
-                <Tabs tabs={viewModeWideCompact ? tabsCompact : tabsWide} bind:selected center />
-
-                <div class="inner">
-                    {#if selected === t.account.navInfo}
-                        <AccInfo bind:user {pamUser} {webIdData} {providers} {authProvider} />
-                    {:else if selected === 'PAM' && pamUser}
-                        <AccPAM bind:pamUser />
-                    {:else if selected === t.account.navEdit}
-                        <AccEdit {config} bind:user />
-                    {:else if selected === t.common.password}
-                        <AccPassword {user} {authProvider} />
-                    {:else if selected === t.account.navMfa}
-                        <AccMFA bind:user />
-                    {:else if selected === 'WebID'}
-                        {#if webIdData}
-                            <AccWebId bind:webIdData />
-                        {/if}
-                    {:else if selected === t.account.other}
-                        <AccOther {user} />
-                    {:else if selected === t.account.devices}
-                        <AccDevices />
-                    {:else if selected === t.account.privacy.privacy}
-                        <AccPrivacy {user} />
-                    {/if}
-                </div>
+        <footer>
+            <div class="preferences">
+                <ThemeSwitch /><LangSelector openTop borderless uppercase />
             </div>
-
-            <div class="bottomLeft">
-                {@render bottomControls()}
-            </div>
-        </div>
-    {/if}
+            <AccountActions {showAdminLink} />
+        </footer>
+    </div>
 </div>
 
 <style>
-    .container {
-        max-height: calc(100dvh - 5.5rem);
-        margin-top: 0.5rem;
-        display: flex;
-        flex-direction: column;
+    .account-shell {
+        width: 100%;
+        min-width: 0;
+        min-height: 100dvh;
+        background: var(--ui-container);
+        color: var(--ui-text);
+        padding: clamp(1rem, 4vw, 3rem);
     }
 
-    .headerPhone {
-        margin-left: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
+    .account {
+        width: min(100%, 64rem);
+        margin-inline: auto;
     }
 
-    .info {
-        border-right: 1px solid hsl(var(--bg-high));
+    h1 {
+        margin: 0 0 var(--ui-space);
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--ui-muted);
     }
 
-    .inner,
-    .innerPhone {
-        padding: 0.5rem;
-    }
-
-    .inner {
-        margin-top: 0.5rem;
-        width: min(33rem, 100dvw);
-        max-height: calc(100dvh - 7rem);
-        overflow-y: auto;
-    }
-
-    /* on phone the container grows to fill the space between the header and the bottom bar,
-       and the inner content scrolls inside it */
-    .containerPhone {
-        flex: 1 1 auto;
-        min-height: 0;
-        max-height: none;
-    }
-
-    .innerPhone {
-        width: 100vw;
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-    }
-
-    .bottomLeft {
-        position: absolute;
-        bottom: 0.5rem;
-        left: 0.75rem;
+    footer,
+    .preferences {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-    }
-
-    .bottomBarPhone {
-        flex: 0 0 auto;
-        display: flex;
         flex-wrap: wrap;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.5rem 0.75rem;
+        gap: 0.5rem;
     }
 
-    .adminLink {
-        font-size: 0.9rem;
-        color: hsla(var(--text) / 0.8);
-    }
-
-    .redirectHome[data-absolute='true'] {
-        position: absolute;
-        top: 0.55rem;
-        left: 0.5rem;
-    }
-
-    .redirectHome[data-absolute='false'] {
-        position: relative;
-        top: 0.15rem;
-    }
-
-    .wide {
-        height: min(max(50rem, 66dvh), 90dvh);
-        padding: 1rem;
-        display: flex;
-        gap: 1rem;
-        border-radius: var(--border-radius);
-        background: hsla(var(--bg-high) / 0.25);
-    }
-
-    .wide:has(.info) {
-        border-radius: 4.5rem var(--border-radius) var(--border-radius) var(--border-radius);
-    }
-
-    .wide .inner {
-        max-height: 100%;
-        overflow-y: auto;
-    }
-
-    .wrapper {
-        height: 100dvh;
-        max-width: 100dvw;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .wrapper:has(.wide) {
-        flex-direction: row;
-        align-items: center;
+    footer {
+        justify-content: space-between;
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin-top: var(--ui-space);
+        padding-block: 0.5rem;
+        border-top: 1px solid var(--ui-outline);
+        background: var(--ui-container);
     }
 </style>

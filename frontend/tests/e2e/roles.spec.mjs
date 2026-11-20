@@ -1,3 +1,4 @@
+import { openEntityDelete, entityDelete } from './helpers/entities.mjs';
 import { test, expect } from './fixtures.mjs';
 import { api } from './helpers/api.mjs';
 import { unique } from './helpers/env.mjs';
@@ -10,7 +11,6 @@ import {
     entry,
     entryList,
     expectCurrent,
-    expectTabSelected,
     listedNames,
     openAddNew,
     openEntry,
@@ -21,7 +21,6 @@ import {
     showSubNav,
     sortedInBrowser,
     subNav,
-    tab,
 } from './helpers/entities.mjs';
 
 const PAGE = '/auth/v1/admin/roles';
@@ -125,7 +124,6 @@ test.describe('roles list', () => {
         await expectCurrent(page, 'user');
         await expect(nameInput(page)).toHaveValue('user');
         await expect(page.getByRole('main').getByText(user.id)).toBeVisible();
-        await expectTabSelected(page, 'Config');
 
         // deep link opens the same role directly
         await page.goto(`${PAGE}?rid=${user.id}`);
@@ -142,23 +140,15 @@ test.describe('roles list', () => {
         await openEntry(page, 'rauthy_admin');
         await expect(nameInput(page)).toBeDisabled();
         await expect(
-            page.getByRole('main').getByText(/rauthy_admin\s*role is immutable/),
+            page
+                .getByRole('main')
+                .getByRole('paragraph')
+                .filter({ hasText: /rauthy_admin\s*role is immutable/ }),
         ).toBeVisible();
         await expect(saveButton(page)).toHaveCount(0);
         await expect(metaInput(page)).toHaveCount(0);
 
-        await tab(page, 'Delete').click();
-        await expect(
-            page.getByRole('main').getByText(/rauthy_admin\s*role is immutable/),
-        ).toBeVisible();
-        await expect(page.getByRole('main').getByText('Are you sure')).toHaveCount(0);
-        // only the tab itself is called "Delete", there is no delete action
-        await expect(
-            page
-                .getByRole('main')
-                .getByRole('button', { name: 'Delete', exact: true })
-                .filter({ hasText: 'Delete' }),
-        ).toHaveCount(1);
+        await expect(entityDelete(page)).toBeDisabled();
     });
 });
 
@@ -384,7 +374,9 @@ test.describe('edit role', () => {
 });
 
 test.describe('delete role', () => {
-    test('delete tab asks first, switching away cancels, confirm deletes', async ({ page }) => {
+    test('header action asks first, cancelling keeps the entry, confirming deletes it', async ({
+        page,
+    }) => {
         await page.goto(PAGE);
         const role = await api(page, 'POST', 'roles', { role: unique('e2e-role') });
         const user = await createUser(page, {
@@ -395,21 +387,22 @@ test.describe('delete role', () => {
             await page.goto(`${PAGE}?rid=${role.id}`);
             await expect(nameInput(page)).toHaveValue(role.name);
 
-            await tab(page, 'Delete').click();
-            await expectTabSelected(page, 'Delete');
+            await openEntityDelete(page);
             await expect(
                 page.getByRole('main').getByText('Are you sure you want to delete this role?'),
             ).toBeVisible();
 
-            // cancel: go back to the config, nothing happened
-            await tab(page, 'Config').click();
+            // Cancel closes the dialog and keeps the entity.
+            await page
+                .getByRole('dialog', { name: 'Delete' })
+                .getByRole('button', { name: 'Cancel' })
+                .click();
             await expect(nameInput(page)).toHaveValue(role.name);
             expect(await roleById(page, role.id)).toBeTruthy();
 
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect.poll(async () => await roleById(page, role.id)).toBeUndefined();
-            await showSubNav(page);
             await expect(entry(page, role.name)).toHaveCount(0);
             await expect(nameInput(page)).toHaveCount(0);
 
@@ -443,7 +436,7 @@ test.describe('roles on a phone', () => {
             await page.goto(PAGE);
             await openEntry(page, name);
             await expectJsonValue(metaInput(page), { mobile: true });
-            await tab(page, 'Delete').click();
+            await openEntityDelete(page);
             await deleteAction(page).click();
             await expect
                 .poll(async () => (await roles(page)).some(r => r.name === name))

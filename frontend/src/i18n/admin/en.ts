@@ -46,6 +46,16 @@ export let I18nAdminEn: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            theme: 'Theme',
+            light: 'Light Theme',
+            dark: 'Dark Theme',
+            preview: 'Preview',
+            assets: 'Logo and favicon',
+            logo: 'Logo',
+            advanced: 'Advanced CSS',
+            resetTheme: 'Reset theme',
+            resetThemeConfirm: 'Restore the default colors and corner radius?',
+            assetsImmediate: 'File changes take effect immediately.',
             descHsl: `The following values must be given as HSL values. You only provide the base colors.
             Alpha channels and other values are manipulated dynamically by the theme.`,
             descFullCss: `The following values must be fully valid CSS <code>color</code> values.
@@ -141,6 +151,8 @@ export let I18nAdminEn: I18nAdmin = {
         },
     },
     common: {
+        date: 'Date',
+        time: 'Time',
         preferences: 'Preferences',
         profile: 'Profile',
         contactDetails: 'Contact details',
@@ -295,12 +307,8 @@ export let I18nAdminEn: I18nAdmin = {
             Afterward, you need to do a logout and log back in.`,
     },
     events: {
-        levelFilters: {
-            info: 'All levels',
-            notice: 'Notice and above',
-            warning: 'Warning and above',
-            critical: 'Critical only',
-        },
+        allLevels: 'All levels',
+        sendTest: 'Send test event',
         eventLevel: 'Event Level',
         eventType: 'Event Type',
     },

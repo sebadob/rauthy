@@ -48,6 +48,16 @@ export let I18nAdminUk: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
+            theme: 'Тема',
+            light: 'Світла тема',
+            dark: 'Темна тема',
+            preview: 'Перегляд',
+            assets: 'Логотип і значок сайту',
+            logo: 'Логотип',
+            advanced: 'Розширений CSS',
+            resetTheme: 'Скинути тему',
+            resetThemeConfirm: 'Відновити типові кольори й радіус заокруглення?',
+            assetsImmediate: 'Зміни файлів набувають чинності одразу.',
             descHsl: `Наступні значення мають бути вказані як HSL-значення. Ви вказуєте лише базові кольори.
             Альфа-канали та інші значення динамічно змінюються темою.`,
             descFullCss: `Наступні значення мають бути повністю валідними CSS-значеннями <code>color</code>.
@@ -143,6 +153,8 @@ export let I18nAdminUk: I18nAdmin = {
         },
     },
     common: {
+        date: 'Дата',
+        time: 'Час',
         preferences: 'Налаштування',
         profile: 'Профіль',
         contactDetails: 'Контактні дані',
@@ -302,12 +314,8 @@ export let I18nAdminUk: I18nAdmin = {
             Після цього вам потрібно вийти і увійти знову.`,
     },
     events: {
-        levelFilters: {
-            info: 'Усі рівні',
-            notice: 'Notice і вище',
-            warning: 'Warning і вище',
-            critical: 'Лише Critical',
-        },
+        allLevels: 'Усі рівні',
+        sendTest: 'Надіслати тестову подію',
         eventLevel: 'Рівень події',
         eventType: 'Тип події',
     },

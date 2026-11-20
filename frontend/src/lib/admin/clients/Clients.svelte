@@ -113,10 +113,7 @@
         <div class="clientsList">
             {#each clientsFiltered as client (client.id)}
                 <NavButtonTile
-                    onclick={() => {
-                        cid.set(client.id);
-                        tr.trigger('navSubSub');
-                    }}
+                    onclick={() => cid.set(client.id)}
                     selected={cid.get() === client.id}
                 >
                     <div class="navBtn">

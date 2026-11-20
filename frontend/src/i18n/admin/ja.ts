@@ -48,6 +48,16 @@ export let I18nAdminJa: I18nAdmin = {
         backchannelLogout:
             'この Client が {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
         branding: {
+            theme: 'テーマ',
+            light: 'ライトテーマ',
+            dark: 'ダークテーマ',
+            preview: 'プレビュー',
+            assets: 'ロゴとファビコン',
+            logo: 'ロゴ',
+            advanced: '高度な CSS',
+            resetTheme: 'テーマをリセット',
+            resetThemeConfirm: '既定の色と角の丸みを復元しますか？',
+            assetsImmediate: 'ファイルの変更はすぐに反映されます。',
             descHsl:
                 '次の値は HSL 値で指定してください。指定するのは基本色だけです。アルファチャンネルなどの値は、テーマが動的に調整します。',
             descFullCss:
@@ -130,6 +140,8 @@ export let I18nAdminJa: I18nAdmin = {
         },
     },
     common: {
+        date: '日付',
+        time: '時刻',
         preferences: '環境設定',
         profile: 'プロフィール',
         contactDetails: '連絡先',
@@ -261,12 +273,8 @@ export let I18nAdminJa: I18nAdmin = {
             'Rauthy の管理者アカウントでは、<b>多要素認証を有効にする</b>必要があります。<br>お使いの<b>アカウント</b>の画面で多要素認証を有効にしてください。<br>その後、一度ログアウトしてから、もう一度ログインしてください。',
     },
     events: {
-        levelFilters: {
-            info: 'すべてのレベル',
-            notice: 'Notice 以上',
-            warning: 'Warning 以上',
-            critical: 'Critical のみ',
-        },
+        allLevels: 'すべてのレベル',
+        sendTest: 'テストイベントを送信',
         eventLevel: 'イベントのレベル',
         eventType: 'イベントの種類',
     },

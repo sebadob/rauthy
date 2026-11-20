@@ -3,7 +3,7 @@
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
     import SearchBar from '#lib/search_bar/SearchBar.svelte';
-    import { fetchDelete, fetchGet, fetchPost, fetchPut } from '#api/fetch.ts';
+    import { fetchGet, fetchPost, fetchPut } from '#api/fetch.ts';
     import Modal from '#lib/Modal.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Form from '#lib/form/Form.svelte';
@@ -15,7 +15,7 @@
     import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
     import IconKey from '#icons/IconKey.svelte';
     import IconEdit from '#icons/IconEdit.svelte';
-    import IconTrash from '#icons/IconTrash.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import IconLink from '#icons/editor/IconLink.svelte';
 
     let {
@@ -34,8 +34,6 @@
     let closeModalAdd: undefined | (() => void) = $state();
     let showModalEdit = $state(false);
     let closeModalEdit: undefined | (() => void) = $state();
-    let showModalDelete = $state(false);
-    let closeModalDelete: undefined | (() => void) = $state();
 
     let values: KVValueResponse[] = $state([]);
     let valuesSearch: KVValueResponse[] = $state([]);
@@ -87,11 +85,6 @@
     function editEntry(entry: KVValueResponse) {
         entrySelected = entry;
         showModalEdit = true;
-    }
-
-    function deleteEntry(entry: KVValueResponse) {
-        entrySelected = entry;
-        showModalDelete = true;
     }
 
     async function fetchAll() {
@@ -191,26 +184,6 @@
             }
         }
     }
-
-    async function onSubmitDelete() {
-        if (!entrySelected) {
-            return;
-        }
-
-        let res = await fetchDelete(`${urlValues}/${entrySelected?.key}`);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            closeModalDelete?.();
-
-            if (valuesSearch.length > 0) {
-                valuesSearch = valuesSearch.filter(v => v.key !== entrySelected?.key);
-            }
-            if (values.length > 0) {
-                values = values.filter(v => v.key !== entrySelected?.key);
-            }
-        }
-    }
 </script>
 
 {#snippet error()}
@@ -297,9 +270,15 @@
                 <Button ariaLabel={ta.common.edit} invisible onclick={() => editEntry(entry)}>
                     <IconEdit width="1.25rem" />
                 </Button>
-                <Button ariaLabel={t.common.delete} invisible onclick={() => deleteEntry(entry)}>
-                    <IconTrash width="1.25rem" />
-                </Button>
+                <EntityDelete
+                    url={`${urlValues}/${encodeURIComponent(entry.key)}`}
+                    name={entry.key}
+                    iconOnly
+                    onDelete={() => {
+                        values = values.filter(value => value.key !== entry.key);
+                        valuesSearch = valuesSearch.filter(value => value.key !== entry.key);
+                    }}
+                />
             </div>
         </div>
         <div class="value">
@@ -366,28 +345,6 @@
             {/if}
         </div>
     </Modal>
-    <Modal
-        bind:showModal={showModalDelete}
-        bind:closeModal={closeModalDelete}
-        onClose={() => (entrySelected = undefined)}
-    >
-        <div class="modal">
-            {#if entrySelected}
-                <h3>
-                    {t.common.delete}
-                </h3>
-                <p>
-                    {ta.kv.deleteConfirmMsg.replace('{{ key }}', entrySelected.key)}
-                </p>
-                <div class="btnModal">
-                    <Button level={-1} onclick={onSubmitDelete}>{t.common.delete}</Button>
-                    <Button level={3} onclick={() => closeModalDelete?.()}>
-                        {t.common.cancel}
-                    </Button>
-                </div>
-            {/if}
-        </div>
-    </Modal>
 </div>
 
 <style>
@@ -398,16 +355,22 @@
         gap: 0.5rem;
     }
 
-    .btns {
-        margin-top: 1.35rem;
+    .btns,
+    .btnsLim {
         display: flex;
-        align-items: center;
+        flex-wrap: wrap;
+        align-items: flex-end;
         gap: 0.5rem;
     }
 
     .btnsLim {
-        display: flex;
-        gap: 0.5rem;
+        margin-bottom: var(--ui-space);
+        --ui-button-height: var(--ui-field-height);
+        --ui-button-min-height: var(--ui-field-height);
+    }
+
+    .btnsLim > :global(.admin-input-field) {
+        margin: 0;
     }
 
     .modal {

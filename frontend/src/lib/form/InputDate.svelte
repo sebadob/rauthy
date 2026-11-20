@@ -220,7 +220,7 @@
 </script>
 
 <div class="admin-date-field">
-    <div aria-live="assertive" class="label">
+    <div aria-live="assertive" class="label admin-field-label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
@@ -228,6 +228,7 @@
 
     <div class="flex">
         <input
+            class="ui-text-input"
             bind:this={refInput}
             type="date"
             {id}
@@ -443,56 +444,31 @@
         color: hsla(var(--text) / 0.66);
     }
 
-    :global(.admin-shell)
-        input:where(
-            :not([type='checkbox']):not([type='hidden']):not([type='file']):not([type='range'])
-        ):not(:global(.branding-preview *)) {
-        box-sizing: border-box;
+    :global(.ui-shell) .admin-date-field input[type='date'] {
         width: 100%;
-        min-width: 0;
-        min-height: 44px;
-        margin: 0;
-        padding: 11px 14px;
-        border: 1px solid var(--ui-outline);
-        border-radius: var(--border-radius);
-        background: var(--ui-surface);
-        color: var(--ui-text);
-        font: inherit;
-        font-size: 14px;
-        line-height: 20px;
-        box-shadow: none;
-    }
-    :global(.admin-shell) input:not(:global(.branding-preview *))::placeholder {
-        color: hsl(var(--text) / 0.65);
-    }
-    :global(.admin-shell) input:focus:not(:global(.branding-preview *)) {
-        outline: 2px solid var(--ui-primary);
-        outline-offset: -1px;
-    }
-    :global(.admin-shell) .admin-date-field input[type='date'] {
-        width: 180px;
+        height: var(--ui-field-height);
         padding-right: 40px;
     }
-    :global(.admin-shell) .admin-date-field :global(.patch) {
+    :global(.ui-shell) .admin-date-field :global(.patch) {
         top: -20px;
         right: 2px;
         height: 40px;
         width: 34px;
         border-radius: 0 var(--border-radius) var(--border-radius) 0;
     }
-    :global(.admin-shell) .admin-date-field :global(.indicator) {
+    :global(.ui-shell) .admin-date-field :global(.indicator) {
         top: -18px;
         right: 0;
         padding: 0;
     }
-    :global(.admin-shell) .admin-date-field {
+    :global(.ui-shell) .admin-date-field {
         margin-bottom: 16px;
     }
-    :global(.admin-shell) .admin-date-field {
-        width: 180px;
-        flex-shrink: 0;
+    :global(.ui-shell) .admin-date-field {
+        width: var(--ui-date-width, 11.25rem);
+        min-width: 0;
     }
-    :global(.admin-shell) input[type='date']::-webkit-calendar-picker-indicator {
+    :global(.ui-shell) input[type='date']::-webkit-calendar-picker-indicator {
         opacity: 0;
         pointer-events: none;
         width: 0;

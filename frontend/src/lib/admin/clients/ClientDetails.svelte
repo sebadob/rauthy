@@ -6,7 +6,7 @@
     import Tabs from '#lib/tabs/Tabs.svelte';
     import type { ClientResponse } from '#api/types/clients.ts';
     import ClientConfig from '#lib/admin/clients/ClientConfig.svelte';
-    import ClientDelete from '#lib/admin/clients/ClientDelete.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import ClientBranding from '#lib/admin/clients/branding/ClientBranding.svelte';
 
     let {
@@ -30,28 +30,27 @@
         ta.clients.settings.tokens,
         ta.clients.settings.integrations,
         'Branding',
-        t.common.delete,
     ];
     let selected = $state(tabs[0]);
     let section = $derived(tabs.indexOf(selected));
-
-    let focusFirst: undefined | (() => void) = $state();
-
-    $effect(() => {
-        if (client.id) {
-            requestAnimationFrame(() => {
-                focusFirst?.();
-            });
-        }
-    });
 </script>
 
 <EntityHeader title={client.name || client.id} subtitle={client.id}>
+    {#snippet actions()}
+        {#key client.id}
+            <EntityDelete
+                url={`/auth/v1/clients/${client.id}`}
+                name={client.id}
+                message={ta.clients.delete1}
+                onDelete={onSave}
+            />
+        {/key}
+    {/snippet}
     <IconOffice width="1.75rem" />
 </EntityHeader>
 
 <div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst />
+    <Tabs {tabs} bind:selected />
 </div>
 
 <div class="details">
@@ -66,7 +65,5 @@
     </div>
     {#if selected === 'Branding'}
         <ClientBranding {client} />
-    {:else if selected === t.common.delete}
-        <ClientDelete {client} {onSave} />
     {/if}
 </div>

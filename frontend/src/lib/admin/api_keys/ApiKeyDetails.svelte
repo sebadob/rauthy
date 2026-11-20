@@ -4,7 +4,9 @@
     import Tabs from '#lib/tabs/Tabs.svelte';
     import type { ApiKeyResponse } from '#api/types/api_keys.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import ApiKeyDelete from '#lib/admin/api_keys/ApiKeyDelete.svelte';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import IconKey from '#icons/IconKey.svelte';
 
     let {
         key = $bindable(),
@@ -16,27 +18,32 @@
 
     let ta = useI18nAdmin();
 
-    const tabs = [ta.tabs.config, 'Secret', ta.tabs.delete];
+    const tabs = [ta.tabs.config, 'Secret'];
     let selected = $state(tabs[0]);
-    let focusFirst: undefined | (() => void) = $state();
-
-    $effect(() => {
-        if (key.name) {
-            focusFirst?.();
-        }
-    });
 </script>
+
+<EntityHeader title={key.name} subtitle={ta.nav.apiKeys}>
+    {#snippet actions()}
+        {#key key.name}
+            <EntityDelete
+                url={`/auth/v1/api_keys/${key.name}`}
+                name={key.name}
+                message={ta.api_key.delete1}
+                onDelete={onSave}
+            />
+        {/key}
+    {/snippet}
+    <IconKey width="28px" />
+</EntityHeader>
 
 <div>
     <div class="flex">
-        <Tabs {tabs} bind:selected bind:focusFirst />
+        <Tabs {tabs} bind:selected />
     </div>
 
     {#if selected === ta.tabs.config}
         <ApiKeyConfig bind:key {onSave} />
     {:else if selected === 'Secret'}
         <ApiKeySecret {key} />
-    {:else if selected === ta.tabs.delete}
-        <ApiKeyDelete {key} {onSave} />
     {/if}
 </div>

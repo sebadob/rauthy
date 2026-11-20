@@ -1,7 +1,11 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    let { title, subtitle, children }: { title: string; subtitle: string; children: Snippet } =
-        $props();
+    let {
+        title,
+        subtitle,
+        children,
+        actions,
+    }: { title: string; subtitle: string; children: Snippet; actions?: Snippet } = $props();
 </script>
 <header class="admin-entity-header">
     <div class="admin-entity-symbol">{@render children()}</div>
@@ -9,6 +13,9 @@
         <h2>{title}</h2>
         <p>{subtitle}</p>
     </div>
+    {#if actions}
+        <div class="actions">{@render actions()}</div>
+    {/if}
 </header>
 
 <style>
@@ -44,6 +51,13 @@
     }
     .admin-entity-title {
         min-width: 0;
+        flex: 1;
+    }
+    .actions {
+        align-self: start;
+    }
+    .actions:empty {
+        display: none;
     }
     .admin-entity-title :global(h2) {
         margin: 0 0 4px;
@@ -60,6 +74,9 @@
         line-height: 22px;
     }
     @media (max-width: 800px) {
+        .admin-entity-header {
+            gap: 12px;
+        }
         .admin-entity-title :global(h2) {
             font-size: 24px;
             line-height: 30px;

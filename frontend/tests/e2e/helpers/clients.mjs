@@ -102,38 +102,19 @@ export async function expectTabSelected(t) {
         .toBe(true);
 }
 
-/**
- * Clicks the destructive "Delete" action of a Delete tab and confirms it if the UI asks for a
- * confirmation dialog. Waits for the DELETE request to `pathPart` and returns its status.
- * @param {import('@playwright/test').Page} page
- * @param {string} pathPart
- */
-export async function clickDeleteAndConfirm(page, pathPart) {
-    const btn = page
-        .getByRole('main')
-        .getByRole('button', { name: 'Delete', exact: true })
-        .filter({ hasText: 'Delete' })
-        // the first one is the tab; waiting for the second one waits for the confirmation
-        .nth(1);
+/** Confirms an entity deletion and returns the DELETE status. */
+export async function clickDeleteAndConfirm(
+    /** @type {import('@playwright/test').Page} */ page,
+    /** @type {string} */ pathPart,
+) {
+    await page.locator('.admin-entity-header').getByRole('button', { name: 'Delete' }).click();
     const del = page.waitForResponse(
         r => r.request().method() === 'DELETE' && r.url().includes(pathPart),
     );
-    await btn.click();
-    const dialog = page.getByRole('alertdialog').or(page.getByRole('dialog'));
-    const first = await Promise.race([
-        del.then(() => 'deleted'),
-        dialog
-            .first()
-            .waitFor({ state: 'visible', timeout: 10_000 })
-            .then(() => 'dialog')
-            .catch(() => 'none'),
-    ]);
-    if (first === 'dialog') {
-        await dialog
-            .first()
-            .getByRole('button', { name: /^(delete|confirm|yes)/i })
-            .click();
-    }
+    await page
+        .getByRole('dialog', { name: 'Delete' })
+        .getByRole('button', { name: 'Delete' })
+        .click();
     return (await del).status();
 }
 

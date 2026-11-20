@@ -7,7 +7,7 @@
     import AppVersion from '../AppVersion.svelte';
     import RauthyLogo from '#lib/RauthyLogo.svelte';
     import NavLink from '#lib/nav/NavLink.svelte';
-    import AdminAccountMenu from '#lib/admin/AdminAccountMenu.svelte';
+    import AccountActions from '#lib/account/AccountActions.svelte';
     import IconUserGroup from '#icons/IconUserGroup.svelte';
     import IconDocText from '#icons/IconDocText.svelte';
     import IconOffice from '#icons/IconOffice.svelte';
@@ -190,16 +190,12 @@
         </div>
 
         {#if !collapsed}
-            <div class="bottom admin-sidebar-footer">
-                <AdminAccountMenu {compact} />
-                <div class="admin-preferences">
-                    {#if !compact}<span class="admin-footer-label">{ta.common.preferences}</span
-                        >{/if}
-                    <div class="admin-preference-controls">
-                        <ThemeSwitch /><LangSelector openTop borderless />
-                    </div>
+            <div class="bottom">
+                <AccountActions admin {compact} />
+                <div class="admin-preference-controls">
+                    <ThemeSwitch /><LangSelector openTop borderless uppercase />
+                    {#if !compact}<div class="version"><AppVersion /></div>{/if}
                 </div>
-                <div class="version"><AppVersion /></div>
             </div>
         {/if}
     </div>
@@ -309,13 +305,13 @@
     }
     #mainNav .nav-container {
         --nav-inset: 12px;
-        padding: 0 var(--nav-inset) 16px;
+        padding: 0 var(--nav-inset) 8px;
         background: transparent;
     }
     #mainNav .logo {
-        height: 80px;
+        height: 60px;
         flex-shrink: 0;
-        justify-content: flex-start;
+        justify-content: center;
         gap: 12px;
         padding: 0 14px;
     }
@@ -343,7 +339,7 @@
     #mainNav .menu > :global(a) {
         display: flex;
         align-items: center;
-        height: 38px;
+        min-height: 34px;
         padding: 0 16px;
         border: 0;
         border-radius: var(--border-radius);
@@ -378,21 +374,21 @@
     #mainNav .menu > :global(a[href*='/sessions']),
     #mainNav .menu > :global(a[href*='/api_keys']),
     #mainNav .menu > :global(a[href*='/config/']) {
-        margin-top: 12px;
+        margin-top: 6px;
     }
     #mainNav .bottom {
         border-top: 1px solid var(--ui-outline);
-        margin: 12px 4px 0;
-        padding-top: 12px;
-        gap: 12px;
+        margin: 4px 0 0;
+        padding-top: 4px;
+        gap: 0;
     }
     #mainNav .bottom > :global(.flex) {
         gap: 0;
         justify-content: space-between;
     }
     #mainNav .version {
-        margin: 0 8px;
-        font-size: 11px;
+        margin: 0 0 0 auto;
+        font-size: 10px;
         color: var(--ui-muted);
         opacity: 0.7;
     }
@@ -407,15 +403,15 @@
         padding: 0;
     }
     #mainNav[data-compact='true'] .menu > :global(a) {
-        height: 54px;
-        padding: 5px 0;
+        min-height: 39px;
+        padding: 4px 0;
         justify-content: center;
         border-radius: var(--border-radius);
     }
     #mainNav[data-compact='true'] :global(.compact) {
         font-size: 10px;
         line-height: 13px;
-        gap: 4px;
+        gap: 2px;
     }
     #mainNav[data-compact='true'] :global(.compact) > :global(span) {
         color: inherit;
@@ -433,45 +429,28 @@
             display: block;
         }
     }
-    #mainNav :global(.admin-sidebar-footer) {
-        gap: 16px;
-        padding: 16px 4px 0;
-    }
-    .admin-footer-label {
-        display: block;
-        margin: 0 8px 4px;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        color: var(--ui-muted);
-    }
     .admin-preference-controls {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 0 4px;
+        justify-content: flex-start;
     }
-    .admin-preference-controls > :global(div) {
-        display: flex;
-        align-items: center;
-    }
+
     #mainNav[data-compact='true'] .admin-preference-controls {
-        flex-direction: column;
-    }
-    #mainNav[data-compact='true']
-        :global(.admin-account-menu)
-        > :global(div)
-        > :global(.admin-control) {
-        padding: 0;
         justify-content: center;
     }
-    #mainNav[data-compact='true']
-        :global(.admin-account-menu)
-        > :global(div)
-        > :global(.admin-control)
-        > :global(.children) {
-        justify-content: center;
+
+    #mainNav[data-compact='true'] .admin-preference-controls :global(.admin-control) {
+        min-width: 32px;
+    }
+
+    @media (height < 850px) {
+        #mainNav[data-compact='true'] .logo {
+            height: 48px;
+        }
+        #mainNav[data-compact='true'] .menu > :global(a) {
+            min-height: 35px;
+            padding-block: 2px;
+        }
     }
 
     #mainNav .logo {
@@ -480,6 +459,6 @@
     .admin-drawer-close {
         position: absolute;
         right: 0;
-        top: 22px;
+        top: 12px;
     }
 </style>

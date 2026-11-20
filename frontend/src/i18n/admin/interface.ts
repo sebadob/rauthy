@@ -42,6 +42,16 @@ export interface I18nAdmin {
         settings: { general: string; tokens: string; integrations: string };
         backchannelLogout: string;
         branding: {
+            theme: string;
+            light: string;
+            dark: string;
+            preview: string;
+            assets: string;
+            logo: string;
+            advanced: string;
+            resetTheme: string;
+            resetThemeConfirm: string;
+            assetsImmediate: string;
             descHsl: string;
             // inserted as html
             descFullCss: string;
@@ -119,6 +129,8 @@ export interface I18nAdmin {
         };
     };
     common: {
+        date: string;
+        time: string;
         preferences: string;
         profile: string;
         contactDetails: string;
@@ -250,7 +262,8 @@ export interface I18nAdmin {
         noAdmin: string;
     };
     events: {
-        levelFilters: { info: string; notice: string; warning: string; critical: string };
+        allLevels: string;
+        sendTest: string;
         eventLevel: string;
         eventType: string;
     };

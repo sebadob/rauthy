@@ -1,11 +1,14 @@
 <script lang="ts">
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import IconCommandLine from '#icons/IconCommandLine.svelte';
     import type {
         PamGroupResponse,
         PamHostDetailsResponse,
         PamHostSimpleResponse,
         PamHostUpdateRequest,
     } from '#api/types/pam.ts';
-    import { fetchDelete, fetchGet, fetchPut } from '#api/fetch.ts';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import { PATTERN_LINUX_HOSTNAME } from '#utils/patterns.ts';
     import Input from '#lib/form/Input.svelte';
@@ -40,7 +43,6 @@
 
     let success = $state(false);
     let err = $state('');
-    let showDeleteConfirm = $state(false);
     let url = $derived(`/auth/v1/pam/hosts/${hostSimple.id}`);
 
     let host: undefined | PamHostDetailsResponse = $state();
@@ -49,15 +51,6 @@
     $effect(() => {
         fetchDetails();
     });
-
-    async function deleteHost() {
-        let res = await fetchDelete(url);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            onDelete();
-        }
-    }
 
     async function fetchDetails() {
         let res = await fetchGet<PamHostDetailsResponse>(url);
@@ -115,7 +108,14 @@
     }
 </script>
 
-<h2>{hostSimple.name}</h2>
+<EntityHeader title={hostSimple.name} subtitle="PAM">
+    {#snippet actions()}
+        {#key hostSimple.id}
+            <EntityDelete {url} name={hostSimple.name} message={ta.pam.deleteHost} {onDelete} />
+        {/key}
+    {/snippet}
+    <IconCommandLine width="28px" />
+</EntityHeader>
 
 {#if host}
     <LabeledValue label="Host ID" copyToClip={host.id} mono>
@@ -179,29 +179,11 @@
             <Button type="submit">
                 {t.common.save}
             </Button>
-            <Button level={-3} onclick={() => (showDeleteConfirm = !showDeleteConfirm)}>
-                {t.common.delete}
-            </Button>
 
             {#if success}
                 <IconCheck />
             {/if}
         </div>
-
-        {#if showDeleteConfirm}
-            <div transition:slide={{ duration: 150 }}>
-                <p>{ta.pam.deleteHost}</p>
-
-                <div class="flex gap-05">
-                    <Button level={-1} onclick={deleteHost}>
-                        {t.common.delete}
-                    </Button>
-                    <Button level={2} onclick={() => (showDeleteConfirm = false)}>
-                        {t.common.cancel}
-                    </Button>
-                </div>
-            </div>
-        {/if}
     </Form>
 {/if}
 
@@ -212,10 +194,6 @@
 {/if}
 
 <style>
-    h2 {
-        margin-top: 0;
-    }
-
     .label {
         margin-bottom: -0.2rem;
         color: hsla(var(--text) / 0.8);

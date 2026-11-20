@@ -76,6 +76,37 @@ function tabAction(
 }
 
 test.describe('users list', () => {
+    test('changes page size and moves between pages of users', async ({ page }) => {
+        for (let index = 0; index < 6; index++) await newUser(page);
+        await page.goto(USERS);
+        const pagination = page.getByRole('navigation', { name: 'Pagination', exact: true });
+        const size = pagination.getByRole('combobox', { name: 'Show count' });
+        const next = pagination.getByRole('button', { name: 'Go to next page' });
+        const previous = pagination.getByRole('button', { name: 'Go to previous page' });
+        await size.selectOption('5');
+        await expect(size).toHaveValue('5');
+        await expect(userEntries(page)).toHaveCount(5);
+        const firstPage = await userEntries(page).allTextContents();
+        await expect(previous).toBeDisabled();
+        await next.click();
+        await expect(pagination.getByRole('listitem', { name: 'Go to page 2' })).toHaveAttribute(
+            'aria-current',
+            'page',
+        );
+        const secondPage = await userEntries(page).allTextContents();
+        expect(secondPage).not.toEqual(firstPage);
+        if (await next.isEnabled()) {
+            await next.click();
+            await expect(
+                pagination.getByRole('listitem', { name: 'Go to page 3' }),
+            ).toHaveAttribute('aria-current', 'page');
+            await previous.click();
+            await expect.poll(() => userEntries(page).allTextContents()).toEqual(secondPage);
+        }
+        await previous.click();
+        await expect.poll(() => userEntries(page).allTextContents()).toEqual(firstPage);
+    });
+
     test('shows users with their count and finds them by e-mail', async ({ page }) => {
         const user = await newUser(page);
         await page.goto(USERS);
@@ -261,12 +292,34 @@ test.describe('user details', () => {
         expect((await done).ok()).toBe(true);
     });
 
-    test('deletes a user from the Delete tab', async ({ page }) => {
+    test('keeps the selected user section on reload without focusing Info on arrival', async ({
+        page,
+    }) => {
         const user = await newUser(page);
         await openUser(page, user);
-        await detailTab(page, 'Delete').click();
-        await expect(page.getByText('Are you sure you want to delete this user?')).toBeVisible();
-        await tabAction(page, 'Delete').click();
+        await expect(detailTab(page, 'Info')).not.toBeFocused();
+        await detailTab(page, 'Password').click();
+        await expect(detailTab(page, 'Password')).toHaveAttribute('aria-current', 'step');
+        await page.reload();
+        await expect(detailTab(page, 'Password')).toHaveAttribute('aria-current', 'step');
+    });
+
+    test('confirms user deletion from the entity header', async ({ page }) => {
+        const user = await newUser(page);
+        await openUser(page, user);
+        const action = page.locator('.admin-entity-header').getByRole('button', { name: 'Delete' });
+        const dialog = page.getByRole('dialog', { name: 'Delete' });
+        await action.click();
+        await expect(dialog.getByText(user.email, { exact: true })).toBeVisible();
+        const cancel = dialog.getByRole('button', { name: 'Cancel' });
+        await expect(cancel).toBeFocused();
+        await cancel.click();
+        await expect(dialog).toBeHidden();
+        await expect(action).toBeFocused();
+        expect(await findUser(page, user.id)).toBeDefined();
+
+        await action.click();
+        await dialog.getByRole('button', { name: 'Delete' }).click();
         await expect(userEntry(page, user.email)).toHaveCount(0);
         await expect.poll(() => findUser(page, user.id)).toBeUndefined();
     });

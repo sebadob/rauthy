@@ -12,6 +12,7 @@
         offsetTop = '0px',
         absolute,
         anchored,
+        placement = 'above',
         lazy,
         btnDisabled,
         btnInvisible,
@@ -35,6 +36,7 @@
         // when set, the popover is positioned by the browser relative to its toggle
         // button via CSS anchor positioning instead of the manual offset math below
         anchored?: boolean;
+        placement?: 'above' | 'below';
         lazy?: boolean;
         btnDisabled?: boolean;
         btnInvisible?: boolean;
@@ -105,6 +107,7 @@
         id={idButton}
         {ariaLabel}
         ariaControls={idPopover}
+        ariaExpanded={isOpen}
         popovertarget={idPopover}
         {onclick}
         invisible={btnInvisible}
@@ -126,6 +129,7 @@
         aria-expanded={isOpen}
         class="popover"
         class:anchored
+        class:below={placement === 'below'}
         popover="auto"
         {ontoggle}
     >
@@ -160,6 +164,10 @@
         position-area: top span-right;
         margin-bottom: 0.4rem;
         position-try-fallbacks: flip-block;
+    }
+    .popover.anchored.below {
+        position-area: bottom span-right;
+        margin: 0.4rem 0 0;
     }
 
     .inner {

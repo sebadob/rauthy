@@ -4,7 +4,7 @@
     import type { ProviderRequest, ProviderResponse } from '#api/types/auth_provider.ts';
     import IconCheck from '#icons/IconCheck.svelte';
     import Form from '#lib/form/Form.svelte';
-    import { fetchDelete, fetchPut } from '#api/fetch.ts';
+    import { fetchPut } from '#api/fetch.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
@@ -50,15 +50,6 @@
             provider.scope = provider.scope.replaceAll('+', ' ');
         }
     });
-
-    async function onLogoDelete() {
-        let res = await fetchDelete(urlImg);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            logoKey = genKey();
-        }
-    }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
@@ -176,7 +167,12 @@
         <div class="logo">
             {#key logoKey}
                 <div>
-                    <ProviderLogo providerId={provider.id} onDelete={onLogoDelete} />
+                    <ProviderLogo
+                        providerId={provider.id}
+                        providerName={provider.name}
+                        imageUrl={`${urlImg}?${logoKey}`}
+                        onDelete={() => (logoKey = genKey())}
+                    />
                 </div>
             {/key}
             <InputFile

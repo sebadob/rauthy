@@ -1,13 +1,13 @@
 <script lang="ts">
     import { onMount, untrack } from 'svelte';
     import { redirectToLogin } from '#utils/helpers.ts';
-    import Button from '#lib/button/Button.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import Pagination from '#lib/pagination/Pagination.svelte';
     import SessionRow from './SessionRow.svelte';
     import type { SessionResponse } from '#api/types/session.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
-    import { fetchDelete, fetchGet } from '#api/fetch.ts';
+    import { fetchGet } from '#api/fetch.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { useSession } from '#state/session.svelte.ts';
     import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
@@ -180,15 +180,6 @@
             window.location.reload();
         }
     }
-
-    async function invalidateSessions() {
-        let res = await fetchDelete('/auth/v1/sessions');
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            redirectToLogin();
-        }
-    }
 </script>
 
 <ContentAdmin>
@@ -206,9 +197,11 @@
         />
         {#if isAdmin}
             <div class="btn">
-                <Button level={-1} onclick={invalidateSessions}>
-                    {ta.sessions.invalidateAll}
-                </Button>
+                <EntityDelete
+                    url="/auth/v1/sessions"
+                    label={ta.sessions.invalidateAll}
+                    onDelete={() => redirectToLogin()}
+                />
             </div>
         {/if}
     </div>

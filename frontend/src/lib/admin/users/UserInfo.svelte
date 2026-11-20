@@ -26,7 +26,6 @@
     import Options from '#lib/Options.svelte';
     import SelectList from '#lib/select_list/SelectList.svelte';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import { slide } from 'svelte/transition';
     import type { Language } from '#api/types/i18n.ts';
     import { useI18nConfig } from '#state/i18n_config.svelte.ts';
     import type { PatchOp } from '#api/types/generic.ts';
@@ -421,10 +420,10 @@
 
 <Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
-<div class="container admin-user-info" data-unsaved={isUnsaved}>
+<div class="admin-user-info" data-unsaved={isUnsaved}>
     {#if user}
         <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
-            <div class="values admin-metadata">
+            <div class="admin-metadata two-columns">
                 <div>
                     <LabeledValue label="ID" mono>
                         {user.id}
@@ -440,7 +439,7 @@
                 </div>
             </div>
 
-            <div class="values admin-status-settings">
+            <div class="admin-status-settings two-columns">
                 {#if isSelf}
                     <div>
                         <Tooltip
@@ -485,8 +484,8 @@
                 {/if}
             </div>
 
-            <div class="values admin-profile-grid">
-                <div class="admin-form-section">
+            <div class="admin-profile-grid two-columns">
+                <section class="admin-form-section edit-fields">
                     <h3>{ta.common.profile}</h3>
                     <Input
                         typ="email"
@@ -530,20 +529,19 @@
                     />
 
                     {#if languages}
-                        <div style:padding=".25rem">
-                            <LabeledValue label={ta.common.language}>
-                                <Options
-                                    ariaLabel={t.common.selectI18n}
-                                    options={languages}
-                                    bind:value={language}
-                                    offsetTop="-12rem"
-                                />
-                            </LabeledValue>
+                        <div class="admin-field-select">
+                            <div class="admin-field-label">{ta.common.language}</div>
+                            <Options
+                                ariaLabel={t.common.selectI18n}
+                                options={languages}
+                                bind:value={language}
+                                anchored
+                            />
                         </div>
                     {/if}
-                </div>
+                </section>
 
-                <div class="admin-form-section">
+                <section class="admin-form-section edit-fields">
                     <h3>{ta.common.contactDetails}</h3>
                     <Input
                         bind:value={street}
@@ -587,56 +585,64 @@
                         required={config.phone === 'required'}
                         pattern={PATTERN_PHONE}
                     />
-                </div>
+                </section>
             </div>
 
             <section class="admin-form-section admin-access-section">
                 <h3>{ta.common.access}</h3>
-                <SelectList bind:items={rolesItems} disabledItems={rolesDisabled}>
-                    {t.account.roles.replaceAll(',', ' ')}
-                </SelectList>
-                <SelectList bind:items={groupsItems} disabledItems={groupsDisabled}>
-                    {t.account.groups.replaceAll(',', ' ')}
-                </SelectList>
+                <div class="two-columns">
+                    <SelectList
+                        bind:items={rolesItems}
+                        disabledItems={rolesDisabled}
+                        maxWidth="100%"
+                    >
+                        {t.account.roles.replaceAll(',', ' ')}
+                    </SelectList>
+                    <SelectList
+                        bind:items={groupsItems}
+                        disabledItems={groupsDisabled}
+                        maxWidth="100%"
+                    >
+                        {t.account.groups.replaceAll(',', ' ')}
+                    </SelectList>
+                </div>
 
-                <div class="values">
-                    <div style:margin-top=".5rem">
-                        {#if !expires && isSelf}
-                            <Tooltip
-                                text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
+                <div class="access-expiration">
+                    {#if !expires && isSelf}
+                        <Tooltip
+                            text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
+                        >
+                            <InputCheckbox
+                                ariaLabel={t.account.accessExp}
+                                bind:checked={expires}
+                                disabled
                             >
-                                <InputCheckbox
-                                    ariaLabel={t.account.accessExp}
-                                    bind:checked={expires}
-                                    disabled
-                                >
-                                    {t.account.accessExp}
-                                </InputCheckbox>
-                            </Tooltip>
-                        {:else}
-                            <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
                                 {t.account.accessExp}
                             </InputCheckbox>
-                        {/if}
-                    </div>
+                        </Tooltip>
+                    {:else}
+                        <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
+                            {t.account.accessExp}
+                        </InputCheckbox>
+                    {/if}
+
                     {#if expires}
-                        <div transition:slide={{ duration: 150 }}>
-                            <InputDateTimeCombo
-                                label={t.account.accessExp}
-                                bind:value={expDate}
-                                bind:timeValue={expTime}
-                                withTime
-                                min={fmtDateInput()}
-                                required
-                                openTop
-                            />
-                        </div>
+                        <InputDateTimeCombo
+                            label={ta.common.date}
+                            labelTime={ta.common.time}
+                            bind:value={expDate}
+                            bind:timeValue={expTime}
+                            withTime
+                            min={fmtDateInput()}
+                            required
+                            openTop
+                        />
                     {/if}
                 </div>
             </section>
             <section class="admin-form-section admin-activity-section">
                 <h3>{ta.common.activity}</h3>
-                <div class="values">
+                <div class="two-columns activity-values">
                     <div>
                         <LabeledValue label={t.account.userCreated}>
                             {formatDateFromTs(user.created_at)}
@@ -664,7 +670,7 @@
                     </div>
                 </div>
             </section>
-            <div class="btn admin-save-bar">
+            <div class="admin-save-bar">
                 <Button type="submit">
                     {t.common.save}
                 </Button>
@@ -684,87 +690,88 @@
 </div>
 
 <style>
-    .btn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .container {
-        padding-left: 0.5rem;
-        border-left: 2px solid transparent;
-    }
-
-    .values {
-        display: flex;
-        column-gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .values > div {
-        /* half the size of <p> max-width */
-        width: min(calc(234pt - 0.5rem), calc(100dvw - 0.5rem));
-    }
-
-    @media (max-width: 467pt) {
-        .values > div {
-            width: min(25rem, calc(100dvw - 0.5rem));
-        }
-    }
-
     .admin-user-info {
-        padding: 0;
-        border: 0;
+        container-type: inline-size;
+        --section-gap: 1.25rem;
     }
-    .admin-user-info :global(.values) {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px 24px;
-        margin: 16px 0;
+
+    .two-columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--ui-space) var(--section-gap);
     }
-    .admin-user-info :global(.values) > :global(div) {
-        flex: 1 1 220px;
-        min-width: 0;
-    }
-    .admin-user-info :global(.values) > :global(div) > :global(div) {
-        max-width: 100%;
-    }
+
     .admin-metadata {
-        margin: 0;
-        padding: 0 0 4px;
+        margin-block-end: var(--ui-space);
     }
+
     .admin-status-settings {
-        margin: 0 0 24px;
-        padding: 8px 16px;
+        padding: 0.5rem var(--ui-space);
         border-radius: var(--border-radius);
         background: var(--ui-container);
+        margin-block-end: var(--section-gap);
     }
+
     .admin-form-section {
-        padding: 24px;
+        padding: clamp(1rem, 3cqi, 1.5rem);
         border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
         min-width: 0;
-        background: transparent;
     }
-    .admin-form-section :global(h3) {
-        margin: 0 0 24px;
+
+    .admin-form-section h3 {
+        margin: 0 0 var(--ui-space);
         color: var(--ui-text);
-        font-size: 16px;
+        font-size: 1rem;
         font-weight: 600;
-        line-height: 24px;
+        line-height: 1.5rem;
     }
-    .admin-profile-grid {
-        gap: 20px;
-        align-items: stretch;
+
+    .edit-fields {
+        display: grid;
+        grid-auto-rows: max-content;
+        gap: var(--ui-space);
     }
-    .admin-profile-grid > :global(div) {
-        flex-basis: 250px;
+
+    .edit-fields h3 {
+        margin: 0;
     }
+
+    .edit-fields > :global(.admin-input-field),
+    .admin-access-section :global(.admin-selection-field) {
+        min-width: 0;
+        margin: 0;
+    }
+
     .admin-access-section,
     .admin-activity-section {
-        margin: 20px 0;
+        margin-block: var(--section-gap);
     }
+
+    .access-expiration {
+        display: grid;
+        gap: 0.5rem;
+        max-width: 25rem;
+        margin-top: var(--ui-space);
+    }
+
+    .activity-values > div {
+        display: grid;
+        align-content: start;
+        gap: var(--ui-space);
+    }
+
+    .activity-values :global(.admin-labeled-value),
+    .admin-metadata :global(.admin-labeled-value) {
+        margin: 0;
+    }
+
+    @container (width < 35rem) {
+        .two-columns:not(.admin-metadata, .admin-status-settings) {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
     .admin-save-bar {
         display: flex;
         align-items: center;
@@ -781,9 +788,6 @@
         border-top-color: var(--ui-primary);
     }
     @media (max-width: 800px) {
-        .admin-form-section {
-            padding: 20px;
-        }
         .admin-save-bar {
             bottom: -24px;
             margin-bottom: -24px;

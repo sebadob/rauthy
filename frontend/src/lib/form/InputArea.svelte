@@ -191,12 +191,12 @@
         padding-top: 0.1rem;
     }
 
-    :global(.admin-shell) .label:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .label:not(:global(.branding-preview *)) {
         padding: 0;
         margin: 0 0 6px;
         line-height: 18px;
     }
-    :global(.admin-shell) textarea:not(:global(.branding-preview *)) {
+    :global(.ui-shell) textarea:not(:global(.branding-preview *)) {
         box-sizing: border-box;
         width: 100%;
         min-width: 0;
@@ -212,19 +212,19 @@
         line-height: 20px;
         box-shadow: none;
     }
-    :global(.admin-shell) textarea:not(:global(.branding-preview *))::placeholder {
+    :global(.ui-shell) textarea:not(:global(.branding-preview *))::placeholder {
         color: hsl(var(--text) / 0.65);
     }
-    :global(.admin-shell) textarea:focus:not(:global(.branding-preview *)) {
+    :global(.ui-shell) textarea:focus:not(:global(.branding-preview *)) {
         outline: 2px solid var(--ui-primary);
         outline-offset: -1px;
     }
 
-    :global(.admin-shell) .admin-textarea-field:not(:global(.branding-preview *)) {
+    :global(.ui-shell) .admin-textarea-field:not(:global(.branding-preview *)) {
         max-width: 100%;
         min-width: 0;
     }
-    :global(.admin-shell) textarea:not(:global(.branding-preview *)) {
+    :global(.ui-shell) textarea:not(:global(.branding-preview *)) {
         max-width: 100%;
         resize: vertical;
     }
