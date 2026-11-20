@@ -165,7 +165,7 @@ impl Session {
             DB::pg_execute(sql, &[&self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }
@@ -189,9 +189,7 @@ impl Session {
             ids
         };
 
-        for id in sids {
-            DB::hql().delete(Cache::Session, id).await?;
-        }
+        DB::cache_delete_delayed(sids.into_iter().map(|id| (Cache::Session, Some(id)))).await?;
 
         Ok(())
     }
@@ -368,7 +366,7 @@ OFFSET $3"#;
         // at least the session used to invalidate all will always exist
         debug_assert!(rows_affected > 0);
 
-        DB::hql().clear_cache(Cache::Session).await?;
+        DB::cache_delete_delayed([(Cache::Session, None::<String>)]).await?;
 
         Ok(())
     }
@@ -393,10 +391,16 @@ OFFSET $3"#;
             ids
         };
 
-        let client = DB::hql();
+        let mut cache_keys: Vec<String> = Vec::with_capacity(sids.len());
         for sid in &sids {
-            client.delete(Cache::Session, sid.clone()).await?;
+            cache_keys.push(sid.clone());
         }
+        DB::cache_delete_delayed(
+            cache_keys
+                .into_iter()
+                .map(|key| (Cache::Session, Some(key))),
+        )
+        .await?;
 
         Ok(sids)
     }
@@ -743,7 +747,7 @@ impl Session {
             DB::pg_execute(sql, &[&now, &state, &self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }

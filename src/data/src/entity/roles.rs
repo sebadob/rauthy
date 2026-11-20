@@ -57,7 +57,7 @@ impl Role {
             DB::pg_execute(sql, &[&new_role.id, &new_role.name, &new_role.meta]).await?;
         }
 
-        DB::hql().delete(Cache::App, IDX_ROLES).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES))]).await?;
 
         Ok(new_role)
     }
@@ -103,9 +103,7 @@ impl Role {
             txn.commit().await?;
         }
 
-        let client = DB::hql();
-        client.clear_cache(Cache::User).await?;
-        client.delete(Cache::App, IDX_ROLES).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES)), (Cache::User, None)]).await?;
 
         Ok(())
     }
@@ -168,7 +166,7 @@ impl Role {
                 DB::pg_execute(sql, &[&new_role.meta, &new_role.id]).await?;
             }
 
-            DB::hql().delete(Cache::App, IDX_ROLES).await?;
+            DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES))]).await?;
             return Ok(new_role);
         }
 
@@ -207,9 +205,7 @@ impl Role {
             txn.commit().await?;
         }
 
-        let client = DB::hql();
-        client.clear_cache(Cache::User).await?;
-        DB::hql().delete(Cache::App, IDX_ROLES).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES)), (Cache::User, None)]).await?;
 
         Ok(new_role)
     }

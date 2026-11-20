@@ -263,7 +263,7 @@ RETURNING *"#;
             DB::pg_execute(sql, &[&user_id]).await?;
         }
 
-        DB::hql().delete(Cache::User, cache_idx).await?;
+        DB::cache_delete_delayed([(Cache::User, Some(cache_idx))]).await?;
 
         Ok(())
     }

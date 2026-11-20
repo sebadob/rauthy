@@ -301,10 +301,8 @@ impl ApiKeyEntity {
         format!("api_key_{name}")
     }
 
-    #[inline]
     async fn cache_invalidate(name: &str) -> Result<(), ErrorResponse> {
-        let idx = Self::cache_idx(name);
-        DB::hql().delete(Cache::App, idx).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(Self::cache_idx(name)))]).await?;
         Ok(())
     }
 

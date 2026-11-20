@@ -102,12 +102,11 @@ impl Logo {
             }
         };
 
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx(typ, id))
-            .await?;
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx_updated(typ, id))
-            .await?;
+        DB::cache_delete_delayed([
+            (Cache::App, Some(Self::cache_idx(typ, id))),
+            (Cache::App, Some(Self::cache_idx_updated(typ, id))),
+        ])
+        .await?;
 
         Ok(())
     }
@@ -120,12 +119,14 @@ impl Logo {
             DB::pg_execute(sql, &[&id]).await?;
         }
 
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx(&LogoType::Client, id))
-            .await?;
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx_updated(&LogoType::Client, id))
-            .await?;
+        DB::cache_delete_delayed([
+            (Cache::App, Some(Self::cache_idx(&LogoType::Client, id))),
+            (
+                Cache::App,
+                Some(Self::cache_idx_updated(&LogoType::Client, id)),
+            ),
+        ])
+        .await?;
 
         Ok(())
     }
@@ -152,12 +153,11 @@ impl Logo {
             }
         };
 
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx(typ, id))
-            .await?;
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx_updated(typ, id))
-            .await?;
+        DB::cache_delete_delayed([
+            (Cache::App, Some(Self::cache_idx(typ, id))),
+            (Cache::App, Some(Self::cache_idx_updated(typ, id))),
+        ])
+        .await?;
 
         Ok(())
     }

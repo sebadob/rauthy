@@ -23,9 +23,7 @@ pub struct MdsAuthenticator {
 
 impl MdsAuthenticator {
     pub async fn clear_cache() -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, IDX_WEBAUTHN_MDS_CA_LIST)
-            .await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_WEBAUTHN_MDS_CA_LIST))]).await?;
         Ok(())
     }
 
