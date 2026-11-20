@@ -24,6 +24,7 @@
     import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
     import { useParam } from '#state/param.svelte.ts';
+    import { startKeepAlive } from '#state/keepAlive.ts';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import InputPassword from '#lib/form/InputPassword.svelte';
@@ -461,17 +462,11 @@
             // The session of this page timed out. Neither the email nor the password was ever looked
             // at, so this says nothing about the entered credentials - starting the flow again fixes
             // it, and the authorize URL with all its query params is still in the address bar.
-            let lastReload = Number.parseInt(
-                sessionStorage.getItem(KEY_SESSION_EXPIRED_RELOAD) ?? '0',
-            );
-            let now = Date.now();
-            if (now - lastReload < SESSION_EXPIRED_RELOAD_MIN_MS) {
+            if (!reloadExpiredSession()) {
                 // The restart above did not bring a session up - do not loop, show the server message.
                 err = res.error?.message || `HTTP ${res.status}`;
                 return;
             }
-            sessionStorage.setItem(KEY_SESSION_EXPIRED_RELOAD, `${now}`);
-            window.location.reload();
         } else if (res.status === 401 && !needsPassword) {
             // this will happen always if the user does the first try with a password-only account
             // the good thing about this is, that it is a prevention against autofill passwords from the browser
@@ -483,6 +478,20 @@
         } else {
             err = res.error?.message || `HTTP ${res.status}`;
         }
+    }
+
+    // Restarts the whole authorize flow when the session of this page is gone. `false` means the
+    // restart already happened inside SESSION_EXPIRED_RELOAD_MIN_MS and did not bring a session up,
+    // which is the point where the server message shows instead of looping the browser.
+    function reloadExpiredSession(): boolean {
+        let lastReload = Number.parseInt(sessionStorage.getItem(KEY_SESSION_EXPIRED_RELOAD) ?? '0');
+        let now = Date.now();
+        if (now - lastReload < SESSION_EXPIRED_RELOAD_MIN_MS) {
+            return false;
+        }
+        sessionStorage.setItem(KEY_SESSION_EXPIRED_RELOAD, `${now}`);
+        window.location.reload();
+        return true;
     }
 
     function isProviderAtProto(providerId: string): boolean {
@@ -622,6 +631,14 @@
     function toggleAtproto() {
         isAtproto = !isAtproto;
     }
+
+    // The idle ticker is what keeps the session of this page alive while somebody reads the ToS,
+    // waits for a Passkey ceremony, or simply left the tab open. This page has no session request of
+    // its own, so the ticker's first beat is the one that learns the deadline. Its 401 restarts the
+    // flow through the same guarded reload as the `x-session-expired` branch in `handleAuthRes`.
+    onMount(() => {
+        startKeepAlive(() => reloadExpiredSession());
+    });
 </script>
 
 <svelte:head>

@@ -778,6 +778,7 @@ impl Session {
         };
 
         // Init sessions are valid only on the explicit login endpoints.
+        // `/auth/v1/keep_alive` is the login page's idle ticker and belongs to that group.
         let init_allowed = match state {
             SessionState::Auth => true,
             SessionState::Init => {
@@ -787,6 +788,7 @@ impl Session {
                     "/auth/v1/dev/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/dev/providers_callback",
@@ -803,6 +805,7 @@ impl Session {
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/users/otp_start",

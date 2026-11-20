@@ -93,6 +93,7 @@ use utoipa::{OpenApi, openapi};
 
         generic::get_auth_check,
         generic::get_auth_check_admin,
+        generic::get_keep_alive,
         generic::get_enc_keys,
         generic::post_migrate_enc_key,
         generic::get_login_time,
