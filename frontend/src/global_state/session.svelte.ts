@@ -1,7 +1,7 @@
 import { fetchGet } from '#api/fetch.ts';
 import type { SessionInfoResponse } from '#api/types/session.ts';
 import { isBrowser, redirectToLogin } from '#utils/helpers.ts';
-import { startKeepAlive } from '#state/keepAlive.ts';
+import { startKeepAlive } from '#utils/keepAlive.ts';
 
 // Delegated group-admin role grammar. A role named exactly `rauthy_admin`
 // is a full Rauthy admin. A role `rauthy_admin:<prefix>` makes the holder a group admin:
