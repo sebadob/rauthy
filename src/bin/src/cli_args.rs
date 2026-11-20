@@ -43,7 +43,7 @@ pub enum ArgsBootstrapCommand {
 pub struct ArgsBootstrapGet {
     /// Path to the Rauthy config file. The encryption keys and the container
     /// location are read from it, so no keys or file path are passed directly.
-    #[clap(short = 'c', long, default_value = "./config.toml")]
+    #[clap(short = 'c', long, default_value = rauthy_common::constants::DEFAULT_CONFIG_PATH)]
     pub config_file: String,
 
     /// Output format.
@@ -66,7 +66,7 @@ pub struct ArgsBootstrapGet {
 #[derive(Debug, Clone, Parser)]
 pub struct ArgsBootstrapPurge {
     /// Path to the Rauthy config file. The container location is read from it.
-    #[clap(short = 'c', long, default_value = "./config.toml")]
+    #[clap(short = 'c', long, default_value = rauthy_common::constants::DEFAULT_CONFIG_PATH)]
     pub config_file: String,
 }
 
@@ -80,7 +80,7 @@ pub enum BootstrapOutputFormat {
 #[derive(Debug, Clone, Parser)]
 pub struct ArgsServer {
     /// Provide a custom path to the config file
-    #[clap(short, long, default_value = "./config.toml")]
+    #[clap(short, long, default_value = rauthy_common::constants::DEFAULT_CONFIG_PATH)]
     pub config_file: String,
 
     /// Provide a custom path to the secrets file

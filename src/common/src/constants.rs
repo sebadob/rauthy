@@ -40,6 +40,9 @@ pub static BUILD_TIME: LazyLock<DateTime<Utc>> = LazyLock::new(|| {
 });
 
 pub const RAUTHY_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// The config file used when none is given explicitly. Only this one may be missing, which allows
+/// a config via env vars only.
+pub const DEFAULT_CONFIG_PATH: &str = "./config.toml";
 pub static CONTENT_TYPE_WEBP: &str = "image/webp";
 pub static HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 pub static HEADER_ALLOW_ALL_ORIGINS: (&str, &str) = ("access-control-allow-origin", "*");

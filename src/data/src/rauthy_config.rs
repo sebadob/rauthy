@@ -10,7 +10,7 @@ use crate::secrets::RauthySecrets;
 use crate::vault_config::VaultConfig;
 use cryptr::EncKeys;
 use hiqlite::NodeConfig;
-use rauthy_common::constants::CookieMode;
+use rauthy_common::constants::{CookieMode, DEFAULT_CONFIG_PATH};
 use rauthy_common::logging::LogLevelAccess;
 use rauthy_common::regex::{RE_LINUX_USERNAME, RE_PREFERRED_USERNAME, RE_RESOURCE};
 use regex::Regex;
@@ -66,6 +66,9 @@ impl RauthyConfig {
         vars.validate();
         if let Err(err) = node_config.is_valid() {
             panic!("Invalid `[cluster]` config: {err}");
+        }
+        if vars.user_pictures.storage_type == "file" && node_config.nodes.len() > 1 {
+            panic!("You can only use local file storage for User Pictures for a single instance");
         }
 
         let listen_scheme = match vars.server.scheme.as_ref() {
@@ -1547,9 +1550,17 @@ impl Vars {
             },
             _ => match fs::read_to_string(path_config).await {
                 Ok(s) => s,
-                Err(err) => {
+                // A config via env vars only is a valid setup, but only for the default path.
+                // A file that was given explicitly, or exists but cannot be read, is an error.
+                Err(err)
+                    if err.kind() == std::io::ErrorKind::NotFound
+                        && path_config == DEFAULT_CONFIG_PATH =>
+                {
                     warn!("Cannot read config from {}: {:?}", path_config, err);
                     String::default()
+                }
+                Err(err) => {
+                    panic!("Cannot read config from {path_config}: {err}");
                 }
             },
         };
@@ -4459,6 +4470,7 @@ impl Vars {
         );
         self.validate_ephemeral_clients();
         self.validate_ldap();
+        self.validate_used_after_db_init();
 
         if self.dynamic_clients.enable && self.dynamic_clients.reg_token.is_none() {
             warn!(
@@ -4532,6 +4544,77 @@ impl Vars {
 }
 
 impl Vars {
+    /// Settings that are only used after `DB::init()`. An invalid value would panic there with
+    /// the storage layer already running, or even later at runtime, like the time zone during an
+    /// E-Mail send. Rejecting them here makes them fail before anything was started.
+    fn validate_used_after_db_init(&self) {
+        if self.database.sched_user_exp.is_zero() {
+            panic!("`database.sched_user_exp` must be greater than 0");
+        }
+
+        if let Err(err) = self.email.smtp_from.parse::<lettre::message::Mailbox>() {
+            panic!(
+                "Invalid `email.smtp_from` '{}': {err}",
+                self.email.smtp_from
+            );
+        }
+
+        if let Err(err) = chrono_tz::Tz::from_str(&self.email.tz_fmt.tz_fallback) {
+            panic!(
+                "Invalid time zone for `email.tz_fmt.tz_fallback` '{}': {err}",
+                self.email.tz_fmt.tz_fallback
+            );
+        }
+
+        if self.events.matrix_user_id.is_some() {
+            if self.events.matrix_room_id.is_none() {
+                panic!("`events.matrix_user_id` is set but `events.matrix_room_id` is not");
+            }
+            if self.events.matrix_access_token.is_none()
+                && self.events.matrix_user_password.is_none()
+            {
+                panic!(
+                    "`events.matrix_user_id` is set, but neither `events.matrix_access_token` nor \
+                    `events.matrix_user_password`"
+                );
+            }
+        }
+
+        let pic = &self.user_pictures;
+        if pic.storage_type == "s3" {
+            for (key, value) in [
+                ("s3_url", &pic.s3_url),
+                ("bucket", &pic.bucket),
+                ("region", &pic.region),
+                ("s3_key", &pic.s3_key),
+                ("s3_secret", &pic.s3_secret),
+            ] {
+                if value.is_none() {
+                    panic!(
+                        "`user_pictures.storage_type` is `s3` but `user_pictures.{key}` is not set"
+                    );
+                }
+            }
+            if let Some(url) = &pic.s3_url
+                && let Err(err) = url.parse::<reqwest::Url>()
+            {
+                panic!("Invalid `user_pictures.s3_url` '{url}': {err}");
+            }
+        }
+
+        if env::var("MIGRATE_DB_FROM").is_ok_and(|from| from.starts_with("postgres")) {
+            for (key, value) in [
+                ("migrate_pg_host", &self.database.migrate_pg_host),
+                ("migrate_pg_user", &self.database.migrate_pg_user),
+                ("migrate_pg_password", &self.database.migrate_pg_password),
+            ] {
+                if value.is_none() {
+                    panic!("`MIGRATE_DB_FROM` is Postgres but `database.{key}` is not set");
+                }
+            }
+        }
+    }
+
     fn validate_ldap(&self) {
         if self.ldap.plain_text && !self.server.proxy_mode {
             panic!("ldap.plain_text requires server.proxy_mode, TLS must be terminated by a proxy");
@@ -5791,6 +5874,62 @@ name = 'A'
 url = 'https://consent.example.com'
 "#,
         );
+    }
+
+    #[test]
+    fn used_after_db_init_defaults_are_valid() {
+        Vars::default().validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`database.sched_user_exp` must be greater than 0")]
+    fn used_after_db_init_sched_user_exp_zero() {
+        let mut vars = Vars::default();
+        vars.database.sched_user_exp = Duration::ZERO;
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid `email.smtp_from`")]
+    fn used_after_db_init_invalid_smtp_from() {
+        let mut vars = Vars::default();
+        vars.email.smtp_from = "Rauthy <rauthy@>".into();
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid time zone for `email.tz_fmt.tz_fallback`")]
+    fn used_after_db_init_invalid_tz() {
+        let mut vars = Vars::default();
+        vars.email.tz_fmt.tz_fallback = "Europe/Nowhere".into();
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`events.matrix_room_id` is not")]
+    fn used_after_db_init_matrix_missing_room() {
+        let mut vars = Vars::default();
+        vars.events.matrix_user_id = Some("@rauthy:example.com".into());
+        vars.events.matrix_access_token = Some("token".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "neither `events.matrix_access_token`")]
+    fn used_after_db_init_matrix_missing_credentials() {
+        let mut vars = Vars::default();
+        vars.events.matrix_user_id = Some("@rauthy:example.com".into());
+        vars.events.matrix_room_id = Some("!room:example.com".into());
+        vars.validate_used_after_db_init();
+    }
+
+    #[test]
+    #[should_panic(expected = "`user_pictures.bucket` is not set")]
+    fn used_after_db_init_s3_missing_bucket() {
+        let mut vars = Vars::default();
+        vars.user_pictures.storage_type = "s3".into();
+        vars.user_pictures.s3_url = Some("https://s3.example.com".into());
+        vars.validate_used_after_db_init();
     }
 
     #[test]
