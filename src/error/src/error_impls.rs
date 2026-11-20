@@ -31,6 +31,9 @@ const APPLICATION_JSON: &str = "application/json";
 const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
+/// Marks a 401 that was raised because the request had no session at all, which tells a login page
+/// to restart its flow instead of showing an error. Changing the name breaks every consumer of it.
+const HEADER_SESSION_EXPIRED: &str = "x-session-expired";
 
 impl ErrorResponse {
     pub fn new<C>(error: ErrorResponseType, message: C) -> Self
@@ -78,6 +81,7 @@ impl ResponseError for ErrorResponse {
             | ErrorResponseType::CSRFTokenError
             | ErrorResponseType::DPoP(_)
             | ErrorResponseType::JwtToken
+            | ErrorResponseType::NoSession
             | ErrorResponseType::PasswordExpired
             | ErrorResponseType::SessionExpired
             | ErrorResponseType::SessionTimeout
@@ -140,6 +144,13 @@ impl ResponseError for ErrorResponse {
 
             ErrorResponseType::WWWAuthenticate(msg) => HttpResponseBuilder::new(status)
                 .insert_header((WWW_AUTHENTICATE, msg.as_str()))
+                .content_type(APPLICATION_JSON)
+                .body(serde_json::to_string(self).unwrap()),
+
+            // Only the header is the signal - the body stays the generic 401 of every other error.
+            ErrorResponseType::NoSession => HttpResponseBuilder::new(status)
+                .insert_header((HEADER_SESSION_EXPIRED, "true"))
+                .append_header((WWW_AUTHENTICATE, "OAuth"))
                 .content_type(APPLICATION_JSON)
                 .body(serde_json::to_string(self).unwrap()),
 

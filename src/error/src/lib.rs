@@ -40,6 +40,9 @@ pub enum ErrorResponseType {
     JwtToken,
     JoseError,
     MfaRequired,
+    /// The request carried no session at all, so nothing inside it was ever validated. Its 401
+    /// answers with the `x-session-expired` header, which tells a login page that its own session is
+    /// gone and that it has to restart its flow, instead of reporting anything about credentials.
     NoSession,
     NotFound,
     PasswordExpired,

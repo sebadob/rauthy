@@ -281,6 +281,79 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
     Ok(())
 }
 
+// The 401 of a login page whose own session has timed out must be tellable apart from a credential
+// failure without reading the message: only the first one carries `x-session-expired`.
+#[tokio::test]
+async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error>> {
+    let client_id = "init_client";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let url_auth = format!("{}/oidc/authorize", get_backend_url());
+
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+
+    let res = client
+        .get(authorize_url_s256(client_id, redirect_uri, ""))
+        .send()
+        .await?;
+    let res = expect_status!(res, 200);
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    let login = LoginRequest {
+        email: Some(USERNAME.to_string()),
+        password: Some("IAmSoWrong1337".to_string()),
+        pow: get_solved_pow().await,
+        client_id: client_id.to_string(),
+        redirect_uri: redirect_uri.to_string(),
+        scopes: None,
+        state: Some("X".to_string()),
+        nonce: None,
+        code_challenge: Some(challenge_s256()),
+        code_challenge_method: Some("S256".to_string()),
+        resource: None,
+        resident_key_token: None,
+        fwda: None,
+    };
+
+    // the page with its live `Init` session: the password is checked and a failure is a plain 401
+    let res = client
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&login)
+        .send()
+        .await?;
+    let has_header = res.headers().get("x-session-expired").is_some();
+    let status = res.status();
+    let body = res.text().await?;
+    assert_eq!(status, 401, "expected a plain 401 - body: {body}");
+    assert!(body.contains("Invalid user credentials"), "{body}");
+    assert!(
+        !has_header,
+        "a checked credential must not be marked: {body}"
+    );
+
+    // the same page after its session is gone: the login never reaches the credentials at all, and
+    // the PoW is not validated either - the header is the only signal the UI gets
+    let mut no_session = headers;
+    no_session.remove(reqwest::header::COOKIE);
+    let mut without_pow = login;
+    without_pow.pow = String::new();
+    let res = client
+        .post(&url_auth)
+        .headers(no_session)
+        .json(&without_pow)
+        .send()
+        .await?;
+    let has_header = res.headers().get("x-session-expired").is_some();
+    let status = res.status();
+    let body = res.text().await?;
+    assert_eq!(status, 401, "expected 401 - body: {body}");
+    assert!(has_header, "the header is the signal - body: {body}");
+
+    Ok(())
+}
+
 // RFC 6749 §3.1.2 - a fragment would swallow `code` / `iss`, and the wildcard would let it through
 #[tokio::test]
 async fn test_authorize_rejects_fragment_in_redirect_uri() -> Result<(), Box<dyn Error>> {

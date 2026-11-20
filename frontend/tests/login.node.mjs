@@ -17,12 +17,28 @@ after(async () => browser?.close());
 const documentPath = '/auth/v1/oidc/authorize';
 const authorizeReq = `POST ${documentPath}`;
 
-/** @param {number} status */
-async function openLogin(status) {
+/**
+ * Opens the login page. `handle` is the answer of `POST /oidc/authorize`, and every document
+ * navigation (the first `goto` and any reload the page does itself) is recorded in `navigations`.
+ * @param {number} status
+ * @param {Record<string, string>} [headers]
+ */
+async function openLogin(status, headers = {}) {
     const context = await browser.newContext({ serviceWorkers: 'block', locale: 'en-US' });
     const page = await context.newPage();
     /** @type {string[]} */
     const requests = [];
+    /** @type {string[]} */
+    const navigations = [];
+    page.on(
+        'request',
+        /** @param {any} request */ request => {
+            const url = new URL(request.url());
+            if (request.method() === 'GET' && url.pathname === documentPath) {
+                navigations.push(url.search);
+            }
+        },
+    );
     await serveUi({
         context,
         documentPath,
@@ -32,6 +48,7 @@ async function openLogin(status) {
             if (url.pathname === documentPath && request.method() === 'POST') {
                 return {
                     status,
+                    headers,
                     json: { error: 'SomeError', message: `server said ${status}` },
                 };
             }
@@ -42,7 +59,7 @@ async function openLogin(status) {
     );
     await page.locator('input[name=email]').fill('user@localhost');
     const submit = () => page.locator('form button[type=submit]').click();
-    return { context, page, requests, submit };
+    return { context, page, requests, navigations, submit };
 }
 
 for (const status of [404, 409, 413]) {
@@ -67,4 +84,39 @@ test('login: HTTP 401 asks for the password, then reports invalid credentials', 
     await submit();
     await page.getByText('Invalid credentials', { exact: true }).waitFor();
     await page.getByText('Password forgotten?').waitFor();
+});
+
+async function waitForReloads(/** @type {string[]} */ navigations, /** @type {number} */ want) {
+    const deadline = Date.now() + 5000;
+    while (navigations.length < want && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+}
+
+test('login: an expired page session reloads itself, it never claims bad credentials', async t => {
+    const { context, page, navigations, submit } = await openLogin(401, {
+        'x-session-expired': 'true',
+    });
+    t.after(() => context.close());
+    await submit();
+    await waitForReloads(navigations, 2);
+    assert.equal(navigations.length, 2, `document reloads: ${navigations.join(' | ')}`);
+    assert.equal(await page.getByText('Invalid credentials').count(), 0);
+});
+
+test('login: the expired session reload runs once, then the server message shows', async t => {
+    const { context, page, navigations, submit } = await openLogin(401, {
+        'x-session-expired': 'true',
+    });
+    t.after(() => context.close());
+
+    await submit();
+    await waitForReloads(navigations, 2);
+    assert.equal(navigations.length, 2, `document reloads: ${navigations.join(' | ')}`);
+
+    // the restarted page is answered the same way - the guard must stop the loop
+    await page.locator('input[name=email]').fill('user@localhost');
+    await submit();
+    await page.getByText('server said 401', { exact: true }).waitFor();
+    assert.equal(navigations.length, 2, `document reloads: ${navigations.join(' | ')}`);
 });

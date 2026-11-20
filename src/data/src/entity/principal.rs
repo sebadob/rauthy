@@ -645,7 +645,7 @@ impl Principal {
         } else {
             trace!("Validating the session failed - no session found");
             Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
+                ErrorResponseType::NoSession,
                 "No valid session",
             ))
         }

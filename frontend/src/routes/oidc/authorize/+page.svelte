@@ -58,6 +58,12 @@
 
     const inputWidth = '18rem';
 
+    // Minimum distance between two session-expired reloads. A reload restarts the whole authorize
+    // flow, so a second one right after the first means the backend does not provide a session at
+    // all - lowering this only shortens the loop a broken backend can run in.
+    const SESSION_EXPIRED_RELOAD_MIN_MS = 30_000;
+    const KEY_SESSION_EXPIRED_RELOAD = 'rauthy_session_expired_reload';
+
     let t = useI18n();
 
     let authorizeUrl = $derived(IS_DEV ? '/auth/v1/dev/authorize' : '/auth/v1/oidc/authorize');
@@ -451,6 +457,21 @@
         } else if (res.status === 0 || res.status >= 500) {
             // network or server error -> not a credentials problem
             err = res.error?.message || '';
+        } else if (res.status === 401 && res.headers.get('x-session-expired')) {
+            // The session of this page timed out. Neither the email nor the password was ever looked
+            // at, so this says nothing about the entered credentials - starting the flow again fixes
+            // it, and the authorize URL with all its query params is still in the address bar.
+            let lastReload = Number.parseInt(
+                sessionStorage.getItem(KEY_SESSION_EXPIRED_RELOAD) ?? '0',
+            );
+            let now = Date.now();
+            if (now - lastReload < SESSION_EXPIRED_RELOAD_MIN_MS) {
+                // The restart above did not bring a session up - do not loop, show the server message.
+                err = res.error?.message || `HTTP ${res.status}`;
+                return;
+            }
+            sessionStorage.setItem(KEY_SESSION_EXPIRED_RELOAD, `${now}`);
+            window.location.reload();
         } else if (res.status === 401 && !needsPassword) {
             // this will happen always if the user does the first try with a password-only account
             // the good thing about this is, that it is a prevention against autofill passwords from the browser
