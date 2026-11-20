@@ -151,6 +151,10 @@ test.describe('create group', () => {
 
     test('dialog validates the name and can be closed without saving', async ({ page }) => {
         await page.goto(PAGE);
+        const duplicateName = unique('e2e-group');
+        cleanup.push(duplicateName);
+        await api(page, 'POST', 'groups', { group: duplicateName });
+        await page.reload();
         const posts = recordRequests(page, 'POST', /\/auth\/v1\/groups$/);
 
         let dialog = await openAddNew(page);
@@ -169,7 +173,7 @@ test.describe('create group', () => {
         await expect(dialog.getByText('Invalid Input')).toBeVisible();
         await dialog.getByRole('button', { name: 'Save' }).click();
 
-        await name.fill('admin');
+        await name.fill(duplicateName);
         await expect(dialog.getByText('Invalid Input')).toBeHidden();
         await dialog.getByRole('button', { name: 'Save' }).click();
         await expect(dialog.getByText('Name exists already')).toBeVisible();
