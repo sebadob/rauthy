@@ -182,7 +182,7 @@
     }
 </script>
 
-<ContentAdmin>
+<ContentAdmin wide>
     <h2 class="admin-page-title">{ta.nav.sessions}</h2>
     <div class="top admin-page-toolbar">
         <OrderSearchBar
@@ -260,17 +260,9 @@
     .admin-page-toolbar > :global(.admin-list-tools) {
         width: min(420px, 100%);
     }
-    .admin-page-title {
-        margin: 0 0 24px;
-        font-size: 24px;
-        line-height: 32px;
-        color: var(--ui-text);
-    }
     #sessions {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        max-width: none;
-        margin: 0;
     }
 </style>

@@ -97,6 +97,25 @@ async function expectCreated(
 test.describe('providers list', () => {
     test.use({ allowErrors: [NO_LOGO] });
 
+    test('paginates long lists and opens the selected page from a deep link', async ({ page }) => {
+        const rows = Array.from({ length: 24 }, (_, index) => ({
+            id: `provider-${index}`,
+            ...customPayload(`Provider ${index + 1}`),
+        }));
+        await page.route('**/auth/v1/providers', route => route.fulfill({ json: rows }));
+        await page.goto(PAGE);
+        const pager = page.getByRole('navigation', { name: 'Pagination', exact: true });
+        await expect(entryList(page).getByRole('listitem')).toHaveCount(20);
+        await pager.getByRole('button', { name: 'Go to next page' }).click();
+        await expect(entryList(page).getByRole('listitem')).toHaveCount(4);
+        await page.goto(`${PAGE}?pid=${rows[23].id}`);
+        await expectCurrent(page, rows[23].name);
+        await expect(pager.getByRole('listitem', { name: 'Go to page 2' })).toHaveAttribute(
+            'aria-current',
+            'page',
+        );
+    });
+
     test('lists all providers and opens one by click and by deep link', async ({ page }) => {
         await page.goto(PAGE);
         const a = await api(page, 'POST', 'providers/create', customPayload(unique('E2E Prov A')));
@@ -625,17 +644,12 @@ test.describe('edit provider', () => {
         const logoUrl = `/auth/v1/providers/${provider.id}/img`;
         expect((await page.request.get(logoUrl)).status()).toBe(404);
 
-        // FINDING: the file input has no accessible name (`lib/form/InputFile.svelte`: the
-        // label only holds an icon), so it is reached through the "Upload" form.
-        const upload = main.getByRole('form', { name: 'Upload' });
+        const header = main.locator('.admin-entity-header');
+        const upload = header.getByLabel('Edit · Logo', { exact: true });
         await expect(upload).toBeVisible();
         // providers need a logo of at least 20px
         const png = await makePng();
-        await upload
-            .getByLabel(/logo|upload|file/i)
-            .or(upload.locator('input[type="file"]'))
-            .first()
-            .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
+        await upload.setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
         await expect.poll(async () => (await page.request.get(logoUrl)).status()).toBe(200);
 
         const remove = main.getByRole('button', { name: 'Delete · Logo', exact: true });

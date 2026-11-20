@@ -291,7 +291,8 @@
                 {/each}
             {/if}
         </div>
-
+    {/snippet}
+    {#snippet listFooter()}
         {#if firstFetchHeaders}
             <PaginationServerSide
                 bind:pageSize={sspPageSize}

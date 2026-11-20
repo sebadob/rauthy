@@ -1,10 +1,10 @@
 <script lang="ts">
-    let { title, count }: { title: string; count: number } = $props();
+    let { title, count }: { title: string; count?: number } = $props();
 </script>
 
 <div class="admin-list-heading">
     <h2>{title}</h2>
-    <span>{count}</span>
+    {#if count !== undefined}<span>{count}</span>{/if}
 </div>
 
 <style>

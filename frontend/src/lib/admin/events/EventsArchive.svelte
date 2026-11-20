@@ -114,7 +114,7 @@
     }
 </script>
 
-<ContentAdmin>
+<ContentAdmin wide>
     <div id="archive">
         <h2 class="admin-page-title">{ta.nav.events}</h2>
         <div class="filters-panel">
@@ -133,12 +133,16 @@
                 <div class="row">
                     <InputDateTimeCombo
                         label={ta.common.from}
+                        labelTime={ta.common.time}
+                        timeName="from_time"
                         bind:value={fromDate}
                         bind:timeValue={fromTime}
                         withTime
                     />
                     <InputDateTimeCombo
                         label={ta.common.until}
+                        labelTime={ta.common.time}
+                        timeName="until_time"
                         bind:value={untilDate}
                         bind:timeValue={untilTime}
                         withTime
@@ -206,5 +210,6 @@
     .eventsList {
         display: grid;
         gap: 0.75rem;
+        container: archive / inline-size;
     }
 </style>

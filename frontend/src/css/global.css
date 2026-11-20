@@ -518,3 +518,10 @@ pre {
         scroll-behavior: auto !important;
     }
 }
+
+.admin-shell .admin-page-title {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    line-height: 2rem;
+    color: var(--ui-text);
+}

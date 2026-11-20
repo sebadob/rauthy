@@ -2,7 +2,7 @@
     import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import EntityHeader from '#lib/admin/EntityHeader.svelte';
     import IconCircleStack from '#icons/IconCircleStack.svelte';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
@@ -23,6 +23,8 @@
     import { PATTERN_GROUP } from '#utils/patterns.ts';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import KVNamespaceEdit from '#lib/admin/kv/KVNamespaceEdit.svelte';
+    import Pagination from '#lib/pagination/Pagination.svelte';
+    import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -41,12 +43,20 @@
     // order: data, access, delete
     let tab = $state(ta.kv.tabs[0]);
     let namespaces: KVNamespaceResponse[] = $state([]);
+    let namespacesPaginated: KVNamespaceResponse[] = $state([]);
+    let page = $state(1);
+    let pageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
     let selected: undefined | KVNamespaceResponse = $derived(
         namespaces.find(namespace => namespace.name === ns.get()),
     );
 
     onMount(() => {
         fetchData();
+    });
+
+    $effect(() => {
+        const index = selected ? namespaces.indexOf(selected) : -1;
+        if (index >= 0) page = Math.floor(index / untrack(() => pageSize)) + 1;
     });
 
     $effect(() => {
@@ -96,8 +106,8 @@
     }
 </script>
 
-<NavSub width="min(16rem, 100dvw - .5rem)" buttonTilesAriaControls="kv">
-    <AdminListHeading title={'KV Store'} count={namespaces.length} />
+<NavSub buttonTilesAriaControls="kv">
+    <AdminListHeading title={ta.nav.kvStore} count={namespaces.length} />
     <ButtonAddModal
         bind:ref={refAddNew}
         level={namespaces.length === 0 ? 1 : 2}
@@ -132,7 +142,7 @@
 
     {#snippet buttonTiles()}
         <div class="nsList">
-            {#each namespaces as namespace (namespace.name)}
+            {#each namespaces.length > PAGE_SIZE_DEFAULT ? namespacesPaginated : namespaces as namespace (namespace.name)}
                 <NavButtonTile
                     onclick={() => ns.set(namespace.name)}
                     selected={ns.get() === namespace.name}
@@ -146,6 +156,16 @@
                 </NavButtonTile>
             {/each}
         </div>
+    {/snippet}
+    {#snippet listFooter()}
+        {#if namespaces.length > PAGE_SIZE_DEFAULT}
+            <Pagination
+                bind:items={namespaces}
+                bind:itemsPaginated={namespacesPaginated}
+                bind:page
+                bind:pageSize
+            />
+        {/if}
     {/snippet}
 </NavSub>
 

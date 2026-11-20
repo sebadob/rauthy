@@ -125,7 +125,7 @@
 
 {err}
 
-<ContentAdmin>
+<ContentAdmin wide>
     <h2 class="admin-page-title">{ta.nav.blacklist}</h2>
     <div class="top admin-page-toolbar">
         <OrderSearchBar
@@ -240,11 +240,6 @@
         margin-top: 1rem;
     }
 
-    #blacklist {
-        max-width: none;
-        margin: 0;
-    }
-
     .blacklist {
         display: grid;
         gap: 0.75rem;
@@ -287,13 +282,6 @@
 
     .admin-page-toolbar > :global(.admin-list-tools) {
         width: min(420px, 100%);
-    }
-
-    .admin-page-title {
-        margin: 0 0 1.5rem;
-        font-size: 1.5rem;
-        line-height: 2rem;
-        color: var(--ui-text);
     }
 
     @media (max-width: 520px) {

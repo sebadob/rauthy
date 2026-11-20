@@ -438,6 +438,12 @@ export let I18nAdminEn: I18nAdmin = {
     },
     providers: {
         config: {
+            sections: {
+                access: 'Access and linking',
+                endpoints: 'Endpoints',
+                client: 'Client credentials',
+                claims: 'Claim mapping',
+            },
             allowInsecureTls: 'Allow insecure TLS',
             autoLink: 'Auto-Link User',
             autoLinkDesc1: `If Auto-Link User is activated, the login via this provider will automatically link a

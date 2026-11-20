@@ -14,7 +14,7 @@ export function subNav(/** @type {Page} */ page) {
 
 /** The list of entries inside the secondary navigation. */
 export function entryList(/** @type {Page} */ page) {
-    return subNav(page).getByRole('list');
+    return subNav(page).getByRole('list').first();
 }
 
 /** A single entry of the list, by its exact name. */

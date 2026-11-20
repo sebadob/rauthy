@@ -377,6 +377,12 @@ export interface I18nAdmin {
     };
     providers: {
         config: {
+            sections?: {
+                access: string;
+                endpoints: string;
+                client: string;
+                claims: string;
+            };
             allowInsecureTls: string;
             autoLink: string;
             autoLinkDesc1: string;

@@ -2,6 +2,7 @@
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import { useTrigger } from '#state/callback.svelte.ts';
     import NavSub from '#lib/nav/NavSub.svelte';
@@ -151,7 +152,8 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="scopes">
+<NavSub buttonTilesAriaControls="pam">
+    <AdminListHeading title="PAM" />
     <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
         {#if isUser}
             <PAMUserAdd onCreate={onCreateUser} />

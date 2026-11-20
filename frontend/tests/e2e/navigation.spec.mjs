@@ -20,7 +20,7 @@ const SECTIONS = [
     ['Providers', 'admin/providers'],
     ['KV Store', 'admin/kv'],
     ['Config', 'admin/config/policy'],
-    ['Docs', 'admin/docs'],
+    ['About', 'admin/docs'],
 ];
 
 test.describe('admin navigation', () => {
@@ -94,12 +94,11 @@ test.describe('admin navigation', () => {
         expect(positions.users - positions.workspace).toBe(6);
         const nav = page.locator('#mainNav');
         await expect(nav.getByText(/^v\d+\./)).toHaveCount(0);
-        await nav.getByRole('button', { name: 'About' }).click();
-        await expect(nav.getByText(/^v\d+\./)).toBeVisible();
-        await page.keyboard.press('Escape');
+        await nav.getByRole('link', { name: 'About', exact: true }).click();
+        await expect(page.getByRole('main').getByText(/^v\d+\./)).toBeVisible();
         await page.setViewportSize({ width: 960, height: 768 });
         await expect(nav).toHaveAttribute('data-compact', 'true');
-        await expect(nav.getByRole('link', { name: 'Docs', exact: true })).toBeInViewport({
+        await expect(nav.getByRole('link', { name: 'About', exact: true })).toBeInViewport({
             ratio: 1,
         });
     });

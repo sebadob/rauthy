@@ -4,8 +4,6 @@
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import LangSelector from '#lib/LangSelector.svelte';
     import { page } from '$app/state';
-    import AppVersion from '../AppVersion.svelte';
-    import Popover from '#lib/Popover.svelte';
     import IconInfo from '#icons/IconInfo.svelte';
     import RauthyLogo from '#lib/RauthyLogo.svelte';
     import NavLink from '#lib/nav/NavLink.svelte';
@@ -21,7 +19,6 @@
     import IconKey from '#icons/IconKey.svelte';
     import IconCloud from '#icons/IconCloud.svelte';
     import IconWrenchScrew from '#icons/IconWrenchScrew.svelte';
-    import IconBookOpen from '#icons/IconBookOpen.svelte';
     import IconCheckBadge from '#icons/IconCheckBadge.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import IconCommandLine from '#icons/IconCommandLine.svelte';
@@ -183,9 +180,9 @@
 
                     <NavLink {compact} {params} route="/docs">
                         {#snippet icon(width: string)}
-                            <IconBookOpen {width} />
+                            <IconInfo {width} />
                         {/snippet}
-                        {ta.nav.docs}
+                        {ta.common.about}
                     </NavLink>
                 </div>
             {/if}
@@ -194,15 +191,12 @@
         {#if !collapsed}
             <div class="bottom">
                 <AccountActions admin adminLabel={ta.common.account} {compact} />
-                <div class="admin-preference-controls">
+                <div
+                    class="admin-preference-controls"
+                    role="group"
+                    aria-label={ta.common.preferences}
+                >
                     <ThemeSwitch /><LangSelector openTop borderless uppercase />
-                    <Popover ariaLabel={ta.common.about} btnInvisible anchored lazy>
-                        {#snippet button()}<IconInfo width="1.125rem" />{/snippet}
-                        <div class="about">
-                            <strong>{ta.common.about}</strong>
-                            <AppVersion />
-                        </div>
-                    </Popover>
                 </div>
             </div>
         {/if}
@@ -383,26 +377,9 @@
     #mainNav .bottom {
         border-top: 1px solid var(--ui-outline);
         margin: 4px 0 0;
-        padding-top: 4px;
-        gap: 0;
+        padding-top: 5px;
+        gap: 3px;
     }
-    #mainNav .bottom > :global(.flex) {
-        gap: 0;
-        justify-content: space-between;
-    }
-    .about {
-        display: grid;
-        gap: 0.375rem;
-        min-width: 10rem;
-        padding: 0.75rem;
-        color: var(--ui-text);
-    }
-
-    .about :global(.ver) {
-        margin: 0;
-        white-space: nowrap;
-    }
-
     #mainNav[data-compact='true'] {
         width: 84px;
     }
@@ -457,22 +434,23 @@
         }
     }
     .admin-preference-controls {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: center;
-        justify-content: flex-start;
+        justify-items: center;
+        border-top: 1px solid var(--ui-outline);
+        --ui-option-padding: 0 3px;
+        --ui-option-button-border: 0;
     }
 
     #mainNav[data-compact='true'] .admin-preference-controls {
-        justify-content: center;
-        margin-inline: -6px;
         --ui-button-padding: 0;
-        --ui-option-button-border: 0;
         --ui-option-padding: 0;
     }
 
     #mainNav[data-compact='true'] .admin-preference-controls :global(> div > .admin-control),
     #mainNav[data-compact='true'] .admin-preference-controls :global(> div > div > .admin-control) {
-        min-width: 24px;
+        min-width: 28px;
     }
 
     #mainNav[data-compact='true'] .admin-preference-controls :global(.admin-select-trigger) {

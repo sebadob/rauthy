@@ -114,7 +114,7 @@
             providers: ta.nav.providers,
             kv: ta.nav.kvStore,
             config: ta.nav.config,
-            docs: ta.nav.docs,
+            docs: ta.common.about,
         };
         return labels[section] || 'Rauthy';
     });

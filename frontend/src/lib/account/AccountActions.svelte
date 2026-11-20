@@ -21,7 +21,7 @@
     const t = useI18n();
 </script>
 
-<div class="actions" class:compact>
+<div class="actions" class:admin class:compact>
     {#if admin || showAdminLink}
         {@const label = admin ? t.account.account : t.account.navBackToAdmin}
         <Tooltip text={label}>
@@ -33,14 +33,14 @@
                 {#if admin}<IconUserCircle width="1.125rem" />{:else}
                     <IconUserGroup width="1.125rem" />
                 {/if}
-                {#if !compact}{adminLabel ?? label}{/if}
+                {#if !compact}<span class="action-label">{adminLabel ?? label}</span>{/if}
             </a>
         </Tooltip>
     {/if}
     <Tooltip text={t.account.navLogout}>
         <button type="button" aria-label={t.account.navLogout} onclick={redirectToLogout}>
             <IconLogout width="1.125rem" />
-            {#if !compact}{t.account.navLogout}{/if}
+            {#if !compact}<span class="action-label">{t.account.navLogout}</span>{/if}
         </button>
     </Tooltip>
 </div>
@@ -83,5 +83,34 @@
 
     .compact {
         justify-content: center;
+    }
+
+    .admin {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.125rem;
+        align-items: stretch;
+    }
+
+    .admin a,
+    .admin button {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        justify-content: center;
+        text-align: center;
+        gap: 0.25rem;
+        padding-inline: 0.125rem;
+    }
+
+    .admin :global(svg) {
+        flex-shrink: 0;
+    }
+
+    .admin .action-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 </style>

@@ -6,12 +6,14 @@
 
     let {
         children,
+        wide = false,
     }: {
         children: Snippet;
+        wide?: boolean;
     } = $props();
 </script>
 
-<div class="content admin-detail">
+<div class="content admin-detail" class:wide>
     <div class="admin-empty">
         <div class="admin-empty-symbol" aria-hidden="true"><IconEntry width="2rem" /></div>
         <h2>{ta.common.selectEntry}</h2>
@@ -38,7 +40,7 @@
         padding: 32px clamp(20px, 3vw, 48px) 32px;
         background: transparent;
     }
-    .admin-detail > :global(div[id]) {
+    .admin-detail:not(.wide) > :global(div[id]) {
         max-width: 960px;
         margin-inline: auto;
     }

@@ -3,6 +3,7 @@
     import NavLinkSub from '#lib/nav/NavLinkSub.svelte';
     import type { Snippet } from 'svelte';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useTrigger } from '#state/callback.svelte.ts';
@@ -21,7 +22,8 @@
     <title>Rauthy Config</title>
 </svelte:head>
 
-<NavSub width="11rem">
+<NavSub>
+    <AdminListHeading title={ta.nav.config} />
     <NavLinkSub bind:ref={refA} href="/auth/v1/admin/config/policy">
         {t.passwordPolicy.passwordPolicy}
     </NavLinkSub>

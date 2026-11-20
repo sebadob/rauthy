@@ -68,6 +68,26 @@ test('a direct link to the KV store opens the KV store', async ({ page }) => {
     await expect(page).toHaveTitle(/KV/, { timeout: 5_000 });
 });
 
+test('paginates the namespace list when it exceeds one page', async ({ page }) => {
+    await page.route('**/auth/v1/kv/ns', route =>
+        route.fulfill({
+            json: [
+                { name: 'default', public: false },
+                ...Array.from({ length: 20 }, (_, index) => ({
+                    name: `namespace-${index + 1}`,
+                    public: false,
+                })),
+            ],
+        }),
+    );
+    await openKv(page);
+    const pager = page.getByRole('navigation', { name: 'Pagination', exact: true });
+    await expect(nsEntry(page, 'namespace-20')).toHaveCount(0);
+    await pager.getByRole('button', { name: 'Go to next page' }).click();
+    await expect(nsEntry(page, 'namespace-20')).toBeVisible();
+    await expect(page.getByRole('main').getByRole('heading', { name: 'default' })).toBeVisible();
+});
+
 test('creates a public namespace from the dialog', async ({ page }) => {
     await openKv(page);
     const name = unique('e2e-kv');

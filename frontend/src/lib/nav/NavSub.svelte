@@ -11,6 +11,7 @@
         thresholdNavSub = 700,
         children,
         buttonTiles,
+        listFooter,
         buttonTilesAriaControls,
     }: {
         width?: string;
@@ -18,6 +19,7 @@
         thresholdNavSub?: number;
         children: Snippet;
         buttonTiles?: Snippet;
+        listFooter?: Snippet;
         buttonTilesAriaControls?: string;
     } = $props();
 
@@ -141,6 +143,9 @@
                     {@render buttonTiles()}
                 </ul>
             {/if}
+            {#if listFooter}
+                <div class="list-footer">{@render listFooter()}</div>
+            {/if}
         </div>
     </nav>
 </div>
@@ -226,6 +231,9 @@
         padding: 28px 16px;
         background: transparent;
         overflow-y: auto;
+    }
+    .list-footer:not(:empty) {
+        margin-top: 0.5rem;
     }
     .navSub :global(.topBtns) {
         display: flex;

@@ -10,9 +10,11 @@ const LINKS = [
 test.describe('docs', () => {
     test('renders every section with its links @mobile', async ({ page }) => {
         await page.goto('/auth/v1/admin/docs');
-        await expect(page).toHaveTitle('Rauthy Documentation');
+        await expect(page).toHaveTitle('Rauthy · About');
         const main = page.getByRole('main');
-        await expect(main.getByRole('heading', { name: 'Docs', level: 1 })).toBeVisible();
+        await expect(main.getByRole('heading', { name: 'About', level: 2 })).toBeVisible();
+        await expect(main.getByRole('heading', { name: 'Docs', level: 3 })).toBeVisible();
+        await expect(main.getByText(/^v\d+\./)).toBeVisible();
         await expect(main.getByText(/general documentation about Rauthy itself/)).toBeVisible();
         await expect(main.getByText(/integrate an external application/)).toBeVisible();
         await expect(main.getByText(/swagger_ui_enable/)).toBeVisible();
@@ -50,10 +52,10 @@ test.describe('docs', () => {
         }
     });
 
-    test('the docs link of the main navigation is marked as current page', async ({ page }) => {
+    test('the About link of the main navigation is marked as current page', async ({ page }) => {
         await page.goto('/auth/v1/admin/docs');
         await expect(
-            page.getByRole('navigation').first().getByRole('link', { name: 'Docs', exact: true }),
+            page.getByRole('navigation').first().getByRole('link', { name: 'About', exact: true }),
         ).toHaveAttribute('aria-current', 'page');
     });
 });

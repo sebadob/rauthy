@@ -1,49 +1,97 @@
 <script lang="ts">
-    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import IconShieldCheck from '#icons/IconShieldCheck.svelte';
+    import ImageEdit from '#lib/ImageEdit.svelte';
+    import { uploadFile } from '#api/fetch.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         providerId,
-        providerName,
-        imageUrl,
-        onDelete,
+        revision,
+        exists = $bindable(false),
+        error = $bindable(''),
+        onUpload,
     }: {
         providerId: string;
-        providerName: string;
-        imageUrl: string;
-        onDelete: () => void;
+        revision: string;
+        exists?: boolean;
+        error?: string;
+        onUpload: () => void;
     } = $props();
 
-    let exists = $state(false);
     const t = useI18n();
     const ta = useI18nAdmin();
+    const accepted = ['image/jpeg', 'image/png', 'image/svg+xml'];
+    const url = $derived(`/auth/v1/providers/${providerId}/img`);
+    let files: File[] | undefined = $state();
+    let uploading = $state(false);
+
+    $effect(() => {
+        const file = files?.[0];
+        if (file && !uploading) {
+            upload(file);
+        }
+    });
+
+    async function upload(file: File) {
+        files = undefined;
+        error = '';
+        if (!accepted.includes(file.type)) {
+            error = t.common.invalidInput;
+            return;
+        }
+
+        uploading = true;
+        try {
+            const result = await uploadFile('PUT', url, file, 'logo');
+            if (result.error) {
+                error = result.error.message;
+            } else {
+                onUpload();
+            }
+        } finally {
+            uploading = false;
+        }
+    }
 </script>
 
-<div class="container">
+<div class="provider-logo">
+    {#if !exists}
+        <IconShieldCheck width="1.75rem" />
+    {/if}
     <img
-        src={imageUrl}
-        width={20}
-        height={20}
-        alt={ta.clients.branding.logo}
+        src={`${url}?${revision}`}
+        alt=""
+        class:loaded={exists}
         onload={() => (exists = true)}
         onerror={() => (exists = false)}
     />
-    {#if exists}
-        <EntityDelete
-            url={`/auth/v1/providers/${providerId}/img`}
-            name={providerName}
-            label={`${t.common.delete} · ${ta.clients.branding.logo}`}
-            {onDelete}
-            iconOnly
-        />
-    {/if}
+    <ImageEdit
+        bind:files
+        accept={accepted.join(', ')}
+        ariaLabel={`${t.common.edit} · ${ta.clients.branding.logo}`}
+        disabled={uploading}
+    />
 </div>
 
 <style>
-    .container {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    .provider-logo {
+        position: relative;
+        display: grid;
+        place-items: center;
+        inline-size: 100%;
+        block-size: 100%;
+    }
+
+    img {
+        position: absolute;
+        inline-size: 70%;
+        block-size: 70%;
+        object-fit: contain;
+        visibility: hidden;
+    }
+
+    img.loaded {
+        visibility: visible;
     }
 </style>

@@ -84,8 +84,10 @@ async function localDateTime(
  * @param {'From' | 'Until'} which
  */
 function dateTime(page, which) {
-    const boxes = main(page).getByRole('textbox', { name: which, exact: true });
-    return { date: boxes.first(), time: boxes.nth(1) };
+    return {
+        date: main(page).getByRole('textbox', { name: which, exact: true }),
+        time: main(page).locator(`input[name="${which.toLowerCase()}_time"]`),
+    };
 }
 
 /**

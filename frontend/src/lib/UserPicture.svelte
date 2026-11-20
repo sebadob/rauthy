@@ -1,7 +1,7 @@
 <script lang="ts">
-    import IconPencil from '#icons/IconPencil.svelte';
+    import ImageEdit from '#lib/ImageEdit.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import { genKey, getCsrfToken } from '#utils/helpers.ts';
+    import { getCsrfToken } from '#utils/helpers.ts';
     import type { ErrorResponse } from '#api/types/error.ts';
     import IconStop from '#icons/IconStop.svelte';
     import Button from '#lib/button/Button.svelte';
@@ -24,7 +24,6 @@
         disableUpload?: boolean;
     } = $props();
 
-    const id = genKey();
     const accept = 'image/png, image/jpeg, image/webp, image/svg+xml';
 
     let t = useI18n();
@@ -38,7 +37,7 @@
     let timer: undefined | number;
 
     let isUploading = $state(false);
-    let files: undefined | FileList = $state();
+    let files: File[] | undefined = $state();
 
     let color = $derived(calculateColor());
     let width = $derived.by(() => {
@@ -85,7 +84,7 @@
     }
 
     function ondrop(ev: DragEvent) {
-        files = ev.dataTransfer?.files;
+        files = Array.from(ev.dataTransfer?.files ?? []);
     }
 
     function onerror(ev: Event & { currentTarget: EventTarget & Element }) {
@@ -128,7 +127,7 @@
         }
     }
 
-    async function upload(list: FileList) {
+    async function upload(list: File[]) {
         err = '';
         errFileSize = '';
 
@@ -200,24 +199,13 @@
 
 <div class="container">
     {#if config?.upload_allowed && !disableUpload}
-        <div
-            class="avatar"
-            class:portrait={size === 'large'}
-            style:--avatar-color={color}
-            style:width
-        >
-            <label for={id} aria-controls={id} aria-disabled={isUploading} style:width>
-                <span class="edit-picture"><IconPencil width="1rem" /></span>
-            </label>
-            <input
-                tabindex="0"
-                {id}
-                type="file"
-                disabled={isUploading}
-                aria-label={t.common.edit}
-                aria-disabled={isUploading}
-                {accept}
+        <div class="avatar" style:--avatar-color={color} style:width>
+            <ImageEdit
                 bind:files
+                {accept}
+                ariaLabel={t.common.edit}
+                disabled={isUploading}
+                alwaysVisible={size === 'large'}
             />
 
             {#if errFileSize}
@@ -250,61 +238,6 @@
 <style>
     img {
         background: hsl(var(--bg));
-    }
-
-    input {
-        margin: 0;
-        padding: 0;
-        width: 0;
-        height: 0;
-        overflow: hidden;
-    }
-
-    input[type='file']::file-selector-button {
-        display: none;
-    }
-
-    label {
-        position: absolute;
-        display: grid;
-        place-items: center;
-        inset: 0;
-        aspect-ratio: 1;
-        cursor: pointer;
-        z-index: 2;
-    }
-
-    label[aria-disabled='true'] {
-        cursor: default;
-        pointer-events: none;
-    }
-
-    .edit-picture {
-        display: grid;
-        place-items: center;
-        width: 1.5rem;
-        height: 1.5rem;
-        border: 1px solid var(--ui-outline, hsl(var(--bg-high)));
-        border-radius: var(--border-radius);
-        background: var(--ui-surface, hsl(var(--bg)));
-        color: var(--ui-text, hsl(var(--text)));
-        opacity: 0;
-    }
-
-    .portrait .edit-picture {
-        position: absolute;
-        inset: auto 2px 2px auto;
-    }
-
-    .portrait .edit-picture,
-    label:hover .edit-picture,
-    .avatar:focus-within .edit-picture {
-        opacity: 1;
-    }
-
-    .avatar:focus-within .edit-picture {
-        outline: 2px solid var(--ui-primary, hsl(var(--action)));
-        outline-offset: -2px;
     }
 
     .avatar {

@@ -55,6 +55,11 @@
     }
     .actions {
         align-self: start;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 0.25rem;
     }
     .actions:empty {
         display: none;

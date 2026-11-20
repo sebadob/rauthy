@@ -379,6 +379,12 @@ export const I18nAdminIt: I18nAdmin = {
     },
     providers: {
         config: {
+            sections: {
+                access: 'Accesso e collegamento',
+                endpoints: 'Endpoint',
+                client: 'Credenziali del client',
+                claims: 'Mappatura dei claim',
+            },
             allowInsecureTls: 'Consenti TLS non sicuro',
             autoLink: 'Collega automaticamente l’utente',
             autoLinkDesc1:

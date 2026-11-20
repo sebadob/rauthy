@@ -218,4 +218,25 @@
         align-items: stretch;
         text-align: left;
     }
+
+    @container archive (width >= 42rem) {
+        .event.inline {
+            display: grid;
+            grid-template-columns: minmax(9rem, 1fr) minmax(0, 2fr) auto;
+            align-items: center;
+            column-gap: 1rem;
+        }
+
+        .event.inline .admin-event-meta {
+            align-items: flex-start;
+            justify-content: center;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin: 0;
+        }
+
+        .event.inline .admin-event-footer {
+            margin: 0;
+        }
+    }
 </style>
