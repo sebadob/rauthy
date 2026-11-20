@@ -205,7 +205,7 @@
 
     :global(.ui-shell) .admin-input-field:not(:global(.branding-preview *)) {
         max-width: 100%;
-        margin-bottom: 16px;
+        margin-bottom: var(--ui-field-margin, var(--ui-space));
     }
     :global(.ui-shell) input.invalid:not(:global(.branding-preview *)) {
         border-color: hsl(var(--error));

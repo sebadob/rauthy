@@ -91,8 +91,16 @@ test('adds, edits and deletes a value', async ({ page }) => {
     await nsEntry(page, ns).click();
     await expect(page).toHaveURL(new RegExp(`ns=${ns}`));
     const main = page.getByRole('main');
+    const limit = main.getByRole('spinbutton', { name: 'Limit' });
+    const loadAll = main.getByRole('button', { name: 'Load all values' });
+    const newValue = main.getByRole('button', { name: 'New Value' });
+    await expect(limit).toBeVisible();
+    const bottom = (/** @type {import('@playwright/test').Locator} */ control) =>
+        control.evaluate(element => element.getBoundingClientRect().bottom);
+    await expect.poll(async () => (await bottom(limit)) - (await bottom(loadAll))).toBe(0);
+    await expect.poll(async () => (await bottom(limit)) - (await bottom(newValue))).toBe(0);
 
-    await main.getByRole('button', { name: 'New Value' }).click();
+    await newValue.click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('textbox', { name: 'Key' }).fill('greeting');
     await dialog.getByRole('textbox', { name: 'JSON Value' }).fill('"hello"');

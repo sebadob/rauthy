@@ -250,10 +250,7 @@
     .settings {
         grid-area: settings;
         --ui-tabs-margin: 0;
-    }
-
-    .settings :global(.admin-input-field) {
-        margin: 0;
+        --ui-field-margin: 0;
     }
 
     .save-bar {

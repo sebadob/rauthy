@@ -370,7 +370,7 @@
     }
 
     .btnsLim > :global(.admin-input-field) {
-        margin: 0;
+        --ui-field-margin: 0;
     }
 
     .modal {

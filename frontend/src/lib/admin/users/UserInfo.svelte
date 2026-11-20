@@ -742,6 +742,9 @@
         min-width: 0;
         margin: 0;
     }
+    .edit-fields > :global(.admin-input-field) {
+        --ui-field-margin: 0;
+    }
 
     .admin-access-section,
     .admin-activity-section {
