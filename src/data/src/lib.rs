@@ -2,8 +2,11 @@
 
 use crate::entity::sessions::Session;
 use actix_web::http::header::{HeaderName, HeaderValue};
+use enumset::{EnumSet, EnumSetType};
 use rauthy_api_types::users::ActiveOtp;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use utoipa::ToSchema;
 
 pub mod api_cookie;
 pub mod database;
@@ -41,11 +44,21 @@ pub(crate) fn init_test_enc_keys() {
     });
 }
 
+/// A single second factor a user can authenticate with.
+#[derive(Debug, EnumSetType, Serialize, Deserialize, ToSchema)]
+#[enumset(serialize_repr = "list")]
+pub enum MfaMethod {
+    Webauthn,
+    Otp,
+}
+
+/// The second factors a login may be completed with. An empty set means no MFA is required.
+pub type MfaMethods = EnumSet<MfaMethod>;
+
 pub enum AuthStep {
     LoggedIn(AuthStepLoggedIn),
     AwaitToSAccept(AwaitToSAccept),
-    AwaitWebauthn(AuthStepAwaitWebauthn),
-    AwaitOtpCode(AuthStepAwaitOtp),
+    AwaitMfa(AuthStepAwaitMfa),
     ProviderLink,
 }
 
@@ -65,21 +78,14 @@ pub struct AwaitToSAccept {
     pub user_id: String,
 }
 
-pub struct AuthStepAwaitWebauthn {
+pub struct AuthStepAwaitMfa {
     pub code: String,
     pub header_csrf: (HeaderName, HeaderValue),
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub email: String,
-    pub exp: u64,
-    pub session: Session,
-}
-
-pub struct AuthStepAwaitOtp {
-    pub code: String,
-    pub header_csrf: (HeaderName, HeaderValue),
-    pub header_origin: Option<(HeaderName, HeaderValue)>,
-    pub email: String,
+    pub mfa_methods: MfaMethods,
     pub active_otps: Vec<ActiveOtp>,
+    pub session: Session,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

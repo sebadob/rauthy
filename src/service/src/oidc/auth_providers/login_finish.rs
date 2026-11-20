@@ -6,13 +6,13 @@ use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_common::constants::{COOKIE_UPSTREAM_CALLBACK, PROVIDER_ATPROTO, PROVIDER_LINK_COOKIE};
 use rauthy_common::sha256;
 use rauthy_common::utils::base64_url_encode;
-use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, NewFederatedUserCreated,
 };
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::Session;
+use rauthy_data::{AuthStep, MfaMethod, MfaMethods};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use tracing::error;
 
@@ -91,8 +91,13 @@ pub async fn login_finish<'a>(
 
     // From here on, we deal with a normal login instead of just an account federation.
 
-    let require_webauthn = user.has_webauthn_enabled();
-    let require_otp = user.has_otp_enabled().await;
+    let mut mfa_methods = MfaMethods::empty();
+    if user.has_webauthn_enabled() {
+        mfa_methods |= MfaMethod::Webauthn;
+    }
+    if user.has_otp_enabled().await {
+        mfa_methods |= MfaMethod::Otp;
+    }
 
     let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;
@@ -110,8 +115,7 @@ pub async fn login_finish<'a>(
             code_challenge_method: slf.req_code_challenge_method,
             resource: slf.req_resource,
             header_origin,
-            require_webauthn,
-            require_otp,
+            mfa_methods,
             is_forward_auth: slf.is_forward_auth,
         },
         None,

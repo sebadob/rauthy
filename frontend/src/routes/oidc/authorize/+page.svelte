@@ -35,9 +35,8 @@
         CodeChallengeMethod,
         LoginRefreshRequest,
         LoginRequest,
-        OtpLoginResponse,
+        MfaLoginResponse,
         RequestResetRequest,
-        WebauthnLoginResponse,
     } from '#api/types/authorize.ts';
     import Form from '#lib/form/Form.svelte';
     import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
@@ -56,6 +55,7 @@
     import type { MfaPurpose } from '#api/types/mfa.ts';
     import type { OtpAdditionalData } from '#mfa/otp/types.ts';
     import IconKey from '#icons/IconKey.svelte';
+    import IconEnvelope from '#icons/IconEnvelope.svelte';
 
     const inputWidth = '18rem';
 
@@ -94,7 +94,7 @@
     let existingMfaUser: undefined | string = $state();
     let providers: AuthProviderTemplate[] = $state([]);
     let mfaPurpose: undefined | MfaPurpose = $state();
-    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' | 'selection' = $state();
     let activeOtps: undefined | ActiveOtp[] = $state();
 
     let isLoading = $state(false);
@@ -398,16 +398,17 @@
             let body = res.body;
             if (body && 'code' in body) {
                 mfaPurpose = { Login: body.code as string };
-                if ('active_otps' in body) {
-                    activeOtps = body.active_otps;
-                    mfaKind = 'otp';
-                } else {
+                activeOtps = body.active_otps || [];
+
+                if (body.require_webauthn && body.require_otp) {
+                    mfaKind = 'selection';
+                } else if (body.require_webauthn) {
                     mfaKind = 'webauthn';
+                } else if (body.require_otp) {
+                    mfaKind = 'otp';
                 }
             } else {
-                console.error(
-                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
-                );
+                console.error('did not receive a proper MfaLoginResponse after HTTP200');
             }
         } else if (res.status === 205) {
             // -> all good, password only account, user needs to update some values
@@ -691,7 +692,40 @@
                     to output proper logs in case of misconfiguration.
                     Another approach would be to check this in the backend and emit warning logs.
                     -->
-                    {#if mfaKind == 'webauthn'}
+                    {#if mfaKind == 'selection'}
+                        <div class="mfaSelection flex-col gap-05">
+                            <p>{t.authorize.mfaSelectionDesc}</p>
+
+                            <div class="btn flex-col">
+                                <Button
+                                    ariaLabel={t.authorize.usePasskey}
+                                    onclick={() => (mfaKind = 'webauthn')}
+                                    isDisabled={isLoading}
+                                >
+                                    <div class="flex gap-05">
+                                        <IconKey width="1.2rem" />
+                                        {t.authorize.usePasskey}
+                                    </div>
+                                </Button>
+                            </div>
+
+                            {#if activeOtps && activeOtps.length > 0}
+                                <div class="btn flex-col">
+                                    <Button
+                                        level={2}
+                                        ariaLabel={t.authorize.useEmailCode}
+                                        onclick={() => (mfaKind = 'otp')}
+                                        isDisabled={isLoading}
+                                    >
+                                        <div class="flex gap-05">
+                                            <IconEnvelope width="1.2rem" />
+                                            {t.authorize.useEmailCode}
+                                        </div>
+                                    </Button>
+                                </div>
+                            {/if}
+                        </div>
+                    {:else if mfaKind == 'webauthn'}
                         <WebauthnRequest
                             purpose={mfaPurpose}
                             onSuccess={onMfaSuccess}

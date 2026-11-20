@@ -6,11 +6,13 @@
 //! into a public function of the server time — see [`OtpSecret`]. Rows from before that are
 //! rotated at startup by [`crate::temp_migrations`]. A code is
 //! only ever sent out via email, the dev-only reveal endpoint is the single test-only exception.
+use crate::MfaMethod;
 use crate::database::{Cache, DB};
 use crate::email::otp::send_email_otp;
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
+use crate::entity::mfa_login::MfaLoginReq;
 use crate::entity::sessions::{MfaAssurance, Session};
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
@@ -471,7 +473,7 @@ impl OtpData {
 // This is the data, that will be passed to the client as response to a successful MFA auth
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum OtpAdditionalData {
-    Login(OtpLoginReq),
+    Login(MfaLoginReq),
     Service(OtpServiceReq),
     Test(String), // saves the User ID
     LoginToSAwait(OtpLoginToSAwaitCode),
@@ -548,52 +550,6 @@ impl OtpAdditionalData {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct OtpLoginReq {
-    pub code: String,
-    pub user_id: String,
-    pub header_loc: String,
-    pub header_origin: Option<String>,
-    pub tos_await_data: Option<OtpToSAwaitData>,
-    pub needs_user_update: bool,
-    pub session_id: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct OtpToSAwaitData {
-    pub auth_code: String,
-    pub auth_code_lifetime: i32,
-}
-
-// CRUD
-impl OtpLoginReq {
-    pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::OneTimePassword, self.code.clone())
-            .await?;
-        Ok(())
-    }
-
-    pub async fn find(code: &String) -> Result<Self, ErrorResponse> {
-        let res: Option<Self> = DB::hql().get(Cache::OneTimePassword, code).await?;
-        match res {
-            None => Err(ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                "OneTimePassword Login Request Data not found",
-            )),
-            Some(res) => Ok(res),
-        }
-    }
-
-    pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = Some(RauthyConfig::get().vars.otp.exp.as_secs() as i64);
-        DB::hql()
-            .put(Cache::OneTimePassword, self.code.clone(), self, ttl)
-            .await?;
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct OtpServiceReq {
     pub code: String,
     pub user_id: String,
@@ -649,7 +605,7 @@ pub async fn auth_start(
     let (add_data, user_id) = match &payload.purpose {
         MfaPurpose::Login(code) => {
             debug_assert!(user_id.is_none());
-            let d = OtpLoginReq::find(code).await?;
+            let d = MfaLoginReq::find_kind_remove(code.clone(), MfaMethod::Otp).await?;
             let user_id = d.user_id.clone();
             (OtpAdditionalData::Login(d), user_id)
         }
