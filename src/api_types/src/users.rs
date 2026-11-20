@@ -241,11 +241,9 @@ pub struct UserValuesRequest {
     pub tz: Option<String>,
 }
 
-/// The type of an attribute config; the only value today is `email`, the same form in JSON and
-/// in the database column.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 // serde's variant name would be `Email`, which is not the DB column form, nor `as_str`, nor
 // what the frontend declares.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum UserAttrConfigTyp {
     Email,
