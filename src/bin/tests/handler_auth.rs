@@ -484,7 +484,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .form(&req)
         .send()
         .await?;
-    let rotated = check_status(res, 200).await?.json::<TokenSet>().await?;
+    let rotated = expect_status_json!(res, 200, TokenSet);
     assert_not_consent_exempt(&rotated.refresh_token.unwrap());
 
     // verify 'nonce' existing in id token
