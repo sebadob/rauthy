@@ -6,16 +6,11 @@
     import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let { children }: { children: Snippet } = $props();
 
     let t = useI18n();
     let ta = useI18nAdmin();
-
-    let refA: undefined | HTMLAnchorElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refA?.focus());
 </script>
 
 <svelte:head>
@@ -24,7 +19,7 @@
 
 <NavSub>
     <AdminListHeading title={ta.nav.config} />
-    <NavLinkSub bind:ref={refA} href="/auth/v1/admin/config/policy">
+    <NavLinkSub href="/auth/v1/admin/config/policy">
         {t.passwordPolicy.passwordPolicy}
     </NavLinkSub>
     <NavLinkSub href="/auth/v1/admin/config/jwks">JWKS</NavLinkSub>

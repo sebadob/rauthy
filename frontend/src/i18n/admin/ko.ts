@@ -258,9 +258,9 @@ export let I18nAdminKo: I18nAdmin = {
                 맞게 조정해야 합니다.`,
         },
         openapi: '외부 애플리케이션을 통합하기 위한 Rauthy의 API 사용 방법:',
-        openapiNote: `기본 구성에서는 위 링크를 통해 Swagger UI가 활성화되지 않습니다. 그건 
-            'server.swagger_ui_enable' 및 가능하다면 'server.swagger_ui_public' 설정을 통해 활성화할 수 
-            있습니다.`,
+        openapiNote: '기본 구성에서는 위 링크를 통해 Swagger UI가 활성화되지 않습니다.',
+        openapiEnable:
+            "그건 'server.swagger_ui_enable' 및 가능하다면 'server.swagger_ui_public' 설정을 통해 활성화할 수 있습니다.",
         source: 'Rauthy의 소스코드',
     },
     editor: {

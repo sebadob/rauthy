@@ -249,11 +249,11 @@
         order: -1;
         margin: 0 auto 0 0;
     }
-    .navSub :global(ul) {
+    .list-content > :global(ul) {
         margin: 12px 0 0;
         padding: 0;
     }
-    .navSub :global(li:is([aria-current='page'], [aria-current='false'])) {
+    .navSub :global(li.admin-record-row) {
         margin: 4px 0;
         padding: 0;
         border: 0;
@@ -261,10 +261,10 @@
         background: transparent;
         list-style: none;
     }
-    .navSub :global(li:is([aria-current='page'], [aria-current='false'])) > :global(div) {
+    .navSub :global(li.admin-record-row) > :global(div) {
         margin: 0;
     }
-    .navSub :global(li:is([aria-current='page'], [aria-current='false'])) :global(.admin-control) {
+    .navSub :global(li.admin-record-row) :global(.admin-control) {
         width: 100%;
         height: auto;
         min-height: 64px;
@@ -273,17 +273,14 @@
         border-radius: var(--border-radius);
         text-align: left;
     }
-    .navSub
-        :global(li:is([aria-current='page'], [aria-current='false']))
-        :global(.admin-control)
-        > :global(.children) {
+    .navSub :global(li.admin-record-row) :global(.admin-control) > :global(.children) {
         width: 100%;
         justify-content: flex-start;
     }
-    .navSub :global(li[aria-current='page']) :global(.admin-control) {
+    .navSub :global(li.admin-record-row[aria-current='page']) :global(.admin-control) {
         background: var(--ui-tonal);
     }
-    .navSub :global(li[aria-current='page']) :global(.admin-row-title) {
+    .navSub :global(li.admin-record-row[aria-current='page']) :global(.admin-row-title) {
         color: var(--ui-text);
     }
     .navSub :global(.tile) {

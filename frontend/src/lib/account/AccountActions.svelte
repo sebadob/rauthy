@@ -97,6 +97,7 @@
         width: 100%;
         height: 100%;
         min-width: 0;
+        min-height: var(--footer-control-height, 2rem);
         justify-content: center;
         text-align: center;
         gap: 0.25rem;

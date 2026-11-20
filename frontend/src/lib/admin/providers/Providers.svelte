@@ -11,15 +11,10 @@
     import ProviderDetails from '#lib/admin/providers/ProviderDetails.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ProviderAddNew from '#lib/admin/providers/ProviderAddNew.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import Pagination from '#lib/pagination/Pagination.svelte';
     import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -60,7 +55,7 @@
 
 <NavSub buttonTilesAriaControls="federation">
     <AdminListHeading title={ta.nav.providers} count={providers.length} />
-    <ButtonAddModal bind:ref={refAddNew} level={providers.length === 0 ? 1 : 2} bind:closeModal>
+    <ButtonAddModal level={providers.length === 0 ? 1 : 2} bind:closeModal>
         <ProviderAddNew {onSave} />
     </ButtonAddModal>
 

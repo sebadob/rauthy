@@ -12,13 +12,8 @@
     import type { GroupResponse } from '#api/types/groups.ts';
     import GroupAddNew from '#lib/admin/groups/GroupAddNew.svelte';
     import GroupDetails from '#lib/admin/groups/GroupDetails.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -85,12 +80,7 @@
 
 <NavSub buttonTilesAriaControls="groups">
     <AdminListHeading title={ta.nav.groups} count={groupsFiltered.length} />
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={groups.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <ButtonAddModal level={groups.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <GroupAddNew onSave={onAddNew} {groups} />
     </ButtonAddModal>
     <OrderSearchBar

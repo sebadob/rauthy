@@ -257,8 +257,9 @@ export let I18nAdminZh: I18nAdmin = {
             必须针对每个部署进行调整。`,
         },
         openapi: '如果您想集成外部应用程序并使用Rauthy的API，请查看',
-        openapiNote: `在默认配置中，Swagger UI不会通过上面的链接激活。它 
-            可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。`,
+        openapiNote: '在默认配置中，Swagger UI不会通过上面的链接激活。',
+        openapiEnable:
+            '它 可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。',
         source: '源代码可以在这里找到',
     },
     editor: {

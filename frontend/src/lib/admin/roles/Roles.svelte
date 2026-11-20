@@ -12,13 +12,8 @@
     import type { RoleResponse } from '#api/types/roles.ts';
     import RoleAddNew from '#lib/admin/roles/RoleAddNew.svelte';
     import RoleDetails from '#lib/admin/roles/RoleDetails.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -85,12 +80,7 @@
 
 <NavSub buttonTilesAriaControls="groups">
     <AdminListHeading title={ta.nav.roles} count={rolesFiltered.length} />
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={roles.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <RoleAddNew onSave={onAddNew} {roles} />
     </ButtonAddModal>
     <OrderSearchBar

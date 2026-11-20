@@ -267,8 +267,9 @@ export let I18nAdminCs: I18nAdmin = {
             je potřeba ho vyladit pro každé nasazení.`,
         },
         openapi: 'Chcete-li napojit externí aplikaci a používat API Rauthy, podívejte se do',
-        openapiNote: `Ve výchozím nastavení není Swagger UI přes odkaz výše dostupné. Zapnout ho lze
-            v konfiguraci 'server.swagger_ui_enable', případně 'server.swagger_ui_public'.`,
+        openapiNote: 'Ve výchozím nastavení není Swagger UI přes odkaz výše dostupné.',
+        openapiEnable:
+            "Zapnout ho lze v konfiguraci 'server.swagger_ui_enable', případně 'server.swagger_ui_public'.",
         source: 'Zdrojový kód najdete zde',
     },
     editor: {

@@ -10,7 +10,6 @@
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import type { KVNamespaceRequest, KVNamespaceResponse } from '#api/types/kv.ts';
     import KVDetails from '#lib/admin/kv/KVDetails.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
@@ -29,10 +28,7 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    let refAddNew: undefined | HTMLButtonElement = $state();
     let refInput: undefined | HTMLInputElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -108,12 +104,7 @@
 
 <NavSub buttonTilesAriaControls="kv">
     <AdminListHeading title={ta.nav.kvStore} count={namespaces.length} />
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={namespaces.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <ButtonAddModal level={namespaces.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <div class="alignLeft">
             <Form action="/auth/v1/kv/ns" {onSubmit}>
                 <h3>{ta.kv.addNewNs}</h3>

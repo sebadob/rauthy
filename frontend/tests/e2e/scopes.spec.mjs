@@ -11,7 +11,6 @@ import {
     countRequests,
     entries,
     entry,
-    entryKeys,
     expectInvalid,
     openAddNew,
     openSubNav,
@@ -105,20 +104,21 @@ test.describe('scopes list', () => {
         await page.goto(SCOPES);
         const all = await allScopes(page);
         await expect(entries(page)).toHaveCount(all.length);
+        const names = () => entries(page).locator('.scope-name').allTextContents();
         const byName = all.map(s => s.name).sort((a, b) => a.localeCompare(b));
-        await expect.poll(() => entryKeys(page)).toEqual(byName);
+        await expect.poll(names).toEqual(byName);
 
         await subNav(page).getByRole('button', { name: 'Change sort to descending' }).click();
-        await expect.poll(() => entryKeys(page)).toEqual([...byName].reverse());
+        await expect.poll(names).toEqual([...byName].reverse());
 
         // order by ID (still descending)
         const order = subNav(page).getByRole('combobox', { name: 'Order by ...' });
         await chooseOption(page, order, 'ID');
         const byId = [...all].sort((a, b) => a.id.localeCompare(b.id)).map(s => s.name);
-        await expect.poll(() => entryKeys(page)).toEqual([...byId].reverse());
+        await expect.poll(names).toEqual([...byId].reverse());
 
         await subNav(page).getByRole('button', { name: 'Change sort to ascending' }).click();
-        await expect.poll(() => entryKeys(page)).toEqual(byId);
+        await expect.poll(names).toEqual(byId);
     });
 
     test('selecting a scope sets the deep link', async ({ page }) => {

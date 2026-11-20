@@ -13,7 +13,6 @@
     import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
     import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
     import { fetchSearchServer, type SearchParamsIdxSession } from '#utils/search.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -21,10 +20,6 @@
     // session deletion is a full-admin action; group admins log a user out from the user
     // details tab instead, so these buttons are hidden for them
     let isAdmin = $derived(session.isAdmin());
-
-    let refOpts: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refOpts?.focus());
 
     let err = $state('');
     let sessions: SessionResponse[] = $state([]);
@@ -184,26 +179,27 @@
 
 <ContentAdmin wide>
     <h2 class="admin-page-title">{ta.nav.sessions}</h2>
-    <div class="top admin-page-toolbar">
+    <div class="admin-page-toolbar">
         <OrderSearchBar
-            bind:ref={refOpts}
             bind:value={searchValue}
             {searchOptions}
             bind:searchOption
             {orderOptions}
             {onChangeOrder}
-            searchWidth="min(25rem, calc(100dvw - 1rem))"
+            searchWidth="100%"
             firstDirReverse
-        />
-        {#if isAdmin}
-            <div class="btn">
-                <EntityDelete
-                    url="/auth/v1/sessions"
-                    label={ta.sessions.invalidateAll}
-                    onDelete={() => redirectToLogin()}
-                />
-            </div>
-        {/if}
+            inline
+        >
+            {#snippet actions()}
+                {#if isAdmin}
+                    <EntityDelete
+                        url="/auth/v1/sessions"
+                        label={ta.sessions.invalidateAll}
+                        onDelete={() => redirectToLogin()}
+                    />
+                {/if}
+            {/snippet}
+        </OrderSearchBar>
     </div>
 
     {#if err}
@@ -239,27 +235,6 @@
 </ContentAdmin>
 
 <style>
-    .btn {
-        margin: 0 0.25rem;
-    }
-
-    .top {
-        margin-bottom: 0.5rem;
-        display: flex;
-        gap: 0.5rem 1rem;
-        flex-wrap: wrap;
-    }
-
-    .admin-page-toolbar {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 20px;
-        margin-bottom: 24px;
-    }
-    .admin-page-toolbar > :global(.admin-list-tools) {
-        width: min(420px, 100%);
-    }
     #sessions {
         display: flex;
         flex-direction: column;

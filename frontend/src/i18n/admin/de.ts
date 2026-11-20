@@ -288,8 +288,10 @@ export let I18nAdminDe: I18nAdmin = {
             mCost3: 'Der minimal erlaubte Wert für <code>m_cost</code> ist <code>32768</code>.',
         },
         openapi: "Zur Integration einer externen Applikation via Rauthy's API gibt es das",
-        openapiNote: `In der Standard Konfiguration ist das Swagger UI über den oben genannten Link nicht aktiv. Es 
-            kann per Konfiguration 'server.swagger_ui_enable' und ggf. 'server.swagger_ui_public' aktiviert werden.`,
+        openapiNote:
+            'In der Standard Konfiguration ist das Swagger UI über den oben genannten Link nicht aktiv.',
+        openapiEnable:
+            "Es kann per Konfiguration 'server.swagger_ui_enable' und ggf. 'server.swagger_ui_public' aktiviert werden.",
         source: 'Der source code kann hier gefunden werden',
     },
     editor: {

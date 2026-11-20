@@ -42,6 +42,22 @@ test.describe('admin navigation', () => {
         }
     });
 
+    test('clicking a sidebar link leaves Add New unfocused', async ({ page }) => {
+        await page.goto('/auth/v1/admin/users');
+        for (const section of ['Clients', 'Attributes', 'Users']) {
+            await page
+                .locator('#mainNav')
+                .getByRole('link', { name: section, exact: true })
+                .click();
+            await expect(page.getByRole('heading', { name: section, level: 1 })).toBeVisible();
+            // The old navigation handler moved focus after a 100 ms timeout.
+            await page.waitForTimeout(180);
+            await expect(
+                page.getByRole('button', { name: 'Add New', exact: true }),
+            ).not.toBeFocused();
+        }
+    });
+
     test('theme switch toggles and persists', async ({ page }) => {
         await page.goto('/auth/v1/admin/users');
         const toggle = page.getByRole('button', { name: /Change Theme/ });

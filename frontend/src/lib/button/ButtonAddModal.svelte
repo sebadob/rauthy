@@ -62,4 +62,10 @@
         color: var(--ui-on-primary);
         border-color: transparent;
     }
+
+    :global(.admin-shell)
+        .admin-add-button
+        > :global(.admin-control[data-variant]:hover:not(:disabled)) {
+        background: color-mix(in srgb, var(--ui-primary) 93%, white);
+    }
 </style>

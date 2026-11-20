@@ -221,8 +221,9 @@ export const I18nAdminIt: I18nAdmin = {
                 'Lo strumento aiuta a calibrare Argon2ID, un algoritmo per il calcolo degli hash delle password, sulla tua infrastruttura.',
         },
         openapi: 'Per integrare applicazioni esterne con le API di Rauthy, consulta',
-        openapiNote:
-            'Swagger UI è disattivata per impostazione predefinita. Puoi attivarla con server.swagger_ui_enable e, se necessario, renderla pubblica con server.swagger_ui_public.',
+        openapiNote: 'Swagger UI è disattivata per impostazione predefinita.',
+        openapiEnable:
+            'Puoi attivarla con server.swagger_ui_enable e, se necessario, renderla pubblica con server.swagger_ui_public.',
         source: 'Consulta il codice sorgente',
     },
     editor: {
@@ -436,6 +437,7 @@ export const I18nAdminIt: I18nAdmin = {
         name: 'Nome del ruolo',
     },
     scopes: {
+        defaultBadge: 'Predefinito',
         claimsAtRoot: 'Inserisci i claim al livello principale del token',
         claimsAtRootWarning:
             'Gli attributi associati a questo ambito vengono scritti al livello principale del token, fuori da custom. Se un nome coincide con un claim JWT riservato, l’emissione fallisce. Future modifiche al protocollo o alle funzionalità possono introdurre conflitti. Riferimento:',

@@ -17,13 +17,8 @@
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import Section from '#lib/Section.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
-
-    let refOpts: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refOpts?.focus());
 
     let err = $state('');
     let events: EventResponse[] = $state([]);
@@ -120,7 +115,6 @@
         <div class="filters-panel">
             <Section>
                 <OrderSearchBar
-                    bind:ref={refOpts}
                     {searchOptions}
                     bind:searchOption
                     bind:value={searchValue}

@@ -21,7 +21,6 @@
     import { fetchSearchServer, type SearchParamsIdxUser } from '#utils/search.ts';
     import UserPicture from '#lib/UserPicture.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
     import Button from '#lib/button/Button.svelte';
     import IconEnvelope from '#icons/IconEnvelope.svelte';
@@ -30,10 +29,6 @@
 
     let ta = useI18nAdmin();
     const t = useI18n();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -260,12 +255,7 @@
     <div class="topBtns">
         <SendMail {groups} {roles} />
         <EmailJobs />
-        <ButtonAddModal
-            bind:ref={refAddNew}
-            level={roles.length === 0 ? 1 : 2}
-            bind:closeModal
-            alignRight
-        >
+        <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
             <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups} />
         </ButtonAddModal>
     </div>

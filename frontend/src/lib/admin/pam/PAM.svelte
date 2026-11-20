@@ -4,7 +4,6 @@
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import NavSub from '#lib/nav/NavSub.svelte';
     import SearchBar from '#lib/search_bar/SearchBar.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
@@ -26,10 +25,6 @@
     import type { PamGroupsSorted } from '#lib/admin/pam/types.js';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
     let searchValue = $state('');
@@ -154,7 +149,7 @@
 
 <NavSub buttonTilesAriaControls="pam">
     <AdminListHeading title="PAM" />
-    <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
+    <ButtonAddModal level={2} bind:closeModal alignRight>
         {#if isUser}
             <PAMUserAdd onCreate={onCreateUser} />
         {:else if isGroup}

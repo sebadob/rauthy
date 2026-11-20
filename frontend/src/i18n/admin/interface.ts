@@ -224,6 +224,7 @@ export interface I18nAdmin {
         };
         openapi: string;
         openapiNote: string;
+        openapiEnable: string;
         source: string;
     };
     editor: {
@@ -434,6 +435,7 @@ export interface I18nAdmin {
         name: string;
     };
     scopes: {
+        defaultBadge?: string;
         claimsAtRoot: string;
         claimsAtRootWarning: string;
         defaultNoMod: string;

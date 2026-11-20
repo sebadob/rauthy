@@ -14,13 +14,8 @@
     import type { ClientResponse } from '#api/types/clients.ts';
     import ClientAddNew from '#lib/admin/clients/ClientAddNew.svelte';
     import ClientDetails from '#lib/admin/clients/ClientDetails.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -92,12 +87,7 @@
 
 <NavSub buttonTilesAriaControls="groups">
     <AdminListHeading title={ta.nav.clients} count={clientsFiltered.length} />
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={clients.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <ButtonAddModal level={clients.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ClientAddNew onSave={onAddNew} {clients} />
     </ButtonAddModal>
     <OrderSearchBar

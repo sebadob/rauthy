@@ -17,13 +17,8 @@
     import ScopeDetails from '#lib/admin/scopes/ScopeDetails.svelte';
     import ScopeAddNew from './ScopeAddNew.svelte';
     import { isDefaultScope } from '#utils/helpers.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -102,12 +97,7 @@
 
 <NavSub buttonTilesAriaControls="scopes">
     <AdminListHeading title={ta.nav.scopes} count={scopesFiltered.length} />
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={scopes.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <ButtonAddModal level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ScopeAddNew onSave={onAddNew} {scopes} />
     </ButtonAddModal>
     <OrderSearchBar
@@ -123,12 +113,12 @@
         <div class="scopesList">
             {#each scopesFiltered as scope (scope.id)}
                 <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
-                    {scope.name}
-                    {#if isDefaultScope(scope.name)}
-                        <span class="default">
-                            <i>default</i>
-                        </span>
-                    {/if}
+                    <span class="scope-row">
+                        <span class="scope-name">{scope.name}</span>
+                        {#if isDefaultScope(scope.name)}
+                            <span class="scope-badge">{ta.scopes.defaultBadge ?? 'default'}</span>
+                        {/if}
+                    </span>
                 </NavButtonTile>
             {/each}
         </div>
@@ -150,9 +140,32 @@
 </ContentAdmin>
 
 <style>
-    .default {
-        font-size: 0.8rem;
-        color: hsla(var(--text) / 0.5);
+    .scopesList :global(.children > div:has(.scope-row)) {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .scope-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .scope-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .scope-badge {
+        flex: none;
+        padding: 0.125rem 0.5rem;
+        border-radius: 999px;
+        background: var(--ui-container);
+        color: var(--ui-muted);
+        font-size: 0.6875rem;
+        font-weight: 500;
+        line-height: 1.25;
     }
 
     .scopesList {

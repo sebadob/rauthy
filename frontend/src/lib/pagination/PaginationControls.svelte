@@ -90,12 +90,16 @@
 
 <style>
     .pagination {
-        display: grid;
-        gap: 0.5rem;
+        --control-size: 1.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.375rem 0.75rem;
         flex-shrink: 0;
-        padding-block-start: 0.75rem;
+        padding-block-start: 0.5rem;
         border-top: 1px solid var(--ui-outline);
-        font-size: var(--ui-control-font-size);
+        font-size: 0.75rem;
         line-height: var(--ui-control-line-height);
         color: var(--ui-muted);
     }
@@ -105,9 +109,13 @@
     .details,
     label {
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
         gap: 0.25rem;
+    }
+
+    .controls,
+    ul {
+        gap: 0.125rem;
     }
 
     ul {
@@ -126,10 +134,10 @@
         box-sizing: border-box;
         display: grid;
         place-items: center;
-        min-height: 2rem;
-        min-width: 2rem;
+        height: var(--control-size);
+        min-width: var(--control-size);
         margin: 0;
-        padding: 0 0.375rem;
+        padding: 0 0.25rem;
         border: 1px solid transparent;
         border-radius: var(--border-radius);
         background: transparent;
@@ -172,8 +180,17 @@
         transform: rotate(180deg);
     }
 
+    button :global(svg) {
+        display: block;
+        width: 1rem;
+        height: 1rem;
+    }
+
     .details {
+        flex: 1 1 auto;
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.75rem;
     }
 
     label {

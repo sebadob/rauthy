@@ -235,8 +235,9 @@ export let I18nAdminJa: I18nAdmin = {
         },
         openapi:
             '外部のアプリケーションを連携させて Rauthy の API を使いたい場合は、次をご覧ください:',
-        openapiNote:
-            '既定の設定では、上のリンクから Swagger UI は使えません。設定の「server.swagger_ui_enable」と、必要に応じて「server.swagger_ui_public」で有効にできます。',
+        openapiNote: '既定の設定では、上のリンクから Swagger UI は使えません。',
+        openapiEnable:
+            '設定の「server.swagger_ui_enable」と、必要に応じて「server.swagger_ui_public」で有効にできます。',
         source: 'ソースコードはこちら',
     },
     editor: {

@@ -525,3 +525,7 @@ pre {
     line-height: 2rem;
     color: var(--ui-text);
 }
+
+.admin-shell .admin-page-toolbar {
+    margin-block-end: 1.25rem;
+}

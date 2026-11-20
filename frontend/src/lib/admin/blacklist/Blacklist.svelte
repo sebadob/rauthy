@@ -20,7 +20,6 @@
     import Form from '#lib/form/Form.svelte';
     import Tooltip from '#lib/Tooltip.svelte';
     import Pagination from '#lib/pagination/Pagination.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import { useSession } from '#state/session.svelte.ts';
 
     let t = useI18n();
@@ -30,10 +29,6 @@
     // is full-admin only
     let session = useSession('admin');
     let isAdmin = $derived(session.isAdmin());
-
-    let refOpts: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refOpts?.focus());
 
     const blacklistThreshold = 30;
 
@@ -127,47 +122,49 @@
 
 <ContentAdmin wide>
     <h2 class="admin-page-title">{ta.nav.blacklist}</h2>
-    <div class="top admin-page-toolbar">
+    <div class="admin-page-toolbar">
         <OrderSearchBar
-            bind:ref={refOpts}
             bind:value={searchValue}
             {orderOptions}
             {onChangeOrder}
-            searchWidth="min(15.75rem, calc(100dvw - 1rem))"
-        />
+            searchWidth="100%"
+            inline
+        >
+            {#snippet actions()}
+                {#if isAdmin}
+                    <ButtonAddModal level={1} bind:closeModal>
+                        <div class="addNew">
+                            <h3>{ta.common.addNew}</h3>
+                            <Form action="/auth/v1/blacklist" {onSubmit}>
+                                <Input
+                                    bind:ref={refIp}
+                                    bind:value={ip}
+                                    autocomplete="off"
+                                    label="IP"
+                                    placeholder="IPv4"
+                                    required
+                                    maxLength={40}
+                                />
+                                <InputDateTimeCombo
+                                    label={ta.options.expires}
+                                    labelTime={ta.common.time}
+                                    bind:value={expDate}
+                                    bind:timeValue={expTime}
+                                    min={fmtDateInput()}
+                                    required
+                                    withTime
+                                />
 
-        {#if isAdmin}
-            <ButtonAddModal level={1} bind:closeModal>
-                <div class="addNew">
-                    <h3>{ta.common.addNew}</h3>
-                    <Form action="/auth/v1/blacklist" {onSubmit}>
-                        <Input
-                            bind:ref={refIp}
-                            bind:value={ip}
-                            autocomplete="off"
-                            label="IP"
-                            placeholder="IPv4"
-                            required
-                            maxLength={40}
-                        />
-                        <InputDateTimeCombo
-                            label={ta.options.expires}
-                            labelTime={ta.common.time}
-                            bind:value={expDate}
-                            bind:timeValue={expTime}
-                            min={fmtDateInput()}
-                            required
-                            withTime
-                        />
-
-                        <Button type="submit">
-                            {t.common.save}
-                        </Button>
-                        {#if errSave}<p class="err" role="alert">{errSave}</p>{/if}
-                    </Form>
-                </div>
-            </ButtonAddModal>
-        {/if}
+                                <Button type="submit">
+                                    {t.common.save}
+                                </Button>
+                                {#if errSave}<p class="err" role="alert">{errSave}</p>{/if}
+                            </Form>
+                        </div>
+                    </ButtonAddModal>
+                {/if}
+            {/snippet}
+        </OrderSearchBar>
     </div>
 
     <div id="blacklist">
@@ -269,19 +266,6 @@
 
     .blacklisted :global(button) {
         --ui-button-padding: 0 0.375rem;
-    }
-
-    .admin-page-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .admin-page-toolbar > :global(.admin-list-tools) {
-        width: min(420px, 100%);
     }
 
     @media (max-width: 520px) {

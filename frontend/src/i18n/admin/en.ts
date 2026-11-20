@@ -268,8 +268,10 @@ export let I18nAdminEn: I18nAdmin = {
         },
         openapi:
             "If you want to integrate an external application and use Rauthy's API, take a look at the",
-        openapiNote: `In the default configuration, the Swagger UI is not active via the link above. It can be activated
-            via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.`,
+        openapiNote:
+            'In the default configuration, the Swagger UI is not active via the link above.',
+        openapiEnable:
+            "It can be activated via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.",
         source: 'The source code can be found here',
     },
     editor: {
@@ -499,6 +501,7 @@ export let I18nAdminEn: I18nAdmin = {
         name: 'Role Name',
     },
     scopes: {
+        defaultBadge: 'default',
         claimsAtRoot: 'Emit claims at token root',
         claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped

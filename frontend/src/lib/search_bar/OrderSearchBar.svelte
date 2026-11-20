@@ -1,6 +1,7 @@
 <script lang="ts">
     import OrderBy from '#lib/search_bar/OrderBy.svelte';
     import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import type { Snippet } from 'svelte';
 
     let {
         ref = $bindable(),
@@ -18,6 +19,7 @@
 
         borderless,
         inline = false,
+        actions,
     }: {
         ref?: undefined | HTMLButtonElement;
         searchOptions?: string[];
@@ -34,6 +36,7 @@
 
         borderless?: boolean;
         inline?: boolean;
+        actions?: Snippet;
     } = $props();
 </script>
 
@@ -55,6 +58,9 @@
         {borderless}
         {firstDirReverse}
     />
+    {#if actions}
+        <div class="actions">{@render actions()}</div>
+    {/if}
 </div>
 
 <style>
@@ -77,5 +83,33 @@
     }
     .inline > :global(.admin-sort) {
         margin-inline-start: auto;
+    }
+    .inline .actions {
+        margin-inline-start: 0.25rem;
+    }
+    .actions:empty {
+        display: none;
+    }
+    .actions :global(.admin-add-button) {
+        margin: 0;
+    }
+
+    @media (max-width: 600px) {
+        .inline:has(> .actions:not(:empty)) > :global(search) {
+            flex-basis: 100%;
+        }
+
+        .inline:has(> .actions:not(:empty)) > :global(.admin-sort) {
+            margin-inline-start: 0;
+        }
+
+        .inline .actions {
+            margin-inline-start: auto;
+        }
+
+        .actions > :global(.admin-control),
+        .actions > :global(.admin-add-button > .admin-control) {
+            padding-inline: 0.5rem;
+        }
     }
 </style>

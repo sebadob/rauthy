@@ -377,8 +377,14 @@
     #mainNav .bottom {
         border-top: 1px solid var(--ui-outline);
         margin: 4px 0 0;
-        padding-top: 5px;
-        gap: 3px;
+        --footer-control-height: 2rem;
+        --footer-row-padding: 0.25rem;
+        --ui-hover: hsl(var(--text) / 0.045);
+        gap: 0;
+        padding: 0;
+    }
+    #mainNav .bottom > :global(.actions) {
+        padding-block: var(--footer-row-padding);
     }
     #mainNav[data-compact='true'] {
         width: 84px;
@@ -439,6 +445,10 @@
         align-items: center;
         justify-items: center;
         border-top: 1px solid var(--ui-outline);
+        padding-block: var(--footer-row-padding);
+        --ui-button-height: var(--footer-control-height);
+        --ui-button-min-height: var(--footer-control-height);
+        --ui-option-height: var(--footer-control-height);
         --ui-option-padding: 0 3px;
         --ui-option-button-border: 0;
     }

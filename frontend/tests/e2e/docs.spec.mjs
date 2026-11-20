@@ -18,6 +18,10 @@ test.describe('docs', () => {
         await expect(main.getByText(/general documentation about Rauthy itself/)).toBeVisible();
         await expect(main.getByText(/integrate an external application/)).toBeVisible();
         await expect(main.getByText(/swagger_ui_enable/)).toBeVisible();
+        const note = main.getByRole('complementary', { name: 'Note' });
+        await expect(note.locator('p')).toHaveCount(2);
+        await expect(note.locator('p').last()).toContainText('It can be activated');
+        await expect(note.locator('code').first()).toHaveText('server.swagger_ui_enable');
         await expect(main.getByText(/source code can be found here/)).toBeVisible();
 
         for (const l of LINKS) {

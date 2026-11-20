@@ -8,7 +8,6 @@
     import { onDestroy, untrack } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { fetchPost } from '#api/fetch.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import { useSession } from '#state/session.svelte.ts';
 
     // Request the entire recent window so a sparse selection can find matching history.
