@@ -1,54 +1,74 @@
-use crate::entity::clients::Client;
-use rauthy_common::validation::validate_redirect_uri;
+use crate::{
+    database::DB,
+    entity::{
+        db_version::DbVersion,
+        one_time_password::{OneTimePassword, OtpSecret},
+    },
+};
+use hiqlite::params;
+use rauthy_common::is_hiqlite;
 use rauthy_error::ErrorResponse;
 use semver::Version;
-use tracing::{error, warn};
+use tracing::{debug, warn};
 
 pub async fn apply_temp_migrations(
-    _previous_db_version: Option<Version>,
+    previous_db_version: Option<Version>,
 ) -> Result<(), ErrorResponse> {
-    warn_invalid_redirect_uris().await;
+    let app_version = DbVersion::app_version();
+    if let Some(prev) = previous_db_version
+        && prev.major == app_version.major
+        && prev.minor == app_version.minor
+    {
+        // This version was already started before - nothing to do.
+        // This function never changes between patch releases.
+        return Ok(());
+    }
+
+    // We changed a few cached entities which would lead to decode errors from old data.
+    DB::hql().clear_cache_all().await?;
+    rotate_empty_otp_secrets().await?;
 
     Ok(())
 }
 
-/// Redirect URIs with a fragment, a `,` or a reserved query key (`code`, `state`, `iss`, ...) are
-/// rejected since v0.37 (RFC 6749 §3.1.2, RFC 9207), and so are post-logout redirect URIs with a
-/// fragment, a `,` or a `state` query key. A client stored before may still contain one: an
-/// authorization or logout request with it is rejected, and the client can only be updated once
-/// the URI is replaced. Only logs and never fails the startup.
-async fn warn_invalid_redirect_uris() {
-    let clients = match Client::find_all().await {
-        Ok(clients) => clients,
-        Err(err) => {
-            error!("Cannot load clients to check their redirect URIs: {err}");
-            return;
-        }
+async fn rotate_empty_otp_secrets() -> Result<(), ErrorResponse> {
+    debug!("Executing rotate_empty_otp_secrets");
+    for otp in find_otps_with_empty_secret().await? {
+        warn!(
+            otp.id = otp.id,
+            otp.user_id = otp.user_id,
+            otp.kind = otp.kind.as_str(),
+            "Rotated an empty OTP secret - the user needs to request a new code"
+        );
+        rotate_otp_secret(otp).await?;
+    }
+    Ok(())
+}
+
+async fn find_otps_with_empty_secret() -> Result<Vec<OneTimePassword>, ErrorResponse> {
+    let sql = if is_hiqlite() {
+        "SELECT * FROM one_time_password WHERE length(secret) = 0"
+    } else {
+        "SELECT * FROM one_time_password WHERE octet_length(secret) = 0"
+    };
+    let res = if is_hiqlite() {
+        DB::hql().query_as(sql, params!()).await?
+    } else {
+        DB::pg_query(sql, &[], 0).await?
     };
 
-    for client in clients {
-        for uri in client.get_redirect_uris() {
-            if let Err(err) = validate_redirect_uri(&uri, true, true) {
-                warn!(
-                    "Client '{}' has an invalid redirect URI '{}': {}. Authorization \
-                requests with it are rejected and the client cannot be updated until the URI is \
-                replaced (breaking change, RFC 6749 §3.1.2).",
-                    client.id, uri, err.message
-                );
-            }
-        }
+    Ok(res)
+}
 
-        if let Some(post_logout) = client.get_post_logout_uris() {
-            for uri in post_logout {
-                if let Err(err) = validate_redirect_uri(&uri, true, true) {
-                    warn!(
-                        "Client '{}' has an invalid post-logout redirect URI '{}': {}. Authorization \
-                requests with it are rejected and the client cannot be updated until the URI is \
-                replaced (breaking change, RFC 6749 §3.1.2).",
-                        client.id, uri, err.message
-                    );
-                }
-            }
-        }
+async fn rotate_otp_secret(otp: OneTimePassword) -> Result<(), ErrorResponse> {
+    let secret = OtpSecret::generate()?;
+
+    let sql = "UPDATE one_time_password SET secret = $1 WHERE id = $2";
+    if is_hiqlite() {
+        DB::hql().execute(sql, params!(secret.0, otp.id)).await?;
+    } else {
+        DB::pg_execute(sql, &[&secret.0, &otp.id]).await?;
     }
+
+    Ok(())
 }

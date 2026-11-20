@@ -90,7 +90,7 @@ pub async fn get_sessions(
             resp.push(SessionResponse {
                 id: &s.id,
                 user_id: s.user_id.as_deref(),
-                is_mfa: s.is_mfa,
+                is_mfa: s.is_mfa_completed(),
                 state: rauthy_api_types::sessions::SessionState::from(
                     s.state()
                         .unwrap_or(rauthy_data::entity::sessions::SessionState::Unknown),

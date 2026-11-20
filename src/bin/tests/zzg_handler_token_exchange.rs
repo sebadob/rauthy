@@ -183,7 +183,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         .json(&new_client)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let _: ClientResponse = res.json().await?;
 
     let res = client
@@ -196,14 +196,14 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         ]))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let res = client
         .post(format!("{backend_url}/clients/{ID}/secret"))
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let secret: ClientSecretResponse = res.json().await?;
     let secret = secret.secret.unwrap();
 
@@ -227,8 +227,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(
         body.contains("token_exchange") || body.contains("token-exchange"),
         "unexpected body: {body}"
@@ -246,7 +245,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         ]))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // (2) impersonation: no actor token -> no `act` claim, `sub` stays the subject's
     let res = client
@@ -262,7 +261,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let ts: TokenSet = res.json().await?;
 
     // an exchanged token never carries a refresh or id token
@@ -301,8 +300,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_target"), "unexpected body: {body}");
 
     // (4) delegation: an actor token adds the `act` claim
@@ -322,7 +320,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let ts: TokenSet = res.json().await?;
     let claims = decode_claims(&ts.access_token);
     let actor_claims = decode_claims(&actor_ts.access_token);
@@ -346,7 +344,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     // (6) a refresh token as the subject token is rejected: access tokens only
     let refresh = subject_ts.refresh_token.clone().unwrap();
@@ -363,8 +361,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_grant"), "unexpected body: {body}");
 
     // (7) a garbage subject token is rejected
@@ -381,7 +378,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     // (8) an unsupported `subject_token_type` is rejected
     let res = client
@@ -397,7 +394,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     // (9) scope narrowing: a scope the subject token does not have is rejected
     let res = client
@@ -414,7 +411,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     // (10) narrowing to a subset of the subject's scopes works
     let subject_scope = subject_claims["scope"].as_str().unwrap_or_default();
@@ -433,7 +430,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let ts: TokenSet = res.json().await?;
     let claims = decode_claims(&ts.access_token);
     assert_eq!(claims["scope"], serde_json::json!(first_scope));
@@ -456,7 +453,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = client
         .post(&url_token)
         .form(&TokenRequest {
@@ -469,7 +466,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let wide_subject: TokenSet = res.json().await?;
     let wide_claims = decode_claims(&wide_subject.access_token);
     assert!(
@@ -489,7 +486,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let exchange = || TokenRequest {
         grant_type: GrantType::TokenExchange,
@@ -503,7 +500,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
 
     // inherited scopes the client is not allowed are dropped
     let res = client.post(&url_token).form(&exchange()).send().await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let ts: TokenSet = res.json().await?;
     let claims = decode_claims(&ts.access_token);
     assert_eq!(ts.scope.as_deref(), Some("openid"));
@@ -524,7 +521,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     // (12) the client's `default_scopes` are allowed as well, same as on login
     let res = client
@@ -538,9 +535,9 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = client.post(&url_token).form(&exchange()).send().await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let ts: TokenSet = res.json().await?;
     assert!(
         ts.scope.as_deref().unwrap().contains("email"),
@@ -554,7 +551,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let user: UserResponse = res.json().await?;
     let user_expires = chrono::Utc::now().timestamp() + 60;
     let patch_user = |body: serde_json::Value| {
@@ -569,7 +566,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         "del": [],
     }))
     .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = client.post(&url_token).form(&exchange()).send().await;
     // restore the user before asserting anything, so a failure cannot leave it expiring
     let restore = match user.user_expires {
@@ -578,9 +575,9 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         }
         None => serde_json::json!({ "put": [], "del": ["user_expires"] }),
     };
-    assert_eq!(patch_user(restore).await?.status(), 200);
+    expect_status!(patch_user(restore).await?, 200);
     let res = res?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let ts: TokenSet = res.json().await?;
     let claims = decode_claims(&ts.access_token);
     assert!(
@@ -916,7 +913,7 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     Ok(())
 }

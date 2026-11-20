@@ -6,6 +6,7 @@ authors.workspace = true
 license.workspace = true
 description.workspace = true
 default-run = "rauthy"
+rust-version = "1.95.0"
 
 [features]
 default = ["jemalloc"]

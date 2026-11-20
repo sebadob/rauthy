@@ -2372,13 +2372,9 @@ impl User {
         let curr_params =
             argon2::Params::try_from(&hash).expect("Could not extract params from hash");
 
-        if curr_params.m_cost() == params.m_cost()
+        Ok(curr_params.m_cost() == params.m_cost()
             && curr_params.t_cost() == params.t_cost()
-            && curr_params.p_cost() == params.p_cost()
-        {
-            return Ok(true);
-        }
-        Ok(false)
+            && curr_params.p_cost() == params.p_cost())
     }
 
     #[inline]

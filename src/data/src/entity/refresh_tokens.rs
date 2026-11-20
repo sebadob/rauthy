@@ -493,6 +493,14 @@ where
     Err(err)
 }
 
+// NOT a template for new tests. This module drives `finish_rotation_with` with the in-memory `Db`
+// stand-in below, a fake DB inside a unit test: it cannot show what a real DB does with these
+// statements, their order, FK cascades, or transaction boundaries. Its `#[ignore]` tests do the
+// check the right way on a real Postgres and end up in the same wrong place, a `#[cfg(test)]`
+// module. Both are to be removed in the long run.
+// Anything that touches a DB is an integration test in `src/bin/tests/` against a running backend:
+// via the public API, or via dev handlers when the public API cannot reach the case. Never inside
+// a `#[cfg(test)]` module, and never with a fake DB.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -502,6 +510,7 @@ mod tests {
     use std::collections::HashMap;
 
     /// In-memory stand-in for `refresh_tokens(_devices)` and `issued_tokens`.
+    /// A fake DB in a unit test, the pattern to avoid: not a template for new tests.
     #[derive(Default)]
     struct Db {
         // refresh token id -> `access_token_jti`

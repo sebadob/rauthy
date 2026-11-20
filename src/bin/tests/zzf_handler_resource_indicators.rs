@@ -100,7 +100,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
         .json(&new_client)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // configure `allowed_resources` + `default_aud` + the client_credentials flow
     let mut upd = base_update();
@@ -112,8 +112,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
         .json(&upd)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let resp = res.json::<ClientResponse>().await?;
+    let resp = expect_status_json!(res, 200, ClientResponse);
     assert_eq!(resp.allowed_resources, Some(vec![RES_A.to_string()]));
     assert_eq!(resp.default_aud, Some(vec![DEFAULT_AUD.to_string()]));
 
@@ -123,7 +122,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let secret = res
         .json::<ClientSecretResponse>()
         .await?
@@ -141,8 +140,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
     // (1) no `resource` requested -> `aud` is an array containing the client and the
     // always-on `default_aud`
     let res = http.post(&url_token).form(&token_req).send().await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     let aud = decode_aud(&ts.access_token);
     let arr = aud
         .as_array()
@@ -153,8 +151,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
     // (2) an allowed `resource` -> it is added to `aud`
     token_req.resource = Some(RES_A.to_string());
     let res = http.post(&url_token).form(&token_req).send().await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     let aud = decode_aud(&ts.access_token);
     let arr = aud.as_array().expect("`aud` array");
     assert!(arr.iter().any(|v| v.as_str() == Some(RES_A)));
@@ -163,8 +160,7 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
     // (3) a disallowed `resource` -> `invalid_target` (HTTP 400)
     token_req.resource = Some(RES_B.to_string());
     let res = http.post(&url_token).form(&token_req).send().await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_target"), "unexpected body: {body}");
 
     // (4) deny-by-default: with no `allowed_resources`, any `resource` is rejected
@@ -176,11 +172,11 @@ async fn test_resource_indicators() -> Result<(), Box<dyn Error>> {
         .json(&upd)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     token_req.resource = Some(RES_A.to_string());
     let res = http.post(&url_token).form(&token_req).send().await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     Ok(())
 }
@@ -216,7 +212,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .json(&new_client)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let upd = UpdateClientRequest {
         name: Some("Resource Refresh Test".to_string()),
@@ -252,7 +248,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .json(&upd)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // authenticated session we reuse for the silent re-auth call
     let res = http
@@ -289,7 +285,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .json(&req_login)
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
+    let res = expect_status!(res, 202);
     let (code, _state) = code_state_from_headers(res)?;
 
     let token_req = TokenRequest {
@@ -317,8 +313,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .form(&token_req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert!(
         aud_contains(&ts.access_token, RES_REFRESH),
         "initial access token `aud` must contain the requested resource"
@@ -340,7 +335,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .json(&req_refresh)
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
+    let res = expect_status!(res, 202);
     let (code_refresh, _state) = code_state_from_headers(res)?;
 
     let token_req = TokenRequest {
@@ -368,8 +363,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         .form(&token_req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts_refresh = res.json::<TokenSet>().await?;
+    let ts_refresh = expect_status_json!(res, 200, TokenSet);
     // the crux of #1645: the re-issued token must STILL be audience-bound to the resource
     assert!(
         aud_contains(&ts_refresh.access_token, RES_REFRESH),
@@ -403,8 +397,7 @@ async fn device_code_accepted(
     form: &[(&str, &str)],
 ) -> Result<String, Box<dyn Error>> {
     let res = device_auth(http, form).await?;
-    assert_eq!(res.status(), 200);
-    let resp = res.json::<serde_json::Value>().await?;
+    let resp = expect_status_json!(res, 200, serde_json::Value);
     let device_code = resp["device_code"].as_str().unwrap().to_string();
     let user_code = resp["user_code"].as_str().unwrap();
 
@@ -418,7 +411,7 @@ async fn device_code_accepted(
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
+    expect_status!(res, 202);
 
     Ok(device_code)
 }
@@ -470,7 +463,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .json(&new_client)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let mut upd = base_update();
     upd.name = Some("Resource Device Test".to_string());
@@ -483,12 +476,11 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .json(&upd)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // a `resource` that is not allowed for the client -> `invalid_target`
     let res = device_auth(&http, &[("client_id", ID_DEVICE), ("resource", RES_B)]).await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_target"), "unexpected body: {body}");
 
     // a single `resource` is supported, like for the other grants -> more than one is
@@ -502,7 +494,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         ],
     )
     .await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     // no `resource` -> unchanged behavior, `aud` is only the client
     let device_code = device_code_accepted(&http, &[("client_id", ID_DEVICE)]).await?;
@@ -512,8 +504,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .form(&device_token_req(&device_code, None))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert_eq!(decode_aud(&ts.access_token), serde_json::json!(ID_DEVICE));
 
     // ... a refresh keeps it that way
@@ -525,8 +516,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         ))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert_eq!(decode_aud(&ts.access_token), serde_json::json!(ID_DEVICE));
 
     // ... and cannot add a `resource` that was never granted
@@ -538,8 +528,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         ))
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_target"), "unexpected body: {body}");
 
     // an allowed `resource` is bound to the device code
@@ -552,8 +541,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .form(&device_token_req(&device_code, Some(RES_B)))
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_target"), "unexpected body: {body}");
 
     // the bound `resource` on the token request is fine, and it ends up in `aud`
@@ -563,8 +551,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .form(&device_token_req(&device_code, Some(RES_A)))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert_eq!(
         decode_aud(&ts.access_token),
         serde_json::json!([ID_DEVICE, RES_A])
@@ -579,8 +566,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         ))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert_eq!(
         decode_aud(&ts.access_token),
         serde_json::json!([ID_DEVICE, RES_A])
@@ -593,8 +579,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .form(&device_refresh_req(&refresh_token, Some(RES_B)))
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
-    let body = res.text().await?;
+    let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_target"), "unexpected body: {body}");
 
     // the granted `resource` is accepted on a refresh
@@ -603,8 +588,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .form(&device_refresh_req(&refresh_token, Some(RES_A)))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert_eq!(
         decode_aud(&ts.access_token),
         serde_json::json!([ID_DEVICE, RES_A])
@@ -619,8 +603,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
         .form(&device_token_req(&device_code, None))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert_eq!(
         decode_aud(&ts.access_token),
         serde_json::json!([ID_DEVICE, RES_A])

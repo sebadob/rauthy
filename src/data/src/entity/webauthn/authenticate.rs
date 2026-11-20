@@ -1,7 +1,7 @@
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
-use crate::entity::sessions::Session;
+use crate::entity::sessions::{MfaAssurance, Session};
 use crate::entity::users::User;
 use crate::entity::webauthn::auth_data::{WebauthnAdditionalData, WebauthnData};
 use crate::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnServiceReq};
@@ -195,25 +195,24 @@ pub async fn auth_finish(
             let uid = user.id.clone();
 
             if is_login && let Some(mut session) = session {
-                if let Some(suid) = &session.user_id
-                    && suid != &user.id
-                {
+                let WebauthnAdditionalData::Login(data) = &auth_data.data else {
+                    unreachable!("is_login is only ever true for WebauthnAdditionalData::Login")
+                };
+                if data.session_id != session.id || data.user_id != uid {
                     // TODO If this happens, this can only be a try to attack and get into another
                     //  user account. We should probably blacklist the source IP after enough
                     //  testing. We must be sure that this can never happen by accident.
-
-                    let WebauthnAdditionalData::Login(data) = auth_data.data else {
-                        unreachable!()
-                    };
                     data.delete().await?;
 
                     return Err(ErrorResponse::new(
                         ErrorResponseType::Forbidden,
-                        "User ID mismatch for session",
+                        "Session / User ID mismatch for login ceremony",
                     ));
                 }
 
-                session.set_authenticated(&user).await?;
+                session
+                    .set_authenticated(&user, MfaAssurance::Ceremony)
+                    .await?;
                 user.save_login_success().await?;
             }
 

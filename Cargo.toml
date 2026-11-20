@@ -4,9 +4,8 @@ members = ["src/*"]
 exclude = ["rauthy-client"]
 
 [workspace.package]
-version = "0.37.3-20261026-ios-rk-test"
+version = "0.38.0-20261119"
 edition = "2024"
-rust-version = "1.95.0"
 authors = ["Sebastian Dobe <sebastiandobe@mailbox.org>"]
 license = "Apache-2.0"
 description = "Single Sign-On Identity & Access Management via OpenID Connect, OAuth 2, and PAM"
@@ -34,7 +33,6 @@ strip = false
 
 [workspace.dependencies]
 accept-language = "3"
-actix = "0.13"
 actix-multipart = "0.8"
 actix-web = { version = "4", features = ["rustls-0_23"] }
 actix-web-lab = "0.29"
@@ -112,7 +110,8 @@ mime_guess = "2"
 num_cpus = "1"
 openssl = { version = "0.10.79", features = ["vendored"] }
 openssl-sys = { version = "0.9.105", features = ["vendored"] }
-oxiri = "0.3.1"
+oxrdf = "0.3.5"
+oxttl = "0.2.5"
 percent-encoding = "2"
 postgres-types = { version = "0.2.6", features = ["derive"] }
 prometheus = "0.14"
@@ -131,8 +130,6 @@ reqwest = { version = "0.13.3", default-features = false, features = [
   "rustls-no-provider",
 ] }
 ring = "0.17.13"
-rio_api = "0.8.4"
-rio_turtle = "0.8.4"
 rpassword = "7.5"
 rsa = { version = "0.9.10", features = ["serde", "sha2"] }
 ruma-client = { version = "0.20", features = [
@@ -147,7 +144,6 @@ rustls = { version = "0.23.46", default-features = false, features = [
   "tls12",
   "ring",
 ] }
-rustls-pki-types = "1.4.1"
 s3-simple = "0.9.1"
 semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }

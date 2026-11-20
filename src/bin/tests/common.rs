@@ -14,6 +14,13 @@ use spow::pow::Pow;
 use std::error::Error;
 use std::sync::OnceLock;
 
+static SESSION_HEADERS: OnceLock<HeaderMap> = OnceLock::new();
+
+pub const CLIENT_ID: &str = "init_client";
+pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
+pub const USERNAME: &str = "init_admin@localhost";
+pub const PASSWORD: &str = "123SuperSafe";
+
 #[macro_export]
 macro_rules! aw {
     ($e:expr) => {
@@ -21,12 +28,52 @@ macro_rules! aw {
     };
 }
 
-static SESSION_HEADERS: OnceLock<HeaderMap> = OnceLock::new();
+/// Asserts the status code of a response and returns it. Only use this when the body is *not*
+/// needed — to get the JSON body, use [`expect_status_json!`]. The `panic!` reports this macro's
+/// call site, not this definition. The optional last argument adds context to the panic, which is
+/// how a test in a loop says *which* case failed.
+///
+/// The argument is bound exactly once, so it can be a call that consumes its arguments, and it is
+/// never evaluated more than once.
+#[macro_export]
+macro_rules! expect_status {
+    ($res:expr, $code:expr) => {
+        $crate::expect_status!($res, $code, "")
+    };
+    ($res:expr, $code:expr, $msg:expr) => {{
+        let res = $res;
+        if res.status().as_u16() != $code {
+            let status = res.status();
+            let err = res.text().await.unwrap_or_default();
+            if $msg.is_empty() {
+                panic!(
+                    "Status: {} / Expected: {} - Content: {:?}",
+                    status, $code, err
+                );
+            }
+            panic!(
+                "Status: {} / Expected: {} - Content: {:?} - {}",
+                status, $code, err, $msg
+            );
+        }
+        res
+    }};
+}
 
-pub const CLIENT_ID: &str = "init_client";
-pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
-pub const USERNAME: &str = "init_admin@localhost";
-pub const PASSWORD: &str = "123SuperSafe";
+/// The same as `expect_status!`, and the way to get the body of a matching response as JSON:
+/// asserts the status, then deserializes and returns it. Needs a `Result` with `reqwest`'s error
+/// type because of the `?` on the body read.
+#[macro_export]
+macro_rules! expect_status_json {
+    ($res:expr, $code:expr, $ty:ty) => {{
+        let res = $crate::expect_status!($res, $code);
+        res.json::<$ty>().await?
+    }};
+    ($res:expr, $code:expr, $ty:ty, $msg:expr) => {{
+        let res = $crate::expect_status!($res, $code, $msg);
+        res.json::<$ty>().await?
+    }};
+}
 
 /// Decodes the (unverified) JWT payload, so a test can assert on any claim.
 #[allow(dead_code)]
@@ -40,6 +87,8 @@ pub fn decode_claims(access_token: &str) -> serde_json::Value {
 }
 
 #[allow(dead_code)]
+#[deprecated = "use `expect_status!` / `expect_status_json!`: they panic at their own call site, \
+this one always inside this function"]
 pub async fn check_status(res: Response, code: u16) -> Result<Response, Box<dyn Error>> {
     if res.status() != code {
         let status = res.status();
@@ -104,7 +153,7 @@ pub async fn password_grant(client: &reqwest::Client, email: &str, password: &st
 /// A password grant token set for `email` on the init client.
 pub async fn password_token_set(client: &reqwest::Client, email: &str, password: &str) -> TokenSet {
     let res = password_grant(client, email, password).await;
-    assert_eq!(res.status(), 200, "password grant for {email}");
+    let res: Response = expect_status!(res, 200, format!("password grant for {email}"));
     res.json::<TokenSet>().await.unwrap()
 }
 
@@ -204,7 +253,7 @@ pub async fn session_headers_for_client(
         .send()
         .await
         .unwrap();
-    assert_eq!(res.status(), 202);
+    let res = expect_status!(res, 202);
 
     let (code, _state) = code_state_from_headers(res).unwrap();
     let req_token = TokenRequest {
@@ -477,7 +526,7 @@ pub async fn create_login_user(
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 204);
+        expect_status!(res, 204);
     }
 
     let res = client
@@ -496,8 +545,7 @@ pub async fn create_login_user(
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
     let res = client
         .put(format!("{backend}/users/{}", user.id))
         .headers(admin.clone())
@@ -516,7 +564,7 @@ pub async fn create_login_user(
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     Ok(user)
 }

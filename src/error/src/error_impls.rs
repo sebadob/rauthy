@@ -13,8 +13,9 @@ use css_color::ParseColorError;
 use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
 use openssl::error::ErrorStack;
+use oxrdf::IriParseError;
+use oxttl::TurtleSyntaxError;
 use ring::error::{KeyRejected, Unspecified};
-use rio_turtle::TurtleError;
 use rsa::pkcs1::Error;
 use s3_simple::S3Error;
 use serde_json_path::ParseError;
@@ -417,12 +418,22 @@ impl From<reqwest::Error> for ErrorResponse {
     }
 }
 
-impl From<TurtleError> for ErrorResponse {
-    fn from(value: TurtleError) -> Self {
-        debug!("TurtleError: {value:?}");
+impl From<TurtleSyntaxError> for ErrorResponse {
+    fn from(value: TurtleSyntaxError) -> Self {
+        debug!("TurtleSyntaxError: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Cannot format / parse turtle data: {value:?}"),
+        )
+    }
+}
+
+impl From<IriParseError> for ErrorResponse {
+    fn from(value: IriParseError) -> Self {
+        debug!("IriParseError: {value:?}");
+        ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            format!("Invalid iri given: {value:?}"),
         )
     }
 }

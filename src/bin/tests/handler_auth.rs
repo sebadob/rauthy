@@ -1,8 +1,8 @@
 use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
-    authorization_response_params_decoded, check_status, code_state_from_headers,
-    cookie_csrf_headers_from_res, decode_claims, get_auth_headers, get_backend_url, get_issuer,
-    get_solved_pow, init_client_bcl_uri,
+    authorization_response_params_decoded, code_state_from_headers, cookie_csrf_headers_from_res,
+    decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
+    init_client_bcl_uri,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
@@ -55,8 +55,7 @@ async fn test_certs() -> Result<(), Box<dyn Error>> {
     // get current certs
     let url = format!("{}/oidc/certs", backend_url);
     let res = reqwest::get(&url).await?;
-    assert_eq!(res.status(), 200);
-    let certs = res.json::<JWKS>().await?;
+    let certs = expect_status_json!(res, 200, JWKS);
     assert_eq!(certs.keys.len(), 4);
 
     // for _ in 1..1000 {
@@ -69,12 +68,11 @@ async fn test_certs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // get all certs and check for the new ones
     let res = reqwest::get(&url).await?;
-    assert_eq!(res.status(), 200);
-    let new_certs = res.json::<JWKS>().await?;
+    let new_certs = expect_status_json!(res, 200, JWKS);
     assert_eq!(new_certs.keys.len(), 8);
 
     Ok(())
@@ -97,7 +95,7 @@ async fn test_authorize_prompt_none_without_session() -> Result<(), Box<dyn Erro
         .get(&url)
         .send()
         .await?;
-    assert_eq!(res.status(), 302);
+    let res = expect_status!(res, 302);
 
     let params = authorization_response_params(&res)?;
     assert!(
@@ -153,7 +151,7 @@ async fn wildcard_redirect_client(client_id: &str) -> Result<String, Box<dyn Err
         })
         .send()
         .await?;
-    check_status(res, 200).await?;
+    expect_status!(res, 200);
 
     Ok(wildcard)
 }
@@ -191,7 +189,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         .get(authorize_url_s256(client_id, &good_redirect_uri, ""))
         .send()
         .await?;
-    check_status(res, 200).await?;
+    expect_status!(res, 200);
 
     for (bad_redirect_uri, _reserved) in [
         (format!("{good_redirect_uri}&iss=x"), "iss"),
@@ -208,7 +206,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
                 .get(authorize_url_s256(client_id, &bad_redirect_uri, prompt))
                 .send()
                 .await?;
-            assert_eq!(res.status(), 400, "{bad_redirect_uri} / prompt: '{prompt}'");
+            let res = expect_status!(res, 400, "{bad_redirect_uri} / prompt: '{prompt}'");
             assert!(res.headers().get(reqwest::header::LOCATION).is_none());
             let body = res.text().await?;
             assert!(body.contains("`redirect_uri` must not contain reserved query param"));
@@ -220,7 +218,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         .get(authorize_url_s256(client_id, &good_redirect_uri, ""))
         .send()
         .await?;
-    let res = check_status(res, 200).await?;
+    let res = expect_status!(res, 200);
     let headers = cookie_csrf_headers_from_res(res).await?;
     let url_auth = format!("{}/oidc/authorize", get_backend_url());
 
@@ -266,7 +264,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         .json(&req_login)
         .send()
         .await?;
-    let res = check_status(res, 202).await?;
+    let res = expect_status!(res, 202);
     let location = res
         .headers()
         .get(reqwest::header::LOCATION)
@@ -297,7 +295,7 @@ async fn test_authorize_rejects_fragment_in_redirect_uri() -> Result<(), Box<dyn
         .get(authorize_url_s256(client_id, &format!("{wildcard}cb"), ""))
         .send()
         .await?;
-    assert_eq!(res.status().as_u16(), 200);
+    expect_status!(res, 200);
 
     for bad_redirect_uri in [
         format!("{wildcard}cb#/callback?iss=https%3A%2F%2Fattacker.example%2F"),
@@ -308,7 +306,7 @@ async fn test_authorize_rejects_fragment_in_redirect_uri() -> Result<(), Box<dyn
                 .get(authorize_url_s256(client_id, &bad_redirect_uri, prompt))
                 .send()
                 .await?;
-            assert_eq!(res.status(), 400, "{bad_redirect_uri} / prompt: '{prompt}'");
+            let res = expect_status!(res, 400, "{bad_redirect_uri} / prompt: '{prompt}'");
             assert!(res.headers().get(reqwest::header::LOCATION).is_none());
             let body = res.text().await?;
             assert!(
@@ -341,7 +339,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
     println!("GET: {}", url_auth);
     let mut res = reqwest::get(&url_auth).await?;
-    res = check_status(res, 200).await?;
+    res = expect_status!(res, 200);
     let headers = cookie_csrf_headers_from_res(res).await?;
 
     // Step 2: POST /authorize with CSRF token cookie
@@ -368,7 +366,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // should be 401 - wrong password
-    check_status(res, 401).await?;
+    expect_status!(res, 401);
 
     req_login.password = Some(PASSWORD.to_string());
     req_login.pow = get_solved_pow().await;
@@ -378,7 +376,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .json(&req_login)
         .send()
         .await?;
-    res = check_status(res, 202).await?;
+    res = expect_status!(res, 202);
 
     // Step 3: extract values from callback location header
     let decoded = authorization_response_params_decoded(&res)?;
@@ -412,7 +410,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // should be 400 - no code verifier given
-    check_status(res, 400).await?;
+    expect_status!(res, 400);
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
@@ -422,7 +420,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .json(&req_login)
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
+    let res = expect_status!(res, 202);
     let (code, _) = code_state_from_headers(res)?;
     req_token.code = Some(code);
 
@@ -433,7 +431,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // should be 401 - wrong code verifier given
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
@@ -443,7 +441,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .json(&req_login)
         .send()
         .await?;
-    assert_eq!(res.status(), 202);
+    let res = expect_status!(res, 202);
     let (code, _) = code_state_from_headers(res)?;
     req_token.code = Some(code);
 
@@ -453,8 +451,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .form(&req_token)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
@@ -491,8 +488,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     // retrieve jwk for kid
     let kid_url = format!("{}/oidc/certs/{}", backend_url, kid);
     let res = reqwest::get(&kid_url).await?;
-    assert_eq!(res.status(), 200);
-    let jwk = res.json::<jwk::Jwk>().await?;
+    let jwk = expect_status_json!(res, 200, jwk::Jwk);
     println!("{:?}", jwk);
 
     // check signature and get the payload
@@ -512,7 +508,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     println!("\nStarting authorization code flow with S256 pkce");
 
     let mut res = reqwest::get(&url_auth).await?;
-    res = check_status(res, 200).await?;
+    res = expect_status!(res, 200);
     let headers = cookie_csrf_headers_from_res(res).await?;
 
     let hash = digest::digest(&digest::SHA256, challenge_plain.as_bytes());
@@ -527,7 +523,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .json(&req_login)
         .send()
         .await?;
-    res = check_status(res, 202).await?;
+    res = expect_status!(res, 202);
     let (code, state) = code_state_from_headers(res)?;
     assert!(state.is_none());
 
@@ -537,17 +533,15 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // should be 401 - trying to use already used authorization code
-    check_status(res, 401).await?;
+    expect_status!(res, 401);
 
     req_token.code = Some(code);
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .post(&url_token)
         .form(&req_token)
         .send()
         .await?;
-    res = check_status(res, 200).await?;
-
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
@@ -561,7 +555,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query);
     let res = reqwest::get(&url_auth).await?;
     // should be 400 - code_challenge is missing
-    check_status(res, 400).await?;
+    expect_status!(res, 400);
 
     // disable pkce for the init client
     let mut update_client = UpdateClientRequest {
@@ -615,11 +609,11 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .json(&update_client)
         .send()
         .await?;
-    check_status(res, 200).await?;
+    expect_status!(res, 200);
 
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query);
     let mut res = reqwest::get(&url_auth).await?;
-    res = check_status(res, 200).await?;
+    res = expect_status!(res, 200);
     let headers = cookie_csrf_headers_from_res(res).await?;
 
     let state = "SomeStateThatShouldBeReturned";
@@ -633,20 +627,18 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .json(&req_login)
         .send()
         .await?;
-    res = check_status(res, 202).await?;
+    res = expect_status!(res, 202);
     let (code, state_check) = code_state_from_headers(res)?;
     println!("1");
     assert_eq!(state, state_check.unwrap());
 
     req_token.code = Some(code);
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .post(&url_token)
         .form(&req_token)
         .send()
         .await?;
-    res = check_status(res, 200).await?;
-
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(ts.refresh_token.is_some());
@@ -660,7 +652,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         .json(&update_client)
         .send()
         .await?;
-    check_status(res, 200).await?;
+    expect_status!(res, 200);
 
     Ok(())
 }
@@ -678,13 +670,11 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
     let res = client.post(&url).form(&body).send().await?;
     // should be 401 because of missing client secret
-    check_status(res, 400).await?;
+    expect_status!(res, 400);
 
     body.client_secret = Some(CLIENT_SECRET.to_string());
-    let mut res = client.post(&url).form(&body).send().await?;
-    res = check_status(res, 200).await?;
-
-    let ts = res.json::<TokenSet>().await?;
+    let res = client.post(&url).form(&body).send().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert!(!ts.access_token.is_empty());
     assert_eq!(ts.token_type, JwtTokenType::Bearer);
     assert_eq!(ts.expires_in, 60);
@@ -699,8 +689,7 @@ async fn test_client_credentials_flow() -> Result<(), Box<dyn Error>> {
         .headers(get_auth_headers().await?)
         .send()
         .await?;
-    let res = check_status(res, 200).await?;
-    let client_res = res.json::<ClientResponse>().await?;
+    let client_res = expect_status_json!(res, 200, ClientResponse);
     let default_scopes = client_res.default_scopes.join(" ");
     assert_eq!(ts.scope.as_deref(), Some(default_scopes.as_str()));
     let access_claims = decode_claims(&ts.access_token);
@@ -735,7 +724,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
     let query_pkce = format!("{}&code_challenge={}", query, challenge_plain);
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
     let mut res = reqwest::get(&url_auth).await?;
-    res = check_status(res, 200).await?;
+    res = expect_status!(res, 200);
     let headers = cookie_csrf_headers_from_res(res).await?;
 
     // Step 2: POST /authorize with CSRF token cookie
@@ -818,29 +807,27 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
     let res = client.post(&url).form(&body).send().await?;
     // should be 400 - no password
-    check_status(res, 400).await?;
+    expect_status!(res, 400);
 
     body.password = Some("IAmSoWrong1337".to_string());
     let res = client.post(&url).form(&body).send().await?;
     // should be 400 - missing client secret
-    check_status(res, 400).await?;
+    expect_status!(res, 400);
 
     body.client_secret = Some("NoNoNoSecret1337".to_string());
     let res = client.post(&url).form(&body).send().await?;
     // should be 400 - wrong password
-    check_status(res, 401).await?;
+    expect_status!(res, 401);
 
     body.password = Some(PASSWORD.to_string());
     let res = client.post(&url).form(&body).send().await?;
     // should be 401 - wrong client secret
-    check_status(res, 401).await?;
+    expect_status!(res, 401);
 
     body.client_secret = Some(CLIENT_SECRET.to_string());
-    let mut res = client.post(&url).form(&body).send().await?;
+    let res = client.post(&url).form(&body).send().await?;
     // all should be good now
-    res = check_status(res, 200).await?;
-
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
     assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
     assert!(!ts.id_token.as_ref().unwrap().is_empty());
@@ -874,8 +861,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     };
     let url = format!("{}/oidc/token", get_backend_url());
     let res = reqwest::Client::new().post(&url).form(&req).send().await?;
-    assert_eq!(res.status(), 200);
-    let new_ts = res.json::<TokenSet>().await?;
+    let new_ts = expect_status_json!(res, 200, TokenSet);
     assert!(!new_ts.access_token.is_empty());
     assert!(new_ts.id_token.is_some());
     assert!(!new_ts.id_token.as_ref().unwrap().is_empty());
@@ -965,7 +951,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // this should fail, because nonce is enforced, which we did not provide
-    assert_eq!(res.status(), 400);
+    let res = expect_status!(res, 400);
     let nonce = res
         .headers()
         .get(HEADER_DPOP_NONCE)
@@ -990,7 +976,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
             .form(&body)
             .send()
             .await?;
-        assert_eq!(res.status(), 400, "nonce '{forged}' was accepted");
+        let res = expect_status!(res, 400, "nonce '{forged}' was accepted");
         assert!(res.headers().get(HEADER_DPOP_NONCE).is_some());
     }
 
@@ -1013,7 +999,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // not it should be good
-    res = check_status(res, 200).await?;
+    res = expect_status!(res, 200);
     // make sure nonce header is still there
     let nonce_new = res
         .headers()
@@ -1043,7 +1029,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
 
     // without DPoP header, it should fail
     let res = reqwest::Client::new().post(&url).form(&req).send().await?;
-    assert_eq!(res.status(), 403);
+    let res = expect_status!(res, 403);
     let err = res.json::<ErrorResponse>().await.unwrap();
     println!("{:?}", err);
     assert_eq!(err.error, ErrorResponseType::Forbidden);
@@ -1056,7 +1042,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
         .form(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);
@@ -1217,7 +1203,7 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
 
     // make sure we get unauthorized without correct headers
     let res = client.get(&url).send().await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     // fetch a valid token and try again
     let url_token = format!("{}/oidc/token", backend_url);
@@ -1239,7 +1225,7 @@ async fn test_auth_headers() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let headers = res.headers();
     println!("{:?}", headers);
 
@@ -1313,7 +1299,7 @@ async fn test_token_introspection() -> Result<(), Box<dyn Error>> {
 
     // without proper auth should fail
     let res = client.post(&url).form(&payload).send().await?;
-    assert_eq!(res.status().as_u16(), 401);
+    expect_status!(res, 401);
 
     // with valid bearer auth
     let header = format!("Bearer {}", ts.access_token);
@@ -1387,7 +1373,7 @@ async fn test_token_revocation() -> Result<(), Box<dyn Error>> {
         .send()
         .await
         .unwrap();
-    assert_eq!(res.status().as_u16(), 401);
+    expect_status!(res, 401);
 
     let s: Option<String> = None;
     let res = reqwest::Client::new()
@@ -1397,7 +1383,7 @@ async fn test_token_revocation() -> Result<(), Box<dyn Error>> {
         .send()
         .await
         .unwrap();
-    assert_eq!(res.status().as_u16(), 401);
+    expect_status!(res, 401);
 
     let res = reqwest::Client::new()
         .post(&url_revoke)
@@ -1504,8 +1490,7 @@ async fn validate_token(
     expected_cnf: Option<JktClaim<'_>>,
 ) -> Result<(), Box<dyn Error>> {
     let res = validate_token_request(token).await?;
-    assert_eq!(res.status(), 200);
-    let text = res.text().await?;
+    let text = expect_status!(res, 200).text().await?;
     let info = serde_json::from_str::<TokenInfo>(&text)?;
     assert!(info.active);
     if let Some(cnf) = expected_cnf {
@@ -1558,7 +1543,7 @@ async fn test_dcr_rejects_unsupported_grant() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // deserialization fails before the IP rate-limit, so this is a deterministic 400
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     Ok(())
 }

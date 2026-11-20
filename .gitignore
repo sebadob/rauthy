@@ -11,6 +11,7 @@ rauthy-client/examples/*/.idea
 .DS_store
 .env
 .test_pid
+.tmp
 /data
 /data_old
 frontend/.next

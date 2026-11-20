@@ -1,6 +1,5 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use chrono::Utc;
-use pretty_assertions::assert_eq;
 use rauthy_api_types::blacklist::IpBlacklistRequest;
 use reqwest::StatusCode;
 use std::error::Error;
@@ -22,12 +21,12 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // get the IP with which we are coming in at the backend from this test
     let url_ip = format!("{}/whoami", get_backend_url());
     let res = client.get(&url_ip).send().await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    let res = expect_status!(res, 200);
 
     let text = res.text().await.unwrap();
     let (ip, _) = text.split_once('\n').unwrap();
@@ -52,7 +51,7 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // - wait 1 second
     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -63,8 +62,9 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::TOO_MANY_REQUESTS);
-    let html = res.text().await?;
+    let html = expect_status!(res, StatusCode::TOO_MANY_REQUESTS)
+        .text()
+        .await?;
     assert!(html.contains("has been blocked"));
     assert!(html.contains("This incident has been reported"));
 
@@ -77,7 +77,7 @@ async fn test_ip_blacklist() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     Ok(())
 }

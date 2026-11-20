@@ -16,7 +16,7 @@ use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaAssurance, Session};
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
@@ -193,7 +193,6 @@ pub async fn post_authorize(
     let require_otp = !require_webauthn && user.has_otp_enabled().await;
     if require_webauthn || require_otp {
         *user_needs_mfa = true;
-        session.set_mfa(true).await?;
     }
 
     finish_authorize(
@@ -306,6 +305,16 @@ pub(crate) async fn finish_authorize(
     user_needs_mfa: Option<&mut bool>,
     provider_mfa_login: Option<ProviderMfaLogin>,
 ) -> Result<AuthStep, ErrorResponse> {
+    // The MFA assurance this login can prove, computed before `provider_mfa_login` gets consumed by
+    // the client validation below.
+    let mfa_assurance = if provider_mfa_login == Some(ProviderMfaLogin::Yes) {
+        MfaAssurance::Provider
+    } else if session.user_id.as_deref() == Some(user.id.as_str()) {
+        MfaAssurance::SamePrincipal
+    } else {
+        MfaAssurance::NoFactor
+    };
+
     client.validate_enabled()?;
     client
         .validate_mfa(&user, provider_mfa_login)
@@ -414,6 +423,7 @@ pub(crate) async fn finish_authorize(
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
             needs_user_update,
+            session_id: session.id.clone(),
         }
         .save()
         .await?;
@@ -442,6 +452,7 @@ pub(crate) async fn finish_authorize(
                 auth_code_lifetime: client.auth_code_lifetime,
             }),
             needs_user_update,
+            session_id: session.id.clone(),
         }
         .save()
         .await?;
@@ -449,7 +460,7 @@ pub(crate) async fn finish_authorize(
         Ok(AuthStep::AwaitOtpCode(step))
     } else {
         // password only account
-        session.set_authenticated(&user).await?;
+        session.set_authenticated(&user, mfa_assurance).await?;
 
         if need_tos_accept {
             let code_await = AuthCodeToSAwait {

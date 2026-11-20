@@ -10,7 +10,6 @@ use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, NewFederatedUserCreated,
-    ProviderMfaLogin,
 };
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::Session;
@@ -94,9 +93,6 @@ pub async fn login_finish<'a>(
 
     let require_webauthn = user.has_webauthn_enabled();
     let require_otp = user.has_otp_enabled().await;
-    session
-        .set_mfa(provider_mfa_login == ProviderMfaLogin::Yes || require_webauthn || require_otp)
-        .await?;
 
     let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;

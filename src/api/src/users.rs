@@ -35,7 +35,7 @@ use rauthy_data::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPi
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaAssurance, Session};
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
@@ -2353,9 +2353,9 @@ pub async fn post_webauthn_reg_finish(
         // this point, so a flow that gets here without a session (during an initial account setup,
         // for instance) must never have its successful registration turned into an error.
         if let Some(mut session) = principal.into_inner().session
-            && !session.is_mfa
+            && !session.is_mfa_completed()
         {
-            session.set_mfa(true).await?;
+            session.set_mfa(MfaAssurance::Ceremony).await?;
         }
 
         Ok(HttpResponse::Created().finish())

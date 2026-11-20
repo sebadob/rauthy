@@ -40,7 +40,7 @@ async fn admin_get_client(id: &str) -> Result<ClientResponse, Box<dyn Error>> {
         .headers(get_auth_headers().await?)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     Ok(res.json::<ClientResponse>().await?)
 }
 
@@ -87,7 +87,7 @@ async fn admin_update_client(
         .json(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     Ok(())
 }
 
@@ -114,7 +114,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     for bad_uri in BAD_REDIRECT_URIS {
         payload.redirect_uris = vec![bad_uri.to_string()];
         let res = client.post(&url).json(&payload).send().await?;
-        assert_eq!(res.status(), 400, "{bad_uri}");
+        let res = expect_status!(res, 400, "{bad_uri}");
         let body = res.text().await?;
         assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
@@ -124,15 +124,14 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
     for bad_uri in BAD_POST_LOGOUT_REDIRECT_URIS {
         payload.post_logout_redirect_uri = Some(bad_uri.to_string());
         let res = client.post(&url).json(&payload).send().await?;
-        assert_eq!(res.status(), 400, "{bad_uri}");
+        let res = expect_status!(res, 400, "{bad_uri}");
         let body = res.text().await?;
         assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
     payload.post_logout_redirect_uri = None;
 
     let res = client.post(&url).json(&payload).send().await?;
-    assert_eq!(res.status(), 201);
-    let resp = res.json::<DynamicClientResponse>().await?;
+    let resp = expect_status_json!(res, 201, DynamicClientResponse);
     assert_eq!(resp.client_name, payload.client_name);
     // currently, we don't have a secret expiration
     assert_eq!(resp.client_secret_expires_at, 0);
@@ -143,7 +142,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
 
     // test the rate limiting -> another registration that fast should be rejected
     let res = client.post(&url).json(&payload).send().await?;
-    assert_eq!(res.status(), 429);
+    expect_status!(res, 429);
 
     // the registration token header for future self-modifications
     let token = format!(
@@ -158,7 +157,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
 
     let res = client.get(&url).send().await?;
     // we did not add any registration token.
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     let res = client
         .get(&url)
@@ -166,7 +165,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     // we did not add the correct registration token
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     let res = client
         .get(&url)
@@ -174,8 +173,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
 
-    assert_eq!(res.status(), 200);
-    let resp_get = res.json::<DynamicClientResponse>().await?;
+    let resp_get = expect_status_json!(res, 200, DynamicClientResponse);
     // We should get back the exact same response as from the registration, except for the
     // registration token and url, which should only be included when it has been changed.
     assert_eq!(resp.client_id, resp_get.client_id);
@@ -210,8 +208,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &token)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let resp_get_new = res.json::<DynamicClientResponse>().await?;
+    let resp_get_new = expect_status_json!(res, 200, DynamicClientResponse);
     assert_eq!(resp_get_new, resp_get);
 
     // self-modify with a fragment, a reserved query key or a comma is rejected and changes nothing
@@ -223,7 +220,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
             .json(&payload)
             .send()
             .await?;
-        assert_eq!(res.status(), 400, "{bad_uri}");
+        expect_status!(res, 400, "{bad_uri}");
     }
     payload.redirect_uris = vec![GOOD_REDIRECT_URI.to_string()];
     for bad_uri in BAD_POST_LOGOUT_REDIRECT_URIS {
@@ -234,7 +231,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
             .json(&payload)
             .send()
             .await?;
-        assert_eq!(res.status(), 400, "{bad_uri}");
+        let res = expect_status!(res, 400, "{bad_uri}");
         let body = res.text().await?;
         assert!(body.contains(expected_redirect_uri_err(bad_uri)), "{body}");
     }
@@ -244,7 +241,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &token)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     assert_eq!(res.json::<DynamicClientResponse>().await?, resp_get);
 
     // a self-update must not add a grant type the client does not have
@@ -257,8 +254,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     payload.grant_types = grant_types;
-    assert_eq!(res.status(), 400);
-    let err = res.json::<serde_json::Value>().await?;
+    let err = expect_status_json!(res, 400, serde_json::Value);
     assert_eq!(err["error"], "invalid_client_metadata");
     let after = admin_get_client(&resp.client_id).await?;
     assert_eq!(after.flows_enabled, resp.grant_types);
@@ -278,7 +274,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let token_old = resp.registration_access_token;
     let resp = res.json::<DynamicClientResponse>().await?;
     assert_ne!(resp.registration_access_token, token_old);
@@ -302,7 +298,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &token)
         .send()
         .await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     // self-modify again and make sure secrets are being rotated
     let token = format!(
@@ -317,8 +313,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let resp = res.json::<DynamicClientResponse>().await?;
+    let resp = expect_status_json!(res, 200, DynamicClientResponse);
     assert_ne!(resp.registration_access_token, token_old);
     assert_ne!(resp.client_secret, secret_old);
 
@@ -349,8 +344,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
-    let err = res.json::<serde_json::Value>().await?;
+    let err = expect_status_json!(res, 400, serde_json::Value);
     assert_eq!(err["error"], "invalid_client_metadata");
     let after = admin_get_client(&client_id).await?;
     assert_eq!(after.flows_enabled, before.flows_enabled);
@@ -365,8 +359,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let resp = res.json::<DynamicClientResponse>().await?;
+    let resp = expect_status_json!(res, 200, DynamicClientResponse);
     assert_eq!(resp.client_name, payload.client_name);
 
     let after = admin_get_client(&client_id).await?;
@@ -396,7 +389,7 @@ async fn test_dynamic_client() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     let after = admin_get_client(&client_id).await?;
     assert!(!after.enabled);

@@ -37,7 +37,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
 
@@ -72,7 +72,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .json(&new_user)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let alfred = res.json::<UserResponse>().await?;
     assert_eq!(alfred.email, "alfred@batcave.io");
@@ -105,8 +105,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user_by_id = res.json::<UserResponse>().await?;
+    let user_by_id = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user_by_id.email, "alfred@batcave.io");
     // the preferred_username given at creation must round-trip onto the created user
     assert_eq!(
@@ -121,8 +120,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user_by_email = res.json::<UserResponse>().await?;
+    let user_by_email = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user_by_email.id, alfred.id);
 
     // an admin may clear a required value (`given_name` by default) to make the user set it again
@@ -142,7 +140,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     // get all users again and check that we are back to only 1
     let res = reqwest::Client::new()
@@ -150,7 +148,7 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
     assert!(!users.iter().any(|u| u.id == alfred.id));
@@ -176,7 +174,7 @@ async fn test_password_reset_always_ok() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // we should always get back an HTTP 200 for username enumeration prevention
     payload.email = "idonotexist@iamaghost.io".to_string();
@@ -187,7 +185,7 @@ async fn test_password_reset_always_ok() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     Ok(())
 }
@@ -199,7 +197,7 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
 
     // Unauthorized without a Bearer
     let res = client.get(&url).send().await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     // This should be good
     let ts = get_token_set().await;
@@ -208,8 +206,7 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let info = res.json::<Userinfo>().await?;
+    let info = expect_status_json!(res, 200, Userinfo);
     assert_eq!(info.sub, "m4PJ3TnyP32LA8hzY23deme3");
     assert_eq!(info.name, "Admin Init");
     assert!(info.roles.contains(&"rauthy_admin".to_string()));
@@ -222,8 +219,7 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let info = res.json::<Userinfo>().await?;
+    let info = expect_status_json!(res, 200, Userinfo);
     assert!(info.email.is_some());
     assert_eq!(info.preferred_username, info.email);
 
@@ -241,7 +237,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let users = res.json::<Vec<UserResponseSimple>>().await?;
     let user_id_admin = users
@@ -267,7 +263,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
 
     // make sure we get 401 without authn
     let res = client.get(&url).send().await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     // success with valid session
     let res = client
@@ -275,7 +271,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     assert_eq!(
         res.headers().get("content-type").unwrap().to_str().unwrap(),
         "image/webp"
@@ -298,7 +294,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    let res = expect_status!(res, 200);
     let secret = res.text().await.unwrap();
     // the header needs to be in format: 'API-Key my_apy_key'
     let key_header = format!("API-Key {}", secret);
@@ -307,7 +303,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // not allowed with token - `rauthy` client does not have the `profile` scope
     let ts = get_token_set().await;
@@ -316,7 +312,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
         .send()
         .await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     // success with access token - `profile` is in default scopes for `init_client`
     let ts = get_token_set_init_client().await;
@@ -325,7 +321,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // success with id token
     let res = client
@@ -336,7 +332,7 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         )
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // make sure access with token for another user fails
     let url_user_admin = format!("{}/users/{}", get_backend_url(), user_id_admin);
@@ -354,13 +350,13 @@ async fn test_user_picture() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, format!("Bearer {}", ts.access_token))
         .send()
         .await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
     let res = client
         .get(&url_admin)
         .header(AUTHORIZATION, format!("Bearer {}", ts.id_token.unwrap()))
         .send()
         .await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     Ok(())
 }
@@ -387,8 +383,7 @@ async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error
         .json(&new_user)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
 
     let mut key = ApiKeyRequest {
         name: new_store_id(),
@@ -404,7 +399,7 @@ async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error
         .json(&key)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    let res = expect_status!(res, 200);
     let key_header = format!("API-Key {}", res.text().await.unwrap());
 
     let delete_url = format!(
@@ -418,7 +413,7 @@ async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error
         .json(&serde_json::json!({}))
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    expect_status!(res, 401);
 
     key.access = vec![ApiKeyAccess {
         group: AccessGroup::Users,
@@ -430,7 +425,7 @@ async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error
         .json(&key)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     let res = client
         .delete(&delete_url)
@@ -438,14 +433,14 @@ async fn test_api_key_passkey_delete_authorization() -> Result<(), Box<dyn Error
         .json(&serde_json::json!({}))
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     let res = client
         .delete(format!("{}/users/{}", get_backend_url(), user.id))
         .headers(auth_headers)
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -481,7 +476,7 @@ const LOGIN_PWD: &str = "Login-TEST.1234!#$";
 /// The refresh of a revoked refresh token fails on the missing row.
 async fn assert_refresh_not_found(client: &Client, refresh_token: String) {
     let res = refresh(client, refresh_token).await;
-    assert_eq!(res.status(), 404);
+    let res = expect_status!(res, 404);
     let body = res.text().await.unwrap();
     assert!(body.contains("Refresh Token not found"), "{body}");
 }
@@ -506,7 +501,7 @@ async fn consent_revoked_events(
         .send()
         .await
         .unwrap();
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let mut texts = res
         .json::<Vec<Value>>()
         .await
@@ -545,7 +540,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 204);
+        expect_status!(res, 204);
     }
 
     // --- setup: a user with a usable password
@@ -565,8 +560,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
 
     let res = client
         .put(format!("{backend}/users/{}", user.id))
@@ -577,7 +571,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let url = format!("{backend}/users/{}/consents", user.id);
     // without `resource` for a consent without one
@@ -585,9 +579,9 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
 
     // --- authorization
     let res = client.get(&url).send().await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
     let res = client.delete(&url_delete).send().await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
 
     let user_headers = session_headers_with(EMAIL, LOGIN_PWD).await;
     let res = client
@@ -595,7 +589,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(user_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
     let res = client
         .delete(format!(
             "{backend}/users/{admin_id}/consents?client_id={CLIENT_ID}"
@@ -603,12 +597,12 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(user_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // --- list, the user itself and an admin
     for headers in [&user_headers, &admin] {
         let res = client.get(&url).headers(headers.clone()).send().await?;
-        assert_eq!(res.status(), 200);
+        let res = expect_status!(res, 200);
         assert!(res.json::<Vec<UserConsentResponse>>().await?.is_empty());
     }
     let res = client
@@ -616,14 +610,14 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(user_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     // an empty filter selects the consents without a resource
     let res = client
         .get(format!("{url}?resource="))
         .headers(user_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     assert!(
         res.json::<Vec<UserConsentResponse>>()
             .await?
@@ -637,7 +631,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(user_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 400);
+    expect_status!(res, 400);
 
     // --- validation: `client_id` is required, `resource` is not empty and has no fragment
     for query in [
@@ -651,7 +645,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
             .headers(user_headers.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 400, "{query}");
+        expect_status!(res, 400, "{query}");
     }
 
     // --- revocation drops the refresh tokens of the user for the client
@@ -659,8 +653,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
 
     time::sleep(Duration::from_secs(2)).await;
     let res = refresh(&client, ts.refresh_token.unwrap()).await;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
 
     // another user's refresh token for the same client
     let other = password_token_set(&client, USERNAME, PASSWORD).await;
@@ -682,8 +675,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(user_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let deleted = res.json::<UserConsentDeleteResponse>().await?;
+    let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
     // the password grant does not ask for consent, there is no consent row to delete
     assert!(!deleted.consent_deleted);
     // the rotated predecessor may still be there with a lowered `exp`
@@ -694,7 +686,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     assert_eq!(userinfo(&ts.access_token).await, 401);
     // the other user keeps theirs
     let res = refresh(&client, other.refresh_token.unwrap()).await;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // an admin, then idempotent
     let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
@@ -703,8 +695,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let deleted = res.json::<UserConsentDeleteResponse>().await?;
+    let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
     assert!(!deleted.consent_deleted);
     assert!(deleted.refresh_tokens_deleted >= 1);
     assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
@@ -713,8 +704,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let deleted = res.json::<UserConsentDeleteResponse>().await?;
+    let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
     assert!(!deleted.consent_deleted);
     assert_eq!(deleted.refresh_tokens_deleted, 0);
 
@@ -737,8 +727,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(user_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let deleted = res.json::<UserConsentDeleteResponse>().await?;
+    let deleted = expect_status_json!(res, 200, UserConsentDeleteResponse);
     assert!(!deleted.consent_deleted);
     assert!(deleted.refresh_tokens_deleted >= 1);
     assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
@@ -751,7 +740,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 404);
+    expect_status!(res, 404);
 
     // --- cleanup
     let res = client
@@ -759,7 +748,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -788,8 +777,7 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
     let res = client
         .put(format!("{backend}/users/{}", user.id))
         .headers(admin.clone())
@@ -799,7 +787,7 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let url = format!("{backend}/users/{}/consents", user.id);
     let url_delete = format!("{url}?client_id={CLIENT_ID}");
 
@@ -817,7 +805,7 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
         .json(&key)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    let res = expect_status!(res, 200);
     let key_header = format!("API-Key {}", res.text().await?);
     let get = async || {
         client
@@ -849,7 +837,7 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
             .send()
             .await
             .unwrap();
-        assert_eq!(res.status(), StatusCode::OK);
+        expect_status!(res, 200);
     };
 
     // the key and an admin session together
@@ -911,13 +899,13 @@ async fn test_user_consents_api_key() -> Result<(), Box<dyn Error>> {
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
     let res = client
         .delete(format!("{backend}/users/{}", user.id))
         .headers(admin)
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -954,14 +942,13 @@ async fn assert_admin_update_survives_logins(
             }))
             .send()
             .await?;
-        assert_eq!(res.status(), 200);
+        expect_status!(res, 200);
         for login in logins {
             login.await?;
         }
 
         let res = client.get(&url_user).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 200);
-        let found = res.json::<UserResponse>().await?;
+        let found = expect_status_json!(res, 200, UserResponse);
         assert_eq!(
             found.given_name.as_deref(),
             Some(given_name.as_str()),
@@ -1008,7 +995,7 @@ async fn test_admin_update_survives_concurrent_logins() -> Result<(), Box<dyn Er
         .headers(admin)
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -1039,7 +1026,7 @@ async fn test_admin_update_survives_concurrent_password_grants() -> Result<(), B
         .headers(admin)
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -1063,7 +1050,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     for host in res.json::<Vec<Value>>().await? {
         if host["name"] == HOSTNAME {
             let res = client
@@ -1074,7 +1061,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
                 .headers(admin.clone())
                 .send()
                 .await?;
-            assert_eq!(res.status(), 200);
+            expect_status!(res, 200);
         }
     }
     // then the user of a left-over PAM user, which takes the PAM user with it, under whatever
@@ -1084,16 +1071,14 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let pam_users = res.json::<Vec<Value>>().await?;
+    let pam_users = expect_status_json!(res, 200, Vec<Value>);
     if let Some(pam_user) = pam_users.iter().find(|u| u["name"] == PAM_USERNAME) {
         let res = client
             .get(format!("{backend}/users"))
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 200);
-        let users = res.json::<Vec<UserResponseSimple>>().await?;
+        let users = expect_status_json!(res, 200, Vec<UserResponseSimple>);
         let left_over = users
             .iter()
             .find(|u| pam_user["email"] == u.email.as_str())
@@ -1103,7 +1088,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 204);
+        expect_status!(res, 204);
     }
     let user = create_login_user(&client, &admin, EMAIL, "Pam", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
@@ -1114,8 +1099,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .json(&json!({ "username": PAM_USERNAME, "email": EMAIL }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let pam_user = res.json::<Value>().await?;
+    let pam_user = expect_status_json!(res, 200, Value);
 
     let res = client
         .post(format!("{backend}/pam/hosts"))
@@ -1128,7 +1112,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let host_id = res.json::<Value>().await?["id"]
         .as_str()
         .unwrap()
@@ -1138,7 +1122,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let host_secret = res.json::<Value>().await?["secret"]
         .as_str()
         .unwrap()
@@ -1168,7 +1152,7 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
             .send()
             .await
             .unwrap();
-        assert_eq!(res.status(), 200);
+        let res = expect_status!(res, 200);
         res.json::<UserResponse>()
             .await
             .unwrap()
@@ -1188,7 +1172,9 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
                     "username": PAM_USERNAME,
                     "password": LOGIN_PWD,
                 }));
-                tokio::spawn(async move { assert_eq!(req.send().await.unwrap().status(), 200) })
+                tokio::spawn(async move {
+                    expect_status!(req.send().await.unwrap(), 200);
+                })
             })
             .collect()
     })
@@ -1199,9 +1185,9 @@ async fn test_admin_update_survives_concurrent_pam_logins() -> Result<(), Box<dy
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = client.delete(&url_user).headers(admin).send().await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -1223,7 +1209,7 @@ async fn upload_picture(
         .multipart(form)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     Ok(res.text().await?)
 }
 
@@ -1256,8 +1242,7 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
         }
 
         let res = client.get(&url_user).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 200);
-        let found = res.json::<UserResponse>().await?;
+        let found = expect_status_json!(res, 200, UserResponse);
         assert_eq!(
             found.picture_id.as_deref(),
             Some(picture_id.as_str()),
@@ -1269,7 +1254,7 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 200, "round {round}");
+        expect_status!(res, 200, "round {round}");
     }
 
     let res = client
@@ -1277,7 +1262,7 @@ async fn test_user_picture_survives_concurrent_logins() -> Result<(), Box<dyn Er
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -1325,8 +1310,7 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
         }
 
         let res = client.get(&url_user).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 200);
-        let found = res.json::<UserResponse>().await?;
+        let found = expect_status_json!(res, 200, UserResponse);
         assert_eq!(
             found.picture_id.as_deref(),
             Some(picture_id.as_str()),
@@ -1340,7 +1324,7 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
     }
 
     let res = client.delete(&url_user).headers(admin).send().await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -1377,7 +1361,7 @@ async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(
             .send()
             .await
             .unwrap();
-        assert_eq!(res.status(), 200, "save with enabled: {enabled}");
+        expect_status!(res, 200, "save with enabled: {enabled}");
     };
 
     // a save of the enabled user keeps both
@@ -1387,16 +1371,15 @@ async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(
         .headers(session.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = refresh(&client, ts.refresh_token.clone().unwrap()).await;
-    assert_eq!(res.status(), 200);
-    let ts = res.json::<TokenSet>().await?;
+    let ts = expect_status_json!(res, 200, TokenSet);
 
     // a save that disables the user drops both, for good
     save(false).await;
     save(true).await;
     let res = client.get(&url_session).headers(session).send().await?;
-    assert_eq!(res.status(), 401);
+    expect_status!(res, 401);
     assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
 
     // the other user keeps both
@@ -1405,9 +1388,9 @@ async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(
         .headers(other_session)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = refresh(&client, other_ts.refresh_token.unwrap()).await;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     for id in [&user.id, &other.id] {
         let res = client
@@ -1415,7 +1398,7 @@ async fn test_save_disabled_user_drops_sessions_and_refresh_tokens() -> Result<(
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 204);
+        expect_status!(res, 204);
     }
 
     Ok(())
@@ -1460,7 +1443,7 @@ async fn test_admin_update_keeps_concurrent_picture_change() -> Result<(), Box<d
                 .headers(admin.clone())
                 .send()
                 .await?;
-            assert_eq!(res.status(), 200);
+            expect_status!(res, 200);
             None
         } else {
             Some(upload_picture(&client, &url_user, &admin).await?)
@@ -1469,19 +1452,18 @@ async fn test_admin_update_keeps_concurrent_picture_change() -> Result<(), Box<d
             !update.is_finished(),
             "round {round}: the picture change must land while the update waits for its hash"
         );
-        assert_eq!(update.await??.status(), 200, "round {round}");
+        expect_status!(update.await??, 200, "round {round}");
         for login in logins {
             login.await?;
         }
 
         let res = client.get(&url_user).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 200);
-        let found = res.json::<UserResponse>().await?;
+        let found = expect_status_json!(res, 200, UserResponse);
         assert_eq!(found.picture_id, picture_id, "round {round}");
     }
 
     let res = client.delete(&url_user).headers(admin).send().await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -1510,7 +1492,7 @@ async fn test_admin_email_change_drops_cached_old_email() -> Result<(), Box<dyn 
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 204);
+        expect_status!(res, 204);
     }
     let user = create_login_user(&client, &admin, EMAIL, "Email", LOGIN_PWD).await?;
     let url_user = format!("{backend}/users/{}", user.id);
@@ -1521,7 +1503,7 @@ async fn test_admin_email_change_drops_cached_old_email() -> Result<(), Box<dyn 
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let res = client
         .put(&url_user)
@@ -1532,24 +1514,24 @@ async fn test_admin_email_change_drops_cached_old_email() -> Result<(), Box<dyn 
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let res = client
         .get(url_by_email(EMAIL))
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 404);
+    expect_status!(res, 404);
     let res = client
         .get(url_by_email(NEW_EMAIL))
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     assert_eq!(res.json::<UserResponse>().await?.id, user.id);
 
     let res = client.delete(&url_user).headers(admin).send().await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     Ok(())
 }
@@ -1604,20 +1586,18 @@ async fn test_picture_change_keeps_concurrent_admin_update() -> Result<(), Box<d
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     assert!(
         !upload.is_finished(),
         "the admin update must land while the upload waits for its body"
     );
     send_tail.send(()).unwrap();
     let res = upload.await??;
-    assert_eq!(res.status(), 200);
-    let picture_id = res.text().await?;
+    let picture_id = expect_status!(res, 200).text().await?;
 
     let assert_users = async |picture_id: Option<&str>| {
         let res = client.get(&url_user).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 200);
-        let found = res.json::<UserResponse>().await?;
+        let found = expect_status_json!(res, 200, UserResponse);
         assert_eq!(found.picture_id.as_deref(), picture_id);
         assert!(!found.enabled);
         let mut found_roles = found.roles.clone();
@@ -1630,8 +1610,7 @@ async fn test_picture_change_keeps_concurrent_admin_update() -> Result<(), Box<d
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 200);
-        let users = res.json::<Vec<UserResponseSimple>>().await?;
+        let users = expect_status_json!(res, 200, Vec<UserResponseSimple>);
         let found = users.iter().find(|u| u.id == other.id).unwrap();
         assert_eq!(found.picture_id.as_deref(), Some(other_picture.as_str()));
         Ok::<_, Box<dyn Error>>(())
@@ -1643,12 +1622,12 @@ async fn test_picture_change_keeps_concurrent_admin_update() -> Result<(), Box<d
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     assert_users(None).await?;
 
     for url in [&url_user, &url_other] {
         let res = client.delete(url).headers(admin.clone()).send().await?;
-        assert_eq!(res.status(), 204);
+        expect_status!(res, 204);
     }
 
     Ok(())
