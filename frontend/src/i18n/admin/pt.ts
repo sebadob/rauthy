@@ -304,6 +304,12 @@ export let I18nAdminPt: I18nAdmin = {
             Depois, tem de terminar sessão e voltar a iniciar sessão.`,
     },
     events: {
+        levelFilters: {
+            info: 'Todos os níveis',
+            notice: 'Notice e superiores',
+            warning: 'Warning e superiores',
+            critical: 'Apenas Critical',
+        },
         eventLevel: 'Nível do evento',
         eventType: 'Tipo de evento',
     },

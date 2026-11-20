@@ -35,14 +35,7 @@
     } = $props();
 </script>
 
-<div class="container admin-list-tools">
-    <OrderBy
-        bind:ref
-        options={orderOptions}
-        onChange={onChangeOrder}
-        {borderless}
-        {firstDirReverse}
-    />
+<div class="admin-list-tools">
     <SearchBar
         bind:value
         {datalist}
@@ -53,23 +46,19 @@
         {borderless}
         {onSearch}
     />
+    <OrderBy
+        bind:ref
+        options={orderOptions}
+        onChange={onChangeOrder}
+        {borderless}
+        {firstDirReverse}
+    />
 </div>
 
 <style>
-    .container {
-        margin: 0 0.25rem;
-        min-width: 20rem;
-        max-width: 40rem;
-        display: flex;
-        align-items: center;
-        column-gap: 0.5rem;
-        row-gap: 0.25rem;
-        flex-wrap: wrap;
-    }
-
     .admin-list-tools {
         display: flex;
-        flex-direction: column-reverse;
+        flex-direction: column;
         align-items: stretch;
         min-width: 0;
         max-width: 100%;

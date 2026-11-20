@@ -72,10 +72,12 @@
                 {backup.name}
             </span>
         </A>
-        <div class="font-mono muted right">
+        <div class="font-mono muted right modified">
+            <span class="meta-label">{ta.backup.lastModified}</span>
             {formatDateFromTs(backup.last_modified)}
         </div>
         <div class="font-mono muted right">
+            <span class="meta-label">{ta.backup.size}</span>
             {#if backup.size}
                 {prettyFileSize(backup.size)}
             {:else}
@@ -107,17 +109,19 @@
     {#if local.length === 0 && s3.length === 0}
         {ta.common.noEntries}
     {:else}
-        <h2>{ta.backup.local}</h2>
-        {@render header()}
-        {#each local as b (b.name)}
-            {@render backup(b, '/auth/v1/backup/local')}
-        {/each}
+        <div class="backup-list">
+            <h2>{ta.backup.local}</h2>
+            {@render header()}
+            {#each local as b (b.name)}
+                {@render backup(b, '/auth/v1/backup/local')}
+            {/each}
 
-        <h2>S3</h2>
-        {@render header()}
-        {#each s3 as b (b.name)}
-            {@render backup(b, '/auth/v1/backup/s3')}
-        {/each}
+            <h2>S3</h2>
+            {@render header()}
+            {#each s3 as b (b.name)}
+                {@render backup(b, '/auth/v1/backup/s3')}
+            {/each}
+        </div>
     {/if}
 {/if}
 
@@ -142,8 +146,53 @@
         text-align: right;
     }
 
+    .backup-list {
+        container-type: inline-size;
+    }
+
     .row {
         display: grid;
-        grid-template-columns: 20rem 12rem 8rem;
+        grid-template-columns: minmax(0, 2fr) minmax(10rem, 1fr) minmax(4.5rem, 0.6fr);
+        gap: 0.75rem;
+        align-items: baseline;
+        padding-block: 0.5rem;
+    }
+
+    .row:not(.header) {
+        border-top: 1px solid var(--ui-outline);
+    }
+
+    .row > :global(a) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .meta-label {
+        display: none;
+    }
+
+    @container (width < 35rem) {
+        .row {
+            grid-template-columns: minmax(0, 1fr) auto;
+            row-gap: 0.25rem;
+        }
+
+        .row > :global(a) {
+            grid-column: 1 / -1;
+        }
+
+        .header {
+            display: none;
+        }
+
+        .modified {
+            text-align: start;
+        }
+
+        .meta-label {
+            display: block;
+            font-family: system-ui, sans-serif;
+            font-size: 0.75rem;
+        }
     }
 </style>

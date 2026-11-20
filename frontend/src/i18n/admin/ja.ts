@@ -261,6 +261,12 @@ export let I18nAdminJa: I18nAdmin = {
             'Rauthy の管理者アカウントでは、<b>多要素認証を有効にする</b>必要があります。<br>お使いの<b>アカウント</b>の画面で多要素認証を有効にしてください。<br>その後、一度ログアウトしてから、もう一度ログインしてください。',
     },
     events: {
+        levelFilters: {
+            info: 'すべてのレベル',
+            notice: 'Notice 以上',
+            warning: 'Warning 以上',
+            critical: 'Critical のみ',
+        },
         eventLevel: 'イベントのレベル',
         eventType: 'イベントの種類',
     },

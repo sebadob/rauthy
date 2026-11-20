@@ -25,6 +25,9 @@
 
     let selected = $state(untrack(() => options[0]));
     let direction: 'up' | 'down' = $state(untrack(() => (firstDirReverse ? 'down' : 'up')));
+    let directionLabel = $derived(
+        direction === 'up' ? ta.search.orderChangeToDesc : ta.search.orderChangeToAsc,
+    );
 
     $effect(() => {
         onChange(selected, direction);
@@ -39,31 +42,24 @@
             {options}
             bind:value={selected}
             {borderless}
+            showTitle={false}
         />
     </Tooltip>
 
     <div class="btn">
-        {#if direction === 'up'}
+        <Tooltip text={directionLabel}>
             <Button
-                ariaLabel={ta.search.orderChangeToDesc}
+                ariaLabel={directionLabel}
                 invisible
-                onclick={() => (direction = 'down')}
+                onclick={() => (direction = direction === 'up' ? 'down' : 'up')}
             >
-                <Tooltip text={ta.search.orderChangeToDesc}>
+                {#if direction === 'up'}
                     <IconBarsArrowUp />
-                </Tooltip>
-            </Button>
-        {:else}
-            <Button
-                ariaLabel={ta.search.orderChangeToAsc}
-                invisible
-                onclick={() => (direction = 'up')}
-            >
-                <Tooltip text={ta.search.orderChangeToAsc}>
+                {:else}
                     <IconBarsArrowDown />
-                </Tooltip>
+                {/if}
             </Button>
-        {/if}
+        </Tooltip>
     </div>
 </div>
 

@@ -46,7 +46,7 @@
         margin-top: 0.5rem;
     }
 
-    .tabs {
-        width: 17rem;
+    h2 {
+        margin-top: 0;
     }
 </style>

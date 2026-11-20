@@ -300,6 +300,12 @@ export let I18nAdminRu: I18nAdmin = {
             После этого необходимо выйти и войти снова.`,
     },
     events: {
+        levelFilters: {
+            info: 'Все уровни',
+            notice: 'Notice и выше',
+            warning: 'Warning и выше',
+            critical: 'Только Critical',
+        },
         eventLevel: 'Уровень события',
         eventType: 'Тип события',
     },

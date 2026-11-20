@@ -302,6 +302,12 @@ export let I18nAdminNb: I18nAdmin = {
             Deretter må du logge ut og inn igjen`,
     },
     events: {
+        levelFilters: {
+            info: 'Alle nivåer',
+            notice: 'Notice og høyere',
+            warning: 'Warning og høyere',
+            critical: 'Bare Critical',
+        },
         eventLevel: 'Hendelsesnivå',
         eventType: 'Hendelsestype',
     },

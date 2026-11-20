@@ -297,14 +297,17 @@
         line-height: 18px;
         color: var(--ui-muted);
     }
+    .navSub :global(.avatar) {
+        border-radius: var(--border-radius);
+    }
+
     .navSub :global(.avatar:not(:has(img))) {
         display: grid;
         place-items: center;
         width: 36px;
         height: 36px;
         flex-shrink: 0;
-        background: var(--ui-container);
-        border-radius: var(--border-radius);
+        --avatar-background: var(--ui-container);
         border: 0;
         color: var(--ui-primary);
     }
@@ -373,7 +376,9 @@
         background: transparent;
     }
     .navSub :global(li.admin-record-row) :global(.admin-control) {
-        min-height: 52px;
+        --ui-button-height: auto;
+        --ui-button-min-height: 3.25rem;
+        --ui-button-padding: 0.375rem 0.625rem;
     }
     .navSub :global(li.admin-record-row[aria-current='page']) {
         border-color: hsl(var(--action) / 0.35);

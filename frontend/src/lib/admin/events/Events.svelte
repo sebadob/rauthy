@@ -2,10 +2,9 @@
     import Event from '#lib/admin/events/Event.svelte';
     import EventsLegend from './EventsLegend.svelte';
     import Button from '#lib/button/Button.svelte';
-    import { EVENT_LEVELS } from '#utils/constants.ts';
     import { isBrowser } from '#utils/helpers.ts';
     import type { EventLevel, EventResponse } from '#api/types/events.ts';
-    import Options from '#lib/Options.svelte';
+    import EventLevelFilter from './EventLevelFilter.svelte';
     import { onDestroy } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { fetchPost } from '#api/fetch.ts';
@@ -143,12 +142,7 @@
         <div class="header">
             <div class="flex gap-10">
                 <b>{ta.nav.events}</b>
-                <Options
-                    ariaLabel={ta.events.eventLevel}
-                    options={EVENT_LEVELS}
-                    bind:value={level}
-                    borderless
-                />
+                <EventLevelFilter bind:level />
             </div>
 
             {#if !isGroupAdmin}

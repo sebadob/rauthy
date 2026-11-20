@@ -295,6 +295,12 @@ export let I18nAdminEn: I18nAdmin = {
             Afterward, you need to do a logout and log back in.`,
     },
     events: {
+        levelFilters: {
+            info: 'All levels',
+            notice: 'Notice and above',
+            warning: 'Warning and above',
+            critical: 'Critical only',
+        },
         eventLevel: 'Event Level',
         eventType: 'Event Type',
     },

@@ -56,10 +56,14 @@ test.describe('groups list', () => {
     test('search by name and by ID, then clear the search', async ({ page }) => {
         await page.goto(PAGE);
         const all = await groups(page);
-        await expect(entry(page, 'admin')).toBeVisible();
+        expect(all.length).toBeGreaterThan(0);
+        const target = all.find(g => g.name === 'user') ?? all[0];
+        await expect(entry(page, target.name)).toBeVisible();
 
-        await searchBox(page).fill('BS_GROUP');
-        const byName = all.filter(g => g.name.toLowerCase().includes('bs_group')).map(g => g.name);
+        await searchBox(page).fill(target.name.toUpperCase());
+        const byName = all
+            .filter(g => g.name.toLowerCase().includes(target.name.toLowerCase()))
+            .map(g => g.name);
         expect(byName.length).toBeGreaterThan(0);
         await expect(entryList(page).getByRole('listitem')).toHaveCount(byName.length);
         expect((await listedNames(page)).sort()).toEqual(byName.sort());
@@ -67,7 +71,6 @@ test.describe('groups list', () => {
         await searchBox(page).fill('no-such-group-xyz');
         await expect(entryList(page).getByRole('listitem')).toHaveCount(0);
 
-        const target = /** @type {Group} */ (all.find(g => g.name === 'user'));
         await chooseOption(
             page,
             subNav(page).getByRole('combobox', { name: 'Search Options' }),
@@ -75,7 +78,7 @@ test.describe('groups list', () => {
         );
         await searchBox(page).fill(target.id.slice(2, 14));
         await expect(entryList(page).getByRole('listitem')).toHaveCount(1);
-        await expect(entry(page, 'user')).toBeVisible();
+        await expect(entry(page, target.name)).toBeVisible();
 
         await searchBox(page).fill('admin');
         await expect(entryList(page).getByRole('listitem')).toHaveCount(

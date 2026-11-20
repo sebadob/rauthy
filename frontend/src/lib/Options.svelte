@@ -15,6 +15,7 @@
         offsetTop,
         offsetLeft,
         anchored,
+        showTitle = true,
         borderless = false,
         withSearch = false,
         onChange,
@@ -32,6 +33,7 @@
         offsetTop?: string;
         offsetLeft?: string;
         anchored?: boolean;
+        showTitle?: boolean;
         borderless?: boolean;
         withSearch?: boolean;
         onChange?: (value: string | number | undefined) => void;
@@ -183,7 +185,7 @@
 >
     {#snippet button()}
         <div class="btn admin-select-trigger" data-border={!borderless}>
-            <div class="btnText" title={ariaLabel}>
+            <div class="btnText" title={showTitle ? ariaLabel : undefined}>
                 {value}
             </div>
             <IconChevronDown width=".8rem" />
@@ -291,9 +293,9 @@
         border: 1px solid transparent;
         border-radius: var(--border-radius);
         font-family: inherit;
-        font-size: 13px;
+        font-size: var(--ui-control-font-size);
         font-weight: 500;
-        line-height: 20px;
+        line-height: var(--ui-control-line-height);
         color: var(--ui-text);
         background: transparent;
     }
@@ -307,7 +309,7 @@
         .admin-select-trigger:not(:global(.branding-preview *))
         :global(.btnText) {
         margin: 0;
-        line-height: 20px;
+        line-height: var(--ui-control-line-height);
     }
     :global(.admin-shell) .popoverOptions:not(:global(.branding-preview *)) {
         display: flex;

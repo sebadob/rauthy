@@ -313,6 +313,12 @@ export let I18nAdminFr: I18nAdmin = {
             Ensuite, vous devrez vous déconnecter puis vous reconnecter.`,
     },
     events: {
+        levelFilters: {
+            info: 'Tous les niveaux',
+            notice: 'Notice et supérieur',
+            warning: 'Warning et supérieur',
+            critical: 'Critical uniquement',
+        },
         eventLevel: `Niveau d'événement`,
         eventType: `Type d'événement`,
     },

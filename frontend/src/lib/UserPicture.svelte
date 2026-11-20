@@ -213,7 +213,7 @@
             class="avatar"
             aria-dropeffect="move"
             aria-label="Upload"
-            style:background-color={color}
+            style:--avatar-color={color}
             style:width
             {onmouseenter}
             {onmouseleave}
@@ -261,7 +261,7 @@
             </div>
         {/if}
     {:else}
-        <span class="avatar" style:background-color={color} style:width style:height={width}>
+        <span class="avatar" style:--avatar-color={color} style:width style:height={width}>
             {@render avatar()}
         </span>
     {/if}
@@ -307,6 +307,7 @@
     }
 
     .avatar {
+        background-color: var(--avatar-background, var(--avatar-color));
         position: relative;
         display: flex;
         justify-content: center;

@@ -307,6 +307,12 @@ export let I18nAdminNl: I18nAdmin = {
             Daarna moet u uitloggen en opnieuw inloggen.`,
     },
     events: {
+        levelFilters: {
+            info: 'Alle niveaus',
+            notice: 'Notice en hoger',
+            warning: 'Warning en hoger',
+            critical: 'Alleen Critical',
+        },
         eventLevel: 'Gebeurtenisniveau',
         eventType: 'Gebeurtenistype',
     },

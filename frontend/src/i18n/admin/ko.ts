@@ -286,6 +286,12 @@ export let I18nAdminKo: I18nAdmin = {
             활성화 후에는 로그아웃한 뒤 다시 로그인해야 합니다.`,
     },
     events: {
+        levelFilters: {
+            info: '모든 수준',
+            notice: 'Notice 이상',
+            warning: 'Warning 이상',
+            critical: 'Critical만',
+        },
         eventLevel: '이벤트 레벨',
         eventType: '이벤트 타입',
     },

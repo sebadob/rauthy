@@ -144,7 +144,7 @@ test.describe('events archive', () => {
         const until = dateTime(page, 'Until');
         await expect(until.date).toHaveValue('');
         await expect(main(page).getByRole('combobox', { name: 'Event Level' })).toContainText(
-            'info',
+            'All levels',
         );
         await expect(main(page).getByRole('combobox', { name: 'Event Type' })).toContainText('-');
         await expect(main(page).getByRole('combobox', { name: 'Order by ...' })).toContainText(
@@ -182,13 +182,13 @@ test.describe('events archive', () => {
 
             // level: the registration is "info", the admin password reset "notice"
             const level = main(page).getByRole('combobox', { name: 'Event Level' });
-            await pick(page, level, 'notice');
+            await pick(page, level, 'Notice and above');
             await expect(reset).toBeVisible();
             await expect(registered).toBeHidden();
             await expect(testEntry).toHaveCount(0);
-            await pick(page, level, 'critical');
+            await pick(page, level, 'Critical only');
             await expect(reset).toBeHidden();
-            await pick(page, level, 'info');
+            await pick(page, level, 'All levels');
             await expect(registered).toBeVisible();
 
             // type
@@ -452,7 +452,7 @@ test.describe('live events panel', () => {
     test('the level selector filters the stream and is remembered', async ({ page }) => {
         await openWithEventsPanel(page, '/auth/v1/admin/sessions');
         const level = main(page).getByRole('combobox', { name: 'Event Level' });
-        await expect(level).toContainText('info');
+        await expect(level).toContainText('All levels');
         // an info event of a fresh user registration
         const user = await createUser(page, 'e2e-evtp');
         try {
@@ -461,7 +461,7 @@ test.describe('live events panel', () => {
             const stream = page.waitForRequest(r =>
                 r.url().includes('/auth/v1/events/stream?latest=50&level=warning'),
             );
-            await pick(page, level, 'warning');
+            await pick(page, level, 'Warning and above');
             await stream;
             await expect(registered).toBeHidden();
             // FINDING (upstream): Events.svelte keeps "Test" events at every level, but the backend
@@ -470,9 +470,13 @@ test.describe('live events panel', () => {
 
             await page.reload();
             await expect(main(page).getByRole('combobox', { name: 'Event Level' })).toContainText(
-                'warning',
+                'Warning and above',
             );
-            await pick(page, main(page).getByRole('combobox', { name: 'Event Level' }), 'info');
+            await pick(
+                page,
+                main(page).getByRole('combobox', { name: 'Event Level' }),
+                'All levels',
+            );
             await expect(registered).toBeVisible();
         } finally {
             await page.evaluate(() => localStorage.setItem('eventLevel', 'info'));

@@ -306,7 +306,6 @@
     :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) {
         appearance: none;
         box-sizing: border-box;
-        /* no own positioning context: an absolute Tooltip inside is placed from the pointer */
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -376,10 +375,10 @@
     }
     :global(.admin-shell)
         .admin-control[data-variant='invisible']:not(:global(.branding-preview *)) {
-        padding: 0 8px;
+        padding: var(--ui-button-padding, 0 8px);
         min-width: 36px;
-        height: 36px;
-        min-height: 36px;
+        height: var(--ui-button-height, 36px);
+        min-height: var(--ui-button-min-height, 36px);
         border-radius: var(--border-radius);
         color: var(--ui-muted);
     }

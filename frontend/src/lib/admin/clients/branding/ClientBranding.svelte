@@ -119,102 +119,102 @@
     }
 </script>
 
-<Form action={url} {onSubmit}>
-    <div class="container">
-        {#if theme}
-            <div class="values">
-                <p>{@html ta.clients.branding.descVariables}</p>
+<div class="branding-layout">
+    <Form action={url} {onSubmit}>
+        <div class="layout">
+            {#if theme}
+                <section class="panel values">
+                    <h2>{ta.nav.config}</h2>
+                    <p>{@html ta.clients.branding.descVariables}</p>
 
-                <Input
-                    label="--border-radius"
-                    placeholder="--border-radius"
-                    errMsg={ta.validation.css}
-                    width={inputWidth}
-                    bind:value={theme.border_radius}
-                    required
-                    pattern={PATTERN_CSS_VALUE_LOOSE}
-                />
-
-                <h3>Light Theme</h3>
-                <BrandingMode bind:values={theme.light} />
-
-                <br />
-                <h3>Dark Theme</h3>
-                <BrandingMode bind:values={theme.dark} />
-            </div>
-            <div class="preview">
-                {#key logoKey}
-                    <BrandingPreviewWrapper {logoUrl} {theme} />
-                {/key}
-
-                <hr />
-
-                <p>Logo Upload</p>
-                <div class="logo">
-                    <InputFile
-                        method="PUT"
-                        url={`/auth/v1/clients/${client.id}/logo`}
-                        fileName="logo"
-                        width="100%"
-                        onSuccess={onUploadSuccess}
+                    <Input
+                        label="--border-radius"
+                        placeholder="--border-radius"
+                        errMsg={ta.validation.css}
+                        width={inputWidth}
+                        bind:value={theme.border_radius}
+                        required
+                        pattern={PATTERN_CSS_VALUE_LOOSE}
                     />
-                    <Button ariaLabel={t.common.delete} invisible onclick={onLogoDelete}>
-                        <IconTrash width="1.25rem" />
-                    </Button>
-                </div>
 
-                <p>{ta.clients.branding.faviconUpload}</p>
-                <div class="favicon">
-                    {#key faviconKey}
-                        <img
-                            class:loaded={faviconLoaded}
-                            src={faviconUrl}
-                            alt={ta.clients.branding.faviconPreviewAlt}
-                            onload={() => (faviconLoaded = true)}
-                            onerror={() => (faviconLoaded = false)}
-                        />
-                    {/key}
-                    <InputFile
-                        method="PUT"
-                        url={`/auth/v1/clients/${client.id}/favicon`}
-                        fileName="favicon"
-                        width="100%"
-                        onSuccess={onFaviconUploadSuccess}
-                    />
-                    <Button ariaLabel={t.common.delete} invisible onclick={onFaviconDelete}>
-                        <IconTrash width="1.25rem" />
-                    </Button>
-                </div>
+                    <h3>Light Theme</h3>
+                    <BrandingMode bind:values={theme.light} />
 
+                    <h3>Dark Theme</h3>
+                    <BrandingMode bind:values={theme.dark} />
+                </section>
+                <div class="side">
+                    <section class="panel">
+                        {#key logoKey}
+                            <BrandingPreviewWrapper {logoUrl} {theme} />
+                        {/key}
+                    </section>
+
+                    <section class="panel">
+                        <h3>Logo Upload</h3>
+                        <div class="logo">
+                            <InputFile
+                                method="PUT"
+                                url={`/auth/v1/clients/${client.id}/logo`}
+                                fileName="logo"
+                                width="100%"
+                                onSuccess={onUploadSuccess}
+                            />
+                            <Button ariaLabel={t.common.delete} invisible onclick={onLogoDelete}>
+                                <IconTrash width="1.25rem" />
+                            </Button>
+                        </div>
+
+                        <h3>{ta.clients.branding.faviconUpload}</h3>
+                        <div class="favicon">
+                            {#key faviconKey}
+                                <img
+                                    class:loaded={faviconLoaded}
+                                    src={faviconUrl}
+                                    alt={ta.clients.branding.faviconPreviewAlt}
+                                    onload={() => (faviconLoaded = true)}
+                                    onerror={() => (faviconLoaded = false)}
+                                />
+                            {/key}
+                            <InputFile
+                                method="PUT"
+                                url={`/auth/v1/clients/${client.id}/favicon`}
+                                fileName="favicon"
+                                width="100%"
+                                onSuccess={onFaviconUploadSuccess}
+                            />
+                            <Button ariaLabel={t.common.delete} invisible onclick={onFaviconDelete}>
+                                <IconTrash width="1.25rem" />
+                            </Button>
+                        </div>
+                    </section>
+                </div>
                 <div class="buttons">
-                    <Button type="submit">
-                        {t.common.save}
-                    </Button>
-                    <Button level={-2} onclick={reset}>
-                        {ta.common.reset}
-                    </Button>
-
-                    {#if success}
-                        <IconCheck />
-                    {/if}
+                    <Button type="submit">{t.common.save}</Button>
+                    <Button level={-2} onclick={reset}>{ta.common.reset}</Button>
+                    {#if success}<IconCheck />{/if}
+                    {#if err}<span class="err" role="alert">{err}</span>{/if}
                 </div>
-
-                {#if err}
-                    <div class="err">
-                        {err}
-                    </div>
-                {/if}
-            </div>
-        {/if}
-    </div>
-</Form>
+            {:else if err}
+                <div class="err" role="alert">{err}</div>
+            {/if}
+        </div>
+    </Form>
+</div>
 
 <style>
     .buttons {
-        margin: 1rem 0;
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        grid-column: 1 / -1;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem;
+        padding-block: var(--ui-space);
+        background: var(--ui-surface);
+        border-top: 1px solid var(--ui-outline);
     }
 
     .logo,
@@ -240,27 +240,40 @@
         visibility: visible;
     }
 
-    .container {
-        max-height: calc(100dvh - 4.5rem);
+    .branding-layout {
+        container-type: inline-size;
+    }
+
+    .layout,
+    .side {
         display: grid;
-        grid-template-columns: 1fr 17rem;
-        gap: 0.5rem;
+        gap: var(--ui-space);
     }
 
-    .values {
-        max-height: calc(100dvh - 5.5rem);
-        margin-top: 1rem;
-        padding-right: 0.5rem;
-        overflow: auto;
+    .layout {
+        align-items: start;
+        margin-top: var(--ui-space);
     }
 
-    @media (max-width: 88rem) {
-        .container {
-            grid-template-columns: 1fr;
-        }
+    .panel {
+        min-width: 0;
+        padding: var(--ui-space);
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+    }
 
-        .values {
-            max-height: inherit;
+    .panel > h2,
+    .panel > h3:first-child {
+        margin-top: 0;
+    }
+
+    .panel h3 {
+        margin-block: 1.25rem 0.5rem;
+    }
+
+    @container (width >= 46rem) {
+        .layout {
+            grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
         }
     }
 </style>

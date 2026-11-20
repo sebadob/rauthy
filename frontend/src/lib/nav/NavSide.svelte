@@ -243,6 +243,9 @@
         overflow-y: auto;
         overflow-x: hidden;
         min-height: 0;
+        margin-inline: calc(-1 * var(--nav-inset));
+        padding-inline: var(--nav-inset);
+        scrollbar-gutter: stable both-edges;
     }
 
     nav[data-collapsed='true'] .scrollable-content,
@@ -305,7 +308,8 @@
         background: transparent;
     }
     #mainNav .nav-container {
-        padding: 0 12px 16px;
+        --nav-inset: 12px;
+        padding: 0 var(--nav-inset) 16px;
         background: transparent;
     }
     #mainNav .logo {
@@ -396,7 +400,7 @@
         width: 84px;
     }
     #mainNav[data-compact='true'] .nav-container {
-        padding-inline: 6px;
+        --nav-inset: 8px;
     }
     #mainNav[data-compact='true'] .logo {
         justify-content: center;

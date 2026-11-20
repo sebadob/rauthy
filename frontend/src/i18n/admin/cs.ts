@@ -294,6 +294,12 @@ export let I18nAdminCs: I18nAdmin = {
             Pak se odhlaste a znovu přihlaste.`,
     },
     events: {
+        levelFilters: {
+            info: 'Všechny úrovně',
+            notice: 'Notice a vyšší',
+            warning: 'Warning a vyšší',
+            critical: 'Pouze Critical',
+        },
         eventLevel: 'Úroveň události',
         eventType: 'Typ události',
     },

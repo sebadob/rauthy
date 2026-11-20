@@ -445,6 +445,9 @@ pre {
     --ui-tonal: hsl(var(--action) / 0.12);
     --ui-hover: hsl(var(--text) / 0.07);
     --ui-space: 1rem;
+    --ui-control-font-size: 0.875rem;
+    --ui-control-line-height: 1.25rem;
+    --ui-search-height: 2.75rem;
     --ui-surface: hsl(var(--bg));
     --ui-container: color-mix(in srgb, hsl(var(--bg)) 94%, hsl(var(--text)));
 }

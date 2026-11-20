@@ -314,6 +314,12 @@ export let I18nAdminDe: I18nAdmin = {
             Danach muss ein Logout und neuer Login folgen`,
     },
     events: {
+        levelFilters: {
+            info: 'Alle Stufen',
+            notice: 'Ab Notice',
+            warning: 'Ab Warning',
+            critical: 'Nur Critical',
+        },
         eventLevel: 'Event Level',
         eventType: 'Event Typ',
     },

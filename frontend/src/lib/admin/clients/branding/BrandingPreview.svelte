@@ -132,7 +132,8 @@
 
     .inner {
         padding: 1rem;
-        width: 17rem;
+        width: 100%;
+        max-width: 21rem;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         background: hsl(var(--bg));

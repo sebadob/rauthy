@@ -284,6 +284,12 @@ export let I18nAdminZh: I18nAdmin = {
             之后，您需要注销并重新登录。`,
     },
     events: {
+        levelFilters: {
+            info: '所有级别',
+            notice: 'Notice 及以上',
+            warning: 'Warning 及以上',
+            critical: '仅 Critical',
+        },
         eventLevel: '事件级别',
         eventType: '事件类型',
     },

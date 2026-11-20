@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { EVENT_LEVELS, EVENT_TYPES } from '#utils/constants.ts';
+    import { EVENT_TYPES } from '#utils/constants.ts';
     import Event from '#lib/admin/events/Event.svelte';
     import type { EventLevel, EventResponse, EventsRequest, EventType } from '#api/types/events.ts';
     import { fetchPost } from '#api/fetch.ts';
     import Options from '#lib/Options.svelte';
+    import EventLevelFilter from './EventLevelFilter.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
     import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
@@ -130,12 +131,7 @@
             <div class="filters">
                 <div class="level">
                     <span class="admin-field-caption">{ta.events.eventLevel}</span>
-                    <Options
-                        ariaLabel={ta.events.eventLevel}
-                        options={EVENT_LEVELS}
-                        bind:value={level}
-                        borderless
-                    />
+                    <EventLevelFilter bind:level />
                 </div>
                 <div class="typ">
                     <span class="admin-field-caption">{ta.events.eventType}</span>

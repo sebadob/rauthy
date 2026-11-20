@@ -250,6 +250,7 @@ export interface I18nAdmin {
         noAdmin: string;
     };
     events: {
+        levelFilters: { info: string; notice: string; warning: string; critical: string };
         eventLevel: string;
         eventType: string;
     };
