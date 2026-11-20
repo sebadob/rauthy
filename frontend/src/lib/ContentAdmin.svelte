@@ -36,8 +36,9 @@
     }
 
     .admin-detail {
+        --admin-detail-padding-bottom: 32px;
         min-width: 0;
-        padding: 32px clamp(20px, 3vw, 48px) 32px;
+        padding: 32px clamp(20px, 3vw, 48px) var(--admin-detail-padding-bottom);
         background: transparent;
     }
     .admin-detail:not(.wide) > :global(div[id]) {
@@ -95,7 +96,8 @@
     }
     @media (max-width: 800px) {
         .admin-detail {
-            padding: 48px 16px 24px;
+            --admin-detail-padding-bottom: 24px;
+            padding: 48px 16px var(--admin-detail-padding-bottom);
         }
     }
 

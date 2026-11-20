@@ -34,6 +34,7 @@
         role?: string;
         ref?: undefined | HTMLButtonElement;
         id?: string;
+        form?: string;
         ariaLabel?: string;
         ariaControls?: string;
         ariaExpanded?: boolean;

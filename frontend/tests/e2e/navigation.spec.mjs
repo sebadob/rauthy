@@ -74,7 +74,20 @@ test.describe('admin navigation', () => {
 
     test('theme switch toggles and persists', async ({ page }) => {
         await page.goto('/auth/v1/admin/users');
-        const toggle = page.getByRole('button', { name: /Change Theme/ });
+        const nav = page.locator('#mainNav');
+        const toggle = nav.getByRole('button', { name: /Change Theme/ });
+        const language = nav.getByRole('combobox', { name: 'Select Language' });
+        for (const [preference, accountAction] of [
+            [toggle, nav.getByRole('link', { name: 'User Account' })],
+            [language, nav.getByRole('button', { name: 'Logout', exact: true })],
+        ]) {
+            const [pref, action] = await Promise.all([
+                preference.boundingBox(),
+                accountAction.boundingBox(),
+            ]);
+            expect(pref?.width).toBeCloseTo(action?.width || 0);
+            expect(pref?.x).toBeCloseTo(action?.x || 0);
+        }
         const before = await toggle.getAttribute('aria-label');
         await toggle.click();
         await expect(toggle).not.toHaveAttribute('aria-label', /** @type {string} */ (before));

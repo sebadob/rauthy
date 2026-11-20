@@ -4,11 +4,13 @@
 
     let {
         label,
+        group,
         h = $bindable(),
         s = $bindable(),
         l = $bindable(),
     }: {
         label: string;
+        group: string;
         h: number;
         s: number;
         l: number;
@@ -16,7 +18,6 @@
 
     const widthRange = '100%';
 
-    let hsl = $derived(`hsl(${h} ${s}% ${l}%)`);
     let hex = $derived(hslToHex(h, s, l));
 
     function hslToHex(h: number, s: number, l: number) {
@@ -51,85 +52,103 @@
     }
 </script>
 
-<div class="outer" role="group" aria-label={label}>
-    <div class="container" style:border-color={hsl}>
-        <div>
-            <h4>{label}</h4>
-            <div class="values">
-                <InputRange
-                    label="Hue"
-                    bind:value={h}
-                    min={0}
-                    max={359}
-                    {widthRange}
-                    bgMode="hue"
-                    hue={h}
-                    sat={s}
-                    lum={l}
-                />
-                <InputRange
-                    label="Sat"
-                    bind:value={s}
-                    min={0}
-                    max={100}
-                    {widthRange}
-                    bgMode="sat"
-                    hue={h}
-                    sat={s}
-                    lum={l}
-                />
-                <InputRange
-                    label="Lum"
-                    bind:value={l}
-                    min={0}
-                    max={100}
-                    {widthRange}
-                    bgMode="lum"
-                    hue={h}
-                    sat={s}
-                    lum={l}
-                />
-            </div>
+<div class="container" role="group" aria-label={label}>
+    <details name={group}>
+        <summary><h4 class="font-mono">{label}</h4></summary>
+        <div class="values">
+            <InputRange
+                label="Hue"
+                bind:value={h}
+                min={0}
+                max={359}
+                {widthRange}
+                bgMode="hue"
+                hue={h}
+                sat={s}
+                lum={l}
+            />
+            <InputRange
+                label="Sat"
+                bind:value={s}
+                min={0}
+                max={100}
+                {widthRange}
+                bgMode="sat"
+                hue={h}
+                sat={s}
+                lum={l}
+            />
+            <InputRange
+                label="Lum"
+                bind:value={l}
+                min={0}
+                max={100}
+                {widthRange}
+                bgMode="lum"
+                hue={h}
+                sat={s}
+                lum={l}
+            />
         </div>
-        <div class="color">
-            <InputColor {label} bind:value={() => hex, v => setHex(v)} />
-        </div>
+    </details>
+    <div class="color">
+        <InputColor {label} bind:value={() => hex, v => setHex(v)} />
     </div>
 </div>
 
 <style>
-    .outer {
-        margin-bottom: 0.75rem;
-    }
-
     .container {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 2.5rem;
-        align-items: stretch;
-        border: 1px solid;
+        position: relative;
+        min-width: 0;
+        border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
         background: var(--ui-container);
     }
 
-    .container > div:first-child {
-        min-width: 0;
-        padding: 0.75rem;
+    summary {
+        min-height: 2.75rem;
+        padding: 0.625rem 3rem 0.625rem 0.75rem;
+        color: var(--ui-muted);
+        cursor: pointer;
+        border-radius: var(--border-radius);
+    }
+
+    summary:hover {
+        background: var(--ui-hover);
     }
 
     h4 {
-        margin: 0 0 0.5rem;
+        display: inline;
+        margin: 0;
         color: var(--ui-text);
         font-size: var(--ui-control-font-size);
     }
 
     .color {
-        width: 2.5rem;
-        border-radius: 0 var(--border-radius) var(--border-radius) 0;
-        overflow: clip;
+        position: absolute;
+        inset-block-start: 0.5rem;
+        inset-inline-end: 0.5rem;
+        width: 2rem;
+        height: 1.75rem;
+    }
+
+    .color :global(input) {
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+    }
+
+    .color :global(input::-webkit-color-swatch) {
+        border-radius: inherit;
+    }
+
+    .color :global(input::-moz-color-swatch) {
+        border-radius: inherit;
     }
 
     .values {
         display: grid;
         gap: 0.25rem;
+        padding: 0.75rem;
+        border-top: 1px solid var(--ui-outline);
     }
 </style>

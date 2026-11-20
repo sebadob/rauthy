@@ -3,6 +3,7 @@
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import HSLInputRange from '#lib/admin/clients/branding/HSLInputRange.svelte';
     import HSLInputText from '#lib/admin/clients/branding/HSLInputText.svelte';
+    import { genKey } from '#utils/helpers.ts';
 
     let {
         values = $bindable(),
@@ -11,57 +12,29 @@
     } = $props();
 
     let ta = useI18nAdmin();
+    const palette = [
+        { key: 'text', label: '--text' },
+        { key: 'text_high', label: '--text-high' },
+        { key: 'bg', label: '--bg' },
+        { key: 'bg_high', label: '--bg-high' },
+        { key: 'action', label: '--action' },
+        { key: 'accent', label: '--accent' },
+        { key: 'error', label: '--error' },
+    ] as const;
+    const group = genKey();
 </script>
 
 <div>
     <div class="hsl">
-        <div>
+        {#each palette as { key, label } (key)}
             <HSLInputRange
-                label="--text"
-                bind:h={values.text[0]}
-                bind:s={values.text[1]}
-                bind:l={values.text[2]}
+                {label}
+                {group}
+                bind:h={values[key][0]}
+                bind:s={values[key][1]}
+                bind:l={values[key][2]}
             />
-            <HSLInputRange
-                label="--text-high"
-                bind:h={values.text_high[0]}
-                bind:s={values.text_high[1]}
-                bind:l={values.text_high[2]}
-            />
-            <HSLInputRange
-                label="--bg"
-                bind:h={values.bg[0]}
-                bind:s={values.bg[1]}
-                bind:l={values.bg[2]}
-            />
-            <HSLInputRange
-                label="--bg-high"
-                bind:h={values.bg_high[0]}
-                bind:s={values.bg_high[1]}
-                bind:l={values.bg_high[2]}
-            />
-        </div>
-
-        <div>
-            <HSLInputRange
-                label="--action"
-                bind:h={values.action[0]}
-                bind:s={values.action[1]}
-                bind:l={values.action[2]}
-            />
-            <HSLInputRange
-                label="--accent"
-                bind:h={values.accent[0]}
-                bind:s={values.accent[1]}
-                bind:l={values.accent[2]}
-            />
-            <HSLInputRange
-                label="--error"
-                bind:h={values.error[0]}
-                bind:s={values.error[1]}
-                bind:l={values.error[2]}
-            />
-        </div>
+        {/each}
     </div>
 
     <details>
@@ -78,8 +51,9 @@
 <style>
     .hsl {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-        gap: var(--ui-space);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+        align-items: start;
+        gap: 0.5rem;
     }
     details {
         margin-top: var(--ui-space);

@@ -7,6 +7,7 @@
     type T = $$Generic;
 
     let {
+        id,
         action,
         method = 'POST',
         isError = $bindable(),
@@ -22,6 +23,7 @@
         // fetch, solve and append a PoW with the given key
         withPowAs,
     }: {
+        id?: string;
         action: string;
         method?: 'GET' | 'POST';
         isError?: boolean;
@@ -86,6 +88,6 @@
     }
 </script>
 
-<form {action} {method} onsubmit={submit} oninvalidcapture={onInvalid}>
+<form {id} {action} {method} onsubmit={submit} oninvalidcapture={onInvalid}>
     {@render children()}
 </form>

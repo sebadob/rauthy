@@ -37,6 +37,7 @@
     let confirmReset = $state(false);
     let closeReset: (() => void) | undefined = $state();
     let pending = $state(false);
+    const formId = genKey();
 
     let logoKey = $state(genKey());
     let logoUrl = $derived(`/auth/v1/clients/${client.id}/logo?${logoKey}`);
@@ -106,8 +107,63 @@
 </script>
 
 <div class="branding-layout">
+    <div class="assets">
+        <Section title={branding.assets}>
+            <p>{branding.assetsImmediate}</p>
+            <div class="asset-grid">
+                <div>
+                    <h4>{branding.logo}</h4>
+                    <div class="upload">
+                        <InputFile
+                            url={`/auth/v1/clients/${client.id}/logo`}
+                            ariaLabel={branding.logo}
+                            fileName="logo"
+                            width="100%"
+                            onSuccess={onUploadSuccess}
+                        />
+                        <EntityDelete
+                            url={`/auth/v1/clients/${client.id}/logo`}
+                            label={`${t.common.delete} · ${branding.logo}`}
+                            name={client.id}
+                            iconOnly
+                            onDelete={onUploadSuccess}
+                        />
+                    </div>
+                </div>
+                <div>
+                    <h4>{branding.faviconUpload}</h4>
+                    <div class="upload">
+                        {#key faviconKey}
+                            <img
+                                class:loaded={faviconLoaded}
+                                src={faviconUrl}
+                                alt={branding.faviconPreviewAlt}
+                                onload={() => (faviconLoaded = true)}
+                                onerror={() => (faviconLoaded = false)}
+                            />
+                        {/key}
+                        <InputFile
+                            url={`/auth/v1/clients/${client.id}/favicon`}
+                            ariaLabel={branding.faviconUpload}
+                            fileName="favicon"
+                            width="100%"
+                            onSuccess={onFaviconUploadSuccess}
+                        />
+                        <EntityDelete
+                            url={`/auth/v1/clients/${client.id}/favicon`}
+                            label={`${t.common.delete} · ${branding.faviconUpload}`}
+                            name={client.id}
+                            iconOnly
+                            onDelete={onFaviconUploadSuccess}
+                        />
+                    </div>
+                </div>
+            </div>
+        </Section>
+    </div>
+
     {#if theme}
-        <Form action={url} {onSubmit}>
+        <Form id={formId} action={url} {onSubmit}>
             <div class="theme-editor">
                 <div class="preview">
                     <Section title={branding.preview}>
@@ -141,17 +197,17 @@
                         {/if}
                     </Section>
                 </div>
-
-                <div class="save-bar">
-                    <Button type="submit" isLoading={pending}>{t.common.save}</Button>
-                    <Button level={2} onclick={() => (confirmReset = true)} isDisabled={pending}>
-                        {branding.resetTheme}
-                    </Button>
-                    {#if success}<IconCheck />{/if}
-                    {#if err && !confirmReset}<span class="err" role="alert">{err}</span>{/if}
-                </div>
             </div>
         </Form>
+
+        <div class="save-bar">
+            <Button type="submit" form={formId} isLoading={pending}>{t.common.save}</Button>
+            <Button level={2} onclick={() => (confirmReset = true)} isDisabled={pending}>
+                {branding.resetTheme}
+            </Button>
+            {#if success}<IconCheck />{/if}
+            {#if err && !confirmReset}<span class="err" role="alert">{err}</span>{/if}
+        </div>
 
         <Modal
             bind:showModal={confirmReset}
@@ -171,61 +227,6 @@
                 </div>
             </div>
         </Modal>
-
-        <div class="assets">
-            <Section title={branding.assets}>
-                <p>{branding.assetsImmediate}</p>
-                <div class="asset-grid">
-                    <div>
-                        <h4>{branding.logo}</h4>
-                        <div class="upload">
-                            <InputFile
-                                url={`/auth/v1/clients/${client.id}/logo`}
-                                ariaLabel={branding.logo}
-                                fileName="logo"
-                                width="100%"
-                                onSuccess={onUploadSuccess}
-                            />
-                            <EntityDelete
-                                url={`/auth/v1/clients/${client.id}/logo`}
-                                label={`${t.common.delete} · ${branding.logo}`}
-                                name={client.id}
-                                iconOnly
-                                onDelete={onUploadSuccess}
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <h4>{branding.faviconUpload}</h4>
-                        <div class="upload">
-                            {#key faviconKey}
-                                <img
-                                    class:loaded={faviconLoaded}
-                                    src={faviconUrl}
-                                    alt={branding.faviconPreviewAlt}
-                                    onload={() => (faviconLoaded = true)}
-                                    onerror={() => (faviconLoaded = false)}
-                                />
-                            {/key}
-                            <InputFile
-                                url={`/auth/v1/clients/${client.id}/favicon`}
-                                ariaLabel={branding.faviconUpload}
-                                fileName="favicon"
-                                width="100%"
-                                onSuccess={onFaviconUploadSuccess}
-                            />
-                            <EntityDelete
-                                url={`/auth/v1/clients/${client.id}/favicon`}
-                                label={`${t.common.delete} · ${branding.faviconUpload}`}
-                                name={client.id}
-                                iconOnly
-                                onDelete={onFaviconUploadSuccess}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </Section>
-        </div>
     {:else if err}
         <div class="err" role="alert">{err}</div>
     {/if}
@@ -234,12 +235,13 @@
 <style>
     .branding-layout {
         container-type: inline-size;
+        margin-bottom: calc(-1 * var(--admin-detail-padding-bottom, 0px));
     }
 
     .theme-editor {
         display: grid;
         gap: var(--ui-space);
-        grid-template-areas: 'preview' 'settings' 'actions';
+        grid-template-areas: 'preview' 'settings';
         align-items: start;
     }
 
@@ -254,21 +256,21 @@
     }
 
     .save-bar {
-        grid-area: actions;
         position: sticky;
-        bottom: 0;
+        bottom: calc(-1 * var(--admin-detail-padding-bottom, 0px));
         z-index: 2;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem;
+        margin-top: var(--ui-space);
         padding: 0.75rem 0;
         border-top: 1px solid var(--ui-outline);
         background: var(--ui-surface);
     }
 
     .assets {
-        margin-top: var(--ui-space);
+        margin-bottom: var(--ui-space);
     }
 
     .assets p,
@@ -279,6 +281,7 @@
 
     .assets h4 {
         margin-bottom: 0.5rem;
+        font-size: var(--ui-control-font-size);
     }
 
     .asset-grid {
@@ -318,7 +321,7 @@
 
     @container (width >= 45rem) {
         .theme-editor {
-            grid-template-areas: 'settings preview' 'actions actions';
+            grid-template-areas: 'settings preview';
             grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
         }
 

@@ -9,6 +9,7 @@
     import { fetchGet, fetchPut } from '#api/fetch.ts';
     import Form from '#lib/form/Form.svelte';
     import LabeledValue from '#lib/LabeledValue.svelte';
+    import Section from '#lib/Section.svelte';
     import {
         PATTERN_CLIENT_NAME,
         PATTERN_CLIENT_URI,
@@ -372,52 +373,60 @@
 
 <div class="container admin-client-config">
     <Form action={`/auth/v1/clients/${client.id}`} {onSubmit} onInvalid={showInvalidSection}>
-        <section data-client-section="0" hidden={section !== 0} class="admin-form-section">
-            <h3>{ta.common.information}</h3>
+        <section data-client-section="0" hidden={section !== 0} class="settings-cards">
+            <Section title={ta.common.information}>
+                <div class="client-identity">
+                    <LabeledValue label="ID" mono copyToClip={client.id}>
+                        {client.id}
+                    </LabeledValue>
+                    <Input
+                        bind:value={name}
+                        autocomplete="off"
+                        label={ta.clients.name}
+                        placeholder={ta.clients.name}
+                        description={ta.clients.descName}
+                        width={inputWidth}
+                        pattern={PATTERN_CLIENT_NAME}
+                    />
+                </div>
+                <div class="ui-field-grid field-grid">
+                    <Input
+                        typ="url"
+                        bind:value={uri}
+                        autocomplete="off"
+                        label="URI"
+                        placeholder="URI"
+                        width={inputWidth}
+                        pattern={PATTERN_CLIENT_URI}
+                    />
+                    <InputTags
+                        bind:values={contacts}
+                        label={ta.common.contact}
+                        pattern={PATTERN_CONTACT}
+                    />
+                    <p class="settings-hint">{ta.clients.descClientUri}</p>
+                </div>
+            </Section>
 
-            <LabeledValue label="ID" mono copyToClip={client.id}>
-                {client.id}
-            </LabeledValue>
-
-            <p class="desc">{ta.clients.descName}</p>
-            <Input
-                bind:value={name}
-                autocomplete="off"
-                label={ta.clients.name}
-                placeholder={ta.clients.name}
-                width={inputWidth}
-                pattern={PATTERN_CLIENT_NAME}
-            />
-
-            <p class="desc">{ta.clients.descClientUri}</p>
-            <Input
-                typ="url"
-                bind:value={uri}
-                autocomplete="off"
-                label="URI"
-                placeholder="URI"
-                width={inputWidth}
-                pattern={PATTERN_CLIENT_URI}
-            />
-            <InputTags bind:values={contacts} label={ta.common.contact} pattern={PATTERN_CONTACT} />
-
-            <h3>{ta.clients.config}</h3>
-
-            <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
-                {ta.common.enabled}
-            </InputCheckbox>
-            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={forceMfa}>
-                {ta.clients.forceMfa}
-            </InputCheckbox>
-            <p style:margin-bottom="-.25rem">{ta.clients.descGroupPrefix}</p>
-            <Input
-                bind:value={restrict_group_prefix}
-                autocomplete="off"
-                label={ta.clients.groupLoginPrefix}
-                placeholder={ta.clients.groupLoginPrefix}
-                width={inputWidth}
-                pattern={PATTERN_GROUP}
-            />
+            <Section title={ta.clients.config}>
+                <div class="client-flags">
+                    <InputCheckbox ariaLabel={ta.common.enabled} bind:checked={enabled}>
+                        {ta.common.enabled}
+                    </InputCheckbox>
+                    <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={forceMfa}>
+                        {ta.clients.forceMfa}
+                    </InputCheckbox>
+                </div>
+                <Input
+                    bind:value={restrict_group_prefix}
+                    autocomplete="off"
+                    label={ta.clients.groupLoginPrefix}
+                    placeholder={ta.clients.groupLoginPrefix}
+                    description={ta.clients.descGroupPrefix}
+                    width={inputWidth}
+                    pattern={PATTERN_GROUP}
+                />
+            </Section>
         </section>
 
         <section data-client-section="1" hidden={section !== 1} class="admin-form-section">
@@ -659,87 +668,80 @@
             {/if}
         </section>
 
-        <section data-client-section="3" hidden={section !== 3} class="admin-form-section">
-            <p class="mb-0"><b>Backchannel Logout</b></p>
-            <p class="desc">
-                {@html ta.clients.backchannelLogout.replace(
-                    '{{ OIDC_BCL }}',
-                    '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank">OpenID Connect Back-Channel Logout</a>',
-                )}
-            </p>
-            <Input
-                typ="url"
-                bind:value={backchannel_logout_uri}
-                autocomplete="off"
-                label="Backchannel Logout URI"
-                placeholder="Backchannel Logout URI"
-                width={inputWidth}
-                pattern={PATTERN_URI}
-                disabled={client.id === 'rauthy'}
-            />
+        <section data-client-section="3" hidden={section !== 3} class="settings-cards">
+            <Section title="Backchannel Logout">
+                <p class="settings-hint">
+                    {@html ta.clients.backchannelLogout.replace(
+                        '{{ OIDC_BCL }}',
+                        '<a href="https://openid.net/specs/openid-connect-backchannel-1_0.html" target="_blank" rel="noopener noreferrer">OpenID Connect Back-Channel Logout</a>',
+                    )}
+                </p>
+                <Input
+                    typ="url"
+                    bind:value={backchannel_logout_uri}
+                    autocomplete="off"
+                    label="Backchannel Logout URI"
+                    placeholder="Backchannel Logout URI"
+                    width={inputWidth}
+                    pattern={PATTERN_URI}
+                    disabled={client.id === 'rauthy'}
+                />
+            </Section>
 
-            <p class="mb-0"><b>SCIM</b></p>
-            <p class="desc" style:margin-bottom=".5rem">
-                {@html ta.clients.scim.desc.replace(
-                    '{{ SCIM_LINK }}',
-                    '<a href="https://www.rfc-editor.org/rfc/rfc7644" target="_blank">SCIM v2</a>',
-                )}
-            </p>
-            <InputCheckbox
-                ariaLabel={ta.clients.scim.enable}
-                disabled={client.id === 'rauthy'}
-                bind:checked={scimEnabled}
-            >
-                {ta.clients.scim.enable}
-            </InputCheckbox>
-            {#if scimEnabled}
-                <div transition:slide={{ duration: 150 }}>
-                    <p class="desc" style:margin-bottom=".5rem">
-                        {ta.clients.scim.reqDesc}
-                    </p>
-                    <ul>
-                        <li>{@html ta.clients.scim.reqLi1}</li>
-                        <li>{@html ta.clients.scim.reqLi2}</li>
-                        <li>{@html ta.clients.scim.reqLi3}</li>
-                    </ul>
-
-                    <p class="mb-0" style:margin-top="1rem">
-                        {@html ta.clients.scim.baseUri}
-                    </p>
-                    <Input
-                        typ="url"
-                        bind:value={scim.base_uri}
-                        autocomplete="off"
-                        label="SCIM Base URI"
-                        placeholder="SCIM Base URI"
-                        width={inputWidth}
-                        pattern={PATTERN_CLIENT_URI}
-                        required={scimEnabled}
-                    />
-                    <InputPassword
-                        bind:value={scim.bearer_token}
-                        autocomplete="off"
-                        label="Bearer Token"
-                        placeholder="Bearer Token"
-                        width={inputWidth}
-                        pattern={PATTERN_URI}
-                        maxLength={2048}
-                        required={scimEnabled}
-                    />
-
-                    <div style:height=".5rem"></div>
+            <Section title="SCIM v2">
+                {#snippet actions()}
                     <InputCheckbox
-                        ariaLabel={ta.clients.scim.groupSync}
+                        ariaLabel={ta.clients.scim.enable}
                         disabled={client.id === 'rauthy'}
-                        bind:checked={scim.sync_groups}
+                        bind:checked={scimEnabled}
                     >
-                        {ta.clients.scim.groupSync}
+                        {ta.clients.scim.enable}
                     </InputCheckbox>
-                    {#if scim.sync_groups}
-                        <div transition:slide={{ duration: 150 }}>
-                            <p class="mb-0">
-                                {@html ta.clients.scim.groupSyncPrefixDesc}
-                            </p>
+                {/snippet}
+
+                <p class="settings-hint">
+                    {@html ta.clients.scim.desc.replace(
+                        '{{ SCIM_LINK }}',
+                        '<a href="https://www.rfc-editor.org/rfc/rfc7644" target="_blank" rel="noopener noreferrer">SCIM v2</a>',
+                    )}
+                </p>
+
+                {#if scimEnabled}
+                    <div class="ui-field-grid field-grid">
+                        <Input
+                            typ="url"
+                            bind:value={scim.base_uri}
+                            autocomplete="off"
+                            label="SCIM Base URI"
+                            placeholder="SCIM Base URI"
+                            width={inputWidth}
+                            pattern={PATTERN_CLIENT_URI}
+                            required={scimEnabled}
+                        />
+                        <InputPassword
+                            bind:value={scim.bearer_token}
+                            autocomplete="off"
+                            label="Bearer Token"
+                            placeholder="Bearer Token"
+                            width={inputWidth}
+                            pattern={PATTERN_URI}
+                            maxLength={2048}
+                            required={scimEnabled}
+                        />
+                        <p class="settings-hint">
+                            {@html ta.clients.scim.baseUri}
+                        </p>
+                    </div>
+
+                    <div class="scim-groups">
+                        <InputCheckbox
+                            ariaLabel={ta.clients.scim.groupSync}
+                            disabled={client.id === 'rauthy'}
+                            bind:checked={scim.sync_groups}
+                        >
+                            {ta.clients.scim.groupSync}
+                        </InputCheckbox>
+                        {#if scim.sync_groups}
                             <Input
                                 bind:value={scim.group_sync_prefix}
                                 autocomplete="off"
@@ -748,10 +750,22 @@
                                 width={inputWidth}
                                 pattern={PATTERN_GROUP}
                             />
-                        </div>
-                    {/if}
-                </div>
-            {/if}
+                            <p class="settings-hint">
+                                {@html ta.clients.scim.groupSyncPrefixDesc}
+                            </p>
+                        {/if}
+                    </div>
+
+                    <details class="scim-compatibility">
+                        <summary>{ta.clients.scim.reqDesc}</summary>
+                        <ul>
+                            <li>{@html ta.clients.scim.reqLi1}</li>
+                            <li>{@html ta.clients.scim.reqLi2}</li>
+                            <li>{@html ta.clients.scim.reqLi3}</li>
+                        </ul>
+                    </details>
+                {/if}
+            </Section>
         </section>
         <div class="flex gap-05 admin-save-bar">
             <Button type="submit">
@@ -809,6 +823,89 @@
         color: hsl(var(--error));
         font-size: 0.9rem;
         opacity: 0.8;
+    }
+
+    .settings-cards {
+        min-width: 0;
+        --ui-field-margin: 0;
+    }
+
+    .settings-cards:not([hidden]) {
+        display: grid;
+        gap: var(--ui-space);
+    }
+
+    .client-identity,
+    .scim-groups {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .client-identity :global(.admin-labeled-value) {
+        margin: 0;
+    }
+
+    .field-grid {
+        row-gap: 0.5rem;
+    }
+
+    .settings-cards .field-grid :global(.admin-password-field),
+    .settings-cards .field-grid :global(.admin-tags-field) {
+        margin-block: 0;
+    }
+
+    .settings-cards .field-grid :global(.admin-tags-field > label) {
+        margin-bottom: var(--ui-label-gap);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        line-height: var(--ui-label-height);
+        color: var(--ui-muted);
+    }
+
+    .settings-cards .field-grid :global(.admin-tags-field > ul) {
+        margin: 0;
+    }
+
+    .settings-hint {
+        margin: 0;
+        color: var(--ui-muted);
+        overflow-wrap: anywhere;
+    }
+
+    .field-grid > .settings-hint {
+        grid-column: 1 / -1;
+    }
+
+    .client-flags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem var(--ui-space);
+    }
+
+    .scim-groups {
+        padding-top: var(--ui-space);
+        border-top: 1px solid var(--ui-outline);
+    }
+
+    .scim-compatibility {
+        padding: 0.625rem 0.75rem;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+        color: var(--ui-muted);
+        font-size: var(--ui-control-font-size);
+        overflow-wrap: anywhere;
+    }
+
+    .scim-compatibility summary {
+        color: var(--ui-text);
+        cursor: pointer;
+    }
+
+    .scim-compatibility ul {
+        display: grid;
+        gap: 0.375rem;
+        margin: 0.5rem 0 0;
+        padding-inline-start: 1.25rem;
     }
 
     .admin-form-section {

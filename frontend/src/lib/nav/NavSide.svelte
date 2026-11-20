@@ -443,7 +443,7 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: center;
-        justify-items: center;
+        gap: 0.125rem;
         border-top: 1px solid var(--ui-outline);
         padding-block: var(--footer-row-padding);
         --ui-button-height: var(--footer-control-height);
@@ -458,9 +458,10 @@
         --ui-option-padding: 0;
     }
 
-    #mainNav[data-compact='true'] .admin-preference-controls :global(> div > .admin-control),
-    #mainNav[data-compact='true'] .admin-preference-controls :global(> div > div > .admin-control) {
-        min-width: 28px;
+    #mainNav .admin-preference-controls :global(> div > button.admin-control),
+    #mainNav .admin-preference-controls :global(> div > div > button.admin-control) {
+        width: 100%;
+        min-width: 0;
     }
 
     #mainNav[data-compact='true'] .admin-preference-controls :global(.admin-select-trigger) {

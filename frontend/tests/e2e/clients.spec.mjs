@@ -403,6 +403,11 @@ test.describe('client config', () => {
         const name = main.getByRole('textbox', { name: 'Client Name', exact: true });
         const uri = main.getByRole('textbox', { name: 'URI', exact: true });
         const contacts = tagInput(main, 'Contact');
+        const [uriRect, contactsRect] = await Promise.all([
+            uri.boundingBox(),
+            contacts.input.locator('xpath=ancestor::ul[1]').boundingBox(),
+        ]);
+        expect(uriRect && contactsRect && Math.abs(uriRect.y - contactsRect.y)).toBeLessThan(2);
 
         // invalid values are flagged and block the save
         await name.fill('x');
@@ -797,7 +802,10 @@ test.describe('client config', () => {
         expect(c2.backchannel_logout_uri ?? null).toBeNull();
     });
 
-    test('SCIM can be enabled with base URI, token and group sync', async ({ page }) => {
+    test('SCIM can be enabled with base URI, token and group sync @mobile @webkit', async ({
+        page,
+        isMobile,
+    }) => {
         await tab(page, 'Integrations').click();
         const main = page.getByRole('main');
         const baseUri = main.getByRole('textbox', { name: 'SCIM Base URI' });
@@ -806,6 +814,27 @@ test.describe('client config', () => {
         await expect(baseUri).toBeVisible();
         const token = main.getByLabel('Bearer Token', { exact: true });
         await expect(checkbox(page, 'Synchronize Groups')).toBeChecked();
+        const [baseRect, tokenRect] = await Promise.all([
+            baseUri.boundingBox(),
+            token.boundingBox(),
+        ]);
+        expect(
+            baseRect &&
+                tokenRect &&
+                (isMobile
+                    ? tokenRect.y > baseRect.y
+                    : tokenRect.x > baseRect.x && Math.abs(tokenRect.y - baseRect.y) < 2),
+        ).toBe(true);
+        const requirements = main.getByText('A few things are required for compatibility:');
+        const requirement = main.getByText('The client must handle', { exact: false });
+        await expect(requirement).toBeHidden();
+        await requirements.click();
+        await expect(requirement).toBeVisible();
+        await expect
+            .poll(() =>
+                main.locator('.admin-detail').evaluate(el => el.scrollWidth - el.clientWidth),
+            )
+            .toBe(0);
 
         // base URI and token are required once SCIM is enabled
         expect(
@@ -972,10 +1001,43 @@ test.describe('client branding', () => {
             v,
         );
 
+    test('shows uploads first and pins the theme actions while scrolling @mobile @webkit', async ({
+        page,
+    }) => {
+        const main = page.getByRole('main');
+        const assets = main.getByRole('region', { name: 'Logo and favicon' });
+        const theme = main.getByRole('region', { name: 'Theme', exact: true });
+        const save = main.getByRole('button', { name: 'Save', exact: true });
+        const reset = main.getByRole('button', { name: 'Reset theme', exact: true });
+        const panel = main.locator('.admin-detail');
+
+        await expect(assets).toBeVisible();
+        await expect(theme).toBeVisible();
+        const [assetRect, themeRect] = await Promise.all([
+            assets.boundingBox(),
+            theme.boundingBox(),
+        ]);
+        expect(assetRect && themeRect && assetRect.y < themeRect.y).toBe(true);
+
+        await page.getByText('Advanced CSS', { exact: true }).click();
+        for (const fraction of [0, 0.6, 1]) {
+            await panel.evaluate((el, fraction) => {
+                el.scrollTop = (el.scrollHeight - el.clientHeight) * fraction;
+            }, fraction);
+            await expect(save).toBeInViewport({ ratio: 1 });
+            await expect(reset).toBeInViewport({ ratio: 1 });
+            const [view, button] = await Promise.all([panel.boundingBox(), save.boundingBox()]);
+            expect(
+                view && button && Math.abs(view.y + view.height - button.y - button.height),
+            ).toBeLessThan(18);
+        }
+    });
+
     function hsl(/** @type {import("@playwright/test").Page} */ page, /** @type {string} */ name) {
         const group = page.getByRole('group', { name, exact: true });
         return {
             heading: group.getByRole('heading', { name, exact: true }),
+            open: () => group.locator('summary').click(),
             hue: group.getByRole('slider', { name: 'Hue' }),
             sat: group.getByRole('slider', { name: 'Sat' }),
             lum: group.getByRole('slider', { name: 'Lum' }),
@@ -1016,6 +1078,8 @@ test.describe('client branding', () => {
     }) => {
         const action = hsl(page, '--action');
         await expect(action.heading).toBeVisible();
+        await expect(action.hue).toBeHidden();
+        await action.open();
         await expect(action.hue).toHaveValue('34');
         await expect(action.sat).toHaveValue('100');
         await expect(action.lum).toHaveValue('40');
@@ -1036,6 +1100,8 @@ test.describe('client branding', () => {
         // the color picker sets all three sliders at once
         const error = hsl(page, '--error');
         await error.color.fill('#ff0000');
+        await error.open();
+        await expect(action.hue).toBeHidden();
         await expect(error.hue).toHaveValue('0');
         await expect(error.sat).toHaveValue('100');
         await expect(error.lum).toHaveValue('50');
@@ -1046,6 +1112,7 @@ test.describe('client branding', () => {
             await tab(page, mode).click();
             for (const name of ['--text', '--text-high', '--bg', '--bg-high', '--accent']) {
                 const c = hsl(page, name);
+                await c.open();
                 await expect(c.hue).toBeVisible();
                 await expect(c.sat).toBeVisible();
                 await expect(c.lum).toBeVisible();
@@ -1055,6 +1122,7 @@ test.describe('client branding', () => {
 
         // a dark theme value
         const darkBg = hsl(page, '--bg');
+        await darkBg.open();
         await darkBg.sat.focus();
         await darkBg.sat.press('ArrowRight');
         await expect(darkBg.sat).toHaveValue('41');
@@ -1073,8 +1141,10 @@ test.describe('client branding', () => {
 
         await page.reload();
         await tab(page, 'Branding').click();
+        await hsl(page, '--action').open();
         await expect(hsl(page, '--action').hue).toHaveValue('36');
         await tab(page, 'Dark Theme').click();
+        await hsl(page, '--bg').open();
         await expect(hsl(page, '--bg').sat).toHaveValue('41');
     });
 
@@ -1119,6 +1189,7 @@ test.describe('client branding', () => {
         await expect.poll(() => cssVar(page, '--bg')).toBe('200 40% 6%');
         // the preview follows edits of the dark theme
         const darkBg = hsl(page, '--bg');
+        await darkBg.open();
         await darkBg.lum.focus();
         await darkBg.lum.press('ArrowRight');
         await expect.poll(() => cssVar(page, '--bg')).toBe('200 40% 7%');
