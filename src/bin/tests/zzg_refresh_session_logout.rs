@@ -54,10 +54,10 @@ async fn test_refresh_preserves_session_id() -> Result<(), Box<dyn Error>> {
     assert!(sid.is_string());
 
     let response = refresh(&http, &original, &secret).await;
-    assert_eq!(response.status(), 200);
+    let response = expect_status!(response, 200);
     let first: TokenSet = response.json().await?;
     let response = refresh(&http, &first, &secret).await;
-    assert_eq!(response.status(), 200);
+    let response = expect_status!(response, 200);
     let rotated: TokenSet = response.json().await?;
     assert_eq!(
         decode_claims(rotated.id_token.as_ref().unwrap())["sid"],
@@ -86,9 +86,9 @@ async fn test_concurrent_refresh_has_one_winner() -> Result<(), Box<dyn Error>> 
     } else {
         (second, first)
     };
-    assert_eq!(winner.status(), 200);
-    assert_eq!(loser.status(), 404);
-    assert_eq!(refresh(&http, &original, &secret).await.status(), 404);
+    let winner = expect_status!(winner, 200);
+    expect_status!(loser, 404);
+    expect_status!(refresh(&http, &original, &secret).await, 404);
     let rotated: TokenSet = winner.json().await?;
     let inspected = http
         .post(format!("{}/oidc/introspect", get_backend_url()))
@@ -96,9 +96,9 @@ async fn test_concurrent_refresh_has_one_winner() -> Result<(), Box<dyn Error>> 
         .form(&[("token", &rotated.access_token)])
         .send()
         .await?;
-    assert_eq!(inspected.status(), 200);
+    let inspected = expect_status!(inspected, 200);
     assert_eq!(inspected.json::<serde_json::Value>().await?["active"], true);
-    assert_eq!(refresh(&http, &rotated, &secret).await.status(), 200);
+    expect_status!(refresh(&http, &rotated, &secret).await, 200);
     Ok(())
 }
 
@@ -126,8 +126,8 @@ async fn test_logout_before_refresh_rejects_rotation() -> Result<(), Box<dyn Err
         })
         .send()
         .await?;
-    assert_eq!(response.status(), 200);
-    assert_eq!(refresh(&http, &original, &secret).await.status(), 404);
+    expect_status!(response, 200);
+    expect_status!(refresh(&http, &original, &secret).await, 404);
     Ok(())
 }
 
@@ -152,10 +152,10 @@ async fn test_session_logout_revokes_rotated_tokens() -> Result<(), Box<dyn Erro
     )
     .await;
     let response = refresh(&http, &original, &secret).await;
-    assert_eq!(response.status(), 200);
+    let response = expect_status!(response, 200);
     let first: TokenSet = response.json().await?;
     let response = refresh(&http, &first, &secret).await;
-    assert_eq!(response.status(), 200);
+    let response = expect_status!(response, 200);
     let rotated: TokenSet = response.json().await?;
     let inspect_url = format!("{}/oidc/introspect", get_backend_url());
     let before = http
@@ -164,7 +164,7 @@ async fn test_session_logout_revokes_rotated_tokens() -> Result<(), Box<dyn Erro
         .form(&[("token", &rotated.access_token)])
         .send()
         .await?;
-    assert_eq!(before.status(), 200);
+    let before = expect_status!(before, 200);
     assert_eq!(before.json::<serde_json::Value>().await?["active"], true);
 
     let logout = http
@@ -177,7 +177,7 @@ async fn test_session_logout_revokes_rotated_tokens() -> Result<(), Box<dyn Erro
         })
         .send()
         .await?;
-    assert_eq!(logout.status(), 200);
+    expect_status!(logout, 200);
 
     let after = http
         .post(&inspect_url)
@@ -185,9 +185,9 @@ async fn test_session_logout_revokes_rotated_tokens() -> Result<(), Box<dyn Erro
         .form(&[("token", &rotated.access_token)])
         .send()
         .await?;
-    assert_eq!(after.status(), 401);
-    assert_eq!(refresh(&http, &rotated, &secret).await.status(), 404);
-    assert_eq!(refresh(&http, &independent, &secret).await.status(), 200);
+    expect_status!(after, 401);
+    expect_status!(refresh(&http, &rotated, &secret).await, 404);
+    expect_status!(refresh(&http, &independent, &secret).await, 200);
     Ok(())
 }
 
@@ -212,7 +212,7 @@ async fn test_concurrent_logout_revokes_returned_refresh() -> Result<(), Box<dyn
             logout_token: None,
         });
     let (rotated, logout) = tokio::join!(refresh(&http, &original, &secret), logout.send());
-    assert_eq!(logout?.status(), 200);
+    expect_status!(logout?, 200);
     if rotated.status().is_success() {
         let rotated: TokenSet = rotated.json().await?;
         let inspected = http
@@ -221,10 +221,10 @@ async fn test_concurrent_logout_revokes_returned_refresh() -> Result<(), Box<dyn
             .form(&[("token", &rotated.access_token)])
             .send()
             .await?;
-        assert_eq!(inspected.status(), 401);
-        assert_eq!(refresh(&http, &rotated, &secret).await.status(), 404);
+        expect_status!(inspected, 401);
+        expect_status!(refresh(&http, &rotated, &secret).await, 404);
     } else {
-        assert_eq!(rotated.status(), 404);
+        expect_status!(rotated, 404);
     }
     Ok(())
 }

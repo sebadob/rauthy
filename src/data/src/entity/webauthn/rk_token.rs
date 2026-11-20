@@ -83,7 +83,7 @@ impl ResidentKeyToken {
         }
         // A user can only have a resident key token if the session is authenticated and
         // MFA already. This is set during `auth_finish_discover()` in the step before.
-        if !session.is_mfa || session.user_id.is_none() {
+        if !session.is_mfa_completed() || session.user_id.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "Invalid Session / Resident Key token combination",

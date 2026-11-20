@@ -4,7 +4,7 @@ use actix_web::{
 };
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
-use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::ip_blacklist::IpBlacklist;
 use rauthy_data::html::templates::{BlockedHtml, TooManyRequestsHtml};
 use rauthy_data::ipgeo;
@@ -58,7 +58,7 @@ where
 
         Box::pin(async move {
             let config = &RauthyConfig::get().vars.geo;
-            let ip = real_ip_from_svc_req(&req)?;
+            let ip = real_ip_from_req(&req)?;
 
             // If the `block_is_whitelist` is `None`, Geoblocking is not configured at all
             if let Some(is_whitelist) = config.block_is_whitelist {

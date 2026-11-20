@@ -42,6 +42,7 @@ fn client_update() -> UpdateClientRequest {
         claims_at_root: false,
         allowed_resources: None,
         default_aud: None,
+        actor_same_client: false,
         scim: None,
         consent: None,
     }
@@ -111,7 +112,7 @@ async fn test_logout_redirect() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let _: ClientResponse = res.json().await?;
 
     let res = http
@@ -120,14 +121,14 @@ async fn test_logout_redirect() -> Result<(), Box<dyn Error>> {
         .json(&client_update())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     let res = http
         .post(format!("{backend_url}/clients/{ID}/secret"))
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let secret = res.json::<ClientSecretResponse>().await?.secret.unwrap();
 
     let token = id_token(&http, &secret).await;
@@ -141,7 +142,7 @@ async fn test_logout_redirect() -> Result<(), Box<dyn Error>> {
         Some("st4te"),
     )
     .await;
-    assert_eq!(res.status(), 400);
+    let res = expect_status!(res, 400);
     assert!(res.headers().get(header::LOCATION).is_none());
     let body = res.text().await?;
     assert!(body.contains("`redirect_uri` must not contain"));
@@ -149,7 +150,7 @@ async fn test_logout_redirect() -> Result<(), Box<dyn Error>> {
     // `state` is appended once, form-urlencoded with a space as `%20`, to the existing query
     let state = "a b+c&state=evil#x";
     let res = logout(&http, token, POST_LOGOUT_URI, Some(state)).await;
-    assert_eq!(res.status(), 302);
+    let res = expect_status!(res, 302);
     let loc = res
         .headers()
         .get(header::LOCATION)
@@ -179,7 +180,7 @@ async fn test_logout_redirect() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     Ok(())
 }

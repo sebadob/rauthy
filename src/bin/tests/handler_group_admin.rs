@@ -58,7 +58,7 @@ async fn create_user(
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     Ok(res.json::<UserResponse>().await?)
 }
 
@@ -146,7 +146,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&set_pwd)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // --- log in as the group admin
     let ga_headers = session_headers_with("ga-admin@gatest.io", PWD).await;
@@ -157,7 +157,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 2. it can read the full details of a managed user
     let res = client
@@ -165,7 +165,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 2b. for an unmanaged but ordinary user it gets a `428`, not the details: the Admin UI
     // uses this to offer adding the user to a managed group
@@ -174,7 +174,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 428);
+    expect_status!(res, 428);
 
     // 2b-2. trying to view another admin is a plain `403`, never a `428`
     let res = client
@@ -182,7 +182,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 2b-3. but a group admin may always view its OWN account (it is an admin, so the gate
     // would otherwise reject it). The account dashboard relies on this for self-management.
@@ -191,7 +191,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 2c. it can read the roles + groups lists (needed for the management UI to work)
     let res = client
@@ -199,13 +199,13 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = client
         .get(format!("{backend}/groups"))
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 2d. it can read the MFA devices (webauthn) of a managed user (the MFA tab)
     let res = client
@@ -213,14 +213,14 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     // ... but not of an unmanaged user
     let res = client
         .get(format!("{backend}/users/{}/webauthn", outsider.id))
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 3. it can edit profile data of a managed user
     let mut change = upd(&member);
@@ -231,7 +231,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&change)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 4. it cannot edit a user outside its managed groups
     let mut nope = upd(&outsider);
@@ -242,7 +242,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&nope)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 5. it cannot change roles (no privilege escalation)
     let mut esc = upd(&member);
@@ -253,7 +253,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&esc)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 6. it cannot add a membership in a group it does not manage
     let mut grp = upd(&member);
@@ -264,7 +264,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&grp)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 7. it CAN set a password for a managed user (they cannot priv-esc anyway)
     let mut pwd = upd(&member);
@@ -275,7 +275,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&pwd)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 8. it cannot delete users
     let res = client
@@ -283,7 +283,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 9. it can force-logout a managed user
     let res = client
@@ -291,7 +291,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 10. but not a user outside its managed groups
     let res = client
@@ -299,7 +299,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 10b. it is authorized to list and revoke the consents of a managed user, the effect of
     // a revoke is covered in `handler_users.rs`
@@ -308,7 +308,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = client
         .delete(format!(
             "{backend}/users/{}/consents?client_id=init_client",
@@ -317,7 +317,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // its own consents, before the group admin check that would refuse an admin target
     let res = client
@@ -325,7 +325,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     let res = client
         .delete(format!(
             "{backend}/users/{}/consents?client_id=init_client",
@@ -334,7 +334,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // an API key of another access group is checked first and rejected, even with the group
     // admin session
@@ -352,7 +352,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&key)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let key_header = format!("API-Key {}", res.text().await?);
     let res = client
         .get(format!("{backend}/users/{}/consents", member.id))
@@ -360,7 +360,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
     let res = client
         .delete(format!(
             "{backend}/users/{}/consents?client_id=init_client",
@@ -370,13 +370,13 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
     let res = client
         .delete(format!("{backend}/api_keys/{}", key.name))
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 10c. but not those of a user outside its managed groups, nor of another admin
     let res = client
@@ -384,7 +384,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
     let res = client
         .delete(format!(
             "{backend}/users/{}/consents?client_id=init_client",
@@ -393,13 +393,13 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
     let res = client
         .get(format!("{backend}/users/{}/consents", outsider.id))
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
     let res = client
         .delete(format!(
             "{backend}/users/{}/consents?client_id=init_client",
@@ -408,7 +408,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 11. the "add an unmanaged user to my groups" flow: a groups-only PATCH that brings the
     // outsider into a managed group is allowed, even though the admin could not see it before.
@@ -424,7 +424,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&patch)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // now the outsider is managed: full details are visible, and it kept `gaother`
     let res = client
@@ -432,8 +432,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let managed = res.json::<UserResponse>().await?;
+    let managed = expect_status_json!(res, 200, UserResponse);
     let groups = managed.groups.unwrap_or_default();
     assert!(groups.contains(&"gatest".to_string()));
     assert!(groups.contains(&"gaother".to_string()));
@@ -458,7 +457,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&patch)
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // 12. self-management: the group admin may edit its OWN profile, even though it is
     // an admin (the account dashboard links here for self-service). PATCH is the real Admin UI
@@ -473,7 +472,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&patch)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // the same via PUT, keeping the (group-admin) role unchanged
     let res = client
@@ -481,8 +480,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let ga_now = res.json::<UserResponse>().await?;
+    let ga_now = expect_status_json!(res, 200, UserResponse);
     let mut self_upd = upd(&ga_now);
     self_upd.given_name = Some("SelfEditPut".to_string());
     let res = client
@@ -491,7 +489,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .json(&self_upd)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // 13. bulk email: a group admin may only send to a single group it manages, with an
     // `in_group` filter; everything else is rejected. Jobs are scheduled far in the future so
@@ -513,7 +511,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // `EmailJob`s use the creation second as their primary key, so two jobs created within the
     // same second collide; wait one second before the next successful insert
@@ -533,7 +531,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // ... but not to all users (no filter)
     let res = client
@@ -548,7 +546,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // ... nor to a group it does not manage
     let res = client
@@ -564,7 +562,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // ... nor with a role filter
     let res = client
@@ -580,7 +578,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         }))
         .send()
         .await?;
-    assert_eq!(res.status(), 403);
+    expect_status!(res, 403);
 
     // the group admin may list email jobs, but only sees jobs scoped to a group it manages
     let res = client
@@ -588,7 +586,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(ga_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let ga_jobs = res
         .json::<serde_json::Value>()
         .await?
@@ -610,7 +608,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .headers(admin.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
     let all_jobs = res
         .json::<serde_json::Value>()
         .await?
@@ -629,7 +627,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
             .headers(ga_headers.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 200);
+        expect_status!(res, 200);
     }
     // ... but not one outside it
     if let Some(id) = gaother_job_id {
@@ -638,7 +636,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
             .headers(ga_headers.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 403);
+        expect_status!(res, 403);
     }
 
     // --- cleanup (full admin can still do everything: non-breaking)
@@ -648,7 +646,7 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
             .headers(admin.clone())
             .send()
             .await?;
-        assert_eq!(res.status(), 204);
+        expect_status!(res, 204);
     }
 
     Ok(())

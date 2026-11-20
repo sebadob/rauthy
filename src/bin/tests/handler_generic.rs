@@ -9,7 +9,7 @@ mod common;
 async fn test_get_ping() -> Result<(), Box<dyn Error>> {
     let url = format!("{}/ping", get_backend_url());
     let res = reqwest::get(&url).await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
     Ok(())
 }
 
@@ -52,8 +52,7 @@ async fn test_get_well_known() -> Result<(), Box<dyn Error>> {
     let url = format!("{}/.well-known/openid-configuration", get_backend_url());
     let res = reqwest::get(&url).await?;
 
-    assert_eq!(res.status(), 200);
-    let content = res.json::<WellKnown>().await?;
+    let content = expect_status_json!(res, 200, WellKnown);
     // strip trailing /
     assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
     // RFC 9207
@@ -89,7 +88,7 @@ async fn test_get_well_known_oauth_rfc8414() -> Result<(), Box<dyn Error>> {
     ] {
         let res = reqwest::get(&url).await?;
 
-        assert_eq!(res.status(), 200, "unexpected status for {url}");
+        let res = expect_status!(res, 200, "unexpected status for {url}");
         assert_eq!(
             res.headers()
                 .get(reqwest::header::CONTENT_TYPE)
@@ -101,6 +100,62 @@ async fn test_get_well_known_oauth_rfc8414() -> Result<(), Box<dyn Error>> {
         // strip trailing /
         assert_eq!(content.issuer[..content.issuer.len() - 1], get_issuer());
         assert!(content.authorization_response_iss_parameter_supported);
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct BackupListing {
+    name: String,
+    size: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BackupListings {
+    local: Vec<BackupListing>,
+}
+
+/// A local backup download must declare its length and deliver all of it.
+#[tokio::test]
+async fn test_backup_download_is_complete() -> Result<(), Box<dyn Error>> {
+    if std::env::var("HIQLITE").as_deref() == Ok("false") {
+        // backups only exist for Hiqlite
+        return Ok(());
+    }
+
+    let (headers, _) = common::session_headers().await;
+    let client = reqwest::Client::new();
+    let url = format!("{}/backup", get_backend_url());
+
+    let res = client.post(&url).headers(headers.clone()).send().await?;
+    assert!(res.status().is_success(), "{}", res.status());
+
+    let listings: BackupListings = client
+        .get(&url)
+        .headers(headers.clone())
+        .send()
+        .await?
+        .json()
+        .await?;
+    assert!(!listings.local.is_empty());
+
+    for listing in &listings.local {
+        let res = client
+            .get(format!(
+                "{}/backup/local/{}",
+                get_backend_url(),
+                listing.name
+            ))
+            .headers(headers.clone())
+            .send()
+            .await?;
+        assert_eq!(res.status(), 200);
+        assert_eq!(res.content_length(), listing.size);
+
+        let bytes = res.bytes().await?;
+        assert_eq!(Some(bytes.len() as u64), listing.size);
+        assert!(bytes.starts_with(b"SQLite format 3\0"));
     }
 
     Ok(())

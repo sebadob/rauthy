@@ -13,6 +13,7 @@ pub struct WebauthnLoginReq {
     pub header_origin: Option<String>,
     pub tos_await_data: Option<WebauthnToSAwaitData>,
     pub needs_user_update: bool,
+    pub session_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

@@ -42,8 +42,10 @@ export let I18nAdminRu: I18nAdmin = {
     clients: {
         allowedResources: 'Разрешённые ресурсы',
         defaultAud: 'Аудитории по умолчанию',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Необязательные индикаторы ресурсов RFC 8707, которые может запрашивать этот клиент. Пустой список отклоняет любой параметр 'resource' с ошибкой 'invalid_target'.`,
         descDefaultAud: `Аудитории, которые всегда добавляются в токены этого клиента, независимо от параметра 'resource'.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout:
             'Если этот клиент поддерживает {{ OIDC_BCL }}, вы можете указать URI здесь.',
         branding: {

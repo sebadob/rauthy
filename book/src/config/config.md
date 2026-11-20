@@ -138,6 +138,8 @@ Kubernetes secrets, or simply provide the whole config as one secret (my preferr
 # Cloudflare, which adds custom headers in this case. For instance,
 # if your requests are proxied through cloudflare, your would set
 # `CF-Connecting-IP`.
+# Needs a single IP address as its value and is only used with
+# `proxy_mode = true`.
 #
 # overwritten by: PEER_IP_HEADER_NAME
 #peer_ip_header_name = ''
@@ -2265,11 +2267,11 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en cs de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans']
 # Languages for the Admin UI.
-# Available Options: en cs de es fr ja ko nb nl pt ru uk zhhans
+# Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
 filter_lang_admin = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
 
@@ -2743,10 +2745,9 @@ pub_url = 'localhost:8080'
 proxy_mode = false
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests with a
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -2875,7 +2876,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de es fr ja ko nb nl pt ru uk zh_hans
+# one of: en de es fr ja ko nb nl pl pt ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset

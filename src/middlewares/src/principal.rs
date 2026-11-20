@@ -6,7 +6,7 @@ use actix_web::{
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::{COOKIE_SESSION, TOKEN_API_KEY};
-use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_data::entity::principal::Principal;
@@ -125,7 +125,7 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
     match Session::find(session_id).await {
         Ok(mut session) => {
             let remote_ip = if RauthyConfig::get().vars.access.session_validate_ip {
-                real_ip_from_svc_req(req).ok()
+                real_ip_from_req(req).ok()
             } else {
                 None
             };

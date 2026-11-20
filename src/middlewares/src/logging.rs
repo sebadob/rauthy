@@ -6,7 +6,7 @@ use actix_web::{
 };
 use futures::future::LocalBoxFuture;
 use rauthy_common::logging::LogLevelAccess;
-use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use std::future::{Ready, ready};
@@ -83,7 +83,7 @@ fn emit_log(log: Option<String>, inst: Instant) {
 #[inline(always)]
 fn build_log(req: &ServiceRequest) -> Result<Option<String>, ErrorResponse> {
     let path = req.uri().path();
-    let ip = real_ip_from_svc_req(req)?;
+    let ip = real_ip_from_req(req)?;
 
     let log = match RauthyConfig::get().log_level_access {
         LogLevelAccess::Debug => {

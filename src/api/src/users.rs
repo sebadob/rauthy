@@ -35,7 +35,7 @@ use rauthy_data::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPi
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaAssurance, Session};
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
@@ -2353,9 +2353,9 @@ pub async fn post_webauthn_reg_finish(
         // this point, so a flow that gets here without a session (during an initial account setup,
         // for instance) must never have its successful registration turned into an error.
         if let Some(mut session) = principal.into_inner().session
-            && !session.is_mfa
+            && !session.is_mfa_completed()
         {
-            session.set_mfa(true).await?;
+            session.set_mfa(MfaAssurance::Ceremony).await?;
         }
 
         Ok(HttpResponse::Created().finish())
@@ -2791,6 +2791,19 @@ pub async fn put_user_self(
     // make sure the logged-in user can only update itself
     let id = id.into_inner();
     principal.is_user(&id)?;
+
+    // the payload replaces the stored values, omitted `user_values` delete them
+    let (stored, preferred_username) = User::upd_req_from_db(id.clone()).await?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: preferred_username.as_deref(),
+        user_values: &payload.user_values,
+    }
+    .validate_update(&UserValuesValidator::from_update_req(
+        &stored,
+        preferred_username.as_deref(),
+    ))?;
 
     let (user, user_values, email_updated) = User::update_self_req(id, payload).await?;
 

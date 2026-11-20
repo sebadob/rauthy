@@ -473,7 +473,10 @@ impl Principal {
 
     #[inline(always)]
     pub fn has_mfa_active(&self) -> bool {
-        self.session.as_ref().map(|s| s.is_mfa).unwrap_or(false)
+        self.session
+            .as_ref()
+            .map(|s| s.is_mfa_completed())
+            .unwrap_or(false)
     }
 
     /// Returns the `user_id` linked to this session. Will `Err` if this principal does not

@@ -1,10 +1,8 @@
 use crate::common::{get_auth_headers, get_backend_url};
 use chrono::Utc;
-use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_data::entity::groups::Group;
-use reqwest::StatusCode;
 use reqwest::header::AUTHORIZATION;
 use std::error::Error;
 use std::ops::Sub;
@@ -18,7 +16,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
 
     let url = format!("{}/api_keys", get_backend_url());
     let res = client.get(&url).send().await?;
-    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    expect_status!(res, 401);
 
     // create a new api key
     let mut payload = ApiKeyRequest {
@@ -35,7 +33,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    let res = expect_status!(res, 200);
     let secret = res.text().await.unwrap();
     eprintln!("api key secret: {}", secret);
     assert!(secret.starts_with(&payload.name));
@@ -49,7 +47,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    expect_status!(res, 400);
 
     // we should be able to read groups now
     let url_groups = format!("{}/groups", get_backend_url());
@@ -58,8 +56,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
-    let body = res.json::<Vec<Group>>().await?;
+    let body = expect_status_json!(res, 200, Vec<Group>);
     assert!(!body.is_empty());
 
     // the groups-only API key must not manage API keys
@@ -68,7 +65,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    expect_status!(res, 403);
 
     // create an API-key manager key and use it to manage another key
     let manager_payload = ApiKeyRequest {
@@ -90,8 +87,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&manager_payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
-    let manager_secret = res.text().await?;
+    let manager_secret = expect_status!(res, 200).text().await?;
     let manager_header = format!("API-Key {}", manager_secret);
 
     let managed_payload = ApiKeyRequest {
@@ -108,8 +104,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&managed_payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
-    let managed_secret = res.text().await?;
+    let managed_secret = expect_status!(res, 200).text().await?;
     assert!(managed_secret.starts_with(&managed_payload.name));
 
     let managed_secret_url = format!("{}/{}/secret", url, managed_payload.name);
@@ -118,8 +113,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &manager_header)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
-    let rotated_secret = res.text().await?;
+    let rotated_secret = expect_status!(res, 200).text().await?;
     assert!(rotated_secret.starts_with(&managed_payload.name));
     assert_ne!(managed_secret, rotated_secret);
 
@@ -129,7 +123,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &manager_header)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // we should NOT be able to create a new group
     let new_group = GroupRequest {
@@ -142,7 +136,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&new_group)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    expect_status!(res, 403);
 
     // modify the API key and give permissions to create a new group
     payload.access = vec![ApiKeyAccess {
@@ -156,7 +150,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // try again to create a group
     let res = client
@@ -165,7 +159,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&new_group)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // issue #1554: an API key with `AuthProviders` access can reach the upstream
     // provider endpoints, which used to be admin-session-only.
@@ -179,7 +173,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // listing providers is `POST /providers` (an admin route, now API-key accessible)
     let url_providers = format!("{}/providers", get_backend_url());
@@ -188,7 +182,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // without `AuthProviders` access, the same call is forbidden
     payload.access = vec![ApiKeyAccess {
@@ -201,13 +195,13 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
     let res = client
         .post(&url_providers)
         .header(AUTHORIZATION, &key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    expect_status!(res, 403);
 
     // let our key expire
     let exp_ts = Utc::now().sub(chrono::Duration::seconds(1)).timestamp();
@@ -218,7 +212,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .json(&payload)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::OK);
+    expect_status!(res, 200);
 
     // we should not be able to access the API with the now expired key -> try reading groups again
     let res = client
@@ -226,7 +220,7 @@ async fn test_api_keys() -> Result<(), Box<dyn Error>> {
         .header(AUTHORIZATION, &key_header)
         .send()
         .await?;
-    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    expect_status!(res, 401);
 
     Ok(())
 }

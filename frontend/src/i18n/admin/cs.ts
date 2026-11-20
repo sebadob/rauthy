@@ -39,8 +39,10 @@ export let I18nAdminCs: I18nAdmin = {
     clients: {
         allowedResources: 'Povolené zdroje',
         defaultAud: 'Výchozí příjemci (audience)',
+        actorSameClient: 'Actor token from this client only',
         descAllowedResources: `Volitelné indikátory zdrojů podle RFC 8707, o které smí tento klient žádat. Při prázdném seznamu se každý požadavek s parametrem 'resource' odmítne chybou 'invalid_target'.`,
         descDefaultAud: `Příjemci (audience), kteří se do tokenů tohoto klienta přidají vždy, bez ohledu na parametr požadavku 'resource'.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Pokud tento klient podporuje {{ OIDC_BCL }}, zadejte sem jeho URI.',
         branding: {
             descHsl: `Následující hodnoty se zadávají jako HSL. Zadáváte jen základní barvy.

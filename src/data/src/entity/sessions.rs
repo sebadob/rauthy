@@ -1,3 +1,12 @@
+//! The `Session` entity and the MFA assurance of a session.
+//!
+//! `Session::is_mfa` means: a second factor has completed on this exact session, for this exact
+//! session's principal. It is only ever written together with an [`MfaAssurance`] —
+//! [`Session::set_authenticated`] at the end of a login, [`Session::set_mfa`] when a ceremony
+//! completes outside of it — and it is read via [`Session::is_mfa_completed`]. `NoFactor` resets
+//! it, `Ceremony` and `Provider` set it, `SamePrincipal` keeps what the session has earned.
+//! Lifetime and state rules live in [`Session::is_valid`] and [`Session::set_authenticated`].
+
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
@@ -33,6 +42,9 @@ pub struct Session {
     pub user_id: Option<String>,
     pub roles: Option<String>,
     pub groups: Option<String>,
+    /// A second factor has completed on this exact session, for this exact principal. Only
+    /// [`Session::set_mfa`] and the `MfaAssurance` of a [`Session::set_authenticated`] ever write it,
+    /// read it via [`Session::is_mfa_completed`].
     pub is_mfa: bool,
     #[column(parse)]
     pub state: SessionState,
@@ -112,6 +124,33 @@ impl SessionState {
             SessionState::Auth => "auth",
             SessionState::LoggedOut => "logged_out",
             SessionState::Unknown => "unknown",
+        }
+    }
+}
+
+/// The provenance of the `is_mfa` flag that gets written when a session is authenticated.
+///
+/// `Session::is_mfa` means: a second factor has completed on this exact session, for this exact
+/// session's principal. Only `Ceremony` and `Provider` ever set it, and `SamePrincipal` carries
+/// over an assurance that the session has already earned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MfaAssurance {
+    /// No second factor was involved: the flag is reset to `false`, always.
+    NoFactor,
+    /// An OTP / Webauthn / passkey ceremony completed on this session.
+    Ceremony,
+    /// A trusted upstream IdP asserted MFA for this login (`ProviderMfaLogin::Yes`).
+    Provider,
+    /// Re-authentication of the session's own principal: keep the current value.
+    SamePrincipal,
+}
+
+impl MfaAssurance {
+    fn apply_to(self, current: bool) -> bool {
+        match self {
+            MfaAssurance::NoFactor => false,
+            MfaAssurance::Ceremony | MfaAssurance::Provider => true,
+            MfaAssurance::SamePrincipal => current,
         }
     }
 }
@@ -493,7 +532,11 @@ WHERE sessions.exp > $11"#;
     }
 
     #[inline]
-    pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
+    pub async fn set_authenticated(
+        &mut self,
+        user: &User,
+        assurance: MfaAssurance,
+    ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
         // An expired session must never be resurrected
         if self.exp <= now {
@@ -515,13 +558,14 @@ WHERE sessions.exp > $11"#;
         self.user_id = Some(user.id.clone());
         self.roles = Some(user.roles.clone());
         self.groups = user.groups.clone();
+        self.is_mfa = assurance.apply_to(self.is_mfa);
 
         // This function MUST NOT use `self.upsert()`, because it might insert
         // a new session during a race-condition.
         let sql = r#"
 UPDATE sessions
-SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5
-WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
+SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5, is_mfa = $6
+WHERE id = $7 AND exp > $8 AND (state = $9 OR state = $10)"#;
 
         let rows_affected = if is_hiqlite() {
             DB::hql()
@@ -533,6 +577,7 @@ WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
                         &self.user_id,
                         &self.roles,
                         &self.groups,
+                        self.is_mfa,
                         &self.id,
                         self.last_seen,
                         SessionState::Init.as_str(),
@@ -549,6 +594,7 @@ WHERE id = $6 AND exp > $7 AND (state = $8 OR state = $9)"#;
                     &self.user_id,
                     &self.roles,
                     &self.groups,
+                    &self.is_mfa,
                     &self.id,
                     &self.last_seen,
                     &SessionState::Init.as_str(),
@@ -828,9 +874,15 @@ impl Session {
     }
 
     #[inline]
-    pub async fn set_mfa(&mut self, value: bool) -> Result<(), ErrorResponse> {
-        self.is_mfa = value;
+    pub async fn set_mfa(&mut self, assurance: MfaAssurance) -> Result<(), ErrorResponse> {
+        self.is_mfa = assurance.apply_to(self.is_mfa);
         self.upsert().await
+    }
+
+    /// True when a second factor has completed on this session for its current principal.
+    #[inline]
+    pub fn is_mfa_completed(&self) -> bool {
+        self.is_mfa
     }
 
     #[inline(always)]

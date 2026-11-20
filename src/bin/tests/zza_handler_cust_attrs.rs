@@ -26,8 +26,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let _ = res.json::<UserAttrConfigResponse>().await?;
+    let _ = expect_status_json!(res, 200, UserAttrConfigResponse);
 
     // add a new attr
     let cust_attr = UserAttrConfigRequest {
@@ -43,8 +42,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&cust_attr)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let attr = res.json::<UserAttrConfigEntity>().await?;
+    let attr = expect_status_json!(res, 200, UserAttrConfigEntity);
     assert_eq!(attr.name, "cust1");
     assert_eq!(attr.desc, Some("some description".to_string()));
 
@@ -62,8 +60,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let scope = res.json::<ScopeResponse>().await?;
+    let scope = expect_status_json!(res, 200, ScopeResponse);
     assert_eq!(scope.name, "cust_scope");
     assert_eq!(scope.attr_include_access, None);
     assert_eq!(scope.attr_include_id, None);
@@ -82,8 +79,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let scope_mapped = res.json::<ScopeResponse>().await?;
+    let scope_mapped = expect_status_json!(res, 200, ScopeResponse);
     assert_eq!(scope.id, scope_mapped.id);
     assert_eq!(scope.name, scope_mapped.name);
     assert_eq!(
@@ -103,8 +99,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let c = res.json::<ClientResponse>().await?;
+    let c = expect_status_json!(res, 200, ClientResponse);
     assert_eq!(c.id, "rauthy".to_string());
     let mut scopes = c.scopes;
     scopes.push("cust_scope".to_string());
@@ -135,6 +130,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         allowed_resources: None,
         default_aud: None,
         consent: None,
+        actor_same_client: false,
         scim: None,
     };
     let res = client
@@ -143,8 +139,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&client_req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let c = res.json::<ClientResponse>().await?;
+    let c = expect_status_json!(res, 200, ClientResponse);
     assert_eq!(c.id, "rauthy".to_string());
     assert!(c.scopes.contains(&"cust_scope".to_string()));
     assert!(c.default_scopes.contains(&"cust_scope".to_string()));
@@ -165,8 +160,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let resp = res.json::<UserAttrValuesResponse>().await?;
+    let resp = expect_status_json!(res, 200, UserAttrValuesResponse);
     assert_eq!(resp.values.len(), 1);
     let user_attr = resp.values.first().unwrap();
     assert_eq!(user_attr.key, cust_attr.name);
@@ -198,8 +192,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let scope_root = res.json::<ScopeResponse>().await?;
+    let scope_root = expect_status_json!(res, 200, ScopeResponse);
     assert!(scope_root.claims_at_root);
 
     // The mapped attribute must now be a top-level claim and must NOT appear nested
@@ -239,7 +232,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .json(&req)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // modify the custom attr and change its name
     let cust_attr_mod = UserAttrConfigRequest {
@@ -257,8 +250,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
 
-    assert_eq!(res.status(), 200);
-    let attr = res.json::<UserAttrConfigEntity>().await?;
+    let attr = expect_status_json!(res, 200, UserAttrConfigEntity);
     assert_eq!(attr.name, cust_attr_mod.name);
     assert_eq!(attr.desc, cust_attr_mod.desc);
 
@@ -268,8 +260,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let scopes = res.json::<Vec<ScopeResponse>>().await?;
+    let scopes = expect_status_json!(res, 200, Vec<ScopeResponse>);
     let scopes_reduced = scopes
         .into_iter()
         .filter(|s| s.id == scope.id)
@@ -291,8 +282,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let resp = res.json::<UserAttrValuesResponse>().await?;
+    let resp = expect_status_json!(res, 200, UserAttrValuesResponse);
     assert_eq!(resp.values.len(), 1);
     let user_attr_mod = resp.values.first().unwrap();
     assert_eq!(&user_attr_mod.key, "cust2");
@@ -318,7 +308,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // scope mapping should have been cleaned up
     let res = client
@@ -326,8 +316,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let scopes = res.json::<Vec<ScopeResponse>>().await?;
+    let scopes = expect_status_json!(res, 200, Vec<ScopeResponse>);
     let scopes_reduced = scopes
         .into_iter()
         .filter(|s| s.id == scope.id)
@@ -343,8 +332,7 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let resp = res.json::<UserAttrValuesResponse>().await?;
+    let resp = expect_status_json!(res, 200, UserAttrValuesResponse);
     assert!(resp.values.is_empty());
 
     // no custom token mapping anymore

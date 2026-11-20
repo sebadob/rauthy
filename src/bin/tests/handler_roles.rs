@@ -19,8 +19,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let roles = res.json::<Vec<Role>>().await?;
+    let roles = expect_status_json!(res, 200, Vec<Role>);
     let len_orig = roles.len();
 
     // add a role
@@ -34,8 +33,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .json(&new_role)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let role = res.json::<Role>().await?;
+    let role = expect_status_json!(res, 200, Role);
     assert_eq!(role.name, "role123");
 
     // assign the role to a user, so the rename below must rewrite the membership
@@ -56,8 +54,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user.roles, vec!["role123".to_string()]);
 
     // modify the role
@@ -72,8 +69,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .json(&upd_role)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let upd_rl = res.json::<Role>().await?;
+    let upd_rl = expect_status_json!(res, 200, Role);
     assert_eq!(upd_role.role, upd_rl.name);
 
     // the user must have the renamed role, not lose it
@@ -83,8 +79,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user.roles, vec!["role456".to_string()]);
 
     let res = reqwest::Client::new()
@@ -92,7 +87,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     // delete the role
     let url_del = format!("{}/{}", url, upd_rl.id);
@@ -101,7 +96,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // verify it is gone
     let res = reqwest::Client::new()
@@ -109,7 +104,7 @@ async fn test_roles() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let roles = res.json::<Vec<Role>>().await?;
     assert_eq!(roles.len(), len_orig);

@@ -51,6 +51,7 @@
         onRight?: () => void;
         onUp?: () => void;
         onDown?: () => void;
+        onmousedown?: (ev: MouseEvent) => void;
     } = $props();
 
     let cls = $derived.by(() => {

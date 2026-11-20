@@ -61,8 +61,9 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
     backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
-    claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26
-WHERE id = $27"#;
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26,
+    actor_same_client = $27
+WHERE id = $28"#;
 
 /**
 # OIDC Client
@@ -122,6 +123,9 @@ pub struct Client {
     /// value. `None` or an invalid value falls back to `local`, see [`Client::consent_source`].
     #[serde(default)]
     pub consent: Option<String>,
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    #[serde(default)]
+    pub actor_same_client: bool,
 }
 
 impl Debug for Client {
@@ -134,7 +138,7 @@ impl Debug for Client {
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
         client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
         claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
-        created_micros: {:?}, consent: {:?} }}",
+        created_micros: {:?}, consent: {:?}, actor_same_client: {} }}",
             self.id,
             self.name,
             self.enabled,
@@ -161,6 +165,7 @@ impl Debug for Client {
             self.default_aud,
             self.created_micros,
             self.consent,
+            self.actor_same_client,
         )
     }
 }
@@ -460,32 +465,9 @@ VALUES ($1, $2, $3, $4)"#;
         Ok(())
     }
 
-    /// Decodes a cached client. An entry this version cannot decode is `None`, a cache miss, and
-    /// is read from the source again. Fields appended at the end, like `consent`, decode from an
-    /// older entry as long as they have a `#[serde(default)]`.
-    fn decode_cached(bytes: &[u8]) -> Option<Self> {
-        match bincode_next::serde::decode_from_slice::<Self, _>(
-            bytes,
-            bincode_next::config::legacy(),
-        ) {
-            Ok((slf, _)) => Some(slf),
-            Err(err) => {
-                warn!(?err, "Ignoring a cached client that cannot be decoded");
-                None
-            }
-        }
-    }
-
-    async fn find_cached(cache: Cache, key: String) -> Result<Option<Self>, ErrorResponse> {
-        Ok(DB::hql()
-            .get_bytes(cache, key)
-            .await?
-            .and_then(|bytes| Self::decode_cached(&bytes)))
-    }
-
     // Returns a client by id without its secret.
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        if let Some(slf) = Self::find_cached(Cache::App, Self::cache_idx(&id)).await? {
+        if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         };
 
@@ -567,7 +549,7 @@ VALUES ($1, $2, $3, $4)"#;
             return Self::find(id).await;
         }
 
-        if let Some(slf) = Self::find_cached(Cache::ClientEphemeral, id.clone()).await? {
+        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, id.clone()).await? {
             return Ok(slf);
         }
 
@@ -655,6 +637,7 @@ VALUES ($1, $2, $3, $4)"#;
                 allowed_resources,
                 default_aud,
                 &self.consent,
+                self.actor_same_client,
                 &self.id
             ),
         ));
@@ -707,6 +690,7 @@ VALUES ($1, $2, $3, $4)"#;
                 &allowed_resources,
                 &default_aud,
                 &self.consent,
+                &self.actor_same_client,
                 &self.id,
             ],
         )
@@ -760,6 +744,7 @@ VALUES ($1, $2, $3, $4)"#;
                         allowed_resources,
                         default_aud,
                         &self.consent,
+                        self.actor_same_client,
                         self.id.clone()
                     ),
                 )
@@ -794,6 +779,7 @@ VALUES ($1, $2, $3, $4)"#;
                     &allowed_resources,
                     &default_aud,
                     &self.consent,
+                    &self.actor_same_client,
                     &self.id,
                 ],
             )
@@ -2120,6 +2106,7 @@ impl Client {
             allowed_resources,
             default_aud,
             consent: self.consent,
+            actor_same_client: self.actor_same_client,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -2212,6 +2199,7 @@ impl Client {
             // never stored, so there is no row that could be deleted and recreated
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         })
     }
 }
@@ -2257,6 +2245,7 @@ impl Default for Client {
             default_aud: None,
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         }
     }
 }
@@ -2333,6 +2322,7 @@ impl Client {
         self.default_aud = current.default_aud;
         self.created_micros = current.created_micros;
         self.consent = current.consent;
+        self.actor_same_client = current.actor_same_client;
     }
 
     /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one
@@ -2598,99 +2588,6 @@ pub(crate) mod tests {
         assert!(validate_dyn_client_redirect_uri("").is_err());
     }
     use pretty_assertions::assert_eq;
-
-    /// `Client` as cached by a version without `consent`.
-    #[derive(Serialize)]
-    struct ClientWithoutConsent {
-        id: String,
-        name: Option<String>,
-        enabled: bool,
-        confidential: bool,
-        secret: Option<Vec<u8>>,
-        secret_kid: Option<String>,
-        redirect_uris: String,
-        post_logout_redirect_uris: Option<String>,
-        allowed_origins: Option<String>,
-        flows_enabled: String,
-        access_token_alg: String,
-        id_token_alg: String,
-        auth_code_lifetime: i32,
-        access_token_lifetime: i32,
-        scopes: String,
-        default_scopes: String,
-        challenge: Option<String>,
-        force_mfa: bool,
-        client_uri: Option<String>,
-        contacts: Option<String>,
-        backchannel_logout_uri: Option<String>,
-        restrict_group_prefix: Option<String>,
-        claims: Option<Vec<u8>>,
-        claims_at_root: bool,
-        allowed_resources: Option<String>,
-        default_aud: Option<String>,
-        created_micros: Option<i64>,
-    }
-
-    #[test]
-    fn cached_client_decode() {
-        let old = ClientWithoutConsent {
-            id: "client".to_string(),
-            name: Some("Client".to_string()),
-            enabled: true,
-            confidential: false,
-            secret: None,
-            secret_kid: None,
-            redirect_uris: "https://app.example.com/cb".to_string(),
-            post_logout_redirect_uris: None,
-            allowed_origins: None,
-            flows_enabled: "authorization_code".to_string(),
-            access_token_alg: "EdDSA".to_string(),
-            id_token_alg: "EdDSA".to_string(),
-            auth_code_lifetime: 60,
-            access_token_lifetime: 1800,
-            scopes: "openid".to_string(),
-            default_scopes: "openid".to_string(),
-            challenge: None,
-            force_mfa: false,
-            client_uri: None,
-            contacts: None,
-            backchannel_logout_uri: None,
-            restrict_group_prefix: None,
-            claims: None,
-            claims_at_root: false,
-            allowed_resources: None,
-            default_aud: None,
-            created_micros: Some(1),
-        };
-        let bytes =
-            bincode_next::serde::encode_to_vec(&old, bincode_next::config::legacy()).unwrap();
-
-        // bincode ends the struct at the end of the input, `#[serde(default)]` fills `consent`
-        let decoded = Client::decode_cached(&bytes).unwrap();
-        assert_eq!(decoded.id, "client");
-        assert_eq!(decoded.created_micros, Some(1));
-        assert_eq!(decoded.consent, None);
-
-        // an entry cut inside a field does not decode and is a miss instead of an error
-        assert!(
-            bincode_next::serde::decode_from_slice::<Client, _>(
-                &bytes[..10],
-                bincode_next::config::legacy()
-            )
-            .is_err()
-        );
-        assert!(Client::decode_cached(&bytes[..10]).is_none());
-
-        // the current shape decodes
-        let client = Client {
-            id: "client".to_string(),
-            consent: Some("local".to_string()),
-            ..Default::default()
-        };
-        let bytes =
-            bincode_next::serde::encode_to_vec(&client, bincode_next::config::legacy()).unwrap();
-        assert_eq!(Client::decode_cached(&bytes), Some(client));
-    }
 
     /// All hiqlite migrations, in order.
     fn sqlite_full_schema() -> rusqlite::Connection {
@@ -3149,6 +3046,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             default_aud: None,
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -3614,6 +3512,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             default_aud: None,
             created_micros: None,
             consent: None,
+            actor_same_client: false,
         }
     }
 
@@ -3789,6 +3688,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             default_aud: Some("https://aud.example.com".to_string()),
             created_micros: Some(1),
             consent: Some("https://consent.example.com/api".to_string()),
+            actor_same_client: true,
         }
     }
 
@@ -3844,6 +3744,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         assert_eq!(new_client.default_aud, current.default_aud);
         assert_eq!(new_client.created_micros, current.created_micros);
         assert_eq!(new_client.consent, current.consent);
+        assert_eq!(new_client.actor_same_client, current.actor_same_client);
         // still public -> the admin's PKCE setting is kept
         assert_eq!(new_client.challenge, current.challenge);
 

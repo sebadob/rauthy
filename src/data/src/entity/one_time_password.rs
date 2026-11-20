@@ -1,9 +1,17 @@
+//! Email OTP (`OtpKind::Email`) is the only implemented kind, `Time` and `Phone` are rejected.
+//!
+//! The invariant: `generate_otp` is `HMAC(secret, step)`, which makes the row's `secret` the whole
+//! security of the mailed code. It is generated random for every kind by
+//! [`OneTimePassword::create`] and it can never be empty, because an empty secret turns the code
+//! into a public function of the server time — see [`OtpSecret`]. Rows from before that are
+//! rotated at startup by [`crate::temp_migrations`]. A code is
+//! only ever sent out via email, the dev-only reveal endpoint is the single test-only exception.
 use crate::database::{Cache, DB};
 use crate::email::otp::send_email_otp;
 use crate::entity::auth_codes::AuthCodeToSAwait;
 use crate::entity::browser_id::BrowserId;
 use crate::entity::login_locations::LoginLocation;
-use crate::entity::sessions::Session;
+use crate::entity::sessions::{MfaAssurance, Session};
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
@@ -59,6 +67,34 @@ impl Debug for OneTimePassword {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OtpSecret(pub Vec<u8>);
+
+impl OtpSecret {
+    /// The only entropy source. [`OneTimePassword::create`] uses it for every [`OtpKind`].
+    ///
+    /// If the len is longer than the algorithm it will be compressed by the digest, if the len is
+    /// shorter than the algorithm it will be padded with 0x30.
+    pub fn generate() -> Result<Self, ErrorResponse> {
+        let secret: [u8; digest::SHA512_OUTPUT_LEN] =
+            rand::generate(&rand::SystemRandom::new())?.expose();
+        Ok(Self(secret.to_vec()))
+    }
+
+    /// A stored secret, validated. Rows of `OtpKind::Email` created before this existed have an
+    /// empty `secret`; [`crate::temp_migrations`] rotates them at startup, and a code is never
+    /// derived from an empty one.
+    pub fn from_stored(raw: &[u8]) -> Result<Self, ErrorResponse> {
+        if raw.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "OTP secret is empty",
+            ));
+        }
+        Ok(Self(raw.to_vec()))
+    }
+}
+
 // CRUD
 impl OneTimePassword {
     pub async fn create(
@@ -66,21 +102,11 @@ impl OneTimePassword {
         name: Option<String>,
         kind: OtpKind,
     ) -> Result<Self, ErrorResponse> {
-        let secret = match kind {
-            OtpKind::Time => {
-                // if the len is longer than the algorithm it will be compressed by the digest
-                // if the len is shorter than the algorithm it will be padded with 0x30
-                let secret: [u8; digest::SHA512_OUTPUT_LEN] =
-                    rand::generate(&rand::SystemRandom::new())?.expose();
-                secret.to_vec()
-            }
-            _ => Vec::default(),
-        };
         let otp = Self {
             id: new_store_id(),
             user_id,
             name,
-            secret,
+            secret: OtpSecret::generate()?.0,
             last_used: 0,
             kind,
             is_active: false,
@@ -255,7 +281,7 @@ impl OneTimePassword {
         1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000,
     ];
 
-    fn generate_otp(secret: &[u8], step: i64, digest_len: u16, code_len: u8) -> String {
+    fn generate_otp(secret: &OtpSecret, step: i64, digest_len: u16, code_len: u8) -> String {
         let msg = step.to_be_bytes();
         let algorithm = match digest_len {
             256 => hmac::HMAC_SHA256,
@@ -263,7 +289,7 @@ impl OneTimePassword {
             512 => hmac::HMAC_SHA512,
             _ => hmac::HMAC_SHA512,
         };
-        let key = hmac::Key::new(algorithm, secret);
+        let key = hmac::Key::new(algorithm, &secret.0);
         let hash = hmac::sign(&key, msg.as_bytes());
         let hash = hash.as_ref();
 
@@ -303,7 +329,7 @@ impl OneTimePassword {
                     ));
                 }
                 let valid_code = Self::generate_otp(
-                    &self.secret,
+                    &OtpSecret::from_stored(&self.secret)?,
                     self.last_used,
                     RauthyConfig::get().vars.otp.digest_len_default,
                     RauthyConfig::get().vars.otp.length,
@@ -326,13 +352,25 @@ impl OneTimePassword {
         Ok(())
     }
 
+    /// Dev-only test helper: returns the very code that `validate` accepts at this moment, which is
+    /// normally only ever sent out via email. Compiled out of release builds entirely.
+    #[cfg(debug_assertions)]
+    pub fn dev_current_code(&self) -> Result<String, ErrorResponse> {
+        Ok(Self::generate_otp(
+            &OtpSecret::from_stored(&self.secret)?,
+            self.last_used,
+            RauthyConfig::get().vars.otp.digest_len_default,
+            RauthyConfig::get().vars.otp.length,
+        ))
+    }
+
     pub async fn request_otp(&mut self) -> Result<(), ErrorResponse> {
         let user = User::find(self.user_id.clone()).await?;
 
         let current_time = Utc::now().timestamp();
         let code_len = RauthyConfig::get().vars.otp.length;
         let code = Self::generate_otp(
-            &self.secret,
+            &OtpSecret::from_stored(&self.secret)?,
             current_time,
             RauthyConfig::get().vars.otp.digest_len_default,
             code_len,
@@ -360,7 +398,7 @@ impl OneTimePassword {
 
         let code_len = RauthyConfig::get().vars.otp.length;
         let code = Self::generate_otp(
-            &self.secret,
+            &OtpSecret::from_stored(&self.secret)?,
             self.last_used,
             RauthyConfig::get().vars.otp.digest_len_default,
             code_len,
@@ -517,6 +555,7 @@ pub struct OtpLoginReq {
     pub header_origin: Option<String>,
     pub tos_await_data: Option<OtpToSAwaitData>,
     pub needs_user_update: bool,
+    pub session_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -683,7 +722,20 @@ pub async fn auth_finish(
             LoginLocation::spawn_background_check(user.clone(), req, browser_id)?;
 
             if is_login && let Some(mut session) = session {
-                session.set_authenticated(&user).await?;
+                let OtpAdditionalData::Login(data) = &auth_data.data else {
+                    unreachable!("is_login is only ever true for OtpAdditionalData::Login")
+                };
+                if data.session_id != session.id || &data.user_id != user_id {
+                    data.delete().await?;
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        "Session / User ID mismatch for login ceremony",
+                    ));
+                }
+
+                session
+                    .set_authenticated(&user, MfaAssurance::Ceremony)
+                    .await?;
                 user.save_login_success().await?;
             }
 
@@ -724,6 +776,7 @@ pub async fn auth_finish(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::entity::one_time_password::OneTimePassword;
 
     #[test]
@@ -740,6 +793,10 @@ mod tests {
             0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36,
             0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34,
         ];
+        // The RFC vectors are secrets, so they go through the validating constructor.
+        let seed32 = OtpSecret::from_stored(&seed32).unwrap();
+        let seed64 = OtpSecret::from_stored(&seed64).unwrap();
+
         let steps = 30;
 
         let mut t = 59 / steps;
@@ -801,5 +858,63 @@ mod tests {
             OneTimePassword::generate_otp(&seed64, t, 512, 8),
             "47863826"
         );
+    }
+
+    /// An OTP secret is a credential: it must be unpredictable at creation and it must never be
+    /// empty, because `generate_otp` is `HMAC(secret, step)` and an empty key makes the derived
+    /// code a public function of the server time.
+    #[test]
+    fn test_otp_secret_rejects_empty() {
+        assert!(OtpSecret::from_stored(&[]).is_err());
+        assert!(OtpSecret::from_stored(&[0; digest::SHA512_OUTPUT_LEN]).is_ok());
+    }
+
+    /// [`OneTimePassword::create`] uses this as its only entropy source, for every [`OtpKind`].
+    #[test]
+    fn test_otp_secret_is_random() {
+        let a = OtpSecret::generate().unwrap();
+        let b = OtpSecret::generate().unwrap();
+        assert_eq!(a.0.len(), digest::SHA512_OUTPUT_LEN);
+        assert_ne!(a, b);
+    }
+
+    /// The derivation exactly as it was *before* the empty secret fix: `HMAC(secret, step)` over
+    /// the raw stored bytes. Kept here only to pin that the code an attacker computes from an
+    /// empty secret is not the code a real row accepts.
+    fn legacy_code(secret: &[u8], step: i64, code_len: u8) -> String {
+        let key = hmac::Key::new(hmac::HMAC_SHA512, secret);
+        let hash = hmac::sign(&key, &step.to_be_bytes());
+        let hash = hash.as_ref();
+        let offset = (hash[hash.len() - 1] & 0xf) as usize;
+        let binary = u32::from_be_bytes([
+            hash[offset] & 0x7f,
+            hash[offset + 1],
+            hash[offset + 2],
+            hash[offset + 3],
+        ]);
+        format!(
+            "{:0width$}",
+            binary % OneTimePassword::DIGITS_POWER[code_len as usize],
+            width = code_len as usize
+        )
+    }
+
+    /// With an empty secret, `legacy_code(&[], step)` is computable by anyone for the whole
+    /// `otp.exp` window, so it must not be derivable from a real secret.
+    #[test]
+    fn test_empty_secret_code_is_not_a_real_code() {
+        let step = 1_700_000_000;
+        let attacker_code = legacy_code(&[], step, 6);
+        let secret = OtpSecret::from_stored(&[0x42; digest::SHA512_OUTPUT_LEN]).unwrap();
+        assert_ne!(
+            attacker_code,
+            OneTimePassword::generate_otp(&secret, step, 512, 6)
+        );
+
+        // The pre-fix `OtpKind::Email` rows all had the very same "secret", which is what made
+        // the code predictable at all.
+        let a = legacy_code(&[], step, 6);
+        let b = legacy_code(&[], step, 6);
+        assert_eq!(a, b);
     }
 }

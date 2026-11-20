@@ -467,6 +467,11 @@ impl UserConsent {
     }
 }
 
+// NOT a template for new tests. These `#[ignore]` tests open a real Postgres schema from
+// `RAUTHY_TEST_PG_URL` inside a `#[cfg(test)]` module. Anything that touches a DB is an integration
+// test in `src/bin/tests/` against a running backend: via the public API, or via dev handlers when
+// the public API cannot reach the case. Never inside a `#[cfg(test)]` module, and never with a
+// fake DB.
 #[cfg(test)]
 mod tests {
     use super::*;

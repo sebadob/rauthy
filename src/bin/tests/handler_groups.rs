@@ -19,8 +19,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let groups = res.json::<Vec<Group>>().await?;
+    let groups = expect_status_json!(res, 200, Vec<Group>);
     let len_orig = groups.len();
 
     // add a group
@@ -34,8 +33,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .json(&new_group)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let group = res.json::<Group>().await?;
+    let group = expect_status_json!(res, 200, Group);
     assert_eq!(group.name, "My Group 123");
 
     // assign the group to a user, so the rename below must rewrite the membership
@@ -56,8 +54,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         })
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user.groups, Some(vec!["My Group 123".to_string()]));
 
     // modify the group
@@ -72,8 +69,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .json(&upd_group)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let upd_grp = res.json::<Group>().await?;
+    let upd_grp = expect_status_json!(res, 200, Group);
     assert_eq!(upd_group.group, upd_grp.name);
 
     // the user must have the renamed group, not lose it
@@ -83,8 +79,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let user = res.json::<UserResponse>().await?;
+    let user = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user.groups, Some(vec!["group456".to_string()]));
 
     let res = reqwest::Client::new()
@@ -92,7 +87,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 204);
+    expect_status!(res, 204);
 
     // delete the group
     let url_del = format!("{}/{}", url, upd_grp.id);
@@ -101,7 +96,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // verify it is gone
     let res = reqwest::Client::new()
@@ -109,7 +104,7 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let groups = res.json::<Vec<Group>>().await?;
     assert_eq!(groups.len(), len_orig);

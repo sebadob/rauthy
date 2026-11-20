@@ -15,7 +15,7 @@ use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::dpop_proof::DPoPProof;
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaAssurance, Session};
 use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
@@ -207,7 +207,10 @@ pub async fn grant_type_authorization_code(
     // update session metadata
     if let Some(sid) = code.session_id.clone() {
         let mut session = Session::find(sid).await?;
-        session.set_authenticated(&user).await?;
+        // The auth code was issued for this exact user, so this is a re-auth of the same principal.
+        session
+            .set_authenticated(&user, MfaAssurance::SamePrincipal)
+            .await?;
     }
 
     if client.is_dynamic() {

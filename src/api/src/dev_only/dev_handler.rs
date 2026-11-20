@@ -7,6 +7,7 @@ use rauthy_api_types::auth_providers::ProviderCallbackRequest;
 use rauthy_api_types::oidc::{LoginRequest, LogoutRequest};
 use rauthy_api_types::users::NewUserRegistrationRequest;
 use rauthy_data::entity::browser_id::{BrowserId, BrowserIdSetNew};
+use rauthy_data::entity::one_time_password::OneTimePassword;
 use rauthy_data::entity::principal::Principal;
 use rauthy_data::html::templates::HtmlTemplate;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -19,6 +20,12 @@ use validator::Validate;
 #[derive(serde::Deserialize)]
 pub struct TemplateQuery {
     client_id: Option<String>,
+}
+
+/// Dev-only: integration tests need the email OTP code which is normally never returned anywhere.
+#[derive(serde::Deserialize)]
+pub struct DevOtpCodeRequest {
+    user_id: String,
 }
 
 pub async fn get_template(
@@ -110,6 +117,21 @@ pub async fn post_dev_only_endpoints(
             let payload = serde_json::from_slice::<ProviderCallbackRequest>(bytes)?;
             let principal = web::ReqData::<Principal>::extract(&req).await?;
             auth_providers::post_provider_callback_handle(req, payload, principal).await
+        }
+        "otp_code" => {
+            // Dev-only helper for integration tests: an email OTP code is only ever sent out via
+            // mail, so tests have no other way to ever get the value of a valid code. Not limited
+            // to `is_active` rows, because tests also need the code that activates an OTP.
+            let payload = serde_json::from_slice::<DevOtpCodeRequest>(bytes)?;
+            let otps = OneTimePassword::find_for_user(&payload.user_id).await?;
+            let Some(otp) = otps.first() else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "No OTP for this user",
+                ));
+            };
+
+            Ok(HttpResponse::Ok().body(otp.dev_current_code()?))
         }
         "register" => {
             let payload = serde_json::from_slice::<NewUserRegistrationRequest>(bytes)?;
