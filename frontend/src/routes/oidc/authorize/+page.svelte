@@ -24,7 +24,7 @@
     import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
     import { useParam } from '#state/param.svelte.ts';
-    import { startKeepAlive } from '#state/keepAlive.ts';
+    import { startKeepAlive } from '#utils/keepAlive.ts';
     import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import InputPassword from '#lib/form/InputPassword.svelte';
