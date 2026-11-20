@@ -15,6 +15,7 @@
     import { fetchPost } from '#api/fetch.ts';
     import IconCheck from '#icons/IconCheck.svelte';
     import { useSession } from '#state/session.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         groups,
@@ -25,6 +26,7 @@
     } = $props();
 
     let ta = useI18nAdmin();
+    let t = useI18n();
     let session = useSession('admin');
 
     // A delegated group admin may only email users of a single group it manages, so
@@ -39,18 +41,19 @@
     let showModal = $state(false);
     let closeModal: undefined | (() => void) = $state();
 
-    let editorMode: 'Text' | 'Markdown' | 'HTML' = $state('Markdown');
+    let editorMode: 'Text' | 'Markdown' = $state('Markdown');
 
     let filter = $state(ta.email.filterType[0]);
     let group = $state('');
     let role = $state('');
 
     let scheduled = $state(false);
-    let schedDate = $state(fmtDateInput());
-    let schedTime = $state(fmtTimeInput());
+    const defaultDispatch = new Date(Date.now() + 5 * 60_000);
+    let schedDate = $state(fmtDateInput(defaultDispatch));
+    let schedTime = $state(fmtTimeInput(defaultDispatch));
+    let scheduledAt = $derived(unixTsFromLocalDateTime(schedDate, schedTime));
 
     let subject = $state('');
-    let body = $state('');
     let bodyRaw = $state('');
 
     let success = $state(false);
@@ -73,22 +76,35 @@
     });
 
     $effect(() => {
-        if (roles.length > 0) {
+        if (roles.length > 0 && !roles.some(r => r.name === role)) {
             role = roles[0].name;
         }
     });
 
+    function openComposer() {
+        if (!scheduled) {
+            const dispatch = new Date(Date.now() + 5 * 60_000);
+            schedDate = fmtDateInput(dispatch);
+            schedTime = fmtTimeInput(dispatch);
+        }
+        showModal = true;
+    }
+
     async function submit() {
+        if (scheduled && (!scheduledAt || scheduledAt <= Date.now() / 1000)) {
+            error = t.common.invalidInput;
+            return;
+        }
+        error = '';
         let payload: EmailJobRequest = {
-            // scheduled: number;
             filter_type: 'none',
             content_type: editorMode === 'Text' ? 'text' : 'markdown',
             subject,
-            body: editorMode === 'HTML' ? body : bodyRaw,
+            body: bodyRaw,
         };
 
         if (scheduled) {
-            payload.scheduled = unixTsFromLocalDateTime(schedDate, schedTime);
+            payload.scheduled = scheduledAt;
         }
         if (isGroupAdmin) {
             // group admins are locked to an "In Group" filter for a group they manage
@@ -125,82 +141,69 @@
 
     function reset() {
         scheduled = false;
+        editorMode = 'Markdown';
         filter = ta.email.filterType[0];
         subject = '';
         bodyRaw = '';
-        body = '';
         success = false;
         error = '';
     }
 </script>
 
-<Button ariaLabel={ta.email.sendMail} onclick={() => (showModal = true)} invisible>
+<Button ariaLabel={ta.email.sendMail} onclick={openComposer} invisible>
     <IconEnvelope />
 </Button>
 
-<Modal bind:showModal bind:closeModal>
+<Modal bind:showModal bind:closeModal ariaLabel={ta.email.sendMail}>
     <div class="admin-mail-composer">
         <h2>{ta.email.sendMail}</h2>
         <div class="options">
+            <div class="filter">
+                <span class="admin-field-label">{ta.email.userFilter}</span>
+                <div class="filter-options">
+                    {#if isGroupAdmin}
+                        <span>{ta.email.filterType[1]}</span>
+                    {:else}
+                        <Options
+                            ariaLabel={ta.email.userFilter}
+                            options={ta.email.filterType}
+                            bind:value={filter}
+                        />
+                    {/if}
+
+                    {#if isGroupAdmin || isFilterGroup}
+                        <Options
+                            ariaLabel={ta.nav.groups}
+                            options={availableGroups.map(g => g.name)}
+                            bind:value={group}
+                            withSearch={availableGroups.length > 7}
+                        />
+                    {:else if isFilterRole}
+                        <Options
+                            ariaLabel={ta.nav.roles}
+                            options={roles.map(r => r.name)}
+                            bind:value={role}
+                            withSearch={roles.length > 7}
+                        />
+                    {/if}
+                </div>
+            </div>
             <div class="scheduled">
                 <InputCheckbox ariaLabel={ta.email.scheduled} bind:checked={scheduled}>
                     {ta.email.scheduled}
                 </InputCheckbox>
-
                 {#if scheduled}
-                    <InputDateTimeCombo
-                        bind:value={schedDate}
-                        bind:timeValue={schedTime}
-                        min={fmtDateInput()}
-                        withTime
-                    />
-                {/if}
-            </div>
-
-            <div class="filter">
-                <div class="label">
-                    {ta.email.userFilter}
-                    <span style:margin=".25rem 0">:</span>
-                </div>
-
-                {#if isGroupAdmin}
-                    <!-- a group admin is locked to "In Group" for a group it manages -->
-                    <div class="ms-05">{ta.email.filterType[1]}:</div>
-                    <Options
-                        ariaLabel={ta.email.userFilter}
-                        options={availableGroups.map(g => g.name)}
-                        bind:value={group}
-                        borderless
-                        withSearch={availableGroups.length > 7}
-                    />
-                {:else}
-                    <Options
-                        ariaLabel={ta.email.userFilter}
-                        options={ta.email.filterType}
-                        bind:value={filter}
-                        borderless
-                    />
-
-                    {#if filter !== ta.email.filterType[0]}
-                        <div class="ms-05">:</div>
-                        {#if isFilterGroup}
-                            <Options
-                                ariaLabel={ta.email.userFilter}
-                                options={groups.map(g => g.name)}
-                                bind:value={group}
-                                borderless
-                                withSearch={groups.length > 7}
-                            />
-                        {:else if isFilterRole}
-                            <Options
-                                ariaLabel={ta.email.userFilter}
-                                options={roles.map(g => g.name)}
-                                bind:value={role}
-                                borderless
-                                withSearch={roles.length > 7}
-                            />
-                        {/if}
-                    {/if}
+                    <div class="schedule-fields">
+                        <InputDateTimeCombo
+                            label={ta.common.date}
+                            labelTime={ta.common.time}
+                            bind:value={schedDate}
+                            bind:timeValue={schedTime}
+                            min={fmtDateInput()}
+                            required
+                            withTime
+                        />
+                    </div>
                 {/if}
             </div>
         </div>
@@ -217,8 +220,7 @@
             <EditorInteractive
                 bind:mode={editorMode}
                 bind:contentRaw={bodyRaw}
-                bind:sanitizedValue={body}
-                height="clamp(12rem, 32dvh, 22rem)"
+                height="clamp(11rem, 28dvh, 21rem)"
             />
         </div>
 
@@ -239,8 +241,12 @@
             </p>
 
             <div class="flex gap-10">
-                <Button onclick={submit} isDisabled={!(body.trim() || bodyRaw.trim()) || !subject}
-                    >Send</Button
+                <Button
+                    onclick={submit}
+                    isDisabled={!bodyRaw.trim() ||
+                        !subject.trim() ||
+                        ((isGroupAdmin || isFilterGroup) && !group) ||
+                        (isFilterRole && !role)}>Send</Button
                 >
 
                 {#if success}
@@ -256,101 +262,40 @@
 </Modal>
 
 <style>
-    .editor {
-        min-width: min(40rem, 93dvw);
-    }
-
-    .err {
-        margin-top: 0.25rem;
-    }
-
-    .filter {
-        margin-top: -0.1rem;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        font-size: 0.98rem;
-        flex-wrap: wrap;
-    }
-
-    .options {
-        display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .scheduled {
-        min-width: 15rem;
-    }
-
-    .send {
-        margin-top: 1rem;
-    }
-
     .admin-mail-composer {
         width: min(720px, calc(100dvw - 96px));
         max-width: 100%;
     }
-    .admin-mail-composer :global(h2) {
-        margin: 0 0 24px;
-        font-size: 22px;
-        line-height: 28px;
+    h2 {
+        margin: 0 0 1.25rem;
+        font-size: 1.375rem;
+        line-height: 1.75rem;
         color: var(--ui-text);
     }
-    .admin-mail-composer :global(.editor) {
-        min-width: 0;
-        width: 100%;
+    .options {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
     }
-    .admin-mail-composer :global(.options) {
-        gap: 16px 24px;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-    .admin-mail-composer :global(.scheduled) {
+    .filter,
+    .editor {
         min-width: 0;
     }
-    .admin-mail-composer :global(.filter) {
-        margin: 0;
-    }
-    .admin-mail-composer :global(.filter) > :global(.label) {
-        margin: 0;
-    }
-    .admin-mail-composer :global(.send) :global(p) {
-        max-width: none;
-        font-size: 13px;
-    }
-    @media (max-width: 800px) {
-        .admin-mail-composer {
-            width: calc(100dvw - 96px);
-        }
-    }
-
-    .admin-mail-composer :global(.toolbar) {
-        flex-wrap: wrap;
-        gap: 4px 12px;
-        padding: 6px 8px;
-    }
-    .admin-mail-composer :global(.toolbar) :global(.actions) {
+    .filter-options {
         display: flex;
         flex-wrap: wrap;
-        justify-content: flex-start;
-        gap: 2px;
-        min-width: 0;
+        align-items: center;
+        gap: 0.5rem;
     }
-    .admin-mail-composer :global(.toolbar) :global(.admin-control[data-variant]) {
-        min-width: 30px;
-        width: 30px;
-        height: 30px;
-        min-height: 30px;
-        padding: 0;
+    .schedule-fields {
+        width: min(100%, 25rem);
+        margin-top: 0.625rem;
     }
-    @media (max-width: 800px) {
-        .admin-mail-composer :global(.inputs) {
-            flex-wrap: wrap;
-        }
-        .admin-mail-composer :global(.options) > :global(div) {
-            max-width: 100%;
-        }
+    .send {
+        margin-top: 1rem;
+    }
+    .send p {
+        max-width: none;
+        font-size: 0.8125rem;
     }
 </style>

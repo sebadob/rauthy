@@ -20,7 +20,7 @@
             <p>{t.userRevoke.desc1}</p>
             <p class="err">{t.userRevoke.desc2}</p>
 
-            <A href="/auth/v1/account">Account</A>
+            <A href="/auth/v1/account" reload>Account</A>
         </div>
 
         <ThemeSwitch absolute />

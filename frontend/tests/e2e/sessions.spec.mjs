@@ -297,7 +297,7 @@ test.describe.serial('sessions of a test user', () => {
         await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(ip);
     });
 
-    test('invalidates single sessions from the row and from the details', async ({ page }) => {
+    test('invalidates single sessions from each row, including when expanded', async ({ page }) => {
         await openSessions(page);
         await search(page, 'Session ID', first.info.id);
         await expect(rows(page)).toHaveCount(1);
@@ -320,14 +320,13 @@ test.describe.serial('sessions of a test user', () => {
         // the other session of the same user is untouched
         expect((await second.page.request.get('/auth/v1/oidc/sessioninfo')).status()).toBe(200);
 
-        // second way: the labelled "Delete" button inside the expanded details
         await searchBox(main(page)).fill(second.info.id);
         await expect(rows(page)).toHaveCount(1);
         await rows(page).first().click();
         await expect(main(page).getByText(second.info.id, { exact: true })).toBeVisible();
-        // the last "Delete" in document order is the one inside the details; the search clear
-        // button carries the same name (FINDING)
-        await main(page).getByRole('button', { name: 'Delete', exact: true }).last().click();
+        const card = page.locator('.admin-session-card');
+        await expect(card.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(1);
+        await card.getByRole('button', { name: 'Delete', exact: true }).click();
         await deleteAction(page).click();
         await expect(rows(page)).toHaveCount(0);
         await expect
@@ -362,7 +361,10 @@ test.describe('sessions at phone size', () => {
             const sid = main(page).getByText(other.info.id, { exact: true });
             await sid.scrollIntoViewIfNeeded();
             await expect(sid).toBeInViewport();
-            const del = main(page).getByRole('button', { name: 'Delete', exact: true }).last();
+            const del = page.locator('.admin-session-card').getByRole('button', {
+                name: 'Delete',
+                exact: true,
+            });
             await del.scrollIntoViewIfNeeded();
             await expect(del).toBeInViewport();
             await del.click();

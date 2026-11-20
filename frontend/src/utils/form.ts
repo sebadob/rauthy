@@ -116,7 +116,7 @@ export function fmtDateInput(date?: Date) {
     if (mm < 10) {
         mm = '0' + mm;
     }
-    const yyyy = d.getUTCFullYear();
+    const yyyy = d.getFullYear();
 
     return `${yyyy}-${mm}-${dd}`;
 }

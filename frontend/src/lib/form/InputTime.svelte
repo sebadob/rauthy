@@ -223,7 +223,7 @@
         </label>
     </div>
 
-    <div class="flex">
+    <div class="flex time-control">
         <input
             class="ui-text-input"
             bind:this={refInput}
@@ -250,7 +250,7 @@
         <div class="relative">
             <div class="absolute indicator">
                 <Popover
-                    ariaLabel="Show Popover Example"
+                    ariaLabel={label || t.common.hours}
                     offsetLeft="-3.8rem"
                     offsetTop={openTop ? '-5rem' : '-.1rem'}
                     bind:close
@@ -345,9 +345,16 @@
     }
 
     :global(.ui-shell) .admin-time-field :global(.indicator) {
-        top: -18px;
-        right: 0;
+        top: 50%;
+        right: 4px;
+        transform: translateY(-50%);
         padding: 0;
+    }
+    :global(.ui-shell) .time-control {
+        position: relative;
+    }
+    :global(.ui-shell) .time-control > :global(.relative) {
+        position: static;
     }
     :global(.ui-shell) .admin-time-field {
         width: var(--ui-time-width, 7rem);
@@ -355,9 +362,11 @@
     }
     :global(.ui-shell) .admin-time-field > .label {
         height: var(--ui-label-height);
+        margin: 0 0 var(--ui-label-gap);
+        padding: 0;
     }
 
     :global(.ui-shell) .admin-time-field input[type='text']:not([type='hidden']) {
-        padding-right: 34px;
+        padding-right: 40px;
     }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import IconUpload from '#icons/IconUpload.svelte';
+    import IconPencil from '#icons/IconPencil.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { genKey, getCsrfToken } from '#utils/helpers.ts';
     import type { ErrorResponse } from '#api/types/error.ts';
@@ -37,7 +37,6 @@
     let errFileSize = $state('');
     let timer: undefined | number;
 
-    let showUpload = $state(false);
     let isUploading = $state(false);
     let files: undefined | FileList = $state();
 
@@ -93,14 +92,6 @@
         if (ev.type === 'error') {
             err = 'Input Error';
         }
-    }
-
-    function onmouseenter() {
-        showUpload = true;
-    }
-
-    function onmouseleave() {
-        showUpload = false;
     }
 
     /// Converts the given string to a random hue.
@@ -209,33 +200,22 @@
 
 <div class="container">
     {#if config?.upload_allowed && !disableUpload}
-        <form
+        <div
             class="avatar"
-            aria-dropeffect="move"
-            aria-label="Upload"
+            class:portrait={size === 'large'}
             style:--avatar-color={color}
             style:width
-            {onmouseenter}
-            {onmouseleave}
         >
-            <label
-                for={id}
-                aria-controls={id}
-                aria-disabled={isUploading}
-                style:width
-                data-show={!isUploading && showUpload}
-            >
-                <IconUpload {width} />
+            <label for={id} aria-controls={id} aria-disabled={isUploading} style:width>
+                <span class="edit-picture"><IconPencil width="1rem" /></span>
             </label>
             <input
                 tabindex="0"
                 {id}
                 type="file"
                 disabled={isUploading}
-                aria-label="Upload Picture"
+                aria-label={t.common.edit}
                 aria-disabled={isUploading}
-                onfocusin={() => (showUpload = true)}
-                onfocusout={() => (showUpload = false)}
                 {accept}
                 bind:files
             />
@@ -247,7 +227,7 @@
             {/if}
 
             {@render avatar()}
-        </form>
+        </div>
 
         {#if size === 'large' && pictureId}
             <div class="relative">
@@ -286,24 +266,45 @@
 
     label {
         position: absolute;
-        opacity: 0;
+        display: grid;
+        place-items: center;
+        inset: 0;
         aspect-ratio: 1;
-        background: hsla(var(--bg) / 0.8);
         cursor: pointer;
         z-index: 2;
-        transition: all 150ms;
     }
 
     label[aria-disabled='true'] {
         cursor: default;
+        pointer-events: none;
     }
 
-    label[data-show='true'] {
+    .edit-picture {
+        display: grid;
+        place-items: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border: 1px solid var(--ui-outline, hsl(var(--bg-high)));
+        border-radius: var(--border-radius);
+        background: var(--ui-surface, hsl(var(--bg)));
+        color: var(--ui-text, hsl(var(--text)));
+        opacity: 0;
+    }
+
+    .portrait .edit-picture {
+        position: absolute;
+        inset: auto 2px 2px auto;
+    }
+
+    .portrait .edit-picture,
+    label:hover .edit-picture,
+    .avatar:focus-within .edit-picture {
         opacity: 1;
     }
 
-    label:hover {
-        color: hsl(var(--action));
+    .avatar:focus-within .edit-picture {
+        outline: 2px solid var(--ui-primary, hsl(var(--action)));
+        outline-offset: -2px;
     }
 
     .avatar {

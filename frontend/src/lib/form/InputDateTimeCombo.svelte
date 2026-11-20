@@ -128,7 +128,13 @@
         gap: 0.5rem;
         --ui-time-width: 100%;
     }
-    :global(.ui-shell) .inputs > :global(.admin-date-field) {
+    :global(.ui-shell) .inputs > :global(.admin-date-field),
+    :global(.ui-shell) .inputs > :global(.admin-time-field) {
         margin: 0;
+    }
+    @media (max-width: 379px) {
+        :global(.ui-shell) .withTime .inputs {
+            grid-template-columns: minmax(0, 1fr);
+        }
     }
 </style>

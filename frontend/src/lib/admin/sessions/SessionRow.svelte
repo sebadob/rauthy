@@ -56,7 +56,7 @@
                         </div>
                     </Tooltip>
                 </div>
-                <div class="headerRight">
+                <div class="headerRight" class:withDelete={isAdmin}>
                     <Tooltip text={ta.options.lastSeen}>
                         <div class="date">
                             <span class="admin-field-caption">{ta.options.lastSeen}</span>
@@ -114,145 +114,71 @@
                     <CheckIcon checked={session.is_mfa} />
                 </LabeledValue>
             </div>
-            {#if isAdmin}
-                <EntityDelete
-                    url={`/auth/v1/sessions/id/${session.id}`}
-                    name={session.id}
-                    onDelete={() => onDeleted(session.id)}
-                />
-            {/if}
         {/snippet}
     </Expandable>
 </div>
 
 <style>
-    .container {
-        max-width: 48.5rem;
-        overflow: clip;
-    }
-
-    .header {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0 0.5rem;
-    }
-
-    .headerRight {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .uid {
-        min-width: 14rem;
-    }
-
-    .ip {
-        color: hsl(var(--accent));
-        cursor: copy;
-    }
-
-    .date {
-        color: hsla(var(--text) / 0.8);
-    }
-
     .expired {
-        background: hsl(var(--bg-high));
+        background: var(--ui-container);
     }
-
-    .admin-session-card {
-        max-width: none;
-        overflow: visible;
-    }
-    .admin-session-card .admin-session-summary {
-        display: flex;
+    .admin-session-summary {
+        display: grid;
         align-items: center;
-        justify-content: space-between;
-        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 1rem;
     }
     .admin-session-identity {
-        min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 0.375rem;
+        min-width: 0;
     }
     .admin-session-state {
         width: fit-content;
         padding: 2px 8px;
+        border-radius: var(--border-radius);
         background: var(--ui-tonal);
         color: var(--ui-primary);
-        border-radius: var(--border-radius);
-        font-size: 11px;
-        line-height: 18px;
+        font-size: 0.75rem;
         font-weight: 600;
     }
-    .admin-session-card :global(.uid) {
-        min-width: 0;
-        font-size: 12px;
-        line-height: 20px;
+    .uid,
+    .ip {
         overflow-wrap: anywhere;
+        font-size: 0.75rem;
+        line-height: 1.25rem;
     }
-    .admin-session-card :global(.headerRight) {
-        gap: 16px;
-        flex-wrap: wrap;
+    .headerRight {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: center;
+        gap: 0.625rem;
+    }
+    .headerRight.withDelete {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    }
+    .headerRight > :global(.admin-control) {
+        min-width: 0;
     }
     .admin-field-caption {
         display: block;
-        font-size: 11px;
-        line-height: 18px;
+        font-size: 0.75rem;
         color: var(--ui-muted);
     }
-    .admin-session-card :global(.date) {
-        font-size: 12px;
-        line-height: 20px;
-        white-space: normal;
+    .date {
+        font-size: 0.8125rem;
+        line-height: 1.25rem;
     }
     .admin-session-details {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px 24px;
-        margin-bottom: 12px;
+        gap: 0.75rem 1.5rem;
     }
     @media (max-width: 800px) {
-        .admin-session-card .admin-session-summary {
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .admin-session-card :global(.headerRight) {
-            gap: 8px;
-        }
+        .admin-session-summary,
         .admin-session-details {
-            grid-template-columns: 1fr;
-        }
-    }
-    .admin-session-card .admin-session-summary {
-        display: grid;
-        grid-template-columns: minmax(140px, 1fr) minmax(0, 500px);
-        gap: 20px;
-    }
-    .admin-session-card :global(.headerRight) {
-        display: grid;
-        grid-template-columns: 140px minmax(0, 1fr) 36px;
-        width: 100%;
-        gap: 12px;
-    }
-    .admin-session-card :global(.ip) {
-        font-size: 11px;
-        overflow-wrap: anywhere;
-    }
-    .admin-session-card :global(.headerRight) > :global(.admin-control) {
-        min-width: 0;
-    }
-    @media (max-width: 800px) {
-        .admin-session-card .admin-session-summary {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .admin-session-card :global(.headerRight) {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
+            grid-template-columns: minmax(0, 1fr);
         }
     }
 </style>

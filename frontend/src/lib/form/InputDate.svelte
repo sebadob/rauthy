@@ -226,7 +226,7 @@
         </label>
     </div>
 
-    <div class="flex">
+    <div class="flex date-control">
         <input
             class="ui-text-input"
             bind:this={refInput}
@@ -253,7 +253,7 @@
             <div class="absolute patch"></div>
             <div class="absolute indicator">
                 <Popover
-                    ariaLabel="Show Popover Example"
+                    ariaLabel={label || t.common.month}
                     offsetLeft="-7.4rem"
                     offsetTop={openTop ? '-17.75rem' : '.1rem'}
                     bind:close
@@ -450,21 +450,22 @@
         padding-right: 40px;
     }
     :global(.ui-shell) .admin-date-field :global(.patch) {
-        top: -20px;
-        right: 2px;
-        height: 40px;
-        width: 34px;
-        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        display: none;
     }
     :global(.ui-shell) .admin-date-field :global(.indicator) {
-        top: -18px;
-        right: 0;
+        top: 50%;
+        right: 4px;
+        transform: translateY(-50%);
         padding: 0;
+    }
+    :global(.ui-shell) .date-control {
+        position: relative;
+    }
+    :global(.ui-shell) .date-control > :global(.relative) {
+        position: static;
     }
     :global(.ui-shell) .admin-date-field {
         margin-bottom: 16px;
-    }
-    :global(.ui-shell) .admin-date-field {
         width: var(--ui-date-width, 11.25rem);
         min-width: 0;
     }

@@ -11,6 +11,7 @@
         ariaLabel,
         ariaControls,
         ariaExpanded,
+        ariaPressed,
         ariaCurrent,
         level = 1,
         width,
@@ -36,6 +37,7 @@
         ariaLabel?: string;
         ariaControls?: string;
         ariaExpanded?: boolean;
+        ariaPressed?: boolean;
         ariaCurrent?: 'time' | 'page' | 'step' | 'location' | 'date' | undefined;
         level?: number;
         width?: string;
@@ -149,6 +151,7 @@
     aria-label={ariaLabel}
     aria-controls={ariaControls}
     aria-expanded={ariaExpanded}
+    aria-pressed={ariaPressed}
     aria-current={ariaCurrent}
     class={adminUi ? 'admin-control' : cls}
     data-variant={adminUi ? cls : undefined}

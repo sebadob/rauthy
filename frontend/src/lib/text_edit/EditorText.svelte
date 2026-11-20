@@ -7,6 +7,7 @@
         content = $bindable(''),
         ref = $bindable(),
         hideButtons = false,
+        ariaLabel,
         height = '40rem',
         // append a custom, non-editable text at the bottom
         appendCustomText,
@@ -22,6 +23,7 @@
         content: string;
         ref?: undefined | HTMLElement;
         hideButtons?: boolean;
+        ariaLabel?: string;
         height?: string;
         appendCustomText?: string;
         onCancel?: () => void;
@@ -37,13 +39,15 @@
     let t = useI18n();
 </script>
 
-<div role="none" class="wrapper" style:height onclick={() => ref?.focus()}>
+<div role="none" class="wrapper" style:min-height={height} onclick={() => ref?.focus()}>
     {@render children?.()}
 
     <div
         bind:this={ref}
         id="editor"
         role="textbox"
+        aria-label={ariaLabel}
+        aria-multiline="true"
         tabindex="0"
         class="edit"
         contenteditable="plaintext-only"
@@ -84,24 +88,17 @@
 
     .edit {
         width: 100%;
-        padding: 0.5rem;
+        flex: 1;
+        padding: 0.75rem;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
     }
-
-    .edit:focus {
-        outline: none;
-    }
-
-    /*.edit:focus-visible {*/
-    /*    outline: 1px solid hsl(var(--accent));*/
-    /*}*/
 
     .wrapper {
-        margin: 0.15rem 0;
         display: flex;
         flex-direction: column;
-        border: 1px solid hsla(var(--bg-high) / 0.5);
+        border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
-        overflow-y: auto;
         cursor: text;
     }
 </style>

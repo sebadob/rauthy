@@ -239,11 +239,6 @@
 </ContentAdmin>
 
 <style>
-    #sessions {
-        max-height: calc(100dvh - 7rem);
-        overflow-y: auto;
-    }
-
     .btn {
         margin: 0 0.25rem;
     }
@@ -275,7 +270,7 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        max-height: none;
-        overflow: visible;
+        max-width: none;
+        margin: 0;
     }
 </style>

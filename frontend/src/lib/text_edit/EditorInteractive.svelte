@@ -1,37 +1,20 @@
 <script lang="ts">
     import Tabs from '#lib/tabs/Tabs.svelte';
-    import EditorMarkdownPreview from '#lib/text_edit/md/EditorMarkdownPreview.svelte';
+    import EditorMarkdown from '#lib/text_edit/md/EditorMarkdown.svelte';
     import EditorText from '#lib/text_edit/EditorText.svelte';
-    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
-    import { onDestroy } from 'svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
-        height = 'calc(90dvh - 5.5rem)',
+        height = '16rem',
         mode = $bindable('Markdown'),
         contentRaw = $bindable(''),
-        sanitizedValue = $bindable(''),
     }: {
         height?: string;
-        mode?: 'Text' | 'Markdown' | 'HTML';
+        mode?: 'Text' | 'Markdown';
         contentRaw?: string;
-        sanitizedValue?: string;
     } = $props();
 
-    let worker = useMarkdownWorker();
-
-    onDestroy(() => {
-        worker.closeWorker();
-    });
-
-    $effect(() => {
-        if (mode === 'Text') {
-            sanitizedValue = contentRaw;
-        } else if (mode === 'Markdown') {
-            sanitizedValue = worker.renderedMarkdown();
-            // } else if (mode === 'HTML') {
-            //     sanitizedValue = worker.sanitizedHTML();
-        }
-    });
+    const ta = useI18nAdmin();
 </script>
 
 <div class="mode">
@@ -39,16 +22,15 @@
 </div>
 
 {#if mode === 'Markdown'}
-    <EditorMarkdownPreview bind:content={contentRaw} {height} />
-    <!--{:else if mode === 'HTML'}-->
-    <!--    <EditorHtml bind:content {height}/>-->
-{:else if mode === 'Text'}
-    <EditorText bind:content={contentRaw} {height} hideButtons />
+    <EditorMarkdown bind:markdown={contentRaw} {height} />
+{:else}
+    <EditorText bind:content={contentRaw} {height} ariaLabel={ta.editor.textArea} hideButtons />
 {/if}
 
 <style>
     .mode {
-        margin: 0.5rem 0;
+        --ui-tabs-margin: 0;
+        margin: 0.5rem 0 0.75rem;
         width: 11rem;
     }
 </style>

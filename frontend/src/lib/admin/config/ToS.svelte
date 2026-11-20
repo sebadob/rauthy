@@ -12,8 +12,8 @@
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import { slide } from 'svelte/transition';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput } from '#utils/form.ts';
-    import { formatDateFromTs, formatUtcTsFromDateInput } from '#utils/helpers.ts';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
     import LabeledValue from '#lib/LabeledValue.svelte';
     import Options from '#lib/Options.svelte';
     import EditorInteractive from '#lib/text_edit/EditorInteractive.svelte';
@@ -33,7 +33,7 @@
     let error = $state('');
     let noneExist = $state(false);
     let tos: ToSResponse[] = $state([]);
-    let editorMode: 'HTML' | 'Text' | 'Markdown' = $state('Markdown');
+    let editorMode: 'Text' | 'Markdown' = $state('Markdown');
     let newToSContentRaw = $state('');
     let optUntil = $state(false);
     let optUntilDate = $state(fmtDateInput());
@@ -134,10 +134,22 @@
             // Always have the latest ToS at the top. The backend sends them ASC.
             res.body.reverse();
             tos = res.body;
+            noneExist = tos.length === 0;
         } else if (res.status === 204) {
             noneExist = true;
             selectedIdx = -1;
         }
+    }
+
+    function openNewVersion(current?: ToSResponse) {
+        const transitionEnd = new Date(Date.now() + 5 * 60_000);
+        optUntil = false;
+        optUntilDate = fmtDateInput(transitionEnd);
+        optUntilTime = fmtTimeInput(transitionEnd);
+        newToSContentRaw = current?.content ?? '';
+        editorMode = current?.is_html === false ? 'Text' : 'Markdown';
+        error = '';
+        showModalAddNew = true;
     }
 
     async function saveToS() {
@@ -153,7 +165,12 @@
             content,
         };
         if (optUntil) {
-            payload.opt_until = formatUtcTsFromDateInput(optUntilDate, optUntilTime);
+            const end = unixTsFromLocalDateTime(optUntilDate, optUntilTime);
+            if (!end || end <= Date.now() / 1000) {
+                error = t.common.invalidInput;
+                return;
+            }
+            payload.opt_until = end;
         }
 
         let res = await fetchPost('/auth/v1/tos', payload);
@@ -180,7 +197,7 @@
     <Button
         ariaLabel={ta.tos.addNewToS}
         level={isModalOpen ? 2 : 1}
-        onclick={() => (showModalAddNew = true)}
+        onclick={() => openNewVersion()}
     >
         {ta.tos.addNewToS}
     </Button>
@@ -188,10 +205,7 @@
         <Button
             ariaLabel={ta.tos.addNewToSFromCurrent}
             level={isModalOpen ? 2 : 1}
-            onclick={() => {
-                newToSContentRaw = tos[selectedIdx].content;
-                showModalAddNew = true;
-            }}
+            onclick={() => openNewVersion(tos[selectedIdx])}
         >
             {ta.tos.addNewToSFromCurrent}
         </Button>
@@ -239,8 +253,12 @@
     {/if}
 </div>
 
-<Modal bind:showModal={showModalAddNew} bind:closeModal={closeModalAddNew}>
-    <div class="modal">
+<Modal
+    bind:showModal={showModalAddNew}
+    bind:closeModal={closeModalAddNew}
+    ariaLabel={ta.tos.addNewToS}
+>
+    <div class="tos-composer">
         <h3>{ta.tos.addNewToS}</h3>
 
         <div class="optUntil">
@@ -249,18 +267,17 @@
             </InputCheckbox>
 
             {#if optUntil}
-                <div transition:slide={{ duration: 150 }}>
+                <div class="transition-fields" transition:slide={{ duration: 150 }}>
+                    <p>{ta.tos.optUntil.desc}</p>
                     <InputDateTimeCombo
                         min={fmtDateInput()}
-                        timeMin={fmtTimeInput()}
+                        label={ta.common.date}
+                        labelTime={ta.common.time}
+                        required
                         withTime
                         bind:value={optUntilDate}
                         bind:timeValue={optUntilTime}
                     />
-
-                    <p>
-                        {ta.tos.optUntil.desc}
-                    </p>
                 </div>
             {/if}
         </div>
@@ -269,24 +286,17 @@
             <EditorInteractive
                 bind:mode={editorMode}
                 bind:contentRaw={newToSContentRaw}
-                height="max(calc(100dvh - 20rem), 30rem)"
+                height="clamp(11rem, 28dvh, 21rem)"
             />
         </div>
 
-        <div class="action" style:margin-bottom="1rem">
-            <p><b>{ta.tos.immutable}</b></p>
+        <p class="immutable">{ta.tos.immutable}</p>
+        <div class="actions">
+            <Button level={2} onclick={() => closeModalAddNew?.()}>{t.common.cancel}</Button>
+            <Button onclick={saveToS} isDisabled={newToSContentRaw.trim().length === 0}>
+                {t.common.save}
+            </Button>
         </div>
-
-        <Button
-            ariaLabel={t.common.save}
-            onclick={saveToS}
-            isDisabled={newToSContentRaw.trim().length === 0}
-        >
-            {t.common.save}
-        </Button>
-        <Button level={-3} ariaLabel={t.common.cancel} onclick={() => closeModalAddNew?.()}>
-            {t.common.cancel}
-        </Button>
 
         {#if error}
             <div class="err">
@@ -355,12 +365,35 @@
         margin: 1rem 0;
     }
 
-    .modal {
-        width: min(90dvw, 2 * 467pt);
+    .tos-composer {
+        width: min(720px, calc(100dvw - 96px));
+        max-width: 100%;
     }
 
-    .optUntil {
-        margin: 0.75rem 0;
+    .tos-composer h3 {
+        margin: 0 0 1rem;
+        font-size: 1.375rem;
+    }
+
+    .transition-fields {
+        margin-top: 0.625rem;
+    }
+
+    .transition-fields p,
+    .immutable {
+        margin: 0 0 0.625rem;
+        font-size: 0.8125rem;
+        color: var(--ui-muted);
+    }
+
+    .transition-fields :global(.container.withTime) {
+        width: min(100%, 25rem);
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .searchOpts {

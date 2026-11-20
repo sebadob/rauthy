@@ -335,8 +335,8 @@
         line-height: 18px;
     }
     #mainNav .menu {
-        gap: 2px;
-        padding: 0 0 0.5rem;
+        gap: 3px;
+        padding: 0.375rem 0 0.5rem;
         max-height: none;
         overflow: visible;
     }

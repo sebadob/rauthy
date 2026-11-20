@@ -64,16 +64,14 @@ async function openAdd(/** @type {import('@playwright/test').Page} */ page) {
 }
 
 /**
- * Fills the add dialog. Date and time inputs both carry the name "Expiry" (FINDING), so they are
- * told apart by their order.
+ * Fills the add dialog.
  * @param {import('@playwright/test').Locator} dialog
  * @param {{ ip: string, date?: string, time?: string }} v
  */
 async function fillAdd(dialog, { ip, date, time }) {
     await dialog.getByRole('textbox', { name: 'IP', exact: true }).fill(ip);
-    const expiry = dialog.getByRole('textbox', { name: 'Expiry' });
-    if (date) await expiry.first().fill(date);
-    if (time) await enterTime(expiry.nth(1), time);
+    if (date) await dialog.locator('input[type="date"]').fill(date);
+    if (time) await enterTime(dialog.getByRole('textbox', { name: 'Time', exact: true }), time);
 }
 
 test.describe('ip blacklist', () => {
@@ -228,12 +226,6 @@ test.describe('ip blacklist', () => {
     });
 
     test('saving with the pre-filled expiry gives feedback', async ({ page }) => {
-        // UPSTREAM BUG: the expiry is pre-filled with the current minute, which the backend
-        // treats as already expired and silently ignores (200 without storing anything,
-        // src/api/src/blacklist.rs `post_blacklist`). The dialog closes as if it worked
-        // (frontend/src/lib/admin/blacklist/Blacklist.svelte). Correct: block a past expiry
-        // with a validation message, or pre-fill a future expiry.
-        test.fail();
         const ip = docIp('198.51.100');
         await page.goto(BLACKLIST);
         try {
@@ -241,16 +233,7 @@ test.describe('ip blacklist', () => {
             await fillAdd(dialog, { ip });
             await dialog.getByRole('button', { name: 'Save' }).click();
             await expect
-                .poll(
-                    async () =>
-                        (await listBlacklist(page)).some(e => e.ip === ip) ||
-                        // not /expir/: the "Expiry" label itself would match
-                        (await dialog
-                            .getByText(/future|past|already expired/i)
-                            .first()
-                            .isVisible()),
-                    { timeout: 5_000 },
-                )
+                .poll(async () => (await listBlacklist(page)).some(e => e.ip === ip))
                 .toBe(true);
         } finally {
             await cleanup(page, [ip]);

@@ -64,6 +64,8 @@ test.describe('admin navigation', () => {
         await expect(page).toHaveURL(/\/auth\/v1\/account/);
         const main = page.getByRole('main');
         await expect(main.getByRole('heading', { name: 'User Account' })).toBeVisible();
+        await main.locator('.tabs').getByRole('button', { name: 'Edit', exact: true }).click();
+        await expect(main.getByRole('textbox', { name: 'E-Mail', exact: true })).toHaveValue(/@/);
         const password = main.getByRole('button', { name: 'Password', exact: true });
         await password.click();
         await expect(password).toHaveAttribute('aria-current', 'step');
@@ -89,7 +91,7 @@ test.describe('admin navigation', () => {
             };
         });
         expect(positions.header).toBe(positions.logo);
-        expect(positions.workspace).toBe(positions.users);
+        expect(positions.users - positions.workspace).toBe(6);
         const nav = page.locator('#mainNav');
         await expect(nav.getByText(/^v\d+\./)).toHaveCount(0);
         await nav.getByRole('button', { name: 'About' }).click();

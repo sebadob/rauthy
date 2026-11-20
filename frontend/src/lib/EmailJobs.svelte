@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import IconCircleStack from '#icons/IconCircleStack.svelte';
+    import IconEnvelope from '#icons/IconEnvelope.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Modal from '#lib/Modal.svelte';
     import type { EmailJobResponse } from '#api/types/email.ts';
@@ -50,10 +50,10 @@
 </script>
 
 <Button ariaLabel={ta.email.jobs} onclick={() => (showModal = true)} invisible>
-    <IconCircleStack />
+    <span class="jobs-icon"><IconEnvelope /><span><IconClock width="0.875rem" /></span></span>
 </Button>
 
-<Modal bind:showModal bind:closeModal>
+<Modal bind:showModal bind:closeModal ariaLabel={ta.email.jobs}>
     <div class="modal">
         <h3>{ta.email.jobs}</h3>
 
@@ -148,6 +148,18 @@
 </Modal>
 
 <style>
+    .jobs-icon {
+        display: grid;
+        position: relative;
+    }
+
+    .jobs-icon > span {
+        position: absolute;
+        inset: auto -0.2rem -0.125rem auto;
+        border-radius: 50%;
+        background: var(--ui-surface);
+    }
+
     .emailBody {
         margin: 0.5rem 0;
         padding: 0.25rem 0.5rem;

@@ -317,7 +317,10 @@
                     <br />
                     <br />
                 {/if}
-                <A href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}>
+                <A
+                    href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}
+                    reload={!redirectUri}
+                >
                     {redirectsToClient ? t.passwordReset.continueSignIn : 'Account'}
                 </A>
             </p>

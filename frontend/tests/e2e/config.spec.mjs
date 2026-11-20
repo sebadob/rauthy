@@ -556,9 +556,7 @@ test.describe('terms of service', () => {
 
     /** @param {import('@playwright/test').Page} page */
     const openToS = async page => {
-        // a direct load of /admin/config/tos is broken upstream (see the deep link test)
-        await page.goto('/auth/v1/admin/config/policy');
-        await subNav(page).getByRole('link', { name: 'ToS', exact: true }).click();
+        await page.goto('/auth/v1/admin/config/tos');
         await expect(MARKER.tos(page)).toBeVisible();
     };
 
@@ -574,9 +572,6 @@ test.describe('terms of service', () => {
     });
 
     test('the empty state explains that no ToS exist yet', async ({ page }) => {
-        // UPSTREAM BUG: ToS.svelte only shows "No Terms of Service have been added yet." on a
-        // 204, but GET /auth/v1/tos answers 200 with `[]`, so the page stays blank.
-        test.fail();
         await openToS(page);
         await expect(main(page).getByText('No Terms of Service have been added yet.')).toBeVisible({
             timeout: 3000,
@@ -604,8 +599,6 @@ test.describe('terms of service', () => {
         await expect(dialog.getByText(/accepting updated ToS is optional/)).toHaveCount(0);
         await optUntil.check();
         await expect(dialog.getByText(/accepting updated ToS is optional/)).toBeVisible();
-        // FINDING: the date and time inputs have an empty aria-label and their picker buttons
-        // are named "Show Popover Example".
         await expect(dialog.locator('input[type="date"]')).toHaveValue(dateInput(0));
         await optUntil.uncheck();
         await expect(dialog.getByText(/accepting updated ToS is optional/)).toHaveCount(0);
@@ -628,7 +621,12 @@ test.describe('terms of service', () => {
 
         const content = '# E2E Terms\n\nYou **must** agree.';
         await dialog.getByRole('textbox', { name: 'Edit Text' }).fill(content);
-        // live preview of the markdown next to the editor
+        const preview = dialog.getByRole('button', { name: 'Preview', exact: true });
+        const edit = dialog.getByRole('button', { name: 'Edit', exact: true });
+        await expect(edit).toHaveAttribute('aria-pressed', 'true');
+        await preview.click();
+        await expect(preview).toHaveAttribute('aria-pressed', 'true');
+        await expect(edit).toHaveAttribute('aria-pressed', 'false');
         await expect(dialog.getByRole('heading', { name: 'E2E Terms' })).toBeVisible();
 
         await dialog.getByRole('checkbox', { name: 'Enable Transition Time' }).check();
@@ -677,9 +675,7 @@ test.describe('terms of service', () => {
             'aria-current',
             'step',
         );
-        // FINDING: the text mode editor is a contenteditable textbox without a name.
-        await expect(dialog.getByRole('textbox', { name: 'Edit Text' })).toHaveCount(0);
-        await dialog.getByRole('textbox').fill('Plain *terms*');
+        await dialog.getByRole('textbox', { name: 'Edit Text' }).fill('Plain *terms*');
         await dialog.getByRole('button', { name: 'Save' }).click();
         await expect(dialog).toBeHidden();
         expect(posted).toEqual([{ is_html: false, content: 'Plain *terms*' }]);
@@ -765,7 +761,7 @@ test.describe('terms of service', () => {
         const dialog = page.getByRole('dialog');
         await dialog.getByRole('textbox', { name: 'Edit Text' }).fill('# Phone Terms');
         // below 1440px the preview is a toggle inside the editor
-        await dialog.getByRole('checkbox', { name: 'Preview' }).check();
+        await dialog.getByRole('button', { name: 'Preview', exact: true }).click();
         await expect(dialog.getByRole('heading', { name: 'Phone Terms' })).toBeVisible();
         await dialog.getByRole('button', { name: 'Save' }).click();
         await expect(dialog).toBeHidden();

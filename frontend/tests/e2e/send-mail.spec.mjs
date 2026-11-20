@@ -32,7 +32,7 @@ async function openCompose(page) {
 /** @param {import('@playwright/test').Locator} dialog */
 const editor = dialog => dialog.getByRole('textbox', { name: 'Edit Text' });
 /** @param {import('@playwright/test').Locator} dialog */
-const filters = dialog => dialog.getByRole('combobox', { name: 'User Filter' });
+const filters = dialog => dialog.getByRole('combobox', { name: /^(User Filter|Groups|Roles)$/ });
 
 test.describe('send e-mail', () => {
     // some tests start on the account page to get a session for the API helpers
@@ -41,7 +41,6 @@ test.describe('send e-mail', () => {
         page,
     }) => {
         const dialog = await openCompose(page);
-        // FINDING: the dialog has no accessible name (no heading / aria-labelledby).
         await expect(
             dialog.getByRole('checkbox', { name: 'Scheduled Dispatch' }),
         ).not.toBeChecked();
@@ -96,7 +95,6 @@ test.describe('send e-mail', () => {
             .map((/** @type {any} */ r) => r.name)
             .sort((/** @type {string} */ a, /** @type {string} */ b) => a.localeCompare(b));
         const dialog = await openCompose(page);
-        // FINDING: both comboboxes (filter type and value) are named "User Filter".
         const type = filters(dialog).first();
 
         // the chosen group / role is kept when switching between "In" and "Not in"
@@ -151,6 +149,7 @@ test.describe('send e-mail', () => {
             const subject = unique('E2E mass mail');
             await dialog.getByRole('textbox', { name: 'Subject' }).fill(subject);
             await editor(dialog).fill('Hello **E2E** reader');
+            await dialog.getByRole('button', { name: 'Preview', exact: true }).click();
             await expect(dialog.getByRole('strong').filter({ hasText: 'E2E' })).toBeVisible();
 
             const since = nowSecs() - 1;
@@ -218,9 +217,7 @@ test.describe('send e-mail', () => {
             'aria-current',
             'step',
         );
-        // FINDING: the text mode editor is a contenteditable textbox without a name.
-        await expect(editor(dialog)).toHaveCount(0);
-        await dialog.getByRole('textbox').last().fill('Just *plain* text');
+        await editor(dialog).fill('Just *plain* text');
         await dialog.getByRole('button', { name: 'Send' }).click();
         await expect(page.getByRole('dialog')).toBeHidden();
         expect(sent).toEqual([
@@ -234,21 +231,28 @@ test.describe('send e-mail', () => {
         ]);
     });
 
-    test('a scheduled mail carries the chosen local time', async ({ page }) => {
+    test('a scheduled mail to a group keeps the recipient and chosen local time', async ({
+        page,
+    }) => {
         const sent = await mockMassMail(page);
         const dialog = await openCompose(page);
+        await chooseOption(page, filters(dialog).first(), 'In Group');
+        const group = await dialog.getByRole('combobox', { name: 'Groups' }).innerText();
         await dialog.getByRole('checkbox', { name: 'Scheduled Dispatch' }).check();
-        // FINDING: date and time inputs have an empty aria-label.
         const date = dateInput(2);
         await dialog.locator('input[type="date"]').fill(date);
-        const time = dialog.locator('input[name="time"]');
+        const time = dialog.getByRole('textbox', { name: 'Time', exact: true });
         await enterTime(time, '09:15');
         await time.blur();
         await dialog.getByRole('textbox', { name: 'Subject' }).fill('Later');
         await editor(dialog).fill('Scheduled body');
         await dialog.getByRole('button', { name: 'Send' }).click();
         await expect.poll(() => sent.length).toBe(1);
-        expect(sent[0].scheduled).toBe(berlinTs(date, '09:15'));
+        expect(sent[0]).toMatchObject({
+            filter_type: 'in_group',
+            filter_value: group.trim(),
+            scheduled: berlinTs(date, '09:15'),
+        });
     });
 
     test('scheduling reveals date and time and is sent with the job', async ({ page }) => {
@@ -309,21 +313,34 @@ test.describe('send e-mail', () => {
             await ed.fill('hello');
             await ed.press('ControlOrMeta+a');
             await dialog.getByRole('button', { name: 'Heading 2', exact: true }).click();
+            const edit = dialog.getByRole('button', { name: 'Edit', exact: true });
+            const preview = dialog.getByRole('button', { name: 'Preview', exact: true });
+            await expect(edit).toHaveAttribute('aria-pressed', 'true');
+            await preview.click();
+            await expect(preview).toHaveAttribute('aria-pressed', 'true');
+            await expect(edit).toHaveAttribute('aria-pressed', 'false');
             await expect(dialog.getByRole('heading', { name: 'hello', level: 2 })).toBeVisible();
+            await edit.click();
+            await expect(edit).toHaveAttribute('aria-pressed', 'true');
 
             await ed.fill('a word');
             await ed.press('ControlOrMeta+a');
             await dialog.getByRole('button', { name: 'Italic', exact: true }).click();
+            await dialog.getByRole('button', { name: 'Preview', exact: true }).click();
             await expect(dialog.getByRole('emphasis')).toHaveText('a word');
+            await dialog.getByRole('button', { name: 'Edit', exact: true }).click();
 
             await ed.fill('item');
             await ed.press('ControlOrMeta+a');
             await dialog.getByRole('button', { name: 'List', exact: true }).click();
+            await dialog.getByRole('button', { name: 'Preview', exact: true }).click();
             await expect(dialog.getByRole('listitem').filter({ hasText: 'item' })).toBeVisible();
+            await dialog.getByRole('button', { name: 'Edit', exact: true }).click();
 
             await ed.fill('site');
             await ed.press('ControlOrMeta+a');
             await dialog.getByRole('button', { name: 'Link', exact: true }).click();
+            await dialog.getByRole('button', { name: 'Preview', exact: true }).click();
             await expect(dialog.getByRole('link', { name: 'site' })).toHaveAttribute(
                 'href',
                 'https://...',
@@ -336,11 +353,11 @@ test.describe('send e-mail', () => {
             const dialog = await openCompose(page);
             await dialog.getByRole('textbox', { name: 'Subject' }).fill('Phone');
             await editor(dialog).fill('**phone** body');
-            const preview = dialog.getByRole('checkbox', { name: 'Preview' });
-            await preview.check();
+            const preview = dialog.getByRole('button', { name: 'Preview', exact: true });
+            await preview.click();
             await expect(editor(dialog)).toHaveCount(0);
             await expect(dialog.getByRole('strong')).toHaveText('phone');
-            await preview.uncheck();
+            await dialog.getByRole('button', { name: 'Edit', exact: true }).click();
             await expect(editor(dialog)).toHaveText('**phone** body');
             await dialog.getByRole('button', { name: 'Send' }).click();
             await expect(page.getByRole('dialog')).toBeHidden();

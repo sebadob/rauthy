@@ -25,7 +25,11 @@
     {#if admin || showAdminLink}
         {@const label = admin ? t.account.account : t.account.navBackToAdmin}
         <Tooltip text={label}>
-            <a href={admin ? '/auth/v1/account' : '/auth/v1/admin/users'} aria-label={label}>
+            <a
+                href={admin ? '/auth/v1/account' : '/auth/v1/admin/users'}
+                aria-label={label}
+                data-sveltekit-reload={admin ? '' : undefined}
+            >
                 {#if admin}<IconUserCircle width="1.125rem" />{:else}
                     <IconUserGroup width="1.125rem" />
                 {/if}
