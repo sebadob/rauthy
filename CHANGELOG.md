@@ -283,6 +283,16 @@ authorization code. Http(s) redirects are unchanged and remain automatic.
 When the same user is deleted by two requests at the same time, the one that loses the race now
 gets a `404` instead of succeeding a second time.
 
+#### UI Sesison Keep-Alive
+
+The login page, the account dashboard and the admin UI now keep their own session alive. The new
+`GET /auth/v1/keep_alive` answers the session's next idle timeout deadline, and each open page
+beats once per timeout, one minute before that deadline, so a page that sits open no longer runs
+into its own session timeout. A logged-out device code page now redirects to the login page instead
+of reloading its own document on every load.
+
+[#1929](https://github.com/sebadob/rauthy/issues/1929)
+
 ### Bugfix
 
 - Changing the password from the account page cleared the given and family name and all user
@@ -308,13 +318,7 @@ gets a `404` instead of succeeding a second time.
   its own session had expired. A `401` for a login request without any session now answers with the
   `x-session-expired` header, and the login page restarts its flow on its own when it gets that
   header, without claiming anything about the credentials.
-  [#1909](https://github.com/sebadob/rauthy/issues/1909)
-- The login page, the account dashboard and the admin UI now keep their own session alive. The new
-  `GET /auth/v1/keep_alive` answers the session's next idle timeout deadline, and each open page
-  beats once per timeout, one minute before that deadline, so a page that sits open no longer runs
-  into its own session timeout. A logged-out device code page now redirects to the login page
-  instead of reloading its own document on every load.
-  [#1909](https://github.com/sebadob/rauthy/issues/1909)
+  [#1929](https://github.com/sebadob/rauthy/issues/1929)
 
 ## v0.37.2
 
