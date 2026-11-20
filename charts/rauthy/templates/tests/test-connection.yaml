@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "rauthy.fullname" . }}-test-connection
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: health
+      image: curlimages/curl:8.11.0
+      command: ["curl"]
+      args:
+        # Readiness gates on the Hiqlite Raft port, which goes ready before the
+        # public HTTP listener serves /auth/v1/health on a first boot. Retry for
+        # roughly the same window the livenessProbe allows for that endpoint.
+        - "--retry"
+        - "30"
+        - "--retry-delay"
+        - "2"
+        - "--retry-connrefused"
+        - "--retry-all-errors"
+        - "--connect-timeout"
+        - "5"
+        - "--fail"
+        - "--silent"
+        - "--show-error"
+        - "http://{{ include "rauthy.fullname" . }}:{{ .Values.service.port }}/auth/v1/health"

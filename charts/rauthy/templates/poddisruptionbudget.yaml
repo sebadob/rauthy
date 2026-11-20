@@ -1,0 +1,15 @@
+{{- if gt (int .Values.replicas) 1 }}
+# Only meaningful for a HA deployment. Keeps voluntary disruptions (node
+# drains, rollouts) from taking down more than one Raft member at a time.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "rauthy.fullname" . }}
+  labels:
+    {{- include "rauthy.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "rauthy.selectorLabels" . | nindent 6 }}
+{{- end }}
