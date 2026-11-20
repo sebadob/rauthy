@@ -52,5 +52,14 @@ export default defineConfig({
                 storageState: './test-results/.auth/admin.json',
             },
         },
+        {
+            name: 'webkit',
+            dependencies: ['setup'],
+            grep: /@webkit/,
+            use: {
+                ...devices['Desktop Safari'],
+                storageState: './test-results/.auth/admin.json',
+            },
+        },
     ],
 });

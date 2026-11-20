@@ -4,6 +4,7 @@ import { test, expect } from './fixtures.mjs';
 import { api } from './helpers/api.mjs';
 import { unique } from './helpers/env.mjs';
 import { loginWithPassword } from './helpers/login.mjs';
+import { chooseOption } from './helpers/ui.mjs';
 import {
     createUser,
     deleteUser,
@@ -76,6 +77,57 @@ function tabAction(
 }
 
 test.describe('users list', () => {
+    test('searches for a name and ignores a late username response after clearing', async ({
+        page,
+    }) => {
+        const username = unique('lookup').replaceAll('-', '');
+        const target = await newUser(page, { preferred_username: username });
+        const other = await newUser(page);
+        await page.goto(USERS);
+
+        const search = page.getByRole('searchbox', { name: 'Search' });
+        const options = page.getByRole('combobox', { name: 'Search Options' });
+        await chooseOption(page, options, 'Name');
+        await search.fill(target.given_name);
+        await expect(userEntry(page, target.email)).toBeVisible();
+        await expect(userEntry(page, other.email)).toHaveCount(0);
+
+        await chooseOption(page, options, 'Username');
+        const url = (/** @type {URL} */ u) =>
+            u.pathname === '/auth/v1/search' &&
+            u.searchParams.get('idx') === 'username' &&
+            u.searchParams.get('q') === username;
+        const started = Promise.withResolvers();
+        const release = Promise.withResolvers();
+        await page.route(url, async route => {
+            try {
+                const response = await route.fetch();
+                expect(response.ok()).toBe(true);
+                expect(await response.json()).toEqual(
+                    expect.arrayContaining([expect.objectContaining({ id: target.id })]),
+                );
+                started.resolve(undefined);
+                await release.promise;
+                await route.fulfill({ response });
+            } catch (err) {
+                started.reject(err);
+            }
+        });
+
+        await search.fill(username);
+        try {
+            await started.promise;
+            await search.clear();
+            await expect(userEntry(page, other.email)).toBeVisible();
+            const delivered = page.waitForResponse(response => url(new URL(response.url())));
+            release.resolve(undefined);
+            await (await delivered).finished();
+            await expect(userEntry(page, other.email)).toBeVisible();
+        } finally {
+            release.resolve(undefined);
+        }
+    });
+
     test('changes page size and moves between pages of users', async ({ page }) => {
         for (let index = 0; index < 6; index++) await newUser(page);
         await page.goto(USERS);
@@ -105,6 +157,9 @@ test.describe('users list', () => {
         }
         await previous.click();
         await expect.poll(() => userEntries(page).allTextContents()).toEqual(firstPage);
+        await page.reload();
+        await expect(size).toHaveValue('5');
+        await expect(userEntries(page)).toHaveCount(5);
     });
 
     test('shows users with their count and finds them by e-mail', async ({ page }) => {

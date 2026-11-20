@@ -49,7 +49,7 @@ const passwordField = (/** @type {import('@playwright/test').Page} */ page) =>
     page.getByLabel('Password', { exact: true });
 
 test.describe('login page', () => {
-    test('e-mail step, then password step, then redirect to the account @mobile', async ({
+    test('e-mail step, then password step, then redirect to the account @mobile @webkit', async ({
         page,
     }) => {
         await page.goto('/auth/v1/account');

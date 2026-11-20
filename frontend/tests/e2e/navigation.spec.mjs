@@ -85,7 +85,46 @@ test.describe('admin navigation', () => {
         await page.getByRole('button', { name: /Change Theme/ }).click();
     });
 
-    test('opens and browses Account from the sidebar footer', async ({ page, allowErrors }) => {
+    for (const [area, key, param] of [
+        ['groups', 'group', 'gid'],
+        ['roles', 'role', 'rid'],
+    ]) {
+        test(`shows the users assigned to a ${key} alongside its settings`, async ({ page }) => {
+            await page.goto(`/auth/v1/admin/${area}`);
+            const name = `membership-${Date.now()}`;
+            const entity = await api(page, 'POST', area, { name });
+            try {
+                const user = await api(page, 'POST', 'users', {
+                    email: `${name}@example.invalid`,
+                    given_name: 'Membership',
+                    language: 'en',
+                    roles: [],
+                    [area]: [name],
+                });
+                try {
+                    await page.goto(`/auth/v1/admin/${area}?${param}=${entity.id}`);
+                    const main = page.getByRole('main');
+                    await main.getByRole('button', { name: 'Users', exact: true }).click();
+                    await expect(main.getByText(user.email, { exact: true })).toBeVisible();
+                    await expect(
+                        main.getByRole('button', { name: `Remove from this ${key}` }),
+                    ).toBeVisible();
+                    await main.getByRole('button', { name: 'Config', exact: true }).click();
+                    const field = key === 'group' ? 'Group Name' : 'Role Name';
+                    await expect(main.getByRole('textbox', { name: field })).toHaveValue(name);
+                } finally {
+                    await deleteTestUser(page, user.id);
+                }
+            } finally {
+                await api(page, 'DELETE', `${area}/${entity.id}`);
+            }
+        });
+    }
+
+    test('opens and browses Account from the sidebar footer @webkit', async ({
+        page,
+        allowErrors,
+    }) => {
         allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
         await page.goto('/auth/v1/admin/users');
         await page.locator('#mainNav').getByRole('link', { name: 'User Account' }).click();
@@ -231,5 +270,16 @@ test.describe('admin navigation', () => {
         await expect(page.getByRole('link', { name: 'Benutzer', exact: true })).toBeVisible();
         await chooseOption(page, page.getByRole('combobox', { name: /Sprache/ }), 'en');
         await expect(page.getByRole('link', { name: 'Users', exact: true })).toBeVisible();
+    });
+
+    test('stores Italian and sends the English setup email', async ({ page }) => {
+        await page.goto('/auth/v1/admin/users');
+        // createTestUser completes password setup via the English New Password email.
+        const user = await createTestUser(page, { language: 'it' });
+        try {
+            expect(await api(page, 'GET', `users/${user.id}`)).toMatchObject({ language: 'it' });
+        } finally {
+            await deleteTestUser(page, user.id);
+        }
     });
 });

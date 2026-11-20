@@ -32,7 +32,7 @@ export const nowSecs = () => Math.floor(Date.now() / 1000) - 1;
  * `preferredUsername: null` leaves the required preferred username empty on purpose.
  * @param {import('@playwright/test').Page} adminPage a page with the logged-in admin session
  * @param {{ password?: string | null, preferredUsername?: string | null, givenName?: string,
- *   familyName?: string, prefix?: string, roles?: string[] }} [opts]
+ *   familyName?: string, prefix?: string, roles?: string[], language?: 'en' | 'it' }} [opts]
  */
 export async function createTestUser(adminPage, opts = {}) {
     const id = unique(opts.prefix || 'e2e-acc').toLowerCase();
@@ -49,7 +49,7 @@ export async function createTestUser(adminPage, opts = {}) {
         email,
         given_name: givenName,
         family_name: familyName,
-        language: 'en',
+        language: opts.language ?? 'en',
         roles: opts.roles || [],
         ...(preferredUsername ? { preferred_username: preferredUsername } : {}),
     });
