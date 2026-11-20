@@ -497,6 +497,11 @@ test.describe('edit provider', () => {
         await expect(main.getByRole('checkbox', { name: 'PKCE' })).toBeChecked();
         await expect(field(main, 'Scope')).toHaveValue('openid profile');
         await expect(field(main, 'Client ID')).toHaveValue('e2e-client');
+        const clientIdBox = await field(main, 'Client ID').boundingBox();
+        const secretBox = await secretField(main).boundingBox();
+        if (!clientIdBox || !secretBox) throw new Error('Missing provider credential fields');
+        expect(Math.abs(clientIdBox.y - secretBox.y)).toBeLessThanOrEqual(1);
+        expect(clientIdBox.height).toBe(secretBox.height);
         await expect(main.getByRole('checkbox', { name: 'client_secret_basic' })).toBeChecked();
         await expect(main.getByRole('checkbox', { name: 'client_secret_post' })).not.toBeChecked();
         await expect(field(main, 'Admin Claim Path')).toHaveValue('$.roles.*');

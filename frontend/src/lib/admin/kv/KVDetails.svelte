@@ -221,6 +221,7 @@
                     <InputArea
                         name="value"
                         label={ta.kv.value}
+                        formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                         placeholder={ta.kv.value}
                         rows={15}
                         required
@@ -325,6 +326,7 @@
                         bind:ref={refArea}
                         name="value"
                         label={ta.kv.value}
+                        formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                         placeholder={ta.kv.value}
                         rows={15}
                         value={stringifyJsonValue(entrySelected.value)}

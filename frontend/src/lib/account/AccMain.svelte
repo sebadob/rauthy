@@ -74,7 +74,7 @@
         ...(pamUser ? ['PAM'] : []),
         ...(webIdData ? ['WebID'] : []),
         t.account.privacy.privacy,
-        t.account.other,
+        t.account.attributes ?? t.account.other,
     ]);
 
     const title = $derived(
@@ -90,7 +90,7 @@
     });
 
     $effect(() => {
-        if (!config || view.get() === 'devices') {
+        if (!config || view.get() === 'devices' || view.get() === 'info') {
             return;
         }
 
@@ -166,27 +166,29 @@
 
         <Tabs {tabs} bind:selected />
 
-        <Section>
-            {#if selected === t.account.navInfo}
-                <AccInfo bind:user {pamUser} {providers} {authProvider} {webIdData} />
-            {:else if selected === t.account.navEdit}
-                <AccEdit {config} bind:user />
-            {:else if selected === t.common.password}
-                <AccPassword {user} {authProvider} />
-            {:else if selected === t.account.navMfa}
-                <AccMFA bind:user />
-            {:else if selected === t.account.devices}
-                <Devices userId={user.id} />
-            {:else if selected === 'PAM' && pamUser}
-                <AccPAM bind:pamUser />
-            {:else if selected === 'WebID' && webIdData}
-                <AccWebId bind:webIdData />
-            {:else if selected === t.account.privacy.privacy}
-                <AccPrivacy {user} />
-            {:else if selected === t.account.other}
-                <AccOther {user} />
-            {/if}
-        </Section>
+        {#if selected === t.account.navMfa}
+            <AccMFA bind:user />
+        {:else if selected === t.common.password}
+            <AccPassword {user} {authProvider} />
+        {:else if selected === 'WebID' && webIdData}
+            <AccWebId bind:webIdData />
+        {:else if selected === t.account.privacy.privacy}
+            <AccPrivacy {user} />
+        {:else}
+            <Section>
+                {#if selected === t.account.navInfo}
+                    <AccInfo bind:user {pamUser} {providers} {authProvider} {webIdData} />
+                {:else if selected === t.account.navEdit}
+                    <AccEdit {config} bind:user />
+                {:else if selected === t.account.devices}
+                    <Devices userId={user.id} />
+                {:else if selected === 'PAM' && pamUser}
+                    <AccPAM bind:pamUser />
+                {:else if selected === (t.account.attributes ?? t.account.other)}
+                    <AccOther {user} />
+                {/if}
+            </Section>
+        {/if}
 
         <footer>
             <div class="preferences">
@@ -201,7 +203,8 @@
     .account-shell {
         width: 100%;
         min-width: 0;
-        min-height: 100dvh;
+        min-height: 100%;
+        align-self: flex-start;
         background: var(--ui-container);
         color: var(--ui-text);
         padding: clamp(1rem, 4vw, 3rem);
@@ -229,9 +232,6 @@
 
     footer {
         justify-content: space-between;
-        position: sticky;
-        bottom: 0;
-        z-index: 2;
         margin-top: var(--ui-space);
         padding-block: 0.5rem;
         border-top: 1px solid var(--ui-outline);

@@ -5,6 +5,10 @@
  */
 export interface I18nAdmin {
     api_key: {
+        validity?: string;
+        permissions?: string;
+        secret?: string;
+        examples?: string;
         delete1: string;
         expires: string;
         generate1: string;
@@ -31,6 +35,7 @@ export interface I18nAdmin {
         userEditable: string;
     };
     backup: {
+        title?: string;
         createBackup: string;
         disabledDesc: string;
         lastModified: string;
@@ -371,6 +376,9 @@ export interface I18nAdmin {
         usernameNewDesc: string;
     };
     passwordPolicy: {
+        lengthRules?: string;
+        characterRules?: string;
+        expiryRules?: string;
         configDesc: string;
         resetSet0: string;
         validForDays: string;
@@ -383,6 +391,10 @@ export interface I18nAdmin {
                 endpoints: string;
                 client: string;
                 claims: string;
+                tokenAuth?: string;
+                adminMapping?: string;
+                mfaMapping?: string;
+                claimHelp?: string;
             };
             allowInsecureTls: string;
             autoLink: string;

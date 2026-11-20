@@ -639,6 +639,7 @@
                     placeholder={ta.clients.claims}
                     rows={10}
                     bind:value={jsonClaims}
+                    formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                 />
             </div>
             <InputCheckbox ariaLabel={ta.clients.claimsAtRoot} bind:checked={claimsAtRoot}>

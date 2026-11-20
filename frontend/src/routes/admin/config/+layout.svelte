@@ -27,7 +27,7 @@
     <NavLinkSub href="/auth/v1/admin/config/encryption">
         {ta.docs.encryption}
     </NavLinkSub>
-    <NavLinkSub href="/auth/v1/admin/config/backups">Backups</NavLinkSub>
+    <NavLinkSub href="/auth/v1/admin/config/backups">{ta.backup.title ?? 'Backups'}</NavLinkSub>
     <NavLinkSub href="/auth/v1/admin/config/tos">
         {ta.tos.tos}
     </NavLinkSub>

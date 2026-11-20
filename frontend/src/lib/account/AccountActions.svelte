@@ -26,7 +26,7 @@
         {@const label = admin ? t.account.account : t.account.navBackToAdmin}
         <Tooltip text={label}>
             <a
-                href={admin ? '/auth/v1/account' : '/auth/v1/admin/users'}
+                href={admin ? '/auth/v1/account?v=info' : '/auth/v1/admin/users'}
                 aria-label={label}
                 data-sveltekit-reload={admin ? '' : undefined}
             >

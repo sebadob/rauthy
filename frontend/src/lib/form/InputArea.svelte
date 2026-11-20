@@ -1,6 +1,7 @@
 <script lang="ts">
     import { slide } from 'svelte/transition';
     import { untrack } from 'svelte';
+    import { genKey } from '#utils/helpers.ts';
 
     let {
         ref = $bindable(),
@@ -11,6 +12,7 @@
 
         rows = 3,
         placeholder = '',
+        formatBadge,
         errMsg = '',
         disabled = false,
         fontMono = false,
@@ -35,6 +37,7 @@
         label?: string;
         rows?: number;
         placeholder?: string;
+        formatBadge?: string;
         errMsg?: string;
         disabled?: boolean | null | undefined;
         fontMono?: boolean | null | undefined;
@@ -109,6 +112,7 @@
         }
         return true;
     }
+    const badgeId = genKey();
 </script>
 
 <div class="container admin-textarea-field" style:width>
@@ -117,31 +121,35 @@
             {label}
         </label>
     </div>
-    <textarea
-        bind:this={ref}
-        {id}
-        {name}
-        class:font-mono={fontMono}
-        title={errMsg}
-        aria-label={label || placeholder}
-        bind:value
-        {rows}
-        autocomplete="off"
-        {placeholder}
-        aria-placeholder={placeholder}
-        {disabled}
-        aria-disabled={disabled}
-        maxlength={maxLength || undefined}
-        required={required || undefined}
-        aria-required={required || false}
-        aria-invalid={isError}
-        {onsubmit}
-        {oninput}
-        {oninvalid}
-        {onblur}
-        {onkeydown}
-    >
-    </textarea>
+    <div class="area" class:with-badge={formatBadge}>
+        <textarea
+            bind:this={ref}
+            {id}
+            aria-describedby={formatBadge ? badgeId : undefined}
+            {name}
+            class:font-mono={fontMono}
+            title={errMsg}
+            aria-label={label || placeholder}
+            bind:value
+            {rows}
+            autocomplete="off"
+            {placeholder}
+            aria-placeholder={placeholder}
+            {disabled}
+            aria-disabled={disabled}
+            maxlength={maxLength || undefined}
+            required={required || undefined}
+            aria-required={required || false}
+            aria-invalid={isError}
+            {onsubmit}
+            {oninput}
+            {oninvalid}
+            {onblur}
+            {onkeydown}
+        >
+        </textarea>
+        {#if formatBadge}<span class="ui-format-badge" id={badgeId}>{formatBadge}</span>{/if}
+    </div>
     {#if isError}
         <div class="error" transition:slide={{ duration: 150 }}>
             {errMsg}
@@ -150,6 +158,24 @@
 </div>
 
 <style>
+    .area {
+        display: contents;
+    }
+
+    .with-badge {
+        display: grid;
+        position: relative;
+    }
+
+    :global(.ui-shell) .with-badge textarea:not(:global(.branding-preview *)) {
+        padding-block-start: 2rem;
+    }
+
+    .with-badge :global(.ui-format-badge) {
+        inset-block-start: 0.5rem;
+        transform: none;
+    }
+
     label {
         font-size: 0.9em;
         flex-wrap: wrap;

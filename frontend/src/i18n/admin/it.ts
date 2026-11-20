@@ -2,6 +2,10 @@ import type { I18nAdmin } from './interface.ts';
 
 export const I18nAdminIt: I18nAdmin = {
     api_key: {
+        validity: 'Validità',
+        permissions: 'Permessi',
+        secret: 'Segreto',
+        examples: 'Esempi di utilizzo',
         delete1: 'Vuoi eliminare questa chiave API?',
         expires: 'Scadenza',
         generate1: 'Puoi generare un nuovo segreto per questa chiave API.',
@@ -28,6 +32,7 @@ export const I18nAdminIt: I18nAdmin = {
         userEditable: 'Modificabile dall’utente',
     },
     backup: {
+        title: 'Backup',
         createBackup: 'Crea backup',
         disabledDesc: 'Questa funzione è disponibile quando il database configurato è Hiqlite.',
         lastModified: 'Ultima modifica',
@@ -373,6 +378,9 @@ export const I18nAdminIt: I18nAdmin = {
             'Scegli con cura il nome utente. Dopo la creazione, modificarlo è complesso per motivi di sicurezza.',
     },
     passwordPolicy: {
+        lengthRules: 'Lunghezza della password',
+        characterRules: 'Requisiti dei caratteri',
+        expiryRules: 'Scadenza e riutilizzo',
         configDesc: 'Requisiti per le nuove password.',
         resetSet0: 'Imposta 0 per disattivare il requisito.',
         validForDays: 'Validità in giorni',
@@ -381,6 +389,10 @@ export const I18nAdminIt: I18nAdmin = {
     providers: {
         config: {
             sections: {
+                tokenAuth: 'Autenticazione del token',
+                adminMapping: 'Accesso amministratore',
+                mfaMapping: 'Autenticazione a più fattori',
+                claimHelp: 'Sintassi ed esempi JSONPath',
                 access: 'Accesso e collegamento',
                 endpoints: 'Endpoint',
                 client: 'Credenziali del client',

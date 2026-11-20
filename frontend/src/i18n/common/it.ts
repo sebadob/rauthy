@@ -53,6 +53,9 @@ export const I18nIt: I18n = {
         year: 'Anno',
     },
     account: {
+        noEditableAttributes: 'Nessun attributo modificabile.',
+        attributes: 'Attributi',
+        stringOrJson: 'Testo / JSON',
         account: 'Account utente',
         accType: 'Tipo di account',
         accTypePasskeyText1: 'Questo account usa solo le passkey. Non serve una password.',
@@ -79,6 +82,7 @@ export const I18nIt: I18n = {
         deviceName: 'Nome',
         devices: 'Dispositivi',
         devicesDesc: 'Dispositivi collegati a questo account',
+        devicesEmpty: 'Nessun dispositivo collegato.',
         emailUpdateConfirm:
             "L'indirizzo email verrà aggiornato dopo la conferma. Apri il link che abbiamo inviato al nuovo indirizzo.",
         emailVerified: 'Email verificata',
@@ -241,6 +245,7 @@ export const I18nIt: I18n = {
     },
     mfa: {
         webauthn: {
+            empty: 'Nessuna passkey registrata.',
             title: 'Passkey',
             p1: 'Se vuoi usare la chiave MFA su più sistemi, come Windows e Android, registrala da Android.',
             p2: 'Android supporta meno funzionalità di accesso senza password. Le chiavi registrate da Android funzionano anche sugli altri sistemi, mentre il contrario può non valere.',
@@ -250,6 +255,9 @@ export const I18nIt: I18n = {
             unsupportedText: 'Aggiorna il browser per usare le credenziali WebAuthn.',
         },
         otp: {
+            empty: 'Nessun metodo OTP registrato.',
+            active: 'Attivo',
+            inactive: 'Inattivo',
             title: 'Password monouso',
             titleEmail: 'Codice OTP via email',
             activationCode: "Inserisci il codice OTP che hai ricevuto all'indirizzo email.",
@@ -273,6 +281,7 @@ export const I18nIt: I18n = {
         passkeyName: 'Nome della passkey',
         passkeyNameErr: 'Da 2 a 32 caratteri, senza caratteri speciali',
         passwordInvalid: 'Password non valida',
+        testPasskey: 'Prova passkey',
         test: 'Prova',
         testError: 'Impossibile avviare la prova',
         testSuccess: 'Prova riuscita',

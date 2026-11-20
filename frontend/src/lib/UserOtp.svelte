@@ -1,10 +1,9 @@
 <script lang="ts">
     import { formatDateFromTs } from '#utils/helpers.ts';
-    import Button from '#lib/button/Button.svelte';
+    import MfaCredential from '#lib/MfaCredential.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import type { OtpResponse } from '#api/types/otp.ts';
-    import IconCheckBadge from '#icons/IconCheckBadge.svelte';
-    import IconStop from '#icons/IconStop.svelte';
+    import { I18nEn } from '../i18n/common/en';
 
     let {
         otp,
@@ -20,73 +19,37 @@
 </script>
 
 {#if otp.is_active || showInactive}
-    <div class="keyContainer">
-        <div class="row">
-            <span class="label">
-                {#if otp.kind == 'email'}
-                    {t.mfa.otp.titleEmail}
-                {:else}
-                    <!-- todo: implement other kind of otp -->
-                    Not implemented
-                {/if}
+    <MfaCredential
+        name={otp.name.toString() || (otp.kind === 'email' ? t.mfa.otp.titleEmail : otp.kind)}
+        metadata={[
+            {
+                label: t.mfa.lastUsed,
+                value: otp.last_used ? formatDateFromTs(otp.last_used) : t.common.never,
+            },
+        ]}
+        onDelete={() => onDelete(otp.id.toString())}
+    >
+        {#snippet badges()}
+            <span class="status" class:active={otp.is_active}>
+                {otp.is_active
+                    ? (t.mfa.otp.active ?? I18nEn.mfa.otp.active)
+                    : (t.mfa.otp.inactive ?? I18nEn.mfa.otp.inactive)}
             </span>
-
-            <div class="name">
-                <b>{otp.name}</b>
-                {#if otp.is_active}
-                    <div style:margin-bottom="-.25rem">
-                        <IconCheckBadge width="1rem" color="hsl(var(--accent))" />
-                    </div>
-                {:else}
-                    <div style:margin-bottom="-.25rem">
-                        <IconStop width="1rem" color="hsl(var(--accent))" />
-                    </div>
-                {/if}
-            </div>
-        </div>
-        <div class="row">
-            <span class="label">
-                {t.mfa.lastUsed}
-            </span>
-            <span class="font-mono">{formatDateFromTs(otp.last_used)}</span>
-        </div>
-
-        <div class="row">
-            <div></div>
-            <div class="deleteBtn">
-                <Button level={-3} onclick={() => onDelete(otp.id.toString())}>
-                    {t.common.delete}
-                </Button>
-            </div>
-        </div>
-    </div>
+        {/snippet}
+    </MfaCredential>
 {/if}
 
 <style>
-    .deleteBtn {
-        margin-right: -0.35rem;
+    .status {
+        padding: 0 0.375rem;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        color: var(--ui-muted);
+        font-size: 0.75rem;
     }
 
-    .keyContainer {
-        margin: 0.33rem 0;
-        overflow: clip;
-    }
-
-    .label {
-        color: hsla(var(--text) / 0.7);
-    }
-
-    .name {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-
-    .row {
-        width: min(95dvw, 21rem);
-        display: flex;
-        gap: 0.5rem;
-        justify-content: space-between;
-        align-items: center;
+    .active {
+        color: var(--ui-text);
+        background: var(--ui-tonal);
     }
 </style>

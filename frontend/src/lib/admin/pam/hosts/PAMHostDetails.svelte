@@ -18,6 +18,7 @@
     import InputArea from '#lib/form/InputArea.svelte';
     import InputTags from '#lib/form/InputTags.svelte';
     import Form from '#lib/form/Form.svelte';
+    import Section from '#lib/Section.svelte';
     import Button from '#lib/button/Button.svelte';
     import { slide } from 'svelte/transition';
     import { useI18n } from '#state/i18n.svelte.ts';
@@ -38,7 +39,6 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const widthAreas = 'min(min(100%, 40rem), calc(100dvw - .5rem))';
     const groupNames = untrack(() => groups.filter(g => g.typ === 'host').map(g => g.name));
 
     let success = $state(false);
@@ -118,64 +118,60 @@
 </EntityHeader>
 
 {#if host}
-    <LabeledValue label="Host ID" copyToClip={host.id} mono>
-        {host.id}
-    </LabeledValue>
-
-    <PAMHostSecret hostId={host.id} />
-
     <Form action={url} {onSubmit}>
-        <Input
-            label="Hostname"
-            placeholder="Hostname"
-            bind:value={host.hostname}
-            required
-            pattern={PATTERN_LINUX_HOSTNAME}
-            maxLength={61}
-            width="min(23rem, calc(100dvw - .5rem))"
-        />
-
-        <div class="row">
-            <div class="label">
-                {ta.pam.groupName}
-            </div>
-            <Options ariaLabel={ta.pam.groupName} options={groupNames} bind:value={groupName} />
+        <div class="sections">
+            <Section title={t.account.navInfo}>
+                {#snippet actions()}<PAMHostSecret hostId={hostSimple.id} />{/snippet}
+                <LabeledValue label="Host ID" copyToClip={host.id} mono>{host.id}</LabeledValue>
+                <div class="ui-field-grid">
+                    <Input
+                        label="Hostname"
+                        placeholder="Hostname"
+                        bind:value={host.hostname}
+                        required
+                        pattern={PATTERN_LINUX_HOSTNAME}
+                        maxLength={61}
+                    />
+                    <div>
+                        <span class="admin-field-label">{ta.pam.groupName}</span>
+                        <Options
+                            ariaLabel={ta.pam.groupName}
+                            options={groupNames}
+                            bind:value={groupName}
+                        />
+                    </div>
+                </div>
+                <div class="checks">
+                    <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa}>
+                        {ta.clients.forceMfa}
+                    </InputCheckbox>
+                    <InputCheckbox
+                        ariaLabel={ta.pam.hostLocalPwdOnly}
+                        bind:checked={host.local_password_only}
+                    >
+                        {ta.pam.hostLocalPwdOnly}
+                    </InputCheckbox>
+                </div>
+                {#if host.local_password_only}
+                    <p class="err" transition:slide={{ duration: 150 }}>
+                        {ta.pam.hostLocalPwdOnlyInfo}
+                    </p>
+                {/if}
+            </Section>
+            <Section title={ta.pam.ipAddresses}>
+                <div class="ui-field-grid">
+                    <InputTags label={ta.pam.ipAddresses} bind:values={host.ips} />
+                    <InputTags
+                        label={ta.pam.hostAliases}
+                        bind:values={host.aliases}
+                        pattern={PATTERN_LINUX_HOSTNAME}
+                    />
+                </div>
+                <InputArea label={ta.pam.notes} bind:value={host.notes} />
+            </Section>
         </div>
 
-        <div class="row">
-            <div class="label">
-                {ta.clients.forceMfa}
-            </div>
-            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa} />
-        </div>
-
-        <div class="row">
-            <div class="label">
-                {ta.pam.hostLocalPwdOnly}
-            </div>
-            <InputCheckbox
-                ariaLabel={ta.pam.hostLocalPwdOnly}
-                bind:checked={host.local_password_only}
-            />
-        </div>
-        {#if host.local_password_only}
-            <div class="err" transition:slide={{ duration: 150 }}>
-                <p>
-                    {ta.pam.hostLocalPwdOnlyInfo}
-                </p>
-            </div>
-        {/if}
-
-        <InputTags label={ta.pam.ipAddresses} bind:values={host.ips} width={widthAreas} />
-        <InputTags
-            label={ta.pam.hostAliases}
-            bind:values={host.aliases}
-            pattern={PATTERN_LINUX_HOSTNAME}
-            width={widthAreas}
-        />
-        <InputArea label={ta.pam.notes} bind:value={host.notes} width={widthAreas} />
-
-        <div class="flex gap-05">
+        <div class="submit flex gap-05">
             <Button type="submit">
                 {t.common.save}
             </Button>
@@ -194,15 +190,19 @@
 {/if}
 
 <style>
-    .label {
-        margin-bottom: -0.2rem;
-        color: hsla(var(--text) / 0.8);
+    .sections {
+        display: grid;
+        gap: var(--ui-space);
     }
 
-    .row {
-        margin: 0.5rem 0;
-        display: grid;
-        grid-template-columns: 12rem 5.5rem;
+    .checks {
+        display: flex;
+        flex-wrap: wrap;
         align-items: center;
+        gap: 0.5rem 1rem;
+    }
+
+    .submit {
+        margin-block: var(--ui-space);
     }
 </style>

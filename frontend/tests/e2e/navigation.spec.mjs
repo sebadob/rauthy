@@ -1,6 +1,18 @@
 import { test, expect } from './fixtures.mjs';
 import { chooseOption } from './helpers/ui.mjs';
-import { ACCOUNT_EXPECTED_ERRORS } from './helpers/account.mjs';
+import { api } from './helpers/api.mjs';
+import {
+    ACCOUNT_EXPECTED_ERRORS,
+    DEVICE_GRANT,
+    NO_SESSION,
+    accountTab,
+    createTestClient,
+    createTestUser,
+    deleteTestUser,
+    loginToAccount,
+    pollDeviceToken,
+    startDeviceAuthorization,
+} from './helpers/account.mjs';
 
 // Every admin section reachable from the main navigation, with the landing path it must open.
 // Some sections append their own query, e.g. the KV store selects its default namespace.
@@ -77,17 +89,93 @@ test.describe('admin navigation', () => {
         allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
         await page.goto('/auth/v1/admin/users');
         await page.locator('#mainNav').getByRole('link', { name: 'User Account' }).click();
-        await expect(page).toHaveURL(/\/auth\/v1\/account/);
+        await expect(page).toHaveURL(/\/auth\/v1\/account\?v=info$/);
         const main = page.getByRole('main');
         await expect(main.getByRole('heading', { name: 'User Account' })).toBeVisible();
+        await expect(main.getByRole('button', { name: 'Info', exact: true })).toHaveAttribute(
+            'aria-current',
+            'step',
+        );
+        await page.setViewportSize({ width: 390, height: 500 });
         await main.locator('.tabs').getByRole('button', { name: 'Edit', exact: true }).click();
         await expect(main.getByRole('textbox', { name: 'E-Mail', exact: true })).toHaveValue(/@/);
+        const coverage = await main.evaluate(el => {
+            const background = el.querySelector('.account-shell');
+            if (!background) throw new Error('Missing account background');
+            el.scrollTop = el.scrollHeight;
+            return {
+                scrollTop: el.scrollTop,
+                gap: el.getBoundingClientRect().bottom - background.getBoundingClientRect().bottom,
+            };
+        });
+        expect(coverage.scrollTop).toBeGreaterThan(0);
+        expect(coverage.gap).toBeLessThanOrEqual(1);
         const password = main.getByRole('button', { name: 'Password', exact: true });
         await password.click();
         await expect(password).toHaveAttribute('aria-current', 'step');
         await page.setViewportSize({ width: 390, height: 850 });
         await expect(password).toHaveAttribute('aria-current', 'step');
         await expect(main.getByRole('button', { name: 'Logout', exact: true })).toBeVisible();
+    });
+
+    test('links, renames and revokes a device from Account', async ({
+        page,
+        browser,
+        baseURL,
+        request,
+    }) => {
+        await page.goto('/auth/v1/admin/users');
+        const client = await createTestClient(page, {
+            flows_enabled: [DEVICE_GRANT, 'refresh_token'],
+        });
+        const user = await createTestUser(page, { prefix: 'e2e-device' });
+        const context = await browser.newContext({ baseURL, storageState: NO_SESSION });
+        try {
+            const account = await context.newPage();
+            await loginToAccount(account, user);
+            await accountTab(account, 'Devices').click();
+            await expect(account.getByText('No devices linked yet.')).toBeVisible();
+
+            const grant = await startDeviceAuthorization(request, client);
+            await account.goto(grant.verification_uri_complete);
+            await account.getByRole('button', { name: 'Submit', exact: true }).click();
+            await account.getByRole('button', { name: 'Accept', exact: true }).click();
+            await expect(accountTab(account, 'Devices')).toHaveAttribute('aria-current', 'step');
+            await new Promise(resolve => setTimeout(resolve, grant.interval * 1000));
+            const tokens = await pollDeviceToken(request, client, grant.device_code);
+            expect(tokens.status).toBe(200);
+
+            await account.getByRole('button', { name: 'Refresh', exact: true }).click();
+            await account.getByRole('button', { name: 'Expand content', exact: true }).click();
+            await account.getByRole('textbox', { name: 'Name', exact: true }).fill('QA Terminal');
+            await account.getByRole('button', { name: 'Save', exact: true }).click();
+            await expect(account.getByText('QA Terminal', { exact: true })).toBeVisible();
+
+            await account.getByRole('button', { name: 'Delete the possibility to renew' }).click();
+            await account.getByRole('button', { name: 'Cancel', exact: true }).click();
+            await expect(
+                account.getByText('Access renewable until', { exact: true }),
+            ).toBeVisible();
+            await account.getByRole('button', { name: 'Delete the possibility to renew' }).click();
+            await account
+                .getByRole('dialog')
+                .getByRole('button', { name: 'Delete', exact: true })
+                .click();
+            await expect(account.getByText('Access renewable until', { exact: true })).toHaveCount(
+                0,
+            );
+
+            await account.reload();
+            await expect(account.getByText('QA Terminal', { exact: true })).toBeVisible();
+            await account.getByRole('button', { name: 'Expand content', exact: true }).click();
+            await expect(account.getByText('Access renewable until', { exact: true })).toHaveCount(
+                0,
+            );
+        } finally {
+            await context.close();
+            await deleteTestUser(page, user.id);
+            await api(page, 'DELETE', `clients/${client}`);
+        }
     });
 
     test('aligns the admin header with the sidebar and shows the version in About', async ({

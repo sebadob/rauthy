@@ -44,7 +44,7 @@ const MARKER = {
     jwks: p => main(p).getByRole('heading', { name: 'Json Web Keys' }),
     argon2: p => main(p).getByRole('heading', { name: 'Argon2ID - Password Hashing' }),
     encryption: p => main(p).getByRole('heading', { name: 'Encryption Keys' }),
-    backups: p => main(p).getByRole('button', { name: 'Create Backup' }),
+    backups: p => main(p).getByRole('heading', { name: 'Backups', exact: true }),
     tos: p => main(p).getByRole('heading', { name: 'Terms of Service' }),
 };
 
@@ -284,7 +284,9 @@ test.describe('password hashing (argon2)', () => {
         await expect(main(page).getByText(`${lt.argon2_params.m_cost} kB`)).toBeVisible();
         await expect(main(page).getByText(`${lt.argon2_params.p_cost} threads`)).toBeVisible();
         await expect(main(page).getByText(/Login Time:\s*\d+ ms/)).toBeVisible();
-        await expect(main(page).getByText(`: ${lt.num_cpus}`)).toBeVisible();
+        await expect(
+            main(page).locator('.stats > div').filter({ hasText: 'Rauthy has access to' }),
+        ).toContainText(String(lt.num_cpus));
         // the calculation form starts with the current values
         await expect(main(page).getByRole('spinbutton', { name: 'Target Time (ms)' })).toHaveValue(
             '1000',
@@ -514,10 +516,7 @@ test.describe('backups', () => {
         await expect(link).toBeVisible();
         await expect(link).toHaveAttribute('href', `/auth/v1/backup/local/${created.name}`);
 
-        // FINDING: the reload button next to "Create Backup" is an icon without a name.
-        const reload = main(page)
-            .getByRole('button', { name: 'Create Backup' })
-            .locator('xpath=following::button[1]');
+        const reload = main(page).getByRole('button', { name: 'Refresh', exact: true });
         const refetch = page.waitForResponse(
             r => r.url().endsWith('/auth/v1/backup') && r.request().method() === 'GET',
         );

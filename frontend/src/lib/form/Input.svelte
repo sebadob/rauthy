@@ -14,6 +14,8 @@
 
         autocomplete = 'on',
         placeholder = '',
+        description,
+        formatBadge,
         disabled = false,
 
         minLength,
@@ -46,6 +48,8 @@
         label?: string;
         autocomplete?: FullAutoFill | null | undefined;
         placeholder?: string;
+        description?: string;
+        formatBadge?: string;
         disabled?: boolean | null | undefined;
         minLength?: number | null | undefined;
         maxLength?: number | null | undefined;
@@ -69,6 +73,8 @@
     } = $props();
 
     let t = useI18n();
+    const helpId = genKey();
+    const badgeId = genKey();
 
     let touched = $state(false);
 
@@ -141,36 +147,43 @@
             {label}
         </label>
     </div>
-    <input
-        class="ui-text-input"
-        bind:this={ref}
-        type={typ}
-        {id}
-        {name}
-        title={errMsg}
-        aria-label={label || placeholder}
-        bind:value
-        {autocomplete}
-        {placeholder}
-        aria-placeholder={placeholder}
-        {disabled}
-        aria-disabled={disabled}
-        minlength={minLength || undefined}
-        maxlength={maxLength || undefined}
-        min={min || undefined}
-        max={max || undefined}
-        {step}
-        required={required || undefined}
-        aria-required={required || false}
-        aria-invalid={isError}
-        pattern={pattern || undefined}
-        class:invalid={isError}
-        {oninput}
-        {oninvalid}
-        {onblur}
-        {onkeydown}
-        onsubmit={onSubmit}
-    />
+    <div class="control" class:with-badge={formatBadge}>
+        <input
+            class="ui-text-input"
+            bind:this={ref}
+            type={typ}
+            {id}
+            {name}
+            title={errMsg}
+            aria-label={label || placeholder}
+            aria-describedby={[description && helpId, formatBadge && badgeId]
+                .filter(Boolean)
+                .join(' ') || undefined}
+            bind:value
+            {autocomplete}
+            {placeholder}
+            aria-placeholder={placeholder}
+            {disabled}
+            aria-disabled={disabled}
+            minlength={minLength || undefined}
+            maxlength={maxLength || undefined}
+            min={min || undefined}
+            max={max || undefined}
+            {step}
+            required={required || undefined}
+            aria-required={required || false}
+            aria-invalid={isError}
+            pattern={pattern || undefined}
+            class:invalid={isError}
+            {oninput}
+            {oninvalid}
+            {onblur}
+            {onkeydown}
+            onsubmit={onSubmit}
+        />
+        {#if formatBadge}<span class="ui-format-badge" id={badgeId}>{formatBadge}</span>{/if}
+    </div>
+    {#if description}<p class="ui-field-hint" id={helpId}>{description}</p>{/if}
     {#if isError}
         <div
             aria-relevant="all"
@@ -184,6 +197,19 @@
 </div>
 
 <style>
+    .control {
+        display: contents;
+    }
+
+    .with-badge {
+        display: grid;
+        position: relative;
+    }
+
+    :global(.ui-shell) .with-badge input.ui-text-input {
+        padding-inline-end: 7.5rem;
+    }
+
     label {
         font-size: 0.9em;
         flex-wrap: wrap;

@@ -191,7 +191,7 @@
     }
 </script>
 
-<h2>{t.tos.tos}</h2>
+<h2 class="ui-page-title">{t.tos.tos}</h2>
 
 <div class="flex gap-05 flex-wrap mh-10">
     <Button
@@ -223,7 +223,7 @@
 
 <div>
     {#if noneExist}
-        <p>{ta.tos.noneExist}</p>
+        <p class="ui-muted-copy">{ta.tos.noneExist}</p>
     {:else if tos.length > 0 && selectedIdx > -1}
         {@const active = tos[selectedIdx]}
 

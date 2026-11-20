@@ -2,6 +2,10 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminEn: I18nAdmin = {
     api_key: {
+        validity: 'Validity',
+        permissions: 'Permissions',
+        secret: 'Secret',
+        examples: 'Usage examples',
         delete1: 'Are you sure, that you want to delete this API Key?',
         expires: 'Expiry',
         generate1: 'Here you can generate a new secret for this API Key.',
@@ -29,6 +33,7 @@ export let I18nAdminEn: I18nAdmin = {
         userEditable: 'User Editable',
     },
     backup: {
+        title: 'Backups',
         createBackup: 'Create Backup',
         disabledDesc: 'This functionality only exists, if Hiqlite is configured as the database.',
         lastModified: 'Last Modified',
@@ -433,6 +438,9 @@ export let I18nAdminEn: I18nAdmin = {
             for security reasons.`,
     },
     passwordPolicy: {
+        lengthRules: 'Password length',
+        characterRules: 'Character requirements',
+        expiryRules: 'Expiry and reuse',
         configDesc: 'Policy for new passwords.',
         resetSet0: 'The value 0 deactivates the requirement.',
         validForDays: 'Valid For Days',
@@ -441,6 +449,10 @@ export let I18nAdminEn: I18nAdmin = {
     providers: {
         config: {
             sections: {
+                tokenAuth: 'Token authentication',
+                adminMapping: 'Admin access',
+                mfaMapping: 'Multi-factor authentication',
+                claimHelp: 'JSONPath syntax and examples',
                 access: 'Access and linking',
                 endpoints: 'Endpoints',
                 client: 'Client credentials',

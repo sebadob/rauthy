@@ -208,6 +208,7 @@ test.describe('attribute config', () => {
     test('edits description and default value', async ({ page }) => {
         const desc = page.getByRole('textbox', { name: 'Description' });
         const def = page.getByRole('textbox', { name: 'Default Value' });
+        await expect(def).toHaveAccessibleDescription('String / JSON');
         await expect(desc).toHaveValue('Initial');
         await expect(def).toHaveValue('');
 

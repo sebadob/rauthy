@@ -47,33 +47,31 @@
     }
 </script>
 
-<div class="container">
-    <Button level={2} {onclick}>
-        {ta.pam.secretShow}
-    </Button>
-    <Modal bind:showModal bind:closeModal>
-        <h2>Secret</h2>
+<Button level={2} {onclick}>
+    {ta.pam.secretShow}
+</Button>
+<Modal bind:showModal bind:closeModal>
+    <h2>Secret</h2>
 
-        {#key secret}
-            <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} />
-        {/key}
+    {#key secret}
+        <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} />
+    {/key}
 
-        <div class="btn">
-            <Button onclick={rotate}>
-                {ta.pam.secretRotate}
-            </Button>
-            <Button level={2} onclick={() => closeModal?.()}>
-                {t.common.close}
-            </Button>
+    <div class="btn">
+        <Button onclick={rotate}>
+            {ta.pam.secretRotate}
+        </Button>
+        <Button level={2} onclick={() => closeModal?.()}>
+            {t.common.close}
+        </Button>
+    </div>
+
+    {#if err}
+        <div class="err">
+            {err}
         </div>
-
-        {#if err}
-            <div class="err">
-                {err}
-            </div>
-        {/if}
-    </Modal>
-</div>
+    {/if}
+</Modal>
 
 <style>
     .btn {
@@ -81,9 +79,5 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-    }
-
-    .container {
-        margin: 1rem 0;
     }
 </style>

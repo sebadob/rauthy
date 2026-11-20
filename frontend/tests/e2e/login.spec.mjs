@@ -289,8 +289,17 @@ test.describe('passkey login', () => {
         );
         await page.getByRole('textbox', { name: 'Passkey Name' }).fill('e2e-resident');
         await page.getByRole('button', { name: 'Register', exact: true }).click();
-        await expect(page.getByText('e2e-resident')).toBeVisible();
+        const passkeyCard = page.getByRole('article').filter({ hasText: 'e2e-resident' });
+        await expect(passkeyCard.getByText('Last Used')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Test passkey' })).toBeVisible();
         expect(await authenticator.credentials()).toHaveLength(1);
+
+        await admin.page.goto(`/auth/v1/admin/users?uid=${user.id}&userTab=mfa`);
+        const adminCard = admin.page.getByRole('article').filter({ hasText: 'e2e-resident' });
+        await expect(adminCard.getByText('Last Used')).toBeVisible();
+        await adminCard.getByRole('button', { name: 'Delete', exact: true }).click();
+        await expect(admin.page.getByRole('dialog').getByText('e2e-resident')).toBeVisible();
+        await admin.page.getByRole('button', { name: 'Cancel', exact: true }).click();
 
         // log out by dropping the session, then log in with the Passkey button only
         // Leave the dashboard before clearing its session so in-flight requests cannot redirect.

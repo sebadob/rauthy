@@ -122,14 +122,13 @@
     {#if attrsCombined.length === 0}
         <p>{ta.common.noEntries}</p>
     {:else}
-        <p>{ta.users.descAttr}</p>
-
         {#each attrsCombined as a}
             <Input
                 bind:value={a.value}
+                formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                 autocomplete="off"
                 label={a.name}
-                placeholder={a.defaultValue ? a.defaultValue : a.desc || 'JSON Value'}
+                placeholder={a.defaultValue ? a.defaultValue : a.desc || ''}
                 onEnter={onSubmit}
             />
         {/each}

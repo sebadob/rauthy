@@ -42,6 +42,9 @@ export interface I18n {
         year: string;
     };
     account: {
+        noEditableAttributes?: string;
+        attributes?: string;
+        stringOrJson?: string;
         account: string;
         accType: string;
         accTypePasskeyText1: string;
@@ -65,6 +68,7 @@ export interface I18n {
         deviceName: string;
         devices: string;
         devicesDesc: string;
+        devicesEmpty?: string;
         emailUpdateConfirm: string;
         emailVerified: string;
         familyName: string;
@@ -220,6 +224,7 @@ export interface I18n {
     };
     mfa: {
         webauthn: {
+            empty?: string;
             title: string;
             p1: string;
             p2: string;
@@ -230,6 +235,9 @@ export interface I18n {
         };
 
         otp: {
+            empty?: string;
+            active?: string;
+            inactive?: string;
             title: string;
             titleEmail: string;
             activationCode: string;
@@ -254,6 +262,7 @@ export interface I18n {
         passkeyName: string;
         passkeyNameErr: string;
         passwordInvalid: string;
+        testPasskey?: string;
         test: string;
         testError: string;
         testSuccess: string;

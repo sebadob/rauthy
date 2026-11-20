@@ -18,7 +18,8 @@
 
     let ta = useI18nAdmin();
 
-    const tabs = [ta.tabs.config, 'Secret'];
+    const secretTab = ta.api_key.secret ?? 'Secret';
+    const tabs = [ta.tabs.config, secretTab];
     let selected = $state(tabs[0]);
 </script>
 
@@ -43,7 +44,7 @@
 
     {#if selected === ta.tabs.config}
         <ApiKeyConfig bind:key {onSave} />
-    {:else if selected === 'Secret'}
+    {:else if selected === secretTab}
         <ApiKeySecret {key} />
     {/if}
 </div>

@@ -15,6 +15,7 @@
     import { fetchGet, fetchPut } from '#api/fetch.ts';
     import Input from '#lib/form/Input.svelte';
     import Form from '#lib/form/Form.svelte';
+    import Section from '#lib/Section.svelte';
     import type { PamGroupsSorted } from '#lib/admin/pam/types.js';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import IconCheck from '#icons/IconCheck.svelte';
@@ -183,78 +184,75 @@
     <IconUser width="28px" />
 </EntityHeader>
 
-<Form action={url} {onSubmit}>
-    <LabeledValue label="UID">
-        {user.id}
-    </LabeledValue>
-    <LabeledValue label="GID">
-        {user.gid}
-    </LabeledValue>
-    <LabeledValue label={ta.pam.username}>
-        {user.name}
-    </LabeledValue>
-    <LabeledValue label="E-Mail">
-        {user.email}
-    </LabeledValue>
+{#snippet snipGroups(header: string, groups: LinkedGroup[], withWheel: boolean = false)}
+    {#if groups.length > 0}
+        {@const rowClass = withWheel ? 'row row-3' : 'row row-2'}
+        <section class="typ">
+            <h4>{header}</h4>
+            <div class={`${rowClass} header`}>
+                <div>{ta.pam.groupName}</div>
+                <div class="center">{ta.pam.member}</div>
+                {#if withWheel}
+                    <div class="center">Wheel</div>
+                {/if}
+            </div>
 
-    <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="15rem" />
-    <Input label="Home" placeholder="Home" required bind:value={user.home_dir} width="15rem" />
-
-    <h3>{ta.pam.groups}</h3>
-
-    <section class="groups">
-        {#snippet snipGroups(header: string, groups: LinkedGroup[], withWheel: boolean = false)}
-            {#if groups.length > 0}
-                {@const rowClass = withWheel ? 'row row-3' : 'row row-2'}
-                <section class="typ">
-                    <h3>{header}</h3>
-                    <div class={`${rowClass} header`}>
-                        <div>{ta.pam.groupName}</div>
-                        <div class="center">{ta.pam.member}</div>
-                        {#if withWheel}
-                            <div class="center">Wheel</div>
-                        {/if}
+            {#each groups as group (group.gid)}
+                <div class={rowClass}>
+                    <div>{group.name}</div>
+                    <div class="center checkbox">
+                        <InputCheckbox
+                            ariaLabel={`${ta.pam.member} · ${group.name}`}
+                            bind:checked={group.isMember}
+                            disabled={group.name === user.name}
+                        />
                     </div>
-
-                    {#each groups as group}
-                        <div class={rowClass}>
-                            <div>{group.name}</div>
-                            <div class="center checkbox">
-                                <InputCheckbox
-                                    ariaLabel={ta.pam.member}
-                                    bind:checked={group.isMember}
-                                    disabled={group.name === user.name}
-                                />
-                            </div>
-                            {#if withWheel}
-                                <div class="center checkbox">
-                                    <InputCheckbox
-                                        ariaLabel="Wheel"
-                                        bind:checked={group.isWheel}
-                                        disabled={!group.isMember}
-                                    />
-                                </div>
-                            {/if}
+                    {#if withWheel}
+                        <div class="center checkbox">
+                            <InputCheckbox
+                                ariaLabel={`Wheel · ${group.name}`}
+                                bind:checked={group.isWheel}
+                                disabled={!group.isMember}
+                            />
                         </div>
-                    {/each}
-                </section>
-            {/if}
-        {/snippet}
-
-        {@render snipGroups('Host', groupsHost, true)}
-        {@render snipGroups('Generic', groupsGeneric)}
-        {@render snipGroups('Local', groupsLocal)}
-        {@render snipGroups('User', groupsUser)}
-    </section>
-
-    {#if details?.authorized_keys}
-        <PamAuthorizedKeys
-            authorizedKeys={details.authorized_keys}
-            onSave={fetchDetails}
-            isAdmin
-            pamUid={user.id}
-        />
+                    {/if}
+                </div>
+            {/each}
+        </section>
     {/if}
+{/snippet}
+
+<Form action={url} {onSubmit}>
+    <div class="sections">
+        <Section title={t.account.navInfo}>
+            <div class="ui-field-grid">
+                <LabeledValue label="UID" mono>{user.id}</LabeledValue>
+                <LabeledValue label="GID" mono>{user.gid}</LabeledValue>
+                <LabeledValue label={t.common.email}>{user.email}</LabeledValue>
+            </div>
+            <div class="ui-field-grid">
+                <Input label="Shell" placeholder="Shell" required bind:value={user.shell} />
+                <Input label="Home" placeholder="Home" required bind:value={user.home_dir} />
+            </div>
+        </Section>
+        <Section title={ta.pam.groups}>
+            {@render snipGroups('Host', groupsHost, true)}
+            {@render snipGroups('Generic', groupsGeneric)}
+            {@render snipGroups('Local', groupsLocal)}
+            {@render snipGroups('User', groupsUser)}
+        </Section>
+
+        {#if details?.authorized_keys}
+            <Section>
+                <PamAuthorizedKeys
+                    authorizedKeys={details.authorized_keys}
+                    onSave={fetchDetails}
+                    isAdmin
+                    pamUid={user.id}
+                />
+            </Section>
+        {/if}
+    </div>
 
     <div class="submit">
         <Button type="submit">{t.common.save}</Button>
@@ -267,12 +265,19 @@
 </Form>
 
 <style>
-    h3 {
-        font-size: 1.1rem;
+    .sections,
+    .typ {
+        display: grid;
+        gap: var(--ui-space);
     }
 
-    h3 {
-        font-size: 1.05rem;
+    .typ {
+        gap: 0;
+    }
+
+    h4 {
+        font-size: var(--ui-control-font-size);
+        margin-bottom: 0.375rem;
     }
 
     .center {
@@ -281,44 +286,39 @@
         align-items: center;
     }
 
-    .checkbox {
-        margin-top: -0.25rem;
-    }
-
     .header {
-        margin-top: -0.66rem;
-        font-weight: bold;
+        color: var(--ui-muted);
+        font-size: 0.8125rem;
+        font-weight: 600;
     }
 
     .row {
-        padding: 0.15rem 0.3rem;
-        max-width: min(25rem, calc(100dvw - 0.5rem));
         display: grid;
-        grid-template-columns: 1fr 5rem 4rem;
-        border-radius: var(--border-radius);
-        transition: background-color 150ms ease-in-out;
+        align-items: center;
+        gap: 0.5rem;
+        min-height: 2.25rem;
+        padding-inline: 0.5rem;
+        border-bottom: 1px solid var(--ui-outline);
+        font-size: var(--ui-control-font-size);
+        overflow-wrap: anywhere;
     }
 
     .row-2 {
-        grid-template-columns: 1fr 4.5rem;
+        grid-template-columns: minmax(0, 1fr) minmax(3rem, 18%);
     }
 
     .row-3 {
-        grid-template-columns: 1fr 4.5rem 4.5rem;
+        grid-template-columns: minmax(0, 1fr) repeat(2, minmax(3rem, 18%));
     }
 
-    .row:hover {
-        background: hsla(var(--accent) / 0.3);
+    .row:not(.header):hover {
+        background: var(--ui-hover);
     }
 
     .submit {
-        margin-top: 1rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
-    }
-
-    .typ {
-        margin: 1rem 0;
+        margin-top: var(--ui-space);
     }
 </style>
