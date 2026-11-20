@@ -118,10 +118,6 @@ test.describe('sessions list', () => {
     test('"Invalidate All Sessions" asks for confirmation that can be cancelled', async ({
         page,
     }) => {
-        // UPSTREAM BUG: the button deletes every session of every user (including the admin's
-        // own) on the first click without any confirmation
-        // (frontend/src/lib/admin/sessions/Sessions.svelte, `invalidateSessions`).
-        test.fail();
         let deleteAllRequested = false;
         // Safety net: the request is never allowed to reach the backend.
         await page.route(
