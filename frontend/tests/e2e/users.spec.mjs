@@ -253,15 +253,21 @@ test.describe('user details', () => {
 
     test('saves custom attributes', async ({ page }) => {
         const user = await newUser(page);
-        await openUser(page, user);
-        await detailTab(page, 'Attributes').click();
-        const main = page.getByRole('main');
+        const name = unique('profile_attr').replaceAll('-', '_');
         const value = unique('attr');
-        await main.getByRole('textbox', { name: 'bs_attr_1' }).fill(value);
-        await main.getByRole('button', { name: 'Save', exact: true }).click();
-        await expect
-            .poll(async () => JSON.stringify(await api(page, 'GET', `users/${user.id}/attr`)))
-            .toContain(value);
+        await api(page, 'POST', 'users/attr', { name });
+        try {
+            await openUser(page, user);
+            await detailTab(page, 'Attributes').click();
+            const main = page.getByRole('main');
+            await main.getByRole('textbox', { name, exact: true }).fill(value);
+            await main.getByRole('button', { name: 'Save', exact: true }).click();
+            await expect
+                .poll(async () => JSON.stringify(await api(page, 'GET', `users/${user.id}/attr`)))
+                .toContain(value);
+        } finally {
+            await api(page, 'DELETE', `users/attr/${name}`);
+        }
     });
 
     test('sets a password manually, after which the user can log in', async ({
@@ -326,14 +332,19 @@ test.describe('user details', () => {
 
     test('assigns a role and saves it', async ({ page }) => {
         const user = await newUser(page);
-        await openUser(page, user);
-        const dialog = await openSelectList(page.getByRole('main'), 'Roles');
-        await dialog.getByRole('checkbox', { name: 'user', exact: true }).check();
-        await closeSelectList(dialog);
-        await page.getByRole('main').getByRole('button', { name: 'Save', exact: true }).click();
-        await expect
-            .poll(async () => (await api(page, 'GET', `users/${user.id}`)).roles)
-            .toContain('user');
+        const role = await api(page, 'POST', 'roles', { role: unique('profile-role') });
+        try {
+            await openUser(page, user);
+            const dialog = await openSelectList(page.getByRole('main'), 'Roles');
+            await dialog.getByRole('checkbox', { name: role.name, exact: true }).check();
+            await closeSelectList(dialog);
+            await page.getByRole('main').getByRole('button', { name: 'Save', exact: true }).click();
+            await expect
+                .poll(async () => (await api(page, 'GET', `users/${user.id}`)).roles)
+                .toContain(role.name);
+        } finally {
+            await api(page, 'DELETE', `roles/${role.id}`);
+        }
     });
 
     test('force logout invalidates the sessions of the user', async ({ page }) => {

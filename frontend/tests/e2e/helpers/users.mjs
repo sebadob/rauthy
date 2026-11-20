@@ -128,18 +128,16 @@ export function detailTab(page, name) {
 
 /**
  * Opens the roles / groups chooser of a `SelectList` and returns its dialog.
- * FINDING: both edit buttons are icon buttons named only "Edit" (from a `title`), they do not
- * say which list they edit. The fallback picks them by position among the "Edit" titles.
+ * Scope the edit button to the field with the matching visible label.
  * @param {import('@playwright/test').Page | import('@playwright/test').Locator} scope
  * @param {'Roles' | 'Groups'} list
  */
 export async function openSelectList(scope, list) {
-    const named = scope.getByRole('button', { name: `Edit ${list}` });
-    const btn = (await named.count())
-        ? named.first()
-        : scope.getByTitle('Edit', { exact: true }).nth(list === 'Roles' ? 0 : 1);
-    await btn.click();
     const page = 'page' in scope ? scope.page() : scope;
+    const field = scope.locator('.admin-selection-field').filter({
+        has: page.getByText(list, { exact: true }),
+    });
+    await field.getByRole('button', { name: 'Edit', exact: true }).click();
     const dialog = page
         .getByRole('dialog')
         .filter({ has: page.getByRole('heading', { name: list }) });

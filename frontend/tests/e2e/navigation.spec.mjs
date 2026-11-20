@@ -92,7 +92,7 @@ test.describe('admin navigation', () => {
         test(`shows the users assigned to a ${key} alongside its settings`, async ({ page }) => {
             await page.goto(`/auth/v1/admin/${area}`);
             const name = `membership-${Date.now()}`;
-            const entity = await api(page, 'POST', area, { name });
+            const entity = await api(page, 'POST', area, { [key]: name });
             try {
                 const user = await api(page, 'POST', 'users', {
                     email: `${name}@example.invalid`,

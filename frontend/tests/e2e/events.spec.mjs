@@ -365,8 +365,8 @@ test.describe('events archive', () => {
             .first()
             .getByRole('button', { name: 'IP Address' });
         await ipBtn.hover();
-        const tip = page.getByText('Copy value to clipboard').first();
-        await expect(tip).toBeVisible();
+        const tip = ipBtn.getByRole('tooltip');
+        await expect(tip).toHaveText('Copy value to clipboard');
         // the tooltip springs to the pointer and settles there, not far away from the button
         await expect
             .poll(async () => {
@@ -376,7 +376,7 @@ test.describe('events archive', () => {
             .toBeLessThan(120);
         await ipBtn.click();
         await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(ev.ip);
-        await expect(page.getByText('Value has been copied to clipboard').first()).toBeVisible();
+        await expect(tip).toHaveText('Value has been copied to clipboard');
     });
 });
 
