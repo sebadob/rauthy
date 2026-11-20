@@ -39,6 +39,7 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
+        settings: { general: 'Generelt', tokens: 'Tokener', integrations: 'Integrasjoner' },
         allowedResources: 'Tillatte ressurser',
         defaultAud: 'Standard-mottakere (aud)',
         actorSameClient: 'Actor token from this client only',
@@ -144,6 +145,17 @@ export let I18nAdminNb: I18nAdmin = {
         },
     },
     common: {
+        preferences: 'Innstillinger',
+        profile: 'Profil',
+        contactDetails: 'Kontaktinformasjon',
+        access: 'Tilgang',
+        activity: 'Aktivitet',
+
+        compactNavigation: 'Kompakt navigasjon',
+        administration: 'Administrasjon',
+        selectEntry: 'Velg en oppføring',
+        selectEntryHint: 'Velg et element fra listen for å se og administrere detaljene.',
+
         account: 'Konto',
         addNew: 'Legg til ny',
         back: 'Tilbake',

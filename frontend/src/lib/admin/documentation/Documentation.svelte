@@ -12,8 +12,6 @@
 </script>
 
 <ContentAdmin>
-    <h1>{ta.nav.docs}</h1>
-
     <p>
         {ta.docs.book}
         <A bind:ref href="https://sebadob.github.io/rauthy/" target="_blank">Rauthy Book</A>

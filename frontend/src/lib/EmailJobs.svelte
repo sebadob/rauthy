@@ -49,7 +49,7 @@
     }
 </script>
 
-<Button onclick={() => (showModal = true)} invisible>
+<Button ariaLabel={ta.email.jobs} onclick={() => (showModal = true)} invisible>
     <IconCircleStack />
 </Button>
 

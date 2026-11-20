@@ -40,6 +40,7 @@ export let I18nAdminRu: I18nAdmin = {
         size: 'Размер',
     },
     clients: {
+        settings: { general: 'Общие', tokens: 'Токены', integrations: 'Интеграции' },
         allowedResources: 'Разрешённые ресурсы',
         defaultAud: 'Аудитории по умолчанию',
         actorSameClient: 'Actor token from this client only',
@@ -144,6 +145,17 @@ export let I18nAdminRu: I18nAdmin = {
         },
     },
     common: {
+        preferences: 'Настройки',
+        profile: 'Профиль',
+        contactDetails: 'Контактные данные',
+        access: 'Доступ',
+        activity: 'Активность',
+
+        compactNavigation: 'Компактная навигация',
+        administration: 'Администрирование',
+        selectEntry: 'Выберите запись',
+        selectEntryHint: 'Выберите элемент в списке, чтобы просмотреть и изменить его данные.',
+
         account: 'Аккаунт',
         addNew: 'Добавить',
         back: 'Назад',

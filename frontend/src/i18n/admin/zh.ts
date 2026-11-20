@@ -37,6 +37,7 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        settings: { general: '常规', tokens: '令牌', integrations: '集成' },
         allowedResources: '允许的资源',
         defaultAud: '默认受众 (aud)',
         actorSameClient: 'Actor token from this client only',
@@ -137,6 +138,17 @@ export let I18nAdminZh: I18nAdmin = {
         },
     },
     common: {
+        preferences: '偏好设置',
+        profile: '个人资料',
+        contactDetails: '联系信息',
+        access: '访问权限',
+        activity: '活动',
+
+        compactNavigation: '紧凑导航',
+        administration: '管理',
+        selectEntry: '选择条目',
+        selectEntryHint: '从列表中选择一个条目以查看和管理其详细信息。',
+
         account: '账户',
         addNew: '新增',
         back: '返回',

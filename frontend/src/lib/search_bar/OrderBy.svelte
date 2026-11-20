@@ -31,7 +31,7 @@
     });
 </script>
 
-<div class="container">
+<div class="container admin-sort">
     <Tooltip text={ta.search.orderBy}>
         <Options
             bind:ref
@@ -75,5 +75,27 @@
     .container {
         display: flex;
         align-items: center;
+    }
+
+    .admin-sort {
+        justify-content: flex-end;
+    }
+    .admin-sort > :global(.btn) {
+        margin: 0;
+    }
+    .admin-sort :global(.admin-select-trigger) {
+        min-height: 32px;
+        border: 0;
+        padding: 0 6px;
+        background: transparent;
+    }
+    .admin-sort :global(svg) {
+        width: 18px;
+        height: 18px;
+    }
+    .admin-sort :global(.admin-select-trigger[data-border]) {
+        border: 0;
+        background: transparent;
+        padding: 0 6px;
     }
 </style>

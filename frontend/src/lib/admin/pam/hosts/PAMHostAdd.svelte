@@ -69,7 +69,7 @@
 </script>
 
 <div class="container">
-    <h1>{ta.pam.addHost}</h1>
+    <h2>{ta.pam.addHost}</h2>
 
     <Form action="/auth/v1/pam/hosts" {onSubmit}>
         <Input
@@ -128,7 +128,7 @@
 </div>
 
 <style>
-    h1 {
+    h2 {
         font-size: 1.1rem;
     }
 

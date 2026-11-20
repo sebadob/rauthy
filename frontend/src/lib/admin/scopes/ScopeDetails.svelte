@@ -1,4 +1,6 @@
 <script lang="ts">
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import IconId from '#icons/IconId.svelte';
     import ScopeConfig from './ScopeConfig.svelte';
     import ScopeDelete from './ScopeDelete.svelte';
     import type { UserAttrConfigValueResponse } from '#api/types/user_attrs.ts';
@@ -35,6 +37,8 @@
         }
     });
 </script>
+
+<EntityHeader title={scope.name} subtitle={ta.nav.scopes}><IconId width="28px" /></EntityHeader>
 
 <div class="flex">
     <Tabs {tabs} bind:selected bind:focusFirst />

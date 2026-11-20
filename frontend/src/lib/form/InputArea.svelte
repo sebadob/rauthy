@@ -111,7 +111,7 @@
     }
 </script>
 
-<div class="container" style:width>
+<div class="container admin-textarea-field" style:width>
     <div class="label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
@@ -189,5 +189,43 @@
         width: 100%;
         padding-left: 0.1rem;
         padding-top: 0.1rem;
+    }
+
+    :global(.admin-shell) .label:not(:global(.branding-preview *)) {
+        padding: 0;
+        margin: 0 0 6px;
+        line-height: 18px;
+    }
+    :global(.admin-shell) textarea:not(:global(.branding-preview *)) {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        margin: 0;
+        padding: 11px 14px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        color: var(--ui-text);
+        font: inherit;
+        font-size: 14px;
+        line-height: 20px;
+        box-shadow: none;
+    }
+    :global(.admin-shell) textarea:not(:global(.branding-preview *))::placeholder {
+        color: hsl(var(--text) / 0.65);
+    }
+    :global(.admin-shell) textarea:focus:not(:global(.branding-preview *)) {
+        outline: 2px solid var(--ui-primary);
+        outline-offset: -1px;
+    }
+
+    :global(.admin-shell) .admin-textarea-field:not(:global(.branding-preview *)) {
+        max-width: 100%;
+        min-width: 0;
+    }
+    :global(.admin-shell) textarea:not(:global(.branding-preview *)) {
+        max-width: 100%;
+        resize: vertical;
     }
 </style>

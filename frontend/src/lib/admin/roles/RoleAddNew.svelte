@@ -69,7 +69,7 @@
                 label={ta.common.jsonMeta}
                 placeholder={ta.common.jsonMeta}
                 bind:value={jsonMeta}
-                rows={15}
+                rows={8}
             />
         </div>
 

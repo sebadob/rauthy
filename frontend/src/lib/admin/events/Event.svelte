@@ -61,45 +61,40 @@
     }
 </script>
 
-<div
-    role="contentinfo"
-    aria-label={`Event Level: ${event.level}}`}
+<article
     class="event"
     class:highlight
     class:inline
-    style:border-left={`2px solid ${eventColor(event.level)}`}
+    style:--event-color={eventColor(event.level)}
+    aria-label={`${ta.events.eventLevel}: ${event.level}`}
 >
-    <div aria-label="Timestamp" class="ts">
-        {formatDateFromTs(event.timestamp / 1000)}
+    <header class="admin-event-meta">
+        <span class="admin-event-level">{event.level}</span>
+        <time class="ts" datetime={new Date(event.timestamp).toISOString()}
+            >{formatDateFromTs(event.timestamp / 1000)}</time
+        >
+    </header>
+    <div class="admin-event-body">
+        <strong>{event.typ.replace(/([a-z])([A-Z])/g, '$1 $2')}</strong>
+        {#if event.typ === 'InvalidLogins'}<span>{event.data}</span>
+        {:else if event.typ === 'NewRauthyVersion'}<A href={event.text || ''} target="_blank"
+                >New Version</A
+            >
+        {:else if event.typ === 'IpBlacklisted'}<span
+                >{ta.common.until} {event.data && formatDateFromTs(event.data)}</span
+            >
+        {:else if event.text}<p>{event.text}</p>{/if}
     </div>
-
-    {#if event.typ !== 'RauthyHealthy' && event.typ !== 'RauthyUnhealthy' && event.typ !== 'NewRauthyVersion' && event.typ !== 'Test'}
-        {event.typ}
-    {/if}
-
-    {#if event.typ === 'InvalidLogins'}
-        {`: ${event.data}`}
-    {:else if event.typ === 'NewRauthyVersion'}
-        <A href={event.text || ''} target="_blank">New Version</A>
-    {:else if event.typ === 'IpBlacklisted'}
-        {ta.common.until}
-        {event.data && formatDateFromTs(event.data)}
-    {:else if event.text}
-        {event.text}
-    {/if}
-
     {#if event.ip}
-        <div>
-            <Button ariaLabel="IP Address" invisible onclick={() => copyToClip(event.ip || '')}>
-                <Tooltip text={tooltip} yOffset={20}>
-                    <div class="ip font-mono">
-                        {event.ip}
-                    </div>
-                </Tooltip>
-            </Button>
+        <div class="admin-event-footer">
+            <Button ariaLabel="IP Address" invisible onclick={() => copyToClip(event.ip || '')}
+                ><Tooltip text={tooltip} yOffset={20}
+                    ><span class="ip font-mono">{event.ip}</span></Tooltip
+                ></Button
+            >
         </div>
     {/if}
-</div>
+</article>
 
 <style>
     .event {
@@ -143,5 +138,84 @@
 
     .highlight .ts {
         color: hsl(var(--bg) / 0.8);
+    }
+
+    .event {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        min-width: 0;
+        padding: 16px;
+        margin: 0;
+        border: 1px solid var(--ui-outline);
+        border-left: 3px solid var(--event-color);
+        border-radius: var(--border-radius);
+        line-height: 22px;
+        background: var(--ui-surface);
+        color: var(--ui-text);
+        overflow-wrap: anywhere;
+    }
+    .admin-event-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-bottom: 10px;
+    }
+    .admin-event-level {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        line-height: 18px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+    .admin-event-level::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--event-color);
+    }
+    .event :global(.ts) {
+        font-size: 12px;
+        line-height: 20px;
+        color: var(--ui-muted);
+        white-space: normal;
+        overflow: visible;
+    }
+    .admin-event-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+    }
+    .admin-event-body :global(strong) {
+        font-weight: 600;
+    }
+    .admin-event-body :global(p) {
+        margin: 0;
+        color: var(--ui-muted);
+    }
+    .event :global(.ip) {
+        margin: 0;
+        font-size: 12px;
+        color: var(--ui-muted);
+    }
+    .admin-event-footer {
+        margin-top: 8px;
+    }
+    .admin-event-footer :global(.admin-control) {
+        padding: 0;
+        height: 28px;
+        min-height: 28px;
+        justify-content: flex-start;
+    }
+
+    .event {
+        align-items: stretch;
+        text-align: left;
     }
 </style>

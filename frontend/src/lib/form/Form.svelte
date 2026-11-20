@@ -15,6 +15,7 @@
         resetOnSubmit,
         // if left empty, the form will handle the request itself
         onSubmit,
+        onInvalid,
         // called after a successful request, will be ignored if onSubmit() is given
         onResponse,
         children,
@@ -26,6 +27,7 @@
         isError?: boolean;
         convertDateToTs?: string[];
         resetOnSubmit?: boolean;
+        onInvalid?: (ev: Event) => void;
         onSubmit?: (form: HTMLFormElement, params: URLSearchParams) => void;
         onResponse?: (res: Response) => void;
         children: Snippet;
@@ -83,6 +85,6 @@
     }
 </script>
 
-<form {action} {method} onsubmit={submit}>
+<form {action} {method} onsubmit={submit} oninvalidcapture={onInvalid}>
     {@render children()}
 </form>

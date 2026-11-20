@@ -135,11 +135,11 @@
                     pattern={PATTERN_CSS_VALUE_LOOSE}
                 />
 
-                <h1>Light Theme</h1>
+                <h3>Light Theme</h3>
                 <BrandingMode bind:values={theme.light} />
 
                 <br />
-                <h1>Dark Theme</h1>
+                <h3>Dark Theme</h3>
                 <BrandingMode bind:values={theme.dark} />
             </div>
             <div class="preview">

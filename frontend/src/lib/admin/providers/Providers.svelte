@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
     import { fetchPost } from '#api/fetch.ts';
     import type { ProviderResponse } from '#api/types/auth_provider.ts';
@@ -50,7 +51,8 @@
     }
 </script>
 
-<NavSub width="11rem" buttonTilesAriaControls="federation" paddingTop="6.65rem">
+<NavSub width="11rem" buttonTilesAriaControls="federation">
+    <AdminListHeading title={ta.nav.providers} count={providers.length} />
     <ButtonAddModal bind:ref={refAddNew} level={providers.length === 0 ? 1 : 2} bind:closeModal>
         <ProviderAddNew {onSave} />
     </ButtonAddModal>

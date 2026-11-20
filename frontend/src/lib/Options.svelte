@@ -182,7 +182,7 @@
     {onDown}
 >
     {#snippet button()}
-        <div class="btn" data-border={!borderless}>
+        <div class="btn admin-select-trigger" data-border={!borderless}>
             <div class="btnText" title={ariaLabel}>
                 {value}
             </div>
@@ -279,5 +279,68 @@
         display: flex;
         flex-direction: column;
         overflow-y: auto;
+    }
+
+    :global(.admin-shell) .admin-select-trigger:not(:global(.branding-preview *)) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 36px;
+        padding: 0 12px;
+        border: 1px solid transparent;
+        border-radius: var(--border-radius);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 20px;
+        color: var(--ui-text);
+        background: transparent;
+    }
+    :global(.admin-shell)
+        .admin-select-trigger[data-border='true']:not(:global(.branding-preview *)) {
+        border-color: var(--ui-outline);
+        padding: 0 12px;
+        background: var(--ui-surface);
+    }
+    :global(.admin-shell)
+        .admin-select-trigger:not(:global(.branding-preview *))
+        :global(.btnText) {
+        margin: 0;
+        line-height: 20px;
+    }
+    :global(.admin-shell) .popoverOptions:not(:global(.branding-preview *)) {
+        display: flex;
+        flex-direction: column;
+        padding: 4px;
+    }
+    :global(.admin-shell)
+        .popoverOptions:not(:global(.branding-preview *))
+        :global(.admin-control) {
+        width: 100%;
+        justify-content: flex-start;
+        height: auto;
+        min-height: 40px;
+        padding: 0;
+        border-radius: var(--border-radius);
+    }
+    :global(.admin-shell)
+        .popoverOptions:not(:global(.branding-preview *))
+        :global(.admin-control)
+        > :global(.children) {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    :global(.admin-shell) .optPopover:not(:global(.branding-preview *)) {
+        width: 100%;
+        padding: 10px 12px;
+        text-align: left;
+        border-radius: var(--border-radius);
+        font-size: 14px;
+        line-height: 20px;
+    }
+    :global(.admin-shell) .optPopover[aria-selected='true']:not(:global(.branding-preview *)) {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
     }
 </style>

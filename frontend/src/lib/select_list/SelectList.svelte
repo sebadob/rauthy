@@ -43,7 +43,7 @@
 
 <svelte:window bind:innerWidth />
 
-<div class="container" style:max-width={maxWidth}>
+<div class="container admin-selection-field" style:max-width={maxWidth}>
     <div class="items">
         {#if anySelected}
             <div class="joined">
@@ -53,7 +53,7 @@
 
         {#if !readonly}
             <div class="edit">
-                <Button invisible onclick={() => (showModal = true)}>
+                <Button ariaLabel={ta.common.edit} invisible onclick={() => (showModal = true)}>
                     <div title={ta.common.edit}>
                         <IconEdit width="1.2rem" />
                     </div>
@@ -169,5 +169,34 @@
     .label {
         font-size: 0.9rem;
         color: hsla(var(--text) / 0.8);
+    }
+
+    :global(.admin-shell) .admin-selection-field {
+        display: flex;
+        flex-direction: column;
+        margin: 0 0 16px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+    }
+    :global(.admin-shell) .admin-selection-field > :global(.label) {
+        order: -1;
+        margin-bottom: 6px;
+    }
+    :global(.admin-shell) .admin-selection-field > :global(.items) {
+        min-height: 44px;
+        padding: 3px 6px 3px 14px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+    }
+    :global(.admin-shell) .admin-selection-field :global(.joined) {
+        flex: 1;
+        font-size: 13px;
+        line-height: 22px;
+    }
+    :global(.admin-shell) .admin-selection-field :global(.edit) {
+        height: auto;
+        margin: 0 0 0 auto;
     }
 </style>

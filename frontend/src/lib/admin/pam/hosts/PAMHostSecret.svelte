@@ -52,7 +52,7 @@
         {ta.pam.secretShow}
     </Button>
     <Modal bind:showModal bind:closeModal>
-        <h1>Secret</h1>
+        <h2>Secret</h2>
 
         {#key secret}
             <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} />

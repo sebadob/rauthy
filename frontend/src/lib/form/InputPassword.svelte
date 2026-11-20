@@ -14,7 +14,8 @@
         name = 'password',
         value = $bindable(''),
         label = 'Password',
-        ariaLabel = 'Password',
+        // the accessible name follows the visible label unless it is set on its own
+        ariaLabel,
         autocomplete = 'current-password',
         placeholder = 'Password',
         disabled = false,
@@ -111,7 +112,7 @@
     }
 </script>
 
-<div class="container" style:width>
+<div class="container admin-password-field" style:width>
     <div aria-live="assertive" class="label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
@@ -124,7 +125,7 @@
             {id}
             {name}
             title={errMsg}
-            aria-label={ariaLabel}
+            aria-label={ariaLabel || label}
             style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
             bind:value
             {autocomplete}
@@ -132,6 +133,7 @@
             {disabled}
             required={required || undefined}
             aria-required={required || false}
+            aria-invalid={isError}
             maxlength={maxLength || undefined}
             pattern={pattern || undefined}
             class:invalid={isError}
@@ -233,5 +235,59 @@
     .rel {
         position: relative;
         /*border: 1px solid green;*/
+    }
+
+    :global(.admin-shell) .label:not(:global(.branding-preview *)) {
+        padding: 0;
+        margin: 0 0 6px;
+        line-height: 18px;
+    }
+    :global(.admin-shell)
+        input:where(
+            :not([type='checkbox']):not([type='hidden']):not([type='file']):not([type='range'])
+        ):not(:global(.branding-preview *)) {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        margin: 0;
+        padding: 11px 14px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        color: var(--ui-text);
+        font: inherit;
+        font-size: 14px;
+        line-height: 20px;
+        box-shadow: none;
+    }
+    :global(.admin-shell) input:not(:global(.branding-preview *))::placeholder {
+        color: hsl(var(--text) / 0.65);
+    }
+    :global(.admin-shell) input:focus:not(:global(.branding-preview *)) {
+        outline: 2px solid var(--ui-primary);
+        outline-offset: -1px;
+    }
+    :global(.admin-shell) input.invalid:not(:global(.branding-preview *)) {
+        border-color: hsl(var(--error));
+    }
+
+    :global(.admin-shell) .admin-password-field:not(:global(.branding-preview *)) {
+        max-width: 100%;
+        min-width: 0;
+    }
+    :global(.admin-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.btn) {
+        top: 4px;
+        right: 4px;
+        margin: 0;
+    }
+    :global(.admin-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.clip) {
+        right: 40px;
+    }
+    :global(.admin-shell) .admin-password-field input[type] {
+        padding-right: 44px;
+    }
+    :global(.admin-shell) .admin-password-field:has(:global(.clip)) input[type] {
+        padding-right: 84px;
     }
 </style>

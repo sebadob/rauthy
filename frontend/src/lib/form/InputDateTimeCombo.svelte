@@ -106,4 +106,12 @@
     .inputs {
         display: flex;
     }
+
+    :global(.admin-shell) .inputs-wrapper > :global(.delete) {
+        padding-bottom: 20px;
+    }
+    :global(.admin-shell) .inputs-wrapper > :global(.inputs) {
+        gap: 8px;
+        align-items: flex-start;
+    }
 </style>

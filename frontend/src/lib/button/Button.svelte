@@ -1,6 +1,6 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
-    import { type Snippet, untrack } from 'svelte';
+    import { getContext, type Snippet, untrack } from 'svelte';
     import Loading from '#lib/Loading.svelte';
 
     let {
@@ -10,6 +10,7 @@
         id,
         ariaLabel,
         ariaControls,
+        ariaExpanded,
         ariaCurrent,
         level = 1,
         width,
@@ -34,6 +35,7 @@
         id?: string;
         ariaLabel?: string;
         ariaControls?: string;
+        ariaExpanded?: boolean;
         ariaCurrent?: 'time' | 'page' | 'step' | 'location' | 'date' | undefined;
         level?: number;
         width?: string;
@@ -51,8 +53,11 @@
         onRight?: () => void;
         onUp?: () => void;
         onDown?: () => void;
+        // passed on to the <button> with the other remaining props
         onmousedown?: (ev: MouseEvent) => void;
     } = $props();
+
+    const adminUi = getContext<boolean>('rauthy-admin-ui') || false;
 
     let cls = $derived.by(() => {
         if (invisible) {
@@ -143,8 +148,10 @@
     {id}
     aria-label={ariaLabel}
     aria-controls={ariaControls}
+    aria-expanded={ariaExpanded}
     aria-current={ariaCurrent}
-    class={cls}
+    class={adminUi ? 'admin-control' : cls}
+    data-variant={adminUi ? cls : undefined}
     class:invisibleOutline
     style:width
     data-isloading={isLoading}
@@ -294,5 +301,128 @@
     .load {
         display: flex;
         justify-content: center;
+    }
+
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) {
+        appearance: none;
+        box-sizing: border-box;
+        /* no own positioning context: an absolute Tooltip inside is placed from the pointer */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        vertical-align: middle;
+        height: 40px;
+        min-height: 40px;
+        min-width: 40px;
+        margin: 0;
+        padding: 0 20px;
+        border: 1px solid transparent;
+        border-radius: var(--border-radius);
+        background: transparent;
+        color: var(--ui-primary);
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 20px;
+        letter-spacing: 0;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: none;
+        transform: none;
+        transition:
+            background-color 120ms,
+            border-color 120ms,
+            color 120ms;
+    }
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) > :global(.children) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 0;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        color: inherit;
+        font: inherit;
+        line-height: 20px;
+        transform: none;
+    }
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) :global(svg) {
+        display: block;
+        flex-shrink: 0;
+    }
+    :global(.admin-shell) .admin-control[data-variant='l1']:not(:global(.branding-preview *)) {
+        background: var(--ui-primary);
+        color: var(--ui-on-primary);
+    }
+    :global(.admin-shell) .admin-control[data-variant='l2']:not(:global(.branding-preview *)) {
+        border-color: var(--ui-outline);
+        background: transparent;
+        color: var(--ui-primary);
+    }
+    :global(.admin-shell) .admin-control[data-variant='l1d']:not(:global(.branding-preview *)) {
+        color: var(--ui-on-primary);
+        background: hsl(var(--error));
+    }
+    :global(.admin-shell) .admin-control[data-variant='l2d']:not(:global(.branding-preview *)),
+    :global(.admin-shell) .admin-control[data-variant='l3d']:not(:global(.branding-preview *)) {
+        color: hsl(var(--error));
+    }
+    :global(.admin-shell) .admin-control[data-variant='l2d']:not(:global(.branding-preview *)) {
+        border-color: hsl(var(--error));
+    }
+    :global(.admin-shell)
+        .admin-control[data-variant='invisible']:not(:global(.branding-preview *)) {
+        padding: 0 8px;
+        min-width: 36px;
+        height: 36px;
+        min-height: 36px;
+        border-radius: var(--border-radius);
+        color: var(--ui-muted);
+    }
+    :global(.admin-shell) .admin-control:hover:not(:global(.branding-preview *)) {
+        background: var(--ui-hover);
+        box-shadow: none;
+    }
+    :global(.admin-shell)
+        .admin-control[data-variant='l1']:hover:not(:global(.branding-preview *)) {
+        background: color-mix(in srgb, var(--ui-primary) 90%, var(--ui-text));
+    }
+    :global(.admin-shell)
+        .admin-control[data-variant='l1d']:hover:not(:global(.branding-preview *)) {
+        background: color-mix(in srgb, hsl(var(--error)) 90%, var(--ui-text));
+    }
+    :global(.admin-shell) .admin-control:disabled:not(:global(.branding-preview *)) {
+        opacity: 0.4;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+    :global(.admin-shell) .admin-control:focus-visible:not(:global(.branding-preview *)) {
+        outline: 2px solid hsl(var(--accent));
+        outline-offset: 3px;
+    }
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) :global(.icon),
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) :global(.backspace),
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) :global(.iconLeft),
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) :global(.iconRight) {
+        display: grid;
+        place-items: center;
+        margin: 0;
+        position: static;
+        width: 20px;
+        height: 20px;
+    }
+    :global(.admin-shell) .admin-control:not(:global(.branding-preview *)) :global(.iconLeft) {
+        transform: rotate(180deg);
+    }
+    :global(.admin-shell)
+        .admin-control:has(:global(> .children > .admin-select-trigger)):not(
+            :global(.branding-preview *)
+        ) {
+        padding: 0;
+        height: auto;
     }
 </style>

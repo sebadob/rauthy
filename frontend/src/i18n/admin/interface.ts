@@ -39,6 +39,7 @@ export interface I18nAdmin {
         size: string;
     };
     clients: {
+        settings: { general: string; tokens: string; integrations: string };
         backchannelLogout: string;
         branding: {
             descHsl: string;
@@ -118,6 +119,16 @@ export interface I18nAdmin {
         };
     };
     common: {
+        preferences: string;
+        profile: string;
+        contactDetails: string;
+        access: string;
+        activity: string;
+
+        compactNavigation: string;
+        administration: string;
+        selectEntry: string;
+        selectEntryHint: string;
         account: string;
         addNew: string;
         back: string;

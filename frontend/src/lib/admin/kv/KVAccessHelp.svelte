@@ -94,7 +94,7 @@
 {/snippet}
 
 <Modal bind:showModal bind:closeModal>
-    <h1>{ta.kv.help.help}</h1>
+    <h2>{ta.kv.help.help}</h2>
 
     <p>{ta.kv.help.p1}</p>
     <ul>

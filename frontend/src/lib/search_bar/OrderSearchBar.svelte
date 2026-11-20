@@ -35,7 +35,7 @@
     } = $props();
 </script>
 
-<div class="container">
+<div class="container admin-list-tools">
     <OrderBy
         bind:ref
         options={orderOptions}
@@ -65,5 +65,15 @@
         column-gap: 0.5rem;
         row-gap: 0.25rem;
         flex-wrap: wrap;
+    }
+
+    .admin-list-tools {
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        min-width: 0;
+        max-width: 100%;
+        gap: 8px;
+        margin: 0;
     }
 </style>

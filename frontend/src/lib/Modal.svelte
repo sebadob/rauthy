@@ -212,4 +212,50 @@ We need the onclick listener here to make easy click-outside work.
             cursor: pointer;
         }
     }
+
+    @media (max-width: 800px) {
+        :global(.admin-shell) dialog > :global(div) {
+            padding: 24px;
+        }
+    }
+    :global(.admin-shell) dialog :global(.modal) {
+        max-width: 100%;
+        width: min(640px, calc(100dvw - 96px));
+    }
+    :global(.admin-shell) dialog:not(:global(.branding-preview *)) {
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        padding: 0;
+        background: var(--ui-surface);
+        max-width: calc(100dvw - 32px);
+        box-shadow: 0 18px 60px #0003;
+    }
+    :global(.admin-shell) dialog:not(:global(.branding-preview *)) > :global(div) {
+        padding: 32px;
+        box-shadow: none;
+    }
+    :global(.admin-shell) dialog:not(:global(.branding-preview *))::backdrop {
+        background: #0006;
+    }
+    :global(.admin-shell) dialog:not(:global(.branding-preview *)) :global(.close) {
+        top: -20px;
+        right: -20px;
+    }
+
+    :global(.admin-shell) dialog {
+        max-height: calc(100dvh - 32px);
+        overflow: hidden;
+    }
+    :global(.admin-shell) dialog > :global(div) {
+        max-height: calc(100dvh - 34px);
+        overflow: auto;
+    }
+
+    :global(.admin-shell) dialog :global(.meta) {
+        max-width: 100%;
+    }
+    :global(.admin-shell) dialog :global(form) {
+        max-width: 100%;
+        min-width: 0;
+    }
 </style>

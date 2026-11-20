@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
@@ -81,12 +82,8 @@
     }
 </script>
 
-<NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="groups"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
->
+<NavSub buttonTilesAriaControls="groups">
+    <AdminListHeading title={ta.nav.attributes} count={attrsFiltered.length} />
     <ButtonAddModal
         bind:ref={refAddNew}
         level={attrs.length === 0 ? 1 : 2}

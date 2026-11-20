@@ -51,19 +51,25 @@
     }
 </script>
 
-<div class="container" class:expired={session.exp < now}>
+<div class="container admin-session-card" class:expired={session.exp < now}>
     <Expandable>
         {#snippet summary()}
-            <div class="header">
-                <Tooltip text="User ID">
-                    <div class="uid font-mono" style:margin-left={session.user_id ? '' : '.35rem'}>
-                        {session.user_id}
-                    </div>
-                </Tooltip>
-
+            <div class="header admin-session-summary">
+                <div class="admin-session-identity">
+                    <span class="admin-session-state">{session.state}</span>
+                    <Tooltip text="User ID">
+                        <div
+                            class="uid font-mono"
+                            style:margin-left={session.user_id ? '' : '.35rem'}
+                        >
+                            {session.user_id}
+                        </div>
+                    </Tooltip>
+                </div>
                 <div class="headerRight">
                     <Tooltip text={ta.options.lastSeen}>
                         <div class="date">
+                            <span class="admin-field-caption">{ta.options.lastSeen}</span>
                             {formatDateFromTs(session.last_seen)}
                         </div>
                     </Tooltip>
@@ -77,7 +83,7 @@
                     </Button>
 
                     {#if isAdmin}
-                        <Button invisible onclick={deleteSession}>
+                        <Button ariaLabel={t.common.delete} invisible onclick={deleteSession}>
                             <Tooltip text={t.common.delete}>
                                 <div class="trash">
                                     <IconTrash width="1.2rem" />
@@ -90,34 +96,35 @@
         {/snippet}
 
         {#snippet details()}
-            <LabeledValue label="Session ID">
-                {session.id}
-            </LabeledValue>
+            <div class="admin-session-details">
+                <LabeledValue label="Session ID">
+                    {session.id}
+                </LabeledValue>
 
-            <LabeledValue label="User ID">
-                {session.user_id}
-            </LabeledValue>
+                <LabeledValue label="User ID">
+                    {session.user_id}
+                </LabeledValue>
 
-            <LabeledValue label={ta.options.expires}>
-                {formatDateFromTs(session.exp)}
-            </LabeledValue>
+                <LabeledValue label={ta.options.expires}>
+                    {formatDateFromTs(session.exp)}
+                </LabeledValue>
 
-            <LabeledValue label={ta.options.lastSeen}>
-                {formatDateFromTs(session.last_seen)}
-            </LabeledValue>
+                <LabeledValue label={ta.options.lastSeen}>
+                    {formatDateFromTs(session.last_seen)}
+                </LabeledValue>
 
-            <LabeledValue label={ta.options.state}>
-                {session.state}
-            </LabeledValue>
+                <LabeledValue label={ta.options.state}>
+                    {session.state}
+                </LabeledValue>
 
-            <LabeledValue label="IP">
-                {session.remote_ip}
-            </LabeledValue>
+                <LabeledValue label="IP">
+                    {session.remote_ip}
+                </LabeledValue>
 
-            <LabeledValue label="MFA">
-                <CheckIcon checked={session.is_mfa} />
-            </LabeledValue>
-
+                <LabeledValue label="MFA">
+                    <CheckIcon checked={session.is_mfa} />
+                </LabeledValue>
+            </div>
             {#if isAdmin}
                 <Button level={-1} onclick={deleteSession}>
                     {t.common.delete}
@@ -165,5 +172,105 @@
 
     .trash {
         margin-bottom: -0.3rem;
+    }
+
+    .admin-session-card {
+        max-width: none;
+        overflow: visible;
+    }
+    .admin-session-card .admin-session-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+    .admin-session-identity {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .admin-session-state {
+        width: fit-content;
+        padding: 2px 8px;
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
+        border-radius: var(--border-radius);
+        font-size: 11px;
+        line-height: 18px;
+        font-weight: 600;
+    }
+    .admin-session-card :global(.uid) {
+        min-width: 0;
+        font-size: 12px;
+        line-height: 20px;
+        overflow-wrap: anywhere;
+    }
+    .admin-session-card :global(.headerRight) {
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .admin-field-caption {
+        display: block;
+        font-size: 11px;
+        line-height: 18px;
+        color: var(--ui-muted);
+    }
+    .admin-session-card :global(.date) {
+        font-size: 12px;
+        line-height: 20px;
+        white-space: normal;
+    }
+    .admin-session-card :global(.trash) {
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    .admin-session-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 24px;
+        margin-bottom: 12px;
+    }
+    @media (max-width: 800px) {
+        .admin-session-card .admin-session-summary {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .admin-session-card :global(.headerRight) {
+            gap: 8px;
+        }
+        .admin-session-details {
+            grid-template-columns: 1fr;
+        }
+    }
+    .admin-session-card .admin-session-summary {
+        display: grid;
+        grid-template-columns: minmax(140px, 1fr) minmax(0, 500px);
+        gap: 20px;
+    }
+    .admin-session-card :global(.headerRight) {
+        display: grid;
+        grid-template-columns: 140px minmax(0, 1fr) 36px;
+        width: 100%;
+        gap: 12px;
+    }
+    .admin-session-card :global(.ip) {
+        font-size: 11px;
+        overflow-wrap: anywhere;
+    }
+    .admin-session-card :global(.headerRight) > :global(.admin-control) {
+        min-width: 0;
+    }
+    @media (max-width: 800px) {
+        .admin-session-card .admin-session-summary {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .admin-session-card :global(.headerRight) {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
+        }
     }
 </style>

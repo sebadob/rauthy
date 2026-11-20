@@ -17,7 +17,7 @@
     let ref: undefined | HTMLButtonElement = $state();
 </script>
 
-<li class:pictureLeft aria-current={selected ? 'page' : 'false'}>
+<li class="admin-record-row" class:pictureLeft aria-current={selected ? 'page' : 'false'}>
     <div>
         <Button bind:ref invisible {onclick}>
             <div>

@@ -1,12 +1,13 @@
 <script lang="ts">
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import LangSelector from '#lib/LangSelector.svelte';
     import { page } from '$app/state';
     import AppVersion from '../AppVersion.svelte';
     import RauthyLogo from '#lib/RauthyLogo.svelte';
     import NavLink from '#lib/nav/NavLink.svelte';
-    import IconArrowPathSquare from '#icons/IconArrowPathSquare.svelte';
+    import AdminAccountMenu from '#lib/admin/AdminAccountMenu.svelte';
     import IconUserGroup from '#icons/IconUserGroup.svelte';
     import IconDocText from '#icons/IconDocText.svelte';
     import IconOffice from '#icons/IconOffice.svelte';
@@ -21,16 +22,12 @@
     import IconBookOpen from '#icons/IconBookOpen.svelte';
     import IconCheckBadge from '#icons/IconCheckBadge.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import IconLogout from '#icons/IconLogout.svelte';
-    import IconUserCircle from '#icons/IconUserCircle.svelte';
-    import { redirectToLogout } from '#utils/helpers.ts';
-    import A from '#lib/A.svelte';
-    import Tooltip from '#lib/Tooltip.svelte';
     import IconCommandLine from '#icons/IconCommandLine.svelte';
     import IconCircleStack from '#icons/IconCircleStack.svelte';
     import { useSession } from '#state/session.svelte.ts';
 
     let ta = useI18nAdmin();
+    let t = useI18n();
 
     let session = useSession('admin');
     // Delegated group admins only get the user-centric, read-only sections.
@@ -39,110 +36,42 @@
     // principal acts as a group admin when it reached the admin UI without the full role.
     let isGroupAdmin = $derived(!session.isAdmin());
 
-    let timeout: undefined | number;
+    let {
+        collapsed,
+        compact,
+        closeDrawer,
+        drawerClose = $bindable(),
+    }: {
+        collapsed: boolean;
+        compact: boolean;
+        closeDrawer: () => void;
+        drawerClose?: HTMLButtonElement;
+    } = $props();
 
-    let optsButtons = $state(false);
-    let params = $state('');
-    let compact = $state(false);
-    let collapsed = $state(false);
-
-    let innerWidth: undefined | number = $state();
-
-    // cannot be derived because of static pre-rendering
-    $effect(() => {
-        params = page.url.search;
-    });
-
-    $effect(() => {
-        if (!innerWidth) {
-            return;
-        }
-        let to_collapse = (page.url && innerWidth < 600) || innerWidth < 800;
-        let be_compact = innerWidth < 1280;
-
-        // we wait for an animation frame to avoid display errors in some browsers
-        requestAnimationFrame(() => {
-            collapsed = to_collapse;
-            compact = be_compact;
-        });
-    });
-
-    function showOpts() {
-        if (timeout) {
-            clearTimeout(timeout);
-        }
-        optsButtons = true;
-    }
-
-    function hideOpts() {
-        setTimeout(() => {
-            optsButtons = false;
-        }, 1000);
-    }
-
-    function toggleCollapsed() {
-        collapsed = !collapsed;
-    }
-
-    function toggleCompact() {
-        compact = !compact;
-    }
+    let params = $derived(page.url.search);
 </script>
 
-<svelte:window bind:innerWidth />
-
-<nav
-    id="mainNav"
-    aria-hidden={collapsed}
-    onmouseenter={showOpts}
-    onmouseleave={hideOpts}
-    data-compact={compact}
->
+<nav id="mainNav" data-collapsed={collapsed} data-compact={compact}>
     <div class="nav-container">
-        <div class="relative">
-            <div
-                class="absolute flex space-between navmod"
-                aria-hidden={!collapsed && !optsButtons}
-            >
-                <div>
-                    <Button ariaControls="mainNav" invisible onclick={toggleCollapsed}>
-                        <svg
-                            aria-expanded={!collapsed}
-                            class="inner"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width={2}
-                            width="1.5rem"
-                            opacity={0.9}
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                            />
-                        </svg>
-                    </Button>
-                </div>
-
-                {#if !collapsed}
-                    <div>
-                        <Button invisible onclick={toggleCompact}>
-                            <span class="inner">
-                                <IconArrowPathSquare />
-                            </span>
-                        </Button>
-                    </div>
-                {/if}
-            </div>
-        </div>
-
-        {#if !collapsed}
-            <div class="scrollable-content">
+        <div class="scrollable-content">
+            {#if !collapsed}
                 <div class="logo">
-                    <RauthyLogo width={compact ? '3rem' : '7rem'} />
+                    <RauthyLogo width="2rem" />
+                    {#if !compact}<strong class="brand-name"
+                            >Rauthy<span>{ta.common.administration}</span></strong
+                        >{/if}
+                    <div class="admin-drawer-close">
+                        <Button
+                            ariaLabel={t.common.close}
+                            invisible
+                            onclick={closeDrawer}
+                            bind:ref={drawerClose}
+                            ><IconStop color="currentColor" width="20px" /></Button
+                        >
+                    </div>
                 </div>
 
-                <div class="menu" data-compact={compact}>
+                <div class="menu">
                     <NavLink {compact} {params} route="/users">
                         {#snippet icon(width: string)}
                             <IconUser {width} />
@@ -257,50 +186,20 @@
                         {ta.nav.docs}
                     </NavLink>
                 </div>
-            </div>
+            {/if}
+        </div>
 
-            <div class="bottom">
-                {#snippet toLogout()}
-                    <div class="logout">
-                        <Button invisible onclick={() => redirectToLogout()}>
-                            <Tooltip text="Logout" yOffset={-40}>
-                                <IconLogout />
-                            </Tooltip>
-                        </Button>
+        {#if !collapsed}
+            <div class="bottom admin-sidebar-footer">
+                <AdminAccountMenu {compact} />
+                <div class="admin-preferences">
+                    {#if !compact}<span class="admin-footer-label">{ta.common.preferences}</span
+                        >{/if}
+                    <div class="admin-preference-controls">
+                        <ThemeSwitch /><LangSelector openTop borderless />
                     </div>
-                {/snippet}
-
-                <!-- a quick link to the own account dashboard. A delegated group admin
-                     cannot manage itself in here (it's an admin), so it self-manages from the
-                     account dashboard, which links back to the Admin UI. -->
-                {#snippet toAccount()}
-                    <div class="account">
-                        <A href="/auth/v1/account" hideUnderline>
-                            <Tooltip text="Account" yOffset={-40}>
-                                <IconUserCircle />
-                            </Tooltip>
-                        </A>
-                    </div>
-                {/snippet}
-
-                {#if compact}
-                    {@render toAccount()}
-                    {@render toLogout()}
-                    <div class="theme">
-                        <ThemeSwitch />
-                    </div>
-                    <LangSelector openTop borderless />
-                {:else}
-                    <div class="flex gap-05">
-                        <ThemeSwitch />
-                        <LangSelector openTop borderless />
-                        {@render toAccount()}
-                        {@render toLogout()}
-                    </div>
-                    <div class="version">
-                        <AppVersion />
-                    </div>
-                {/if}
+                </div>
+                <div class="version"><AppVersion /></div>
             </div>
         {/if}
     </div>
@@ -316,12 +215,16 @@
         overflow: hidden;
     }
 
-    @media (max-width: 800px) {
+    @media (width < 800px) {
         nav {
             position: absolute;
             top: 0;
             left: 0;
         }
+    }
+
+    .admin-drawer-close {
+        display: none;
     }
 
     .nav-container {
@@ -342,8 +245,8 @@
         min-height: 0;
     }
 
-    nav[aria-hidden='true'] .scrollable-content,
-    nav[aria-hidden='true'] .bottom {
+    nav[data-collapsed='true'] .scrollable-content,
+    nav[data-collapsed='true'] .bottom {
         display: none;
     }
 
@@ -357,12 +260,12 @@
         line-height: 0.8rem;
     }
 
-    nav[aria-hidden='true'] {
+    nav[data-collapsed='true'] {
         width: 0;
         overflow: visible;
     }
 
-    nav[aria-hidden='true'] .nav-container {
+    nav[data-collapsed='true'] .nav-container {
         padding: 0;
     }
 
@@ -375,10 +278,6 @@
         margin-bottom: 0.4rem;
     }
 
-    nav[data-compact='true'] .theme {
-        margin-bottom: -0.5rem;
-    }
-
     .logo {
         display: flex;
         align-items: center;
@@ -387,20 +286,7 @@
         overflow: clip;
     }
 
-    .account,
-    .logout {
-        margin-bottom: -0.25rem;
-    }
-
-    /* now that the nav has multiple bottom buttons, color the logout icon the same red as
-       the one on the account dashboard to set it apart */
-    .logout :global(button > div),
-    .logout :global(button:hover > div) {
-        color: hsl(var(--error));
-    }
-
     .menu {
-        margin-top: 1.5rem;
         max-height: 85dvh;
         display: flex;
         flex-direction: column;
@@ -408,55 +294,188 @@
         overflow-y: auto;
     }
 
-    .menu[data-compact='true'] {
-        margin-top: 0.5rem;
-        overflow-y: auto;
-        overflow-x: hidden;
-        white-space: nowrap;
-    }
-
-    nav[data-compact='true'] .menu {
-        max-height: calc(100dvh - 12rem);
-    }
-
-    .navmod {
-        opacity: 0;
-        margin: 0;
-        width: 100%;
-        transition: all 150ms ease-in-out;
-        z-index: 1;
-    }
-
-    nav[aria-hidden='true'] .navmod {
-        opacity: 1;
-        margin: 0 0 0 0.25rem;
-    }
-
-    nav[data-compact='true'] .navmod {
-        margin: 0;
-        width: 100%;
-    }
-
-    .navmod[aria-hidden='false'],
-    .navmod:hover {
-        opacity: 1;
-    }
-
-    .navmod .inner {
-        color: hsla(var(--text) / 0.5);
-        transition: all 150ms ease-in-out;
-    }
-
-    nav[aria-hidden='true'] .navmod .inner {
-        color: hsla(var(--text) / 0.7);
-    }
-
-    nav[aria-hidden='true'] .navmod .inner:hover,
-    .navmod .inner:hover {
-        color: hsl(var(--action));
-    }
-
     .version {
         margin: 0 0 -0.5rem -0.5rem;
+    }
+
+    #mainNav {
+        width: 224px;
+        flex-shrink: 0;
+        border: 0;
+        background: transparent;
+    }
+    #mainNav .nav-container {
+        padding: 0 12px 16px;
+        background: transparent;
+    }
+    #mainNav .logo {
+        height: 80px;
+        flex-shrink: 0;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 0 14px;
+    }
+    .brand-name {
+        font-size: 20px;
+        font-weight: 650;
+        letter-spacing: -0.04em;
+        color: var(--ui-text);
+        line-height: 24px;
+    }
+    .brand-name :global(span) {
+        display: block;
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        color: var(--ui-muted);
+        line-height: 18px;
+    }
+    #mainNav .menu {
+        gap: 2px;
+        padding: 8px 0;
+        max-height: none;
+        overflow: visible;
+    }
+    #mainNav .menu > :global(a) {
+        display: flex;
+        align-items: center;
+        height: 38px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: var(--border-radius);
+        color: var(--ui-muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    #mainNav .menu > :global(a:hover) {
+        background: var(--ui-hover);
+    }
+    #mainNav .menu > :global(a[aria-current='page']) {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
+        font-weight: 650;
+    }
+    #mainNav :global(.wide) {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    #mainNav :global(.iconWide) {
+        display: flex;
+        align-items: center;
+        transform: none;
+    }
+    #mainNav .menu :global(svg) {
+        width: 20px;
+        height: 20px;
+        display: block;
+    }
+    #mainNav .menu > :global(a[href*='/sessions']),
+    #mainNav .menu > :global(a[href*='/api_keys']),
+    #mainNav .menu > :global(a[href*='/config/']) {
+        margin-top: 12px;
+    }
+    #mainNav .bottom {
+        border-top: 1px solid var(--ui-outline);
+        margin: 12px 4px 0;
+        padding-top: 12px;
+        gap: 12px;
+    }
+    #mainNav .bottom > :global(.flex) {
+        gap: 0;
+        justify-content: space-between;
+    }
+    #mainNav .version {
+        margin: 0 8px;
+        font-size: 11px;
+        color: var(--ui-muted);
+        opacity: 0.7;
+    }
+    #mainNav[data-compact='true'] {
+        width: 84px;
+    }
+    #mainNav[data-compact='true'] .nav-container {
+        padding-inline: 6px;
+    }
+    #mainNav[data-compact='true'] .logo {
+        justify-content: center;
+        padding: 0;
+    }
+    #mainNav[data-compact='true'] .menu > :global(a) {
+        height: 54px;
+        padding: 5px 0;
+        justify-content: center;
+        border-radius: var(--border-radius);
+    }
+    #mainNav[data-compact='true'] :global(.compact) {
+        font-size: 10px;
+        line-height: 13px;
+        gap: 4px;
+    }
+    #mainNav[data-compact='true'] :global(.compact) > :global(span) {
+        color: inherit;
+    }
+    #mainNav[data-collapsed='true'] {
+        width: 0;
+    }
+    @media (width < 800px) {
+        #mainNav {
+            z-index: 110;
+            background: var(--ui-surface);
+        }
+
+        .admin-drawer-close {
+            display: block;
+        }
+    }
+    #mainNav :global(.admin-sidebar-footer) {
+        gap: 16px;
+        padding: 16px 4px 0;
+    }
+    .admin-footer-label {
+        display: block;
+        margin: 0 8px 4px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--ui-muted);
+    }
+    .admin-preference-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 0 4px;
+    }
+    .admin-preference-controls > :global(div) {
+        display: flex;
+        align-items: center;
+    }
+    #mainNav[data-compact='true'] .admin-preference-controls {
+        flex-direction: column;
+    }
+    #mainNav[data-compact='true']
+        :global(.admin-account-menu)
+        > :global(div)
+        > :global(.admin-control) {
+        padding: 0;
+        justify-content: center;
+    }
+    #mainNav[data-compact='true']
+        :global(.admin-account-menu)
+        > :global(div)
+        > :global(.admin-control)
+        > :global(.children) {
+        justify-content: center;
+    }
+
+    #mainNav .logo {
+        position: relative;
+    }
+    .admin-drawer-close {
+        position: absolute;
+        right: 0;
+        top: 22px;
     }
 </style>

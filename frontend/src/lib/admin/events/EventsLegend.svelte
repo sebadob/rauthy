@@ -1,49 +1,49 @@
 <script lang="ts">
     import { eventColor } from '#utils/helpers.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
-
-    let { wide }: { wide: boolean } = $props();
-
+    let { wide = false }: { wide?: boolean } = $props();
+    const levels = ['info', 'notice', 'warning', 'critical'] as const;
     let t = useI18n();
 </script>
-
-<fieldset aria-hidden="true">
-    <legend class="font-label">{t.common.legend}</legend>
+<details class="admin-event-legend">
+    <summary>{t.common.legend}</summary>
     <ul class:wide>
-        <li style:border-color={eventColor('info')}>Info</li>
-        <li style:border-color={eventColor('notice')}>Notice</li>
-        <li style:border-color={eventColor('warning')}>Warning</li>
-        <li style:border-color={eventColor('critical')}>Critical</li>
+        {#each levels as level}<li>
+                <span class="admin-legend-dot" style:background={eventColor(level)}></span>{level}
+            </li>{/each}
     </ul>
-</fieldset>
+</details>
 
 <style>
-    fieldset {
-        line-height: 1rem;
-        border: none;
+    .admin-event-legend {
+        flex-shrink: 0;
+        padding: 12px 16px;
+        border-top: 1px solid var(--ui-outline);
+        background: var(--ui-surface);
     }
-
-    legend {
-        font-size: 0.9rem;
-        color: hsla(var(--text) / 0.5);
+    .admin-event-legend :global(summary) {
+        font-size: 12px;
+        cursor: pointer;
     }
-
-    ul {
-        padding-right: 0.5rem;
+    .admin-event-legend :global(ul) {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin: 12px 0 0;
+        padding: 0;
+    }
+    .admin-event-legend :global(li) {
         display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    li {
+        align-items: center;
+        gap: 8px;
         margin: 0;
-        padding-left: 0.5rem;
-        list-style: none;
-        border-left: 2px solid transparent;
-        color: hsla(var(--text) / 0.7);
+        padding: 0;
+        font-size: 12px;
+        text-transform: capitalize;
     }
-
-    .wide {
-        flex-direction: row;
+    .admin-legend-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
     }
 </style>

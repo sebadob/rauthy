@@ -4,7 +4,7 @@
     import { untrack } from 'svelte';
     import CheckIcon from '#lib/CheckIcon.svelte';
     import Input from '#lib/form/Input.svelte';
-    import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
+    import type { UserResponse } from '#api/types/user.ts';
     import type { RoleResponse } from '#api/types/roles.ts';
     import type { GroupResponse } from '#api/types/groups.ts';
     import type { SelectItem } from '#lib/select_list/props.ts';
@@ -29,7 +29,6 @@
     import { slide } from 'svelte/transition';
     import type { Language } from '#api/types/i18n.ts';
     import { useI18nConfig } from '#state/i18n_config.svelte.ts';
-    import UserPicture from '#lib/UserPicture.svelte';
     import type { PatchOp } from '#api/types/generic.ts';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import { useSession } from '#state/session.svelte.ts';
@@ -268,19 +267,6 @@
         }
     });
 
-    function fallbackCharacters(user: UserResponseSimple) {
-        let chars = '';
-        if (user.given_name) {
-            chars = user.given_name[0];
-        } else {
-            chars = user.email[0];
-        }
-        if (user.family_name) {
-            chars += user.family_name[0];
-        }
-        return chars;
-    }
-
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
@@ -435,19 +421,10 @@
 
 <Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
-<div class="container" style:border-color={isUnsaved ? 'hsla(var(--action) / .7)' : 'transparent'}>
+<div class="container admin-user-info" data-unsaved={isUnsaved}>
     {#if user}
-        <div class="picture">
-            <UserPicture
-                fallbackCharacters={fallbackCharacters(user)}
-                userId={user.id}
-                pictureId={user.picture_id}
-                size="large"
-            />
-        </div>
-
         <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
-            <div class="values">
+            <div class="values admin-metadata">
                 <div>
                     <LabeledValue label="ID" mono>
                         {user.id}
@@ -463,7 +440,7 @@
                 </div>
             </div>
 
-            <div class="values">
+            <div class="values admin-status-settings">
                 {#if isSelf}
                     <div>
                         <Tooltip
@@ -508,8 +485,9 @@
                 {/if}
             </div>
 
-            <div class="values">
-                <div>
+            <div class="values admin-profile-grid">
+                <div class="admin-form-section">
+                    <h3>{ta.common.profile}</h3>
                     <Input
                         typ="email"
                         bind:value={email}
@@ -565,7 +543,8 @@
                     {/if}
                 </div>
 
-                <div>
+                <div class="admin-form-section">
+                    <h3>{ta.common.contactDetails}</h3>
                     <Input
                         bind:value={street}
                         autocomplete="off"
@@ -611,77 +590,81 @@
                 </div>
             </div>
 
-            <SelectList bind:items={rolesItems} disabledItems={rolesDisabled}>
-                {t.account.roles.replaceAll(',', ' ')}
-            </SelectList>
-            <SelectList bind:items={groupsItems} disabledItems={groupsDisabled}>
-                {t.account.groups.replaceAll(',', ' ')}
-            </SelectList>
+            <section class="admin-form-section admin-access-section">
+                <h3>{ta.common.access}</h3>
+                <SelectList bind:items={rolesItems} disabledItems={rolesDisabled}>
+                    {t.account.roles.replaceAll(',', ' ')}
+                </SelectList>
+                <SelectList bind:items={groupsItems} disabledItems={groupsDisabled}>
+                    {t.account.groups.replaceAll(',', ' ')}
+                </SelectList>
 
-            <div class="values">
-                <div style:margin-top=".5rem">
-                    {#if !expires && isSelf}
-                        <Tooltip
-                            text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
-                        >
-                            <InputCheckbox
-                                ariaLabel={t.account.accessExp}
-                                bind:checked={expires}
-                                disabled
+                <div class="values">
+                    <div style:margin-top=".5rem">
+                        {#if !expires && isSelf}
+                            <Tooltip
+                                text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
                             >
+                                <InputCheckbox
+                                    ariaLabel={t.account.accessExp}
+                                    bind:checked={expires}
+                                    disabled
+                                >
+                                    {t.account.accessExp}
+                                </InputCheckbox>
+                            </Tooltip>
+                        {:else}
+                            <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
                                 {t.account.accessExp}
                             </InputCheckbox>
-                        </Tooltip>
-                    {:else}
-                        <InputCheckbox ariaLabel={t.account.accessExp} bind:checked={expires}>
-                            {t.account.accessExp}
-                        </InputCheckbox>
+                        {/if}
+                    </div>
+                    {#if expires}
+                        <div transition:slide={{ duration: 150 }}>
+                            <InputDateTimeCombo
+                                label={t.account.accessExp}
+                                bind:value={expDate}
+                                bind:timeValue={expTime}
+                                withTime
+                                min={fmtDateInput()}
+                                required
+                                openTop
+                            />
+                        </div>
                     {/if}
                 </div>
-                {#if expires}
-                    <div transition:slide={{ duration: 150 }}>
-                        <InputDateTimeCombo
-                            label={t.account.accessExp}
-                            bind:value={expDate}
-                            bind:timeValue={expTime}
-                            withTime
-                            min={fmtDateInput()}
-                            required
-                            openTop
-                        />
+            </section>
+            <section class="admin-form-section admin-activity-section">
+                <h3>{ta.common.activity}</h3>
+                <div class="values">
+                    <div>
+                        <LabeledValue label={t.account.userCreated}>
+                            {formatDateFromTs(user.created_at)}
+                        </LabeledValue>
+                        <LabeledValue label={ta.users.lastLogin}>
+                            {#if user.last_login}
+                                {formatDateFromTs(user.last_login)}
+                            {:else}
+                                {t.common.never}
+                            {/if}
+                        </LabeledValue>
                     </div>
-                {/if}
-            </div>
 
-            <div class="values">
-                <div>
-                    <LabeledValue label={t.account.userCreated}>
-                        {formatDateFromTs(user.created_at)}
-                    </LabeledValue>
-                    <LabeledValue label={ta.users.lastLogin}>
-                        {#if user.last_login}
-                            {formatDateFromTs(user.last_login)}
-                        {:else}
-                            {t.common.never}
-                        {/if}
-                    </LabeledValue>
+                    <div>
+                        <LabeledValue label={t.account.passwordExpiry}>
+                            {#if user.password_expires}
+                                {formatDateFromTs(user.password_expires)}
+                            {:else}
+                                {t.common.never}
+                            {/if}
+                        </LabeledValue>
+                        <LabeledValue label={t.account.mfaActivated}>
+                            <CheckIcon checked={!!user.webauthn_user_id || hasOtp} />
+                        </LabeledValue>
+                    </div>
                 </div>
-
-                <div>
-                    <LabeledValue label={t.account.passwordExpiry}>
-                        {#if user.password_expires}
-                            {formatDateFromTs(user.password_expires)}
-                        {:else}
-                            {t.common.never}
-                        {/if}
-                    </LabeledValue>
-                    <LabeledValue label={t.account.mfaActivated}>
-                        <CheckIcon checked={!!user.webauthn_user_id || hasOtp} />
-                    </LabeledValue>
-                </div>
-            </div>
-
-            <div class="btn">
+            </section>
+            <div class="btn admin-save-bar">
                 <Button type="submit">
                     {t.common.save}
                 </Button>
@@ -713,10 +696,6 @@
         border-left: 2px solid transparent;
     }
 
-    .picture {
-        margin: 1rem 0;
-    }
-
     .values {
         display: flex;
         column-gap: 1rem;
@@ -731,6 +710,83 @@
     @media (max-width: 467pt) {
         .values > div {
             width: min(25rem, calc(100dvw - 0.5rem));
+        }
+    }
+
+    .admin-user-info {
+        padding: 0;
+        border: 0;
+    }
+    .admin-user-info :global(.values) {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px 24px;
+        margin: 16px 0;
+    }
+    .admin-user-info :global(.values) > :global(div) {
+        flex: 1 1 220px;
+        min-width: 0;
+    }
+    .admin-user-info :global(.values) > :global(div) > :global(div) {
+        max-width: 100%;
+    }
+    .admin-metadata {
+        margin: 0;
+        padding: 0 0 4px;
+    }
+    .admin-status-settings {
+        margin: 0 0 24px;
+        padding: 8px 16px;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+    }
+    .admin-form-section {
+        padding: 24px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        min-width: 0;
+        background: transparent;
+    }
+    .admin-form-section :global(h3) {
+        margin: 0 0 24px;
+        color: var(--ui-text);
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 24px;
+    }
+    .admin-profile-grid {
+        gap: 20px;
+        align-items: stretch;
+    }
+    .admin-profile-grid > :global(div) {
+        flex-basis: 250px;
+    }
+    .admin-access-section,
+    .admin-activity-section {
+        margin: 20px 0;
+    }
+    .admin-save-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        bottom: -32px;
+        z-index: 2;
+        margin: 24px -1px -32px;
+        padding: 16px 1px;
+        background: var(--ui-surface);
+        border-top: 1px solid var(--ui-outline);
+    }
+    .admin-user-info[data-unsaved='true'] .admin-save-bar {
+        border-top-color: var(--ui-primary);
+    }
+    @media (max-width: 800px) {
+        .admin-form-section {
+            padding: 20px;
+        }
+        .admin-save-bar {
+            bottom: -24px;
+            margin-bottom: -24px;
         }
     }
 </style>

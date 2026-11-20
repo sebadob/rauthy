@@ -40,6 +40,7 @@ export let I18nAdminDe: I18nAdmin = {
         size: 'Größe',
     },
     clients: {
+        settings: { general: 'Allgemein', tokens: 'Tokens', integrations: 'Integrationen' },
         allowedResources: 'Erlaubte Ressourcen',
         defaultAud: 'Standard-Audiences',
         actorSameClient: 'Actor token from this client only',
@@ -152,6 +153,18 @@ export let I18nAdminDe: I18nAdmin = {
         },
     },
     common: {
+        preferences: 'Einstellungen',
+        profile: 'Profil',
+        contactDetails: 'Kontaktdaten',
+        access: 'Zugriff',
+        activity: 'Aktivität',
+
+        compactNavigation: 'Kompakte Navigation',
+        administration: 'Verwaltung',
+        selectEntry: 'Eintrag auswählen',
+        selectEntryHint:
+            'Wähle einen Eintrag aus der Liste, um seine Details anzuzeigen und zu bearbeiten.',
+
         account: 'Account',
         addNew: 'Neu Hinzufügen',
         back: 'Zurück',

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
     import { fetchGet } from '#api/fetch.ts';
     import type { ApiKeyResponse, ApiKeysResponse } from '#api/types/api_keys.ts';
@@ -74,12 +75,8 @@
 
 {err}
 
-<NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="keys"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
->
+<NavSub buttonTilesAriaControls="keys">
+    <AdminListHeading title={ta.nav.apiKeys} count={keysFiltered.length} />
     <ButtonAddModal
         bind:ref={refAddNew}
         level={keys.length === 0 ? 1 : 2}

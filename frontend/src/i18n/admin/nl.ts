@@ -40,6 +40,7 @@ export let I18nAdminNl: I18nAdmin = {
         size: 'Grootte',
     },
     clients: {
+        settings: { general: 'Algemeen', tokens: 'Tokens', integrations: 'Integraties' },
         allowedResources: 'Toegestane resources',
         defaultAud: 'Standaard audiences',
         actorSameClient: 'Actor token from this client only',
@@ -146,6 +147,17 @@ export let I18nAdminNl: I18nAdmin = {
         },
     },
     common: {
+        preferences: 'Voorkeuren',
+        profile: 'Profiel',
+        contactDetails: 'Contactgegevens',
+        access: 'Toegang',
+        activity: 'Activiteit',
+
+        compactNavigation: 'Compacte navigatie',
+        administration: 'Beheer',
+        selectEntry: 'Selecteer een item',
+        selectEntryHint: 'Kies een item uit de lijst om de details te bekijken en te beheren.',
+
         account: 'Account',
         addNew: 'Nieuw toevoegen',
         back: 'Terug',

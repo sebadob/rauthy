@@ -29,14 +29,27 @@
     let es: undefined | EventSource = $state();
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
-    let level: EventLevel = $state(
-        isBrowser()
-            ? (localStorage.getItem('eventLevel')?.toLowerCase() as EventLevel) || 'info'
-            : 'info',
-    );
+    function storedLevel(): EventLevel {
+        if (isBrowser()) {
+            try {
+                const value = localStorage.getItem('eventLevel')?.toLowerCase();
+                if (value === 'notice' || value === 'warning' || value === 'critical') {
+                    return value;
+                }
+            } catch {
+                // Storage may be unavailable in a restricted browser session.
+            }
+        }
+        return 'info';
+    }
+    let level: EventLevel = $state(storedLevel());
     let levelBefore = '';
 
+    let disposed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     onDestroy(() => {
+        disposed = true;
+        clearTimeout(retryTimer);
         es?.close();
     });
 
@@ -86,7 +99,13 @@
     }
 
     function stream() {
-        localStorage.setItem('eventLevel', level);
+        if (disposed) return;
+        clearTimeout(retryTimer);
+        try {
+            localStorage.setItem('eventLevel', level);
+        } catch {
+            // A storage failure must not stop the live stream.
+        }
 
         if (es && es.readyState !== 2) {
             es.close();
@@ -101,10 +120,10 @@
         };
 
         es.onerror = () => {
-            // make sure to re-open after any error
-            setTimeout(() => {
-                stream();
-            }, 3000);
+            // Never reconnect after the optional panel has been closed.
+            if (disposed) return;
+            clearTimeout(retryTimer);
+            retryTimer = setTimeout(stream, 3000);
         };
 
         es.onmessage = ev => {
@@ -119,11 +138,11 @@
 
 <svelte:window bind:innerWidth />
 
-<div id="events" class:wide class:narrow={!wide}>
+<div id="events">
     <div class="upper">
         <div class="header">
             <div class="flex gap-10">
-                <b>Events</b>
+                <b>{ta.nav.events}</b>
                 <Options
                     ariaLabel={ta.events.eventLevel}
                     options={EVENT_LEVELS}
@@ -149,41 +168,54 @@
 
 <style>
     #events {
-        height: 100dvh;
-        margin-left: 0.5rem;
+        width: 20rem;
+        height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        background: hsla(var(--bg-high) / 0.1);
-        border-radius: var(--border-radius) 0 0 var(--border-radius);
-        overflow-y: clip;
-        transition: all 150ms ease-in-out;
+        border-left: 1px solid var(--ui-outline);
+        background: var(--ui-surface);
     }
 
-    .data {
-        max-height: calc(100dvh - 7.5rem);
-        background: hsla(var(--bg-high) / 0.1);
-        overflow-y: auto;
+    .upper {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
     }
 
     .header {
         display: flex;
+        flex-wrap: wrap;
         justify-content: space-between;
         align-items: center;
-        padding: 0 0.5rem 0 calc(2px + 0.5rem);
+        gap: 8px;
+        min-height: 72px;
+        padding: 16px;
+        border-bottom: 1px solid var(--ui-outline);
     }
 
-    .narrow {
-        width: 15rem;
-        min-width: 15rem;
+    .header > .flex {
+        gap: 8px;
     }
 
-    .wide {
-        width: 25rem;
-        min-width: 25rem;
+    .data {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        background: hsla(var(--bg-high) / 0.1);
     }
 
-    .wide .data {
-        max-height: calc(100dvh - 4.5rem);
+    .data :global(.event) {
+        margin: 0;
+        padding: 12px;
+        border: 1px solid var(--ui-outline);
+        border-left: 3px solid var(--event-color);
+        border-radius: var(--border-radius);
+        font-size: 12px;
+        line-height: 20px;
     }
 </style>

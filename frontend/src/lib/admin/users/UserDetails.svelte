@@ -1,6 +1,8 @@
 <script lang="ts">
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import UserPicture from '#lib/UserPicture.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
     import type { RoleResponse } from '#api/types/roles.ts';
     import type { GroupResponse } from '#api/types/groups.ts';
@@ -101,6 +103,21 @@
         await fetchUser();
     }
 </script>
+
+{#if user && !err}
+    <EntityHeader
+        title={[user.given_name, user.family_name].filter(Boolean).join(' ') || user.email}
+        subtitle={user.email}
+    >
+        <UserPicture
+            fallbackCharacters={(user.given_name?.[0] || user.email[0]) +
+                (user.family_name?.[0] || '')}
+            userId={user.id}
+            pictureId={user.picture_id}
+            size="large"
+        />
+    </EntityHeader>
+{/if}
 
 {#if err}
     <!-- a group admin reaching a user it cannot manage (e.g. another admin) gets a clean

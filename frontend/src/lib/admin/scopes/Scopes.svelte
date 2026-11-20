@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
@@ -99,12 +100,8 @@
     }
 </script>
 
-<NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="scopes"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
->
+<NavSub buttonTilesAriaControls="scopes">
+    <AdminListHeading title={ta.nav.scopes} count={scopesFiltered.length} />
     <ButtonAddModal
         bind:ref={refAddNew}
         level={scopes.length === 0 ? 1 : 2}

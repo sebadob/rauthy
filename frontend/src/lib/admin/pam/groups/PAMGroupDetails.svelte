@@ -57,7 +57,7 @@
     }
 </script>
 
-<h1>{group.name}</h1>
+<h2>{group.name}</h2>
 
 <LabeledValue label="ID">
     {group.id}
@@ -101,7 +101,7 @@
 {/if}
 
 <style>
-    h1 {
+    h2 {
         margin-top: 0;
     }
 

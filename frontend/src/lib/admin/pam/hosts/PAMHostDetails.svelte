@@ -115,7 +115,7 @@
     }
 </script>
 
-<h1>{hostSimple.name}</h1>
+<h2>{hostSimple.name}</h2>
 
 {#if host}
     <LabeledValue label="Host ID" copyToClip={host.id} mono>
@@ -212,7 +212,7 @@
 {/if}
 
 <style>
-    h1 {
+    h2 {
         margin-top: 0;
     }
 

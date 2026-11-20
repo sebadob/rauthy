@@ -37,6 +37,7 @@ export let I18nAdminCs: I18nAdmin = {
         size: 'Velikost',
     },
     clients: {
+        settings: { general: 'Obecné', tokens: 'Tokeny', integrations: 'Integrace' },
         allowedResources: 'Povolené zdroje',
         defaultAud: 'Výchozí příjemci (audience)',
         actorSameClient: 'Actor token from this client only',
@@ -140,6 +141,16 @@ export let I18nAdminCs: I18nAdmin = {
         },
     },
     common: {
+        preferences: 'Předvolby',
+        profile: 'Profil',
+        contactDetails: 'Kontaktní údaje',
+        access: 'Přístup',
+        activity: 'Aktivita',
+        compactNavigation: 'Kompaktní navigace',
+        administration: 'Administrace',
+        selectEntry: 'Vyberte položku',
+        selectEntryHint: 'Vyberte položku ze seznamu a zobrazte nebo upravte její údaje.',
+
         account: 'Účet',
         addNew: 'Přidat',
         back: 'Zpět',

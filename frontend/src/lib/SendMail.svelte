@@ -139,115 +139,118 @@
 </Button>
 
 <Modal bind:showModal bind:closeModal>
-    <div class="options">
-        <div class="scheduled">
-            <InputCheckbox ariaLabel={ta.email.scheduled} bind:checked={scheduled}>
-                {ta.email.scheduled}
-            </InputCheckbox>
+    <div class="admin-mail-composer">
+        <h2>{ta.email.sendMail}</h2>
+        <div class="options">
+            <div class="scheduled">
+                <InputCheckbox ariaLabel={ta.email.scheduled} bind:checked={scheduled}>
+                    {ta.email.scheduled}
+                </InputCheckbox>
 
-            {#if scheduled}
-                <InputDateTimeCombo
-                    bind:value={schedDate}
-                    bind:timeValue={schedTime}
-                    min={fmtDateInput()}
-                    withTime
-                />
-            {/if}
-        </div>
-
-        <div class="filter">
-            <div class="label">
-                {ta.email.userFilter}
-                <span style:margin=".25rem 0">:</span>
+                {#if scheduled}
+                    <InputDateTimeCombo
+                        bind:value={schedDate}
+                        bind:timeValue={schedTime}
+                        min={fmtDateInput()}
+                        withTime
+                    />
+                {/if}
             </div>
 
-            {#if isGroupAdmin}
-                <!-- a group admin is locked to "In Group" for a group it manages -->
-                <div class="ms-05">{ta.email.filterType[1]}:</div>
-                <Options
-                    ariaLabel={ta.email.userFilter}
-                    options={availableGroups.map(g => g.name)}
-                    bind:value={group}
-                    borderless
-                    withSearch={availableGroups.length > 7}
-                />
-            {:else}
-                <Options
-                    ariaLabel={ta.email.userFilter}
-                    options={ta.email.filterType}
-                    bind:value={filter}
-                    borderless
-                />
+            <div class="filter">
+                <div class="label">
+                    {ta.email.userFilter}
+                    <span style:margin=".25rem 0">:</span>
+                </div>
 
-                {#if filter !== ta.email.filterType[0]}
-                    <div class="ms-05">:</div>
-                    {#if isFilterGroup}
-                        <Options
-                            ariaLabel={ta.email.userFilter}
-                            options={groups.map(g => g.name)}
-                            bind:value={group}
-                            borderless
-                            withSearch={groups.length > 7}
-                        />
-                    {:else if isFilterRole}
-                        <Options
-                            ariaLabel={ta.email.userFilter}
-                            options={roles.map(g => g.name)}
-                            bind:value={role}
-                            borderless
-                            withSearch={roles.length > 7}
-                        />
+                {#if isGroupAdmin}
+                    <!-- a group admin is locked to "In Group" for a group it manages -->
+                    <div class="ms-05">{ta.email.filterType[1]}:</div>
+                    <Options
+                        ariaLabel={ta.email.userFilter}
+                        options={availableGroups.map(g => g.name)}
+                        bind:value={group}
+                        borderless
+                        withSearch={availableGroups.length > 7}
+                    />
+                {:else}
+                    <Options
+                        ariaLabel={ta.email.userFilter}
+                        options={ta.email.filterType}
+                        bind:value={filter}
+                        borderless
+                    />
+
+                    {#if filter !== ta.email.filterType[0]}
+                        <div class="ms-05">:</div>
+                        {#if isFilterGroup}
+                            <Options
+                                ariaLabel={ta.email.userFilter}
+                                options={groups.map(g => g.name)}
+                                bind:value={group}
+                                borderless
+                                withSearch={groups.length > 7}
+                            />
+                        {:else if isFilterRole}
+                            <Options
+                                ariaLabel={ta.email.userFilter}
+                                options={roles.map(g => g.name)}
+                                bind:value={role}
+                                borderless
+                                withSearch={roles.length > 7}
+                            />
+                        {/if}
                     {/if}
                 {/if}
-            {/if}
+            </div>
         </div>
-    </div>
 
-    <div class="editor">
-        <Input
-            label={ta.email.subject}
-            placeholder={ta.email.subject}
-            bind:value={subject}
-            width="min(40rem, 90dvw)"
-            maxLength={1024}
-            required
-        />
-        <EditorInteractive
-            bind:mode={editorMode}
-            bind:contentRaw={bodyRaw}
-            bind:sanitizedValue={body}
-            height="min(60dvh, 40rem)"
-        />
-    </div>
+        <div class="editor">
+            <Input
+                label={ta.email.subject}
+                placeholder={ta.email.subject}
+                bind:value={subject}
+                width="100%"
+                maxLength={1024}
+                required
+            />
+            <EditorInteractive
+                bind:mode={editorMode}
+                bind:contentRaw={bodyRaw}
+                bind:sanitizedValue={body}
+                height="clamp(12rem, 32dvh, 22rem)"
+            />
+        </div>
 
-    <div class="send">
-        <p>
-            {#if isGroupAdmin}
-                {ta.email.sendAllUsersFiltered}
-                <b>{`${ta.email.filterType[1]} ${group}`}</b>
-            {:else if isFilterNone}
-                {ta.email.sendAllUsers}
-            {:else if isFilterGroup}
-                {ta.email.sendAllUsersFiltered}
-                <b>{`${filter} ${group}`}</b>
-            {:else if isFilterRole}
-                {ta.email.sendAllUsersFiltered}
-                <b>{`${filter} ${role}`}</b>
-            {/if}
-        </p>
+        <div class="send">
+            <p>
+                {#if isGroupAdmin}
+                    {ta.email.sendAllUsersFiltered}
+                    <b>{`${ta.email.filterType[1]} ${group}`}</b>
+                {:else if isFilterNone}
+                    {ta.email.sendAllUsers}
+                {:else if isFilterGroup}
+                    {ta.email.sendAllUsersFiltered}
+                    <b>{`${filter} ${group}`}</b>
+                {:else if isFilterRole}
+                    {ta.email.sendAllUsersFiltered}
+                    <b>{`${filter} ${role}`}</b>
+                {/if}
+            </p>
 
-        <div class="flex gap-10">
-            <Button onclick={submit} isDisabled={!(body.trim() || bodyRaw.trim()) || !subject}
-                >Send</Button
-            >
+            <div class="flex gap-10">
+                <Button onclick={submit} isDisabled={!(body.trim() || bodyRaw.trim()) || !subject}
+                    >Send</Button
+                >
 
-            {#if success}
-                <IconCheck />
-            {:else if error}
-                <span class="err">
-                    {error}
-                </span>
-            {/if}
+                {#if success}
+                    <IconCheck />
+                {:else if error}
+                    <span class="err">
+                        {error}
+                    </span>
+                {/if}
+            </div>
         </div>
     </div>
 </Modal>
@@ -285,9 +288,69 @@
         margin-top: 1rem;
     }
 
-    @media (min-width: 1440px) {
-        .editor {
-            min-width: 80rem;
+    .admin-mail-composer {
+        width: min(720px, calc(100dvw - 96px));
+        max-width: 100%;
+    }
+    .admin-mail-composer :global(h2) {
+        margin: 0 0 24px;
+        font-size: 22px;
+        line-height: 28px;
+        color: var(--ui-text);
+    }
+    .admin-mail-composer :global(.editor) {
+        min-width: 0;
+        width: 100%;
+    }
+    .admin-mail-composer :global(.options) {
+        gap: 16px 24px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .admin-mail-composer :global(.scheduled) {
+        min-width: 0;
+    }
+    .admin-mail-composer :global(.filter) {
+        margin: 0;
+    }
+    .admin-mail-composer :global(.filter) > :global(.label) {
+        margin: 0;
+    }
+    .admin-mail-composer :global(.send) :global(p) {
+        max-width: none;
+        font-size: 13px;
+    }
+    @media (max-width: 800px) {
+        .admin-mail-composer {
+            width: calc(100dvw - 96px);
+        }
+    }
+
+    .admin-mail-composer :global(.toolbar) {
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        padding: 6px 8px;
+    }
+    .admin-mail-composer :global(.toolbar) :global(.actions) {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 2px;
+        min-width: 0;
+    }
+    .admin-mail-composer :global(.toolbar) :global(.admin-control[data-variant]) {
+        min-width: 30px;
+        width: 30px;
+        height: 30px;
+        min-height: 30px;
+        padding: 0;
+    }
+    @media (max-width: 800px) {
+        .admin-mail-composer :global(.inputs) {
+            flex-wrap: wrap;
+        }
+        .admin-mail-composer :global(.options) > :global(div) {
+            max-width: 100%;
         }
     }
 </style>

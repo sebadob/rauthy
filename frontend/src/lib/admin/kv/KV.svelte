@@ -1,4 +1,7 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import IconCircleStack from '#icons/IconCircleStack.svelte';
     import { onMount } from 'svelte';
     import { fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
@@ -93,7 +96,8 @@
     }
 </script>
 
-<NavSub width="min(16rem, 100dvw - .5rem)" buttonTilesAriaControls="kv" paddingTop="2.35rem">
+<NavSub width="min(16rem, 100dvw - .5rem)" buttonTilesAriaControls="kv">
+    <AdminListHeading title={'KV Store'} count={namespaces.length} />
     <ButtonAddModal
         bind:ref={refAddNew}
         level={namespaces.length === 0 ? 1 : 2}
@@ -148,7 +152,10 @@
 <ContentAdmin>
     <div id="kv" aria-label={ta.common.details}>
         {#if selected}
-            <div class="tabs">
+            <EntityHeader title={selected.name} subtitle="KV Store"
+                ><IconCircleStack width="28px" /></EntityHeader
+            >
+            <div class="admin-tabs-wrapper">
                 <Tabs tabs={ta.kv.tabs} bind:selected={tab} />
             </div>
 
@@ -193,7 +200,7 @@
         overflow-y: auto;
     }
 
-    .tabs {
+    .admin-tabs-wrapper {
         display: flex;
         margin-bottom: 0.5rem;
     }

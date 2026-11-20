@@ -123,9 +123,14 @@
     }
 </script>
 
-<div class="container">
+<div class="container admin-pagination">
     <div class="flex">
-        <Button onclick={goLeft} invisible isDisabled={page < 2}>
+        <Button
+            ariaLabel={t.pagination.gotoPagePrev}
+            onclick={goLeft}
+            invisible
+            isDisabled={page < 2}
+        >
             <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
                 <IconChevronRight width={iconSize} />
             </div>
@@ -137,7 +142,12 @@
             </li>
         </ul>
 
-        <Button onclick={goRight} invisible isDisabled={isLastPage}>
+        <Button
+            ariaLabel={t.pagination.gotoPageNext}
+            onclick={goRight}
+            invisible
+            isDisabled={isLastPage}
+        >
             <div
                 class="iconRight"
                 aria-label={t.pagination.gotoPageNext}
@@ -207,5 +217,55 @@
     .total {
         transform: translateY(0.05rem);
         text-wrap: nowrap;
+    }
+
+    :global(.admin-shell) .admin-pagination {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        flex-shrink: 0;
+        margin-top: 20px;
+        padding: 16px 0 0;
+        border-top: 1px solid var(--ui-outline);
+        font-size: 12px;
+    }
+    :global(.admin-shell) .admin-pagination > :global(.flex) {
+        gap: 4px;
+    }
+    :global(.admin-shell) .admin-pagination > :global(.flex:last-child) {
+        width: 100%;
+        justify-content: space-between;
+    }
+    :global(.admin-shell) .admin-pagination :global(nav),
+    :global(.admin-shell) .admin-pagination :global(ul),
+    :global(.admin-shell) .admin-pagination :global(.chunkSize) {
+        margin: 0;
+    }
+    :global(.admin-shell) .admin-pagination :global(.link) {
+        width: auto;
+        margin: 0;
+        padding: 0;
+        color: inherit;
+        font-size: 13px;
+        text-decoration: none;
+    }
+    :global(.admin-shell)
+        .admin-pagination
+        :global(li[aria-current='step'])
+        :global(.admin-control) {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
+    }
+    :global(.admin-shell) .admin-pagination :global(.total) {
+        font-size: 12px;
+        transform: none;
+    }
+    :global(.admin-shell) .admin-pagination :global(.admin-control[data-variant]) {
+        width: 32px;
+        min-width: 32px;
+        height: 32px;
+        min-height: 32px;
+        padding: 0;
+        border-radius: 50%;
     }
 </style>

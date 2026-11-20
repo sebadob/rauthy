@@ -183,7 +183,7 @@
     }
 </script>
 
-<h1>{user.name}</h1>
+<h2>{user.name}</h2>
 
 <Form action={url} {onSubmit}>
     <LabeledValue label="UID">
@@ -202,7 +202,7 @@
     <Input label="Shell" placeholder="Shell" required bind:value={user.shell} width="15rem" />
     <Input label="Home" placeholder="Home" required bind:value={user.home_dir} width="15rem" />
 
-    <h2>{ta.pam.groups}</h2>
+    <h3>{ta.pam.groups}</h3>
 
     <section class="groups">
         {#snippet snipGroups(header: string, groups: LinkedGroup[], withWheel: boolean = false)}
@@ -290,11 +290,11 @@
 </Form>
 
 <style>
-    h1 {
+    h2 {
         margin-top: 0;
     }
 
-    h2 {
+    h3 {
         font-size: 1.1rem;
     }
 

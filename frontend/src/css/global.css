@@ -428,3 +428,36 @@ pre {
         transform: scale(1);
     }
 }
+
+.admin-shell .font-label:not(.branding-preview *) {
+    font-family: inherit;
+}
+.admin-shell pre {
+    padding: 16px;
+    border-radius: var(--border-radius);
+}
+.admin-shell {
+    --ui-primary: hsl(var(--action));
+    --ui-on-primary: var(--btn-text);
+    --ui-text: hsl(var(--text-high));
+    --ui-muted: hsl(var(--text));
+    --ui-outline: hsl(var(--text) / 0.2);
+    --ui-tonal: hsl(var(--action) / 0.12);
+    --ui-hover: hsl(var(--text) / 0.07);
+    --ui-space: 1rem;
+    --ui-surface: hsl(var(--bg));
+    --ui-container: color-mix(in srgb, hsl(var(--bg)) 94%, hsl(var(--text)));
+}
+.admin-shell :is(a, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--accent));
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .admin-shell *:not(.branding-preview *),
+    .admin-shell *:not(.branding-preview *)::before,
+    .admin-shell *:not(.branding-preview *)::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

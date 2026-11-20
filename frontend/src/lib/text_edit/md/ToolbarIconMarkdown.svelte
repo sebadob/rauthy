@@ -155,7 +155,7 @@
 </script>
 
 <!-- a mousedown would move the focus to the button and drop the editor selection -->
-<Button invisible {onclick} onmousedown={(ev: MouseEvent) => ev.preventDefault()}>
+<Button ariaLabel={title} invisible {onclick} onmousedown={(ev: MouseEvent) => ev.preventDefault()}>
     <div {title}>
         {@render children()}
     </div>

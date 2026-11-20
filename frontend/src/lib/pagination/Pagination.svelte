@@ -45,7 +45,8 @@
             res.push(chunk);
         }
         itemsArr = res;
-        itemsPaginated = res[page - 1];
+        page = Math.max(1, Math.min(page, res.length || 1));
+        itemsPaginated = res[page - 1] || [];
     });
 
     $effect(() => {
@@ -71,22 +72,23 @@
 
     function calculate() {
         let links = [];
-        let countHalf = Math.floor(pageSize / 2);
+        const visiblePages = 5;
+        let countHalf = Math.floor(visiblePages / 2);
 
-        if (itemsArr.length <= pageSize) {
+        if (itemsArr.length <= visiblePages) {
             for (let i = 1; i <= itemsArr.length; i++) {
                 links.push(i);
             }
         } else if (page <= countHalf) {
-            for (let i = 1; i <= pageSize; i++) {
+            for (let i = 1; i <= visiblePages; i++) {
                 links.push(i);
             }
         } else if (page > itemsArr.length - countHalf - 1) {
-            for (let i = itemsArr.length - pageSize; i <= itemsArr.length - 1; i++) {
+            for (let i = itemsArr.length - visiblePages; i <= itemsArr.length - 1; i++) {
                 links.push(i + 1);
             }
         } else {
-            for (let i = page - countHalf; i < page - countHalf + pageSize; i++) {
+            for (let i = page - countHalf; i < page - countHalf + visiblePages; i++) {
                 links.push(i);
             }
         }
@@ -134,9 +136,14 @@
     </div>
 {/snippet}
 
-<div class="container">
+<div class="container admin-pagination">
     <div class="flex">
-        <Button onclick={goLeft} invisible isDisabled={page === 1}>
+        <Button
+            ariaLabel={t.pagination.gotoPagePrev}
+            onclick={goLeft}
+            invisible
+            isDisabled={page === 1}
+        >
             <div class="iconLeft" aria-label={t.pagination.gotoPagePrev} data-disabled={page === 1}>
                 <IconChevronRight width={iconSize} />
             </div>
@@ -144,7 +151,12 @@
 
         {@render links()}
 
-        <Button onclick={goRight} invisible isDisabled={page === itemsArr.length}>
+        <Button
+            ariaLabel={t.pagination.gotoPageNext}
+            onclick={goRight}
+            invisible
+            isDisabled={page >= itemsArr.length}
+        >
             <div
                 class="iconRight"
                 aria-label={t.pagination.gotoPageNext}
@@ -219,5 +231,55 @@
     .total {
         transform: translateY(0.05rem);
         text-wrap: nowrap;
+    }
+
+    :global(.admin-shell) .admin-pagination {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        flex-shrink: 0;
+        margin-top: 20px;
+        padding: 16px 0 0;
+        border-top: 1px solid var(--ui-outline);
+        font-size: 12px;
+    }
+    :global(.admin-shell) .admin-pagination > :global(.flex) {
+        gap: 4px;
+    }
+    :global(.admin-shell) .admin-pagination > :global(.flex:last-child) {
+        width: 100%;
+        justify-content: space-between;
+    }
+    :global(.admin-shell) .admin-pagination :global(nav),
+    :global(.admin-shell) .admin-pagination :global(ul),
+    :global(.admin-shell) .admin-pagination :global(.chunkSize) {
+        margin: 0;
+    }
+    :global(.admin-shell) .admin-pagination :global(.link) {
+        width: auto;
+        margin: 0;
+        padding: 0;
+        color: inherit;
+        font-size: 13px;
+        text-decoration: none;
+    }
+    :global(.admin-shell)
+        .admin-pagination
+        :global(li[aria-current='step'])
+        :global(.admin-control) {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
+    }
+    :global(.admin-shell) .admin-pagination :global(.total) {
+        font-size: 12px;
+        transform: none;
+    }
+    :global(.admin-shell) .admin-pagination :global(.admin-control[data-variant]) {
+        width: 32px;
+        min-width: 32px;
+        height: 32px;
+        min-height: 32px;
+        padding: 0;
+        border-radius: 50%;
     }
 </style>

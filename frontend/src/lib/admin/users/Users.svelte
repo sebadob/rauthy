@@ -1,4 +1,6 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { onMount } from 'svelte';
     import { fetchGet } from '#api/fetch.ts';
     import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
@@ -24,6 +26,8 @@
     import IconEnvelope from '#icons/IconEnvelope.svelte';
     import SendMail from '#lib/SendMail.svelte';
     import EmailJobs from '#lib/EmailJobs.svelte';
+
+    let ta = useI18nAdmin();
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -244,24 +248,20 @@
                 />
             </div>
             <div class="tile">
-                <div>
-                    {user.email}
+                <div class="admin-row-title">
+                    {[user.given_name, user.family_name].filter(Boolean).join(' ') || user.email}
                 </div>
-                <div class="muted">
-                    {user.given_name}
-                    {user.family_name}
-                </div>
+                <div class="muted">{user.email}</div>
             </div>
         </div>
     </NavButtonTile>
 {/snippet}
 
-<NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="users"
-    width="min(23rem, 100dvw)"
-    thresholdNavSub={700}
->
+<NavSub buttonTilesAriaControls="users">
+    <AdminListHeading
+        title={ta.nav.users}
+        count={useServerSide ? users.length : usersFiltered.length}
+    />
     <div class="topBtns">
         <SendMail {groups} {roles} />
         <EmailJobs />
@@ -359,5 +359,11 @@
         align-items: flex-start;
         line-height: 1rem;
         overflow-x: clip;
+    }
+
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 </style>

@@ -36,6 +36,7 @@ export let I18nAdminKo: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        settings: { general: '일반', tokens: '토큰', integrations: '통합' },
         allowedResources: '허용된 리소스',
         defaultAud: '기본 대상(Audience)',
         actorSameClient: 'Actor token from this client only',
@@ -136,6 +137,17 @@ export let I18nAdminKo: I18nAdmin = {
         },
     },
     common: {
+        preferences: '환경 설정',
+        profile: '프로필',
+        contactDetails: '연락처 정보',
+        access: '접근 권한',
+        activity: '활동',
+
+        compactNavigation: '간결한 탐색',
+        administration: '관리',
+        selectEntry: '항목 선택',
+        selectEntryHint: '목록에서 항목을 선택하여 세부 정보를 확인하고 관리하세요.',
+
         account: '계정',
         addNew: '생성',
         back: '뒤로',

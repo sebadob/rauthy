@@ -1,4 +1,6 @@
 <script lang="ts">
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import IconUserGroup from '#icons/IconUserGroup.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Tabs from '#lib/tabs/Tabs.svelte';
@@ -32,6 +34,10 @@
         }
     });
 </script>
+
+<EntityHeader title={group.name} subtitle={ta.nav.groups}
+    ><IconUserGroup width="28px" /></EntityHeader
+>
 
 <div class="flex">
     <Tabs {tabs} bind:selected bind:focusFirst />

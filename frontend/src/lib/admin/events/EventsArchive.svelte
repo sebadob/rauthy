@@ -17,10 +17,11 @@
     let tr = useTrigger();
     tr.set('navMain', () => refOpts?.focus());
 
+    let err = $state('');
     let events: EventResponse[] = $state([]);
     let eventsFiltered: EventResponse[] = $state([]);
 
-    let fromDate = $state(fmtDateInput());
+    let fromDate = $state(fmtDateInput(new Date(Date.now() - 86400000)));
     let fromTime = $state(fmtTimeInput());
     let untilDate: undefined | string = $state('');
     let untilTime = $state('--:--');
@@ -45,20 +46,27 @@
         } else if (searchOption === searchOptions[1]) {
             eventsFiltered = events.filter(
                 e =>
-                    e.typ?.toLowerCase().includes(search) || e.text?.toLowerCase().includes(search),
+                    e.typ?.toLowerCase().includes(search) ||
+                    e.typ
+                        ?.replace(/([a-z])([A-Z])/g, '$1 $2')
+                        .toLowerCase()
+                        .includes(search) ||
+                    e.text?.toLowerCase().includes(search),
             );
         }
     });
 
+    let latestRequest = 0;
+
     async function fetchData() {
+        const request = ++latestRequest;
         let from = unixTsFromLocalDateTime(fromDate, fromTime);
-        if (!from) {
-            console.error('from ts invalid', from);
-            return;
-        }
+        // A time field is temporarily incomplete while the user types.
+        if (!from) return;
         let until: undefined | number;
         if (untilDate && untilTime) {
             until = unixTsFromLocalDateTime(untilDate, untilTime);
+            if (!until) return;
         }
 
         let payload: EventsRequest = {
@@ -68,10 +76,12 @@
             typ: typ !== EVENT_TYPES[0] ? typ : undefined,
         };
         let res = await fetchPost<EventResponse[]>('/auth/v1/events', payload);
+        if (request !== latestRequest) return;
         if (res.body) {
+            err = '';
             events = res.body;
         } else {
-            console.error(res.error);
+            err = res.error?.message || 'Error';
         }
     }
 
@@ -91,51 +101,56 @@
 
 <ContentAdmin>
     <div id="archive">
-        <OrderSearchBar
-            bind:ref={refOpts}
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            firstDirReverse
-        />
-        <div class="row">
-            <InputDateTimeCombo
-                label={ta.common.from}
-                bind:value={fromDate}
-                bind:timeValue={fromTime}
-                withTime
+        <h2 class="admin-page-title">{ta.nav.events}</h2>
+        <div class="admin-event-filters">
+            <OrderSearchBar
+                bind:ref={refOpts}
+                {searchOptions}
+                bind:searchOption
+                bind:value={searchValue}
+                {orderOptions}
+                {onChangeOrder}
+                firstDirReverse
             />
-            <InputDateTimeCombo
-                label={ta.common.until}
-                bind:value={untilDate}
-                bind:timeValue={untilTime}
-                withTime
-                withDelete
-            />
-        </div>
-        <div class="filters">
-            <div class="level">
-                <Options
-                    ariaLabel={ta.events.eventLevel}
-                    options={EVENT_LEVELS}
-                    bind:value={level}
-                    borderless
+            <div class="row">
+                <InputDateTimeCombo
+                    label={ta.common.from}
+                    bind:value={fromDate}
+                    bind:timeValue={fromTime}
+                    withTime
+                />
+                <InputDateTimeCombo
+                    label={ta.common.until}
+                    bind:value={untilDate}
+                    bind:timeValue={untilTime}
+                    withTime
+                    withDelete
                 />
             </div>
-            <div class="typ">
-                <Options
-                    ariaLabel={ta.events.eventType}
-                    options={EVENT_TYPES}
-                    bind:value={typ}
-                    borderless
-                />
+            <div class="filters">
+                <div class="level">
+                    <span class="admin-field-caption">{ta.events.eventLevel}</span>
+                    <Options
+                        ariaLabel={ta.events.eventLevel}
+                        options={EVENT_LEVELS}
+                        bind:value={level}
+                        borderless
+                    />
+                </div>
+                <div class="typ">
+                    <span class="admin-field-caption">{ta.events.eventType}</span>
+                    <Options
+                        ariaLabel={ta.events.eventType}
+                        options={EVENT_TYPES}
+                        bind:value={typ}
+                        borderless
+                    />
+                </div>
             </div>
         </div>
-
+        {#if err}<div class="err">{err}</div>{/if}
         {#if eventsFiltered.length === 0}
-            <div class="row">No events found</div>
+            <div class="admin-list-empty">{ta.common.noEntries}</div>
         {:else}
             <div class="eventsList">
                 {#each eventsFiltered as event (event.id)}
@@ -182,5 +197,71 @@
 
     .typ {
         width: 11rem;
+    }
+
+    #archive {
+        max-width: 1100px;
+    }
+    .admin-event-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 12px 24px;
+        padding: 20px;
+        background: var(--ui-container);
+        border-radius: var(--border-radius);
+        margin-bottom: 24px;
+    }
+    .admin-event-filters > :global(.admin-list-tools) {
+        width: 100%;
+        max-width: none;
+    }
+    .admin-event-filters :global(.row) {
+        gap: 16px;
+    }
+    .admin-event-filters :global(.filters) {
+        height: auto;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .admin-event-filters :global(.level),
+    .admin-event-filters :global(.typ) {
+        width: auto;
+    }
+    .eventsList {
+        max-height: none;
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    @media (max-width: 800px) {
+        .admin-event-filters {
+            padding: 16px;
+        }
+        .admin-event-filters :global(.row) {
+            width: 100%;
+        }
+    }
+
+    .admin-event-filters :global(.admin-date-field) {
+        margin-bottom: 0;
+    }
+    .admin-event-filters :global(.inputs-wrapper) > :global(.delete) {
+        padding-bottom: 4px;
+    }
+    .admin-event-filters :global(.filters) {
+        align-items: flex-end;
+    }
+    .admin-event-filters :global(.admin-field-caption) {
+        margin-bottom: 6px;
+    }
+    @media (max-width: 800px) {
+        .admin-event-filters :global(.admin-date-field) {
+            width: 160px;
+        }
+        .admin-event-filters :global(.admin-time-field) {
+            width: 104px;
+        }
     }
 </style>

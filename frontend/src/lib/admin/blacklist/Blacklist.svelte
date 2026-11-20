@@ -129,7 +129,8 @@
 {err}
 
 <ContentAdmin>
-    <div class="top">
+    <h2 class="admin-page-title">{ta.nav.blacklist}</h2>
+    <div class="top admin-page-toolbar">
         <OrderSearchBar
             bind:ref={refOpts}
             bind:value={searchValue}
@@ -194,7 +195,11 @@
                         {formatDateFromTs(entry.exp)}
                     </div>
                     {#if isAdmin}
-                        <Button invisible onclick={() => deleteIp(entry.ip)}>
+                        <Button
+                            ariaLabel={`${t.common.delete}: ${entry.ip}`}
+                            invisible
+                            onclick={() => deleteIp(entry.ip)}
+                        >
                             <Tooltip text={t.common.delete}>
                                 <div class="delete">
                                     <IconStop width="1.25rem" />
@@ -281,5 +286,53 @@
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem 1rem;
+    }
+
+    .admin-page-toolbar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    .admin-page-toolbar > :global(.admin-list-tools) {
+        width: min(420px, 100%);
+    }
+    .admin-page-title {
+        margin: 0 0 24px;
+        font-size: 24px;
+        line-height: 32px;
+        color: var(--ui-text);
+    }
+    .blacklist {
+        max-height: none;
+    }
+    .blacklisted {
+        max-width: none;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        margin: 12px 0;
+        background: var(--ui-surface);
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+    }
+    .blacklisted:hover,
+    .blacklisted:hover :global(div) {
+        background: transparent;
+        color: var(--ui-text);
+    }
+    .blacklisted :global(.delete) {
+        height: auto;
+        display: flex;
+        align-items: center;
+        overflow: visible;
+    }
+    .blacklisted :global(.ip) {
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
 </style>

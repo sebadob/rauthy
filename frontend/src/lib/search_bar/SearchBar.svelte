@@ -83,7 +83,7 @@
 </script>
 
 <search
-    class="flex container"
+    class="flex container admin-search"
     style:border={borderless ? undefined : '1px solid hsl(var(--bg-high))'}
     style:width
 >
@@ -181,5 +181,53 @@
         background: hsl(var(--bg-high));
         border-right: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius) 0 0 var(--border-radius);
+    }
+
+    :global(.admin-shell) .admin-search:not(:global(.branding-preview *)) {
+        display: flex;
+        align-items: center;
+        width: 100% !important;
+        min-width: 0;
+        height: 44px;
+        margin: 0;
+        border: 1px solid var(--ui-outline) !important;
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        overflow: hidden;
+    }
+    :global(.admin-shell) .admin-search:focus-within:not(:global(.branding-preview *)) {
+        border-color: var(--ui-primary) !important;
+        outline: 2px solid hsl(var(--action) / 0.16);
+    }
+    :global(.admin-shell) .admin-search:not(:global(.branding-preview *)) :global(input) {
+        flex: 1;
+        border: 0;
+        outline: 0;
+        min-height: 42px;
+        padding: 10px 34px 10px 10px;
+        background: transparent;
+    }
+    :global(.admin-shell) .admin-search:not(:global(.branding-preview *)) :global(.options) {
+        margin: 0;
+        background: transparent;
+        border: 0;
+        border-right: 1px solid var(--ui-outline);
+        border-radius: 0;
+    }
+    :global(.admin-shell) .admin-search:not(:global(.branding-preview *)) :global(.btnDelete) {
+        right: 2px;
+        top: -18px;
+    }
+    :global(.admin-shell)
+        .admin-search:not(:global(.branding-preview *))
+        :global(.admin-select-trigger) {
+        padding: 0 10px;
+        font-size: 12px;
+    }
+    :global(.admin-shell) .admin-search :global(input[type='search']) {
+        border: 0 !important;
+        outline: 0;
+        border-radius: 0;
+        background: transparent;
     }
 </style>

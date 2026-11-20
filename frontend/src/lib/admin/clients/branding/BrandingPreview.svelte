@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { setContext } from 'svelte';
+    setContext('rauthy-admin-ui', false);
     import type { ThemeCss } from '#api/types/themes.ts';
     import Button from '#lib/button/Button.svelte';
     import Input from '#lib/form/Input.svelte';
@@ -38,6 +40,7 @@
 </script>
 
 <div
+    class="branding-preview"
     aria-label="Preview: All components inside are only for theme and colors preview and have no effect or interaction"
     style:--border-radius={borderRadius}
     style:--text={hslVar(theme.text)}

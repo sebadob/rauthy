@@ -36,6 +36,7 @@ export let I18nAdminJa: I18nAdmin = {
         size: 'サイズ',
     },
     clients: {
+        settings: { general: '一般', tokens: 'トークン', integrations: '連携' },
         allowedResources: '許可するリソース',
         defaultAud: '既定の Audience',
         actorSameClient: 'Actor token from this client only',
@@ -129,6 +130,17 @@ export let I18nAdminJa: I18nAdmin = {
         },
     },
     common: {
+        preferences: '環境設定',
+        profile: 'プロフィール',
+        contactDetails: '連絡先',
+        access: 'アクセス',
+        activity: 'アクティビティ',
+
+        compactNavigation: 'コンパクトナビゲーション',
+        administration: '管理',
+        selectEntry: '項目を選択してください',
+        selectEntryHint: '一覧から項目を選択すると、詳細の表示と管理ができます。',
+
         account: 'アカウント',
         addNew: '新規追加',
         back: '戻る',

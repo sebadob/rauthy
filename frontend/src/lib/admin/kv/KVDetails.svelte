@@ -276,7 +276,7 @@
 {@render error()}
 
 {#snippet renderEntry(entry: KVValueResponse)}
-    <div class="row">
+    <div class="row admin-kv-record">
         <div class="key">
             <div>
                 {entry.key}
@@ -308,7 +308,7 @@
     </div>
 {/snippet}
 
-<div class="values">
+<div class="values admin-kv-values">
     {#if valuesSearch.length > 0}
         {#each valuesSearch as entry (entry.key)}
             {@render renderEntry(entry)}
@@ -446,5 +446,33 @@
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         overflow: auto;
+    }
+
+    .admin-kv-values {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: none;
+        border: 0;
+        margin: 24px 0;
+        overflow: visible;
+    }
+    .admin-kv-record {
+        padding: 16px;
+        background: var(--ui-surface);
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+    }
+    .admin-kv-record :global(.key) {
+        gap: 16px;
+        font-size: 14px;
+    }
+    .admin-kv-record :global(.value) {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+        font-size: 12px;
+        overflow-wrap: anywhere;
     }
 </style>

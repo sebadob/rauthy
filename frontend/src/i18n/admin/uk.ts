@@ -39,6 +39,7 @@ export let I18nAdminUk: I18nAdmin = {
         size: 'Розмір',
     },
     clients: {
+        settings: { general: 'Загальні', tokens: 'Токени', integrations: 'Інтеграції' },
         allowedResources: 'Дозволені ресурси',
         defaultAud: 'Аудиторії за замовчуванням',
         actorSameClient: 'Actor token from this client only',
@@ -142,6 +143,17 @@ export let I18nAdminUk: I18nAdmin = {
         },
     },
     common: {
+        preferences: 'Налаштування',
+        profile: 'Профіль',
+        contactDetails: 'Контактні дані',
+        access: 'Доступ',
+        activity: 'Активність',
+
+        compactNavigation: 'Компактна навігація',
+        administration: 'Адміністрування',
+        selectEntry: 'Виберіть запис',
+        selectEntryHint: 'Виберіть елемент зі списку, щоб переглянути та змінити його дані.',
+
         account: 'Акаунт',
         addNew: 'Додати',
         back: 'Назад',

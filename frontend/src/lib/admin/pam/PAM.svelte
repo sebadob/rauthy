@@ -151,12 +151,7 @@
     }
 </script>
 
-<NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="scopes"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
->
+<NavSub buttonTilesAriaControls="scopes">
     <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
         {#if isUser}
             <PAMUserAdd onCreate={onCreateUser} />
@@ -308,5 +303,11 @@
 
     .typ {
         color: hsl(var(--accent));
+    }
+
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 </style>

@@ -135,7 +135,7 @@
     }
 </script>
 
-<div style:width>
+<div class="admin-input-field" style:width>
     <div aria-live="assertive" class="label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
@@ -200,5 +200,44 @@
         margin-top: -0.4rem;
         padding-left: 0.1rem;
         font-size: 0.8rem;
+    }
+
+    :global(.admin-shell) .admin-input-field:not(:global(.branding-preview *)) {
+        max-width: 100%;
+        margin-bottom: 16px;
+    }
+    :global(.admin-shell) .label:not(:global(.branding-preview *)) {
+        padding: 0;
+        margin: 0 0 6px;
+        line-height: 18px;
+    }
+    :global(.admin-shell)
+        input:where(
+            :not([type='checkbox']):not([type='hidden']):not([type='file']):not([type='range'])
+        ):not(:global(.branding-preview *)) {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        margin: 0;
+        padding: 11px 14px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        color: var(--ui-text);
+        font: inherit;
+        font-size: 14px;
+        line-height: 20px;
+        box-shadow: none;
+    }
+    :global(.admin-shell) input:not(:global(.branding-preview *))::placeholder {
+        color: hsl(var(--text) / 0.65);
+    }
+    :global(.admin-shell) input:focus:not(:global(.branding-preview *)) {
+        outline: 2px solid var(--ui-primary);
+        outline-offset: -1px;
+    }
+    :global(.admin-shell) input.invalid:not(:global(.branding-preview *)) {
+        border-color: hsl(var(--error));
     }
 </style>

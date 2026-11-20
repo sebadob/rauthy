@@ -128,7 +128,7 @@
     }
 </script>
 
-<div role="none" class="container" onclick={focus} style:width>
+<div role="none" class="container admin-tags-field" onclick={focus} style:width>
     <ul style:max-height={maxHeightList}>
         {#each values as value}
             <li class="value">
@@ -136,7 +136,11 @@
                     {value}
                 </div>
                 <div class="btnClose">
-                    <Button invisible onclick={() => deleteValue(value)}>
+                    <Button
+                        ariaLabel={`${t.common.delete}: ${value}`}
+                        invisible
+                        onclick={() => deleteValue(value)}
+                    >
                         <IconStop width="1.2rem" />
                     </Button>
                 </div>
@@ -247,5 +251,50 @@
 
     .value {
         background: hsla(var(--accent) / 0.2);
+    }
+
+    :global(.admin-shell) .admin-tags-field {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        margin: 16px 0;
+    }
+    :global(.admin-shell) .admin-tags-field > :global(label) {
+        order: -1;
+        margin: 0 0 6px;
+    }
+    :global(.admin-shell) .admin-tags-field > :global(ul) {
+        min-height: 44px;
+        padding: 6px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        gap: 6px;
+        overflow-y: auto;
+    }
+    :global(.admin-shell) .admin-tags-field :global(li) {
+        padding: 0;
+        align-items: center;
+    }
+    :global(.admin-shell) .admin-tags-field :global(li.value) {
+        padding-left: 10px;
+        background: var(--ui-tonal);
+        border-radius: var(--border-radius);
+        font-size: 12px;
+    }
+    :global(.admin-shell) .admin-tags-field :global(li) :global(.label) {
+        margin: 0;
+    }
+    :global(.admin-shell) .admin-tags-field :global(.btnClose) {
+        margin: 0;
+    }
+    :global(.admin-shell) .admin-tags-field :global(input) {
+        min-height: 30px;
+        padding: 3px 8px;
+        border: 0 !important;
+        outline: 0;
+        background: transparent;
     }
 </style>
