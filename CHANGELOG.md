@@ -124,6 +124,32 @@ password_reset_redirect_timeout = 5
 
 [#1722](https://github.com/sebadob/rauthy/issues/1722)
 
+#### Post Reset Redirect
+
+The redirect after a successful password reset via a magic link, and after the initial setup of a
+new account, always ended on Rauthy's account dashboard, unless the magic link was created with its
+own `redirect_uri`, which a client can provide during a registration or a reset request.
+
+You now have a new config variable to set a custom fallback if not specific overwrite was given.
+
+```toml
+[user_registration]
+# The default redirect target for a browser after a user has
+# successfully reset their password via a magic link, or completed
+# the initial setup of a new account. Can be a relative path, like
+# '/auth/v1/account', or a full URL to your own application.
+#
+# Only used when the magic link itself did not carry a
+# 'redirect_uri'. Such a 'redirect_uri' always has priority. When
+# this is not set, no 'Location' header is returned, and the
+# frontend redirects to the account dashboard.
+#
+# overwritten by: USER_REG_POST_RESET_REDIRECT_URI
+post_reset_redirect_uri = 'https://example.com'
+```
+
+[#1899](https://github.com/sebadob/rauthy/issues/1899)
+
 #### Opt-in Bootstrap Reconcile
 
 The bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` can be re-applied on

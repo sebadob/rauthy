@@ -603,9 +603,9 @@ node_id = 1
 # default: ["1 localhost:8100 localhost:8200"]
 # overwritten by: HQL_NODES
 nodes = [
-    "1 localhost:8100 localhost:8200",
-    #    "2 localhost:8101 localhost:8201",
-    #    "3 localhost:8102 localhost:8202",
+  "1 localhost:8100 localhost:8200",
+  #    "2 localhost:8101 localhost:8201",
+  #    "3 localhost:8102 localhost:8202",
 ]
 
 # The data dir hiqlite will store raft logs and state machine data in.
@@ -2294,11 +2294,40 @@ MQDILpWyHgPraBRtIGgwgpKsuPwVkKlZ8J+WtcWJxBVSerIK2B0dgAzCF+iCKWcY
 # Languages for all user-facing pages.
 # Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['cs', 'de', 'en', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = [
+  'cs',
+  'de',
+  'en',
+  'es',
+  'fr',
+  'ja',
+  'ko',
+  'nb',
+  'nl',
+  'pl',
+  'pt',
+  'ru',
+  'uk',
+  'zhhans',
+]
 # Languages for the Admin UI.
 # Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_admin = [
+  'en',
+  'cs',
+  'de',
+  'es',
+  'fr',
+  'ja',
+  'ko',
+  'nb',
+  'nl',
+  'pt',
+  'ru',
+  'uk',
+  'zhhans',
+]
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -3121,6 +3150,21 @@ enable = true
 # default: false
 # overwritten by: USER_REG_OPEN_REDIRECT
 #allow_open_redirect = false
+
+# The default redirect target for a browser after a user has successfully reset
+# their password via a magic link, or completed the initial setup of a new
+# account. It can be a relative path, like '/auth/v1/account', or a full URL to
+# your own application.
+#
+# Only used when the magic link itself did not carry a 'redirect_uri', which can
+# be set during a user registration, or with a password reset request from a
+# client. Such a 'redirect_uri' always has priority.
+#
+# If this is not set, no 'Location' header will be returned, and the frontend
+# redirects to the account dashboard, which keeps the current behavior.
+#
+# overwritten by: USER_REG_POST_RESET_REDIRECT_URI
+#post_reset_redirect_uri = 'https://example.com'
 
 [user_values]
 # In this section, you can configure the requirements for different

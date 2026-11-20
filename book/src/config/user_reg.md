@@ -187,6 +187,40 @@ do so:
 allow_open_redirect = false
 ```
 
+### Post Reset Redirect
+
+The redirect hint above belongs to a single registration and to the magic link that was created for
+it. For every other magic link, like a plain _Password forgotten?_ request, there is a global
+default for where the browser ends up after a user has reset their password, or completed the
+initial setup of a new account:
+
+```toml
+[user_registration]
+# The default redirect target for a browser after a user has successfully reset
+# their password via a magic link, or completed the initial setup of a new
+# account. It can be a relative path, like '/auth/v1/account', or a full URL to
+# your own application.
+#
+# Only used when the magic link itself did not carry a 'redirect_uri', which can
+# be set during a user registration, or with a password reset request from a
+# client. Such a 'redirect_uri' always has priority.
+#
+# If this is not set, no 'Location' header will be returned, and the frontend
+# redirects to the account dashboard, which keeps the current behavior.
+#
+# overwritten by: USER_REG_POST_RESET_REDIRECT_URI
+#post_reset_redirect_uri = 'https://example.com'
+```
+
+The `redirect_uri` of a magic link always wins over this value, and if neither is set, nothing
+changes compared to the current behavior.
+
+```admonish note
+The `redirect_uri` of a client is validated against the registered `client_uri`s, unless
+`allow_open_redirect` is `true`. This config value is set by an admin, and therefore trusted, so
+it is not validated.
+```
+
 ### Custom Frontend
 
 Depending on your application, you may want to create your own frontend for the registration. For
