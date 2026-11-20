@@ -1,6 +1,3 @@
-//! Email templates are selected separately from the UI locale. Italian uses the English
-//! templates until an Italian email catalog and its template configuration are available.
-
 pub mod change_info_new;
 pub mod change_info_old;
 pub mod confirm_change;

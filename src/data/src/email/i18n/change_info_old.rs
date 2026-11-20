@@ -17,9 +17,10 @@ impl I18nEmailChangeInfoOld<'_> {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
-            Language::En | Language::It => Self::build_en(),
+            Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_en(),
@@ -127,6 +128,18 @@ impl I18nEmailChangeInfoOld<'_> {
             validity: "出于安全考虑，此链接仅在短时间内有效。",
             expires: "链接过期时间：",
             button_text: "阻止地址更改",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "Richiesta di cambio indirizzo email",
+            header: "Richiesta di cambio indirizzo email per",
+            change_info: "È stato richiesto un cambio del tuo indirizzo email. Nuovo indirizzo:",
+            click_link: "Se non hai richiesto questa modifica, apri il link qui sotto.",
+            validity: "Per motivi di sicurezza, il link è valido solo per un breve periodo.",
+            expires: "Il link scade il:",
+            button_text: "Blocca il cambio di indirizzo",
         }
     }
 

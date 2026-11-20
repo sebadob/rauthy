@@ -40,9 +40,10 @@ fn email_ts_prettify_with(
     let fmt_str = match lang {
         Language::Cs => config.cs.as_ref(),
         Language::De => config.de.as_ref(),
-        Language::En | Language::It => config.en.as_ref(),
+        Language::En => config.en.as_ref(),
         Language::Es => config.es.as_ref(),
         Language::Fr => config.fr.as_ref(),
+        Language::It => config.it.as_ref(),
         Language::Ja => config.ja.as_ref(),
         Language::Ko => config.ko.as_ref(),
         Language::Nb => config.no.as_ref(),
@@ -64,23 +65,7 @@ mod tests {
 
     #[test]
     fn test_email_ts_prettify() {
-        let config = VarsEmailTzFmt {
-            cs: "%-d. %-m. %Y %T (%Z)".into(),
-            de: "%d.%m.%Y %T (%Z)".into(),
-            en: "%m/%d/%Y %T (%Z)".into(),
-            es: "%d/%m/%Y %T (%Z)".into(),
-            fr: "%d/%m/%Y %T (%Z)".into(),
-            ja: "%Y/%m/%d %T (%Z)".into(),
-            ko: "%Y-%m-%d %T (%Z)".into(),
-            nl: "%d-%m-%Y %T (%Z)".into(),
-            no: "%d.%m.%Y %T (%Z)".into(),
-            pl: "%d.%m.%Y %T (%Z)".into(),
-            pt: "%d/%m/%Y %T (%Z)".into(),
-            ru: "%d.%m.%Y %T (%Z)".into(),
-            uk: "%d.%m.%Y %T (%Z)".into(),
-            zhhans: "%d-%m-%Y %T (%Z)".into(),
-            tz_fallback: "UTC".into(),
-        };
+        let config = crate::rauthy_config::Vars::default().email.tz_fmt;
 
         let now = Utc
             .with_ymd_and_hms(2000, 10, 20, 13, 23, 33)
@@ -90,7 +75,9 @@ mod tests {
         let p = email_ts_prettify_with(&config, now, &Language::En, None);
         assert_eq!(&p, "10/20/2000 13:23:33 (UTC)");
         let p = email_ts_prettify_with(&config, now, &Language::It, None);
-        assert_eq!(&p, "10/20/2000 13:23:33 (UTC)");
+        assert_eq!(&p, "20/10/2000 13:23:33 (UTC)");
+        let p = email_ts_prettify_with(&config, now, &Language::It, Some("Europe/Rome"));
+        assert_eq!(&p, "20/10/2000 15:23:33 (CEST)");
         let p = email_ts_prettify_with(&config, now, &Language::En, Some("Europe/Berlin"));
         assert_eq!(&p, "10/20/2000 15:23:33 (CEST)");
 

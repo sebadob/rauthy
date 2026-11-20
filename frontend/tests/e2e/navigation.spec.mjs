@@ -10,9 +10,11 @@ import {
     createTestUser,
     deleteTestUser,
     loginToAccount,
+    nowSecs,
     pollDeviceToken,
     startDeviceAuthorization,
 } from './helpers/account.mjs';
+import { firstRauthyLink, waitForMail } from './helpers/mail.mjs';
 
 // Every admin section reachable from the main navigation, with the landing path it must open.
 // Some sections append their own query, e.g. the KV store selects its default namespace.
@@ -272,12 +274,31 @@ test.describe('admin navigation', () => {
         await expect(page.getByRole('link', { name: 'Users', exact: true })).toBeVisible();
     });
 
-    test('stores Italian and sends the English setup email', async ({ page }) => {
+    test('stores Italian and sends localized setup and password reset emails', async ({ page }) => {
         await page.goto('/auth/v1/admin/users');
-        // createTestUser completes password setup via the English New Password email.
+        const since = nowSecs();
         const user = await createTestUser(page, { language: 'it' });
         try {
             expect(await api(page, 'GET', `users/${user.id}`)).toMatchObject({ language: 'it' });
+            const setup = await waitForMail(page.request, {
+                to: user.email,
+                subject: /Nuova password$/,
+                since,
+            });
+            expect(setup.html).toContain('<html lang="it">');
+            expect(setup.text).toContain('impostare la password');
+
+            await page.goto(`/auth/v1/admin/users?uid=${user.id}`);
+            await page.getByRole('button', { name: 'Password', exact: true }).click();
+            await page.getByRole('button', { name: 'Send Reset E-Mail' }).click();
+            const reset = await waitForMail(page.request, {
+                to: user.email,
+                subject: /Richiesta di reimpostazione della password$/,
+                since,
+            });
+            expect(reset.html).toContain('<html lang="it">');
+            expect(reset.text).toMatch(/Il link scade il:\s*\d{2}\/\d{2}\/\d{4}/);
+            expect(new URL(firstRauthyLink(reset)).pathname).toContain(`/users/${user.id}/reset/`);
         } finally {
             await deleteTestUser(page, user.id);
         }

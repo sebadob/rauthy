@@ -57,12 +57,19 @@ export async function createTestUser(adminPage, opts = {}) {
     if (password) {
         // `PUT /users/{id}` cannot set it: it always rejects the request while the preferred
         // username is configured as required (see the report). The magic link of the
-        // "New Password" mail sets it instead, with plain HTTP.
+        // setup mail sets it instead, with plain HTTP.
         const request = await playwrightRequest.newContext({
             baseURL: new URL(adminPage.url()).origin,
         });
         try {
-            await setPasswordFromNewUserMail(request, user.id, email, since, password);
+            await setPasswordFromNewUserMail(
+                request,
+                user.id,
+                email,
+                since,
+                password,
+                opts.language,
+            );
         } finally {
             await request.dispose();
         }
@@ -89,15 +96,24 @@ export function readTemplate(html, id) {
 }
 
 /**
- * Sets the first password through the magic link of the "New Password" mail.
+ * Sets the first password through the magic link in the account setup mail.
  * @param {import('@playwright/test').APIRequestContext} request
  * @param {string} userId
  * @param {string} email
  * @param {number} since
  * @param {string} password
+ * @param {'en' | 'it'} [language]
  */
-export async function setPasswordFromNewUserMail(request, userId, email, since, password) {
-    const mail = await waitForMail(request, { to: email, subject: /New Password/, since });
+export async function setPasswordFromNewUserMail(
+    request,
+    userId,
+    email,
+    since,
+    password,
+    language = 'en',
+) {
+    const subject = language === 'it' ? /Nuova password$/ : /New Password$/;
+    const mail = await waitForMail(request, { to: email, subject, since });
     const html = await (await request.get(firstRauthyLink(mail))).text();
     const tpl = JSON.parse(readTemplate(html, 'tpl_password_reset'));
     const res = await request.put(`/auth/v1/users/${userId}/reset`, {

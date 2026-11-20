@@ -15,9 +15,10 @@ impl I18nEmailResetInfo<'_> {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
-            Language::En | Language::It => Self::build_en(),
+            Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
@@ -79,6 +80,16 @@ impl I18nEmailResetInfo<'_> {
             expires_2: "est sur le point d'expirer :",
             update: "Vous pouvez le mettre à jour ici :",
             button_text: "Mettre à jour le mot de passe",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "La password sta per scadere",
+            expires_1: "La tua password per",
+            expires_2: "scadrà a breve:",
+            update: "Puoi cambiarla qui:",
+            button_text: "Cambia password",
         }
     }
 

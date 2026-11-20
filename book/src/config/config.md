@@ -1526,6 +1526,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_IT
+#it = '%d/%m/%Y %T (%Z)'
 # default: '%Y/%m/%d %T (%Z)'
 # overwritten by: TZ_FMT_JA
 #ja = '%Y/%m/%d %T (%Z)'
@@ -2863,7 +2866,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de es fr ja ko nb nl pl pt ru uk zh_hans
+# one of: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset
