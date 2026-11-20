@@ -13,6 +13,14 @@ async fn test_get_ping() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_get_ready() -> Result<(), Box<dyn Error>> {
+    let url = format!("{}/ready", get_backend_url());
+    let res = reqwest::get(&url).await?;
+    assert_eq!(res.status(), 200);
+    Ok(())
+}
+
 // Re-defined and copy & pasted here to be able to get rid of lots of
 // memory allocations in prod, because `Deserialize` will not work with
 // `'static` lifetimes.
