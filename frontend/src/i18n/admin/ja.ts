@@ -255,6 +255,10 @@ export let I18nAdminJa: I18nAdmin = {
     groups: {
         delete1: 'このグループを削除してもよろしいですか？',
         name: 'グループの名前',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'アルゴリズム',
@@ -408,6 +412,10 @@ export let I18nAdminJa: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code> ロールは変更できません。',
         delete1: 'このロールを削除してもよろしいですか？',
         name: 'ロールの名前',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Claim を Token の最上位に出力する',

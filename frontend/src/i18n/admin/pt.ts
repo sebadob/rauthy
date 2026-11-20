@@ -298,6 +298,10 @@ export let I18nAdminPt: I18nAdmin = {
     groups: {
         delete1: 'Tem a certeza de que pretende eliminar este grupo?',
         name: 'Nome do grupo',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritmo',
@@ -471,6 +475,10 @@ export let I18nAdminPt: I18nAdmin = {
         adminNoMod: 'A função <code>rauthy_admin</code> não pode ser alterada.',
         delete1: 'Tem a certeza de que pretende eliminar esta função?',
         name: 'Nome da função',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emitir claims na raiz do token',

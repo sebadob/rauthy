@@ -2,7 +2,7 @@ use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::groups::GroupRequest;
-use rauthy_api_types::users::{NewUserRequest, UserResponse};
+use rauthy_api_types::users::{NewUserRequest, UserResponse, UserResponseSimple};
 use rauthy_data::entity::groups::Group;
 use std::error::Error;
 
@@ -57,6 +57,19 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
     let user = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user.groups, Some(vec!["My Group 123".to_string()]));
 
+    // the group's member list must contain exactly that user
+    let url_members = format!("{}/groups/{}/users", backend_url, group.id);
+    let res = reqwest::Client::new()
+        .get(&url_members)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let members = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(
+        members.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(),
+        vec![user.id.as_str()],
+    );
+
     // modify the group
     let upd_group = GroupRequest {
         group: "group456".to_string(),
@@ -81,6 +94,68 @@ async fn test_groups() -> Result<(), Box<dyn Error>> {
         .await?;
     let user = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user.groups, Some(vec!["group456".to_string()]));
+
+    // the member list follows the renamed group
+    let res = reqwest::Client::new()
+        .get(url_members.clone())
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let members = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(
+        members.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(),
+        vec![user.id.as_str()],
+    );
+
+    // the member list must not contain users that are only a member of a group whose name
+    // contains this one as a substring
+    let res = reqwest::Client::new()
+        .post(&url)
+        .headers(auth_headers.clone())
+        .json(&GroupRequest {
+            group: "group45".to_string(),
+            meta: None,
+        })
+        .send()
+        .await?;
+    let sub_group = expect_status_json!(res, 200, Group);
+    let res = reqwest::Client::new()
+        .get(format!("{}/groups/{}/users", backend_url, sub_group.id))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let members = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert!(
+        members.is_empty(),
+        "a substring must not match a group member"
+    );
+
+    // the sub-group is not needed anymore
+    let res = reqwest::Client::new()
+        .delete(format!("{}/{}", url, sub_group.id))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 200);
+
+    // removing the user from the group via the same PATCH op the Admin UI sends empties the list
+    let res = reqwest::Client::new()
+        .patch(format!("{}/users/{}", backend_url, user.id))
+        .headers(auth_headers.clone())
+        .json(&serde_json::json!({
+            "put": [],
+            "del": ["groups"],
+        }))
+        .send()
+        .await?;
+    expect_status!(res, 200);
+    let res = reqwest::Client::new()
+        .get(&url_members)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let members = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert!(members.is_empty());
 
     let res = reqwest::Client::new()
         .delete(&url_user)

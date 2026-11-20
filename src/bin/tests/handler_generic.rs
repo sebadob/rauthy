@@ -1,6 +1,7 @@
-use crate::common::{get_backend_url, get_issuer};
+use crate::common::{get_auth_headers, get_backend_url, get_issuer};
 use pretty_assertions::assert_eq;
 use serde::Deserialize;
+use serde_json::Value;
 use std::error::Error;
 
 mod common;
@@ -157,6 +158,27 @@ async fn test_backup_download_is_complete() -> Result<(), Box<dyn Error>> {
         assert_eq!(Some(bytes.len() as u64), listing.size);
         assert!(bytes.starts_with(b"SQLite format 3\0"));
     }
+
+    Ok(())
+}
+
+/// The session search idx is `ILIKE` on Postgres and `LIKE` on SQLite, both case-insensitive, and
+/// the admin session of `get_auth_headers` always talks to the local backend.
+#[tokio::test]
+async fn test_search_sessions_by_ip() -> Result<(), Box<dyn Error>> {
+    let auth_headers = get_auth_headers().await?;
+    let url = format!("{}/search?ty=session&idx=ip&q=127.0.0.1", get_backend_url());
+
+    let res = reqwest::Client::new()
+        .get(&url)
+        .headers(auth_headers)
+        .send()
+        .await?;
+    let sessions = expect_status_json!(res, 200, Vec<Value>);
+    assert!(
+        !sessions.is_empty(),
+        "the admin session must be found by IP"
+    );
 
     Ok(())
 }

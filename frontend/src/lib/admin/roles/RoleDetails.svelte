@@ -5,6 +5,7 @@
     import type { RoleResponse } from '#api/types/roles.ts';
     import RoleConfig from '#lib/admin/roles/RoleConfig.svelte';
     import RoleDelete from '#lib/admin/roles/RoleDelete.svelte';
+    import RoleUsers from '#lib/admin/roles/RoleUsers.svelte';
 
     let {
         role,
@@ -19,7 +20,7 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const tabs = [ta.nav.config, t.common.delete];
+    const tabs = [ta.nav.config, ta.nav.users, t.common.delete];
     let selected = $state(tabs[0]);
 
     let focusFirst: undefined | (() => void) = $state();
@@ -39,6 +40,8 @@
 
 {#if selected === ta.nav.config}
     <RoleConfig {role} {roles} {onSave} />
+{:else if selected === ta.nav.users}
+    <RoleUsers {role} />
 {:else if selected === t.common.delete}
     <RoleDelete {role} {onSave} />
 {/if}

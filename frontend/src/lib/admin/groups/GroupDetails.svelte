@@ -5,6 +5,7 @@
     import type { GroupResponse } from '#api/types/groups.ts';
     import GroupConfig from '#lib/admin/groups/GroupConfig.svelte';
     import GroupDelete from '#lib/admin/groups/GroupDelete.svelte';
+    import GroupUsers from './GroupUsers.svelte';
 
     let {
         group,
@@ -19,7 +20,7 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const tabs = [ta.nav.config, t.common.delete];
+    const tabs = [ta.nav.config, ta.nav.users, t.common.delete];
     let selected = $state(tabs[0]);
 
     let focusFirst: undefined | (() => void) = $state();
@@ -39,6 +40,8 @@
 
 {#if selected === ta.nav.config}
     <GroupConfig {group} {groups} {onSave} />
+{:else if selected === ta.nav.users}
+    <GroupUsers {group} />
 {:else if selected === t.common.delete}
     <GroupDelete {group} {onSave} />
 {/if}

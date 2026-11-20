@@ -64,11 +64,6 @@ never used Forward Auth.
 
 ### Changes
 
-#### Added I18n: Czech
-
-Czech (`cs`) translations are now available for the UI (common and admin) and for e-mails. The
-e-mail date format can be set with `email.tz_fmt.cs` (`TZ_FMT_CS`).
-
 #### Token Exchange keeps the delegation chain of the `subject_token`
 
 The Token Exchange now keeps the `act` of the `subject_token` as well, like it already does for the
@@ -258,14 +253,31 @@ max_connections = 1000
 
 [#1851](https://github.com/sebadob/rauthy/issues/1851)
 
+#### Search Users by Name and Username in the Admin UI
+
+The Users page in the Admin UI can search `given_name` / `family_name` and `preferred_username` in
+addition to the existing E-Mail and ID. Server-side searches are case-insensitive, and the `q`
+validation accepts names from any script.
+
+#### Users of a Group / Role in the Admin UI
+
+The _Groups_ and _Roles_ views of the Admin UI have a new _Users_ tab that lists every user that
+is assigned to the selected group / role.
+
+#### Added I18n: Czech
+
+Czech (`cs`) translations are now available for the UI (common and admin) and for e-mails. The
+e-mail date format can be set with `email.tz_fmt.cs` (`TZ_FMT_CS`).
+
+[#1904](https://github.com/sebadob/rauthy/pull/1904)
+
 #### Externally Provisioned Client Secrets
 
 `PUT /clients/{id}/secret` accepts an optional `secret` in its payload. When given, this value is
-stored (encrypted with the active `ENC_KEY`) instead of generating a new random secret. This makes
-continuous declarative provisioning of clients against a running instance possible, which the
-bootstrap `Plain` secret cannot do, since the bootstrap only runs on an empty database. When
-`secret` is not given, the behavior is unchanged and a new random secret is generated, so existing
-callers (like the Admin UI) are not affected.
+stored instead of generating a new random secret. This makes continuous declarative provisioning of
+clients against a running instance possible, which the bootstrap `Plain` secret cannot do, since the
+bootstrap only runs on an empty database. When `secret` is not given, the behavior is unchanged and
+a new random secret is generated, so existing callers (like the Admin UI) are not affected.
 
 #### Open Native Apps after MFA Login
 
@@ -282,6 +294,8 @@ authorization code. Http(s) redirects are unchanged and remain automatic.
 
 When the same user is deleted by two requests at the same time, the one that loses the race now
 gets a `404` instead of succeeding a second time.
+
+[#1931](https://github.com/sebadob/rauthy/pull/1931)
 
 #### UI Sesison Keep-Alive
 
@@ -313,6 +327,9 @@ of reloading its own document on every load.
 - An invalid `lifetimes.jwk_autorotate_cron` or `geo.maxmind_update_cron`, or one without a future
   occurrence, made its scheduler silently die after boot. Rauthy now refuses to start instead.
   [#1857](https://github.com/sebadob/rauthy/pull/1857)
+- A bug in the JWKS cleanup scheduler always kept the oldest instead of the latest JWK for each
+  alg, and then cleaned up all others that were older than 90 days.
+  [#1927](https://github.com/sebadob/rauthy/pull/1927)
 - A login page that sat open longer than the session timeout answered every login attempt with
   _Invalid credentials_, even though the entered email and password were never looked at, because
   its own session had expired. A `401` for a login request without any session now answers with the

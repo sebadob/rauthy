@@ -4,15 +4,20 @@
     import { untrack } from 'svelte';
     import Button from '#lib/button/Button.svelte';
     import Options from '#lib/Options.svelte';
-    import type { PageSize } from '#lib/pagination/props.ts';
+    import {
+        loadPageSize,
+        PAGE_SIZE_OPTIONS,
+        savePageSize,
+        type PageSize,
+    } from '#lib/pagination/props.ts';
 
-    const options: PageSize[] = [5, 10, 20, 30, 50, 100];
+    const options: PageSize[] = PAGE_SIZE_OPTIONS;
 
     let {
         items = $bindable(),
         itemsPaginated = $bindable(),
         page = $bindable(1),
-        pageSize = $bindable(options[2]),
+        pageSize = $bindable(loadPageSize()),
         compact = false,
     }: {
         items: any[];
@@ -36,6 +41,8 @@
             pageSizeBefore = untrack(() => pageSize);
             page = 1;
         }
+        // remember the chosen count for every pagination in the Admin UI
+        savePageSize(pageSize);
     });
 
     $effect(() => {

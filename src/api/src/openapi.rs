@@ -108,6 +108,7 @@ use utoipa::{OpenApi, openapi};
         generic::get_whoami,
 
         groups::get_groups,
+        groups::get_group_users,
         groups::post_group,
         groups::put_group,
         groups::delete_group,
@@ -181,6 +182,7 @@ use utoipa::{OpenApi, openapi};
         oidc::get_well_known,
 
         roles::get_roles,
+        roles::get_role_users,
         roles::post_role,
         roles::put_role,
         roles::delete_role,

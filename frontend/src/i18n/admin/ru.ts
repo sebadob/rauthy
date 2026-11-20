@@ -294,6 +294,10 @@ export let I18nAdminRu: I18nAdmin = {
     groups: {
         delete1: 'Вы уверены, что хотите удалить эту группу?',
         name: 'Имя группы',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Алгоритм',
@@ -465,6 +469,10 @@ export let I18nAdminRu: I18nAdmin = {
         adminNoMod: 'Роль <code>rauthy_admin</code> является неизменяемой.',
         delete1: 'Вы уверены, что хотите удалить эту роль?',
         name: 'Имя роли',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
