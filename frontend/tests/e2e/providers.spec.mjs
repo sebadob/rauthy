@@ -707,7 +707,7 @@ test.describe('delete provider', () => {
 test.describe('providers on a phone', () => {
     test.use({ allowErrors: [NO_LOGO] });
 
-    test('open, edit and delete a provider @mobile', async ({ page }) => {
+    test('open, edit and delete a provider @mobile', async ({ page, isMobile }) => {
         await page.goto(PAGE);
         const p = await api(page, 'POST', 'providers/create', customPayload(unique('E2E Mob')));
         try {
@@ -715,6 +715,15 @@ test.describe('providers on a phone', () => {
             await openEntry(page, p.name);
             const main = page.getByRole('main');
             await expect(field(main, 'Client Name')).toHaveValue(p.name);
+            if (isMobile) {
+                const toggle = await main
+                    .locator('.btnCollapsed')
+                    .getByRole('button')
+                    .boundingBox();
+                const detail = await main.locator('.admin-detail').boundingBox();
+                if (!toggle || !detail) throw new Error('Missing provider list toggle or detail');
+                expect(detail.y).toBeGreaterThanOrEqual(toggle.y + toggle.height);
+            }
             await field(main, 'Client ID').fill('mobile-client');
             await saveButton(page).click();
             await expect

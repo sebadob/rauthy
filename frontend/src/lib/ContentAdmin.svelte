@@ -98,4 +98,12 @@
             padding: 48px 16px 24px;
         }
     }
+
+    @media (width < 700px) {
+        :global(.navSub) + .admin-detail {
+            /* Keep the list toggle outside the detail's scroll area. */
+            margin-top: 48px;
+            padding-top: 0;
+        }
+    }
 </style>
