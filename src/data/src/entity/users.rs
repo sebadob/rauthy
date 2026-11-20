@@ -284,15 +284,11 @@ LIMIT $3"#;
 
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
-
-        let idx = format!("{IDX_USERS}_{user_id}");
-        client.delete(Cache::User, idx).await?;
-
-        let idx = format!("{IDX_USERS}_{email}");
-        client.delete(Cache::User, idx).await?;
-
-        Ok(())
+        DB::cache_delete_delayed([
+            (Cache::User, Some(format!("{IDX_USERS}_{user_id}"))),
+            (Cache::User, Some(format!("{IDX_USERS}_{email}"))),
+        ])
+        .await
     }
 
     pub async fn count() -> Result<i64, ErrorResponse> {
@@ -1462,12 +1458,15 @@ RETURNING email, email_verified, enabled"#;
     /// too, if it differs: the email before a change, or the stored one a write returned, which
     /// a concurrent update may have changed.
     async fn invalidate_cache_also(&self, other_email: Option<&str>) -> Result<(), ErrorResponse> {
-        Self::invalidate_cache(&self.id, &self.email).await?;
-        if let Some(email) = other_email.filter(|email| *email != self.email) {
-            let idx = format!("{IDX_USERS}_{email}");
-            DB::hql().delete(Cache::User, idx).await?;
+        let id = self.id.as_str();
+        let email = self.email.as_str();
+        let mut keys: Vec<String> =
+            vec![format!("{IDX_USERS}_{id}"), format!("{IDX_USERS}_{email}")];
+        if let Some(other) = other_email.filter(|other| *other != email) {
+            keys.push(format!("{IDX_USERS}_{other}"));
         }
-        Ok(())
+
+        DB::cache_delete_delayed(keys.into_iter().map(|key| (Cache::User, Some(key)))).await
     }
 
     /// Caution: Uses regex / LIKE on the database -> very costly query

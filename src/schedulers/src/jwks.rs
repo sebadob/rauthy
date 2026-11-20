@@ -98,6 +98,7 @@ pub async fn jwks_cleanup() {
         // finally, delete all expired JWKs
         let count = to_delete.len();
         let sql = "DELETE FROM jwks WHERE kid = $1";
+        let mut deleted_kids: Vec<String> = Vec::with_capacity(count);
         for kid in to_delete {
             let cache_idx = format!("{IDX_JWK_KID}{kid}");
 
@@ -111,9 +112,14 @@ pub async fn jwks_cleanup() {
                 continue;
             }
 
-            if let Err(err) = DB::hql().delete(Cache::App, cache_idx).await {
-                error!(?err, "deleting JWK from cache");
-            }
+            deleted_kids.push(cache_idx);
+        }
+
+        let cache_entries = deleted_kids
+            .into_iter()
+            .map(|cache_idx| (Cache::App, Some(cache_idx)));
+        if let Err(err) = DB::cache_delete_delayed(cache_entries).await {
+            error!(?err, "deleting JWKs from cache");
         }
         if count > 0 {
             info!("Cleaned up old JWKs: {count}");

@@ -254,7 +254,7 @@ VALUES
             .await?;
         };
 
-        Self::invalidate_cache_all().await?;
+        Self::invalidate_cache_all(None).await?;
 
         DB::hql()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
@@ -343,8 +343,7 @@ VALUES
             DB::pg_execute(sql, &[&id]).await?;
         }
 
-        Self::invalidate_cache_all().await?;
-        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
+        Self::invalidate_cache_all(Some(id)).await?;
 
         Ok(())
     }
@@ -424,7 +423,7 @@ WHERE id = $21"#;
             .await?;
         }
 
-        Self::invalidate_cache_all().await?;
+        Self::invalidate_cache_all(None).await?;
         DB::hql()
             .put(Cache::App, Self::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
@@ -480,8 +479,20 @@ impl AuthProvider {
         })
     }
 
-    async fn invalidate_cache_all() -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, Self::cache_idx("all")).await?;
+    /// Invalidates every auth providers cache, plus the config of `affected_id`, and rebuilds
+    /// the template. The template rebuild must stay after the delay, it is what makes the
+    /// fresh template win over a fill that raced with this write.
+    async fn invalidate_cache_all(affected_id: Option<&str>) -> Result<(), ErrorResponse> {
+        let affected = affected_id
+            .map(|id| (Cache::App, Some(Cow::from(Self::cache_idx(id)))))
+            .into_iter();
+        let cache_entries = [
+            (Cache::App, Some(Cow::from(Self::cache_idx("all")))),
+            (Cache::App, Some(Cow::from(IDX_AUTH_PROVIDER_TEMPLATE))),
+        ]
+        .into_iter()
+        .chain(affected);
+        DB::cache_delete_delayed(cache_entries).await?;
 
         // We don't really need to clean all HTML caches, but rebuilding all of them
         // is a lot easier to maintain and auth providers are not updated often anyway.
@@ -489,7 +500,7 @@ impl AuthProvider {
 
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
-        AuthProviderTemplate::update_cache().await?;
+        AuthProviderTemplate::get_all_json_template().await?;
 
         Ok(())
     }
@@ -966,10 +977,8 @@ impl AuthProviderTemplate {
     }
 
     async fn invalidate_cache() -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
+        DB::cache_delete_delayed([(Cache::App, Some(Cow::from(IDX_AUTH_PROVIDER_TEMPLATE)))])
             .await?;
-
         Ok(())
     }
 

@@ -21,6 +21,7 @@ use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
 use rsa::traits::PublicKeyParts;
 use rsa::{BigUint, sha2};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
@@ -239,41 +240,26 @@ impl JWKS {
         };
         entity.save().await?;
 
-        // clear all latest_jwk from cache
-        let client = DB::hql();
-        client
-            .delete(
+        // clear all latest_jwk from cache, plus the all_certs / JWKS cache
+        //
+        // The explicit `Cow<'static, str>` is what pins the keys to `'static`, which the
+        // `jwks_auto_rotate` scheduler task needs for its spawned future.
+        let mut cache_entries: Vec<(Cache, Option<Cow<'static, str>>)> = Vec::with_capacity(6);
+        cache_entries.push((Cache::App, Some(Cow::Borrowed(IDX_JWKS))));
+        for alg in [
+            JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512,
+            JwkKeyPairAlg::EdDSA,
+            JwkKeyPairAlg::Ed25519,
+        ] {
+            let alg = alg.as_str();
+            cache_entries.push((
                 Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS256.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS384.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS512.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::EdDSA.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::Ed25519.as_str()),
-            )
-            .await?;
-
-        // clear the all_certs / JWKS cache
-        client.delete(Cache::App, IDX_JWKS).await?;
+                Some(Cow::Owned(format!("{IDX_JWK_LATEST}{alg}"))),
+            ));
+        }
+        DB::cache_delete_delayed(cache_entries).await?;
 
         info!("Finished JWKS rotation");
 
