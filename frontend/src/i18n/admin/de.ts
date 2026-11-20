@@ -50,6 +50,7 @@ export let I18nAdminDe: I18nAdmin = {
         backchannelLogout:
             'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
         branding: {
+            title: 'Erscheinungsbild',
             theme: 'Design',
             light: 'Helles Design',
             dark: 'Dunkles Design',
@@ -163,6 +164,7 @@ export let I18nAdminDe: I18nAdmin = {
         },
     },
     common: {
+        about: 'Über Rauthy',
         date: 'Datum',
         time: 'Uhrzeit',
         preferences: 'Einstellungen',
@@ -326,6 +328,10 @@ export let I18nAdminDe: I18nAdmin = {
             Danach muss ein Logout und neuer Login folgen`,
     },
     events: {
+        searchContent: 'Inhalt',
+        timestamp: 'Zeitstempel',
+        level: 'Stufe',
+        type: 'Typ',
         allLevels: 'Alle Stufen',
         sendTest: 'Testereignis senden',
         eventLevel: 'Event Level',
@@ -347,6 +353,7 @@ export let I18nAdminDe: I18nAdmin = {
         rotateKeys: 'Keys Rotieren',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `Der Access Key muss im <code>Authorization</code> header als 
             <code>Bearer</code> token angegeben werden. Der folgende <code>curl</code> Befehl kann
             zum Testen genutzt werden.`,
@@ -385,6 +392,7 @@ export let I18nAdminDe: I18nAdmin = {
         value: 'JSON Wert',
     },
     nav: {
+        kvStore: 'KV-Speicher',
         apiKeys: 'API Keys',
         attributes: 'Attribute',
         blacklist: 'Blacklist',

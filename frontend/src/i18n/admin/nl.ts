@@ -50,6 +50,7 @@ export let I18nAdminNl: I18nAdmin = {
         backchannelLogout:
             'Als deze client {{ OIDC_BCL }} ondersteunt, kunt u de URI hier opgeven.',
         branding: {
+            title: 'Vormgeving',
             theme: 'Thema',
             light: 'Licht thema',
             dark: 'Donker thema',
@@ -157,6 +158,7 @@ export let I18nAdminNl: I18nAdmin = {
         },
     },
     common: {
+        about: 'Over Rauthy',
         date: 'Datum',
         time: 'Tijd',
         preferences: 'Voorkeuren',
@@ -319,6 +321,10 @@ export let I18nAdminNl: I18nAdmin = {
             Daarna moet u uitloggen en opnieuw inloggen.`,
     },
     events: {
+        searchContent: 'Inhoud',
+        timestamp: 'Tijdstempel',
+        level: 'Niveau',
+        type: 'Type',
         allLevels: 'Alle niveaus',
         sendTest: 'Testgebeurtenis sturen',
         eventLevel: 'Gebeurtenisniveau',
@@ -341,6 +347,7 @@ export let I18nAdminNl: I18nAdmin = {
         rotateKeys: 'Sleutels roteren',
     },
     kv: {
+        limit: 'Limiet',
         accessTestDesc: `De toegangssleutel moet worden opgegeven in de <code>Authorization</code>-header als
             <code>Bearer</code>-token. De volgende <code>curl</code>-opdracht kan worden gebruikt voor testen.`,
         addNewKey: 'Nieuwe toegangssleutel',
@@ -377,6 +384,7 @@ export let I18nAdminNl: I18nAdmin = {
         value: 'JSON-waarde',
     },
     nav: {
+        kvStore: 'KV-opslag',
         apiKeys: 'API-sleutels',
         attributes: 'Attributen',
         blacklist: 'Zwarte lijst',

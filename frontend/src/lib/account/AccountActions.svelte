@@ -9,10 +9,12 @@
     let {
         compact = false,
         admin = false,
+        adminLabel,
         showAdminLink = false,
     }: {
         compact?: boolean;
         admin?: boolean;
+        adminLabel?: string;
         showAdminLink?: boolean;
     } = $props();
 
@@ -27,7 +29,7 @@
                 {#if admin}<IconUserCircle width="1.125rem" />{:else}
                     <IconUserGroup width="1.125rem" />
                 {/if}
-                {#if !compact}{label}{/if}
+                {#if !compact}{adminLabel ?? label}{/if}
             </a>
         </Tooltip>
     {/if}

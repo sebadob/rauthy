@@ -50,6 +50,7 @@ export let I18nAdminRu: I18nAdmin = {
         backchannelLogout:
             'Если этот клиент поддерживает {{ OIDC_BCL }}, вы можете указать URI здесь.',
         branding: {
+            title: 'Оформление',
             theme: 'Тема',
             light: 'Светлая тема',
             dark: 'Тёмная тема',
@@ -155,6 +156,7 @@ export let I18nAdminRu: I18nAdmin = {
         },
     },
     common: {
+        about: 'О программе',
         date: 'Дата',
         time: 'Время',
         preferences: 'Настройки',
@@ -312,6 +314,10 @@ export let I18nAdminRu: I18nAdmin = {
             После этого необходимо выйти и войти снова.`,
     },
     events: {
+        searchContent: 'Содержимое',
+        timestamp: 'Дата и время',
+        level: 'Уровень',
+        type: 'Тип',
         allLevels: 'Все уровни',
         sendTest: 'Отправить тестовое событие',
         eventLevel: 'Уровень события',
@@ -334,6 +340,7 @@ export let I18nAdminRu: I18nAdmin = {
         rotateKeys: 'Ротировать ключи',
     },
     kv: {
+        limit: 'Лимит',
         accessTestDesc: `Ключ доступа должен быть передан в заголовке <code>Authorization</code> как
             токен <code>Bearer</code>. Для тестирования можно использовать следующую команду
             <code>curl</code>.`,
@@ -372,6 +379,7 @@ export let I18nAdminRu: I18nAdmin = {
         value: 'JSON-значение',
     },
     nav: {
+        kvStore: 'Хранилище KV',
         apiKeys: 'API-ключи',
         attributes: 'Атрибуты',
         blacklist: 'Чёрный список',

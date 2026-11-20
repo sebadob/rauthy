@@ -5,6 +5,8 @@
     import LangSelector from '#lib/LangSelector.svelte';
     import { page } from '$app/state';
     import AppVersion from '../AppVersion.svelte';
+    import Popover from '#lib/Popover.svelte';
+    import IconInfo from '#icons/IconInfo.svelte';
     import RauthyLogo from '#lib/RauthyLogo.svelte';
     import NavLink from '#lib/nav/NavLink.svelte';
     import AccountActions from '#lib/account/AccountActions.svelte';
@@ -163,7 +165,7 @@
                             {#snippet icon(width: string)}
                                 <IconCircleStack {width} />
                             {/snippet}
-                            KV Store
+                            {ta.nav.kvStore}
                         </NavLink>
 
                         <NavLink
@@ -191,10 +193,16 @@
 
         {#if !collapsed}
             <div class="bottom">
-                <AccountActions admin {compact} />
+                <AccountActions admin adminLabel={ta.common.account} {compact} />
                 <div class="admin-preference-controls">
                     <ThemeSwitch /><LangSelector openTop borderless uppercase />
-                    {#if !compact}<div class="version"><AppVersion /></div>{/if}
+                    <Popover ariaLabel={ta.common.about} btnInvisible anchored lazy>
+                        {#snippet button()}<IconInfo width="1.125rem" />{/snippet}
+                        <div class="about">
+                            <strong>{ta.common.about}</strong>
+                            <AppVersion />
+                        </div>
+                    </Popover>
                 </div>
             </div>
         {/if}
@@ -293,12 +301,8 @@
         overflow-y: auto;
     }
 
-    .version {
-        margin: 0 0 -0.5rem -0.5rem;
-    }
-
     #mainNav {
-        width: 224px;
+        width: 12.25rem;
         flex-shrink: 0;
         border: 0;
         background: transparent;
@@ -309,7 +313,7 @@
         background: transparent;
     }
     #mainNav .logo {
-        height: 60px;
+        height: var(--admin-header-height);
         flex-shrink: 0;
         justify-content: center;
         gap: 12px;
@@ -332,7 +336,7 @@
     }
     #mainNav .menu {
         gap: 2px;
-        padding: 8px 0;
+        padding: 0 0 0.5rem;
         max-height: none;
         overflow: visible;
     }
@@ -340,7 +344,7 @@
         display: flex;
         align-items: center;
         min-height: 34px;
-        padding: 0 16px;
+        padding: 0 12px;
         border: 0;
         border-radius: var(--border-radius);
         color: var(--ui-muted);
@@ -386,12 +390,19 @@
         gap: 0;
         justify-content: space-between;
     }
-    #mainNav .version {
-        margin: 0 0 0 auto;
-        font-size: 10px;
-        color: var(--ui-muted);
-        opacity: 0.7;
+    .about {
+        display: grid;
+        gap: 0.375rem;
+        min-width: 10rem;
+        padding: 0.75rem;
+        color: var(--ui-text);
     }
+
+    .about :global(.ver) {
+        margin: 0;
+        white-space: nowrap;
+    }
+
     #mainNav[data-compact='true'] {
         width: 84px;
     }
@@ -425,6 +436,22 @@
             background: var(--ui-surface);
         }
 
+        #mainNav .logo {
+            justify-content: flex-start;
+            gap: 6px;
+            padding-inline: 4px 38px;
+        }
+
+        .brand-name {
+            min-width: 0;
+        }
+
+        .brand-name :global(span) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .admin-drawer-close {
             display: block;
         }
@@ -437,16 +464,23 @@
 
     #mainNav[data-compact='true'] .admin-preference-controls {
         justify-content: center;
+        margin-inline: -6px;
+        --ui-button-padding: 0;
+        --ui-option-button-border: 0;
+        --ui-option-padding: 0;
     }
 
-    #mainNav[data-compact='true'] .admin-preference-controls :global(.admin-control) {
-        min-width: 32px;
+    #mainNav[data-compact='true'] .admin-preference-controls :global(> div > .admin-control),
+    #mainNav[data-compact='true'] .admin-preference-controls :global(> div > div > .admin-control) {
+        min-width: 24px;
+    }
+
+    #mainNav[data-compact='true'] .admin-preference-controls :global(.admin-select-trigger) {
+        gap: 2px;
+        border: 0;
     }
 
     @media (height < 850px) {
-        #mainNav[data-compact='true'] .logo {
-            height: 48px;
-        }
         #mainNav[data-compact='true'] .menu > :global(a) {
             min-height: 35px;
             padding-block: 2px;
@@ -459,6 +493,7 @@
     .admin-drawer-close {
         position: absolute;
         right: 0;
-        top: 12px;
+        top: 50%;
+        transform: translateY(-50%);
     }
 </style>

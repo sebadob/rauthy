@@ -46,6 +46,7 @@ export let I18nAdminCs: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Pokud tento klient podporuje {{ OIDC_BCL }}, zadejte sem jeho URI.',
         branding: {
+            title: 'Vzhled',
             theme: 'Motiv',
             light: 'Světlý motiv',
             dark: 'Tmavý motiv',
@@ -151,6 +152,7 @@ export let I18nAdminCs: I18nAdmin = {
         },
     },
     common: {
+        about: 'O aplikaci',
         date: 'Datum',
         time: 'Čas',
         preferences: 'Předvolby',
@@ -306,6 +308,10 @@ export let I18nAdminCs: I18nAdmin = {
             Pak se odhlaste a znovu přihlaste.`,
     },
     events: {
+        searchContent: 'Obsah',
+        timestamp: 'Čas',
+        level: 'Úroveň',
+        type: 'Typ',
         allLevels: 'Všechny úrovně',
         sendTest: 'Odeslat testovací událost',
         eventLevel: 'Úroveň události',
@@ -328,6 +334,7 @@ export let I18nAdminCs: I18nAdmin = {
         rotateKeys: 'Vyměnit klíče',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `Klíč k úložišti se zadává v hlavičce <code>Authorization</code> jako
             token <code>Bearer</code>. K vyzkoušení můžete použít následující příkaz
             <code>curl</code>.`,
@@ -365,6 +372,7 @@ export let I18nAdminCs: I18nAdmin = {
         value: 'Hodnota JSON',
     },
     nav: {
+        kvStore: 'Úložiště KV',
         apiKeys: 'API klíče',
         attributes: 'Atributy',
         blacklist: 'Blokované adresy',

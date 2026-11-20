@@ -42,6 +42,7 @@ export interface I18nAdmin {
         settings: { general: string; tokens: string; integrations: string };
         backchannelLogout: string;
         branding: {
+            title: string;
             theme: string;
             light: string;
             dark: string;
@@ -129,6 +130,7 @@ export interface I18nAdmin {
         };
     };
     common: {
+        about: string;
         date: string;
         time: string;
         preferences: string;
@@ -262,6 +264,10 @@ export interface I18nAdmin {
         noAdmin: string;
     };
     events: {
+        searchContent: string;
+        timestamp: string;
+        level: string;
+        type: string;
         allLevels: string;
         sendTest: string;
         eventLevel: string;
@@ -280,6 +286,7 @@ export interface I18nAdmin {
         rotateKeys: string;
     };
     kv: {
+        limit: string;
         // inserted as HTML
         accessTestDesc: string;
         addNewKey: string;
@@ -315,6 +322,7 @@ export interface I18nAdmin {
         value: string;
     };
     nav: {
+        kvStore: string;
         apiKeys: string;
         attributes: string;
         blacklist: string;

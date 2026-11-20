@@ -40,7 +40,7 @@ fn email_ts_prettify_with(
     let fmt_str = match lang {
         Language::Cs => config.cs.as_ref(),
         Language::De => config.de.as_ref(),
-        Language::En => config.en.as_ref(),
+        Language::En | Language::It => config.en.as_ref(),
         Language::Es => config.es.as_ref(),
         Language::Fr => config.fr.as_ref(),
         Language::Ja => config.ja.as_ref(),

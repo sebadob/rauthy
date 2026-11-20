@@ -41,6 +41,7 @@ pub enum Language {
     En,
     Es,
     Fr,
+    It,
     Ja,
     Ko,
     Nb,

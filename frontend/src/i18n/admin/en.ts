@@ -46,6 +46,7 @@ export let I18nAdminEn: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            title: 'Branding',
             theme: 'Theme',
             light: 'Light Theme',
             dark: 'Dark Theme',
@@ -151,6 +152,7 @@ export let I18nAdminEn: I18nAdmin = {
         },
     },
     common: {
+        about: 'About',
         date: 'Date',
         time: 'Time',
         preferences: 'Preferences',
@@ -307,6 +309,10 @@ export let I18nAdminEn: I18nAdmin = {
             Afterward, you need to do a logout and log back in.`,
     },
     events: {
+        searchContent: 'Content',
+        timestamp: 'Timestamp',
+        level: 'Level',
+        type: 'Type',
         allLevels: 'All levels',
         sendTest: 'Send test event',
         eventLevel: 'Event Level',
@@ -329,6 +335,7 @@ export let I18nAdminEn: I18nAdmin = {
         rotateKeys: 'Rotate Keys',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -366,6 +373,7 @@ export let I18nAdminEn: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV Store',
         apiKeys: 'API Keys',
         attributes: 'Attributes',
         blacklist: 'Blacklist',

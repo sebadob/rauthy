@@ -46,6 +46,7 @@ export let I18nAdminZh: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
+            title: '外观',
             theme: '主题',
             light: '浅色主题',
             dark: '深色主题',
@@ -148,6 +149,7 @@ export let I18nAdminZh: I18nAdmin = {
         },
     },
     common: {
+        about: '关于',
         date: '日期',
         time: '时间',
         preferences: '偏好设置',
@@ -296,6 +298,10 @@ export let I18nAdminZh: I18nAdmin = {
             之后，您需要注销并重新登录。`,
     },
     events: {
+        searchContent: '内容',
+        timestamp: '时间戳',
+        level: '级别',
+        type: '类型',
         allLevels: '所有级别',
         sendTest: '发送测试事件',
         eventLevel: '事件级别',
@@ -317,6 +323,7 @@ export let I18nAdminZh: I18nAdmin = {
         rotateKeys: '轮换密钥',
     },
     kv: {
+        limit: '上限',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -354,6 +361,7 @@ export let I18nAdminZh: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV 存储',
         apiKeys: 'API密钥',
         attributes: '属性',
         blacklist: '黑名单',

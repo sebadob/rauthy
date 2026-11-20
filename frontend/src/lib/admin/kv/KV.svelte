@@ -152,7 +152,7 @@
 <ContentAdmin>
     <div id="kv" aria-label={ta.common.details}>
         {#if selected}
-            <EntityHeader title={selected.name} subtitle="KV Store">
+            <EntityHeader title={selected.name} subtitle={ta.nav.kvStore}>
                 {#snippet actions()}
                     {#if selected}
                         {#key selected.name}

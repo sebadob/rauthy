@@ -29,7 +29,7 @@
         t.authorize.login,
         ta.clients.settings.tokens,
         ta.clients.settings.integrations,
-        'Branding',
+        ta.clients.branding.title,
     ];
     let selected = $state(tabs[0]);
     let section = $derived(tabs.indexOf(selected));
@@ -63,7 +63,7 @@
             bind:section={() => section, value => (selected = tabs[value])}
         />
     </div>
-    {#if selected === 'Branding'}
+    {#if selected === ta.clients.branding.title}
         <ClientBranding {client} />
     {/if}
 </div>

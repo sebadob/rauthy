@@ -2250,13 +2250,17 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans',
+]
 # Languages for the Admin UI.
-# Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_admin = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans',
+]
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh

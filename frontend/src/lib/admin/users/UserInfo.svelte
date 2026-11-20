@@ -491,8 +491,8 @@
                         typ="email"
                         bind:value={email}
                         autocomplete="off"
-                        label="E-Mail"
-                        placeholder="E-Mail"
+                        label={t.common.email}
+                        placeholder={t.common.email}
                         required
                     />
 

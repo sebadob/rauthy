@@ -16,6 +16,7 @@ pub enum Language {
     En,
     Es,
     Fr,
+    It,
     Ja,
     Ko,
     Nb,
@@ -28,11 +29,11 @@ pub enum Language {
 }
 
 impl Language {
-    pub fn all_available() -> [&'static str; 29] {
+    pub fn all_available() -> [&'static str; 31] {
         [
-            "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja",
-            "ja-JP", "ko", "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pl", "pl-PL", "pt",
-            "pt-PT", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
+            "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "it",
+            "it-IT", "ja", "ja-JP", "ko", "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pl",
+            "pl-PL", "pt", "pt-PT", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
         ]
     }
 
@@ -44,6 +45,7 @@ impl Language {
             Language::En => "en",
             Language::Es => "es",
             Language::Fr => "fr",
+            Language::It => "it",
             Language::Ja => "ja",
             Language::Ko => "ko",
             Language::Nb => "nb",
@@ -68,6 +70,7 @@ impl Language {
             Language::En => "en-US",
             Language::Es => "es-ES",
             Language::Fr => "fr-FR",
+            Language::It => "it-IT",
             Language::Ja => "ja-JP",
             Language::Ko => "ko-KR",
             Language::Nb => "nb-NO",
@@ -116,6 +119,7 @@ impl From<&str> for Language {
             "de" | "de-DE" => Self::De,
             "es" | "es-ES" => Self::Es,
             "fr" | "fr-FR" => Self::Fr,
+            "it" | "it-IT" => Self::It,
             "ja" | "ja-JP" => Self::Ja,
             "ko" | "ko-KR" => Self::Ko,
             "nb" | "nb-NO" | "no-NO" => Self::Nb,
@@ -166,6 +170,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
             rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::Es => Self::Es,
             rauthy_api_types::generic::Language::Fr => Self::Fr,
+            rauthy_api_types::generic::Language::It => Self::It,
             rauthy_api_types::generic::Language::Ja => Self::Ja,
             rauthy_api_types::generic::Language::Ko => Self::Ko,
             rauthy_api_types::generic::Language::Nb => Self::Nb,
@@ -187,6 +192,7 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::En => Self::En,
             Language::Es => Self::Es,
             Language::Fr => Self::Fr,
+            Language::It => Self::It,
             Language::Ja => Self::Ja,
             Language::Ko => Self::Ko,
             Language::Nb => Self::Nb,

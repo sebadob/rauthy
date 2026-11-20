@@ -48,6 +48,7 @@ export let I18nAdminUk: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
+            title: 'Оформлення',
             theme: 'Тема',
             light: 'Світла тема',
             dark: 'Темна тема',
@@ -153,6 +154,7 @@ export let I18nAdminUk: I18nAdmin = {
         },
     },
     common: {
+        about: 'Про Rauthy',
         date: 'Дата',
         time: 'Час',
         preferences: 'Налаштування',
@@ -314,6 +316,10 @@ export let I18nAdminUk: I18nAdmin = {
             Після цього вам потрібно вийти і увійти знову.`,
     },
     events: {
+        searchContent: 'Вміст',
+        timestamp: 'Дата й час',
+        level: 'Рівень',
+        type: 'Тип',
         allLevels: 'Усі рівні',
         sendTest: 'Надіслати тестову подію',
         eventLevel: 'Рівень події',
@@ -336,6 +342,7 @@ export let I18nAdminUk: I18nAdmin = {
         rotateKeys: 'Ротувати ключі',
     },
     kv: {
+        limit: 'Ліміт',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -373,6 +380,7 @@ export let I18nAdminUk: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'Сховище KV',
         apiKeys: 'API Ключі',
         attributes: 'Атрибути',
         blacklist: 'Чорний список',

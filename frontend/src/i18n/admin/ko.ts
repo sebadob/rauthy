@@ -45,6 +45,7 @@ export let I18nAdminKo: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            title: '디자인',
             theme: '테마',
             light: '라이트 테마',
             dark: '다크 테마',
@@ -147,6 +148,7 @@ export let I18nAdminKo: I18nAdmin = {
         },
     },
     common: {
+        about: '정보',
         date: '날짜',
         time: '시간',
         preferences: '환경 설정',
@@ -298,6 +300,10 @@ export let I18nAdminKo: I18nAdmin = {
             활성화 후에는 로그아웃한 뒤 다시 로그인해야 합니다.`,
     },
     events: {
+        searchContent: '내용',
+        timestamp: '시각',
+        level: '수준',
+        type: '유형',
         allLevels: '모든 수준',
         sendTest: '테스트 이벤트 보내기',
         eventLevel: '이벤트 레벨',
@@ -319,6 +325,7 @@ export let I18nAdminKo: I18nAdmin = {
         rotateKeys: '키 회전',
     },
     kv: {
+        limit: '한도',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -356,6 +363,7 @@ export let I18nAdminKo: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV 저장소',
         apiKeys: 'API 키',
         attributes: '속성',
         blacklist: '블랙리스트',

@@ -112,7 +112,7 @@
             blacklist: ta.nav.blacklist,
             api_keys: ta.nav.apiKeys,
             providers: ta.nav.providers,
-            kv: 'KV Store',
+            kv: ta.nav.kvStore,
             config: ta.nav.config,
             docs: ta.nav.docs,
         };
@@ -190,6 +190,7 @@
     }
 
     .admin-shell {
+        --admin-header-height: 4rem;
         display: flex;
         width: 100%;
         height: 100dvh;
@@ -208,8 +209,8 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        height: 80px;
-        min-height: 80px;
+        height: var(--admin-header-height);
+        min-height: var(--admin-header-height);
         padding: 0 28px 0 12px;
     }
     .admin-location {
@@ -261,10 +262,6 @@
         min-width: 0;
     }
     @media (width < 800px) {
-        .admin-header {
-            height: 72px;
-            min-height: 72px;
-        }
         .admin-location > span {
             display: none;
         }

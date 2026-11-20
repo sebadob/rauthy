@@ -36,10 +36,10 @@
     let minimumLevel = $derived(EVENT_LEVELS.find(level => levels.includes(level)));
     let typ: EventType = $state(EVENT_TYPES[0] as EventType);
 
-    let searchOptions = ['IP', 'Content'];
+    let searchOptions = ['IP', ta.events.searchContent];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
-    let orderOptions = ['Timestamp', 'Level', 'Type'];
+    let orderOptions = [ta.events.timestamp, ta.events.level, ta.events.type];
 
     $effect(() => {
         fetchData();

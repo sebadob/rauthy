@@ -12,6 +12,7 @@
     import { PATTERN_KV_KEY } from '#utils/patterns.ts';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import { slide } from 'svelte/transition';
+    import { tick } from 'svelte';
     import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
     import IconKey from '#icons/IconKey.svelte';
     import IconEdit from '#icons/IconEdit.svelte';
@@ -63,7 +64,7 @@
 
     $effect(() => {
         if (refInput) {
-            requestAnimationFrame(() => {
+            tick().then(() => {
                 refInput?.focus();
             });
         }
@@ -71,7 +72,7 @@
 
     $effect(() => {
         if (refArea) {
-            requestAnimationFrame(() => {
+            tick().then(() => {
                 refArea?.focus();
             });
         }
@@ -195,7 +196,14 @@
 {/snippet}
 
 <div class="btnsLim">
-    <Input typ="number" bind:value={limit} label="Limit" min="1" max="4294967295" width="7rem" />
+    <Input
+        typ="number"
+        bind:value={limit}
+        label={ta.kv.limit}
+        min="1"
+        max="4294967295"
+        width="7rem"
+    />
     <div class="btns">
         <Button level={2} onclick={fetchAll}>{ta.kv.loadAllValues}</Button>
         <Button onclick={() => (showModalAdd = true)}>{ta.kv.addNewValue}</Button>

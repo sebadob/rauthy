@@ -72,6 +72,54 @@ test.describe('admin navigation', () => {
         await expect(main.getByRole('button', { name: 'Logout', exact: true })).toBeVisible();
     });
 
+    test('aligns the admin header with the sidebar and shows the version in About', async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 1440, height: 768 });
+        await page.goto('/auth/v1/admin/users');
+        await expect(page.getByRole('heading', { name: 'Users', level: 1 })).toBeVisible();
+        const positions = await page.evaluate(() => {
+            const rect = (/** @type {string} */ selector) =>
+                /** @type {Element} */ (document.querySelector(selector)).getBoundingClientRect();
+            return {
+                header: rect('.admin-header').bottom,
+                logo: rect('#mainNav .logo').bottom,
+                workspace: rect('.admin-workspace').top,
+                users: rect('#mainNav a[href*="/admin/users"]').top,
+            };
+        });
+        expect(positions.header).toBe(positions.logo);
+        expect(positions.workspace).toBe(positions.users);
+        const nav = page.locator('#mainNav');
+        await expect(nav.getByText(/^v\d+\./)).toHaveCount(0);
+        await nav.getByRole('button', { name: 'About' }).click();
+        await expect(nav.getByText(/^v\d+\./)).toBeVisible();
+        await page.keyboard.press('Escape');
+        await page.setViewportSize({ width: 960, height: 768 });
+        await expect(nav).toHaveAttribute('data-compact', 'true');
+        await expect(nav.getByRole('link', { name: 'Docs', exact: true })).toBeInViewport({
+            ratio: 1,
+        });
+    });
+
+    test('switches to Italian in the admin and keeps it on Account', async ({
+        page,
+        allowErrors,
+    }) => {
+        allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
+        await page.goto('/auth/v1/admin/users');
+        const config = await page.request.get('/auth/v1/i18n_config');
+        const languages = await config.json();
+        expect(languages.common).toContain('it');
+        expect(languages.admin).toContain('it');
+        await chooseOption(page, page.getByRole('combobox', { name: 'Select Language' }), 'it');
+        await expect(page.locator('html')).toHaveAttribute('lang', 'it-IT');
+        await expect(page.getByRole('heading', { name: 'Utenti', level: 1 })).toBeVisible();
+        await page.locator('#mainNav').getByRole('link', { name: 'Account utente' }).click();
+        await expect(page.getByRole('heading', { name: 'Account utente' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Esci', exact: true })).toBeVisible();
+    });
+
     test('language selector switches the UI language', async ({ page }) => {
         await page.goto('/auth/v1/admin/users');
         await chooseOption(page, page.getByRole('combobox', { name: 'Select Language' }), 'de');

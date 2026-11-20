@@ -49,6 +49,7 @@ export let I18nAdminPt: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Se este Client suportar {{ OIDC_BCL }}, pode indicar aqui o URI.',
         branding: {
+            title: 'Aparência',
             theme: 'Tema',
             light: 'Tema claro',
             dark: 'Tema escuro',
@@ -156,6 +157,7 @@ export let I18nAdminPt: I18nAdmin = {
         },
     },
     common: {
+        about: 'Sobre',
         date: 'Data',
         time: 'Hora',
         preferences: 'Preferências',
@@ -316,6 +318,10 @@ export let I18nAdminPt: I18nAdmin = {
             Depois, tem de terminar sessão e voltar a iniciar sessão.`,
     },
     events: {
+        searchContent: 'Conteúdo',
+        timestamp: 'Data e hora',
+        level: 'Nível',
+        type: 'Tipo',
         allLevels: 'Todos os níveis',
         sendTest: 'Enviar evento de teste',
         eventLevel: 'Nível do evento',
@@ -338,6 +344,7 @@ export let I18nAdminPt: I18nAdmin = {
         rotateKeys: 'Rodar chaves',
     },
     kv: {
+        limit: 'Limite',
         accessTestDesc: `A Access Key tem de ser indicada no cabeçalho <code>Authorization</code> como
             token <code>Bearer</code>. Pode usar o seguinte comando <code>curl</code> para
             testar.`,
@@ -375,6 +382,7 @@ export let I18nAdminPt: I18nAdmin = {
         value: 'Valor JSON',
     },
     nav: {
+        kvStore: 'Armazenamento KV',
         apiKeys: 'API Keys',
         attributes: 'Atributos',
         blacklist: 'Lista de bloqueio',

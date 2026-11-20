@@ -50,6 +50,7 @@ export let I18nAdminFr: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: `Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l'URI ici.`,
         branding: {
+            title: 'Apparence',
             theme: 'Thème',
             light: 'Thème clair',
             dark: 'Thème sombre',
@@ -161,6 +162,7 @@ export let I18nAdminFr: I18nAdmin = {
         },
     },
     common: {
+        about: 'À propos',
         date: 'Date',
         time: 'Heure',
         preferences: 'Préférences',
@@ -325,6 +327,10 @@ export let I18nAdminFr: I18nAdmin = {
             Ensuite, vous devrez vous déconnecter puis vous reconnecter.`,
     },
     events: {
+        searchContent: 'Contenu',
+        timestamp: 'Horodatage',
+        level: 'Niveau',
+        type: 'Type',
         allLevels: 'Tous les niveaux',
         sendTest: 'Envoyer un événement de test',
         eventLevel: `Niveau d'événement`,
@@ -348,6 +354,7 @@ export let I18nAdminFr: I18nAdmin = {
         rotateKeys: 'Rotation des clés',
     },
     kv: {
+        limit: 'Limite',
         accessTestDesc: `La clé d'accès doit être fournie dans l'en-tête <code>Authorization</code> sous forme de jeton
             <code>Bearer</code>. La commande <code>curl</code> suivante peut être utilisée pour les tests.`,
         addNewKey: `Nouvelle clé d'accès`,
@@ -385,6 +392,7 @@ export let I18nAdminFr: I18nAdmin = {
         value: 'Valeur JSON',
     },
     nav: {
+        kvStore: 'Stockage KV',
         apiKeys: 'Clés API',
         attributes: 'Attributs',
         blacklist: 'Liste noire',

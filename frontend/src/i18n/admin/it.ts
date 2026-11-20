@@ -1,0 +1,531 @@
+import type { I18nAdmin } from './interface.ts';
+
+export const I18nAdminIt: I18nAdmin = {
+    api_key: {
+        delete1: 'Vuoi eliminare questa chiave API?',
+        expires: 'Scadenza',
+        generate1: 'Puoi generare un nuovo segreto per questa chiave API.',
+        generate2:
+            'Il segreto viene mostrato solo dopo la generazione. Il nuovo segreto sostituisce quello precedente in modo irreversibile.',
+        generate3:
+            'Invia la chiave API nella seguente forma, nell’intestazione HTTP <code>Authorization</code>:',
+        generate4: 'Puoi verificare la nuova chiave con questa richiesta <code>curl</code>:',
+        generate5: 'Se non hai installato <code>jq</code> e il comando precedente non funziona:',
+        keyName: 'Nome della chiave',
+        limitedValidity: 'Validità limitata',
+    },
+    attrs: {
+        delete1: 'Vuoi eliminare questo attributo?',
+        defaultValue: 'Valore predefinito',
+        desc: 'Descrizione',
+        makeEditable: 'Rendi modificabile',
+        makeEditableP1: 'Puoi consentire agli utenti di modificare questo attributo.',
+        makeEditableP2:
+            '<b>Attenzione:</b> la modifica è irreversibile. I dati inseriti dagli utenti non sono attendibili e non vanno mai usati per autenticazione o autorizzazione.',
+        makeEditableP3:
+            'Una volta reso modificabile, un attributo potrebbe già contenere dati non attendibili. Per questo la modifica è irreversibile.',
+        name: 'Nome dell’attributo',
+        userEditable: 'Modificabile dall’utente',
+    },
+    backup: {
+        createBackup: 'Crea backup',
+        disabledDesc: 'Questa funzione è disponibile quando il database configurato è Hiqlite.',
+        lastModified: 'Ultima modifica',
+        local: 'Locale',
+        name: 'Nome',
+        size: 'Dimensione',
+    },
+    clients: {
+        settings: { general: 'Generale', tokens: 'Token', integrations: 'Integrazioni' },
+        allowedResources: 'Risorse consentite',
+        defaultAud: 'Destinatari predefiniti',
+        actorSameClient: 'Token dell’attore emesso per questo client',
+        descAllowedResources:
+            'Indicatori di risorsa facoltativi definiti da RFC 8707. Con un elenco vuoto, ogni parametro resource viene respinto con invalid_target.',
+        descDefaultAud:
+            'Destinatari aggiunti ai token del client a prescindere dal parametro resource.',
+        descActorSameClient:
+            'Quando è attivo, lo scambio accetta solo gli actor_token emessi per questo client.',
+        backchannelLogout: 'Se il client supporta {{ OIDC_BCL }}, inserisci qui l’URI.',
+        branding: {
+            title: 'Aspetto',
+            theme: 'Tema',
+            light: 'Tema chiaro',
+            dark: 'Tema scuro',
+            preview: 'Anteprima',
+            assets: 'Logo e favicon',
+            logo: 'Logo',
+            advanced: 'CSS avanzato',
+            resetTheme: 'Ripristina tema',
+            resetThemeConfirm: 'Vuoi ripristinare i colori e il raggio degli angoli predefiniti?',
+            assetsImmediate: 'Le modifiche ai file si applicano subito.',
+            descHsl:
+                'Imposta i colori di base in formato HSL. Il tema calcola dinamicamente trasparenza e altre variazioni.',
+            descFullCss:
+                'Inserisci valori CSS <code>color</code> validi. Puoi usare espressioni e le variabili CSS definite sopra.',
+            descVariables:
+                'Ogni etichetta corrisponde a una variabile CSS. Puoi usarla nei campi liberi, ad esempio <code>hsla(var(--action) / .7)</code>.',
+            faviconPreviewAlt: 'Anteprima della favicon del client',
+            faviconUpload: 'Favicon',
+        },
+        claimsAtRoot: 'Inserisci i claim al livello principale del token',
+        claimsAtRootWarning:
+            'I claim del client vengono scritti al livello principale del token, fuori da custom. Se un nome coincide con un claim JWT riservato, l’emissione fallisce. Future modifiche al protocollo o alle funzionalità possono introdurre conflitti. Riferimento:',
+        claims: 'Claim personalizzati (client_credentials)',
+        claimsDesc:
+            'Oggetto JSON inserito nel claim custom dei token client_credentials. Massimo 1024 caratteri dopo la serializzazione.',
+        confidential: 'Confidenziale',
+        confidentialNoSecret: 'Il client è pubblico e non dispone di un segreto.',
+        config: 'Configurazione del client',
+        consent: {
+            builtIn: 'Integrata',
+            desc: 'Origine dei contenuti della schermata di consenso quando consent.enable è attivo. La schermata integrata mostra gli ambiti richiesti. Un URL deve restituire il consenso in JSON. Una voce [[consent.sources]] per la risorsa richiesta ha la precedenza. La configurazione diventa operativa quando sarà disponibile la relativa schermata.',
+            source: 'Origine del consenso',
+        },
+        delete1: 'Vuoi eliminare questo client?',
+        descAuthCode:
+            'I codici di autorizzazione sono utilizzabili una sola volta e scadono dopo 60 secondi per impostazione predefinita. Per maggiore sicurezza, imposta la durata più breve che permetta al client di completare l’accesso.',
+        descClientUri: 'L’URI e i contatti del client compaiono nella pagina di accesso.',
+        descName:
+            'Il nome serve a identificare il client nella pagina di accesso. Puoi cambiarlo senza modificare la configurazione.',
+        descGroupPrefix:
+            'Puoi limitare l’accesso agli utenti che appartengono a un gruppo con il prefisso indicato.',
+        descOrigin:
+            'Origini esterne aggiuntive consentite. Di solito servono alle applicazioni web che inviano richieste a Rauthy direttamente dal browser.',
+        descPKCE:
+            'Attiva PKCE S256 quando il client lo supporta. I client pubblici, come le SPA, richiedono almeno un metodo PKCE.',
+        descPKCEEnforce:
+            'Quando PKCE è attivo, Rauthy respinge le richieste di accesso prive di una challenge valida.',
+        descUri:
+            'Puoi indicare più URI di reindirizzamento. Usa <code>*</code> alla fine dell’URI come carattere jolly.',
+        errConfidentialPKCE: 'Rendi il client confidenziale oppure attiva almeno un metodo PKCE.',
+        forceMfa: 'Richiedi MFA',
+        groupLoginPrefix: 'Prefisso del gruppo di accesso',
+        name: 'Nome del client',
+        passwordFlowMfaWarn:
+            'Sono attivi sia il requisito MFA sia il flusso password. Lo standard OIDC impedisce a Rauthy di applicare la MFA a questo flusso. Se il client deve imporla, può verificare il claim amr.',
+        scim: {
+            baseUri:
+                'L’URI di base SCIM permette di costruire i percorsi delle risorse, ad esempio <code>{base_uri}/Users/{id}</code>.',
+            desc: 'Se il client supporta {{ SCIM_LINK }}, puoi attivarlo qui.',
+            enable: 'Attiva SCIMv2',
+            groupSync: 'Sincronizza gruppi',
+            groupSyncPrefix: 'Prefisso dei gruppi da sincronizzare',
+            groupSyncPrefixDesc:
+                'Puoi filtrare i gruppi da sincronizzare per prefisso. Ad esempio <code>app:</code> include <code>app:admins</code> e <code>app:users</code> e gli utenti assegnati ad almeno uno di questi gruppi.',
+            reqDesc: 'Requisiti di compatibilità:',
+            reqLi1: 'Il client deve gestire correttamente <code>externalId</code>.',
+            reqLi2: 'Le risorse <code>/Users</code> devono supportare almeno <code>filter=externalId eq "*"</code> e <code>filter=userName eq "*"</code>.',
+            reqLi3: 'Per sincronizzare i gruppi, le risorse <code>/Groups</code> devono supportare <code>filter=displayName eq "*"</code>.',
+        },
+        scopes: {
+            allowed: 'Ambiti consentiti',
+            default: 'Ambiti predefiniti',
+            desc: 'Il client può richiedere gli ambiti consentiti durante il reindirizzamento per il flusso <code>authorization_code</code>. Rauthy aggiunge sempre gli ambiti predefiniti ai token, anche per flussi come <code>password</code>.',
+        },
+        secret: {
+            doCache: 'Conserva il segreto precedente in cache',
+            cacheDuration: 'Durata della cache (ore)',
+            generate: 'Genera nuovo segreto',
+            rotateDesc1:
+                'Per permettere un aggiornamento graduale puoi conservare il segreto attuale in una cache in memoria da 1 a 24 ore.',
+            rotateDesc2: 'Se il segreto è stato compromesso, ruotalo senza conservarlo in cache.',
+        },
+        tokenLifetime: {
+            p1: 'La durata dei token di accesso e ID si esprime in secondi.',
+            p2: 'Preferisci EdDSA / Ed25519 quando il client li supporta. Gli algoritmi RSA sono disponibili per compatibilità.',
+            p3: 'Solo Rauthy usa i token di aggiornamento, il cui algoritmo è fisso.',
+        },
+    },
+    common: {
+        about: 'Informazioni',
+        date: 'Data',
+        time: 'Ora',
+        preferences: 'Preferenze',
+        profile: 'Profilo',
+        contactDetails: 'Contatti',
+        access: 'Accesso',
+        activity: 'Attività',
+        compactNavigation: 'Navigazione compatta',
+        administration: 'Amministrazione',
+        selectEntry: 'Seleziona una voce',
+        selectEntryHint: 'Scegli una voce dall’elenco per vederne e gestirne i dettagli.',
+        account: 'Account',
+        addNew: 'Aggiungi',
+        back: 'Indietro',
+        caution: 'Attenzione',
+        contact: 'Contatto',
+        copiedToClip: 'Copiato negli appunti',
+        details: 'Dettagli',
+        edit: 'Modifica',
+        enabled: 'Abilitato',
+        filter: 'Filtra',
+        from: 'Da',
+        information: 'Informazioni',
+        language: 'Lingua',
+        loading: 'Caricamento',
+        jsonMeta: 'Metadati in formato JSON',
+        name: 'Nome',
+        nameExistsAlready: 'Nome già in uso',
+        note: 'Nota',
+        noEntries: 'Nessuna voce',
+        preview: 'Anteprima',
+        reset: 'Ripristina',
+        searchOptions: 'Opzioni di ricerca',
+        until: 'Fino a',
+    },
+    docs: {
+        book: 'Per informazioni su Rauthy, consulta',
+        encryption: 'Crittografia',
+        encKeys: {
+            header: 'Chiavi di crittografia',
+            keyActive: 'Chiave attiva',
+            keysAvailable: 'Chiavi disponibili',
+            migrate: 'Migra',
+            migrateToKey: 'Migra tutti i valori già cifrati a questa chiave',
+            p1: 'Queste chiavi aggiungono un livello di crittografia dei dati a riposo, indipendente dal database. Le imposti nella configurazione e puoi ruotarle o usarle per una migrazione da questa pagina.',
+            p2: 'La chiave attiva viene impostata nella configurazione di Rauthy o nelle variabili d’ambiente. Le nuove JWK sono sempre cifrate con la chiave attiva.',
+            p3: 'La migrazione di molti segreti può richiedere qualche secondo.',
+            pNotPossible: 'Per avviare la migrazione devono essere disponibili almeno due chiavi.',
+        },
+        hashing: {
+            calculate: 'Calcola',
+            currValuesHead: 'Valori attuali',
+            currValues1: 'Valori del server:',
+            currValuesNote:
+                'Il tempo di accesso diventa indicativo dopo almeno cinque accessi riusciti. A ogni riavvio riparte da 2000 ms e si adatta con gli accessi successivi.',
+            currValuesThreadsAccess: 'Thread (p_cost) disponibili per Rauthy',
+            loginTimeHead: 'Tempo di accesso',
+            loginTime1:
+                'Per un accesso sicuro può essere ragionevole prevedere tra 500 e 1000 ms. Un tempo troppo breve riduce la resistenza dell’hash.',
+            loginTime2:
+                'Per mantenere un livello di sicurezza minimo puoi impostare un tempo di almeno 500 ms.',
+            mCost1: '<code>m_cost</code> indica la quantità di <b>memoria (in kB)</b> usata per calcolare un hash. Per quattro password calcolate in parallelo il server deve avere a disposizione <code>4 × m_cost</code>.',
+            mCost2: 'Dividi la memoria massima destinata a Rauthy per il numero massimo di accessi simultanei (<code>MAX_HASH_THREADS</code>) e sottrai la memoria di base. In genere servono da 32 a 96 MB, in base al database e al numero di utenti.',
+            mCost3: 'Il valore minimo consentito per <code>m_cost</code> è <code>32768</code>.',
+            pCost1: '<code>p_cost</code> indica il <b>parallelismo</b> del calcolo. Il valore predefinito di Rauthy è 8.',
+            pCost2: 'Come riferimento usa il doppio dei core disponibili. Ad esempio, con quattro core imposta <code>p_cost</code> a <code>8</code>. Riducilo tenendo conto degli accessi simultanei consentiti da <code>MAX_HASH_THREADS</code>.',
+            tCost1: '<code>t_cost</code> determina il <b>tempo</b> di calcolo. È il principale valore da calibrare dopo aver fissato <code>m_cost</code> e <code>p_cost</code> in base alle risorse.',
+            tCost2: 'Imposta <code>m_cost</code> e <code>p_cost</code>, poi aumenta <code>t_cost</code> fino a raggiungere il tempo di calcolo desiderato.',
+            utilityHead: 'Calcolo dei parametri',
+            utility1:
+                'Usa lo strumento nell’ambiente di destinazione, con le risorse effettive e sotto carico, per trovare valori adatti alla tua installazione.',
+            utility2:
+                'Se ometti <code>m_cost</code>, lo strumento usa il minimo sicuro di <code>32768</code>. Se ometti <code>p_cost</code>, usa tutti i thread disponibili.',
+            time: 'Tempo',
+            targetTime: 'Tempo obiettivo',
+            tune: 'Calibra questi valori nell’ambiente di destinazione.',
+            pDetails: 'Questa guida riassume i tre parametri da configurare per Argon2ID.',
+            pTune: 'Con più risorse puoi configurare parametri che aumentano la resistenza degli hash.',
+            pUtility:
+                'Lo strumento aiuta a calibrare Argon2ID, un algoritmo per il calcolo degli hash delle password, sulla tua infrastruttura.',
+        },
+        openapi: 'Per integrare applicazioni esterne con le API di Rauthy, consulta',
+        openapiNote:
+            'Swagger UI è disattivata per impostazione predefinita. Puoi attivarla con server.swagger_ui_enable e, se necessario, renderla pubblica con server.swagger_ui_public.',
+        source: 'Consulta il codice sorgente',
+    },
+    editor: {
+        bold: 'Grassetto',
+        code: 'Codice',
+        heading1: 'Titolo 1',
+        heading2: 'Titolo 2',
+        heading3: 'Titolo 3',
+        italic: 'Corsivo',
+        link: 'Collegamento',
+        listBullet: 'Elenco puntato',
+        listTasks: 'Elenco attività',
+        listNumbered: 'Elenco numerato',
+        paragraph: 'Paragrafo',
+        quote: 'Citazione',
+        removeFmt: 'Rimuovi formattazione',
+        strikeThrough: 'Barrato',
+        textArea: 'Modifica testo',
+    },
+    email: {
+        cancelJob: 'Annulla invio',
+        filterType: ['Nessuno', 'Nel gruppo', 'Fuori dal gruppo', 'Con il ruolo', 'Senza il ruolo'],
+        immediate: 'Immediato',
+        jobs: 'Invii email',
+        scheduled: 'Invio programmato',
+        sendAllUsers: 'L’email verrà inviata a tutti gli utenti.',
+        sendAllUsersFiltered:
+            'L’email verrà inviata agli utenti che corrispondono a questo filtro:',
+        sendMail: 'Invia email',
+        subject: 'Oggetto',
+        userFilter: 'Filtro utenti',
+    },
+    error: {
+        needsAdminRole:
+            'Il tuo account non dispone del ruolo <b>rauthy_admin</b> richiesto per accedere al pannello di amministrazione.',
+        noAdmin:
+            'Per amministrare Rauthy devi <b>attivare la MFA</b> nelle impostazioni del tuo account. Poi esci e accedi di nuovo.',
+    },
+    events: {
+        searchContent: 'Contenuto',
+        timestamp: 'Data e ora',
+        level: 'Livello',
+        type: 'Tipo',
+        allLevels: 'Tutti i livelli',
+        sendTest: 'Invia evento di prova',
+        eventLevel: 'Livello evento',
+        eventType: 'Tipo di evento',
+    },
+    groups: {
+        delete1: 'Vuoi eliminare questo gruppo?',
+        name: 'Nome del gruppo',
+    },
+    jwks: {
+        alg: 'Algoritmo',
+        p1: 'Chiavi JSON Web Key (JWK) usate per firmare i token.',
+        p2: 'Per impostazione predefinita, Rauthy ruota le JWK il primo giorno del mese. Firma i nuovi token con la chiave più recente per ciascun algoritmo e conserva temporaneamente le chiavi precedenti per convalidare i token ancora validi. Poi le elimina automaticamente.',
+        p3: 'Puoi anche ruotare le chiavi manualmente. L’operazione può richiedere alcuni secondi.',
+        type: 'Tipo',
+        rotateKeys: 'Ruota chiavi',
+    },
+    kv: {
+        limit: 'Limite',
+        accessTestDesc:
+            'Invia la chiave di accesso come token <code>Bearer</code> nell’intestazione <code>Authorization</code>. Puoi verificarla con questo comando <code>curl</code>.',
+        addNewKey: 'Nuova chiave di accesso',
+        addNewNs: 'Nuovo spazio dei nomi',
+        addNewValue: 'Nuovo valore',
+        delConfirm: 'Vuoi eliminare questa chiave di accesso?',
+        delNsMsg: 'Vuoi eliminare questo spazio dei nomi e tutti i dati che contiene?',
+        encryptedDesc:
+            'Per ragioni di prestazioni, riserva la crittografia aggiuntiva ai valori sensibili, come chiavi di accesso o dati personali.',
+        deleteConfirmMsg: 'Vuoi eliminare la chiave «{{ key }}»?',
+        help: {
+            help: 'Guida',
+            ops: [
+                'Verifica una chiave di accesso',
+                'Elenca tutte le chiavi',
+                'Elenca tutte le chiavi con i valori',
+                'Imposta una chiave e il relativo valore',
+                'Leggi il valore di una chiave',
+                'Elimina una chiave',
+            ],
+            p1: 'Le applicazioni esterne possono eseguire queste operazioni sugli archivi chiave-valore:',
+            p2: 'Invia la chiave di accesso come token <code>Bearer</code> (<code>{id}${secret}</code>) nell’intestazione <code>Authorization</code>. La chiave vale solo per lo spazio dei nomi che la contiene.',
+            p3: 'Questi esempi usano <code>curl</code>.',
+        },
+        key: 'Chiave',
+        loadAllValues: 'Carica tutti i valori',
+        storeEncrypted: 'Cifra il valore',
+        tabs: ['Dati', 'Accesso', 'Modifica', 'Elimina'],
+        testCmd: 'Comando di prova',
+        value: 'Valore JSON',
+    },
+    nav: {
+        kvStore: 'Archivio KV',
+        apiKeys: 'Chiavi API',
+        attributes: 'Attributi',
+        blacklist: 'IP bloccati',
+        clients: 'Client',
+        config: 'Configurazione',
+        docs: 'Guida',
+        events: 'Eventi',
+        groups: 'Gruppi',
+        providers: 'Provider',
+        roles: 'Ruoli',
+        scopes: 'Ambiti',
+        sessions: 'Sessioni',
+        users: 'Utenti',
+    },
+    options: {
+        expires: 'Scadenza',
+        lastSeen: 'Ultima attività',
+        state: 'Stato',
+    },
+    pam: {
+        addGroup: 'Nuovo gruppo PAM',
+        addHost: 'Nuovo host PAM',
+        addUser: 'Nuovo utente PAM',
+        deleteHost: 'Vuoi eliminare questo host?',
+        deleteUser: 'Vuoi eliminare questo utente?',
+        groupDescGeneric:
+            'I gruppi generici corrispondono ai gruppi che di solito trovi in /etc/group. Puoi assegnare loro utenti e vengono restituiti dalle ricerche NSS.',
+        groupDescHost:
+            'I gruppi di host riuniscono più host. Le ricerche NSS su un host del gruppo restituiscono anche gli altri host. Assegna un utente al gruppo per consentirgli di accedere ai suoi host.',
+        groupDescLocal:
+            'I gruppi locali funzionano come quelli generici. Il proxy NSS dell’host traduce il loro ID nel database Rauthy nell’ID corrispondente in /etc/group, così puoi usare gruppi già presenti sull’host.',
+        groupDescUser:
+            'Rauthy gestisce automaticamente questi gruppi e li associa all’utente con lo stesso nome.',
+        groupDescWheel:
+            'Questo gruppo speciale è immutabile. Rauthy lo assegna dinamicamente in base alla configurazione dei gruppi.',
+        groupName: 'Nome del gruppo',
+        groups: 'Gruppi',
+        groupType: 'Tipo di gruppo',
+        hostAliases: 'Alias dell’host',
+        hostLocalPwdOnly: 'Accesso locale con password',
+        hostLocalPwdOnlyInfo:
+            'Questa opzione prevale sul requisito MFA per gli accessi locali, che avvengono senza passkey anche per gli utenti con MFA. Attivala solo se serve, ad esempio dove gli utenti non possono usare una passkey hardware.',
+        ipAddresses: 'Indirizzi IP',
+        member: 'Membro',
+        nameExistsAlready: 'Nome già in uso',
+        notes: 'Note',
+        secretShow: 'Mostra segreto',
+        secretRotate: 'Ruota segreto',
+        userEmail: 'Email dell’utente collegato',
+        username: 'Nome utente',
+        usernameNewDesc:
+            'Scegli con cura il nome utente. Dopo la creazione, modificarlo è complesso per motivi di sicurezza.',
+    },
+    passwordPolicy: {
+        configDesc: 'Requisiti per le nuove password.',
+        resetSet0: 'Imposta 0 per disattivare il requisito.',
+        validForDays: 'Validità in giorni',
+        validityNew: 'Durata delle nuove password.',
+    },
+    providers: {
+        config: {
+            allowInsecureTls: 'Consenti TLS non sicuro',
+            autoLink: 'Collega automaticamente l’utente',
+            autoLinkDesc1:
+                'Quando un utente esistente accede tramite il provider, Rauthy può collegare l’account al provider automaticamente.',
+            autoLinkDesc2:
+                'Attenzione: se il provider accetta indirizzi email di altre persone senza verificarli, il collegamento automatico può consentire il furto dell’account. In quel caso lascia disattivata questa opzione.',
+            clientName: 'Nome del client',
+            custRootCa: 'CA radice personalizzata (PEM)',
+            descAuthMethod:
+                'Metodo di autenticazione per <code>/token</code>. La maggior parte dei provider usa <code>basic</code>, alcuni richiedono <code>post</code>. In rari casi servono entrambi, mentre per altri provider abilitarli entrambi causa errori.',
+            descClientId: 'ID del client fornito dal provider.',
+            descClientName: 'Nome del client da mostrare nella pagina di accesso di Rauthy.',
+            descClientSecret: 'Segreto fornito dal provider. Serve almeno un segreto oppure PKCE.',
+            descScope:
+                'Ambiti che il client richiede nel reindirizzare l’utente all’accesso. Separa i valori con uno spazio.',
+            errNoAuthMethod:
+                'Hai impostato un segreto del client. Attiva anche un metodo di autenticazione.',
+            errConfidential: 'Usa un client confidenziale oppure attiva PKCE.',
+            jsonPath: {
+                p1: 'Dopo un accesso riuscito presso il provider, puoi usare automaticamente i valori del token ID.',
+                p2: 'Indica il <code>path</code> con una sintassi simile a un’espressione regolare. Può individuare valori singoli o elementi in oggetti e array JSON.',
+                p3: '<code>$.</code> indica la radice dell’oggetto JSON.',
+                p4: '<code>*</code> è un carattere jolly nel percorso.',
+                p5: '<code>$.roles</code> individua <code>&#123;"roles": "value"&#125;</code>.',
+                p6: '<code>$.roles.*</code> può individuare un elemento in un oggetto o array, ad esempio <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>.',
+            },
+            lookup: 'Cerca',
+            pathAdminClaim: 'Percorso del claim di amministrazione',
+            pathMfaClaim: 'Percorso del claim MFA',
+            rootPemCert: 'Certificato radice (PEM)',
+            mapMfa: 'Se il provider emette un claim che attesta un accesso con almeno due fattori, indicane qui il percorso.',
+            mapUser:
+                'Puoi assegnare i permessi di amministratore di Rauthy in base a un claim del provider.',
+            valueAdminClaim: 'Valore del claim di amministrazione',
+            valueMfaClaim: 'Valore del claim MFA',
+        },
+        delete: {
+            areYouSure: 'Vuoi eliminare questo provider?',
+            forceDelete: 'Forza eliminazione',
+            isInUse1: 'Ci sono utenti attivi collegati a questo provider.',
+            isInUse2:
+                'Se forzi l’eliminazione, gli utenti privi di password locale e di passkey perderanno l’accesso.',
+            linkedUsers: 'Utenti collegati',
+        },
+    },
+    roles: {
+        adminNoMod: 'Il ruolo <code>rauthy_admin</code> è immutabile.',
+        delete1: 'Vuoi eliminare questo ruolo?',
+        name: 'Nome del ruolo',
+    },
+    scopes: {
+        claimsAtRoot: 'Inserisci i claim al livello principale del token',
+        claimsAtRootWarning:
+            'Gli attributi associati a questo ambito vengono scritti al livello principale del token, fuori da custom. Se un nome coincide con un claim JWT riservato, l’emissione fallisce. Future modifiche al protocollo o alle funzionalità possono introdurre conflitti. Riferimento:',
+        defaultNoMod: 'Gli ambiti predefiniti di OIDC sono immutabili.',
+        delete1: 'Vuoi eliminare questo ambito?',
+        deleteDefault: 'Gli ambiti predefiniti di OIDC non si possono eliminare.',
+        mapping1: 'Puoi associare attributi agli ambiti personalizzati.',
+        mapping2:
+            'Gli attributi aggiuntivi possono avere un valore diverso per ogni utente. Associandoli a un ambito puoi includerli nei token di accesso o ID.',
+        name: 'Nome dell’ambito',
+    },
+    search: {
+        orderBy: 'Ordina per',
+        orderChangeToAsc: 'Ordina in modo crescente',
+        orderChangeToDesc: 'Ordina in modo decrescente',
+    },
+    sessions: { invalidateAll: 'Invalida tutte le sessioni' },
+    tabs: { config: 'Configurazione', delete: 'Elimina' },
+    tos: {
+        accepted: 'Accettate',
+        addNewToS: 'Nuove condizioni',
+        addNewToSFromCurrent: 'Duplica le condizioni selezionate',
+        added: 'Aggiunte il',
+        checkStatus: 'Verifica lo stato dell’utente',
+        immutable:
+            'Dopo la pubblicazione, le condizioni di servizio non si possono modificare né eliminare.',
+        noneExist: 'Non sono ancora state pubblicate condizioni di servizio.',
+        optUntil: {
+            desc: 'Durante il periodo di transizione puoi rimandare l’accettazione delle nuove condizioni. Al termine l’accettazione diventa obbligatoria.',
+            enable: 'Attiva periodo di transizione',
+            label: 'Fine del periodo di transizione',
+        },
+        tos: 'Condizioni di servizio',
+    },
+    users: {
+        antiLockout: {
+            rule: 'Protezione contro il blocco dell’account',
+            delete: 'L’account attivo non può essere eliminato',
+            disable: 'L’account attivo non può essere disabilitato',
+            rauthyAdmin: 'Il ruolo rauthy_admin non può essere rimosso',
+        },
+        attributes: 'Attributi',
+        deleteUser: 'Vuoi eliminare questo utente?',
+        descAttr:
+            'Assegna attributi personalizzati all’utente. Ogni valore è trattato come stringa o valore JSON.',
+        forceLogout:
+            'Vuoi invalidare tutte le sessioni ed eliminare tutti i token di aggiornamento di questo utente?',
+        groupAdmin: {
+            notManagedTitle: 'Utente fuori dai gruppi che gestisci',
+            notManagedDesc:
+                'Per vedere i dettagli e gestire l’utente, aggiungilo a un gruppo che amministri. Le altre appartenenze vengono conservate.',
+            addToGroups: 'Aggiungi ai miei gruppi',
+        },
+        lastLogin: 'Ultimo accesso',
+        manualInitDesc: 'Puoi configurare l’utente qui e comunicargli la password direttamente.',
+        manualInit: 'Configurazione manuale',
+        mfa: {
+            otp: {
+                title: 'Codici OTP',
+                mfaDelete1: 'Puoi rimuovere i codici OTP di questo utente.',
+                mfaDelete2:
+                    'Per recuperare un codice OTP eliminato, <b>l’utente deve registrarlo di nuovo</b>.',
+                noMfaOtps: 'L’utente non ha registrato codici OTP.',
+            },
+            webauthn: {
+                title: 'Passkey',
+                mfaDelete1: 'Puoi rimuovere le passkey di questo utente.',
+                mfaDelete2:
+                    'Per recuperare una passkey eliminata, <b>l’utente deve registrarla di nuovo</b>.',
+                noMfaKeys: 'L’utente non ha registrato passkey.',
+            },
+        },
+        pkOnly1: 'Questo account usa solo passkey.',
+        pkOnly2: 'L’utente accede senza password e non ne ha impostata una.',
+        pkOnly3:
+            'Se l’utente ha perso tutte le passkey, puoi ripristinare l’account e inviare una nuova email per impostare la password. Per farlo, entra nella scheda MFA ed elimina le passkey esistenti.',
+        pwdNoInit: 'L’utente deve ancora impostare la password iniziale.',
+        pwdSendEmailBtn: 'Invia email di ripristino',
+        pwdSendEmailDesc:
+            'Se l’utente non ha ricevuto l’email per impostare la password, puoi inviarla di nuovo.',
+        savePassword: 'Salva password',
+        selfServiceDesc:
+            'Puoi impostare una nuova password o inviare all’utente un’email di ripristino.',
+        sendResetEmail: 'Invia email di ripristino',
+    },
+    validation: {
+        css: 'Valore CSS non valido',
+        origin: 'Origine non valida',
+        uri: 'URI non valido',
+        redirectUri: {
+            comma: 'L’URI di reindirizzamento non può contenere virgole (,)',
+            controlChar:
+                'Il nome di un parametro di query non può contenere caratteri di controllo',
+            fragment: 'L’URI di reindirizzamento non può contenere un frammento (#)',
+            reservedKey: 'Il parametro «{{ KEY }}» è riservato alla risposta di autorizzazione',
+            reservedKeyLogout: 'Il parametro «{{ KEY }}» è riservato alla risposta di uscita',
+        },
+    },
+};

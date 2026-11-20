@@ -48,6 +48,7 @@ export let I18nAdminJa: I18nAdmin = {
         backchannelLogout:
             'この Client が {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
         branding: {
+            title: '外観',
             theme: 'テーマ',
             light: 'ライトテーマ',
             dark: 'ダークテーマ',
@@ -140,6 +141,7 @@ export let I18nAdminJa: I18nAdmin = {
         },
     },
     common: {
+        about: 'Rauthy について',
         date: '日付',
         time: '時刻',
         preferences: '環境設定',
@@ -273,6 +275,10 @@ export let I18nAdminJa: I18nAdmin = {
             'Rauthy の管理者アカウントでは、<b>多要素認証を有効にする</b>必要があります。<br>お使いの<b>アカウント</b>の画面で多要素認証を有効にしてください。<br>その後、一度ログアウトしてから、もう一度ログインしてください。',
     },
     events: {
+        searchContent: '内容',
+        timestamp: '日時',
+        level: 'レベル',
+        type: '種類',
         allLevels: 'すべてのレベル',
         sendTest: 'テストイベントを送信',
         eventLevel: 'イベントのレベル',
@@ -291,6 +297,7 @@ export let I18nAdminJa: I18nAdmin = {
         rotateKeys: '鍵をローテーション',
     },
     kv: {
+        limit: '上限',
         accessTestDesc:
             'Access Key は、<code>Authorization</code> ヘッダーで <code>Bearer</code> Token として渡す必要があります。試すには、次の <code>curl</code> コマンドを使えます。',
         addNewKey: '新しい Access Key',
@@ -323,6 +330,7 @@ export let I18nAdminJa: I18nAdmin = {
         value: 'JSON の値',
     },
     nav: {
+        kvStore: 'KV ストア',
         apiKeys: 'API Keys',
         attributes: '属性',
         blacklist: 'ブロックリスト',

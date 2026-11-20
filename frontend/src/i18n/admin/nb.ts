@@ -48,6 +48,7 @@ export let I18nAdminNb: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
+            title: 'Utseende',
             theme: 'Tema',
             light: 'Lyst tema',
             dark: 'Mørkt tema',
@@ -155,6 +156,7 @@ export let I18nAdminNb: I18nAdmin = {
         },
     },
     common: {
+        about: 'Om Rauthy',
         date: 'Dato',
         time: 'Tid',
         preferences: 'Innstillinger',
@@ -314,6 +316,10 @@ export let I18nAdminNb: I18nAdmin = {
             Deretter må du logge ut og inn igjen`,
     },
     events: {
+        searchContent: 'Innhold',
+        timestamp: 'Tidsstempel',
+        level: 'Nivå',
+        type: 'Type',
         allLevels: 'Alle nivåer',
         sendTest: 'Send testhendelse',
         eventLevel: 'Hendelsesnivå',
@@ -332,6 +338,7 @@ export let I18nAdminNb: I18nAdmin = {
         rotateKeys: 'Roter nøkler',
     },
     kv: {
+        limit: 'Grense',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -369,6 +376,7 @@ export let I18nAdminNb: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV-lager',
         apiKeys: 'API-nøkler',
         attributes: 'Attributter',
         blacklist: 'Svarteliste',

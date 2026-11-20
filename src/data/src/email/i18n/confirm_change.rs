@@ -13,7 +13,7 @@ impl I18nEmailConfirmChange<'_> {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
-            Language::En => Self::build_en(),
+            Language::En | Language::It => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
             Language::Ja => Self::build_ja(),

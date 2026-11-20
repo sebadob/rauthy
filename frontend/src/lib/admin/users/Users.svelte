@@ -1,6 +1,7 @@
 <script lang="ts">
     import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
     import { onMount } from 'svelte';
     import { fetchGet } from '#api/fetch.ts';
     import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
@@ -28,6 +29,7 @@
     import EmailJobs from '#lib/EmailJobs.svelte';
 
     let ta = useI18nAdmin();
+    const t = useI18n();
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -52,10 +54,10 @@
     let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
     let isSearchedServer = $state(false);
 
-    let searchOptions = $state(['E-Mail', 'ID']);
+    let searchOptions = $state([t.common.email, 'ID']);
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
-    let orderOptions = $state(['E-Mail', 'ID', 'Created', 'Last Login']);
+    let orderOptions = $state([t.common.email, 'ID', t.account.userCreated, ta.users.lastLogin]);
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);
