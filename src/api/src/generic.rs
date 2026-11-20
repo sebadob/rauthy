@@ -1,4 +1,5 @@
 use crate::ReqPrincipal;
+use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header;
 use actix_web::http::header::{AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, HeaderValue, VARY};
 use actix_web::web::{Json, Query};
@@ -7,8 +8,9 @@ use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
     AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
-    HealthResponse, I18nConfigResponse, LoginTimeResponse, PasswordHashTimesRequest,
-    PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
+    HealthResponse, I18nConfigResponse, KeepAliveResponse, LoginTimeResponse,
+    PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse, SearchParams,
+    SearchParamsType,
 };
 use rauthy_common::constants::{
     APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
@@ -32,7 +34,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
 use std::fmt::Write;
-use std::ops::Sub;
+use std::ops::{Add, Sub};
 use std::str::FromStr;
 use std::sync::{LazyLock, OnceLock};
 use tracing::{error, info, warn};
@@ -108,6 +110,33 @@ pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpRespons
         principal.validate_group_admin_session()?;
     }
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Keep the session of the current browser alive
+///
+/// Answers the session's next idle timeout deadline, which the caller schedules its next request
+/// from.
+///
+/// **Permissions**
+/// - session-auth (`Init` or `Auth`)
+#[utoipa::path(
+    get,
+    path = "/keep_alive",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok", body = KeepAliveResponse),
+        (status = 401, description = "Session expired", body = ErrorResponse),
+    ),
+)]
+#[get("/keep_alive")]
+pub async fn get_keep_alive(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth_or_init()?;
+    let session = principal.get_session()?;
+    let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
+        .expect("session.last_seen is a unix timestamp from our own DB")
+        .add(RauthyConfig::get().vars.lifetimes.session_timeout);
+
+    Ok(HttpResponse::Ok().json(KeepAliveResponse { timeout }))
 }
 
 /// Returns the existing encryption key ID's

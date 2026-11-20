@@ -571,6 +571,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_fed_cm_html)
                 .service(generic::get_auth_check)
                 .service(generic::get_auth_check_admin)
+                .service(generic::get_keep_alive)
                 .service(generic::get_timezones)
                 .service(generic::post_update_language)
                 .service(generic::get_version)

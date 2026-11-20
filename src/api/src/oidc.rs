@@ -330,7 +330,7 @@ fn build_authorize_resp(
         )),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
         (status = 400, description = "Missing / bad input data", body = ErrorResponse),
-        (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
+        (status = 401, description = "Bad input, expired sessionn, or CSRF Token error", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/authorize")]

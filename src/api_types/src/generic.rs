@@ -1,6 +1,7 @@
 use crate::sessions::SessionState;
 use rauthy_common::regex::{RE_ALNUM, RE_SEARCH};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
@@ -174,6 +175,16 @@ pub struct HealthResponse {
 pub struct I18nConfigResponse {
     pub common: Vec<Language>,
     pub admin: Vec<Language>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct KeepAliveResponse {
+    /// The session's next idle timeout deadline.
+    /// format: `OffsetDateTime`
+    #[schema(value_type = str)]
+    #[serde(with = "time::serde::rfc3339")]
+    pub timeout: OffsetDateTime,
 }
 
 #[derive(Serialize, ToSchema)]

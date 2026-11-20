@@ -36,7 +36,14 @@
         let code = param.get() || '';
         userCode = code;
 
-        let res = await fetchGet<SessionResponse>('/auth/v1/oidc/sessioninfo');
+        // 'noRedirect': the device flow is opened by users that are not logged in, so a 401 here is
+        // the normal case. The default 'handle401' would reload the document on every load, which
+        // never ends - the redirect below is what this page does with a missing session anyway.
+        let res = await fetchGet<SessionResponse>(
+            '/auth/v1/oidc/sessioninfo',
+            'json',
+            'noRedirect',
+        );
         if (res.body) {
             if (res.body.state != 'Auth') {
                 redirectToLogin(`device?code=${code}`);

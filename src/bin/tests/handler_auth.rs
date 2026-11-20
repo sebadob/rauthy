@@ -2,7 +2,7 @@ use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
     authorization_response_params_decoded, code_state_from_headers, cookie_csrf_headers_from_res,
     decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
-    init_client_bcl_uri,
+    init_client_bcl_uri, session_headers,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
@@ -10,6 +10,7 @@ use ed25519_compact::Noise;
 use josekit::jwk;
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, NewClientRequest, UpdateClientRequest};
+use rauthy_api_types::generic::KeepAliveResponse;
 use rauthy_api_types::oidc::{
     GrantType, JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest,
     TokenRevocationRequest, TokenValidationRequest,
@@ -279,6 +280,155 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
     assert_eq!(decoded.iter().filter(|(k, _)| k == "code").count(), 1);
 
     Ok(())
+}
+
+// The 401 of a login page whose own session has timed out must be tellable apart from a credential
+// failure without reading the message: only the first one carries `x-session-expired`.
+#[tokio::test]
+async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error>> {
+    let client_id = "init_client";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let url_auth = format!("{}/oidc/authorize", get_backend_url());
+
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+
+    let res = client
+        .get(authorize_url_s256(client_id, redirect_uri, ""))
+        .send()
+        .await?;
+    let res = expect_status!(res, 200);
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    let login = LoginRequest {
+        email: Some(USERNAME.to_string()),
+        password: Some("IAmSoWrong1337".to_string()),
+        pow: get_solved_pow().await,
+        client_id: client_id.to_string(),
+        redirect_uri: redirect_uri.to_string(),
+        scopes: None,
+        state: Some("X".to_string()),
+        nonce: None,
+        code_challenge: Some(challenge_s256()),
+        code_challenge_method: Some("S256".to_string()),
+        resource: None,
+        resident_key_token: None,
+        fwda: None,
+    };
+
+    // the page with its live `Init` session: the password is checked and a failure is a plain 401
+    let res = client
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&login)
+        .send()
+        .await?;
+    let has_header = res.headers().get("x-session-expired").is_some();
+    let status = res.status();
+    let body = res.text().await?;
+    assert_eq!(status, 401, "expected a plain 401 - body: {body}");
+    assert!(body.contains("Invalid user credentials"), "{body}");
+    assert!(
+        !has_header,
+        "a checked credential must not be marked: {body}"
+    );
+
+    // the same page after its session is gone: the login never reaches the credentials at all, and
+    // the PoW is not validated either - the header is the only signal the UI gets
+    let mut no_session = headers;
+    no_session.remove(reqwest::header::COOKIE);
+    let mut without_pow = login;
+    without_pow.pow = String::new();
+    let res = client
+        .post(&url_auth)
+        .headers(no_session)
+        .json(&without_pow)
+        .send()
+        .await?;
+    let has_header = res.headers().get("x-session-expired").is_some();
+    let status = res.status();
+    let body = res.text().await?;
+    assert_eq!(status, 401, "expected 401 - body: {body}");
+    assert!(has_header, "the header is the signal - body: {body}");
+
+    Ok(())
+}
+
+// The login page's idle ticker: `GET /keep_alive` must be valid with an `Init` session, its answer
+// is the deadline the next beat is scheduled from, and the beat itself is what keeps the session.
+#[tokio::test]
+async fn test_keep_alive_beats_for_the_login_page() -> Result<(), Box<dyn Error>> {
+    let client_id = "init_client";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let url_keep_alive = format!("{}/keep_alive", get_backend_url());
+
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+
+    // the document request of a login page is what opens its `Init` session
+    let res = client
+        .get(authorize_url_s256(client_id, redirect_uri, ""))
+        .send()
+        .await?;
+    let res = expect_status!(res, 200);
+    let headers = cookie_csrf_headers_from_res(res).await?;
+
+    let first = keep_alive_deadline(&client, &url_keep_alive, headers.clone()).await?;
+    let delta = first - Utc::now().timestamp();
+    assert!(delta > 60, "the deadline has to be in the future: {delta}");
+    assert!(
+        delta < 24 * 3600,
+        "the deadline has to be a SESSION_TIMEOUT: {delta}"
+    );
+
+    // the beat is the keep-alive: `last_seen` is only refreshed when it is older than 10 s, and
+    // exactly that distance is what makes the second answer move
+    time::sleep(Duration::from_secs(11)).await;
+    let second = keep_alive_deadline(&client, &url_keep_alive, headers.clone()).await?;
+    assert!(
+        second > first,
+        "the beat must refresh the session: {first} -> {second}"
+    );
+
+    // an `Auth` session - the account dashboard and the admin UI - answers the same way
+    let (auth_headers, _ts) = session_headers().await;
+    let auth = keep_alive_deadline(&client, &url_keep_alive, auth_headers).await?;
+    assert!(
+        auth > Utc::now().timestamp(),
+        "an Auth session must answer a deadline: {auth}"
+    );
+
+    // no session at all is the very same signal as on the login endpoint
+    let mut no_cookie = headers;
+    no_cookie.remove(reqwest::header::COOKIE);
+    let res = client
+        .get(&url_keep_alive)
+        .headers(no_cookie)
+        .send()
+        .await?;
+    let has_header = res.headers().get("x-session-expired").is_some();
+    let status = res.status();
+    let body = res.text().await?;
+    assert_eq!(status, 401, "expected 401 - body: {body}");
+    assert!(has_header, "the header is the signal - body: {body}");
+
+    Ok(())
+}
+
+async fn keep_alive_deadline(
+    client: &reqwest::Client,
+    url: &str,
+    headers: reqwest::header::HeaderMap,
+) -> Result<i64, Box<dyn Error>> {
+    let res = client.get(url).headers(headers).send().await?;
+    let status = res.status();
+    let body = res.text().await?;
+    assert_eq!(status, 200, "expected 200 - body: {body}");
+    Ok(serde_json::from_str::<KeepAliveResponse>(&body)?
+        .timeout
+        .unix_timestamp())
 }
 
 // RFC 6749 §3.1.2 - a fragment would swallow `code` / `iss`, and the wildcard would let it through
