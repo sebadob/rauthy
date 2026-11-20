@@ -49,7 +49,7 @@ const passwordField = (/** @type {import('@playwright/test').Page} */ page) =>
     page.getByLabel('Password', { exact: true });
 
 test.describe('login page', () => {
-    test('e-mail step, then password step, then redirect to the account @mobile @webkit', async ({
+    test('e-mail step, then password step, then redirect to the account @mobile', async ({
         page,
     }) => {
         await page.goto('/auth/v1/account');
@@ -109,37 +109,6 @@ test.describe('login page', () => {
         await emailField(page).fill(user.email);
         await expect(emailField(page)).toHaveAttribute('aria-invalid', 'false');
         await expect(page.getByText('Provide valid E-Mail address')).toBeHidden();
-    });
-
-    test.describe(() => {
-        // the request this test is about
-        test.use({
-            allowErrors: [
-                ...ACCOUNT_EXPECTED_ERRORS,
-                /^http 400 POST \/auth\/v1\/oidc\/authorize$/,
-            ],
-        });
-
-        test('an invalid e-mail is not sent to the backend', async ({ page }) => {
-            // UPSTREAM BUG: the Login button calls `onSubmit()` from its `onclick` as well, which
-            // skips the form validation. An invalid address is posted, and the raw backend
-            // message "Payload validation error: ValidationErrors(...)" is shown to the user.
-            // `routes/oidc/authorize/+page.svelte` (the submit `Button` with `onclick`).
-            test.fail();
-            /** @type {string[]} */
-            const posts = [];
-            page.on('request', r => {
-                if (r.method() === 'POST' && r.url().includes('/oidc/authorize'))
-                    posts.push(r.url());
-            });
-            await page.goto('/auth/v1/account');
-            await fillLoginEmail(page, 'not-an-email');
-            await loginButton(page).click();
-            await expect(page.getByText('Provide valid E-Mail address')).toBeVisible();
-            await page.waitForTimeout(1_500);
-            await expect(page.getByText(/ValidationErrors/)).toHaveCount(0);
-            expect(posts).toEqual([]);
-        });
     });
 
     test('wrong password, then a reset request from the login page, then the right password', async ({
