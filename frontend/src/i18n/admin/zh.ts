@@ -278,6 +278,10 @@ export let I18nAdminZh: I18nAdmin = {
     groups: {
         delete1: '您确定要删除此组吗？',
         name: '组名',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: '算法',
@@ -442,6 +446,10 @@ export let I18nAdminZh: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code>角色是不可变的。',
         delete1: '您确定要删除此角色吗？',
         name: '角色名称',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',

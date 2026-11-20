@@ -296,6 +296,10 @@ export let I18nAdminNb: I18nAdmin = {
     groups: {
         delete1: 'Skal denne gruppen slettes?',
         name: 'Gruppenavn',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritme',
@@ -440,6 +444,10 @@ export let I18nAdminNb: I18nAdmin = {
         adminNoMod: 'Rollen <code>rauthy_admin</code> kan ikke endres.',
         delete1: 'Skal denne rollen slettes?',
         name: 'Rollenavn',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',

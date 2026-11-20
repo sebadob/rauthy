@@ -507,16 +507,20 @@ WHERE sessions.exp > $11"#;
         let q = format!("%{q}%");
 
         let size_hint = max(limit as usize, 1);
+        // SQLite has no `ILIKE` and its `LIKE` is case-insensitive for ASCII already
+        let like = if is_hiqlite() { "LIKE" } else { "ILIKE" };
 
         let sql = match idx {
             SearchParamsIdx::UserId => {
-                "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE user_id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Id | SearchParamsIdx::SessionId => {
-                "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Ip => {
-                "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!(
+                    "SELECT * FROM sessions WHERE remote_ip {like} $1 ORDER BY exp DESC LIMIT $2"
+                )
             }
             _ => {
                 return Err(ErrorResponse::new(
@@ -529,7 +533,7 @@ WHERE sessions.exp > $11"#;
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(q, limit)).await?
         } else {
-            DB::pg_query(sql, &[&q, &limit], size_hint).await?
+            DB::pg_query(&sql, &[&q, &limit], size_hint).await?
         };
 
         Ok(res)

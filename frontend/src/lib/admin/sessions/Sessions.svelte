@@ -11,7 +11,7 @@
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { useSession } from '#state/session.svelte.ts';
     import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
+    import { loadPageSize, type PageSize } from '#lib/pagination/props.ts';
     import { fetchSearchServer, type SearchParamsIdxSession } from '#utils/search.ts';
     import { useTrigger } from '#state/callback.svelte.ts';
 
@@ -34,7 +34,7 @@
 
     let useServerSide = $state(false);
     let firstFetchHeaders: undefined | Headers = $state();
-    let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
+    let sspPageSize: PageSize = $state(loadPageSize());
     let isSearchedServer = $state(false);
 
     let searchOptions = ['User ID', 'Session ID', 'IP'];

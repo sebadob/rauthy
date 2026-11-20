@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { fetchGet } from '#api/fetch.ts';
     import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
@@ -14,7 +14,7 @@
     import UserAddNew from '#lib/admin/users/UserAddNew.svelte';
     import UserDetails from '#lib/admin/users/UserDetails.svelte';
     import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
+    import { loadPageSize, type PageSize } from '#lib/pagination/props.ts';
     import { fetchSearchServer, type SearchParamsIdxUser } from '#utils/search.ts';
     import UserPicture from '#lib/UserPicture.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
@@ -24,6 +24,15 @@
     import IconEnvelope from '#icons/IconEnvelope.svelte';
     import SendMail from '#lib/SendMail.svelte';
     import EmailJobs from '#lib/EmailJobs.svelte';
+
+    // The search bar's options: 'Name' matches given_name / family_name, 'Username' matches
+    // preferred_username, and both are server-side idx values as well
+    const SEARCH_EMAIL = 'E-Mail';
+    const SEARCH_ID = 'ID';
+    const SEARCH_NAME = 'Name';
+    const SEARCH_USERNAME = 'Username';
+    // Server-side searches are fired while typing - this is the minimum time between two queries
+    const SERVER_SEARCH_THROTTLE_MS = 250;
 
     let refAddNew: undefined | HTMLButtonElement = $state();
     let tr = useTrigger();
@@ -45,13 +54,22 @@
 
     let useServerSide = $state(false);
     let firstFetchHeaders: undefined | Headers = $state();
-    let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
+    let sspPageSize: PageSize = $state(loadPageSize());
     let isSearchedServer = $state(false);
 
-    let searchOptions = $state(['E-Mail', 'ID']);
-    let searchOption = $state(searchOptions[0]);
+    // 'Name' is filtered in memory as long as the whole list is loaded, 'Username' always needs a
+    // server-side search
+    let searchOptions = $state([SEARCH_EMAIL, SEARCH_ID, SEARCH_NAME, SEARCH_USERNAME]);
+    let searchOption = $state(SEARCH_EMAIL);
     let searchValue = $state('');
     let orderOptions = $state(['E-Mail', 'ID', 'Created', 'Last Login']);
+
+    let serverSearchTimer: undefined | ReturnType<typeof setTimeout> = undefined;
+    // timestamp of the last fired server-side search - the throttle's anchor
+    let serverSearchTs = 0;
+    let serverSearchId = 0;
+
+    onDestroy(() => clearTimeout(serverSearchTimer));
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);
@@ -67,36 +85,70 @@
 
     $effect(() => {
         let search = searchValue.toLowerCase();
+        // preferred_username is not part of the in-memory payload -> server-side in any mode, and
+        // with server side pagination 'Name' is searched on the backend as well
+        let serverSide = useServerSide || searchOption === SEARCH_USERNAME;
 
-        if (useServerSide) {
+        if (serverSide) {
+            clearTimeout(serverSearchTimer);
             if (search.length < 3) {
                 if (isSearchedServer) {
-                    fetchUsers('page_size=' + sspPageSize);
                     isSearchedServer = false;
+                    if (useServerSide) {
+                        fetchUsers('page_size=' + sspPageSize);
+                    } else {
+                        usersFiltered = users;
+                    }
                 }
-            } else {
+                return;
+            }
+
+            let elapsed = Date.now() - serverSearchTs;
+            if (elapsed >= SERVER_SEARCH_THROTTLE_MS) {
                 searchServer(search);
+            } else {
+                // trailing query so the last typed value is the one that ends up being shown
+                serverSearchTimer = setTimeout(
+                    () => searchServer(search),
+                    SERVER_SEARCH_THROTTLE_MS - elapsed,
+                );
             }
+            return;
+        }
+
+        isSearchedServer = false;
+
+        if (!search) {
+            usersFiltered = users;
+        } else if (searchOption === SEARCH_EMAIL) {
+            usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
+        } else if (searchOption === SEARCH_ID) {
+            usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
         } else {
-            if (!search) {
-                usersFiltered = users;
-            } else if (searchOption === searchOptions[0]) {
-                usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
-            } else if (searchOption === searchOptions[1]) {
-                usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
-            }
+            usersFiltered = users.filter(
+                u =>
+                    u.given_name?.toLowerCase().includes(search) ||
+                    u.family_name?.toLowerCase().includes(search),
+            );
         }
     });
 
     async function searchServer(q: string) {
+        // throttled queries can resolve out of order - only apply the newest answer
+        let id = ++serverSearchId;
+        serverSearchTs = Date.now();
         firstFetchHeaders = undefined;
         isSearchedServer = true;
 
         let idx: SearchParamsIdxUser;
-        if (searchOption === searchOptions[0]) {
+        if (searchOption === SEARCH_EMAIL) {
             idx = 'email';
-        } else {
+        } else if (searchOption === SEARCH_ID) {
             idx = 'id';
+        } else if (searchOption === SEARCH_NAME) {
+            idx = 'name';
+        } else {
+            idx = 'username';
         }
 
         let res = await fetchSearchServer<UserResponseSimple[]>({
@@ -104,8 +156,16 @@
             idx,
             q,
         });
+        if (id !== serverSearchId) {
+            return;
+        }
         if (res.body) {
-            users = res.body;
+            // in-memory mode keeps the full `users` list intact and only replaces the filter
+            if (useServerSide) {
+                users = res.body;
+            } else {
+                usersFiltered = res.body;
+            }
         } else {
             console.error(res.error);
         }

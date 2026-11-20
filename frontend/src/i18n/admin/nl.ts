@@ -301,6 +301,10 @@ export let I18nAdminNl: I18nAdmin = {
     groups: {
         delete1: 'Weet u zeker dat u deze groep wilt verwijderen?',
         name: 'Groepsnaam',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritme',
@@ -472,6 +476,10 @@ export let I18nAdminNl: I18nAdmin = {
         adminNoMod: 'De <code>rauthy_admin</code>-rol is onveranderlijk.',
         delete1: 'Weet u zeker dat u deze rol wilt verwijderen?',
         name: 'Rolnaam',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Claims op tokenroot plaatsen',
