@@ -156,6 +156,9 @@ test.describe('API keys list', () => {
         created.push(name);
         await page.goto(PAGE);
         await expect(entry(page, name)).toBeVisible();
+        // Wait for the debounced filter before checking whether this key reappears.
+        await searchBox(page).fill('nothing-matches');
+        await expect(entry(page, name)).toHaveCount(0);
         await searchBox(page).fill(name);
         await expect(entry(page, name)).toBeVisible({ timeout: 3_000 });
     });
