@@ -1,6 +1,8 @@
 <script lang="ts">
     import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import RoleUsers from './RoleUsers.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
     import IconCheckBadge from '#icons/IconCheckBadge.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import type { RoleResponse } from '#api/types/roles.ts';
@@ -17,6 +19,8 @@
     } = $props();
 
     let ta = useI18nAdmin();
+    const tabs = [ta.nav.config, ta.nav.users];
+    let selected = $state(tabs[0]);
 </script>
 
 <EntityHeader title={role.name} subtitle={ta.nav.roles}>
@@ -36,4 +40,10 @@
     <IconCheckBadge width="28px" />
 </EntityHeader>
 
-<RoleConfig {role} {roles} {onSave} />
+<Tabs {tabs} bind:selected />
+
+{#if selected === ta.nav.config}
+    <RoleConfig {role} {roles} {onSave} />
+{:else}
+    <RoleUsers {role} />
+{/if}

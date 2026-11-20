@@ -16,7 +16,6 @@ pub enum Language {
     En,
     Es,
     Fr,
-    It,
     Ja,
     Ko,
     Nb,
@@ -26,6 +25,8 @@ pub enum Language {
     Ru,
     Uk,
     ZhHans,
+    // Keep new variants at the end to preserve existing binary discriminants.
+    It,
 }
 
 impl Language {
@@ -203,5 +204,40 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::Uk => Self::Uk,
             Language::ZhHans => Self::ZhHans,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Language;
+    use actix_web::test::TestRequest;
+    use rauthy_common::utils::{deserialize, serialize};
+
+    #[test]
+    fn italian_is_negotiated_and_round_trips_as_it() {
+        let req = TestRequest::default()
+            .insert_header(("Accept-Language", "it-IT,it;q=0.9,en;q=0.5"))
+            .to_http_request();
+        let lang = Language::try_from(&req).unwrap();
+        assert_eq!(lang, Language::It);
+        assert_eq!(lang.html_lang(), "it-IT");
+        assert_eq!(lang.as_str(), "it");
+        let api: rauthy_api_types::generic::Language = serde_json::from_str("\"it\"").unwrap();
+        assert_eq!(Language::from(api), lang);
+    }
+
+    #[test]
+    fn existing_binary_locale_values_keep_their_discriminants() {
+        let old_japanese = 5_u32.to_le_bytes();
+        let old_chinese = 13_u32.to_le_bytes();
+        assert_eq!(
+            deserialize::<Language>(&old_japanese).unwrap(),
+            Language::Ja
+        );
+        assert_eq!(
+            deserialize::<Language>(&old_chinese).unwrap(),
+            Language::ZhHans
+        );
+        assert_eq!(serialize(&Language::It).unwrap(), 14_u32.to_le_bytes());
     }
 }

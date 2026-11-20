@@ -1,10 +1,10 @@
 <script lang="ts">
     import PaginationControls from './PaginationControls.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from './props.ts';
+    import { loadPageSize, PAGE_SIZE_DEFAULT, savePageSize, type PageSize } from './props.ts';
     import { untrack } from 'svelte';
 
     let {
-        pageSize = $bindable(PAGE_SIZE_DEFAULT),
+        pageSize = $bindable(loadPageSize()),
         sspFetch,
         idxTotalCount,
         itemsLength,
@@ -77,5 +77,8 @@
     total={itemsTotal}
     {pending}
     onPage={navigate}
-    onPageSize={size => navigate(1, size)}
+    onPageSize={async size => {
+        await navigate(1, size);
+        if (pageSize === size) savePageSize(size);
+    }}
 />

@@ -1,6 +1,8 @@
 <script lang="ts">
     import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import GroupUsers from './GroupUsers.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
     import IconUserGroup from '#icons/IconUserGroup.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import type { GroupResponse } from '#api/types/groups.ts';
@@ -17,6 +19,8 @@
     } = $props();
 
     let ta = useI18nAdmin();
+    const tabs = [ta.nav.config, ta.nav.users];
+    let selected = $state(tabs[0]);
 </script>
 
 <EntityHeader title={group.name} subtitle={ta.nav.groups}>
@@ -33,4 +37,10 @@
     <IconUserGroup width="28px" />
 </EntityHeader>
 
-<GroupConfig {group} {groups} {onSave} />
+<Tabs {tabs} bind:selected />
+
+{#if selected === ta.nav.config}
+    <GroupConfig {group} {groups} {onSave} />
+{:else}
+    <GroupUsers {group} />
+{/if}

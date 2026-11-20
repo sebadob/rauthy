@@ -1,12 +1,12 @@
 <script lang="ts" generics="T">
     import PaginationControls from './PaginationControls.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from './props.ts';
+    import { loadPageSize, savePageSize, type PageSize } from './props.ts';
 
     let {
         items = $bindable(),
         itemsPaginated = $bindable(),
         page = $bindable(1),
-        pageSize = $bindable(PAGE_SIZE_DEFAULT),
+        pageSize = $bindable(loadPageSize()),
         compact = false,
     }: {
         items: T[];
@@ -42,5 +42,6 @@
     onPageSize={size => {
         page = 1;
         pageSize = size;
+        savePageSize(size);
     }}
 />

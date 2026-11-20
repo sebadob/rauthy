@@ -1,7 +1,7 @@
 <script lang="ts">
     import IconChevronRight from '#icons/IconChevronRight.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import type { PageSize } from './props.ts';
+    import { PAGE_SIZE_OPTIONS, type PageSize } from './props.ts';
 
     let {
         page,
@@ -26,7 +26,6 @@
     } = $props();
 
     const t = useI18n();
-    const sizes = [5, 10, 15, 20, 30, 50, 100] as const;
 </script>
 
 <nav aria-label={t.pagination.pagination} aria-busy={pending} class="pagination">
@@ -76,7 +75,7 @@
                         onPageSize(next);
                     }}
                 >
-                    {#each sizes as size (size)}
+                    {#each PAGE_SIZE_OPTIONS as size (size)}
                         <option value={size}>{size}</option>
                     {/each}
                 </select>

@@ -89,6 +89,8 @@ mod tests {
 
         let p = email_ts_prettify_with(&config, now, &Language::En, None);
         assert_eq!(&p, "10/20/2000 13:23:33 (UTC)");
+        let p = email_ts_prettify_with(&config, now, &Language::It, None);
+        assert_eq!(&p, "10/20/2000 13:23:33 (UTC)");
         let p = email_ts_prettify_with(&config, now, &Language::En, Some("Europe/Berlin"));
         assert_eq!(&p, "10/20/2000 15:23:33 (CEST)");
 

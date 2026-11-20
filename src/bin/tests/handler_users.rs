@@ -123,6 +123,127 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     let user_by_email = expect_status_json!(res, 200, UserResponse);
     assert_eq!(user_by_email.id, alfred.id);
 
+    // the `username` search idx lives in the `users_values` table
+    let url_search = format!(
+        "{}/search?ty=user&idx=username&q=alfredo",
+        get_backend_url()
+    );
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(searched.len(), 1, "search for 'alfredo'");
+    assert_eq!(searched[0].id, alfred.id);
+
+    // an unknown username matches nobody
+    let url_search = format!("{}/search?ty=user&idx=username&q=nobody", get_backend_url());
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert!(searched.is_empty(), "search for 'nobody'");
+
+    // the `name` search idx matches `given_name` / `family_name` and is case-insensitive on both
+    // databases (`ILIKE` on Postgres). The bootstrap seeds `alfred@batcave` with the very same
+    // names, so both of them must be found.
+    let url_search = format!("{}/search?ty=user&idx=name&q=Batman", get_backend_url());
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(searched.len(), 2, "search for 'Batman'");
+    assert!(
+        searched.iter().any(|u| u.id == alfred.id),
+        "search for 'Batman' must include the new user"
+    );
+
+    // the very same query in lower case
+    let url_search = format!("{}/search?ty=user&idx=name&q=batman", get_backend_url());
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(searched.len(), 2, "search for 'batman'");
+
+    // `given_name` is matched as well
+    let url_search = format!("{}/search?ty=user&idx=name&q=Wayne", get_backend_url());
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(searched.len(), 1, "search for 'Wayne'");
+    assert_eq!(searched[0].email, "batman@batcave");
+
+    // a name nobody has matches nobody
+    let url_search = format!("{}/search?ty=user&idx=name&q=nobody", get_backend_url());
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert!(searched.is_empty(), "search for name 'nobody'");
+
+    // a user with non-ASCII names and a `+` in the email for the searches below
+    let new_umlaut_user = NewUserRequest {
+        given_name: Some("André".to_string()),
+        family_name: Some("Gödel".to_string()),
+        email: "andre+tag@batcave.io".to_string(),
+        preferred_username: None,
+        language: Language::En,
+        roles: vec!["user".to_string()],
+        groups: None,
+        user_expires: None,
+        tz: None,
+    };
+    let res = reqwest::Client::new()
+        .post(&url)
+        .headers(auth_headers.clone())
+        .json(&new_umlaut_user)
+        .send()
+        .await?;
+    let umlaut_user = expect_status_json!(res, 200, UserResponse);
+
+    // non-ASCII queries survive the `q` validation and the query string round-trip
+    let url_search = format!("{}/search?ty=user&idx=name&q=Gödel", get_backend_url());
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(searched.len(), 1, "search for 'Gödel'");
+    assert_eq!(searched[0].id, umlaut_user.id);
+
+    // `%2B` has to arrive as a `+` - a raw `+` in a query string would decode as a space
+    let url_search = format!("{}/search?ty=user&idx=email&q=%2Btag", get_backend_url());
+    let res = reqwest::Client::new()
+        .get(&url_search)
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    let searched = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert_eq!(searched.len(), 1, "search for '+tag'");
+    assert_eq!(searched[0].email, "andre+tag@batcave.io");
+
+    // an idx that only exists on sessions is a BadRequest for users
+    let res = reqwest::Client::new()
+        .get(format!("{}/search?ty=user&idx=ip&q=127", get_backend_url()))
+        .headers(auth_headers.clone())
+        .send()
+        .await?;
+    expect_status!(res, 400);
+
     // an admin may clear a required value (`given_name` by default) to make the user set it again
     let res = reqwest::Client::new()
         .patch(&url_id)

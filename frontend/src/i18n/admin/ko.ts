@@ -312,6 +312,10 @@ export let I18nAdminKo: I18nAdmin = {
     groups: {
         delete1: '이 그룹을 삭제하시겠습니까?',
         name: '그룹 이름',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: '알고리즘',
@@ -483,6 +487,10 @@ export let I18nAdminKo: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code> 역할은 변경할 수 없습니다.',
         delete1: '이 역할을 삭제하시겠습니까?',
         name: '역할 이름',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',

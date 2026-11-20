@@ -282,6 +282,10 @@ export interface I18nAdmin {
     groups: {
         delete1: string;
         name: string;
+        users: {
+            empty: string;
+            remove: string;
+        };
     };
     jwks: {
         alg: string;
@@ -445,6 +449,10 @@ export interface I18nAdmin {
         adminNoMod: string;
         delete1: string;
         name: string;
+        users: {
+            empty: string;
+            remove: string;
+        };
     };
     scopes: {
         defaultBadge?: string;
@@ -485,6 +493,8 @@ export interface I18nAdmin {
         tos: string;
     };
     users: {
+        searchName?: string;
+        searchUsername?: string;
         antiLockout: {
             rule: string;
             delete: string;

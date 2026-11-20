@@ -2,7 +2,7 @@
     import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { fetchGet } from '#api/fetch.ts';
     import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
@@ -17,7 +17,7 @@
     import UserAddNew from '#lib/admin/users/UserAddNew.svelte';
     import UserDetails from '#lib/admin/users/UserDetails.svelte';
     import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
+    import { loadPageSize, type PageSize } from '#lib/pagination/props.ts';
     import { fetchSearchServer, type SearchParamsIdxUser } from '#utils/search.ts';
     import UserPicture from '#lib/UserPicture.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
@@ -29,6 +29,14 @@
 
     let ta = useI18nAdmin();
     const t = useI18n();
+    // The search bar's options: ta.users.searchName ?? 'Name' matches given_name / family_name, ta.users.searchUsername ?? 'Username' matches
+    // preferred_username, and both are server-side idx values as well
+    const SEARCH_EMAIL = t.common.email;
+    const SEARCH_ID = 'ID';
+    const SEARCH_NAME = ta.users.searchName ?? 'Name';
+    const SEARCH_USERNAME = ta.users.searchUsername ?? 'Username';
+    // Server-side searches are fired while typing - this is the minimum time between two queries
+    const SERVER_SEARCH_THROTTLE_MS = 250;
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -46,13 +54,20 @@
 
     let useServerSide = $state(false);
     let firstFetchHeaders: undefined | Headers = $state();
-    let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
+    let sspPageSize: PageSize = $state(loadPageSize());
     let isSearchedServer = $state(false);
 
-    let searchOptions = $state([t.common.email, 'ID']);
-    let searchOption = $state(searchOptions[0]);
+    // 'Name' is filtered in memory as long as the whole list is loaded, 'Username' always needs a
+    // server-side search
+    let searchOptions = $state([SEARCH_EMAIL, SEARCH_ID, SEARCH_NAME, SEARCH_USERNAME]);
+    let searchOption = $state(SEARCH_EMAIL);
     let searchValue = $state('');
     let orderOptions = $state([t.common.email, 'ID', t.account.userCreated, ta.users.lastLogin]);
+
+    let serverSearchTimer: undefined | ReturnType<typeof setTimeout> = undefined;
+    // timestamp of the last fired server-side search - the throttle's anchor
+    let serverSearchTs = 0;
+    let serverSearchId = 0;
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);
@@ -67,37 +82,66 @@
     });
 
     $effect(() => {
-        let search = searchValue.toLowerCase();
+        const search = searchValue.toLowerCase();
+        const option = searchOption;
+        const paginated = useServerSide;
 
-        if (useServerSide) {
+        if (paginated || option === SEARCH_USERNAME) {
+            const searchId = ++serverSearchId;
             if (search.length < 3) {
-                if (isSearchedServer) {
-                    fetchUsers('page_size=' + sspPageSize);
+                untrack(() => {
+                    if (isSearchedServer && paginated) {
+                        fetchUsers('page_size=' + sspPageSize);
+                    }
                     isSearchedServer = false;
-                }
-            } else {
-                searchServer(search);
+                });
+                if (!paginated) usersFiltered = users;
+                return;
             }
+
+            const delay = Math.max(0, SERVER_SEARCH_THROTTLE_MS - (Date.now() - serverSearchTs));
+            const run = () => {
+                void searchServer(search, option, paginated, searchId);
+            };
+            if (delay) serverSearchTimer = setTimeout(run, delay);
+            else untrack(run);
+            return () => {
+                clearTimeout(serverSearchTimer);
+                serverSearchId++;
+            };
+        }
+
+        isSearchedServer = false;
+
+        if (!search) {
+            usersFiltered = users;
+        } else if (searchOption === SEARCH_EMAIL) {
+            usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
+        } else if (searchOption === SEARCH_ID) {
+            usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
         } else {
-            if (!search) {
-                usersFiltered = users;
-            } else if (searchOption === searchOptions[0]) {
-                usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
-            } else if (searchOption === searchOptions[1]) {
-                usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
-            }
+            usersFiltered = users.filter(
+                u =>
+                    u.given_name?.toLowerCase().includes(search) ||
+                    u.family_name?.toLowerCase().includes(search),
+            );
         }
     });
 
-    async function searchServer(q: string) {
+    async function searchServer(q: string, option: string, paginated: boolean, id: number) {
+        serverSearchTs = Date.now();
         firstFetchHeaders = undefined;
         isSearchedServer = true;
 
         let idx: SearchParamsIdxUser;
-        if (searchOption === searchOptions[0]) {
+        if (option === SEARCH_EMAIL) {
             idx = 'email';
-        } else {
+        } else if (option === SEARCH_ID) {
             idx = 'id';
+        } else if (option === SEARCH_NAME) {
+            idx = 'name';
+        } else {
+            idx = 'username';
         }
 
         let res = await fetchSearchServer<UserResponseSimple[]>({
@@ -105,8 +149,16 @@
             idx,
             q,
         });
+        if (id !== serverSearchId) {
+            return;
+        }
         if (res.body) {
-            users = res.body;
+            // in-memory mode keeps the full `users` list intact and only replaces the filter
+            if (paginated) {
+                users = res.body;
+            } else {
+                usersFiltered = res.body;
+            }
         } else {
             console.error(res.error);
         }

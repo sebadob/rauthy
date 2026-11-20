@@ -278,6 +278,7 @@ export const I18nAdminIt: I18nAdmin = {
         eventType: 'Tipo di evento',
     },
     groups: {
+        users: { empty: 'Nessun utente assegnato a questo gruppo.', remove: 'Rimuovi dal gruppo' },
         delete1: 'Vuoi eliminare questo gruppo?',
         name: 'Nome del gruppo',
     },
@@ -444,6 +445,7 @@ export const I18nAdminIt: I18nAdmin = {
         },
     },
     roles: {
+        users: { empty: 'Nessun utente assegnato a questo ruolo.', remove: 'Rimuovi dal ruolo' },
         adminNoMod: 'Il ruolo <code>rauthy_admin</code> è immutabile.',
         delete1: 'Vuoi eliminare questo ruolo?',
         name: 'Nome del ruolo',
@@ -485,6 +487,8 @@ export const I18nAdminIt: I18nAdmin = {
         tos: 'Condizioni di servizio',
     },
     users: {
+        searchName: 'Nome',
+        searchUsername: 'Nome utente',
         antiLockout: {
             rule: 'Protezione contro il blocco dell’account',
             delete: 'L’account attivo non può essere eliminato',

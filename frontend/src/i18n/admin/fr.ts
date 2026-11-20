@@ -340,6 +340,10 @@ export let I18nAdminFr: I18nAdmin = {
     groups: {
         delete1: 'Êtes-vous sûr de vouloir supprimer ce groupe ?',
         name: 'Nom du groupe',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algorithme',
@@ -523,6 +527,10 @@ export let I18nAdminFr: I18nAdmin = {
         adminNoMod: 'Le rôle <code>rauthy_admin</code> est immuable.',
         delete1: 'Êtes-vous sûr de vouloir supprimer ce rôle ?',
         name: 'Nom du rôle',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Émettre les claims à la racine du jeton',

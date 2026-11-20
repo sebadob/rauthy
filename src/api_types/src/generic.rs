@@ -41,7 +41,6 @@ pub enum Language {
     En,
     Es,
     Fr,
-    It,
     Ja,
     Ko,
     Nb,
@@ -52,6 +51,8 @@ pub enum Language {
     Uk,
     #[serde(alias = "zh")]
     ZhHans,
+    // Keep new variants at the end to preserve existing binary discriminants.
+    It,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]
@@ -118,8 +119,13 @@ pub struct SearchParams {
     pub ty: SearchParamsType,
     /// Index
     pub idx: SearchParamsIdx,
-    /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+@]+`
-    #[validate(regex(path = "*RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+@]+"))]
+    /// The actual search query - validation: `[,:/_&?=~#!$()*+@\p{L}\p{M}\p{N}\p{Zs}'.-]+`, which
+    /// is the `given_name` / `family_name` characters plus everything of an email, id, username,
+    /// session id, or IP
+    #[validate(regex(
+        path = "*RE_SEARCH",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.\\-,:/_&?=~#!$()*+@]+"
+    ))]
     pub q: String,
     pub limit: Option<u16>,
 }
@@ -130,6 +136,8 @@ pub enum SearchParamsIdx {
     // user params
     Id,
     Email,
+    Name,
+    Username,
     // session params
     UserId,
     SessionId,
