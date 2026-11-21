@@ -1,8 +1,8 @@
 use crate::scim::types::{
-    ScimError, ScimGroup, ScimListQuery, ScimListResponse, ScimPatchOp, ScimToken, ScimUser,
-    SCIM_SCHEMA_GROUP, SCIM_SCHEMA_PATCH_OP, SCIM_SCHEMA_USER,
+    SCIM_SCHEMA_GROUP, SCIM_SCHEMA_PATCH_OP, SCIM_SCHEMA_USER, ScimError, ScimGroup, ScimListQuery,
+    ScimListResponse, ScimPatchOp, ScimToken, ScimUser,
 };
-use crate::scim::{is_content_type_scim, validate_scim_token, CONTENT_TYPE_SCIM};
+use crate::scim::{CONTENT_TYPE_SCIM, is_content_type_scim, validate_scim_token};
 use axum::extract::{FromRequest, FromRequestParts, Query, Request};
 use axum::response::IntoResponse;
 use axum::response::Response;
