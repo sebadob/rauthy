@@ -867,15 +867,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
 
     // refresh it
     time::sleep(Duration::from_secs(2)).await;
-    let req = TokenRequest {
-        grant_type: GrantType::RefreshToken,
-        client_id: Some(CLIENT_ID.to_string()),
-        client_secret: Some(CLIENT_SECRET.to_string()),
-        refresh_token: Some(ts.refresh_token.clone().unwrap()),
-        ..Default::default()
-    };
-    let url = format!("{}/oidc/token", get_backend_url());
-    let res = reqwest::Client::new().post(&url).form(&req).send().await?;
+    let res = refresh(&reqwest::Client::new(), ts.refresh_token.clone().unwrap()).await;
     let new_ts = expect_status_json!(res, 200, TokenSet);
     assert!(!new_ts.access_token.is_empty());
     assert!(new_ts.id_token.is_some());
