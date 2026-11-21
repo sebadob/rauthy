@@ -1,12 +1,6 @@
-//! With `consent.enable`, the authorization_code grant (FedCM included) and the refresh tokens
-//! it issued only yield tokens while the user's consent grant (`user_consents`) for the client
-//! and RFC 8707 resource exists. The password and device_code grants have no consent step: their
-//! tokens are `ConsentCheck::Exempt` and not checked. Without `consent.enable`, everything here
-//! is a no-op.
-//!
-//! The checks are plain reads that fail early. What a concurrent revoke cannot miss is
-//! decided by the write: a `ConsentCheck::Required` refresh token is only inserted while the
-//! grant exists (`RefreshTokenGrant::Required` of `RefreshToken::create`).
+//! The consent grant check of the authorization_code exchange and FedCM, the mapping of its
+//! `ConsentRequired` to `invalid_grant`, and the narrowing of a refresh token's scope to the
+//! consent grant.
 
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::user_consents::UserConsent;
@@ -47,8 +41,7 @@ pub fn consent_as_invalid_grant(err: ErrorResponse) -> ErrorResponse {
     }
 }
 
-// `rt_scope ∩ (granted ∪ default_scopes)` in the order of `rt_scope`: never wider than the
-// refresh token (RFC 6749 §6)
+// never wider than the refresh token (RFC 6749 §6)
 pub(crate) fn effective_scope(rt_scope: &str, grant: &UserConsent, client: &Client) -> String {
     let mut res = String::with_capacity(rt_scope.len());
     for s in rt_scope.split_whitespace() {

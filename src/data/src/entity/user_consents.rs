@@ -1905,11 +1905,11 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             .unwrap();
     }
 
-    /// A discard of the refresh token `rt_c1` of u1 for c1 runs at the same time as a `Client::delete` of c1 or a `User::delete` of u1:
-    /// one of them runs its first statements, the other one all of its statements, then the
-    /// first one the rest. Whichever of them deletes a refresh token revokes its access token, so
-    /// no access token of the deleted refresh tokens stays live, at every split, and Postgres
-    /// aborts neither as a deadlock.
+    /// A discard of the refresh token `rt_c1` of u1 for c1 runs at the same time as a
+    /// `Client::delete` of c1 or a `User::delete` of u1: one of them runs its first statements,
+    /// the other one all of its statements, then the first one the rest. Whichever of them deletes
+    /// a refresh token revokes its access token, so no access token of the deleted refresh tokens
+    /// stays live, at every split, and Postgres aborts neither as a deadlock.
     /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]

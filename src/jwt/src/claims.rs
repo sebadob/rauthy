@@ -322,7 +322,8 @@ pub struct JwtRefreshClaims<'a> {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resource: Option<&'a str>,
     /// Issued by a grant without a consent step (password, device code), carried through
-    /// rotation. `false` for tokens issued by an older version.
+    /// rotation. `false` for tokens issued by an older version, which are still exempt if they
+    /// carry a signed `did`.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub consent_exempt: bool,
 }
