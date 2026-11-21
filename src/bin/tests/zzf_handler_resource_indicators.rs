@@ -374,6 +374,9 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
 }
 
 const ID_DEVICE: &str = "res_device_test";
+/// The device code poll interval of the test config, which a device must respect before
+/// redeeming its code.
+const DEVICE_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 /// `POST /oidc/device`, waiting out the per-IP rate limit of the endpoint.
 async fn device_auth(
@@ -416,42 +419,44 @@ async fn device_code_accepted(
     Ok(device_code)
 }
 
-fn device_token_req(device_code: &str, resource: Option<&str>) -> TokenRequest {
+fn device_token_req(client_id: &str, device_code: &str, resource: Option<&str>) -> TokenRequest {
     TokenRequest {
         grant_type: GrantType::DeviceCode,
-        client_id: Some(ID_DEVICE.to_string()),
+        client_id: Some(client_id.to_string()),
         device_code: Some(device_code.to_string()),
         resource: resource.map(String::from),
         ..Default::default()
     }
 }
 
-fn device_refresh_req(refresh_token: &str, resource: Option<&str>) -> TokenRequest {
+fn device_refresh_req(
+    client_id: &str,
+    refresh_token: &str,
+    resource: Option<&str>,
+) -> TokenRequest {
     TokenRequest {
         grant_type: GrantType::RefreshToken,
-        client_id: Some(ID_DEVICE.to_string()),
+        client_id: Some(client_id.to_string()),
         refresh_token: Some(refresh_token.to_string()),
         resource: resource.map(String::from),
         ..Default::default()
     }
 }
 
-/// RFC 8707 resource indicators on the device authorization grant: the `resource` is
-/// validated at `POST /oidc/device`, bound to the device code, ends up in the access token
-/// `aud`, and survives a refresh. Without a `resource`, nothing changes.
-#[tokio::test]
-async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
-    let auth_headers = get_auth_headers().await?;
+/// Creates the public client `id` with the device code and refresh token flows enabled.
+async fn create_device_client(
+    http: &reqwest::Client,
+    id: &str,
+    name: &str,
+    allowed_resources: Option<Vec<String>>,
+) -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
-    let url_token = format!("{backend_url}/oidc/token");
-    let http = reqwest::Client::new();
-    // the poll interval of the test config, which a device must respect before redeeming
-    let poll_interval = Duration::from_secs(5);
+    let auth_headers = get_auth_headers().await?;
 
     let new_client = NewClientRequest {
-        id: ID_DEVICE.to_string(),
+        id: id.to_string(),
         secret: None,
-        name: Some("Resource Device Test".to_string()),
+        name: Some(name.to_string()),
         confidential: false,
         redirect_uris: vec!["http://localhost/callback".to_string()],
         post_logout_redirect_uris: None,
@@ -466,17 +471,36 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     expect_status!(res, 200);
 
     let mut upd = base_update();
-    upd.name = Some("Resource Device Test".to_string());
+    upd.name = Some(name.to_string());
     upd.confidential = false;
     upd.flows_enabled = vec![GrantType::DeviceCode, GrantType::RefreshToken];
-    upd.allowed_resources = Some(vec![RES_A.to_string()]);
+    upd.allowed_resources = allowed_resources;
     let res = http
-        .put(format!("{backend_url}/clients/{ID_DEVICE}"))
-        .headers(auth_headers.clone())
+        .put(format!("{backend_url}/clients/{id}"))
+        .headers(auth_headers)
         .json(&upd)
         .send()
         .await?;
     expect_status!(res, 200);
+
+    Ok(())
+}
+
+/// RFC 8707 resource indicators on the device authorization grant: the `resource` is
+/// validated at `POST /oidc/device`, bound to the device code, ends up in the access token
+/// `aud`, and survives a refresh. Without a `resource`, nothing changes.
+#[tokio::test]
+async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
+    let url_token = format!("{}/oidc/token", get_backend_url());
+    let http = reqwest::Client::new();
+
+    create_device_client(
+        &http,
+        ID_DEVICE,
+        "Resource Device Test",
+        Some(vec![RES_A.to_string()]),
+    )
+    .await?;
 
     // a `resource` that is not allowed for the client -> `invalid_target`
     let res = device_auth(&http, &[("client_id", ID_DEVICE), ("resource", RES_B)]).await?;
@@ -498,10 +522,10 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
 
     // no `resource` -> unchanged behavior, `aud` is only the client
     let device_code = device_code_accepted(&http, &[("client_id", ID_DEVICE)]).await?;
-    tokio::time::sleep(poll_interval).await;
+    tokio::time::sleep(DEVICE_POLL_INTERVAL).await;
     let res = http
         .post(&url_token)
-        .form(&device_token_req(&device_code, None))
+        .form(&device_token_req(ID_DEVICE, &device_code, None))
         .send()
         .await?;
     let ts = expect_status_json!(res, 200, TokenSet);
@@ -511,6 +535,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     let res = http
         .post(&url_token)
         .form(&device_refresh_req(
+            ID_DEVICE,
             ts.refresh_token.as_deref().unwrap(),
             None,
         ))
@@ -523,6 +548,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     let res = http
         .post(&url_token)
         .form(&device_refresh_req(
+            ID_DEVICE,
             ts.refresh_token.as_deref().unwrap(),
             Some(RES_A),
         ))
@@ -538,17 +564,17 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     // the token request cannot switch to another `resource`
     let res = http
         .post(&url_token)
-        .form(&device_token_req(&device_code, Some(RES_B)))
+        .form(&device_token_req(ID_DEVICE, &device_code, Some(RES_B)))
         .send()
         .await?;
     let body = expect_status!(res, 400).text().await?;
     assert!(body.contains("invalid_target"), "unexpected body: {body}");
 
     // the bound `resource` on the token request is fine, and it ends up in `aud`
-    tokio::time::sleep(poll_interval).await;
+    tokio::time::sleep(DEVICE_POLL_INTERVAL).await;
     let res = http
         .post(&url_token)
-        .form(&device_token_req(&device_code, Some(RES_A)))
+        .form(&device_token_req(ID_DEVICE, &device_code, Some(RES_A)))
         .send()
         .await?;
     let ts = expect_status_json!(res, 200, TokenSet);
@@ -561,6 +587,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     let res = http
         .post(&url_token)
         .form(&device_refresh_req(
+            ID_DEVICE,
             ts.refresh_token.as_deref().unwrap(),
             None,
         ))
@@ -576,7 +603,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     let refresh_token = ts.refresh_token.unwrap();
     let res = http
         .post(&url_token)
-        .form(&device_refresh_req(&refresh_token, Some(RES_B)))
+        .form(&device_refresh_req(ID_DEVICE, &refresh_token, Some(RES_B)))
         .send()
         .await?;
     let body = expect_status!(res, 400).text().await?;
@@ -585,7 +612,7 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     // the granted `resource` is accepted on a refresh
     let res = http
         .post(&url_token)
-        .form(&device_refresh_req(&refresh_token, Some(RES_A)))
+        .form(&device_refresh_req(ID_DEVICE, &refresh_token, Some(RES_A)))
         .send()
         .await?;
     let ts = expect_status_json!(res, 200, TokenSet);
@@ -597,10 +624,10 @@ async fn test_resource_indicators_device_code() -> Result<(), Box<dyn Error>> {
     // omitting the `resource` on the token request still applies the bound one
     let device_code =
         device_code_accepted(&http, &[("client_id", ID_DEVICE), ("resource", RES_A)]).await?;
-    tokio::time::sleep(poll_interval).await;
+    tokio::time::sleep(DEVICE_POLL_INTERVAL).await;
     let res = http
         .post(&url_token)
-        .form(&device_token_req(&device_code, None))
+        .form(&device_token_req(ID_DEVICE, &device_code, None))
         .send()
         .await?;
     let ts = expect_status_json!(res, 200, TokenSet);
@@ -626,70 +653,30 @@ fn assert_consent_exempt(refresh_token: &str, did: bool) {
     assert_eq!(claims.get("did").is_some(), did, "{claims}");
 }
 
-/// A device refresh token is kept until its replacement exists, then consumed. Without its
-/// device, the refresh fails and leaves no replacement.
+/// A device refresh rotates into a regular refresh token that stays consent-exempt and consumes
+/// its source, so a replay of the source fails. Once its device is deleted, its refresh fails.
 #[tokio::test]
 async fn test_device_refresh_rotation() -> Result<(), Box<dyn Error>> {
     let auth_headers = get_auth_headers().await?;
     let backend_url = get_backend_url();
     let url_token = format!("{backend_url}/oidc/token");
     let http = reqwest::Client::new();
-    // the poll interval of the test config, which a device must respect before redeeming
-    let poll_interval = Duration::from_secs(5);
 
-    let new_client = NewClientRequest {
-        id: ID_DEVICE_ROTATION.to_string(),
-        secret: None,
-        name: Some("Device Refresh Test".to_string()),
-        confidential: false,
-        redirect_uris: vec!["http://localhost/callback".to_string()],
-        post_logout_redirect_uris: None,
-        consent: None,
-    };
-    let res = http
-        .post(format!("{backend_url}/clients"))
-        .headers(auth_headers.clone())
-        .json(&new_client)
-        .send()
-        .await?;
-    assert_eq!(res.status(), 200);
-
-    let mut upd = base_update();
-    upd.name = Some("Device Refresh Test".to_string());
-    upd.confidential = false;
-    upd.flows_enabled = vec![GrantType::DeviceCode, GrantType::RefreshToken];
-    let res = http
-        .put(format!("{backend_url}/clients/{ID_DEVICE_ROTATION}"))
-        .headers(auth_headers.clone())
-        .json(&upd)
-        .send()
-        .await?;
-    assert_eq!(res.status(), 200);
+    create_device_client(&http, ID_DEVICE_ROTATION, "Device Refresh Test", None).await?;
 
     let device_token_set = async || -> Result<TokenSet, Box<dyn Error>> {
         let device_code = device_code_accepted(&http, &[("client_id", ID_DEVICE_ROTATION)]).await?;
-        tokio::time::sleep(poll_interval).await;
+        tokio::time::sleep(DEVICE_POLL_INTERVAL).await;
         let res = http
             .post(&url_token)
-            .form(&TokenRequest {
-                grant_type: GrantType::DeviceCode,
-                client_id: Some(ID_DEVICE_ROTATION.to_string()),
-                device_code: Some(device_code),
-                ..Default::default()
-            })
+            .form(&device_token_req(ID_DEVICE_ROTATION, &device_code, None))
             .send()
             .await?;
-        assert_eq!(res.status(), 200);
-        Ok(res.json::<TokenSet>().await?)
+        Ok(expect_status_json!(res, 200, TokenSet))
     };
     let refresh = async |refresh_token: &str| {
         http.post(&url_token)
-            .form(&TokenRequest {
-                grant_type: GrantType::RefreshToken,
-                client_id: Some(ID_DEVICE_ROTATION.to_string()),
-                refresh_token: Some(refresh_token.to_string()),
-                ..Default::default()
-            })
+            .form(&device_refresh_req(ID_DEVICE_ROTATION, refresh_token, None))
             .send()
             .await
             .unwrap()
@@ -700,21 +687,21 @@ async fn test_device_refresh_rotation() -> Result<(), Box<dyn Error>> {
     assert_consent_exempt(&device_rt, true);
 
     let res = refresh(&device_rt).await;
-    assert_eq!(res.status(), 200);
-    let rotated_rt = res.json::<TokenSet>().await?.refresh_token.unwrap();
+    let rotated_rt = expect_status_json!(res, 200, TokenSet)
+        .refresh_token
+        .unwrap();
     // a regular refresh token now, still exempt
     assert_consent_exempt(&rotated_rt, false);
 
     // the source is consumed: a replay fails on the missing row
     let res = refresh(&device_rt).await;
-    assert_eq!(res.status(), 404);
-    let body = res.text().await?;
+    let body = expect_status!(res, 404).text().await?;
     assert!(body.contains("Device Refresh Token not found"), "{body}");
 
     // the replacement keeps rotating
     let res = refresh(&rotated_rt).await;
-    assert_eq!(res.status(), 200);
-    assert_consent_exempt(&res.json::<TokenSet>().await?.refresh_token.unwrap(), false);
+    let ts = expect_status_json!(res, 200, TokenSet);
+    assert_consent_exempt(&ts.refresh_token.unwrap(), false);
 
     // --- the device and its refresh tokens are deleted between issue and refresh
     let device_rt = device_token_set().await?.refresh_token.unwrap();
@@ -728,12 +715,11 @@ async fn test_device_refresh_rotation() -> Result<(), Box<dyn Error>> {
         .json(&serde_json::json!({ "device_id": device_id }))
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // the deleted device took its refresh tokens with it: the refresh fails on the missing row
     let res = refresh(&device_rt).await;
-    assert_eq!(res.status(), 404);
-    let body = res.text().await?;
+    let body = expect_status!(res, 404).text().await?;
     assert!(body.contains("Device Refresh Token not found"), "{body}");
 
     let res = http
@@ -741,7 +727,7 @@ async fn test_device_refresh_rotation() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     Ok(())
 }
