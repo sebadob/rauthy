@@ -1055,7 +1055,7 @@ async fn assert_admin_update_survives_logins(
             .headers(admin.clone())
             .json(&update_request(user, |upd| {
                 upd.given_name = Some(given_name.clone());
-                upd.roles = roles.clone();
+                upd.roles.clone_from(&roles);
                 upd.email_verified = true;
             }))
             .send()
