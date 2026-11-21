@@ -905,7 +905,7 @@ pub async fn post_pam_users(
     let pam_user = PamUser::insert(payload.username, user.email).await?;
 
     if let Some(mut groups) = payload.groups {
-        for g in groups.iter_mut() {
+        for g in &mut groups {
             g.uid = pam_user.id;
         }
         // update_groups does delete-all + re-insert, so include the user's

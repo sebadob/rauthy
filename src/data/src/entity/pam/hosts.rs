@@ -342,7 +342,7 @@ LIMIT 1
         let aliases = Self::find_aliases_all().await?;
         let ips = Self::find_ips_all().await?;
 
-        for host in hosts.iter_mut() {
+        for host in &mut hosts {
             if let Some(a) = aliases.get(&host.id) {
                 host.aliases = a.clone();
             }
@@ -380,7 +380,7 @@ LIMIT 1
         let aliases = Self::find_aliases_all().await?;
         let ips = Self::find_ips_all().await?;
 
-        for host in hosts.iter_mut() {
+        for host in &mut hosts {
             if let Some(a) = aliases.get(&host.id) {
                 host.aliases = a.clone();
             }
