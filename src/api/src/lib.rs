@@ -1,7 +1,5 @@
 // Copyright 2026 Sebastian Dobe <sebastiandobe@mailbox.org>
 
-#![forbid(unsafe_code)]
-
 use actix_web::http::StatusCode;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderMap, HeaderValue,

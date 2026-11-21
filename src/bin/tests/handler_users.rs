@@ -78,23 +78,11 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert_eq!(alfred.email, "alfred@batcave.io");
     assert_eq!(alfred.given_name.as_deref(), Some("Alfred"));
     assert_eq!(alfred.family_name.as_deref(), Some("Batman"));
-    assert!(alfred.roles.contains(&"admin".to_string()));
-    assert!(alfred.roles.contains(&"user".to_string()));
+    assert!(alfred.roles.iter().any(|i| i == "admin"));
+    assert!(alfred.roles.iter().any(|i| i == "user"));
     assert!(alfred.groups.is_some());
-    assert!(
-        alfred
-            .groups
-            .as_ref()
-            .unwrap()
-            .contains(&"admin".to_string())
-    );
-    assert!(
-        alfred
-            .groups
-            .as_ref()
-            .unwrap()
-            .contains(&"user".to_string())
-    );
+    assert!(alfred.groups.as_ref().unwrap().iter().any(|i| i == "admin"));
+    assert!(alfred.groups.as_ref().unwrap().iter().any(|i| i == "user"));
     assert_eq!(alfred.enabled, true);
     assert_eq!(alfred.email_verified, false);
 
@@ -330,7 +318,7 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
     let info = expect_status_json!(res, 200, Userinfo);
     assert_eq!(info.sub, "m4PJ3TnyP32LA8hzY23deme3");
     assert_eq!(info.name, "Admin Init");
-    assert!(info.roles.contains(&"rauthy_admin".to_string()));
+    assert!(info.roles.iter().any(|i| i == "rauthy_admin"));
 
     // `init_client` has the `profile` scope, the admin has no `preferred_username`
     // -> `email_fallback` (default: true) must apply, like in the ID token

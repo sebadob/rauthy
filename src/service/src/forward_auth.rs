@@ -203,7 +203,7 @@ pub async fn get_forward_auth_client_callback(
     let origin = format!("{proto}://{host}");
     debug!(origin);
 
-    let state = ForwardAuthCallbackState::try_from(params.state.as_str())?;
+    let state = ForwardAuthCallbackState::from_str(params.state.as_str())?;
     debug!(?state);
 
     if !state.danger_cookie_insecure

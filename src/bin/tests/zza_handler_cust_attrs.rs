@@ -141,8 +141,8 @@ async fn test_cust_attrs() -> Result<(), Box<dyn Error>> {
         .await?;
     let c = expect_status_json!(res, 200, ClientResponse);
     assert_eq!(c.id, "rauthy".to_string());
-    assert!(c.scopes.contains(&"cust_scope".to_string()));
-    assert!(c.default_scopes.contains(&"cust_scope".to_string()));
+    assert!(c.scopes.iter().any(|i| i == "cust_scope"));
+    assert!(c.default_scopes.iter().any(|i| i == "cust_scope"));
 
     // add a value for the new attr to a user
     let test_val = serde_json::Value::from("Some String");

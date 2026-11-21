@@ -13,3 +13,6 @@ tracing-subscriber = { version = "0.3.23", features = ["tracing"] }
 
 # This example uses actix-web, but shows the generic usage -> no actix-web feature set
 rauthy-client = { path = "../..", features = [] }
+
+[lints]
+workspace = true

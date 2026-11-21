@@ -14,6 +14,7 @@ use rauthy_data::entity::auth_providers::{
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::Session;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::str::FromStr;
 use tracing::error;
 
 /// The callback is single-use: it is atomically taken out of the cache before anything is
@@ -65,7 +66,7 @@ pub async fn login_finish<'a>(
     // extract a possibly existing provider link cookie for
     // linking an existing account to a provider
     let link_cookie = ApiCookie::from_req(req, PROVIDER_LINK_COOKIE)
-        .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
+        .and_then(|value| AuthProviderLinkCookie::from_str(value.as_str()).ok());
 
     // deserialize payload and validate the information
     let (user, provider_mfa_login, is_new_user) = if provider.issuer == PROVIDER_ATPROTO {
