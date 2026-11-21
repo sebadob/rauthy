@@ -1923,7 +1923,7 @@ WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"
 
 /// Validates a dynamic-client redirect URI.
 /// Rejects backchannel callbacks for dynamic clients.
-fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
+fn validate_no_backchannel_logout_uri(opt: Option<&str>) -> Result<(), ErrorResponse> {
     if opt.is_some() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -2395,7 +2395,7 @@ impl Client {
             .join(",");
 
         // Dynamic registration accepts only validated redirect URIs and no backchannel callback.
-        validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
+        validate_no_backchannel_logout_uri(req.backchannel_logout_uri.as_deref())?;
 
         let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
         for uri in req.redirect_uris {
@@ -2541,19 +2541,12 @@ pub(crate) mod tests {
     #[test]
     fn test_validate_no_backchannel_logout_uri() {
         // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)
-        assert!(validate_no_backchannel_logout_uri(&None).is_ok());
+        assert!(validate_no_backchannel_logout_uri(None).is_ok());
         assert!(
-            validate_no_backchannel_logout_uri(&Some("https://app.example.com/logout".to_string()))
-                .is_err()
+            validate_no_backchannel_logout_uri(Some("https://app.example.com/logout")).is_err()
         );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("https://169.254.169.254/".to_string()))
-                .is_err()
-        );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("http://127.0.0.1:8080/".to_string()))
-                .is_err()
-        );
+        assert!(validate_no_backchannel_logout_uri(Some("https://169.254.169.254/")).is_err());
+        assert!(validate_no_backchannel_logout_uri(Some("http://127.0.0.1:8080/")).is_err());
     }
 
     #[test]

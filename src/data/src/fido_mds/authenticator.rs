@@ -86,9 +86,9 @@ impl MdsAuthenticator {
             authenticators.retain(|a| {
                 verify_mds_attestation(
                     &a.entry,
-                    &config.force_passkey_cert_level,
-                    &config.force_passkey_protection,
-                    &config.force_passkey_attachment,
+                    config.force_passkey_cert_level.as_ref(),
+                    config.force_passkey_protection.as_ref(),
+                    config.force_passkey_attachment.as_ref(),
                 )
                 .is_ok()
             });
