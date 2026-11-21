@@ -12,3 +12,6 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.23", features = ["tracing"] }
 
 rauthy-client = { path = "../..", features = ["actix-web"] }
+
+[lints]
+workspace = true

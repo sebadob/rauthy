@@ -17,3 +17,6 @@ ruma-client = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
+
+[lints]
+workspace = true

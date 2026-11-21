@@ -1024,15 +1024,15 @@ mod tests {
         // user is in the unmanaged "ops"; admin submits only the managed "dev"
         // -> "ops" is preserved, "dev" added
         let out = p.group_admin_scoped_groups(["ops"], &s(&["dev"]));
-        assert!(out.contains(&"ops".to_string()));
-        assert!(out.contains(&"dev".to_string()));
+        assert!(out.iter().any(|i| i == "ops"));
+        assert!(out.iter().any(|i| i == "dev"));
         assert_eq!(out.len(), 2);
 
         // a submitted group outside the admin's scope is ignored
         let out = p.group_admin_scoped_groups(["ops"], &s(&["dev", "sales"]));
-        assert!(out.contains(&"ops".to_string()));
-        assert!(out.contains(&"dev".to_string()));
-        assert!(!out.contains(&"sales".to_string()));
+        assert!(out.iter().any(|i| i == "ops"));
+        assert!(out.iter().any(|i| i == "dev"));
+        assert!(!out.iter().any(|i| i == "sales"));
 
         // group-less user, single managed group submitted
         let out = p.group_admin_scoped_groups(std::iter::empty::<&str>(), &s(&["dev"]));
