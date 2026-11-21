@@ -304,6 +304,9 @@
         params?: URLSearchParams,
         residentKeyToken?: string,
     ) {
+        if (isLoading) {
+            return;
+        }
         if (isAtproto) {
             return providerLogin(atprotoId);
         }
@@ -418,7 +421,15 @@
             tosAcceptCode = body.tos_await_code;
             await fetchTos();
         } else if (res.status === 400) {
-            err = res.error?.message || '';
+            if (res.error?.error === 'PasswordRequired') {
+                needsPassword = true;
+                emailAfterSubmit = email;
+            } else if (res.error?.error === 'InvalidCredentials') {
+                err = t.authorize.invalidCredentials;
+                showResetRequest = true;
+            } else {
+                err = res.error?.message || '';
+            }
         } else if (res.status === 403) {
             if (res.error?.message.includes('contact your Administrator')) {
                 err = t.authorize.clientGroupPrefixForbidden;
@@ -467,14 +478,6 @@
                 err = res.error?.message || `HTTP ${res.status}`;
                 return;
             }
-        } else if (res.status === 401 && !needsPassword) {
-            // this will happen always if the user does the first try with a password-only account
-            // the good thing about this is, that it is a prevention against autofill passwords from the browser
-            needsPassword = true;
-            emailAfterSubmit = email;
-        } else if (res.status === 401) {
-            err = t.authorize.invalidCredentials;
-            showResetRequest = true;
         } else {
             err = res.error?.message || `HTTP ${res.status}`;
         }
@@ -783,8 +786,7 @@
                                     <Button
                                         type="submit"
                                         ariaLabel={t.authorize.login}
-                                        onclick={() => onSubmit()}
-                                        isDisabled={email.length === 0}
+                                        isDisabled={isAtproto ? !atprotoHandle : !email}
                                         {isLoading}
                                     >
                                         {t.authorize.login}

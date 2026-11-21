@@ -67,6 +67,10 @@ pub enum ErrorResponseType {
     /// `invalid_request`.
     #[serde(rename = "invalid_request")]
     InvalidRequest,
+    /// The interactive sign-in form must ask for a password to complete the request.
+    PasswordRequired,
+    /// The credentials submitted through the interactive sign-in form were rejected.
+    InvalidCredentials,
 }
 
 impl Display for ErrorResponseType {

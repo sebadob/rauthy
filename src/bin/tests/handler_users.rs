@@ -1414,8 +1414,13 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
         // upload while the logins wait for their password hash, one at a time
         time::sleep(Duration::from_millis(20)).await;
         let picture_id = upload_picture(&client, &url_user, &admin).await?;
+        let expected = if authorize {
+            StatusCode::BAD_REQUEST
+        } else {
+            StatusCode::UNAUTHORIZED
+        };
         for login in logins {
-            assert_eq!(login.await?, StatusCode::UNAUTHORIZED, "round {round}");
+            assert_eq!(login.await?, expected, "round {round}");
         }
 
         let res = client.get(&url_user).headers(admin.clone()).send().await?;

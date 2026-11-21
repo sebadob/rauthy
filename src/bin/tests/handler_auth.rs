@@ -214,7 +214,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         }
     }
 
-    // POST must stay a uniform 401 for correct and wrong password - no enumeration oracle
+    // POST must stay uniform for correct and wrong passwords to avoid leaking account information.
     let res = client
         .get(authorize_url_s256(client_id, &good_redirect_uri, ""))
         .send()
@@ -249,11 +249,14 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
             .json(&req_login)
             .send()
             .await?;
-        let status = res.status();
-        let body = res.text().await?;
-        assert_eq!(status, 401, "expected uniform 401 - body: {body}");
-        assert!(body.contains("Invalid user credentials"), "{body}");
-        assert!(!body.contains("iss"), "{body}");
+        let res = expect_status!(res, 400);
+        assert!(
+            !res.headers()
+                .contains_key(reqwest::header::WWW_AUTHENTICATE)
+        );
+        let body: ErrorResponse = res.json().await?;
+        assert_eq!(body.error, ErrorResponseType::InvalidCredentials);
+        assert_eq!(body.message, "Invalid user credentials");
     }
 
     // the same login without the reserved key succeeds
@@ -317,22 +320,21 @@ async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error
         fwda: None,
     };
 
-    // the page with its live `Init` session: the password is checked and a failure is a plain 401
+    // With a live `Init` session a rejected password is an interactive form error.
     let res = client
         .post(&url_auth)
         .headers(headers.clone())
         .json(&login)
         .send()
         .await?;
-    let has_header = res.headers().get("x-session-expired").is_some();
-    let status = res.status();
-    let body = res.text().await?;
-    assert_eq!(status, 401, "expected a plain 401 - body: {body}");
-    assert!(body.contains("Invalid user credentials"), "{body}");
+    let res = expect_status!(res, 400);
     assert!(
-        !has_header,
-        "a checked credential must not be marked: {body}"
+        !res.headers()
+            .contains_key(reqwest::header::WWW_AUTHENTICATE)
     );
+    assert!(!res.headers().contains_key("x-session-expired"));
+    let body: ErrorResponse = res.json().await?;
+    assert_eq!(body.error, ErrorResponseType::InvalidCredentials);
 
     // the same page after its session is gone: the login never reaches the credentials at all, and
     // the PoW is not validated either - the header is the only signal the UI gets
@@ -347,6 +349,7 @@ async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error
         .send()
         .await?;
     let has_header = res.headers().get("x-session-expired").is_some();
+    assert_eq!(res.headers()[reqwest::header::WWW_AUTHENTICATE], "OAuth");
     let status = res.status();
     let body = res.text().await?;
     assert_eq!(status, 401, "expected 401 - body: {body}");
@@ -509,14 +512,43 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         resident_key_token: None,
         fwda: None,
     };
+    // An email-only submission must not expose whether the account exists.
+    for email in [USERNAME, "nonexistent@example.test"] {
+        let mut email_step = req_login.clone();
+        email_step.email = Some(email.to_string());
+        email_step.password = None;
+        email_step.pow = get_solved_pow().await;
+        let res = reqwest::Client::new()
+            .post(&url_auth)
+            .headers(headers.clone())
+            .json(&email_step)
+            .send()
+            .await?;
+        let res = expect_status!(res, 400);
+        assert!(
+            !res.headers()
+                .contains_key(reqwest::header::WWW_AUTHENTICATE)
+        );
+        let body: ErrorResponse = res.json().await?;
+        assert_eq!(body.error, ErrorResponseType::PasswordRequired);
+        assert_eq!(body.message, "Password required");
+    }
+
+    req_login.pow = get_solved_pow().await;
     let res = reqwest::Client::new()
         .post(&url_auth)
         .headers(headers.clone())
         .json(&req_login)
         .send()
         .await?;
-    // should be 401 - wrong password
-    expect_status!(res, 401);
+    // A rejected password is an application error in the interactive form.
+    let res = expect_status!(res, 400);
+    assert!(
+        !res.headers()
+            .contains_key(reqwest::header::WWW_AUTHENTICATE)
+    );
+    let body: ErrorResponse = res.json().await?;
+    assert_eq!(body.error, ErrorResponseType::InvalidCredentials);
 
     req_login.password = Some(PASSWORD.to_string());
     req_login.pow = get_solved_pow().await;
@@ -966,8 +998,9 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
 
     body.client_secret = Some("NoNoNoSecret1337".to_string());
     let res = client.post(&url).form(&body).send().await?;
-    // should be 400 - wrong password
-    expect_status!(res, 401);
+    // A token endpoint denial keeps its HTTP challenge.
+    let res = expect_status!(res, 401);
+    assert_eq!(res.headers()[reqwest::header::WWW_AUTHENTICATE], "OAuth");
 
     body.password = Some(PASSWORD.to_string());
     let res = client.post(&url).form(&body).send().await?;
