@@ -323,22 +323,17 @@ test.describe('admin navigation', () => {
             });
         });
         expect(spills).toBe(false);
+        const birthdate = main.locator('input[type="date"][aria-label="Birthdate"]');
+        await expect(birthdate).toBeVisible();
+        await birthdate.fill('1990-06-15');
+        await expect(birthdate).toHaveValue('1990-06-15');
         await main.getByRole('button', { name: 'Birthdate', exact: true }).click();
-        const calendar = main.locator('.admin-date-field [popover]:popover-open').first();
-        await expect(calendar).toBeVisible();
-        await expect
-            .poll(() =>
-                calendar.evaluate(el => {
-                    const rect = el.getBoundingClientRect();
-                    return Math.min(
-                        rect.left,
-                        rect.top,
-                        innerWidth - rect.right,
-                        innerHeight - rect.bottom,
-                    );
-                }),
-            )
-            .toBeGreaterThanOrEqual(7);
+        const calendar = main.locator('.date-control [popover]:popover-open').first();
+        await expect(calendar).toBeInViewport({ ratio: 1 });
+        await expect(calendar.locator('button:focus time')).toHaveAttribute(
+            'datetime',
+            '1990-06-15',
+        );
     });
 
     test('links, renames and revokes a device from Account', async ({

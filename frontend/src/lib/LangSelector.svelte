@@ -64,11 +64,13 @@
 </script>
 
 {#if languages}
-    <div class:absolute class:uppercase>
+    <div class:absolute>
         <Options
             ariaLabel={t.common.selectI18n}
             options={languages}
             {borderless}
+            {uppercase}
+            hideScrollbar
             bind:value={selected}
             anchored={openTop}
         />
@@ -76,11 +78,6 @@
 {/if}
 
 <style>
-    .uppercase :global(.btnText),
-    .uppercase :global(.optPopover) {
-        text-transform: uppercase;
-    }
-
     .absolute {
         height: 1.5rem;
         position: absolute;

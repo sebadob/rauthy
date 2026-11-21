@@ -271,6 +271,7 @@
                                     options={optionHour}
                                     bind:value={hour}
                                     maxHeight="13rem"
+                                    hideScrollbar
                                     borderless
                                     onRight={() => refMinutes?.focus()}
                                 />
@@ -283,6 +284,7 @@
                                     options={optionMinute}
                                     bind:value={minute}
                                     maxHeight="13rem"
+                                    hideScrollbar
                                     borderless
                                     onLeft={() => refHours?.focus()}
                                 />

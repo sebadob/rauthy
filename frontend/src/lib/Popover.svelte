@@ -71,6 +71,19 @@
         }
     });
 
+    $effect(() => {
+        if (!fitViewport || !isOpen) return;
+
+        function onScroll(event: Event) {
+            if (event.target instanceof Node && ref && event.target.contains(ref)) {
+                positionInViewport();
+            }
+        }
+
+        window.addEventListener('scroll', onScroll, true);
+        return () => window.removeEventListener('scroll', onScroll, true);
+    });
+
     function onclick(ev: Event) {
         ev.stopPropagation();
 
@@ -106,13 +119,15 @@
         const fitsAbove = above >= inset;
         const fitsBelow = below + height <= window.innerHeight - inset;
         const y = (placement === 'above' && fitsAbove) || !fitsBelow ? above : below;
+        const x = roleButton === 'combobox' ? rect.left : rect.right - width;
         refPopover.style.top = `${Math.max(inset, Math.min(y, window.innerHeight - height - inset))}px`;
-        refPopover.style.left = `${Math.max(inset, Math.min(rect.right - width, window.innerWidth - width - inset))}px`;
+        refPopover.style.left = `${Math.max(inset, Math.min(x, window.innerWidth - width - inset))}px`;
     }
 
     function ontoggle(ev: ToggleEvent) {
         let st = ev.newState as 'open' | 'closed';
         isOpen = 'open' === st;
+        if (fitViewport && isOpen) positionInViewport();
         onToggle?.(st);
         if (fitViewport && isOpen) {
             void tick().then(positionInViewport);

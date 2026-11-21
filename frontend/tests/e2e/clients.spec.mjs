@@ -271,6 +271,24 @@ test.describe('add new client', () => {
         await redirect.add('http://localhost:3000/*');
         await expect(redirect.list.getByRole('listitem')).toHaveCount(3);
 
+        const edit = redirect.list.getByRole('button', {
+            name: 'Edit: https://app.example.com/cb',
+            exact: true,
+        });
+        await edit.click();
+        await expect(redirect.input).toBeFocused();
+        await expect(redirect.input).toHaveValue('https://app.example.com/cb');
+        await redirect.input.fill('https://app.example.com/cb#frag');
+        await redirect.input.press('Enter');
+        await expectInvalid(redirect.input);
+        await redirect.input.press('Escape');
+        await expect(edit).toBeVisible();
+        await edit.press('Enter');
+        await redirect.input.fill('https://app.example.com/updated');
+        await redirect.input.press('Enter');
+        await expect(redirect.item('https://app.example.com/updated')).toBeVisible();
+        await expect(edit).toHaveCount(0);
+
         await redirect.remove('http://localhost:3000/*');
         await expect(redirect.item('http://localhost:3000/*')).toHaveCount(0);
         await expect(redirect.list.getByRole('listitem')).toHaveCount(2);

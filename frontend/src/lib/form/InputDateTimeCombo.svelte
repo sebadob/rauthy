@@ -134,7 +134,7 @@
     }
     @media (max-width: 379px) {
         :global(.ui-shell) .withTime .inputs {
-            grid-template-columns: minmax(0, 1fr);
+            grid-template-columns: var(--ui-datetime-compact-columns, minmax(0, 1fr));
         }
     }
 </style>

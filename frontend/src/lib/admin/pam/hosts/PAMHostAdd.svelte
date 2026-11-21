@@ -82,10 +82,8 @@
             maxLength={61}
         />
 
-        <div class="row">
-            <div class="label">
-                {ta.pam.groupName}
-            </div>
+        <div class="admin-field-select">
+            <div class="admin-field-label">{ta.pam.groupName}</div>
             <Options ariaLabel={ta.pam.groupName} {options} bind:value={groupName} />
         </div>
 
@@ -141,7 +139,7 @@
     }
 
     .container {
-        width: 20rem;
+        width: min(20rem, 100%);
         text-align: left;
     }
 
@@ -153,7 +151,7 @@
     .row {
         margin: 0.5rem 0;
         display: grid;
-        grid-template-columns: 12rem 5.5rem;
+        grid-template-columns: minmax(0, 12rem) auto;
         align-items: center;
     }
 </style>

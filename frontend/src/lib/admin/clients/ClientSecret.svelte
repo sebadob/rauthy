@@ -95,7 +95,10 @@
         />
 
         {#if showConfirm}
-            <div transition:slide={{ duration: 150 }}>
+            <div
+                transition:slide={{ duration: 150 }}
+                onintroend={ev => ev.currentTarget.scrollIntoView({ block: 'nearest' })}
+            >
                 <p>{ta.clients.secret.rotateDesc1}</p>
                 <p><b>{ta.clients.secret.rotateDesc2}</b></p>
 

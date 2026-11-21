@@ -535,6 +535,8 @@
                                 ariaLabel={t.common.selectI18n}
                                 options={languages}
                                 bind:value={language}
+                                uppercase
+                                hideScrollbar
                                 anchored
                             />
                         </div>

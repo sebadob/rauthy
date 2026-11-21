@@ -39,7 +39,7 @@
     let t = useI18n();
 </script>
 
-<div role="none" class="wrapper" style:min-height={height} onclick={() => ref?.focus()}>
+<div role="none" class="wrapper" style:height onclick={() => ref?.focus()}>
     {@render children?.()}
 
     <div
@@ -89,6 +89,8 @@
     .edit {
         width: 100%;
         flex: 1;
+        min-height: 0;
+        overflow: auto;
         padding: 0.75rem;
         overflow-wrap: anywhere;
         white-space: pre-wrap;

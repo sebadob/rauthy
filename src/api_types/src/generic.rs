@@ -41,6 +41,7 @@ pub enum Language {
     En,
     Es,
     Fr,
+    It,
     Ja,
     Ko,
     Nb,
@@ -51,8 +52,6 @@ pub enum Language {
     Uk,
     #[serde(alias = "zh")]
     ZhHans,
-    // Keep new variants at the end to preserve existing binary discriminants.
-    It,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

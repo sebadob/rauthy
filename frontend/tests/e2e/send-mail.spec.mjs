@@ -83,9 +83,9 @@ test.describe('send e-mail', () => {
         page,
     }) => {
         const dialog = await openCompose(page);
-        await expect(
-            dialog.getByRole('checkbox', { name: 'Scheduled Dispatch' }),
-        ).not.toBeChecked();
+        await expect(dialog.getByRole('combobox', { name: 'Delivery', exact: true })).toHaveValue(
+            'immediate',
+        );
         await expect(filters(dialog)).toHaveCount(1);
         await expect(filters(dialog)).toHaveText('None');
         await expect(dialog.getByText('This E-Mail will be sent to all users.')).toBeVisible();
@@ -93,9 +93,8 @@ test.describe('send e-mail', () => {
             'aria-required',
             'true',
         );
-        await expect(dialog.getByRole('button', { name: 'Markdown' })).toHaveAttribute(
-            'aria-current',
-            'step',
+        await expect(dialog.getByRole('combobox', { name: 'Format', exact: true })).toHaveValue(
+            'Markdown',
         );
         await expect(dialog.getByRole('button', { name: 'Send' })).toBeDisabled();
 
@@ -254,11 +253,9 @@ test.describe('send e-mail', () => {
         const dialog = await openCompose(page);
         await chooseOption(page, filters(dialog).first(), 'Has not Role');
         await dialog.getByRole('textbox', { name: 'Subject' }).fill('Plain');
-        await dialog.getByRole('button', { name: 'Text', exact: true }).click();
-        await expect(dialog.getByRole('button', { name: 'Text', exact: true })).toHaveAttribute(
-            'aria-current',
-            'step',
-        );
+        const format = dialog.getByRole('combobox', { name: 'Format', exact: true });
+        await format.selectOption('Text');
+        await expect(format).toHaveValue('Text');
         await editor(dialog).fill('Just *plain* text');
         await dialog.getByRole('button', { name: 'Send' }).click();
         await expect(page.getByRole('dialog')).toBeHidden();
@@ -280,7 +277,9 @@ test.describe('send e-mail', () => {
         const dialog = await openCompose(page);
         await chooseOption(page, filters(dialog).first(), 'In Group');
         const group = await dialog.getByRole('combobox', { name: 'Groups' }).innerText();
-        await dialog.getByRole('checkbox', { name: 'Scheduled Dispatch' }).check();
+        await dialog
+            .getByRole('combobox', { name: 'Delivery', exact: true })
+            .selectOption('scheduled');
         const date = dateInput(2);
         await dialog.locator('input[type="date"]').fill(date);
         const time = dialog.getByRole('textbox', { name: 'Time', exact: true });
@@ -300,13 +299,13 @@ test.describe('send e-mail', () => {
     test('scheduling reveals date and time and is sent with the job', async ({ page }) => {
         const sent = await mockMassMail(page);
         const dialog = await openCompose(page);
-        const scheduled = dialog.getByRole('checkbox', { name: 'Scheduled Dispatch' });
+        const delivery = dialog.getByRole('combobox', { name: 'Delivery', exact: true });
         await expect(dialog.locator('input[type="date"]')).toHaveCount(0);
-        await scheduled.check();
+        await delivery.selectOption('scheduled');
         await expect(dialog.locator('input[type="date"]')).toHaveValue(dateInput(0));
-        await scheduled.uncheck();
+        await delivery.selectOption('immediate');
         await expect(dialog.locator('input[type="date"]')).toHaveCount(0);
-        await scheduled.check();
+        await delivery.selectOption('scheduled');
         await dialog.locator('input[type="date"]').fill(dateInput(2));
         await dialog.getByRole('textbox', { name: 'Subject' }).fill('Later');
         await editor(dialog).fill('Scheduled body');

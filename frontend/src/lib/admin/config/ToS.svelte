@@ -25,6 +25,7 @@
     let refSearch: undefined | HTMLInputElement = $state();
 
     let showModalAddNew = $state(false);
+    let expanded = $state(false);
     let closeModalAddNew: undefined | (() => void) = $state();
     let showModalStatus = $state(false);
     let closeModalStatus: undefined | (() => void) = $state();
@@ -257,53 +258,54 @@
     bind:showModal={showModalAddNew}
     bind:closeModal={closeModalAddNew}
     ariaLabel={ta.tos.addNewToS}
+    {expanded}
+    onClose={() => (expanded = false)}
+    --dialog-padding="clamp(14px, 3vw, 24px)"
 >
-    <div class="tos-composer">
-        <h3>{ta.tos.addNewToS}</h3>
+    <EditorInteractive
+        bind:mode={editorMode}
+        bind:expanded
+        bind:contentRaw={newToSContentRaw}
+        title={ta.tos.addNewToS}
+    >
+        {#snippet fields()}
+            <div class="optUntil">
+                <InputCheckbox ariaLabel={ta.tos.optUntil.enable} bind:checked={optUntil}>
+                    {ta.tos.optUntil.enable}
+                </InputCheckbox>
 
-        <div class="optUntil">
-            <InputCheckbox ariaLabel={ta.tos.optUntil.enable} bind:checked={optUntil}>
-                {ta.tos.optUntil.enable}
-            </InputCheckbox>
+                {#if optUntil}
+                    <div class="transition-fields" transition:slide={{ duration: 150 }}>
+                        <p>{ta.tos.optUntil.desc}</p>
+                        <InputDateTimeCombo
+                            min={fmtDateInput()}
+                            label={ta.common.date}
+                            labelTime={ta.common.time}
+                            required
+                            withTime
+                            bind:value={optUntilDate}
+                            bind:timeValue={optUntilTime}
+                        />
+                    </div>
+                {/if}
+            </div>
+        {/snippet}
+        {#snippet footer()}
+            <p class="immutable">{ta.tos.immutable}</p>
+            <div class="actions">
+                <Button level={2} onclick={() => closeModalAddNew?.()}>{t.common.cancel}</Button>
+                <Button onclick={saveToS} isDisabled={newToSContentRaw.trim().length === 0}>
+                    {t.common.save}
+                </Button>
+            </div>
 
-            {#if optUntil}
-                <div class="transition-fields" transition:slide={{ duration: 150 }}>
-                    <p>{ta.tos.optUntil.desc}</p>
-                    <InputDateTimeCombo
-                        min={fmtDateInput()}
-                        label={ta.common.date}
-                        labelTime={ta.common.time}
-                        required
-                        withTime
-                        bind:value={optUntilDate}
-                        bind:timeValue={optUntilTime}
-                    />
+            {#if error}
+                <div class="err">
+                    {error}
                 </div>
             {/if}
-        </div>
-
-        <div class="editor">
-            <EditorInteractive
-                bind:mode={editorMode}
-                bind:contentRaw={newToSContentRaw}
-                height="clamp(11rem, 28dvh, 21rem)"
-            />
-        </div>
-
-        <p class="immutable">{ta.tos.immutable}</p>
-        <div class="actions">
-            <Button level={2} onclick={() => closeModalAddNew?.()}>{t.common.cancel}</Button>
-            <Button onclick={saveToS} isDisabled={newToSContentRaw.trim().length === 0}>
-                {t.common.save}
-            </Button>
-        </div>
-
-        {#if error}
-            <div class="err">
-                {error}
-            </div>
-        {/if}
-    </div>
+        {/snippet}
+    </EditorInteractive>
 </Modal>
 
 {#if tos.length > 0}
@@ -361,29 +363,27 @@
 {/if}
 
 <style>
-    .editor {
-        margin: 1rem 0;
-    }
-
-    .tos-composer {
-        width: min(720px, calc(100dvw - 96px));
-        max-width: 100%;
-    }
-
-    .tos-composer h3 {
-        margin: 0 0 1rem;
-        font-size: 1.375rem;
-    }
-
     .transition-fields {
-        margin-top: 0.625rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 0.375rem 1rem;
+        margin-top: 0.25rem;
     }
 
     .transition-fields p,
     .immutable {
-        margin: 0 0 0.625rem;
         font-size: 0.8125rem;
         color: var(--ui-muted);
+    }
+
+    .transition-fields p {
+        flex: 1 1 16rem;
+        margin: 0;
+    }
+
+    .immutable {
+        margin: 0 0 0.375rem;
     }
 
     .transition-fields :global(.container.withTime) {

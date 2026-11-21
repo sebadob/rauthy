@@ -222,8 +222,8 @@
     @container archive (width >= 42rem) {
         .event.inline {
             display: grid;
-            grid-template-columns: minmax(9rem, 1fr) minmax(0, 2fr) auto;
-            align-items: center;
+            grid-template-columns: minmax(9rem, 1fr) minmax(0, 2fr) 9rem;
+            align-items: start;
             column-gap: 1rem;
         }
 
@@ -236,7 +236,12 @@
         }
 
         .event.inline .admin-event-footer {
+            min-width: 0;
             margin: 0;
+        }
+        .event.inline .admin-event-footer :global(.admin-control) {
+            max-width: 100%;
+            height: auto;
         }
     }
 </style>

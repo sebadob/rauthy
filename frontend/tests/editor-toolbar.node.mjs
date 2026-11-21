@@ -2,6 +2,7 @@
 // must apply its markdown to the text the user selected before clicking it.
 // All requests are intercepted; no backend needs to run.
 import assert from 'node:assert/strict';
+import { expect } from '@playwright/test';
 import { after, before, test } from 'node:test';
 import {
     injectTemplates,
@@ -83,6 +84,81 @@ test('toolbar buttons apply their markdown to the selection', async () => {
             await editor.press('ControlOrMeta+a');
             await dialog.getByRole('button', { name, exact: true }).click();
             assert.equal(await editor.innerText(), expected, name);
+        }
+
+        await page.setViewportSize({ width: 1280, height: 900 });
+        const delivery = dialog.getByRole('combobox', { name: 'Delivery', exact: true });
+        await delivery.selectOption('scheduled');
+        const controls = [
+            dialog.getByRole('combobox', { name: 'User Filter', exact: true }),
+            delivery,
+            dialog.locator('input[type="date"]'),
+            dialog.getByRole('textbox', { name: 'Time', exact: true }),
+        ];
+        await expect
+            .poll(async () => {
+                const boxes = await Promise.all(controls.map(control => control.boundingBox()));
+                const first = boxes[0];
+                return (
+                    first &&
+                    boxes.every(
+                        box =>
+                            box &&
+                            Math.abs(box.y - first.y) <= 1 &&
+                            Math.abs(box.height - first.height) <= 1,
+                    )
+                );
+            })
+            .toBe(true);
+        await delivery.selectOption('immediate');
+        await editor.fill('Draft before expanding');
+        const expand = dialog.getByRole('button', { name: 'Expand content' });
+        const normal = await editor.boundingBox();
+        await expand.click();
+        await expect(expand).toHaveAttribute('aria-pressed', 'true');
+        const expanded = await editor.boundingBox();
+        assert.ok(normal && expanded && expanded.width > normal.width);
+        assert.ok(normal && expanded && expanded.height > normal.height);
+        await expect(editor).toHaveText('Draft before expanding');
+        await expand.click();
+        await expect(expand).toHaveAttribute('aria-pressed', 'false');
+
+        const format = dialog.getByRole('combobox', { name: 'Format', exact: true });
+        await expect(format).toBeVisible({ timeout: 3000 });
+        await expect(format).toHaveValue('Markdown');
+        await format.focus();
+        await format.selectOption('Text');
+        await expect(format).toBeFocused();
+        await expect(dialog.getByRole('button', { name: 'Preview', exact: true })).toHaveCount(0);
+        await expect(editor).toHaveText('Draft before expanding');
+        await format.selectOption('Markdown');
+        await expect(format).toBeFocused();
+        await expect(dialog.getByRole('button', { name: 'Preview', exact: true })).toBeVisible();
+        await expect(editor).toHaveText('Draft before expanding');
+
+        await page.setViewportSize({ width: 390, height: 520 });
+        await dialog
+            .getByRole('combobox', { name: 'Delivery', exact: true })
+            .selectOption('scheduled');
+        await expect(dialog.locator('.fields')).toHaveCSS('scrollbar-width', 'none');
+        await editor.fill('Paragraph\n'.repeat(100));
+        await editor.evaluate((/** @type {HTMLElement} */ element) => {
+            element.scrollTop = element.scrollHeight;
+        });
+        await expect(dialog.getByRole('button', { name: 'Bold', exact: true })).toBeInViewport();
+        await expect(dialog.getByRole('button', { name: 'Send', exact: true })).toBeInViewport({
+            ratio: 1,
+        });
+
+        for (const [key, expected] of [
+            ['b', '**shortcut**'],
+            ['i', '*shortcut*'],
+            ['k', '[shortcut](https://...)'],
+        ]) {
+            await editor.fill('shortcut');
+            await editor.press('ControlOrMeta+a');
+            await editor.press(`ControlOrMeta+${key}`);
+            await expect(editor).toHaveText(expected);
         }
     } finally {
         await context.close();

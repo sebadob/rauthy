@@ -30,10 +30,27 @@
     let t = useI18n();
     let ref: undefined | HTMLDivElement = $state();
     let preview = $state(false);
+    let toolbar: HTMLDivElement;
+
+    function onkeydown(event: KeyboardEvent) {
+        if (
+            !(event.ctrlKey || event.metaKey) ||
+            event.altKey ||
+            event.shiftKey ||
+            event.isComposing
+        ) {
+            return;
+        }
+        const key = event.key.toLowerCase();
+        if (key === 'b' || key === 'i' || key === 'k') {
+            event.preventDefault();
+            toolbar.querySelector(`[data-shortcut="${key}"]`)?.closest('button')?.click();
+        }
+    }
 </script>
 
-<div class="editor" style:min-height={height}>
-    <div class="toolbar">
+<div class="editor" style:height>
+    <div class="toolbar" bind:this={toolbar}>
         <div class="view" role="group" aria-label="Markdown">
             <Button invisible ariaPressed={!preview} onclick={() => (preview = false)}>
                 {t.common.edit}
@@ -63,6 +80,7 @@
                 <ToolbarIcon
                     {ref}
                     title={ta.editor.bold}
+                    shortcut="b"
                     bind:content={markdown}
                     addLeft="**"
                     addRight="**"
@@ -72,6 +90,7 @@
                 <ToolbarIcon
                     {ref}
                     title={ta.editor.italic}
+                    shortcut="i"
                     bind:content={markdown}
                     addLeft="*"
                     addRight="*"
@@ -130,6 +149,7 @@
                 <ToolbarIcon
                     {ref}
                     title={ta.editor.link}
+                    shortcut="k"
                     bind:content={markdown}
                     addLeft="["
                     addRightLink="https://..."
@@ -155,6 +175,7 @@
             bind:innerText={markdown}
             contenteditable="plaintext-only"
             spellcheck="false"
+            {onkeydown}
         ></div>
     {/if}
 </div>
@@ -171,6 +192,7 @@
 
     .toolbar {
         display: flex;
+        flex: none;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
@@ -194,11 +216,24 @@
         --ui-button-padding: 0 8px;
     }
 
+    .view :global(.admin-control) {
+        min-width: 4rem;
+        font-size: var(--ui-control-font-size);
+        font-weight: 600;
+    }
+
     .toolbar .view :global(.admin-control[aria-pressed='true'][data-variant]) {
         background: var(--ui-tonal);
         border-color: var(--ui-primary);
         color: var(--ui-primary);
-        font-weight: 700;
+    }
+
+    .actions {
+        flex-wrap: nowrap;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        padding: 4px;
     }
 
     .actions :global(button) {
@@ -211,6 +246,8 @@
     .renderer {
         flex: 1;
         min-width: 0;
+        min-height: 0;
+        overflow: auto;
         padding: 0.75rem;
         overflow-wrap: anywhere;
     }

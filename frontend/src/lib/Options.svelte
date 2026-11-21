@@ -15,10 +15,13 @@
         offsetTop,
         offsetLeft,
         anchored,
+        fitViewport,
         placement,
         showTitle = true,
         borderless = false,
         withSearch = false,
+        uppercase = false,
+        hideScrollbar = false,
         onChange,
         onLeft,
         onRight,
@@ -34,10 +37,13 @@
         offsetTop?: string;
         offsetLeft?: string;
         anchored?: boolean;
+        fitViewport?: boolean;
         placement?: 'above' | 'below';
         showTitle?: boolean;
         borderless?: boolean;
         withSearch?: boolean;
+        uppercase?: boolean;
+        hideScrollbar?: boolean;
         onChange?: (value: string | number | undefined) => void;
         onLeft?: () => void;
         onRight?: () => void;
@@ -179,6 +185,7 @@
     {offsetTop}
     {offsetLeft}
     {anchored}
+    {fitViewport}
     {placement}
     {onToggle}
     {onLeft}
@@ -188,7 +195,7 @@
 >
     {#snippet button()}
         <div class="btn admin-select-trigger" data-border={!borderless}>
-            <div class="btnText" title={showTitle ? ariaLabel : undefined}>
+            <div class="btnText" class:uppercase title={showTitle ? ariaLabel : undefined}>
                 {value}
             </div>
             <IconChevronDown width=".8rem" />
@@ -204,11 +211,12 @@
             />
         {/if}
 
-        <div bind:this={refOptions} class="popoverOptions">
+        <div bind:this={refOptions} class="popoverOptions" class:hide-scrollbar={hideScrollbar}>
             {#each optionsFiltered as option, i}
                 <Button invisible invisibleOutline onclick={ev => select(ev, option)}>
                     <div
                         class="optPopover"
+                        class:uppercase
                         aria-selected={value === option}
                         data-focus={selected === i}
                     >
@@ -238,6 +246,10 @@
         border-radius: var(--border-radius);
     }
 
+    .uppercase {
+        text-transform: uppercase;
+    }
+
     .btnText {
         margin: 0 0.25rem;
         text-wrap: nowrap;
@@ -250,8 +262,8 @@
     .optPopover {
         width: 100%;
         text-align: left;
-        /* to the right, big scrollbars like in chrome can crash with not enough space */
-        padding: 0.25rem 1rem 0.25rem 0.7rem;
+        padding: 0.25rem 0.7rem;
+        overflow-wrap: anywhere;
         color: hsl(var(--text));
         font-weight: normal;
         border-radius: var(--border-radius);
@@ -275,15 +287,25 @@
     .popover {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        inline-size: max-content;
+        max-inline-size: calc(100dvw - 2rem);
     }
 
     .popoverOptions {
-        /*height: 100%;*/
-        width: 100%;
         display: flex;
         flex-direction: column;
-        overflow-y: auto;
+        min-block-size: 0;
+        overflow: auto;
+        scrollbar-gutter: stable both-edges;
+    }
+
+    .popoverOptions.hide-scrollbar {
+        scrollbar-width: none;
+        scrollbar-gutter: auto;
+    }
+
+    .popoverOptions.hide-scrollbar::-webkit-scrollbar {
+        display: none;
     }
 
     :global(.ui-shell) .admin-select-trigger:not(:global(.branding-preview *)) {
@@ -311,8 +333,6 @@
         line-height: var(--ui-control-line-height);
     }
     :global(.ui-shell) .popoverOptions:not(:global(.branding-preview *)) {
-        display: flex;
-        flex-direction: column;
         padding: 4px;
     }
     :global(.ui-shell) .popoverOptions:not(:global(.branding-preview *)) :global(.admin-control) {

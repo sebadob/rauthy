@@ -280,6 +280,8 @@ export let I18nAdminEn: I18nAdmin = {
         source: 'The source code can be found here',
     },
     editor: {
+        format: 'Format',
+        plainText: 'Plain text',
         bold: 'Bold',
         code: 'Code',
         heading1: 'Heading 1',
@@ -297,11 +299,13 @@ export let I18nAdminEn: I18nAdmin = {
         textArea: 'Edit Text',
     },
     email: {
+        delivery: 'Delivery',
         cancelJob: 'Cancel Job',
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
         immediate: 'Immediate',
         jobs: 'E-Mail Jobs',
         scheduled: 'Scheduled Dispatch',
+        scheduledDelivery: 'Scheduled',
         sendAllUsers: 'This E-Mail will be sent to all users.',
         sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
         sendMail: 'Send E-Mail',

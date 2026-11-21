@@ -485,11 +485,11 @@
                 <p class="settings-hint">{ta.clients.descPKCE}</p>
                 <p class="settings-hint"><strong>{ta.clients.descPKCEEnforce}</strong></p>
                 <div class="client-flags">
-                    <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}
-                        >plain</InputCheckbox
-                    >
                     <InputCheckbox ariaLabel="PKCE S256" bind:checked={challenges.s256}
                         >S256</InputCheckbox
+                    >
+                    <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}
+                        >plain</InputCheckbox
                     >
                 </div>
                 {#if !confidential && !challenges.plain && !challenges.s256}

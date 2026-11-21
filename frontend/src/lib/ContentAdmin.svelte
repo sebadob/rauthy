@@ -27,6 +27,7 @@
         flex: 1;
         padding: 2.2rem 1rem 0 1rem;
         overflow: auto;
+        scrollbar-gutter: stable;
     }
 
     @media (max-width: 800px) {

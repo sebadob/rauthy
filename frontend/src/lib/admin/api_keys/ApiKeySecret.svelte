@@ -74,8 +74,9 @@
                 {#key curlPretty}
                     <HiddenValueArea
                         ariaLabel="curl text command with jq"
-                        rows={3}
+                        rows={4}
                         value={curlPretty}
+                        width="100%"
                     />
                 {/key}
             </div>
@@ -84,7 +85,7 @@
                 {#key curl}
                     <HiddenValueArea
                         ariaLabel="curl text command simple"
-                        rows={3}
+                        rows={4}
                         value={curl}
                         width="100%"
                     />

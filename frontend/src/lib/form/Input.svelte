@@ -13,6 +13,7 @@
         label = '',
 
         autocomplete = 'on',
+        'data-bwignore': bitwardenIgnore,
         placeholder = '',
         description,
         formatBadge,
@@ -47,6 +48,7 @@
         value?: string | number | null;
         label?: string;
         autocomplete?: FullAutoFill | null | undefined;
+        'data-bwignore'?: boolean;
         placeholder?: string;
         description?: string;
         formatBadge?: string;
@@ -161,6 +163,7 @@
                 .join(' ') || undefined}
             bind:value
             {autocomplete}
+            data-bwignore={bitwardenIgnore ? true : undefined}
             {placeholder}
             aria-placeholder={placeholder}
             {disabled}

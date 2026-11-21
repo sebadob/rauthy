@@ -659,11 +659,9 @@ test.describe('terms of service', () => {
         await openToS(page);
         await main(page).getByRole('button', { name: 'New ToS', exact: true }).click();
         const dialog = page.getByRole('dialog');
-        await dialog.getByRole('button', { name: 'Text', exact: true }).click();
-        await expect(dialog.getByRole('button', { name: 'Text', exact: true })).toHaveAttribute(
-            'aria-current',
-            'step',
-        );
+        const format = dialog.getByRole('combobox', { name: 'Format', exact: true });
+        await format.selectOption('Text');
+        await expect(format).toHaveValue('Text');
         await dialog.getByRole('textbox', { name: 'Edit Text' }).fill('Plain *terms*');
         await dialog.getByRole('button', { name: 'Save' }).click();
         await expect(dialog).toBeHidden();
@@ -740,19 +738,39 @@ test.describe('terms of service', () => {
         }
     });
 
-    test('ToS editor works at phone size @mobile', async ({ page, isMobile }) => {
-        test.skip(!isMobile, 'phone layout only');
+    test('ToS editor keeps actions visible at phone size @mobile @webkit', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 520 });
         await page.goto('/auth/v1/admin/config/policy');
         const tosLink = subNav(page).getByRole('link', { name: 'ToS', exact: true });
         await openSubNav(page, tosLink);
         await tosLink.click();
         await main(page).getByRole('button', { name: 'New ToS', exact: true }).click();
         const dialog = page.getByRole('dialog');
-        await dialog.getByRole('textbox', { name: 'Edit Text' }).fill('# Phone Terms');
+        const editor = dialog.getByRole('textbox', { name: 'Edit Text' });
+        const save = dialog.getByRole('button', { name: 'Save', exact: true });
+        const transition = dialog.getByRole('checkbox', { name: 'Enable Transition Time' });
+        await transition.check();
+        const draft = 'Paragraph\n'.repeat(99) + 'Last paragraph';
+        await editor.fill(draft);
+        const normal = await editor.boundingBox();
+        const expand = dialog.getByRole('button', { name: 'Expand content', exact: true });
+        await expand.click();
+        await expect(expand).toHaveAttribute('aria-pressed', 'true');
+        await expect
+            .poll(async () => (await editor.boundingBox())?.width ?? 0)
+            .toBeGreaterThan(normal?.width ?? 0);
+        await expect(editor).toContainText('Last paragraph');
+        await editor.evaluate(el => (el.scrollTop = el.scrollHeight));
+        await expect(dialog.getByRole('button', { name: 'Preview', exact: true })).toBeInViewport();
+        await expect(save).toBeInViewport({ ratio: 1 });
+        await expand.click();
+        await expect(expand).toHaveAttribute('aria-pressed', 'false');
+        await transition.uncheck();
+        await editor.fill('# Phone Terms');
         // below 1440px the preview is a toggle inside the editor
         await dialog.getByRole('button', { name: 'Preview', exact: true }).click();
         await expect(dialog.getByRole('heading', { name: 'Phone Terms' })).toBeVisible();
-        await dialog.getByRole('button', { name: 'Save' }).click();
+        await save.click();
         await expect(dialog).toBeHidden();
         expect(posted).toEqual([{ is_html: true, content: '# Phone Terms' }]);
         await expect(main(page).getByRole('heading', { name: 'Phone Terms' })).toBeVisible();

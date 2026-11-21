@@ -431,9 +431,14 @@ test.describe('API key secret', () => {
             const curlCmd = await page.evaluate(() => navigator.clipboard.readText());
             expect(curlCmd).toContain(`Authorization: API-Key ${secret}`);
             expect(curlCmd).toContain(`/auth/v1/api_keys/${name}/test`);
-            await expect(
-                main.getByRole('textbox', { name: 'curl text command with jq' }),
-            ).toBeVisible();
+            const curlPretty = main.getByRole('textbox', { name: 'curl text command with jq' });
+            await expect(curlPretty).toBeVisible();
+            await expect(curlPretty).toHaveAttribute('rows', '4');
+            await expect(curl).toHaveAttribute('rows', '4');
+            expect((await curlPretty.boundingBox())?.width).toBeCloseTo(
+                (await curl.boundingBox())?.width ?? -1,
+                0,
+            );
 
             // use the key: the test endpoint and an allowed endpoint work ...
             const auth = { Authorization: `API-Key ${secret}` };

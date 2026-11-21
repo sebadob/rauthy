@@ -9,6 +9,7 @@
         closeModal = $bindable(),
         onClose,
         strict = false,
+        expanded = false,
         prerender = false,
         ariaLabel,
         children,
@@ -17,6 +18,7 @@
         closeModal?: () => void;
         onClose?: () => void;
         strict?: boolean;
+        expanded?: boolean;
         prerender?: boolean;
         ariaLabel?: string;
         children: Snippet;
@@ -124,6 +126,7 @@ We need the onclick listener here to make easy click-outside work.
     aria-modal="true"
     aria-label={ariaLabel}
     data-strict={strict}
+    class:expanded
     onclose={() => {
         showModal = false;
         onClose?.();
@@ -252,6 +255,17 @@ We need the onclick listener here to make easy click-outside work.
     :global(.admin-shell) dialog > :global(div) {
         max-height: calc(100dvh - 34px);
         overflow: auto;
+    }
+
+    :global(.admin-shell) dialog.expanded {
+        max-width: 100dvw;
+        max-height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    :global(.admin-shell) dialog.expanded > div {
+        max-height: 100dvh;
     }
 
     :global(.admin-shell) dialog :global(.meta) {

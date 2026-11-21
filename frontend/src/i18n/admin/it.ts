@@ -232,6 +232,8 @@ export const I18nAdminIt: I18nAdmin = {
         source: 'Consulta il codice sorgente',
     },
     editor: {
+        format: 'Formato',
+        plainText: 'Testo semplice',
         bold: 'Grassetto',
         code: 'Codice',
         heading1: 'Titolo 1',
@@ -249,11 +251,13 @@ export const I18nAdminIt: I18nAdmin = {
         textArea: 'Modifica testo',
     },
     email: {
+        delivery: 'Consegna',
         cancelJob: 'Annulla invio',
         filterType: ['Nessuno', 'Nel gruppo', 'Fuori dal gruppo', 'Con il ruolo', 'Senza il ruolo'],
         immediate: 'Immediato',
         jobs: 'Invii email',
         scheduled: 'Invio programmato',
+        scheduledDelivery: 'Programmato',
         sendAllUsers: 'L’email verrà inviata a tutti gli utenti.',
         sendAllUsersFiltered:
             'L’email verrà inviata agli utenti che corrispondono a questo filtro:',

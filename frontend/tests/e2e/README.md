@@ -8,8 +8,9 @@ They cover every admin section, the account dashboard and the public flows end t
 1. `just mailcrab-start`, then start Rauthy (`just run`) after `just build-ui`. The backend embeds
    the static assets, so rebuild and restart Rauthy after every UI build. Keep the repository
    bootstrap fixtures enabled for the list and search tests.
-2. `npx playwright install chromium webkit` (once).
+2. `npx playwright install chromium firefox webkit` (once).
 3. `npm run test:e2e` (all), or `npx playwright test -c playwright.e2e.config.js users`.
+   Use `npm run test:e2e -- --project=firefox --headed` to test with classic scrollbars on macOS.
 4. Report: `npx playwright show-report test-results/e2e-report`.
 
 Environment overrides: `E2E_BASE_URL`, `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, `E2E_MAILCRAB_URL`,

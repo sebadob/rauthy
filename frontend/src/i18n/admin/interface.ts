@@ -233,6 +233,8 @@ export interface I18nAdmin {
         source: string;
     };
     editor: {
+        format?: string;
+        plainText?: string;
         bold: string;
         code: string;
         heading1: string;
@@ -250,6 +252,7 @@ export interface I18nAdmin {
         textArea: string;
     };
     email: {
+        delivery?: string;
         cancelJob: string;
         // MUST be in the order:
         // 'none' | 'in_group' | 'not_in_group' | 'has_role' | 'has_not_role'
@@ -257,6 +260,7 @@ export interface I18nAdmin {
         immediate: string;
         jobs: string;
         scheduled: string;
+        scheduledDelivery?: string;
         sendAllUsers: string;
         sendAllUsersFiltered: string;
         sendMail: string;

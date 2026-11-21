@@ -53,6 +53,22 @@ export default defineConfig({
             },
         },
         {
+            name: 'firefox',
+            dependencies: ['setup'],
+            testMatch: /review-layout\.spec\.mjs$/,
+            use: {
+                ...devices['Desktop Firefox'],
+                viewport: { width: 1200, height: 800 },
+                storageState: './test-results/.auth/admin.json',
+                launchOptions: {
+                    firefoxUserPrefs: {
+                        'ui.useOverlayScrollbars': 0,
+                        'ui.allowOverlayScrollbarsOverlap': 0,
+                    },
+                },
+            },
+        },
+        {
             name: 'webkit',
             dependencies: ['setup'],
             grep: /@webkit/,
