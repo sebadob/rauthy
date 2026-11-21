@@ -565,7 +565,7 @@ WHERE sessions.exp > $11"#;
         self.validate_user_expiry(user)?;
         self.user_id = Some(user.id.clone());
         self.roles = Some(user.roles.clone());
-        self.groups = user.groups.clone();
+        self.groups.clone_from(&user.groups);
         self.is_mfa = assurance.apply_to(self.is_mfa);
 
         // This function MUST NOT use `self.upsert()`, because it might insert
