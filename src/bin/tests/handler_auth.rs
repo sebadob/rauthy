@@ -2,7 +2,7 @@ use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
     authorization_response_params_decoded, code_state_from_headers, cookie_csrf_headers_from_res,
     decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
-    init_client_bcl_uri,
+    init_client_bcl_uri, refresh,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
@@ -470,20 +470,9 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     assert_eq!(ts.scope.as_deref(), access_claims["scope"].as_str());
 
     // an authorization_code refresh token is never consent-exempt, nor is its rotation
-    let refresh_token = ts.refresh_token.clone().unwrap();
+    let refresh_token = ts.refresh_token.unwrap();
     assert_not_consent_exempt(&refresh_token);
-    let req = TokenRequest {
-        grant_type: GrantType::RefreshToken,
-        client_id: Some(CLIENT_ID.to_string()),
-        client_secret: Some(CLIENT_SECRET.to_string()),
-        refresh_token: Some(refresh_token),
-        ..Default::default()
-    };
-    let res = reqwest::Client::new()
-        .post(&url_token)
-        .form(&req)
-        .send()
-        .await?;
+    let res = refresh(&reqwest::Client::new(), refresh_token).await;
     let rotated = expect_status_json!(res, 200, TokenSet);
     assert_not_consent_exempt(&rotated.refresh_token.unwrap());
 
