@@ -95,7 +95,12 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="scopes">
+<NavSub
+    detail={!!scope}
+    onBack={() => sid.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="scopes"
+>
     <AdminListHeading title={ta.nav.scopes} count={scopesFiltered.length} />
     <ButtonAddModal level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ScopeAddNew onSave={onAddNew} {scopes} />

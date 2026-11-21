@@ -3,6 +3,7 @@
     import EntityHeader from '#lib/admin/EntityHeader.svelte';
     import IconCircleStack from '#icons/IconCircleStack.svelte';
     import { onMount, untrack } from 'svelte';
+    import { MediaQuery } from 'svelte/reactivity';
     import { fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
@@ -33,6 +34,7 @@
     let closeModal: undefined | (() => void) = $state();
 
     let ns = useParam('ns');
+    const mobile = new MediaQuery('(width < 800px)', false);
 
     let err = $state('');
 
@@ -42,9 +44,7 @@
     let namespacesPaginated: KVNamespaceResponse[] = $state([]);
     let page = $state(1);
     let pageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
-    let selected: undefined | KVNamespaceResponse = $derived(
-        namespaces.find(namespace => namespace.name === ns.get()),
-    );
+    let selected = $derived(namespaces.find(namespace => namespace.name === ns.get()));
 
     onMount(() => {
         fetchData();
@@ -67,7 +67,7 @@
         let res = await fetchGet<KVNamespaceResponse[]>('/auth/v1/kv/ns');
         if (res.body) {
             namespaces = res.body;
-            if (!ns.get() && res.body.length > 0) {
+            if (!mobile.current && !ns.get() && res.body.length > 0) {
                 ns.set(res.body[0].name);
             }
         } else {
@@ -102,7 +102,12 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="kv">
+<NavSub
+    detail={!!selected}
+    onBack={() => ns.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="kv"
+>
     <AdminListHeading title={ta.nav.kvStore} count={namespaces.length} />
     <ButtonAddModal level={namespaces.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <div class="alignLeft">

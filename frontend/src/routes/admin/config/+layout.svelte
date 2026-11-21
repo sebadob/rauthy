@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
+    import { page } from '$app/state';
     import NavSub from '#lib/nav/NavSub.svelte';
     import NavLinkSub from '#lib/nav/NavLinkSub.svelte';
     import type { Snippet } from 'svelte';
@@ -11,13 +13,19 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+
+    function showList() {
+        const url = new URL(page.url.href);
+        url.searchParams.set('list', '');
+        void goto(url);
+    }
 </script>
 
 <svelte:head>
     <title>Rauthy Config</title>
 </svelte:head>
 
-<NavSub>
+<NavSub detail={!page.url.searchParams.has('list')} onBack={showList}>
     <AdminListHeading title={ta.nav.config} />
     <NavLinkSub href="/auth/v1/admin/config/policy">
         {t.passwordPolicy.passwordPolicy}

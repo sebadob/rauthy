@@ -299,7 +299,12 @@
     </NavButtonTile>
 {/snippet}
 
-<NavSub buttonTilesAriaControls="users">
+<NavSub
+    detail={!!userId}
+    onBack={() => uid.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="users"
+>
     <AdminListHeading
         title={ta.nav.users}
         count={useServerSide ? users.length : usersFiltered.length}

@@ -717,12 +717,11 @@ test.describe('providers on a phone', () => {
             await expect(field(main, 'Client Name')).toHaveValue(p.name);
             if (isMobile) {
                 const toggle = await main
-                    .locator('.btnCollapsed')
-                    .getByRole('button')
+                    .getByRole('button', { name: 'Back', exact: true })
                     .boundingBox();
                 const detail = await main.locator('.admin-detail').boundingBox();
-                if (!toggle || !detail) throw new Error('Missing provider list toggle or detail');
-                expect(detail.y).toBeGreaterThanOrEqual(toggle.y + toggle.height);
+                if (!toggle || !detail) throw new Error('Missing provider back button or detail');
+                expect(detail.y).toBeGreaterThanOrEqual(toggle.y + toggle.height + 8);
             }
             await field(main, 'Client ID').fill('mobile-client');
             await saveButton(page).click();

@@ -22,22 +22,14 @@ export async function chooseOption(page, combobox, value) {
 }
 
 /**
- * At phone size the entry list of an admin section is collapsed behind a toggle in `main`
- * (named after the empty state, "Select an entry", with `aria-expanded`). Opens the list when it
- * is collapsed; on wide screens there is no toggle and the list is always shown.
+ * Returns to the list when a phone-size admin detail is open.
  * @param {import('@playwright/test').Page} page
  */
 export async function showEntryList(page) {
     const main = page.getByRole('main');
     await expect(main.getByRole('heading', { level: 1 })).toBeVisible();
-    const toggle = main
-        .getByRole('button', { name: 'Select an entry', exact: true })
-        .or(main.getByRole('button', { name: /(show|open|toggle).*(list|entries)/i }))
-        .first();
-    if (!(await toggle.isVisible())) return;
-    if ((await toggle.getAttribute('aria-expanded')) === 'true') return;
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const back = main.locator('.navSub').getByRole('button', { name: 'Back', exact: true });
+    if (await back.isVisible()) await back.click();
 }
 
 /**

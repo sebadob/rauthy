@@ -15,8 +15,7 @@ export function subNav(/** @type {import('@playwright/test').Page} */ page) {
 }
 
 /**
- * Makes sure the secondary navigation is expanded. At phone size it is collapsed behind a toggle
- * button that has no accessible name (FINDING), so the fallback is the button that controls it.
+ * Returns to the section list when a phone-size detail is open.
  * @param {import('@playwright/test').Page} page
  */
 export async function openSubNav(page) {

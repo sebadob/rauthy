@@ -36,7 +36,7 @@ const detailUrl = (/** @type {string} */ id) => `${CLIENTS}?cid=${encodeURICompo
 async function openClient(page, id) {
     await page.goto(detailUrl(id));
     await expect(page.getByRole('textbox', { name: 'Client Name', exact: true })).toBeVisible();
-    await expect(page.getByRole('main').getByText(id, { exact: true }).first()).toBeVisible();
+    await expect(page.locator('.admin-entity-header').getByText(id, { exact: true })).toBeVisible();
 }
 
 /** The client checkbox with the given accessible name. */

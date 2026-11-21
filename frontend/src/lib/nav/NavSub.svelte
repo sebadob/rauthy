@@ -1,22 +1,23 @@
 <script lang="ts">
-    import { untrack, type Snippet } from 'svelte';
-    import { page } from '$app/state';
+    import { tick, untrack, type Snippet } from 'svelte';
+    import { MediaQuery } from 'svelte/reactivity';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { genKey } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
+    import IconArrowLeft from '#icons/IconArrowLeft.svelte';
 
     let {
-        width = 'clamp(17rem, 22vw, 21rem)',
-        collapseButtonThreshold = 800,
-        thresholdNavSub = 700,
+        detail,
+        onBack,
+        error,
         children,
         buttonTiles,
         listFooter,
         buttonTilesAriaControls,
     }: {
-        width?: string;
-        collapseButtonThreshold?: number;
-        thresholdNavSub?: number;
+        detail: boolean;
+        onBack: () => void;
+        error?: string;
         children: Snippet;
         buttonTiles?: Snippet;
         listFooter?: Snippet;
@@ -24,120 +25,40 @@
     } = $props();
 
     const id = genKey();
-    let ta = useI18nAdmin();
+    const ta = useI18nAdmin();
+    const mobile = new MediaQuery('(width < 800px)', false);
 
-    $inspect(thresholdNavSub).with(() => {
-        if (thresholdNavSub > collapseButtonThreshold) {
-            console.warn(
-                'thresholdNavMain must be lower than or equal to collapseButtonThreshold: ',
-                collapseButtonThreshold,
-            );
-        }
-    });
-
-    let innerWidth: undefined | number = $state();
-    let shouldCollapse = $derived(!!(innerWidth && innerWidth < thresholdNavSub));
-
-    let collapsed = $state(false);
-    let showIcon = $state(false);
+    let nav: HTMLElement | undefined = $state();
+    let backButton: HTMLButtonElement | undefined = $state();
+    let previousDetail = untrack(() => detail);
 
     $effect(() => {
-        if (innerWidth) {
-            collapsed = shouldCollapse;
+        const isDetail = detail;
+        const changed = previousDetail !== isDetail;
+        previousDetail = isDetail;
+
+        if (changed && mobile.current) {
+            void tick().then(() => {
+                const target = detail ? backButton : nav;
+                if (!document.activeElement || document.activeElement === document.body) {
+                    target?.focus({ preventScroll: true });
+                }
+            });
         }
     });
-
-    // On narrow screens the list covers the details. Whenever the selected entry in the URL
-    // changes (picked from the list, or just created in the "Add New" dialog), show the details.
-    let lastSearch: undefined | string;
-    $effect(() => {
-        let search = page.url.search;
-        if (lastSearch !== undefined && search !== lastSearch && untrack(() => shouldCollapse)) {
-            collapsed = true;
-        }
-        lastSearch = search;
-    });
-
-    function toggle() {
-        collapsed = !collapsed;
-    }
-
-    function onclick(ev: MouseEvent) {
-        if (
-            shouldCollapse &&
-            ev.target instanceof Element &&
-            ev.target.closest('.admin-record-row, a')
-        ) {
-            collapsed = true;
-        }
-    }
-
-    function onmouseenter() {
-        if (innerWidth && innerWidth < collapseButtonThreshold) {
-            showIcon = true;
-        }
-    }
-
-    function onmouseleave() {
-        showIcon = false;
-    }
 </script>
 
-<svelte:window bind:innerWidth />
-
-<div class="navSub">
-    {#snippet btn()}
-        <Button
-            ariaLabel={ta.common.selectEntry}
-            ariaControls={id}
-            ariaExpanded={!collapsed}
-            invisible
-            onclick={toggle}
-        >
-            <span class="btn"
-                ><svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.7"
-                    ><path
-                        stroke-linecap="round"
-                        d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"
-                    /></svg
-                ></span
-            >
-        </Button>
-    {/snippet}
-
-    {#if collapsed || shouldCollapse}
-        <div class="btnCollapsed">
-            {@render btn()}
+<div class="navSub" data-detail={detail}>
+    {#if detail}
+        <div class="back-bar">
+            <Button bind:ref={backButton} ariaControls={id} invisible onclick={onBack}>
+                <IconArrowLeft width="20px" />{ta.common.back}
+            </Button>
         </div>
     {/if}
-
-    <nav
-        {id}
-        aria-hidden={collapsed}
-        data-collapsed={collapsed}
-        style:--list-width={width}
-        inert={collapsed}
-        {onclick}
-        {onmouseenter}
-        {onmouseleave}
-    >
-        {#if showIcon && !(collapsed || shouldCollapse)}
-            <div class="absolute">
-                <div class="iconHover" class:hoverLeft={collapsed}>
-                    {@render btn()}
-                </div>
-            </div>
-        {/if}
-
+    <nav {id} bind:this={nav} tabindex="-1">
         <div class="list-content">
             {@render children()}
-
             {#if buttonTiles}
                 <ul aria-controls={buttonTilesAriaControls}>
                     {@render buttonTiles()}
@@ -146,95 +67,41 @@
             {#if listFooter}
                 <div class="list-footer">{@render listFooter()}</div>
             {/if}
+            {#if error}
+                <p class="mobile-error err">{error}</p>
+            {/if}
         </div>
     </nav>
 </div>
 
 <style>
-    nav {
-        background: hsl(var(--bg));
-        border-left: 1px solid hsla(var(--bg-high) / 0.35);
-        border-right: 1px solid hsla(var(--bg-high) / 0.23);
-        border-radius: 0 var(--border-radius) var(--border-radius) 0;
-        overflow: clip;
-        z-index: 1;
-        transition: width 150ms;
-    }
-
-    nav[data-collapsed='true'] {
-        width: 0;
-    }
-
-    .list-content {
-        height: 100dvh;
-        background: hsla(var(--bg-high) / 0.1);
-        padding: 1rem 0;
-        line-height: 1.6rem;
-    }
-
-    @media (width < 700px) {
-        nav {
-            position: absolute;
-            inset: 0 auto 0 0;
-            background: var(--ui-surface);
-        }
-    }
-
-    .btn {
-        margin-top: -0.1rem;
-        color: hsla(var(--text) / 0.8);
-        transition: color 150ms;
-    }
-
-    .btn:hover {
-        color: hsl(var(--action));
-    }
-
-    .btnCollapsed {
-        position: absolute;
-        width: 0;
-        margin-left: 1.5rem;
-        margin-top: 0.1rem;
-        z-index: 2;
-    }
-
-    .iconHover {
-        top: -1rem;
-        left: 1.5rem;
-        position: relative;
-    }
-
-    .hoverLeft {
-        left: 1rem;
-    }
-
-    .navSub {
-        position: relative;
-        z-index: 1;
-    }
-
     .navSub {
         flex-shrink: 0;
+        min-height: 0;
     }
+
     nav {
         height: 100%;
-        border: 0;
+        width: clamp(17rem, 22vw, 21rem);
         border-right: 1px solid var(--ui-outline);
-        border-radius: 0;
-        background: transparent;
+        overflow: clip;
     }
-    nav:not([data-collapsed='true']) {
-        width: var(--list-width);
-    }
+
     .list-content {
         height: 100%;
         padding: 28px 16px;
-        background: transparent;
         overflow-y: auto;
     }
+
     .list-footer:not(:empty) {
         margin-top: 0.5rem;
     }
+
+    .back-bar,
+    .mobile-error {
+        display: none;
+    }
+
     .navSub :global(.topBtns) {
         display: flex;
         align-items: center;
@@ -338,23 +205,6 @@
         min-height: 0;
         max-height: none;
     }
-    @media (max-width: 800px) {
-        .list-content {
-            padding-top: 48px;
-        }
-        nav:not([data-collapsed='true']) {
-            width: min(20rem, 100dvw);
-            min-width: min(20rem, 100dvw);
-            /* below 500px the list floats above the details, so it needs its own surface */
-            background: var(--ui-surface);
-            box-shadow: 0 8px 24px #00000024;
-        }
-        .navSub :global(.btnCollapsed) {
-            margin-top: 6px;
-            margin-left: 8px;
-        }
-    }
-
     .navSub :global(a) {
         display: block;
         padding: 10px 12px;
@@ -393,15 +243,42 @@
         font-weight: 500;
     }
 
-    .navSub :global(.btnCollapsed) > :global(.admin-control[data-variant]) {
-        width: 40px;
-        height: 40px;
-        background: var(--ui-container);
-        border-radius: var(--border-radius);
-    }
-    .navSub :global(.btnCollapsed) :global(.btn) {
-        display: flex;
-        align-items: center;
-        margin: 0;
+    @media (width < 800px) {
+        .navSub[data-detail='false'] {
+            flex: 1;
+        }
+
+        nav {
+            width: 100%;
+            border-right: 0;
+        }
+
+        .list-content {
+            padding: 20px 16px;
+        }
+
+        .navSub[data-detail='true'] nav {
+            display: none;
+        }
+
+        .back-bar {
+            display: flex;
+            padding: 12px 16px 8px;
+        }
+
+        .back-bar :global(.admin-control) {
+            --ui-button-height: 44px;
+            --ui-button-padding: 0 12px;
+            background: var(--ui-container);
+        }
+
+        .back-bar :global(.admin-control:hover) {
+            background: var(--ui-hover);
+        }
+
+        .mobile-error {
+            display: block;
+            overflow-wrap: anywhere;
+        }
     }
 </style>

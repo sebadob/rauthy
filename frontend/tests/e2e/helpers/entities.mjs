@@ -23,9 +23,7 @@ export function entry(/** @type {Page} */ page, /** @type {string} */ name) {
 }
 
 /**
- * Makes sure the secondary navigation is visible. On phones it is collapsed behind a toggle.
- * FINDING: upstream the toggle (`lib/nav/NavSub.svelte`) is an icon button without a name, so
- * the fallback is the first button of `main`.
+ * Returns to the section list when a phone-size detail is open.
  */
 export async function showSubNav(/** @type {Page} */ page) {
     await showEntryList(page);

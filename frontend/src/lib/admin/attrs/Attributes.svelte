@@ -77,7 +77,12 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="groups">
+<NavSub
+    detail={!!attr}
+    onBack={() => an.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="groups"
+>
     <AdminListHeading title={ta.nav.attributes} count={attrsFiltered.length} />
     <ButtonAddModal level={attrs.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <AttrAddNew onSave={onAddNew} {attrs} />

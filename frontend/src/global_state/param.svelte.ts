@@ -71,6 +71,12 @@ export const useParam = (key: string, initialValue?: string | number | boolean):
     };
 };
 
+// Browser history and mobile section links can change the query without calling set().
+export function syncParamsFromUrl(search: string) {
+    _params = new URLSearchParams(search);
+    _signals = Object.fromEntries(_params);
+}
+
 function go(mode?: 'replace') {
     if (typeof window !== 'undefined' && _params) {
         let params = _params.toString().replace(' ', '+');

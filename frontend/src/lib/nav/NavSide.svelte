@@ -38,16 +38,18 @@
     let {
         collapsed,
         compact,
+        mobile,
         closeDrawer,
         drawerClose = $bindable(),
     }: {
         collapsed: boolean;
         compact: boolean;
+        mobile: boolean;
         closeDrawer: () => void;
         drawerClose?: HTMLButtonElement;
     } = $props();
 
-    let params = $derived(page.url.search);
+    let params = $derived(mobile ? '' : page.url.search);
 </script>
 
 <nav id="mainNav" data-collapsed={collapsed} data-compact={compact}>
@@ -168,7 +170,7 @@
                         <NavLink
                             {compact}
                             {params}
-                            route="/config/policy"
+                            route={mobile ? '/config/policy?list' : '/config/policy'}
                             highlightIncludes="/config/"
                         >
                             {#snippet icon(width: string)}

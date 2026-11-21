@@ -70,7 +70,7 @@
 
 {err}
 
-<NavSub buttonTilesAriaControls="keys">
+<NavSub detail={!!key} onBack={() => kid.set(undefined)} error={err} buttonTilesAriaControls="keys">
     <AdminListHeading title={ta.nav.apiKeys} count={keysFiltered.length} />
     <ButtonAddModal level={keys.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ApiKeyAddNew {keys} onSave={onNewKey} />

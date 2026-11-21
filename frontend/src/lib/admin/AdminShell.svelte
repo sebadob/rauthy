@@ -3,6 +3,7 @@
     import { afterNavigate } from '$app/navigation';
     import { page } from '$app/state';
     import { MediaQuery } from 'svelte/reactivity';
+    import { syncParamsFromUrl } from '#state/param.svelte.ts';
     import Main from '#lib/Main.svelte';
     import IconBell from '#icons/IconBell.svelte';
     import Button from '#lib/button/Button.svelte';
@@ -75,7 +76,12 @@
         }
     }
 
-    afterNavigate(closeDrawer);
+    afterNavigate(({ type, to }) => {
+        if (to && (type === 'popstate' || (mobile.current && type === 'link'))) {
+            syncParamsFromUrl(to.url.search);
+        }
+        closeDrawer();
+    });
 
     async function toggleNavigation() {
         if (!mobile.current) {
@@ -129,7 +135,13 @@
             onclick={closeDrawer}
             tabindex="-1"
         ></button>{/if}
-    <NavSide {compact} collapsed={mobile.current && !drawerOpen} {closeDrawer} bind:drawerClose />
+    <NavSide
+        {compact}
+        mobile={mobile.current}
+        collapsed={mobile.current && !drawerOpen}
+        {closeDrawer}
+        bind:drawerClose
+    />
     <Main>
         <header class="admin-header">
             <div class="admin-location">
@@ -264,6 +276,9 @@
     @media (width < 800px) {
         .admin-location > span {
             display: none;
+        }
+        .content:has(> :global(.navSub)) {
+            flex-direction: column;
         }
         .admin-workspace {
             margin: 0;

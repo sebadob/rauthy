@@ -21,7 +21,6 @@ import {
 /** @param {import('@playwright/test').Page} page */
 async function openCompose(page) {
     await page.goto('/auth/v1/admin/users');
-    // at phone size the button sits in the collapsed user list
     await showEntryList(page);
     await page.getByRole('button', { name: 'Send E-Mail' }).click();
     const dialog = page.getByRole('dialog');

@@ -53,7 +53,12 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="federation">
+<NavSub
+    detail={!!provider}
+    onBack={() => pid.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="federation"
+>
     <AdminListHeading title={ta.nav.providers} count={providers.length} />
     <ButtonAddModal level={providers.length === 0 ? 1 : 2} bind:closeModal>
         <ProviderAddNew {onSave} />

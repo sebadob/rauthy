@@ -78,7 +78,12 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="groups">
+<NavSub
+    detail={!!role}
+    onBack={() => rid.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="groups"
+>
     <AdminListHeading title={ta.nav.roles} count={rolesFiltered.length} />
     <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <RoleAddNew onSave={onAddNew} {roles} />

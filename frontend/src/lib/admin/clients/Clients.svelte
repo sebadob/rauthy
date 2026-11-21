@@ -85,7 +85,12 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="groups">
+<NavSub
+    detail={!!client}
+    onBack={() => cid.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="groups"
+>
     <AdminListHeading title={ta.nav.clients} count={clientsFiltered.length} />
     <ButtonAddModal level={clients.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ClientAddNew onSave={onAddNew} {clients} />

@@ -13,7 +13,6 @@ import {
     mailIdsTo,
     openSelectList,
     closeSelectList,
-    openUserList,
     strongPassword,
     trackRequests,
     userEntries,
@@ -392,14 +391,46 @@ test.describe('user details', () => {
 });
 
 test.describe('users at phone size', () => {
-    test('list and details are reachable @mobile', async ({ page }) => {
+    test('the list opens first and retains its filter when returning from a user @mobile', async ({
+        page,
+        isMobile,
+    }) => {
         const user = await newUser(page);
         await page.goto(USERS);
-        await openUserList(page);
+        const main = page.getByRole('main');
+        const list = main.getByRole('navigation', { name: '', exact: true });
+        const search = list.getByRole('searchbox', { name: 'Search' });
+        const back = main.getByRole('button', { name: 'Back', exact: true });
+        const email = main.getByRole('textbox', { name: 'E-Mail' });
+        await expect(search).toBeVisible();
+        await expect(email).toBeHidden();
+        await search.fill(user.email);
         await userEntry(page, user.email).click();
-        await expect(page.getByRole('main').getByRole('textbox', { name: 'E-Mail' })).toHaveValue(
-            user.email,
-        );
+        await expect(email).toHaveValue(user.email);
+
+        if (isMobile) {
+            await expect(list).toBeHidden();
+            await expect(back).toBeVisible();
+            await page.goBack();
+            await expect(search).toBeVisible();
+            await expect(search).toHaveValue(user.email);
+            await page.goForward();
+            await expect(email).toHaveValue(user.email);
+
+            await back.click();
+            await expect(search).toHaveValue(user.email);
+            await expect(email).toBeHidden();
+            await expect(page).toHaveURL(url => !url.searchParams.has('uid'));
+
+            await openUser(page, user);
+            await expect(list).toBeHidden();
+            await back.click();
+            await expect(userEntry(page, user.email)).toBeVisible();
+        } else {
+            await expect(list).toBeVisible();
+            await expect(back).toBeHidden();
+        }
+
         const overflow = await page.evaluate(
             () => document.documentElement.scrollWidth - window.innerWidth,
         );

@@ -78,7 +78,12 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="groups">
+<NavSub
+    detail={!!group}
+    onBack={() => gid.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="groups"
+>
     <AdminListHeading title={ta.nav.groups} count={groupsFiltered.length} />
     <ButtonAddModal level={groups.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <GroupAddNew onSave={onAddNew} {groups} />

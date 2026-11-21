@@ -48,6 +48,69 @@ test.describe('admin navigation', () => {
         }
     });
 
+    test('the mobile section menu opens lists including Config @mobile-only', async ({ page }) => {
+        await page.goto('/auth/v1/admin/clients?cid=rauthy');
+        const main = page.getByRole('main');
+        const back = main.getByRole('button', { name: 'Back', exact: true });
+        const sectionMenu = main.getByRole('button', { name: 'Administration', exact: true });
+        const sidebar = page.locator('#mainNav');
+        const list = main.getByRole('navigation');
+
+        await expect(main.getByRole('textbox', { name: 'Client Name' })).toHaveValue('Rauthy');
+        await sectionMenu.click();
+        await sidebar.getByRole('link', { name: 'Clients', exact: true }).click();
+        await expect(list.getByRole('heading', { name: 'Clients' })).toBeVisible();
+        await expect(back).toBeHidden();
+
+        await sectionMenu.click();
+        await sidebar.getByRole('link', { name: 'Config', exact: true }).click();
+        const policy = list.getByRole('link', { name: 'Password Policy', exact: true });
+        await expect(policy).toBeVisible();
+        const detail = main.getByRole('heading', { name: 'Password Policy', exact: true });
+        await expect(detail).toBeHidden();
+        await policy.click();
+        await expect(detail).toBeVisible();
+        await expect(back).toBeVisible();
+        await back.click();
+        await expect(policy).toBeVisible();
+        await expect(detail).toBeHidden();
+    });
+
+    test('entity titles fit with Events open at tablet width @webkit', async ({ page }) => {
+        await page.setViewportSize({ width: 1024, height: 768 });
+        await page.goto('/auth/v1/admin/docs');
+        await expect(page.getByRole('heading', { name: 'About', level: 1 })).toBeVisible();
+        const user = await createTestUser(page, {
+            givenName: 'Matru',
+            familyName: 'Admin',
+            password: null,
+        });
+        try {
+            for (const [route, title] of [
+                [`users?uid=${user.id}`, 'Matru Admin'],
+                ['clients?cid=init_client', 'Init Client'],
+            ]) {
+                await page.goto(`/auth/v1/admin/${route}`);
+                const header = page.locator('.admin-entity-header');
+                const heading = header.getByRole('heading', { name: title, exact: true });
+                await expect(heading).toBeVisible();
+                await page.locator('.admin-header').getByRole('button', { name: 'Events' }).click();
+                await expect(page.locator('#admin-events-panel')).toBeVisible();
+                await expect(
+                    header.getByRole('button', { name: 'Delete', exact: true }),
+                ).toBeVisible();
+                const lines = await heading.evaluate(
+                    element =>
+                        element.getBoundingClientRect().height /
+                        Number.parseFloat(getComputedStyle(element).lineHeight),
+                );
+                expect(lines).toBeCloseTo(1, 1);
+            }
+        } finally {
+            await deleteTestUser(page, user.id);
+        }
+    });
+
     test('deep links load directly', async ({ page }) => {
         for (const [, url] of SECTIONS) {
             await page.goto(`/auth/v1/${url}`);

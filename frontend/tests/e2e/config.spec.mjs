@@ -17,9 +17,7 @@ const main = page => page.getByRole('main');
 const subNav = page => main(page).getByRole('navigation');
 
 /**
- * Opens the collapsed sub navigation at phone size when `link` is not reachable yet.
- * FINDING: its toggle has no accessible name and puts `aria-expanded` on the inner svg;
- * `aria-controls` is the only stable hook.
+ * Returns to the section list when a phone-size detail is open.
  * @param {import('@playwright/test').Page} page
  * @param {import('@playwright/test').Locator} link
  */

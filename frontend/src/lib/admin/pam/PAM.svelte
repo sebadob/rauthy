@@ -100,6 +100,16 @@
         }
     });
 
+    function clearSelection() {
+        if (isUser) {
+            selectedUser = undefined;
+        } else if (isGroup) {
+            selectedGroup = undefined;
+        } else {
+            selectedHost = undefined;
+        }
+    }
+
     async function fetchGroups() {
         let res = await fetchGet<PamGroupResponse[]>('/auth/v1/pam/groups');
         if (res.body) {
@@ -147,7 +157,11 @@
     }
 </script>
 
-<NavSub buttonTilesAriaControls="pam">
+<NavSub
+    detail={!!((isUser && selectedUser) || (isGroup && selectedGroup) || (isHost && selectedHost))}
+    onBack={clearSelection}
+    buttonTilesAriaControls="pam"
+>
     <AdminListHeading title="PAM" />
     <ButtonAddModal level={2} bind:closeModal alignRight>
         {#if isUser}

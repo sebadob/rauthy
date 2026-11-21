@@ -3,7 +3,6 @@ import { openEntityDelete, deleteAction } from './helpers/entities.mjs';
 import { test, expect } from './fixtures.mjs';
 import { api } from './helpers/api.mjs';
 import { unique } from './helpers/env.mjs';
-import { showEntryList } from './helpers/ui.mjs';
 
 /** @type {string[]} */
 let namespaces = [];
@@ -212,12 +211,23 @@ test('edits namespace visibility and deletes the namespace', async ({ page }) =>
         .toBe(false);
 });
 
-test('namespaces and values are usable at phone size @mobile', async ({ page }) => {
+test('namespaces and values are usable at phone size @mobile', async ({ page, isMobile }) => {
     const ns = await newNamespace(page);
     await openKv(page);
-    await showEntryList(page);
+    const main = page.getByRole('main');
+    const newValue = main.getByRole('button', { name: 'New Value' });
+    if (isMobile) {
+        await expect(nsEntry(page, ns)).toBeVisible();
+        await expect(newValue).toBeHidden();
+        await expect(page).toHaveURL(url => !url.searchParams.has('ns'));
+    }
     await nsEntry(page, ns).click();
-    await expect(page.getByRole('main').getByRole('button', { name: 'New Value' })).toBeVisible();
+    await expect(newValue).toBeVisible();
+    if (isMobile) {
+        await main.getByRole('button', { name: 'Back', exact: true }).click();
+        await expect(nsEntry(page, ns)).toBeVisible();
+        await expect(newValue).toBeHidden();
+    }
     const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
     );

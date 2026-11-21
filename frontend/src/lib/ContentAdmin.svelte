@@ -48,22 +48,24 @@
     .admin-empty {
         display: none;
     }
-    :global(.admin-workspace)
-        > :global(.content:has(> .navSub))
-        .admin-detail:has(:global(> div[id]:empty)):not(:has(:global(> .err))) {
-        display: grid;
-        place-content: center;
-    }
-    :global(.admin-workspace)
-        > :global(.content:has(> .navSub))
-        .admin-detail:has(:global(> div[id]:empty)):not(:has(:global(> .err)))
-        .admin-empty {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        max-width: 280px;
-        text-align: center;
-        padding-bottom: 60px;
+    @media (width >= 800px) {
+        :global(.admin-workspace)
+            > :global(.content:has(> .navSub))
+            .admin-detail:has(:global(> div[id]:empty)):not(:has(:global(> .err))) {
+            display: grid;
+            place-content: center;
+        }
+        :global(.admin-workspace)
+            > :global(.content:has(> .navSub))
+            .admin-detail:has(:global(> div[id]:empty)):not(:has(:global(> .err)))
+            .admin-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 280px;
+            text-align: center;
+            padding-bottom: 60px;
+        }
     }
     .admin-empty-symbol {
         display: grid;
@@ -101,11 +103,13 @@
         }
     }
 
-    @media (width < 700px) {
-        :global(.navSub) + .admin-detail {
-            /* Keep the list toggle outside the detail's scroll area. */
-            margin-top: 48px;
-            padding-top: 0;
+    @media (width < 800px) {
+        :global(.navSub[data-detail='false']) + .admin-detail {
+            display: none;
+        }
+
+        :global(.navSub[data-detail='true']) + .admin-detail {
+            padding-top: 12px;
         }
     }
 </style>
