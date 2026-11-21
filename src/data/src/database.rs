@@ -5,11 +5,13 @@ use crate::migration::{anti_lockout, bootstrap, db_migrate};
 use crate::rauthy_config::RauthyConfig;
 use futures_util::StreamExt;
 use hiqlite::macros::{CacheVariants, embed::*};
+use rauthy_common::constants::CACHE_INVALIDATION_DELAY;
 use rauthy_common::{is_hiqlite, is_postgres};
 use rauthy_error::ErrorResponse;
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
 use semver::Version;
+use std::borrow::Cow;
 use std::env;
 use std::ops::DerefMut;
 use std::sync::{Arc, OnceLock};
@@ -38,7 +40,7 @@ struct MigrationsHiqlite;
 /// CAUTION: DO NOT change the order when adding new entries to now have false-positive
 /// during updates for already existing environments. Caches are not indexed via String / Name,
 /// but via u32 internally.
-#[derive(Debug, CacheVariants)]
+#[derive(Debug, Clone, Copy, CacheVariants)]
 pub enum Cache {
     Atproto,
     App,
@@ -105,6 +107,33 @@ impl DB {
         HIQLITE_CLIENT
             .get()
             .expect("cache::start_cache() must be called at startup")
+    }
+
+    /// Deletes cache entries after a database write.
+    ///
+    /// Sleeps [`CACHE_INVALIDATION_DELAY`] before it deletes: a concurrent fill reads the
+    /// database and only then puts its snapshot, and that put can land after this write has
+    /// invalidated. The delay orders these deletes after the put of any fill that read before
+    /// the write, which is what removes that stale snapshot.
+    ///
+    /// `(Cache, None)` wipes that entire cache, for writes that cannot name every affected
+    /// key. One call sleeps once, which keeps the delay at one [`CACHE_INVALIDATION_DELAY`]
+    /// per request.
+    pub async fn cache_delete_delayed<K, E>(entries: E) -> Result<(), ErrorResponse>
+    where
+        K: Into<Cow<'static, str>>,
+        E: IntoIterator<Item = (Cache, Option<K>)>,
+    {
+        sleep(CACHE_INVALIDATION_DELAY).await;
+
+        let client = Self::hql();
+        for (cache, key) in entries {
+            match key {
+                Some(key) => client.delete(cache, key).await?,
+                None => client.clear_cache(cache).await?,
+            }
+        }
+        Ok(())
     }
 
     /// Returns a client from the Postgres connection pool

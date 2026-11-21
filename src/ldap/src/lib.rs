@@ -3,8 +3,6 @@
 //! A minimal, read-only LDAPS server for clients that can only log in via an LDAP bind.
 //! Binds reuse the `password` grant checks. Each client gets its own subtree, see [dn].
 
-#![forbid(unsafe_code)]
-
 use crate::directory::{Entry, Target};
 use crate::dn::BindDn;
 use futures::{SinkExt, StreamExt};

@@ -442,26 +442,30 @@ VALUES ($1, $2, $3, $4)"#;
             txn.commit().await?;
         }
 
-        self.delete_cache().await?;
         self.delete_cached_secrets().await?;
         // `clients_dyn` cascades in the database
-        if self.is_dynamic() {
-            ClientDyn::delete_from_cache(&self.id).await?;
-        }
+        let dyn_client = if self.is_dynamic() {
+            Some((Cache::App, Some(ClientDyn::get_cache_entry(&self.id))))
+        } else {
+            None
+        };
+        DB::cache_delete_delayed(
+            [(Cache::App, Some(Self::cache_idx(&self.id)))]
+                .into_iter()
+                .chain(dyn_client),
+        )
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete_cache(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx(&self.id))
-            .await?;
-
+        DB::cache_delete_delayed([(Cache::App, Some(Self::cache_idx(&self.id)))]).await?;
         Ok(())
     }
 
     pub async fn delete_cache_for(id: &str) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(Self::cache_idx(id)))]).await?;
         Ok(())
     }
 
@@ -3247,8 +3251,8 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             enable_solid_aud: false,
             force_mfa: false,
             allowed_flows: vec!["authorization_code".into()],
-            allowed_scopes: allowed.iter().map(|s| Cow::Owned(s.to_string())).collect(),
-            default_scopes: Some(default.iter().map(|s| Cow::Owned(s.to_string())).collect()),
+            allowed_scopes: allowed.iter().map(|s| Cow::from(s.to_string())).collect(),
+            default_scopes: Some(default.iter().map(|s| Cow::from(s.to_string())).collect()),
             cache_lifetime: std::time::Duration::from_secs(3600),
             danger_allow_unvalidated_resource: false,
             ignore_unknown_auth_flows: false,

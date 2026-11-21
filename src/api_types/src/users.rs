@@ -241,7 +241,10 @@ pub struct UserValuesRequest {
     pub tz: Option<String>,
 }
 
+// serde's variant name would be `Email`, which is not the DB column form, nor `as_str`, nor
+// what the frontend declares.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum UserAttrConfigTyp {
     Email,
 }
@@ -848,6 +851,35 @@ pub struct WebauthnLoginResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn attr_config_typ_wire_form_is_lowercase() {
+        // The stored column, `as_str`, `FromStr`, and the frontend type all use "email", so the
+        // JSON form must be that too, not serde's variant name.
+        assert_eq!(
+            serde_json::json!("email"),
+            serde_json::to_value(UserAttrConfigTyp::Email).unwrap()
+        );
+        assert_eq!("email", UserAttrConfigTyp::Email.as_str());
+        assert!(
+            serde_json::from_str::<UserAttrConfigTyp>("\"email\"").is_ok(),
+            "the lowercase form must deserialize"
+        );
+        assert!(
+            "email".parse::<UserAttrConfigTyp>().is_ok(),
+            "FromStr is the DB column form"
+        );
+
+        let req = r#"{"name":"attr-1","desc":null,"default_value":null,"typ":"email","user_editable":null}"#;
+        assert!(
+            serde_json::from_str::<UserAttrConfigRequest>(req).is_ok(),
+            "a request with the lowercase typ must deserialize"
+        );
+
+        use utoipa::PartialSchema;
+        let schema = serde_json::to_value(UserAttrConfigTyp::schema()).unwrap();
+        assert_eq!(serde_json::json!(["email"]), schema["enum"], "{schema}");
+    }
 
     #[test]
     fn consent_delete_params_resource() {

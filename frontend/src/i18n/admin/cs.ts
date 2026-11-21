@@ -289,6 +289,10 @@ export let I18nAdminCs: I18nAdmin = {
     groups: {
         delete1: 'Opravdu chcete tuto skupinu smazat?',
         name: 'Název skupiny',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritmus',
@@ -458,6 +462,10 @@ export let I18nAdminCs: I18nAdmin = {
         adminNoMod: 'Roli <code>rauthy_admin</code> nelze měnit.',
         delete1: 'Opravdu chcete tuto roli smazat?',
         name: 'Název role',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Claimy v kořeni tokenu',

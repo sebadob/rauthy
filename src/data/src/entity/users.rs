@@ -284,15 +284,11 @@ LIMIT $3"#;
 
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
-
-        let idx = format!("{IDX_USERS}_{user_id}");
-        client.delete(Cache::User, idx).await?;
-
-        let idx = format!("{IDX_USERS}_{email}");
-        client.delete(Cache::User, idx).await?;
-
-        Ok(())
+        DB::cache_delete_delayed([
+            (Cache::User, Some(format!("{IDX_USERS}_{user_id}"))),
+            (Cache::User, Some(format!("{IDX_USERS}_{email}"))),
+        ])
+        .await
     }
 
     pub async fn count() -> Result<i64, ErrorResponse> {
@@ -1462,12 +1458,15 @@ RETURNING email, email_verified, enabled"#;
     /// too, if it differs: the email before a change, or the stored one a write returned, which
     /// a concurrent update may have changed.
     async fn invalidate_cache_also(&self, other_email: Option<&str>) -> Result<(), ErrorResponse> {
-        Self::invalidate_cache(&self.id, &self.email).await?;
-        if let Some(email) = other_email.filter(|email| *email != self.email) {
-            let idx = format!("{IDX_USERS}_{email}");
-            DB::hql().delete(Cache::User, idx).await?;
+        let id = self.id.as_str();
+        let email = self.email.as_str();
+        let mut keys: Vec<String> =
+            vec![format!("{IDX_USERS}_{id}"), format!("{IDX_USERS}_{email}")];
+        if let Some(other) = other_email.filter(|other| *other != email) {
+            keys.push(format!("{IDX_USERS}_{other}"));
         }
-        Ok(())
+
+        DB::cache_delete_delayed(keys.into_iter().map(|key| (Cache::User, Some(key)))).await
     }
 
     /// Caution: Uses regex / LIKE on the database -> very costly query
@@ -1478,40 +1477,80 @@ RETURNING email, email_verified, enabled"#;
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let q = format!("%{q}%");
         let size_hint = max(limit, 1) as usize;
+        // SQLite has no `ILIKE` and its `LIKE` is case-insensitive for ASCII already
+        let like = if is_hiqlite() { "LIKE" } else { "ILIKE" };
 
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
-                let sql = r#"
+                let sql = format!(
+                    r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE id LIKE $1
+WHERE id {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2"#
+                );
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
                 }
             }
             SearchParamsIdx::Email => {
-                let sql = r#"
+                let sql = format!(
+                    r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE email LIKE $1
+WHERE email {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2"#
+                );
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
+                }
+            }
+            SearchParamsIdx::Name => {
+                let sql = format!(
+                    r#"
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
+FROM users
+WHERE given_name {like} $1 OR family_name {like} $1
+ORDER BY created_at ASC
+LIMIT $2"#
+                );
+
+                if is_hiqlite() {
+                    DB::hql().query_as(sql, params!(q, limit)).await?
+                } else {
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
+                }
+            }
+            SearchParamsIdx::Username => {
+                // `preferred_username` lives in the `users_values` table
+                let sql = format!(
+                    r#"
+SELECT u.id, u.email, u.given_name, u.family_name, u.created_at, u.last_login, u.picture_id
+FROM users u
+INNER JOIN users_values uv ON u.id = uv.id
+WHERE uv.preferred_username {like} $1
+ORDER BY u.created_at ASC
+LIMIT $2"#
+                );
+
+                if is_hiqlite() {
+                    DB::hql().query_as(sql, params!(q, limit)).await?
+                } else {
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
                 }
             }
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "supported search idx for users: id / user_id, email",
+                    "supported search idx for users: id / user_id, email, name, username",
                 ));
             }
         };
@@ -2881,14 +2920,8 @@ mod tests {
         stale.delete().await.unwrap();
 
         let pictures = hql_picture_ids().await;
-        assert!(
-            pictures.contains(&"del_pic_old".to_string()),
-            "{pictures:?}"
-        );
-        assert!(
-            !pictures.contains(&"del_pic_new".to_string()),
-            "{pictures:?}"
-        );
+        assert!(pictures.iter().any(|i| i == "del_pic_old"), "{pictures:?}");
+        assert!(!pictures.iter().any(|i| i == "del_pic_new"), "{pictures:?}");
     }
 
     /// Inserts for the user `{user_id}` an access token `{user_id}_at`, a refresh token

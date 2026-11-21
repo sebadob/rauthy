@@ -4,8 +4,11 @@ use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKey
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::groups::GroupRequest;
 use rauthy_api_types::roles::RoleRequest;
-use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
+use rauthy_api_types::users::{
+    NewUserRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
+};
 use rauthy_common::utils::new_store_id;
+use rauthy_data::entity::groups::Group;
 use reqwest::Client;
 use reqwest::header::{AUTHORIZATION, HeaderMap};
 use std::error::Error;
@@ -206,6 +209,29 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     expect_status!(res, 200);
+
+    // 2c-2. the member list of a group (the Groups -> Users tab): it answers with the minified
+    // user list, which any group admin may read for any group, like the user list above
+    let res = client
+        .get(format!("{backend}/groups"))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    let groups = expect_status_json!(res, 200, Vec<Group>);
+    let managed = groups
+        .iter()
+        .find(|g| g.name == "gatest")
+        .expect("the 'gatest' group exists");
+    let res = client
+        .get(format!("{backend}/groups/{}/users", managed.id))
+        .headers(ga_headers.clone())
+        .send()
+        .await?;
+    let members = expect_status_json!(res, 200, Vec<UserResponseSimple>);
+    assert!(
+        members.iter().any(|u| u.id == member.id),
+        "the managed user is a member of 'gatest'",
+    );
 
     // 2d. it can read the MFA devices (webauthn) of a managed user (the MFA tab)
     let res = client
@@ -434,8 +460,8 @@ async fn test_group_admin_delegation() -> Result<(), Box<dyn Error>> {
         .await?;
     let managed = expect_status_json!(res, 200, UserResponse);
     let groups = managed.groups.unwrap_or_default();
-    assert!(groups.contains(&"gatest".to_string()));
-    assert!(groups.contains(&"gaother".to_string()));
+    assert!(groups.iter().any(|i| i == "gatest"));
+    assert!(groups.iter().any(|i| i == "gaother"));
 
     // a groups-only PATCH that does NOT bring the user into scope is still rejected
     let outsider2 = create_user(

@@ -3,13 +3,19 @@
     import { useI18n } from '#state/i18n.svelte.ts';
     import Button from '#lib/button/Button.svelte';
     import Options from '#lib/Options.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
+    import {
+        loadPageSize,
+        PAGE_SIZE_DEFAULT,
+        PAGE_SIZE_OPTIONS,
+        savePageSize,
+        type PageSize,
+    } from '#lib/pagination/props.ts';
     import { onMount, untrack } from 'svelte';
 
-    const options: PageSize[] = [5, 10, 20, 30, 50, 100];
+    const options: PageSize[] = PAGE_SIZE_OPTIONS;
 
     let {
-        pageSize = $bindable(PAGE_SIZE_DEFAULT),
+        pageSize = $bindable(loadPageSize()),
         sspFetch,
         idxTotalCount,
         itemsLength,
@@ -60,6 +66,8 @@
     async function handlePageSizeChange() {
         if (pageSize !== pageSizeBefore) {
             pageSizeBefore = pageSize;
+            // remember the chosen count for every pagination in the Admin UI
+            savePageSize(pageSize);
             continuationToken = undefined;
             let [status, headers] = await sspFetch(`page_size=${pageSize}`);
             parseHeaders(status, headers);

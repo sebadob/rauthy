@@ -165,7 +165,7 @@ impl Session {
             DB::pg_execute(sql, &[&self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }
@@ -189,9 +189,7 @@ impl Session {
             ids
         };
 
-        for id in sids {
-            DB::hql().delete(Cache::Session, id).await?;
-        }
+        DB::cache_delete_delayed(sids.into_iter().map(|id| (Cache::Session, Some(id)))).await?;
 
         Ok(())
     }
@@ -368,7 +366,7 @@ OFFSET $3"#;
         // at least the session used to invalidate all will always exist
         debug_assert!(rows_affected > 0);
 
-        DB::hql().clear_cache(Cache::Session).await?;
+        DB::cache_delete_delayed([(Cache::Session, None::<String>)]).await?;
 
         Ok(())
     }
@@ -393,10 +391,16 @@ OFFSET $3"#;
             ids
         };
 
-        let client = DB::hql();
+        let mut cache_keys: Vec<String> = Vec::with_capacity(sids.len());
         for sid in &sids {
-            client.delete(Cache::Session, sid.clone()).await?;
+            cache_keys.push(sid.clone());
         }
+        DB::cache_delete_delayed(
+            cache_keys
+                .into_iter()
+                .map(|key| (Cache::Session, Some(key))),
+        )
+        .await?;
 
         Ok(sids)
     }
@@ -503,16 +507,20 @@ WHERE sessions.exp > $11"#;
         let q = format!("%{q}%");
 
         let size_hint = max(limit as usize, 1);
+        // SQLite has no `ILIKE` and its `LIKE` is case-insensitive for ASCII already
+        let like = if is_hiqlite() { "LIKE" } else { "ILIKE" };
 
         let sql = match idx {
             SearchParamsIdx::UserId => {
-                "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE user_id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Id | SearchParamsIdx::SessionId => {
-                "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Ip => {
-                "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!(
+                    "SELECT * FROM sessions WHERE remote_ip {like} $1 ORDER BY exp DESC LIMIT $2"
+                )
             }
             _ => {
                 return Err(ErrorResponse::new(
@@ -525,7 +533,7 @@ WHERE sessions.exp > $11"#;
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(q, limit)).await?
         } else {
-            DB::pg_query(sql, &[&q, &limit], size_hint).await?
+            DB::pg_query(&sql, &[&q, &limit], size_hint).await?
         };
 
         Ok(res)
@@ -743,7 +751,7 @@ impl Session {
             DB::pg_execute(sql, &[&now, &state, &self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }
@@ -778,6 +786,7 @@ impl Session {
         };
 
         // Init sessions are valid only on the explicit login endpoints.
+        // `/auth/v1/keep_alive` is the login page's idle ticker and belongs to that group.
         let init_allowed = match state {
             SessionState::Auth => true,
             SessionState::Init => {
@@ -787,6 +796,7 @@ impl Session {
                     "/auth/v1/dev/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/dev/providers_callback",
@@ -803,6 +813,7 @@ impl Session {
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/users/otp_start",

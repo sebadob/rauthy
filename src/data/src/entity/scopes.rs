@@ -12,6 +12,7 @@ use rauthy_common::utils::{csv_rename, new_store_id};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashSet;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -33,7 +34,7 @@ pub struct Scope {
 // CRUD
 impl Scope {
     pub async fn clear_cache() -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, IDX_SCOPES).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(Cow::from(IDX_SCOPES)))]).await?;
         Ok(())
     }
 
@@ -159,17 +160,25 @@ VALUES ($1, $2, $3, $4, $5)"#;
             .filter(|s| s.id != scope.id)
             .collect::<Vec<Scope>>();
 
-        let client = DB::hql();
-        // no need to evict the cache if no clients are updated
-        if !clients.is_empty() {
-            client.delete(Cache::App, IDX_CLIENTS).await?;
+        // no need to evict the clients cache if no clients are updated
+        let clients_idx = if clients.is_empty() {
+            None
+        } else {
+            Some((Cache::App, Some(Cow::from(IDX_CLIENTS))))
+        };
+        let mut client_keys: Vec<Cow<'static, str>> = Vec::with_capacity(clients.len());
+        for client in &clients {
+            client_keys.push(Cow::from(Client::cache_idx(&client.id)));
         }
+        let cache_entries = [(Cache::App, Some(Cow::from(IDX_SCOPES)))]
+            .into_iter()
+            .chain(clients_idx)
+            .chain(client_keys.into_iter().map(|key| (Cache::App, Some(key))));
+        DB::cache_delete_delayed(cache_entries).await?;
 
-        for client in clients {
-            client.delete_cache().await?;
-        }
-
-        client
+        // The write-through refill after the delay is what makes the fresh list win over any
+        // fill that raced with this delete.
+        DB::hql()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
@@ -332,12 +341,7 @@ WHERE id = $5"#,
             txn.commit().await?;
         }
 
-        if let Some(clients) = clients {
-            for client in clients {
-                client.delete_cache().await?;
-            }
-        }
-
+        let affected_clients = clients.unwrap_or_default();
         let scopes = Scope::find_all()
             .await?
             .into_iter()
@@ -349,13 +353,28 @@ WHERE id = $5"#,
             })
             .collect::<Vec<Scope>>();
 
-        let client = DB::hql();
+        let clients_idx = if is_name_update {
+            Some((Cache::App, Some(Cow::from(IDX_CLIENTS))))
+        } else {
+            None
+        };
+        let mut client_keys: Vec<Cow<'static, str>> = Vec::with_capacity(affected_clients.len());
+        for client in &affected_clients {
+            client_keys.push(Cow::from(Client::cache_idx(&client.id)));
+        }
+        let cache_entries = [(Cache::App, Some(Cow::from(IDX_SCOPES)))]
+            .into_iter()
+            .chain(clients_idx)
+            .chain(client_keys.into_iter().map(|key| (Cache::App, Some(key))));
+        DB::cache_delete_delayed(cache_entries).await?;
+
+        // The write-through refill after the delay is what makes the fresh list win over any
+        // fill that raced with this update.
         DB::hql()
             .put(Cache::App, IDX_SCOPES, &scopes, CACHE_TTL_APP)
             .await?;
 
         if is_name_update {
-            client.delete(Cache::App, IDX_CLIENTS).await?;
             WellKnown::rebuild().await?;
         }
 

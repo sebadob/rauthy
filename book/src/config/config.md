@@ -18,12 +18,12 @@ order matches their location in the reference config below.
 
 ```admonish caution
 When you go into production, make sure that you provide the included secrets / sensitive
-information in this file in an appropriate way. With docker, you can leave them inside this file 
-(with proper access rights!), but when deploying with Kubernetes, either extract these values into 
+information in this file in an appropriate way. With docker, you can leave them inside this file
+(with proper access rights!), but when deploying with Kubernetes, either extract these values into
 Kubernetes secrets, or simply provide the whole config as one secret (my preferred approach).
 ```
 
-```toml
+````toml
 [access]
 # If set to true, the `/userinfo` endpoint will do additional
 # validations. The non-strict mode will fetch the user by id from
@@ -2154,13 +2154,13 @@ argon2_t_cost = 4
 # overwritten by: ARGON2_P_COST
 argon2_p_cost = 8
 
-# Limits the maximum amount of parallel password hashes at 
-# the exact same time to never exceed system memory while 
-# still allowing a good amount of memory for the Argon2ID 
+# Limits the maximum amount of parallel password hashes at
+# the exact same time to never exceed system memory while
+# still allowing a good amount of memory for the Argon2ID
 # algorithm
 #
 # CAUTION: You must make sure, that you have at least
-# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory 
+# (MAX_HASH_THREADS * ARGON2_M_COST / 1024) + idle memory
 # of your deployment available.
 #
 # default: 2
@@ -2507,7 +2507,7 @@ enable = false
 # overwritten by: OTP_LENGTH
 #length = 6
 
-# The lifetime for OTP requests. Within this time, an OTP 
+# The lifetime for OTP requests. Within this time, an OTP
 # request must have been validated.
 #
 # default: '5m'
@@ -2517,7 +2517,7 @@ enable = false
 # Default digest algorithm's length, HMAC using SHA-X.
 # SHA-1 is forbidden.
 #
-# NOTE: This value currently has no effect. It's a 
+# NOTE: This value currently has no effect. It's a
 # preparation for future support for TOTP. At the time
 # of writing, only E-Mail-based OTP is implemented.
 #
@@ -3087,6 +3087,21 @@ storage_type = 'db'
 # overwritten by: USER_REG_OPEN_REDIRECT
 #allow_open_redirect = false
 
+# The default redirect target for a browser after a user has successfully reset
+# their password via a magic link, or completed the initial setup of a new
+# account. It can be a relative path, like '/auth/v1/account', or a full URL to
+# your own application.
+#
+# Only used when the magic link itself did not carry a 'redirect_uri', which can
+# be set during a user registration, or with a password reset request from a
+# client. Such a 'redirect_uri' always has priority.
+#
+# If this is not set, no 'Location' header will be returned, and the frontend
+# redirects to the account dashboard, which keeps the current behavior.
+#
+# overwritten by: USER_REG_POST_RESET_REDIRECT_URI
+#post_reset_redirect_uri = 'https://example.com'
+
 [user_values]
 # In this section, you can configure the requirements for different
 # user values to adjust them to your needs. The `preferred_username`
@@ -3462,4 +3477,4 @@ rp_origin = 'http://localhost:8080'
 # value type: [String]
 # overwritten by: WEBAUTHN_PK_ATT (`\n` separated values)
 #force_passkey_attachment = ['external', 'nfc', 'wired', 'wireless']
-```
+````

@@ -2109,7 +2109,8 @@ VALUES ('rt_r', 'u1', 1, 2, 'j_r', 'c1')"#
             Ok(()) => assert!(
                 pg_ids(&monitor, "SELECT jti FROM issued_tokens WHERE revoked")
                     .await
-                    .contains(&"j_r".to_string()),
+                    .iter()
+                    .any(|i| i == "j_r"),
                 "{case}: the replacement was removed with its access token live"
             ),
         }

@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::env;
 use std::sync::{LazyLock, OnceLock};
+use std::time::Duration;
 
 #[derive(Debug, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -87,6 +88,13 @@ pub const CACHE_TTL_AUTH_PROVIDER_CALLBACK: Option<i64> =
     Some(UPSTREAM_AUTH_CALLBACK_TIMEOUT_SECS as i64);
 pub const CACHE_TTL_SESSION: Option<i64> = Some(14400);
 pub const CACHE_TTL_USER: Option<i64> = Some(600);
+/// The delay a database write waits before it invalidates the cache entries it changed. A
+/// concurrent cache fill reads the database and only then puts its snapshot, and that put can
+/// land after the write has invalidated. The delay orders the write's delete after the put of
+/// any fill that read before the write, which is what removes that stale snapshot. A fill
+/// slower than this keeps its stale entry until that key's TTL expires.
+/// The delay avoids the need of locking for DB updates in many places.
+pub const CACHE_INVALIDATION_DELAY: Duration = Duration::from_millis(50);
 
 pub static IDX_APP_VERSION: &str = "rauthy_app_version";
 pub static IDX_AUTH_PROVIDER: &str = "auth_provider_";
