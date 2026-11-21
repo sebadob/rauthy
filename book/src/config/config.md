@@ -907,9 +907,6 @@ backup_keep_for_local = '3d'
 # - every non-exempt refresh token is deleted, and its access token
 #   revoked, on its next refresh. Turning the flag off again does not
 #   restore them.
-# - the password / device code exemption does not cover refresh
-#   tokens issued before this version, nor device refresh tokens
-#   that were already rotated. Those need a new login.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
