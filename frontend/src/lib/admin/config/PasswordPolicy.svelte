@@ -106,7 +106,7 @@
                         placeholder={t.passwordPolicy.lengthMin}
                         autocomplete="off"
                         min="8"
-                        max="128"
+                        max="1024"
                         required
                     />
 
@@ -117,7 +117,7 @@
                         placeholder={t.passwordPolicy.lengthMax}
                         autocomplete="off"
                         min="8"
-                        max="128"
+                        max="1024"
                         required
                     />
                 </div>

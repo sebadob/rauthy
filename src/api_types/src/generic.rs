@@ -1,4 +1,5 @@
 use crate::sessions::SessionState;
+use rauthy_common::constants::PASSWORD_MAX_LEN_I32;
 use rauthy_common::regex::{RE_ALNUM, RE_SEARCH};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -86,11 +87,11 @@ pub struct PasswordHashTimesRequest {
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct PasswordPolicyRequest {
-    /// Validation: `8 <= length_min <= 128`
-    #[validate(range(min = 8, max = 128))]
+    /// Validation: `8 <= length_min <= 1024`
+    #[validate(range(min = 8, max = PASSWORD_MAX_LEN_I32))]
     pub length_min: i32,
-    /// Validation: `8 <= length_max <= 128`
-    #[validate(range(min = 8, max = 128))]
+    /// Validation: `8 <= length_max <= 1024`
+    #[validate(range(min = 8, max = PASSWORD_MAX_LEN_I32))]
     pub length_max: i32,
     /// Validation: `1 <= include_lower_case <= 32`
     #[validate(range(min = 1, max = 32))]
@@ -219,4 +220,35 @@ pub struct PasswordPolicyResponse {
     pub valid_days: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_recently_used: Option<i32>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn password_policy_max_length_matches_the_hard_limit() {
+        let policy = |length_max: i32| PasswordPolicyRequest {
+            length_min: 8,
+            length_max,
+            include_lower_case: None,
+            include_upper_case: None,
+            include_digits: None,
+            include_special: None,
+            valid_days: None,
+            not_recently_used: None,
+        };
+        assert!(
+            policy(128).validate().is_ok(),
+            "the seeded default policy stays valid"
+        );
+        assert!(
+            policy(PASSWORD_MAX_LEN_I32).validate().is_ok(),
+            "the policy can be raised up to the request limit"
+        );
+        assert!(
+            policy(PASSWORD_MAX_LEN_I32 + 1).validate().is_err(),
+            "anything above the request limit is rejected"
+        );
+    }
 }

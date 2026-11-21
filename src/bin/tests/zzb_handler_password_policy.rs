@@ -2,6 +2,7 @@ use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::{Language, PasswordPolicyRequest, PasswordPolicyResponse};
 use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
+use rauthy_common::constants::PASSWORD_MAX_LEN_I32;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::error::Error;
 
@@ -187,6 +188,75 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
     let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("last 7 used passwords"));
+
+    // The policy's max length can be set to the hard request limit, which is needed to import a
+    // user base from an application that allowed longer passwords than the previous 128 policy max.
+    let new_rules = PasswordPolicyRequest {
+        length_min: 12,
+        length_max: PASSWORD_MAX_LEN_I32,
+        include_lower_case: None,
+        include_upper_case: None,
+        include_digits: None,
+        include_special: None,
+        valid_days: Some(60),
+        not_recently_used: Some(7),
+    };
+    let res = reqwest::Client::new()
+        .put(&url)
+        .headers(auth_headers.clone())
+        .json(&new_rules)
+        .send()
+        .await?;
+    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
+    assert_eq!(rules.length_max, PASSWORD_MAX_LEN_I32);
+
+    // A password beyond the old 256 chars request validator limit must be accepted by the API.
+    upd_req.password = Some("aAbB1!2soSuperDamnSafe".repeat(15));
+    let res = reqwest::Client::new()
+        .put(&user_url)
+        .headers(auth_headers.clone())
+        .json(&upd_req)
+        .send()
+        .await?;
+    let resp = expect_status_json!(res, 200, UserResponse);
+    assert_eq!(resp.id, user.id);
+
+    // Anything above the hard request limit stays rejected.
+    let too_long = PasswordPolicyRequest {
+        length_max: PASSWORD_MAX_LEN_I32 + 1,
+        ..new_rules
+    };
+    let res = reqwest::Client::new()
+        .put(&url)
+        .headers(auth_headers.clone())
+        .json(&too_long)
+        .send()
+        .await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
+    assert_eq!(err.error, ErrorResponseType::BadRequest);
+    assert!(err.message.contains("Payload validation error"));
+
+    // Restore the strict rules for the tests that run after this one.
+    let strict_rules = PasswordPolicyRequest {
+        length_min: 12,
+        length_max: 112,
+        include_lower_case: Some(2),
+        include_upper_case: Some(3),
+        include_digits: Some(4),
+        include_special: Some(5),
+        valid_days: Some(60),
+        not_recently_used: Some(7),
+    };
+    let res = reqwest::Client::new()
+        .put(&url)
+        .headers(auth_headers.clone())
+        .json(&strict_rules)
+        .send()
+        .await?;
+    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
+    assert_eq!(rules.length_min, 12);
+    assert_eq!(rules.length_max, 112);
+    assert_eq!(rules.include_special, Some(5));
 
     Ok(())
 }
