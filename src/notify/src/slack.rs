@@ -12,7 +12,7 @@ pub struct NotifierSlack {
 
 impl NotifierSlack {
     #[must_use]
-    pub fn new(webhook_url: String) -> Self {
+    pub const fn new(webhook_url: String) -> Self {
         Self { webhook_url }
     }
 }
@@ -61,7 +61,7 @@ struct SlackMessageApi<'a> {
 }
 
 impl SlackMessageApi<'_> {
-    pub fn new(color: &str, fields: Vec<SlackMessageField>) -> SlackMessageApi<'_> {
+    pub const fn new(color: &str, fields: Vec<SlackMessageField>) -> SlackMessageApi<'_> {
         SlackMessageApi { color, fields }
     }
 }
@@ -75,7 +75,7 @@ pub struct SlackMessageField {
 
 impl SlackMessageField {
     #[must_use]
-    pub fn new(title: String, value: String) -> Self {
+    pub const fn new(title: String, value: String) -> Self {
         Self { title, value }
     }
 }

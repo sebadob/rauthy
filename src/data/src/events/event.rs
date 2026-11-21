@@ -18,7 +18,7 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use tracing::error;
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EventLevel {
     #[default]
@@ -31,10 +31,10 @@ pub enum EventLevel {
 impl From<&EventLevel> for NotificationLevel {
     fn from(value: &EventLevel) -> Self {
         match value {
-            EventLevel::Info => NotificationLevel::Info,
-            EventLevel::Notice => NotificationLevel::Notice,
-            EventLevel::Warning => NotificationLevel::Warning,
-            EventLevel::Critical => NotificationLevel::Critical,
+            EventLevel::Info => Self::Info,
+            EventLevel::Notice => Self::Notice,
+            EventLevel::Warning => Self::Warning,
+            EventLevel::Critical => Self::Critical,
         }
     }
 }
@@ -64,10 +64,10 @@ impl From<EventLevel> for rauthy_api_types::events::EventLevel {
 impl Display for EventLevel {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            EventLevel::Info => "INFO    ",
-            EventLevel::Notice => "NOTICE  ",
-            EventLevel::Warning => "WARNING ",
-            EventLevel::Critical => "CRITICAL",
+            Self::Info => "INFO    ",
+            Self::Notice => "NOTICE  ",
+            Self::Warning => "WARNING ",
+            Self::Critical => "CRITICAL",
         };
         write!(f, "{s}")
     }
@@ -96,10 +96,10 @@ impl FromStr for EventLevel {
 impl From<i16> for EventLevel {
     fn from(value: i16) -> Self {
         match value {
-            0 => EventLevel::Info,
-            1 => EventLevel::Notice,
-            2 => EventLevel::Warning,
-            3 => EventLevel::Critical,
+            0 => Self::Info,
+            1 => Self::Notice,
+            2 => Self::Warning,
+            3 => Self::Critical,
             _ => unreachable!(),
         }
     }
@@ -108,10 +108,10 @@ impl From<i16> for EventLevel {
 impl From<i64> for EventLevel {
     fn from(value: i64) -> Self {
         match value {
-            0 => EventLevel::Info,
-            1 => EventLevel::Notice,
-            2 => EventLevel::Warning,
-            3 => EventLevel::Critical,
+            0 => Self::Info,
+            1 => Self::Notice,
+            2 => Self::Warning,
+            3 => Self::Critical,
             _ => unreachable!(),
         }
     }
@@ -119,27 +119,27 @@ impl From<i64> for EventLevel {
 
 impl EventLevel {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            EventLevel::Info => "INFO",
-            EventLevel::Notice => "NOTICE",
-            EventLevel::Warning => "WARNING",
-            EventLevel::Critical => "CRITICAL",
+            Self::Info => "INFO",
+            Self::Notice => "NOTICE",
+            Self::Warning => "WARNING",
+            Self::Critical => "CRITICAL",
         }
     }
 
     #[must_use]
-    pub fn value(&self) -> i16 {
+    pub const fn value(&self) -> i16 {
         match self {
-            EventLevel::Info => 0,
-            EventLevel::Notice => 1,
-            EventLevel::Warning => 2,
-            EventLevel::Critical => 3,
+            Self::Info => 0,
+            Self::Notice => 1,
+            Self::Warning => 2,
+            Self::Critical => 3,
         }
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EventType {
     // InvalidLogins is always the lowest int value -> needed for DB queries
     #[default]
@@ -274,7 +274,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
 
 impl EventType {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::InvalidLogins => "InvalidLogins",
             Self::IpBlacklisted => "IpBlacklisted",
@@ -309,34 +309,34 @@ impl EventType {
     // add them to the end! To save space in the DB, these are not saved as String's but
     // as integers instead and deserialization of older events will fail, if the order is mixed up!
     #[must_use]
-    pub fn value(&self) -> i16 {
+    pub const fn value(&self) -> i16 {
         match self {
-            EventType::InvalidLogins => 0,
-            EventType::IpBlacklisted => 1,
-            EventType::IpBlacklistRemoved => 2,
-            EventType::JwksRotated => 3,
-            EventType::NewUserRegistered => 4,
-            EventType::NewRauthyAdmin => 5,
-            EventType::NewRauthyVersion => 6,
-            EventType::PossibleBruteForce => 7,
-            EventType::RauthyStarted => 8,
-            EventType::RauthyHealthy => 9,
-            EventType::RauthyUnhealthy => 10,
-            EventType::SecretsMigrated => 11,
-            EventType::UserEmailChange => 12,
-            EventType::UserPasswordReset => 13,
-            EventType::Test => 14,
-            EventType::BackchannelLogoutFailed => 15,
-            EventType::ScimTaskFailed => 16,
-            EventType::ForcedLogout => 17,
-            EventType::UserLoginRevoke => 18,
-            EventType::SuspiciousApiScan => 19,
-            EventType::LoginNewLocation => 20,
-            EventType::TokenIssued => 21,
-            EventType::CredentialStuffing => 22,
-            EventType::EmailSendError => 23,
-            EventType::ConsentRevoked => 24,
-            EventType::LdapLogin => 25,
+            Self::InvalidLogins => 0,
+            Self::IpBlacklisted => 1,
+            Self::IpBlacklistRemoved => 2,
+            Self::JwksRotated => 3,
+            Self::NewUserRegistered => 4,
+            Self::NewRauthyAdmin => 5,
+            Self::NewRauthyVersion => 6,
+            Self::PossibleBruteForce => 7,
+            Self::RauthyStarted => 8,
+            Self::RauthyHealthy => 9,
+            Self::RauthyUnhealthy => 10,
+            Self::SecretsMigrated => 11,
+            Self::UserEmailChange => 12,
+            Self::UserPasswordReset => 13,
+            Self::Test => 14,
+            Self::BackchannelLogoutFailed => 15,
+            Self::ScimTaskFailed => 16,
+            Self::ForcedLogout => 17,
+            Self::UserLoginRevoke => 18,
+            Self::SuspiciousApiScan => 19,
+            Self::LoginNewLocation => 20,
+            Self::TokenIssued => 21,
+            Self::CredentialStuffing => 22,
+            Self::EmailSendError => 23,
+            Self::ConsentRevoked => 24,
+            Self::LdapLogin => 25,
         }
     }
 }
@@ -388,39 +388,39 @@ impl From<i16> for EventType {
 impl From<i64> for EventType {
     fn from(value: i64) -> Self {
         match value {
-            0 => EventType::InvalidLogins,
-            1 => EventType::IpBlacklisted,
-            2 => EventType::IpBlacklistRemoved,
-            3 => EventType::JwksRotated,
-            4 => EventType::NewUserRegistered,
-            5 => EventType::NewRauthyAdmin,
-            6 => EventType::NewRauthyVersion,
-            7 => EventType::PossibleBruteForce,
-            8 => EventType::RauthyStarted,
-            9 => EventType::RauthyHealthy,
-            10 => EventType::RauthyUnhealthy,
-            11 => EventType::SecretsMigrated,
-            12 => EventType::UserEmailChange,
-            13 => EventType::UserPasswordReset,
+            0 => Self::InvalidLogins,
+            1 => Self::IpBlacklisted,
+            2 => Self::IpBlacklistRemoved,
+            3 => Self::JwksRotated,
+            4 => Self::NewUserRegistered,
+            5 => Self::NewRauthyAdmin,
+            6 => Self::NewRauthyVersion,
+            7 => Self::PossibleBruteForce,
+            8 => Self::RauthyStarted,
+            9 => Self::RauthyHealthy,
+            10 => Self::RauthyUnhealthy,
+            11 => Self::SecretsMigrated,
+            12 => Self::UserEmailChange,
+            13 => Self::UserPasswordReset,
             #[allow(clippy::match_same_arms)]
-            14 => EventType::Test,
-            15 => EventType::BackchannelLogoutFailed,
-            16 => EventType::ScimTaskFailed,
-            17 => EventType::ForcedLogout,
-            18 => EventType::UserLoginRevoke,
-            19 => EventType::SuspiciousApiScan,
-            20 => EventType::LoginNewLocation,
-            21 => EventType::TokenIssued,
-            22 => EventType::CredentialStuffing,
-            23 => EventType::EmailSendError,
-            24 => EventType::ConsentRevoked,
-            25 => EventType::LdapLogin,
-            _ => EventType::Test,
+            14 => Self::Test,
+            15 => Self::BackchannelLogoutFailed,
+            16 => Self::ScimTaskFailed,
+            17 => Self::ForcedLogout,
+            18 => Self::UserLoginRevoke,
+            19 => Self::SuspiciousApiScan,
+            20 => Self::LoginNewLocation,
+            21 => Self::TokenIssued,
+            22 => Self::CredentialStuffing,
+            23 => Self::EmailSendError,
+            24 => Self::ConsentRevoked,
+            25 => Self::LdapLogin,
+            _ => Self::Test,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
 pub struct Event {
     pub id: String,
     pub timestamp: i64,
@@ -699,7 +699,7 @@ impl Event {
             _ => events.level_failed_login.clone(),
         };
         Self::new(
-            level.clone(),
+            level,
             EventType::InvalidLogins,
             Some(ip),
             Some(i64::from(failed_logins)),
@@ -818,11 +818,10 @@ impl Event {
 
     #[must_use]
     pub fn new_login_location(user: &User, loc: &LoginLocation) -> Self {
-        let text = if let Some(location) = &loc.location {
-            format!("{} / {} / {}", user.email, loc.user_agent, location)
-        } else {
-            format!("{} / {}", user.email, loc.user_agent)
-        };
+        let text = loc.location.as_ref().map_or_else(
+            || format!("{} / {}", user.email, loc.user_agent),
+            |location| format!("{} / {} / {}", user.email, loc.user_agent, location),
+        );
 
         Self::new(
             RauthyConfig::get()

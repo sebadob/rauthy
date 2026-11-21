@@ -11,7 +11,7 @@ pub struct I18nEmailConfirmChangeHtml<'a> {
 
 impl I18nEmailConfirmChangeHtml<'_> {
     #[must_use]
-    pub fn build(lang: Language) -> Self {
+    pub const fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
@@ -31,7 +31,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
 }
 
 impl I18nEmailConfirmChangeHtml<'_> {
-    fn build_cs() -> Self {
+    const fn build_cs() -> Self {
         Self {
             title: "Změna e-mailu potvrzena",
             text_changed: "Vaše e-mailová adresa byla změněna z",
@@ -40,7 +40,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_de() -> Self {
+    const fn build_de() -> Self {
         Self {
             title: "E-Mail Wechsel bestätigt",
             text_changed: "Ihre E-Mail Adresse wurde erfolgreich geändert von",
@@ -49,7 +49,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_en() -> Self {
+    const fn build_en() -> Self {
         Self {
             title: "E-Mail Change confirmed",
             text_changed: "Your E-Mail address has been changed from",
@@ -58,7 +58,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_es() -> Self {
+    const fn build_es() -> Self {
         Self {
             title: "Cambio de correo electrónico confirmado",
             text_changed: "Su dirección de correo electrónico se ha cambiado de",
@@ -67,7 +67,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_fr() -> Self {
+    const fn build_fr() -> Self {
         Self {
             title: "Changement d'e-mail confirmé",
             text_changed: "Votre adresse e-mail a été modifiée",
@@ -76,7 +76,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_ja() -> Self {
+    const fn build_ja() -> Self {
         Self {
             title: "メールアドレスの変更完了",
             text_changed: "メールアドレスを変更しました。変更前",
@@ -85,7 +85,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_ko() -> Self {
+    const fn build_ko() -> Self {
         Self {
             title: "이메일 변경이 승인되었습니다.",
             text_changed: "이메일 주소가 다음으로부터 변경되었습니다",
@@ -94,7 +94,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_nb() -> Self {
+    const fn build_nb() -> Self {
         Self {
             title: "E-postbytte bekreftet",
             text_changed: "Din epostadresse har blitt endret fra",
@@ -103,7 +103,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_nl() -> Self {
+    const fn build_nl() -> Self {
         Self {
             title: "E-Mail wijziging bevestigd",
             text_changed: "Uw e-mailadres is gewijzigd van",
@@ -112,7 +112,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_pt() -> Self {
+    const fn build_pt() -> Self {
         Self {
             title: "Alteração de e-mail confirmada",
             text_changed: "O seu endereço de e-mail foi alterado de",
@@ -121,7 +121,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_uk() -> Self {
+    const fn build_uk() -> Self {
         Self {
             title: "Зміну E-mail підтверджено",
             text_changed: "Вашу адресу E-mail було змінено з",
@@ -130,7 +130,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_ru() -> Self {
+    const fn build_ru() -> Self {
         Self {
             title: "Смена E-Mail подтверждена",
             text_changed: "Ваш адрес E-Mail был изменён с",
@@ -139,7 +139,7 @@ impl I18nEmailConfirmChangeHtml<'_> {
         }
     }
 
-    fn build_zh_hans() -> Self {
+    const fn build_zh_hans() -> Self {
         Self {
             title: "电子邮件地址已更新",
             text_changed: "您的电子邮件地址已从",

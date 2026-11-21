@@ -56,19 +56,12 @@ async fn get(args: ArgsBootstrapGet) -> Result<(), StdError> {
     }
 
     match args.format {
-        BootstrapOutputFormat::Raw => {
-            println!("{}", render_raw(&entries)?);
-            Ok(())
-        }
-        BootstrapOutputFormat::Json => {
-            println!("{}", render_json(&entries)?);
-            Ok(())
-        }
-        BootstrapOutputFormat::Env => {
-            print!("{}", render_env(&entries));
-            Ok(())
-        }
+        BootstrapOutputFormat::Raw => println!("{}", render_raw(&entries)?),
+        BootstrapOutputFormat::Json => println!("{}", render_json(&entries)?),
+        BootstrapOutputFormat::Env => print!("{}", render_env(&entries)),
     }
+
+    Ok(())
 }
 
 async fn purge(args: ArgsBootstrapPurge) -> Result<(), StdError> {

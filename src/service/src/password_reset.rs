@@ -194,13 +194,13 @@ pub async fn handle_put_user_password_reset<'a>(
     ml.invalidate().await?;
     user.save_password_reset().await?;
 
-    let ip = match real_ip_from_req(&req).ok() {
-        None => {
+    let ip = real_ip_from_req(&req).ok().map_or_else(
+        || {
             error!("Extracting clients real IP from HttpRequest during password reset");
             "UNKNOWN".to_string()
-        }
-        Some(ip) => ip.to_string(),
-    };
+        },
+        |ip| ip.to_string(),
+    );
     RauthyConfig::get()
         .tx_events
         .send_async(Event::user_password_reset(

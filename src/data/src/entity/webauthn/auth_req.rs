@@ -30,13 +30,15 @@ impl WebauthnLoginReq {
 
     pub async fn find_remove(code: String) -> Result<Self, ErrorResponse> {
         let res: Option<Self> = DB::hql().get_remove(Cache::Webauthn, code).await?;
-        match res {
-            None => Err(ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                "Webauthn Login Request Data not found",
-            )),
-            Some(res) => Ok(res),
-        }
+        res.map_or_else(
+            || {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "Webauthn Login Request Data not found",
+                ))
+            },
+            Ok,
+        )
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
@@ -71,13 +73,15 @@ impl WebauthnServiceReq {
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
         let res = DB::hql().get(Cache::Webauthn, code).await?;
-        match res {
-            None => Err(ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                "Webauthn Service Request Data not found",
-            )),
-            Some(res) => Ok(res),
-        }
+        res.map_or_else(
+            || {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "Webauthn Service Request Data not found",
+                ))
+            },
+            Ok,
+        )
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {

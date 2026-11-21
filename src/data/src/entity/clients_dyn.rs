@@ -23,7 +23,7 @@ impl ClientDyn {
     /// The deletion at database level happens via the foreign key cascade.
     pub async fn delete_from_cache(id: &str) -> Result<(), ErrorResponse> {
         DB::hql()
-            .delete(Cache::App, ClientDyn::get_cache_entry(id))
+            .delete(Cache::App, Self::get_cache_entry(id))
             .await?;
         Ok(())
     }
@@ -32,7 +32,7 @@ impl ClientDyn {
         let client = DB::hql();
 
         if let Some(slf) = client
-            .get(Cache::ClientDynamic, ClientDyn::get_cache_entry(&id))
+            .get(Cache::ClientDynamic, Self::get_cache_entry(&id))
             .await?
         {
             return Ok(slf);
@@ -53,7 +53,7 @@ impl ClientDyn {
         client
             .put(
                 Cache::ClientDynamic,
-                ClientDyn::get_cache_entry(&slf.id),
+                Self::get_cache_entry(&slf.id),
                 &slf,
                 Some(ttl),
             )

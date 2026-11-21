@@ -33,9 +33,7 @@ enum GroupAdminAccess {
 
 impl Principal {
     #[inline(always)]
-    pub fn from_req(
-        principal: web::ReqData<Option<Principal>>,
-    ) -> Result<Principal, ErrorResponse> {
+    pub fn from_req(principal: web::ReqData<Option<Self>>) -> Result<Self, ErrorResponse> {
         principal.into_inner().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
@@ -46,14 +44,9 @@ impl Principal {
 
     #[inline(always)]
     pub fn get_session(&self) -> Result<&Session, ErrorResponse> {
-        if let Some(s) = &self.session {
-            Ok(s)
-        } else {
-            Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "No valid session",
-            ))
-        }
+        self.session
+            .as_ref()
+            .ok_or_else(|| ErrorResponse::new(ErrorResponseType::Unauthorized, "No valid session"))
     }
 
     #[inline(always)]
@@ -95,15 +88,14 @@ impl Principal {
         if name.is_empty() {
             return false;
         }
-        self.roles.iter().any(
-            |role| match role.as_str().strip_prefix(RAUTHY_ADMIN_GROUP_PREFIX) {
-                Some(rest) => match rest.strip_suffix('*') {
-                    Some(prefix) => name.starts_with(prefix),
-                    None => name == rest,
-                },
-                None => false,
-            },
-        )
+        self.roles.iter().any(|role| {
+            role.as_str()
+                .strip_prefix(RAUTHY_ADMIN_GROUP_PREFIX)
+                .is_some_and(|rest| {
+                    rest.strip_suffix('*')
+                        .map_or_else(|| name == rest, |prefix| name.starts_with(prefix))
+                })
+        })
     }
 
     /// `true` if this group admin manages at least one of the given `groups`.
@@ -496,8 +488,14 @@ impl Principal {
         access_group: AccessGroup,
         access_rights: AccessRights,
     ) -> Result<(), ErrorResponse> {
-        if let Some(api_key) = &self.api_key {
-            match api_key.validate_access(access_group, access_rights) {
+        self.api_key.as_ref().map_or_else(
+            || {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "No API Key found",
+                ))
+            },
+            |api_key| match api_key.validate_access(access_group, access_rights) {
                 Ok(()) => Ok(()),
                 Err(_) => Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -506,13 +504,8 @@ impl Principal {
                         {access_rights:?}"
                     ),
                 )),
-            }
-        } else {
-            Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "No API Key found",
-            ))
-        }
+            },
+        )
     }
 
     /// Validates the Principal's session that it is authenticated and either an admin session, or

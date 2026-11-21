@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum AccessGroup {
     Blacklist,
     Clients,
@@ -21,7 +21,7 @@ pub enum AccessGroup {
     ApiKeys,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessRights {
     Read,
@@ -30,7 +30,7 @@ pub enum AccessRights {
     Delete,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeyAccess {
     pub group: AccessGroup,
     pub access_rights: Vec<AccessRights>,

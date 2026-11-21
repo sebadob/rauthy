@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum SessionState {
     Init,
     Auth,

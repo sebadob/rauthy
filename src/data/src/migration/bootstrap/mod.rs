@@ -152,10 +152,7 @@ fn find_existing_entry<'a, T>(
 ) -> Option<&'a T> {
     existing.iter().find(|e| {
         let (e_id, e_name) = key(e);
-        match id {
-            Some(id) => e_id == id,
-            None => e_name == name,
-        }
+        id.map_or_else(|| e_name == name, |id| e_id == id)
     })
 }
 

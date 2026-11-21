@@ -232,6 +232,11 @@ pub async fn run(
 async fn server_with_metrics() -> std::io::Result<()> {
     let listen_scheme = RauthyConfig::get().listen_scheme.clone();
     let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
+    let tls_config = if matches!(listen_scheme, ListenScheme::Https | ListenScheme::HttpHttps) {
+        Some(tls::load_tls().await)
+    } else {
+        None
+    };
 
     let shared_registry = Registry::new();
     let metrics = PrometheusMetricsBuilder::new("api")
@@ -328,61 +333,59 @@ async fn server_with_metrics() -> std::io::Result<()> {
     .workers(workers())
     .shutdown_timeout(10);
 
-    match listen_scheme {
-        ListenScheme::Http => {
-            server
-                .bind(format!(
-                    "{listen_addr}:{}",
-                    RauthyConfig::get().vars.server.port_http
-                ))?
-                .run()
-                .await
-        }
+    let srv = match listen_scheme {
+        ListenScheme::Http => server
+            .bind(format!(
+                "{listen_addr}:{}",
+                RauthyConfig::get().vars.server.port_http
+            ))?
+            .run(),
 
-        ListenScheme::Https => {
-            server
-                .bind_rustls_0_23(
-                    format!(
-                        "{listen_addr}:{}",
-                        RauthyConfig::get().vars.server.port_https
-                    ),
-                    tls::load_tls().await,
-                )?
-                .run()
-                .await
-        }
-
-        ListenScheme::HttpHttps => {
-            server
-                .bind(format!(
+        ListenScheme::Https => server
+            .bind_rustls_0_23(
+                format!(
                     "{listen_addr}:{}",
-                    RauthyConfig::get().vars.server.port_http
-                ))?
-                .bind_rustls_0_23(
-                    format!(
-                        "{listen_addr}:{}",
-                        RauthyConfig::get().vars.server.port_https
-                    ),
-                    tls::load_tls().await,
-                )?
-                .run()
-                .await
-        }
+                    RauthyConfig::get().vars.server.port_https
+                ),
+                tls_config.expect("tls_config loaded for Https"),
+            )?
+            .run(),
+
+        ListenScheme::HttpHttps => server
+            .bind(format!(
+                "{listen_addr}:{}",
+                RauthyConfig::get().vars.server.port_http
+            ))?
+            .bind_rustls_0_23(
+                format!(
+                    "{listen_addr}:{}",
+                    RauthyConfig::get().vars.server.port_https
+                ),
+                tls_config.expect("tls_config loaded for HttpHttps"),
+            )?
+            .run(),
 
         #[cfg(not(target_os = "windows"))]
         ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
             use std::os::unix::fs::PermissionsExt;
 
             let server = server.bind_uds(&listen_addr)?;
-            tokio::fs::set_permissions(listen_addr, std::fs::Permissions::from_mode(0o666)).await?;
-            server.run().await
+            std::fs::set_permissions(listen_addr, std::fs::Permissions::from_mode(0o666))?;
+            server.run()
         }
-    }
+    };
+
+    srv.await
 }
 
 async fn server_without_metrics() -> std::io::Result<()> {
     let listen_scheme = RauthyConfig::get().listen_scheme.clone();
     let listen_addr = RauthyConfig::get().vars.server.listen_address.to_string();
+    let tls_config = if matches!(listen_scheme, ListenScheme::Https | ListenScheme::HttpHttps) {
+        Some(tls::load_tls().await)
+    } else {
+        None
+    };
 
     let server = HttpServer::new(move || {
         let mut app = App::new()
@@ -428,56 +431,49 @@ async fn server_without_metrics() -> std::io::Result<()> {
     .workers(workers())
     .shutdown_timeout(10);
 
-    match listen_scheme {
-        ListenScheme::Http => {
-            server
-                .bind(format!(
-                    "{listen_addr}:{}",
-                    RauthyConfig::get().vars.server.port_http
-                ))?
-                .run()
-                .await
-        }
+    let srv = match listen_scheme {
+        ListenScheme::Http => server
+            .bind(format!(
+                "{listen_addr}:{}",
+                RauthyConfig::get().vars.server.port_http
+            ))?
+            .run(),
 
-        ListenScheme::Https => {
-            server
-                .bind_rustls_0_23(
-                    format!(
-                        "{listen_addr}:{}",
-                        RauthyConfig::get().vars.server.port_https
-                    ),
-                    tls::load_tls().await,
-                )?
-                .run()
-                .await
-        }
-
-        ListenScheme::HttpHttps => {
-            server
-                .bind(format!(
+        ListenScheme::Https => server
+            .bind_rustls_0_23(
+                format!(
                     "{listen_addr}:{}",
-                    RauthyConfig::get().vars.server.port_http
-                ))?
-                .bind_rustls_0_23(
-                    format!(
-                        "{listen_addr}:{}",
-                        RauthyConfig::get().vars.server.port_https
-                    ),
-                    tls::load_tls().await,
-                )?
-                .run()
-                .await
-        }
+                    RauthyConfig::get().vars.server.port_https
+                ),
+                tls_config.expect("tls_config loaded for Https"),
+            )?
+            .run(),
+
+        ListenScheme::HttpHttps => server
+            .bind(format!(
+                "{listen_addr}:{}",
+                RauthyConfig::get().vars.server.port_http
+            ))?
+            .bind_rustls_0_23(
+                format!(
+                    "{listen_addr}:{}",
+                    RauthyConfig::get().vars.server.port_https
+                ),
+                tls_config.expect("tls_config loaded for HttpHttps"),
+            )?
+            .run(),
 
         #[cfg(not(target_os = "windows"))]
         ListenScheme::UnixHttp | ListenScheme::UnixHttps => {
             use std::os::unix::fs::PermissionsExt;
 
             let server = server.bind_uds(&listen_addr)?;
-            tokio::fs::set_permissions(listen_addr, std::fs::Permissions::from_mode(0o666)).await?;
-            server.run().await
+            std::fs::set_permissions(listen_addr, std::fs::Permissions::from_mode(0o666))?;
+            server.run()
         }
-    }
+    };
+
+    srv.await
 }
 
 fn default_headers() -> middleware::DefaultHeaders {

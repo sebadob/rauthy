@@ -12,7 +12,7 @@ use std::fmt;
 use std::fmt::Display;
 use webauthn_rs::prelude::Uuid;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MdsEntry {
     pub aaguid: Uuid,
     pub description: String,

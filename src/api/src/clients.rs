@@ -580,11 +580,7 @@ pub async fn put_generate_client_secret(
     payload: Option<Json<ClientSecretRequest>>,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Secrets, AccessRights::Update)?;
-    let payload = if let Some(p) = payload {
-        p.into_inner()
-    } else {
-        ClientSecretRequest::default()
-    };
+    let payload = payload.map_or_else(ClientSecretRequest::default, Json::into_inner);
     payload.validate()?;
 
     client::generate_new_secret(id.into_inner(), payload.cache_current_hours, payload.secret)

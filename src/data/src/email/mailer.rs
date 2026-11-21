@@ -11,11 +11,12 @@ use lettre::{AsyncSmtpTransport, AsyncTransport, Tokio1Executor, message};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::Deserialize;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmailType {
     Custom,
     EmailChangeConfirm,
@@ -54,7 +55,7 @@ pub struct EMail {
     pub html: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub enum SmtpConnMode {
     Default,
     XOauth2,
@@ -62,14 +63,16 @@ pub enum SmtpConnMode {
     Test,
 }
 
-impl From<&str> for SmtpConnMode {
-    fn from(s: &str) -> Self {
+impl FromStr for SmtpConnMode {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "default" => Self::Default,
-            "xoauth2" => Self::XOauth2,
-            "microsoft_graph" => Self::MicrosoftGraph,
-            "test" => Self::Test,
-            _ => panic!("Invalid smtp_conn_mode, expected one of: default xoauth2 microsoft_graph"),
+            "default" => Ok(Self::Default),
+            "xoauth2" => Ok(Self::XOauth2),
+            "microsoft_graph" => Ok(Self::MicrosoftGraph),
+            "test" => Ok(Self::Test),
+            _ => Err("Invalid smtp_conn_mode, expected one of: default xoauth2 microsoft_graph"),
         }
     }
 }

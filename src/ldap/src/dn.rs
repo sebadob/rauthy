@@ -7,7 +7,7 @@
 //! ```
 
 /// A parsed bind DN.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BindDn {
     Client(String),
     User { client_id: String, uid: String },

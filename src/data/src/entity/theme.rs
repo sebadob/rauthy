@@ -32,8 +32,16 @@ impl From<&mut hiqlite::Row<'_>> for ThemeCssFull {
     fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let version: i64 = row.get("version");
         let (light, dark) = if version == 1 {
-            let light = ThemeCss::from(row.get::<Vec<u8>>("light").as_slice());
-            let dark = ThemeCss::from(row.get::<Vec<u8>>("dark").as_slice());
+            let light =
+                ThemeCss::try_from(row.get::<Vec<u8>>("light").as_slice()).unwrap_or_else(|err| {
+                    error!("Failed to deserialize light theme CSS, using default: {err:?}");
+                    ThemeCss::default_light()
+                });
+            let dark =
+                ThemeCss::try_from(row.get::<Vec<u8>>("dark").as_slice()).unwrap_or_else(|err| {
+                    error!("Failed to deserialize dark theme CSS, using default: {err:?}");
+                    ThemeCss::default_dark()
+                });
             (light, dark)
         } else {
             error!("Invalid CSS version {version} returned from database, using defaults");
@@ -56,9 +64,15 @@ impl From<tokio_postgres::Row> for ThemeCssFull {
         let version: i32 = row.get("version");
         let (light, dark) = if version == 1 {
             let bytes: Vec<u8> = row.get("light");
-            let light = ThemeCss::from(bytes.as_slice());
+            let light = ThemeCss::try_from(bytes.as_slice()).unwrap_or_else(|err| {
+                error!("Failed to deserialize light theme CSS, using default: {err:?}");
+                ThemeCss::default_light()
+            });
             let bytes: Vec<u8> = row.get("dark");
-            let dark = ThemeCss::from(bytes.as_slice());
+            let dark = ThemeCss::try_from(bytes.as_slice()).unwrap_or_else(|err| {
+                error!("Failed to deserialize dark theme CSS, using default: {err:?}");
+                ThemeCss::default_dark()
+            });
 
             (light, dark)
         } else {
@@ -405,9 +419,11 @@ impl From<ThemeCss> for rauthy_api_types::themes::ThemeCss {
     }
 }
 
-impl From<&[u8]> for ThemeCss {
-    fn from(value: &[u8]) -> Self {
-        deserialize(value).unwrap()
+impl TryFrom<&[u8]> for ThemeCss {
+    type Error = ErrorResponse;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        deserialize(value)
     }
 }
 

@@ -180,16 +180,12 @@ fn decompress(input_file: &str, output_dir: &str, db_file: &str) -> Result<(), E
         let mut entry = entry?;
         let path = entry.path()?;
         debug!("Entry in archive: {path:?}");
-        let path_str = if let Some(prefix) = &prefix {
-            match path.strip_prefix(prefix) {
-                Ok(s) => s,
-                Err(_) => path.as_ref(),
-            }
-        } else {
-            path.as_ref()
-        }
-        .to_str()
-        .unwrap_or_default();
+        let path_str = prefix
+            .as_ref()
+            .and_then(|prefix| path.strip_prefix(prefix).ok())
+            .unwrap_or_else(|| path.as_ref())
+            .to_str()
+            .unwrap_or_default();
 
         // for maxmind, we will always have a single directory
         if is_first {

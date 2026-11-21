@@ -109,7 +109,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
         for s in scopes {
             let mut needs_update = false;
 
-            let attr_include_access = if let Some(access) = s.attr_include_access {
+            let attr_include_access = s.attr_include_access.and_then(|access| {
                 if access.contains(&name) {
                     needs_update = true;
                     let a = csv_remove(&access, &name);
@@ -117,11 +117,9 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 } else {
                     Some(access)
                 }
-            } else {
-                None
-            };
+            });
 
-            let attr_include_id = if let Some(id) = s.attr_include_id {
+            let attr_include_id = s.attr_include_id.and_then(|id| {
                 if id.contains(&name) {
                     needs_update = true;
                     let i = csv_remove(&id, &name);
@@ -129,9 +127,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 } else {
                     Some(id)
                 }
-            } else {
-                None
-            };
+            });
 
             if needs_update {
                 scope_updates.push((s.id, attr_include_access, attr_include_id));
@@ -420,11 +416,11 @@ impl UserAttrConfigEntity {
     }
 
     #[must_use]
-    pub fn names_hash_set(mut slf: Vec<Self>) -> HashSet<String> {
+    pub fn names_hash_set(slf: Vec<Self>) -> HashSet<String> {
         let mut res = HashSet::with_capacity(slf.len());
-        slf.drain(..).for_each(|s| {
+        for s in slf {
             res.insert(s.name);
-        });
+        }
         res
     }
 }
@@ -604,11 +600,10 @@ impl UserAttrValueEntity {
         User::exists(user_id.to_string()).await?;
 
         let delete_value = |value: &Value| {
-            if let Some(s) = value.as_str() {
-                s.is_empty() || value == &Value::Null
-            } else {
-                value == &Value::Null
-            }
+            value.as_str().map_or_else(
+                || value == &Value::Null,
+                |s| s.is_empty() || value == &Value::Null,
+            )
         };
 
         let client = DB::hql();
@@ -691,12 +686,14 @@ impl UserAttrValueEntity {
     }
 }
 
-impl From<UserAttrValueEntity> for UserAttrValueResponse {
-    fn from(value: UserAttrValueEntity) -> Self {
-        let val = serde_json::from_slice(&value.value).unwrap();
-        Self {
+impl TryFrom<UserAttrValueEntity> for UserAttrValueResponse {
+    type Error = serde_json::Error;
+
+    fn try_from(value: UserAttrValueEntity) -> Result<Self, Self::Error> {
+        let val = serde_json::from_slice(&value.value)?;
+        Ok(Self {
             key: value.key,
             value: val,
-        }
+        })
     }
 }

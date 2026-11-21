@@ -241,7 +241,7 @@ impl DB {
             Self::hql().migrate::<MigrationsHiqlite>().await?;
         } else {
             debug!("Migrating data from ../../migrations/postgres");
-            let mut client = DB::pg().await?;
+            let mut client = Self::pg().await?;
             let report = migrations_postgres::migrations::runner()
                 .run_async(client.deref_mut().deref_mut())
                 .await
@@ -367,10 +367,7 @@ impl DB {
         let cl = Self::pg().await?;
         let st = cl.prepare_cached(stmt).await?;
         let row = cl.query_opt(&st, params).await?;
-        match row {
-            None => Ok(None),
-            Some(row) => Ok(Some(T::from(row))),
-        }
+        Ok(row.map(T::from))
     }
 
     /// If you can estimate how many rows would be returned from the given query, provide a

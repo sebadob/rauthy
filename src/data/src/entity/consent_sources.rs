@@ -211,7 +211,7 @@ impl ConsentContent {
 
         Self::hashed(
             ConsentSourceType::Remote,
-            name.or(remote.name.map(Cow::Owned)),
+            name.or_else(|| remote.name.map(Cow::Owned)),
             scopes,
             remote.intro,
             remote.terms_url,
@@ -340,8 +340,8 @@ impl RemoteConsent {
     ) -> Result<Self, ErrorResponse>
     where
         C: ConsentCache,
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<Self, ErrorResponse>>,
+        F: FnOnce() -> Fut + Send,
+        Fut: Future<Output = Result<Self, ErrorResponse>> + Send,
     {
         let idx = Self::cache_idx(url, lang);
         if let Some(res) = Self::cached(cache, &idx, url).await {
@@ -463,21 +463,24 @@ fn cache_value(
 /// `true` if a failed fetch must not overwrite what the cache holds, given a cache read right
 /// before the write: a value a concurrent lookup has cached meanwhile is kept. An unreadable
 /// cache is written like an empty one, so the failure is still cached.
-fn keeps_cached<E>(reread: &Result<Option<Option<RemoteConsent>>, E>) -> bool {
+const fn keeps_cached<E>(reread: &Result<Option<Option<RemoteConsent>>, E>) -> bool {
     matches!(reread, Ok(Some(_)))
 }
 
 /// Cache of [`RemoteConsent::find`]. A value is the document, or `None` for a recently
 /// unavailable source.
-trait ConsentCache {
-    async fn get(&self, idx: &str) -> Result<Option<Option<RemoteConsent>>, ErrorResponse>;
+trait ConsentCache: Sync {
+    fn get(
+        &self,
+        idx: &str,
+    ) -> impl Future<Output = Result<Option<Option<RemoteConsent>>, ErrorResponse>> + Send;
 
-    async fn put(
+    fn put(
         &self,
         idx: &str,
         value: Option<&RemoteConsent>,
         ttl: u32,
-    ) -> Result<(), ErrorResponse>;
+    ) -> impl Future<Output = Result<(), ErrorResponse>> + Send;
 }
 
 /// [`ConsentCache`] in [`Cache::ConsentContent`].
@@ -523,13 +526,13 @@ struct InFlight(Mutex<HashMap<String, Weak<SharedResult>>>);
 impl InFlight {
     /// Joins the shared lookup for `idx`, or starts a new one.
     fn join(&self, idx: &str) -> InFlightLookup<'_> {
-        let mut map = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        let cell = if let Some(cell) = map.get(idx).and_then(Weak::upgrade) {
-            cell
-        } else {
-            let cell = SharedLookup::default();
-            map.insert(idx.to_string(), Arc::downgrade(&cell));
-            cell
+        let cell = {
+            let mut map = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+            map.get(idx).and_then(Weak::upgrade).unwrap_or_else(|| {
+                let cell = SharedLookup::default();
+                map.insert(idx.to_string(), Arc::downgrade(&cell));
+                cell
+            })
         };
         InFlightLookup {
             in_flight: self,
@@ -1044,13 +1047,15 @@ mod tests {
                 Language::De => de,
                 lang => panic!("unexpected fetch for {lang:?}"),
             };
-            match doc {
-                Some(doc) => RemoteConsent::parse(doc.as_bytes()),
-                None => Err(ErrorResponse::new(
-                    ErrorResponseType::Connection,
-                    "unavailable",
-                )),
-            }
+            doc.map_or_else(
+                || {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::Connection,
+                        "unavailable",
+                    ))
+                },
+                |doc| RemoteConsent::parse(doc.as_bytes()),
+            )
         };
         let content = ConsentContent::resolve_with(
             &client,
@@ -1282,7 +1287,8 @@ mod tests {
         fn get(
             &self,
             idx: &str,
-        ) -> impl Future<Output = Result<Option<Option<RemoteConsent>>, ErrorResponse>> {
+        ) -> impl Future<Output = Result<Option<Option<RemoteConsent>>, ErrorResponse>> + Send
+        {
             let n = self.reads.fetch_add(1, Ordering::SeqCst);
             if self.fail_reads_from.is_some_and(|from| n >= from) {
                 return std::future::ready(Err(ErrorResponse::new(
@@ -1298,7 +1304,7 @@ mod tests {
             idx: &str,
             value: Option<&RemoteConsent>,
             _ttl: u32,
-        ) -> impl Future<Output = Result<(), ErrorResponse>> {
+        ) -> impl Future<Output = Result<(), ErrorResponse>> + Send {
             self.puts.fetch_add(1, Ordering::SeqCst);
             self.insert(idx, value.cloned());
             std::future::ready(Ok(()))

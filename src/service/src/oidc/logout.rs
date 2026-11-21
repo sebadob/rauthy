@@ -160,7 +160,7 @@ pub async fn post_logout_handle(
         let loc = post_logout_redirect(
             post_logout_redirect_uri
                 .as_deref()
-                .unwrap_or(&RauthyConfig::get().issuer),
+                .unwrap_or_else(|| &RauthyConfig::get().issuer),
             params.state.as_deref(),
         );
 
@@ -395,9 +395,11 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
     Ok(())
 }
 
-/// Sends a backchannel logout to the given client. Successful deliveries delete any pending
-/// failure record for this (`client_id`, `sub`, `sid`); failed ones upsert / increment it. Callers
-/// must join their `JoinSet` before assuming all attempts have finished.
+/// Sends a backchannel logout to the given client.
+///
+/// Successful deliveries delete any pending failure record for this (`client_id`, `sub`, `sid`);
+/// failed ones upsert / increment it.
+/// Callers must join their `JoinSet` before assuming all attempts have finished.
 pub fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,

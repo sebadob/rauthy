@@ -5,11 +5,9 @@ use cryptr::EncKeys;
 use std::fmt::Write;
 
 pub fn generate(args: ArgsGenKey) -> Result<(), StdError> {
-    let kid = if let Some(kid) = args.with_key_id {
-        kid
-    } else {
-        Utc::now().date_naive().to_string()
-    };
+    let kid = args
+        .with_key_id
+        .unwrap_or_else(|| Utc::now().date_naive().to_string());
     if !EncKeys::re_key_id().is_match(&kid) {
         return Err("Invalid Key ID. Must match: ^[a-zA-Z0-9:_-]{{2,20}}$".into());
     }

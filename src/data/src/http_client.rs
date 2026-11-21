@@ -42,8 +42,11 @@ fn tls_config(vars: &Vars) -> (tls::Version, Vec<Certificate>) {
         _ => panic!("Invalid value for HTTP_MIN_TLS, allowed: '1.3', '1.2', '1.1', '1.0'"),
     };
 
-    let certs = match vars.http_client.root_ca_bundle.as_ref() {
-        Some(bundle) => {
+    let certs = vars
+        .http_client
+        .root_ca_bundle
+        .as_ref()
+        .map_or_else(Vec::new, |bundle| {
             let certs = Certificate::from_pem_bundle(bundle.trim().as_bytes())
                 .expect("Cannot parse given HTTP_CUST_ROOT_CA_BUNDLE");
             debug!(
@@ -51,15 +54,14 @@ fn tls_config(vars: &Vars) -> (tls::Version, Vec<Certificate>) {
                 certs.len()
             );
             certs
-        }
-        None => Vec::new(),
-    };
+        });
 
     (tls_version, certs)
 }
 
-/// `reqwest::ClientBuilder` with the globally configured timeouts, TLS settings and Root CA
-/// bundle. Base for the global HTTP client and the ephemeral client fetcher. The TLS config
+/// `reqwest::ClientBuilder` with the globally configured timeouts, TLS settings and Root CA bundle.
+///
+/// Base for the global HTTP client and the ephemeral client fetcher. The TLS config
 /// is parsed on each call, so nothing is kept around once the clients are built.
 pub fn http_client_builder() -> reqwest::ClientBuilder {
     let vars = &RauthyConfig::get().vars;

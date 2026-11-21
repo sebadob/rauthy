@@ -73,6 +73,19 @@ where
         .collect::<Vec<_>>())
 }
 
+fn query_sqlite_map<T, F>(
+    conn: &rusqlite::Connection,
+    query: &str,
+    map: F,
+) -> Result<Vec<T>, ErrorResponse>
+where
+    F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+{
+    let mut stmt = conn.prepare(query)?;
+    let rows = stmt.query_map([], map)?.map(Result::unwrap).collect_vec();
+    Ok(rows)
+}
+
 /// Migrates `MIGRATE_DB_FROM` to current database
 ///
 /// Note: This uses `rusqlite` blocking calls, but we don't really care, since this function
@@ -87,10 +100,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     conn.pragma_update(None, "foreign_keys", "ON")?;
 
     // before doing anything, make sure that we are on the same feature version
-    let mut res = DB::hql()
-        .query_raw_one("SELECT data FROM config WHERE id = 'db_version'", params!())
-        .await?;
-    let bytes: Vec<u8> = res.get("data");
+    let bytes: Vec<u8> = {
+        let mut res = DB::hql()
+            .query_raw_one("SELECT data FROM config WHERE id = 'db_version'", params!())
+            .await?;
+        res.get("data")
+    };
     let version = deserialize::<DbVersion>(&bytes)?.version;
     check_feature_version_migrate(&version);
 
@@ -155,21 +170,17 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // CLIENTS SCIM
     debug!("Migrating table: clients_scim");
-    let mut stmt = conn.prepare("SELECT * FROM clients_scim")?;
-    let before = stmt
-        .query_map([], |row| {
-            let bearer_token = ClientScim::decrypt_bearer_token(row.get("bearer_token")?)
-                .expect("Column clients_scim.bearer_token corrupted");
-            Ok(ClientScim {
-                client_id: row.get("client_id")?,
-                bearer_token,
-                base_uri: row.get("base_endpoint")?,
-                sync_groups: row.get("sync_groups")?,
-                group_sync_prefix: row.get("group_sync_prefix")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM clients_scim", |row| {
+        let bearer_token = ClientScim::decrypt_bearer_token(row.get("bearer_token")?)
+            .expect("Column clients_scim.bearer_token corrupted");
+        Ok(ClientScim {
+            client_id: row.get("client_id")?,
+            bearer_token,
+            base_uri: row.get("base_endpoint")?,
+            sync_groups: row.get("sync_groups")?,
+            group_sync_prefix: row.get("group_sync_prefix")?,
+        })
+    })?;
     inserts::clients_scim(before).await?;
 
     // GROUPS
@@ -209,21 +220,17 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // EVENTS
     debug!("Migrating table: events");
-    let mut stmt = conn.prepare("SELECT * FROM events")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(Event {
-                id: row.get("id")?,
-                timestamp: row.get("timestamp")?,
-                level: EventLevel::from(row.get::<_, i64>("level")?),
-                typ: EventType::from(row.get::<_, i64>("typ")?),
-                ip: row.get("ip")?,
-                data: row.get("data")?,
-                text: row.get("text")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM events", |row| {
+        Ok(Event {
+            id: row.get("id")?,
+            timestamp: row.get("timestamp")?,
+            level: EventLevel::from(row.get::<_, i64>("level")?),
+            typ: EventType::from(row.get::<_, i64>("typ")?),
+            ip: row.get("ip")?,
+            data: row.get("data")?,
+            text: row.get("text")?,
+        })
+    })?;
     inserts::events(before).await?;
 
     // USER ATTR CONFIG
@@ -243,16 +250,12 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // USER REVOKE
     debug!("Migrating table: user_revoke");
-    let mut stmt = conn.prepare("SELECT * FROM user_revoke")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(UserRevoke {
-                user_id: row.get("user_id")?,
-                code: row.get("code")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM user_revoke", |row| {
+        Ok(UserRevoke {
+            user_id: row.get("user_id")?,
+            code: row.get("code")?,
+        })
+    })?;
     inserts::user_revoke(before).await?;
 
     // DEVICES
@@ -267,26 +270,22 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // SESSIONS
     debug!("Migrating table: sessions");
-    let mut stmt = conn.prepare("SELECT * FROM sessions")?;
-    let before = stmt
-        .query_map([], |row| {
-            let state = SessionState::from_str(&row.get::<_, String>("state")?)
-                .unwrap_or(SessionState::Unknown);
-            Ok(Session {
-                id: row.get("id")?,
-                csrf_token: row.get("csrf_token")?,
-                user_id: row.get("user_id")?,
-                roles: row.get("roles")?,
-                groups: row.get("groups")?,
-                is_mfa: row.get("is_mfa")?,
-                state,
-                exp: row.get("exp")?,
-                last_seen: row.get("last_seen")?,
-                remote_ip: row.get("remote_ip")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM sessions", |row| {
+        let state = SessionState::from_str(&row.get::<_, String>("state")?)
+            .unwrap_or(SessionState::Unknown);
+        Ok(Session {
+            id: row.get("id")?,
+            csrf_token: row.get("csrf_token")?,
+            user_id: row.get("user_id")?,
+            roles: row.get("roles")?,
+            groups: row.get("groups")?,
+            is_mfa: row.get("is_mfa")?,
+            state,
+            exp: row.get("exp")?,
+            last_seen: row.get("last_seen")?,
+            remote_ip: row.get("remote_ip")?,
+        })
+    })?;
     inserts::sessions(before).await?;
 
     // USER LOGIN STATES
@@ -296,20 +295,16 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // LOGIN LOCATIONS
     debug!("Migrating table: login_locations");
-    let mut stmt = conn.prepare("SELECT * FROM login_locations")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(LoginLocation {
-                user_id: row.get("user_id")?,
-                browser_id: row.get("browser_id")?,
-                ip: row.get("ip")?,
-                last_seen: row.get("last_seen")?,
-                user_agent: row.get("user_agent")?,
-                location: row.get("location")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM login_locations", |row| {
+        Ok(LoginLocation {
+            user_id: row.get("user_id")?,
+            browser_id: row.get("browser_id")?,
+            ip: row.get("ip")?,
+            last_seen: row.get("last_seen")?,
+            user_agent: row.get("user_agent")?,
+            location: row.get("location")?,
+        })
+    })?;
     inserts::login_locations(before).await?;
 
     // FAILED BACKCHANNEL LOGOUTS
@@ -320,17 +315,13 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // FAILED SCIM TASKS
     debug!("Migrating table: failed_scim_tasks");
-    let mut stmt = conn.prepare("SELECT * FROM failed_scim_tasks")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(FailedScimTask {
-                action: row.get::<_, String>("action")?.parse().unwrap(),
-                client_id: row.get("client_id")?,
-                retry_count: row.get::<_, i64>("retry_count")? as i32,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM failed_scim_tasks", |row| {
+        Ok(FailedScimTask {
+            action: row.get::<_, String>("action")?.parse().unwrap(),
+            client_id: row.get("client_id")?,
+            retry_count: row.get::<_, i64>("retry_count")? as i32,
+        })
+    })?;
     inserts::failed_scim_tasks(before).await?;
 
     // RECENT PASSWORDS
@@ -340,29 +331,25 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // THEMES
     debug!("Migrating table: themes");
-    let mut stmt = conn.prepare("SELECT * FROM themes")?;
-    let before = stmt
-        .query_map([], |row| {
-            let version: i64 = row.get("version")?;
-            let (light, dark) = if version == 1 {
-                let light = ThemeCss::from(row.get::<_, Vec<u8>>("light")?.as_slice());
-                let dark = ThemeCss::from(row.get::<_, Vec<u8>>("dark")?.as_slice());
-                (light, dark)
-            } else {
-                (ThemeCss::default_light(), ThemeCss::default_dark())
-            };
+    let before = query_sqlite_map(&conn, "SELECT * FROM themes", |row| {
+        let version: i64 = row.get("version")?;
+        let (light, dark) = if version == 1 {
+            let light = ThemeCss::try_from(row.get::<_, Vec<u8>>("light")?.as_slice()).unwrap();
+            let dark = ThemeCss::try_from(row.get::<_, Vec<u8>>("dark")?.as_slice()).unwrap();
+            (light, dark)
+        } else {
+            (ThemeCss::default_light(), ThemeCss::default_dark())
+        };
 
-            Ok(ThemeCssFull {
-                client_id: row.get("client_id")?,
-                last_update: row.get("last_update")?,
-                version,
-                light,
-                dark,
-                border_radius: row.get("border_radius")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+        Ok(ThemeCssFull {
+            client_id: row.get("client_id")?,
+            last_update: row.get("last_update")?,
+            version,
+            light,
+            dark,
+            border_radius: row.get("border_radius")?,
+        })
+    })?;
     inserts::themes(before).await?;
 
     // WEBIDS
@@ -372,96 +359,72 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // PAM GROUPS
     debug!("Migrating table: pam_groups");
-    let mut stmt = conn.prepare("SELECT * FROM pam_groups")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(PamGroup {
-                id: row.get::<_, i64>("id")? as u32,
-                name: row.get("name")?,
-                typ: row.get::<_, String>("typ")?.parse().unwrap(),
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM pam_groups", |row| {
+        Ok(PamGroup {
+            id: row.get::<_, i64>("id")? as u32,
+            name: row.get("name")?,
+            typ: row.get::<_, String>("typ")?.parse().unwrap(),
+        })
+    })?;
     inserts::pam_groups(before).await?;
 
     // PAM HOSTS
     debug!("Migrating table: pam_hosts");
-    let mut stmt = conn.prepare("SELECT * FROM pam_hosts")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(PamHost {
-                id: row.get("id")?,
-                hostname: row.get("hostname")?,
-                gid: row.get::<_, i64>("gid")? as u32,
-                secret: row.get("secret")?,
-                force_mfa: row.get("force_mfa")?,
-                local_password_only: row.get("local_password_only")?,
-                notes: row.get("notes")?,
-                ips: Vec::default(),
-                aliases: Vec::default(),
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM pam_hosts", |row| {
+        Ok(PamHost {
+            id: row.get("id")?,
+            hostname: row.get("hostname")?,
+            gid: row.get::<_, i64>("gid")? as u32,
+            secret: row.get("secret")?,
+            force_mfa: row.get("force_mfa")?,
+            local_password_only: row.get("local_password_only")?,
+            notes: row.get("notes")?,
+            ips: Vec::default(),
+            aliases: Vec::default(),
+        })
+    })?;
     inserts::pam_hosts(before).await?;
 
     // PAM HOSTS ALIASES
     debug!("Migrating table: pam_hosts_aliases");
-    let mut stmt = conn.prepare("SELECT * FROM pam_hosts_aliases")?;
-    let before = stmt
-        .query_map([], |row| {
-            let id: String = row.get("host_id")?;
-            let alias: String = row.get("alias")?;
-            Ok((id, alias))
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM pam_hosts_aliases", |row| {
+        let id: String = row.get("host_id")?;
+        let alias: String = row.get("alias")?;
+        Ok((id, alias))
+    })?;
     inserts::pam_hosts_aliases(before).await?;
 
     // PAM HOSTS IPS
     debug!("Migrating table: pam_hosts_ips");
-    let mut stmt = conn.prepare("SELECT * FROM pam_hosts_ips")?;
-    let before = stmt
-        .query_map([], |row| {
-            let id: String = row.get("host_id")?;
-            let ip: String = row.get("ip")?;
-            Ok((id, ip))
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM pam_hosts_ips", |row| {
+        let id: String = row.get("host_id")?;
+        let ip: String = row.get("ip")?;
+        Ok((id, ip))
+    })?;
     inserts::pam_hosts_ips(before).await?;
 
     // PAM USERS
     debug!("Migrating table: pam_users");
-    let mut stmt = conn.prepare("SELECT * FROM pam_users")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(PamUser {
-                id: row.get::<_, i64>("id")? as u32,
-                name: row.get("name")?,
-                gid: row.get::<_, i64>("gid")? as u32,
-                email: row.get("email")?,
-                shell: row.get("shell")?,
-                home_dir: row.get("home_dir")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM pam_users", |row| {
+        Ok(PamUser {
+            id: row.get::<_, i64>("id")? as u32,
+            name: row.get("name")?,
+            gid: row.get::<_, i64>("gid")? as u32,
+            email: row.get("email")?,
+            shell: row.get("shell")?,
+            home_dir: row.get("home_dir")?,
+        })
+    })?;
     inserts::pam_users(before).await?;
 
     // PAM REL GROUPS USERS
     debug!("Migrating table: pam_rel_groups_users");
-    let mut stmt = conn.prepare("SELECT * FROM pam_rel_groups_users")?;
-    let before = stmt
-        .query_map([], |row| {
-            let gid: i64 = row.get("gid")?;
-            let uid: i64 = row.get("uid")?;
-            let wheel: bool = row.get("wheel")?;
-            Ok((gid, uid, wheel))
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM pam_rel_groups_users", |row| {
+        let gid: i64 = row.get("gid")?;
+        let uid: i64 = row.get("uid")?;
+        let wheel: bool = row.get("wheel")?;
+        Ok((gid, uid, wheel))
+    })?;
     inserts::pam_rel_groups_users(before).await?;
 
     // TOS
@@ -476,125 +439,96 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // EMAIL JOBS
     debug!("Migrating table: email_jobs");
-    let mut stmt = conn.prepare("SELECT * FROM email_jobs")?;
-    let before = stmt
-        .query_map([], |row| {
-            let status = EmailJobStatus::from(row.get::<_, i64>("status")?);
-            let filter: EmailJobFilter = row.get::<_, String>("filter")?.parse().unwrap();
-            let content_type: EmailContentType =
-                row.get::<_, String>("content_type")?.parse().unwrap();
+    let before = query_sqlite_map(&conn, "SELECT * FROM email_jobs", |row| {
+        let status = EmailJobStatus::from(row.get::<_, i64>("status")?);
+        let filter: EmailJobFilter = row.get::<_, String>("filter")?.parse().unwrap();
+        let content_type: EmailContentType = row.get::<_, String>("content_type")?.parse().unwrap();
 
-            Ok(EmailJob {
-                id: row.get("id")?,
-                scheduled: row.get("scheduled")?,
-                status,
-                updated: row.get("updated")?,
-                last_user_ts: row.get("last_user_ts")?,
-                filter,
-                content_type,
-                subject: row.get("subject")?,
-                body: row.get("body")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+        Ok(EmailJob {
+            id: row.get("id")?,
+            scheduled: row.get("scheduled")?,
+            status,
+            updated: row.get("updated")?,
+            last_user_ts: row.get("last_user_ts")?,
+            filter,
+            content_type,
+            subject: row.get("subject")?,
+            body: row.get("body")?,
+        })
+    })?;
     inserts::email_jobs(before).await?;
 
     // SSH AUTH KEYS
     debug!("Migrating table: ssh_auth_keys");
-    let mut stmt = conn.prepare("SELECT * FROM ssh_auth_keys")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(AuthorizedKey {
-                // type cast is safe because Rauthy controls the input
-                pam_uid: row.get::<_, i64>("pam_uid")? as u32,
-                ts_added: row.get("ts_added")?,
-                expires: row.get("expires")?,
-                typ: row.get("typ")?,
-                data: row.get("data")?,
-                comment: row.get("comment")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM ssh_auth_keys", |row| {
+        Ok(AuthorizedKey {
+            // type cast is safe because Rauthy controls the input
+            pam_uid: row.get::<_, i64>("pam_uid")? as u32,
+            ts_added: row.get("ts_added")?,
+            expires: row.get("expires")?,
+            typ: row.get("typ")?,
+            data: row.get("data")?,
+            comment: row.get("comment")?,
+        })
+    })?;
     inserts::ssh_auth_keys(before).await?;
 
     // SSH AUTH KEYS USED
     debug!("Migrating table: ssh_auth_keys_used");
-    let mut stmt = conn.prepare("SELECT * FROM ssh_auth_keys_used")?;
-    let before = stmt
-        .query_map([], |row| {
-            let used_key_hash = row.get::<_, String>("used_key_hash")?;
-            let ts_added = row.get::<_, i64>("ts_added")?;
-            Ok((used_key_hash, ts_added))
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM ssh_auth_keys_used", |row| {
+        let used_key_hash = row.get::<_, String>("used_key_hash")?;
+        let ts_added = row.get::<_, i64>("ts_added")?;
+        Ok((used_key_hash, ts_added))
+    })?;
     inserts::ssh_auth_keys_used(before).await?;
 
     // ISSUED TOKENS
     debug!("Migrating table: issued_tokens");
-    let mut stmt = conn.prepare("SELECT * FROM issued_tokens")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(IssuedToken {
-                jti: row.get("jti")?,
-                user_id: row.get("user_id")?,
-                did: row.get("did")?,
-                sid: row.get("sid")?,
-                exp: row.get("exp")?,
-                revoked: row.get("revoked")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM issued_tokens", |row| {
+        Ok(IssuedToken {
+            jti: row.get("jti")?,
+            user_id: row.get("user_id")?,
+            did: row.get("did")?,
+            sid: row.get("sid")?,
+            exp: row.get("exp")?,
+            revoked: row.get("revoked")?,
+        })
+    })?;
     inserts::issued_tokens(before).await?;
 
     // KV NS
     debug!("Migrating table: kv_ns");
-    let mut stmt = conn.prepare("SELECT * FROM kv_ns")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(KVNamespace {
-                ns: row.get("ns")?,
-                public: row.get("public")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM kv_ns", |row| {
+        Ok(KVNamespace {
+            ns: row.get("ns")?,
+            public: row.get("public")?,
+        })
+    })?;
     inserts::kv_ns(before).await?;
 
     // KV ACCESS
     debug!("Migrating table: kv_access");
-    let mut stmt = conn.prepare("SELECT * FROM kv_access")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(KVAccess {
-                id: row.get("id")?,
-                ns: row.get("ns")?,
-                secret: row.get("secret")?,
-                enabled: row.get("enabled")?,
-                name: row.get("name")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM kv_access", |row| {
+        Ok(KVAccess {
+            id: row.get("id")?,
+            ns: row.get("ns")?,
+            secret: row.get("secret")?,
+            enabled: row.get("enabled")?,
+            name: row.get("name")?,
+        })
+    })?;
     inserts::kv_access(before).await?;
 
     // KV VALUES
     debug!("Migrating table: kv_values");
-    let mut stmt = conn.prepare("SELECT * FROM kv_values")?;
-    let before = stmt
-        .query_map([], |row| {
-            Ok(KVValue {
-                ns: row.get("ns")?,
-                key: row.get("key")?,
-                encrypted: row.get("encrypted")?,
-                value: row.get("value")?,
-            })
-        })?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before = query_sqlite_map(&conn, "SELECT * FROM kv_values", |row| {
+        Ok(KVValue {
+            ns: row.get("ns")?,
+            key: row.get("key")?,
+            encrypted: row.get("encrypted")?,
+            value: row.get("value")?,
+        })
+    })?;
     inserts::kv_values(before).await?;
 
     // PWD EXP MAILS
@@ -609,11 +543,10 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // FIDO MDS CERTS
     debug!("Migrating table: fido_mds_certs");
-    let mut stmt = conn.prepare("SELECT hash, cert_der FROM fido_mds_certs")?;
-    let before: Vec<(Vec<u8>, Vec<u8>)> = stmt
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before: Vec<(Vec<u8>, Vec<u8>)> =
+        query_sqlite_map(&conn, "SELECT hash, cert_der FROM fido_mds_certs", |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?;
     inserts::fido_mds_certs(before).await?;
 
     // FIDO MDS ENTRIES
@@ -623,11 +556,11 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
 
     // FIDO MDS ENTRY CERTS
     debug!("Migrating table: fido_mds_entry_certs");
-    let mut stmt = conn.prepare("SELECT aaguid, cert_hash FROM fido_mds_entry_certs")?;
-    let before: Vec<(Vec<u8>, Vec<u8>)> = stmt
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
-        .map(|r| r.unwrap())
-        .collect_vec();
+    let before: Vec<(Vec<u8>, Vec<u8>)> = query_sqlite_map(
+        &conn,
+        "SELECT aaguid, cert_hash FROM fido_mds_entry_certs",
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
     inserts::fido_mds_entry_certs(before).await?;
 
     // USER CONSENTS

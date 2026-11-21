@@ -83,10 +83,9 @@ impl RefreshToken {
     /// Legacy tokens without `client_id` match any client.
     #[must_use]
     pub fn is_for_client(&self, client: &Client) -> bool {
-        match &self.client_id {
-            None => true,
-            Some(id) => *id == client.id && self.client_created_micros == client.created_micros,
-        }
+        self.client_id.as_ref().is_none_or(|id| {
+            *id == client.id && self.client_created_micros == client.created_micros
+        })
     }
 }
 
@@ -499,8 +498,8 @@ mod tests {
     use super::*;
     use crate::entity::refresh_tokens_devices::SQL_RTD_DISCARD;
     use pretty_assertions::assert_eq;
-    use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::sync::Mutex;
 
     /// In-memory stand-in for `refresh_tokens(_devices)` and `issued_tokens`.
     #[derive(Default)]
@@ -535,14 +534,10 @@ mod tests {
         }
     }
 
-    async fn finish(
-        db: &RefCell<Db>,
-        source: &str,
-        replacement: &str,
-    ) -> Result<(), ErrorResponse> {
-        let deleted = db.borrow_mut().delete_checked(source);
+    async fn finish(db: &Mutex<Db>, source: &str, replacement: &str) -> Result<(), ErrorResponse> {
+        let deleted = db.lock().unwrap().delete_checked(source);
         finish_rotation_with(async { deleted }, || {
-            db.borrow_mut().discard(replacement);
+            db.lock().unwrap().discard(replacement);
             async { Ok(()) }
         })
         .await
@@ -552,47 +547,47 @@ mod tests {
     /// inserted. It removed the source, but could not see the replacement.
     #[tokio::test]
     async fn test_rotation_revoked_before_replacement() {
-        let db = RefCell::new(Db::default());
-        db.borrow_mut().insert("source", "j_source");
+        let db = Mutex::new(Db::default());
+        db.lock().unwrap().insert("source", "j_source");
 
-        db.borrow_mut().revoke_all();
+        db.lock().unwrap().revoke_all();
         // `TokenSet::from_user` inserts the replacement
-        db.borrow_mut().insert("replacement", "j_replacement");
+        db.lock().unwrap().insert("replacement", "j_replacement");
 
         let err = finish(&db, "source", "replacement").await.unwrap_err();
         assert_eq!(err.error, ErrorResponseType::NotFound);
-        assert!(db.borrow().rows.is_empty());
+        assert!(db.lock().unwrap().rows.is_empty());
         assert_eq!(
-            db.borrow().revoked,
+            db.lock().unwrap().revoked,
             vec!["j_source".to_string(), "j_replacement".to_string()]
         );
     }
 
     #[tokio::test]
     async fn test_rotation_not_revoked() {
-        let db = RefCell::new(Db::default());
-        db.borrow_mut().insert("source", "j_source");
-        db.borrow_mut().insert("replacement", "j_replacement");
+        let db = Mutex::new(Db::default());
+        db.lock().unwrap().insert("source", "j_source");
+        db.lock().unwrap().insert("replacement", "j_replacement");
 
         finish(&db, "source", "replacement").await.unwrap();
         assert_eq!(
-            db.borrow().rows.keys().collect::<Vec<_>>(),
+            db.lock().unwrap().rows.keys().collect::<Vec<_>>(),
             vec!["replacement"]
         );
-        assert_eq!(db.borrow().revoked, [] as [String; 0]);
+        assert_eq!(db.lock().unwrap().revoked, [] as [String; 0]);
 
         // any other error of the source delete is returned as is, the replacement stays
         let err = finish_rotation_with(
             async { Err(ErrorResponse::new(ErrorResponseType::Database, "down")) },
             || {
-                db.borrow_mut().discard("replacement");
+                db.lock().unwrap().discard("replacement");
                 async { Ok(()) }
             },
         )
         .await
         .unwrap_err();
         assert_eq!(err.error, ErrorResponseType::Database);
-        assert_eq!(db.borrow().rows.len(), 1);
+        assert_eq!(db.lock().unwrap().rows.len(), 1);
     }
 
     fn row(client_id: Option<&str>) -> serde_json::Value {

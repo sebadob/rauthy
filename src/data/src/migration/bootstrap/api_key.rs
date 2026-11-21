@@ -124,8 +124,7 @@ async fn create_or_update_api_key_access(
     if api_key_exists(&name).await {
         ApiKeyEntity::update(&name, expires, access).await?;
     } else {
-        let mut generated_secret = ApiKeyEntity::create(name, expires, access).await?;
-        generated_secret.zeroize();
+        let _ = zeroize::Zeroizing::new(ApiKeyEntity::create(name, expires, access).await?);
     }
 
     Ok(())

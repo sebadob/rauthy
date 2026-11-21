@@ -7,7 +7,7 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PamGroupType {
     Immutable,
@@ -35,7 +35,7 @@ impl FromStr for PamGroupType {
 
 impl PamGroupType {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::Immutable => "immutable",
             Self::Host => "host",
@@ -54,6 +54,7 @@ pub struct PamGroup {
     pub typ: PamGroupType,
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<tokio_postgres::Row> for PamGroup {
     fn from(row: tokio_postgres::Row) -> Self {
         Self {

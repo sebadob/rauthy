@@ -18,7 +18,7 @@ pub struct EmailJobRequest {
     pub body: String,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum EmailContentType {
     Text,
@@ -26,7 +26,7 @@ pub enum EmailContentType {
     HTML,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EmailJobFilterType {
     None,

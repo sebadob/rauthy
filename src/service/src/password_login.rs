@@ -10,6 +10,7 @@ use tracing::{info, warn};
 use zeroize::Zeroize;
 
 /// The user side of a password login, shared by the `password` grant and LDAP binds.
+///
 /// The `client` must already be validated by the caller (enabled, secret, `password` flow).
 /// `cred_stuff_detect = false` skips the per-IP credential stuffing detection.
 pub async fn password_login(

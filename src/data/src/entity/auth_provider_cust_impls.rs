@@ -16,6 +16,7 @@ struct GitHubEmailPrivateResponse {
 }
 
 /// GitHub is very special and does its own thing, which is super annoying.
+///
 /// If a user has no public E-Mail and changed the visibility settings, the
 /// user info endpoint will not return any address, even if a valid access token
 /// has been provided. In this case, there is another special endpoint only for

@@ -44,14 +44,12 @@ impl MfaModToken {
     }
 
     pub async fn find(id: &str) -> Result<Self, ErrorResponse> {
-        if let Some(slf) = DB::hql().get(Cache::Webauthn, Self::cache_idx(id)).await? {
-            Ok(slf)
-        } else {
-            Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid MfaModToken id",
-            ))
-        }
+        DB::hql()
+            .get(Cache::Webauthn, Self::cache_idx(id))
+            .await?
+            .ok_or_else(|| {
+                ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid MfaModToken id")
+            })
     }
 }
 

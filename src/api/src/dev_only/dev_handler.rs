@@ -35,11 +35,10 @@ pub async fn get_template(
     let client_id = query.into_inner().client_id;
     let (tpl, cookie) = HtmlTemplate::build_from_str(id.as_str(), session, client_id).await?;
 
-    if let Some(cookie) = cookie {
-        Ok(HttpResponse::Ok().cookie(cookie).body(tpl.inner().clone()))
-    } else {
-        Ok(HttpResponse::Ok().body(tpl.inner().clone()))
-    }
+    cookie.map_or_else(
+        || Ok(HttpResponse::Ok().body(tpl.inner())),
+        |cookie| Ok(HttpResponse::Ok().cookie(cookie).body(tpl.inner())),
+    )
 }
 
 pub async fn post_dev_only_endpoints(

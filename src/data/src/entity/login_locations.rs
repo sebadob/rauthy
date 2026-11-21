@@ -175,19 +175,17 @@ impl LoginLocation {
     ) -> Result<(), ErrorResponse> {
         let ip = real_ip_from_req(req)?;
 
-        let user_agent = match req.headers().get(USER_AGENT) {
-            None => {
-                // to make our life a bit easier, we allow empty UAs during local dev
-                // and only reject in PROD to block some bots out of the box
-                #[cfg(not(debug_assertions))]
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "Empty User-Agent not allowed",
-                ));
-                #[cfg(debug_assertions)]
-                "No User-Agent - not allowed in production!".to_string()
-            }
-            Some(v) => v.to_str().unwrap_or_default().to_string(),
+        let user_agent = if let Some(v) = req.headers().get(USER_AGENT) {
+            v.to_str().unwrap_or_default().to_string()
+        } else if cfg!(debug_assertions) {
+            // to make our life a bit easier, we allow empty UAs during local dev
+            // and only reject in PROD to block some bots out of the box
+            "No User-Agent - not allowed in production!".to_string()
+        } else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Empty User-Agent not allowed",
+            ));
         };
         if user_agent.is_empty() {
             return Err(ErrorResponse::new(

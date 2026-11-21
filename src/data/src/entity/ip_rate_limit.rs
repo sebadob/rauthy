@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::ops::Add;
 use std::time::Duration;
 
-/// Caution: The `exp` on this struct does not define the timeout. It is only used
-/// to return information back to the limited client when it is allowed to poll again.
-/// The timeout is defined via `DEVICE_GRANT_RATE_LIMIT`.
+/// Caution: The `exp` on this struct does not define the timeout.
+///
+/// It is only used to return information back to the limited client when it is
+/// allowed to poll again. The timeout is defined via `DEVICE_GRANT_RATE_LIMIT`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceIpRateLimit {
     pub ip: String,

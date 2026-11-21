@@ -80,7 +80,7 @@ impl AtHash {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AuthCodeFlow {
     Yes,
     No,
@@ -98,18 +98,18 @@ impl AuthTime {
 
     #[inline]
     #[must_use]
-    pub fn given(ts: i64) -> Self {
+    pub const fn given(ts: i64) -> Self {
         Self(ts)
     }
 
     #[inline]
     #[must_use]
-    pub fn get(&self) -> i64 {
+    pub const fn get(&self) -> i64 {
         self.0
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeviceCodeFlow {
     Yes(String),
     No,
@@ -190,13 +190,16 @@ impl TokenSet {
         let issued_token =
             IssuedToken::create(user_id, did.as_deref(), sid.map(|sid| sid.0), exp).await?;
 
-        let sub = if let Some(user) = user {
-            Some(user.id.as_str())
-        } else if RauthyConfig::get().vars.access.client_credentials_map_sub {
-            Some(client.id.as_str())
-        } else {
-            None
-        };
+        let sub = user.map_or_else(
+            || {
+                if RauthyConfig::get().vars.access.client_credentials_map_sub {
+                    Some(client.id.as_str())
+                } else {
+                    None
+                }
+            },
+            |user| Some(user.id.as_str()),
+        );
 
         // RFC 8707: the access token audience is the client itself, plus any always-on
         // `default_aud` entries, plus the granted `resource` (de-duplicated).
@@ -725,10 +728,10 @@ impl TokenSet {
         device_code_flow: DeviceCodeFlow,
     ) -> Result<Self, ErrorResponse> {
         let scopes = scopes.map(|s| s.0);
-        let scope = match scopes.as_deref() {
-            Some(s) => Cow::Borrowed(s),
-            None => Cow::Owned(client.default_scopes.replace(',', " ")),
-        };
+        let scope = scopes.as_deref().map_or_else(
+            || Cow::Owned(client.default_scopes.replace(',', " ")),
+            Cow::Borrowed,
+        );
 
         // check for any non-custom scopes and prepare data
         let cust = Scope::extract_custom(&scope);

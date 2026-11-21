@@ -12,7 +12,7 @@ pub struct I18nEmailResetInfo<'a> {
 
 impl I18nEmailResetInfo<'_> {
     #[must_use]
-    pub fn build(lang: Language) -> Self {
+    pub const fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
@@ -32,7 +32,7 @@ impl I18nEmailResetInfo<'_> {
 }
 
 impl I18nEmailResetInfo<'_> {
-    fn build_cs() -> Self {
+    const fn build_cs() -> Self {
         Self {
             subject: "Platnost hesla brzy vyprší",
             expires_1: "Vaše heslo ke službě",
@@ -42,7 +42,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_de() -> Self {
+    const fn build_de() -> Self {
         Self {
             subject: "Passwort läuft demnächst ab",
             expires_1: "Ihr Passwort für",
@@ -52,7 +52,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_en() -> Self {
+    const fn build_en() -> Self {
         Self {
             subject: "Password is about to expire",
             expires_1: "Your password for",
@@ -62,7 +62,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_es() -> Self {
+    const fn build_es() -> Self {
         Self {
             subject: "Su contraseña está a punto de caducar",
             expires_1: "Su contraseña para",
@@ -72,7 +72,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_fr() -> Self {
+    const fn build_fr() -> Self {
         Self {
             subject: "Le mot de passe est sur le point d'expirer",
             expires_1: "Votre mot de passe pour",
@@ -82,7 +82,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_ja() -> Self {
+    const fn build_ja() -> Self {
         Self {
             subject: "パスワードの有効期限が近づいています",
             expires_1: "お使いの",
@@ -92,7 +92,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_ko() -> Self {
+    const fn build_ko() -> Self {
         Self {
             subject: "비밀번호가 곧 만료됩니다.",
             expires_1: "",
@@ -101,7 +101,8 @@ impl I18nEmailResetInfo<'_> {
             button_text: "비밀번호 변경",
         }
     }
-    fn build_nb() -> Self {
+
+    const fn build_nb() -> Self {
         Self {
             subject: "Passordet ditt utløper snart",
             expires_1: "Passordet ditt for",
@@ -111,7 +112,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_nl() -> Self {
+    const fn build_nl() -> Self {
         Self {
             subject: "Wachtwoord verloopt binnenkort",
             expires_1: "Uw wachtwoord voor",
@@ -121,7 +122,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_pt() -> Self {
+    const fn build_pt() -> Self {
         Self {
             subject: "A palavra-passe está prestes a expirar",
             expires_1: "A sua palavra-passe para",
@@ -131,7 +132,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_uk() -> Self {
+    const fn build_uk() -> Self {
         Self {
             subject: "Термін дії пароля скоро закінчиться",
             expires_1: "Термін дії вашого пароля для",
@@ -141,7 +142,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_ru() -> Self {
+    const fn build_ru() -> Self {
         Self {
             subject: "Срок действия пароля скоро истечёт",
             expires_1: "Ваш пароль для",
@@ -151,7 +152,7 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
-    fn build_zh_hans() -> Self {
+    const fn build_zh_hans() -> Self {
         Self {
             subject: "您的密码即将过期",
             expires_1: "",

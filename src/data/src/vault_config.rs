@@ -17,7 +17,7 @@ pub struct VaultConfig {
 impl VaultConfig {
     pub async fn load_config() -> Result<String, Box<dyn Error>> {
         let vault_config_file = "vault.toml";
-        let vault_conf = VaultConfig::build(vault_config_file).await?;
+        let vault_conf = Self::build(vault_config_file).await?;
 
         let config_from_vault = vault_conf.vault_source.get_config().await?;
         let config = config_from_vault[&vault_conf.vault_source.config_key]
@@ -28,22 +28,18 @@ impl VaultConfig {
     }
 
     async fn build(config_file: &str) -> Result<Self, Box<dyn Error>> {
-        let mut vault_conf = VaultConfig::default();
+        let vault_conf = Self::load(config_file).await.unwrap_or_default();
 
-        if let Ok(cfg) = Self::load(config_file).await {
-            vault_conf = cfg;
-        }
-
-        Ok(Self::load_from_env(vault_conf).await)
+        Ok(Self::load_from_env(vault_conf))
     }
 
     async fn load(path_vault_config: &str) -> Result<Self, Box<dyn Error>> {
         let config = fs::read_to_string(path_vault_config).await?;
-        let vault_config = Self::load_from_string(&config).await?;
+        let vault_config = Self::load_from_string(&config);
         Ok(vault_config)
     }
 
-    fn load_from_env(mut existing_config: VaultConfig) -> impl Future<Output = Self> {
+    fn load_from_env(mut existing_config: Self) -> Self {
         if let Ok(v) = env::var("VAULT_ADDR") {
             existing_config.vault_source.addr = v;
         }
@@ -70,10 +66,10 @@ impl VaultConfig {
             existing_config.vault_source.root_ca_bundle = Some(v);
         }
 
-        std::future::ready(existing_config)
+        existing_config
     }
 
-    fn load_from_string(config: &str) -> impl Future<Output = Result<Self, Box<dyn Error>>> {
+    fn load_from_string(config: &str) -> Self {
         let vault_source = VaultSource::default();
         let mut slf = Self { vault_source };
 
@@ -83,7 +79,7 @@ impl VaultConfig {
 
         slf.parse_toml(&mut table);
 
-        std::future::ready(Ok(slf))
+        slf
     }
 
     fn parse_toml(&mut self, table: &mut toml::Table) {
@@ -160,7 +156,7 @@ struct VaultSource {
 
 impl Default for VaultSource {
     fn default() -> Self {
-        VaultSource {
+        Self {
             addr: String::default(),
             token: String::default(),
             mount: String::default(),
@@ -181,8 +177,8 @@ enum KvVersion {
 impl KvVersion {
     fn get_api_path(&self, mount: &str, path: &str) -> String {
         match self {
-            KvVersion::V1 => format!("/v1/{mount}/{path}"),
-            KvVersion::V2 => format!("/v1/{mount}/data/{path}"),
+            Self::V1 => format!("/v1/{mount}/{path}"),
+            Self::V2 => format!("/v1/{mount}/data/{path}"),
         }
     }
 }

@@ -100,9 +100,10 @@ pub fn validate_https_url(value: &str) -> Result<Url, String> {
     Ok(url)
 }
 
-/// The grammar of a remote consent source URL, checked by `ConsentSource::parse`, which both the
-/// client API (through `Client::validate_consent`) and the runtime use: at most
-/// [`CONSENT_SOURCE_MAX_LEN`] bytes of [`RE_RESOURCE`] characters, an URL accepted by
+/// Grammar of a remote consent source URL, checked by `ConsentSource::parse`.
+///
+/// Used by both the client API (through `Client::validate_consent`) and the runtime: at most
+/// [`CONSENT_SOURCE_MAX_LEN`] bytes of [`RE_RESOURCE`] characters, a URL accepted by
 /// [`validate_https_url`], and no `lang` query key, which is appended on each fetch.
 pub fn validate_consent_source_url(value: &str) -> Result<Url, String> {
     if value.len() > CONSENT_SOURCE_MAX_LEN {

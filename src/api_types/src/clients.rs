@@ -372,7 +372,7 @@ pub struct ClientSecretResponse {
     pub secret: Option<String>,
 }
 
-#[derive(PartialEq, Serialize, ToSchema)]
+#[derive(PartialEq, Eq, Serialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Debug, Deserialize))]
 pub struct DynamicClientResponse {
     pub client_id: String,

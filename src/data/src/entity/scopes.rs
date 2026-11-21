@@ -39,7 +39,7 @@ impl Scope {
 
     pub async fn create(scope_req: ScopeRequest) -> Result<Self, ErrorResponse> {
         // check for already existing scope
-        let mut scopes = Scope::find_all().await?;
+        let mut scopes = Self::find_all().await?;
         for s in &scopes {
             if s.name == scope_req.scope {
                 return Err(ErrorResponse::new(
@@ -49,7 +49,7 @@ impl Scope {
             }
         }
 
-        if !Scope::is_custom(&scope_req.scope)
+        if !Self::is_custom(&scope_req.scope)
             && (scope_req.attr_include_access.is_some() || scope_req.attr_include_id.is_some())
         {
             return Err(ErrorResponse::new(
@@ -65,9 +65,9 @@ impl Scope {
 
         // `claims_at_root` is only meaningful for custom scopes; normalize it so
         // the stored data can never request root emission for a default OIDC scope.
-        let claims_at_root = scope_req.claims_at_root && Scope::is_custom(&scope_req.scope);
+        let claims_at_root = scope_req.claims_at_root && Self::is_custom(&scope_req.scope);
 
-        let new_scope = Scope {
+        let new_scope = Self {
             id: new_store_id(),
             name: scope_req.scope,
             attr_include_access,
@@ -117,7 +117,7 @@ VALUES ($1, $2, $3, $4, $5)";
     }
 
     pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
-        let scope = Scope::find(id).await?;
+        let scope = Self::find(id).await?;
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -153,11 +153,11 @@ VALUES ($1, $2, $3, $4, $5)";
             txn.commit().await?;
         }
 
-        let scopes = Scope::find_all()
+        let scopes = Self::find_all()
             .await?
             .into_iter()
             .filter(|s| s.id != scope.id)
-            .collect::<Vec<Scope>>();
+            .collect::<Vec<Self>>();
 
         let client = DB::hql();
         // no need to evict the cache if no clients are updated
@@ -210,11 +210,11 @@ VALUES ($1, $2, $3, $4, $5)";
     }
 
     pub async fn find_with_mapping(attr_name: &str) -> Result<Vec<Self>, ErrorResponse> {
-        Ok(Scope::find_all()
+        Ok(Self::find_all()
             .await?
             .into_iter()
             .filter(|s| {
-                if Scope::is_custom(&s.name) {
+                if Self::is_custom(&s.name) {
                     let access = s.attr_include_access.as_deref().unwrap_or_default();
                     let id = s.attr_include_id.as_deref().unwrap_or_default();
                     access.contains(attr_name) || id.contains(attr_name)
@@ -226,7 +226,7 @@ VALUES ($1, $2, $3, $4, $5)";
     }
 
     pub async fn update(id: &str, scope_req: ScopeRequest) -> Result<Self, ErrorResponse> {
-        let scope = Scope::find(id).await?;
+        let scope = Self::find(id).await?;
         if scope.name == "openid" {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -234,7 +234,7 @@ VALUES ($1, $2, $3, $4, $5)";
             ));
         }
 
-        if !Scope::is_custom(&scope_req.scope)
+        if !Self::is_custom(&scope_req.scope)
             && (scope_req.attr_include_access.is_some() || scope_req.attr_include_id.is_some())
         {
             return Err(ErrorResponse::new(
@@ -268,8 +268,8 @@ VALUES ($1, $2, $3, $4, $5)";
         debug!(?attr_include_access);
         debug!(?attr_include_id);
 
-        let claims_at_root = scope_req.claims_at_root && Scope::is_custom(&scope_req.scope);
-        let new_scope = Scope {
+        let claims_at_root = scope_req.claims_at_root && Self::is_custom(&scope_req.scope);
+        let new_scope = Self {
             id: scope.id.clone(),
             name: scope_req.scope,
             attr_include_access,
@@ -338,7 +338,7 @@ WHERE id = $5",
             }
         }
 
-        let scopes = Scope::find_all()
+        let scopes = Self::find_all()
             .await?
             .into_iter()
             .map(|mut s| {
@@ -347,7 +347,7 @@ WHERE id = $5",
                 }
                 s
             })
-            .collect::<Vec<Scope>>();
+            .collect::<Vec<Self>>();
 
         let client = DB::hql();
         DB::hql()
@@ -406,7 +406,7 @@ impl Scope {
     ) -> Option<String> {
         req_attrs.as_ref()?;
         let res = req_attrs?
-            .drain(..)
+            .into_iter()
             .filter(|a| !a.is_empty() && existing_attrs.contains(a))
             .collect::<Vec<String>>()
             .join(",");

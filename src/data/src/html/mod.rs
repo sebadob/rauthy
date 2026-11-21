@@ -59,7 +59,7 @@ pub enum HtmlCached {
 
 impl HtmlCached {
     #[inline]
-    fn as_str(&self) -> &'static str {
+    const fn as_str(&self) -> &'static str {
         match self {
             Self::Account => "account",
             Self::Admin => "admin",
@@ -106,7 +106,7 @@ impl HtmlCached {
         with_cache: bool,
     ) -> Result<HttpResponse, ErrorResponse> {
         // TODO refactor the `AcceptEncoding` from `api` into `common` and re-use it here.
-        let encoding = if let Some(enc) = req.headers().get(ACCEPT_ENCODING) {
+        let encoding = req.headers().get(ACCEPT_ENCODING).map_or("none", |enc| {
             let accept = enc.to_str().unwrap_or("none");
             if accept.contains("br") {
                 "br"
@@ -115,9 +115,7 @@ impl HtmlCached {
             } else {
                 "none"
             }
-        } else {
-            "none"
-        };
+        });
 
         let lang = Language::try_from(&req).unwrap_or_default();
         debug!(language = ?lang);

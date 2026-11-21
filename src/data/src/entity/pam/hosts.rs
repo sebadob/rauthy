@@ -210,12 +210,9 @@ RETURNING *
                 .await?
                 .into_iter()
                 .filter_map(|mut r| {
-                    if let Ok(ip) = r.get::<String>("ip").parse::<IpAddr>() {
-                        let host_id = r.get::<String>("host_id");
-                        Some((host_id, ip))
-                    } else {
-                        None
-                    }
+                    let ip = r.get::<String>("ip").parse::<IpAddr>().ok()?;
+                    let host_id = r.get::<String>("host_id");
+                    Some((host_id, ip))
                 })
                 .collect::<Vec<_>>()
         } else {
@@ -223,12 +220,9 @@ RETURNING *
                 .await?
                 .into_iter()
                 .filter_map(|r| {
-                    if let Ok(ip) = r.get::<_, String>("ip").parse::<IpAddr>() {
-                        let host_id = r.get::<_, String>("host_id");
-                        Some((host_id, ip))
-                    } else {
-                        None
-                    }
+                    let ip = r.get::<_, String>("ip").parse::<IpAddr>().ok()?;
+                    let host_id = r.get::<_, String>("host_id");
+                    Some((host_id, ip))
                 })
                 .collect::<Vec<_>>()
         };

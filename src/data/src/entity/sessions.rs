@@ -74,10 +74,10 @@ impl FromStr for SessionState {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let res = match s {
-            "init" => SessionState::Init,
-            "auth" => SessionState::Auth,
-            "logged_out" => SessionState::LoggedOut,
-            _ => SessionState::Unknown,
+            "init" => Self::Init,
+            "auth" => Self::Auth,
+            "logged_out" => Self::LoggedOut,
+            _ => Self::Unknown,
         };
         Ok(res)
     }
@@ -107,12 +107,12 @@ impl From<SessionState> for rauthy_api_types::sessions::SessionState {
 
 impl SessionState {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            SessionState::Init => "init",
-            SessionState::Auth => "auth",
-            SessionState::LoggedOut => "logged_out",
-            SessionState::Unknown => "unknown",
+            Self::Init => "init",
+            Self::Auth => "auth",
+            Self::LoggedOut => "logged_out",
+            Self::Unknown => "unknown",
         }
     }
 }
@@ -658,8 +658,8 @@ impl Session {
     }
 
     pub fn extract_from_req(
-        session_req: web::ReqData<Option<Session>>,
-    ) -> Result<Session, ErrorResponse> {
+        session_req: web::ReqData<Option<Self>>,
+    ) -> Result<Self, ErrorResponse> {
         if session_req.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -672,10 +672,10 @@ impl Session {
     /// Extracts the session from an `Option<Session>` coming from an `HttpRequest`, validates the
     /// CSRF token from the Header and then returns the Session.
     pub fn extract_validate_csrf(
-        session_req: web::ReqData<Option<Session>>,
+        session_req: web::ReqData<Option<Self>>,
         req: &HttpRequest,
-    ) -> Result<Session, ErrorResponse> {
-        let s = Session::extract_from_req(session_req)?;
+    ) -> Result<Self, ErrorResponse> {
+        let s = Self::extract_from_req(session_req)?;
         s.validate_csrf(req)?;
         Ok(s)
     }

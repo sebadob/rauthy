@@ -16,15 +16,14 @@ pub async fn migrate_dev_data() -> Result<(), ErrorResponse> {
 
     let sql = "SELECT * FROM jwks";
     let needs_migration = if is_hiqlite() {
-        match DB::hql().query_as::<Jwk, _>(sql, params!()).await {
-            Ok(res) => res.is_empty(),
-            Err(_) => true,
-        }
+        DB::hql()
+            .query_as::<Jwk, _>(sql, params!())
+            .await
+            .map_or(true, |res| res.is_empty())
     } else {
-        match DB::pg_query::<Jwk>(sql, &[], 8).await {
-            Ok(res) => res.is_empty(),
-            Err(_) => true,
-        }
+        DB::pg_query::<Jwk>(sql, &[], 8)
+            .await
+            .map_or(true, |res| res.is_empty())
     };
 
     if !needs_migration {

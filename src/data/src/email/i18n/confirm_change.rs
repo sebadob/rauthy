@@ -10,7 +10,7 @@ pub struct I18nEmailConfirmChange<'a> {
 
 impl I18nEmailConfirmChange<'_> {
     #[must_use]
-    pub fn build(lang: Language) -> Self {
+    pub const fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
@@ -30,7 +30,7 @@ impl I18nEmailConfirmChange<'_> {
 }
 
 impl I18nEmailConfirmChange<'_> {
-    fn build_cs() -> Self {
+    const fn build_cs() -> Self {
         Self {
             subject: "Změna e-mailu potvrzena",
             msg: "Vaše e-mailová adresa byla úspěšně změněna na:",
@@ -38,7 +38,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_de() -> Self {
+    const fn build_de() -> Self {
         Self {
             subject: "E-Mail Wechsel bestätigt für",
             msg: "Ihre E-Mail Adresse wurde erfolgreich geändert zu:",
@@ -46,7 +46,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_en() -> Self {
+    const fn build_en() -> Self {
         Self {
             subject: "E-Mail Change confirmed for",
             msg: "Your E-Mail address has been changed successfully to:",
@@ -54,7 +54,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_es() -> Self {
+    const fn build_es() -> Self {
         Self {
             subject: "Cambio de correo electrónico confirmado para",
             msg: "Su dirección de correo electrónico se ha cambiado correctamente a:",
@@ -62,7 +62,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_fr() -> Self {
+    const fn build_fr() -> Self {
         Self {
             subject: "Changement d'adresse e-mail confirmé pour",
             msg: "Votre adresse e-mail a été modifiée avec succès et est désormais :",
@@ -70,7 +70,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_nb() -> Self {
+    const fn build_nb() -> Self {
         Self {
             subject: "Epostbytte bekreftet for",
             msg: "Din epostadresse har blitt endret til:",
@@ -78,7 +78,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_nl() -> Self {
+    const fn build_nl() -> Self {
         Self {
             subject: "E-Mail wijziging bevestigd voor",
             msg: "Uw e-mailadres is succesvol gewijzigd naar:",
@@ -86,7 +86,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_pt() -> Self {
+    const fn build_pt() -> Self {
         Self {
             subject: "Alteração de e-mail confirmada para",
             msg: "O seu endereço de e-mail foi alterado com sucesso para:",
@@ -94,7 +94,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_ja() -> Self {
+    const fn build_ja() -> Self {
         Self {
             subject: "メールアドレスの変更完了のお知らせ",
             msg: "メールアドレスは次のとおり変更されました:",
@@ -102,7 +102,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_ko() -> Self {
+    const fn build_ko() -> Self {
         Self {
             subject: "이메일 변경이 승인되었습니다:",
             msg: "이메일 주소가 다음 주소로 성공적으로 변경되었습니다:",
@@ -110,7 +110,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_uk() -> Self {
+    const fn build_uk() -> Self {
         Self {
             subject: "Зміну E-mail підтверджено для",
             msg: "Вашу адресу E-mail було успішно змінено на:",
@@ -118,7 +118,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_ru() -> Self {
+    const fn build_ru() -> Self {
         Self {
             subject: "Смена E-Mail подтверждена для",
             msg: "Ваш адрес E-Mail был успешно изменён на:",
@@ -126,7 +126,7 @@ impl I18nEmailConfirmChange<'_> {
         }
     }
 
-    fn build_zh_hans() -> Self {
+    const fn build_zh_hans() -> Self {
         Self {
             subject: "电子邮件地址已更新：",
             msg: "您的电子邮件地址已成功更新为：",

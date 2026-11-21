@@ -483,12 +483,10 @@ async fn test_token_exchange() -> Result<(), Box<dyn Error>> {
     assert_eq!(res.status(), 200);
     let res = client.post(&url_token).form(&exchange()).send().await;
     // restore the user before asserting anything, so a failure cannot leave it expiring
-    let restore = match user.user_expires {
-        Some(ts) => {
-            serde_json::json!({ "put": [{ "key": "user_expires", "value": ts }], "del": [] })
-        }
-        None => serde_json::json!({ "put": [], "del": ["user_expires"] }),
-    };
+    let restore = user.user_expires.map_or_else(
+        || serde_json::json!({ "put": [], "del": ["user_expires"] }),
+        |ts| serde_json::json!({ "put": [{ "key": "user_expires", "value": ts }], "del": [] }),
+    );
     assert_eq!(patch_user(restore).await?.status(), 200);
     let res = res?;
     assert_eq!(res.status(), 200);

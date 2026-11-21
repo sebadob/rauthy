@@ -30,7 +30,7 @@ impl PasswordHashTimes {
     pub async fn compute(req_data: PasswordHashTimesRequest) -> Result<Self, ErrorResponse> {
         let target = req_data.target_time;
         let m_cost = req_data.m_cost.unwrap_or(ARGON2ID_M_COST_MIN);
-        let p_cost = req_data.p_cost.unwrap_or(num_cpus::get() as u32);
+        let p_cost = req_data.p_cost.unwrap_or_else(|| num_cpus::get() as u32);
 
         let mut results = Vec::with_capacity(4);
         let mut time_taken = 0u32;
@@ -162,7 +162,7 @@ impl PasswordPolicy {
 }
 
 impl PasswordPolicy {
-    pub fn apply_req(&mut self, req: &PasswordPolicyRequest) {
+    pub const fn apply_req(&mut self, req: &PasswordPolicyRequest) {
         self.length_min = req.length_min;
         self.length_max = req.length_max;
         self.include_lower_case = req.include_lower_case;

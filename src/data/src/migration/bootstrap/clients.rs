@@ -231,12 +231,18 @@ async fn to_entity(
             ));
         }
     }
-    let redirect_uris = opt_vec_to_csv(Some(client.redirect_uris.as_slice())).unwrap();
+    let redirect_uris = vec_to_csv(&client.redirect_uris);
     // empty values are stored as `NULL`, like `ClientEntity::save()` does
-    let post_logout_redirect_uris =
-        opt_vec_to_csv(client.post_logout_redirect_uris.as_deref()).filter(|v| !v.is_empty());
-    let allowed_origins =
-        opt_vec_to_csv(client.allowed_origins.as_deref()).filter(|v| !v.is_empty());
+    let post_logout_redirect_uris = client
+        .post_logout_redirect_uris
+        .as_deref()
+        .map(vec_to_csv)
+        .filter(|v| !v.is_empty());
+    let allowed_origins = client
+        .allowed_origins
+        .as_deref()
+        .map(vec_to_csv)
+        .filter(|v| !v.is_empty());
 
     let flows_enabled = GrantType::csv(&client.flows_enabled);
     let challenge = if secret.is_none() {
@@ -379,19 +385,18 @@ async fn insert(c: &ClientEntity) -> Result<(), ErrorResponse> {
 }
 
 #[cold]
-fn opt_vec_to_csv(input: Option<&[String]>) -> Option<String> {
-    input.map(|v| {
-        v.iter()
-            .filter_map(|v| {
-                let trimmed = v.trim();
-                if trimmed.is_empty() {
-                    None
-                } else {
-                    Some(trimmed.to_string())
-                }
-            })
-            .join(",")
-    })
+fn vec_to_csv(input: &[String]) -> String {
+    input
+        .iter()
+        .filter_map(|v| {
+            let trimmed = v.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        })
+        .join(",")
 }
 
 #[cfg(test)]

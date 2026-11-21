@@ -488,9 +488,9 @@ fn filter_targets(filter: &LdapFilter) -> Option<Vec<Target>> {
 /// Normalizes the requested search `base` and refuses any base outside `client_base`.
 fn search_base(base: &str, client_base: &str) -> Result<String, (LdapResultCode, String)> {
     let client_base_norm = dn::normalize(client_base)
-        .ok_or((LdapResultCode::Other, "invalid client base DN".into()))?;
-    let search_base =
-        dn::normalize(base).ok_or((LdapResultCode::InvalidDNSyntax, "invalid base DN".into()))?;
+        .ok_or_else(|| (LdapResultCode::Other, "invalid client base DN".into()))?;
+    let search_base = dn::normalize(base)
+        .ok_or_else(|| (LdapResultCode::InvalidDNSyntax, "invalid base DN".into()))?;
     if !dn::is_within(&search_base, &client_base_norm) {
         return Err((
             LdapResultCode::InsufficentAccessRights,

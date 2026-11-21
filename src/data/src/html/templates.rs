@@ -19,9 +19,9 @@ pub enum FrontendAction {
 impl Display for FrontendAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            FrontendAction::Refresh => write!(f, "Refresh"),
-            FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {s}"),
-            FrontendAction::None => write!(f, "None"),
+            Self::Refresh => write!(f, "Refresh"),
+            Self::MfaLogin(s) => write!(f, "MfaLogin {s}"),
+            Self::None => write!(f, "None"),
         }
     }
 }
@@ -77,7 +77,7 @@ pub enum HtmlTemplate {
 impl HtmlTemplate {
     /// Returns the `id` that will be used for the HTML `<template>` element.
     #[must_use]
-    pub fn id(&self) -> &'static str {
+    pub const fn id(&self) -> &'static str {
         match self {
             Self::AdminButtonHide(_) => "tpl_admin_btn_hide",
             Self::AtprotoId(_) => "tpl_atproto_id",
@@ -970,7 +970,7 @@ pub struct BlockedHtml;
 impl BlockedHtml {
     #[must_use]
     pub fn build() -> String {
-        BlockedHtml.render().unwrap()
+        Self.render().unwrap()
     }
 }
 
@@ -984,7 +984,7 @@ pub struct TooManyRequestsHtml {
 impl TooManyRequestsHtml {
     #[must_use]
     pub fn build(ip: String, exp: i64) -> String {
-        TooManyRequestsHtml { ip, exp }.render().unwrap()
+        Self { ip, exp }.render().unwrap()
     }
 }
 

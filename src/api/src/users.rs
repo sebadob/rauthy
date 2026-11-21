@@ -559,15 +559,9 @@ pub(crate) fn redirect_uri_matches_client(redirect_uri: &str, client_uri: &str) 
     if !client_uri_has_non_empty_host(client_uri) {
         return false;
     }
-    match redirect_uri.strip_prefix(client_uri) {
-        None => false,
-        Some(rest) => {
-            rest.is_empty()
-                || rest.starts_with('/')
-                || rest.starts_with('?')
-                || rest.starts_with('#')
-        }
-    }
+    redirect_uri.strip_prefix(client_uri).is_some_and(|rest| {
+        rest.is_empty() || rest.starts_with('/') || rest.starts_with('?') || rest.starts_with('#')
+    })
 }
 
 /// Validates a registration or password-reset redirect URI against configured clients.
@@ -645,9 +639,9 @@ pub async fn get_user_attr(
 
     let values = UserAttrValueEntity::find_for_user(&path.into_inner())
         .await?
-        .drain(..)
-        .map(UserAttrValueResponse::from)
-        .collect::<Vec<UserAttrValueResponse>>();
+        .into_iter()
+        .map(UserAttrValueResponse::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(HttpResponse::Ok().json(UserAttrValuesResponse { values }))
 }
@@ -750,9 +744,9 @@ pub async fn put_user_attr(
     let user = User::find(user_id).await?;
     let values = UserAttrValueEntity::upsert_for_user(&user.id, payload)
         .await?
-        .drain(..)
-        .map(UserAttrValueResponse::from)
-        .collect::<Vec<UserAttrValueResponse>>();
+        .into_iter()
+        .map(UserAttrValueResponse::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
 
     task::spawn(async move {
         let email = user.email.clone();

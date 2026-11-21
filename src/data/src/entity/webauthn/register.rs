@@ -27,11 +27,12 @@ pub async fn reg_start(
     payload: WebauthnRegStartRequest,
 ) -> Result<CreationChallengeResponse, ErrorResponse> {
     let user = User::find(user_id).await?;
-    let passkey_user_id = if let Some(id) = &user.webauthn_user_id {
-        Uuid::from_str(id).expect("corrupted database: user.webauthn_user_id")
-    } else {
-        Uuid::new_v4()
-    };
+    let passkey_user_id = user
+        .webauthn_user_id
+        .as_ref()
+        .map_or_else(Uuid::new_v4, |id| {
+            Uuid::from_str(id).expect("corrupted database: user.webauthn_user_id")
+        });
     let exclude_creds = {
         let pks = PasskeyEntity::find_cred_ids_for_user(&user.id).await?;
         if pks.is_empty() { None } else { Some(pks) }
@@ -240,9 +241,9 @@ pub async fn reg_finish(
                 } else {
                     // If the authenticator did not send any cred props, we fall back to other
                     // possibly known values. This improves compatibility for e.g. MacOS.
-                    let fallback = payload.allow_rk_hint.unwrap_or(
-                        RauthyConfig::get().vars.webauthn.passkey_reg_type_str() == "resident_key",
-                    );
+                    let fallback = payload.allow_rk_hint.unwrap_or_else(|| {
+                        RauthyConfig::get().vars.webauthn.passkey_reg_type_str() == "resident_key"
+                    });
                     Some(fallback)
                 }
             };
@@ -273,7 +274,7 @@ pub async fn reg_finish(
     Ok(())
 }
 
-fn is_attestation_error(err: &WebauthnError) -> bool {
+const fn is_attestation_error(err: &WebauthnError) -> bool {
     matches!(
         err,
         WebauthnError::MissingAttestationCredentialData

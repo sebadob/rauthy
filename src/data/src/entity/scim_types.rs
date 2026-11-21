@@ -46,8 +46,8 @@ pub struct ScimAddress {
 
 impl ScimAddress {
     #[must_use]
-    pub fn try_build(values: &UserValues) -> Option<ScimAddress> {
-        let mut slf = ScimAddress {
+    pub fn try_build(values: &UserValues) -> Option<Self> {
+        let mut slf = Self {
             street_address: None,
             locality: None,
             region: None,
@@ -286,7 +286,7 @@ pub struct ScimGroup {
 
 impl Default for ScimGroup {
     fn default() -> Self {
-        ScimGroup {
+        Self {
             schemas: Some(vec!["urn:ietf:params:scim:schemas:core:2.0:Group".into()]),
             id: None,
             external_id: None,
@@ -311,7 +311,7 @@ pub struct ScimSearchRequest {
 
 impl Default for ScimSearchRequest {
     fn default() -> Self {
-        ScimSearchRequest {
+        Self {
             schemas: vec!["urn:ietf:params:scim:api:messages:2.0:SearchRequest".into()],
             attributes: None,
             excluded_attributes: None,
@@ -339,7 +339,7 @@ pub struct ScimListQuery {
 
 impl Default for ScimListQuery {
     fn default() -> Self {
-        ScimListQuery {
+        Self {
             filter: None,
             start_index: Some(1),
             count: Some(100),

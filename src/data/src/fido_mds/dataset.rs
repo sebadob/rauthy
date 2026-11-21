@@ -23,7 +23,7 @@ use tracing::{info, warn};
 /// The dataset shipped with the image, produced by the `fido-mds-prep` tool.
 static MDS_DATASET: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/fido_mds_dataset.bin"));
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MdsDataset {
     /// The monotonic MDS blob number (`no`). A higher value is newer.
     pub blob_no: i64,
@@ -35,7 +35,7 @@ pub struct MdsDataset {
 }
 
 /// A distinct root certificate, keyed by the SHA-256 of its DER encoding.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MdsCert {
     pub hash: [u8; 32],
     pub cert_der: Vec<u8>,

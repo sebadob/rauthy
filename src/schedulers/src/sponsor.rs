@@ -191,10 +191,9 @@ async fn find_email_recipients() -> Vec<Recipient> {
 /// Looks up the user with the given e-mail address and returns their first name, if they
 /// exist and have one set.
 async fn find_first_name(email: &str) -> Option<String> {
-    match User::find_by_email(email.to_string()).await {
-        Ok(user) => first_name(&user),
-        Err(_) => None,
-    }
+    User::find_by_email(email.to_string())
+        .await
+        .map_or(None, |user| first_name(&user))
 }
 
 /// Returns the user's first name, if they have one set.

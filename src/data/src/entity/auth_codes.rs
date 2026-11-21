@@ -161,10 +161,10 @@ pub fn authorization_redirect(
 /// `validate_post_logout_redirect_uri_shape`.
 #[must_use]
 pub fn post_logout_redirect(post_logout_redirect_uri: &str, state: Option<&str>) -> String {
-    match state {
-        Some(state) => append_query(post_logout_redirect_uri, [("state", state)]),
-        None => post_logout_redirect_uri.to_string(),
-    }
+    state.map_or_else(
+        || post_logout_redirect_uri.to_string(),
+        |state| append_query(post_logout_redirect_uri, [("state", state)]),
+    )
 }
 
 /// Appends `pairs`, form-urlencoded, to the query of `uri`, which must not contain a fragment.

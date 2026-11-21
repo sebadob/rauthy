@@ -16,12 +16,10 @@ pub fn impl_from_pg_row(input: DeriveInput) -> proc_macro::TokenStream {
                     let id = field.ident.as_ref()?;
                     let is_opt = is_field_ty_opt(&field.ty).unwrap_or(false);
                     let ch = ColumnHandler::from(field.attrs.as_slice());
-                    let name = if let Some(name) = &ch.rename {
-                        quote! {#name}
-                    } else {
+                    let name = ch.rename.as_ref().map_or_else(|| {
                         let name = id.to_string();
                         quote! {#name}
-                    };
+                    }, |name| quote! {#name});
 
                     let ts = match ch.attr {
                         ColumnAttr::Flatten => {

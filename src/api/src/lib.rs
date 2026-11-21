@@ -60,30 +60,28 @@ enum AcceptEncoding {
 impl From<&HeaderMap> for AcceptEncoding {
     #[inline]
     fn from(headers: &HeaderMap) -> Self {
-        if let Some(accept) = headers
+        headers
             .get("accept-encoding")
             .map(|v| v.to_str().unwrap_or_default())
-        {
-            if accept.contains("br") {
-                Self::Br
-            } else if accept.contains("gzip") {
-                Self::Gzip
-            } else {
-                Self::None
-            }
-        } else {
-            Self::None
-        }
+            .map_or(Self::None, |accept| {
+                if accept.contains("br") {
+                    Self::Br
+                } else if accept.contains("gzip") {
+                    Self::Gzip
+                } else {
+                    Self::None
+                }
+            })
     }
 }
 
 impl AcceptEncoding {
     #[inline]
-    pub fn value(&self) -> HeaderValue {
+    pub const fn value(&self) -> HeaderValue {
         match self {
-            AcceptEncoding::Br => HeaderValue::from_static("br"),
-            AcceptEncoding::Gzip => HeaderValue::from_static("gzip"),
-            AcceptEncoding::None => HeaderValue::from_static("none"),
+            Self::Br => HeaderValue::from_static("br"),
+            Self::Gzip => HeaderValue::from_static("gzip"),
+            Self::None => HeaderValue::from_static("none"),
         }
     }
 }
@@ -223,12 +221,14 @@ pub async fn map_auth_step(
 
 /// Throws an error if the `content-length` exceeds the given size in MB.
 fn content_len_limit(req: &HttpRequest, limit_mb: u16) -> Result<(), ErrorResponse> {
-    match req.headers().get("Content-Length") {
-        None => Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Content-Length header missing",
-        )),
-        Some(value) => match value.to_str().unwrap_or("0").parse::<u32>() {
+    req.headers().get("Content-Length").map_or_else(
+        || {
+            Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Content-Length header missing",
+            ))
+        },
+        |value| match value.to_str().unwrap_or("0").parse::<u32>() {
             Ok(len) => {
                 if len > u32::from(limit_mb) * 1024 * 1024 {
                     Err(ErrorResponse::new(
@@ -247,5 +247,5 @@ fn content_len_limit(req: &HttpRequest, limit_mb: u16) -> Result<(), ErrorRespon
                 ))
             }
         },
-    }
+    )
 }

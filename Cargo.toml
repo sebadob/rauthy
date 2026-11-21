@@ -222,3 +222,5 @@ option_option = "allow"
 struct_excessive_bools = "allow"
 struct_field_names = "allow"
 too_many_lines = "allow"
+# nursery = { level = "deny", priority = -1 }
+# future_not_send = "allow"

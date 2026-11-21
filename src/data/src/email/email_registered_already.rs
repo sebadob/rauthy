@@ -34,6 +34,7 @@ pub struct EmailRegisteredAlreadyTxt<'a> {
 }
 
 /// This is sent out when you have an open user registration and the email exists in the DB already.
+///
 /// In this case, we want to basically do nothing but inform the user about it. We don't want to
 /// show this information in the UI directly to prevent a username enumeration using the
 /// registration endpoint.

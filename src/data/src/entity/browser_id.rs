@@ -13,7 +13,7 @@ static COOKIE_NAME: &str = "rbid";
 static COOKIE_NAME_HOST: &str = "__Host-rbid";
 static COOKIE_NAME_SECURE: &str = "__Secure-rbid";
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BrowserIdSetNew {
     Yes,
     No,
@@ -63,7 +63,7 @@ impl BrowserId {
     }
 
     #[must_use]
-    pub fn needs_set_new(&self) -> BrowserIdSetNew {
+    pub const fn needs_set_new(&self) -> BrowserIdSetNew {
         if self.0.is_some() {
             BrowserIdSetNew::No
         } else {
@@ -84,12 +84,6 @@ impl actix_web::FromRequest for BrowserId {
         };
         let cookie = req.cookie(name);
 
-        Box::pin(async move {
-            if let Some(cookie) = cookie {
-                Ok(Self(Some(cookie.value().to_string())))
-            } else {
-                Ok(Self(None))
-            }
-        })
+        Box::pin(async move { Ok(Self(cookie.map(|cookie| cookie.value().to_string()))) })
     }
 }

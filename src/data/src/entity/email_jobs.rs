@@ -29,6 +29,7 @@ pub struct EmailJob {
     pub body: String,
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<tokio_postgres::Row> for EmailJob {
     fn from(row: tokio_postgres::Row) -> Self {
         Self {
@@ -45,7 +46,7 @@ impl From<tokio_postgres::Row> for EmailJob {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EmailContentType {
     Text,
     Markdown,
@@ -68,14 +69,14 @@ impl FromStr for EmailContentType {
 impl Display for EmailContentType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            EmailContentType::Text => write!(f, "text"),
-            EmailContentType::Markdown => write!(f, "markdown"),
-            EmailContentType::Html => write!(f, "html"),
+            Self::Text => write!(f, "text"),
+            Self::Markdown => write!(f, "markdown"),
+            Self::Html => write!(f, "html"),
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EmailJobFilter {
     None,
     InGroup(String),
@@ -84,7 +85,7 @@ pub enum EmailJobFilter {
     HasNotRole(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EmailJobStatus {
     Open,
     Finished,
@@ -93,15 +94,16 @@ pub enum EmailJobStatus {
 
 impl EmailJobStatus {
     #[must_use]
-    pub fn value(&self) -> i16 {
+    pub const fn value(&self) -> i16 {
         match self {
-            EmailJobStatus::Open => 0,
-            EmailJobStatus::Finished => 1,
-            EmailJobStatus::Canceled => 2,
+            Self::Open => 0,
+            Self::Finished => 1,
+            Self::Canceled => 2,
         }
     }
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<i64> for EmailJobStatus {
     fn from(value: i64) -> Self {
         match value {
@@ -118,6 +120,7 @@ impl From<i64> for EmailJobStatus {
 impl FromStr for EmailJobFilter {
     type Err = ErrorResponse;
 
+    #[allow(clippy::option_if_let_else)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let slf = if let Some(group) = s.strip_prefix("group_") {
             Self::InGroup(group.to_string())
@@ -141,21 +144,11 @@ impl FromStr for EmailJobFilter {
 impl Display for EmailJobFilter {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            EmailJobFilter::None => {
-                write!(f, "none")
-            }
-            EmailJobFilter::InGroup(s) => {
-                write!(f, "group_{s}")
-            }
-            EmailJobFilter::NotInGroup(s) => {
-                write!(f, "not_group_{s}")
-            }
-            EmailJobFilter::HasRole(s) => {
-                write!(f, "role_{s}")
-            }
-            EmailJobFilter::HasNotRole(s) => {
-                write!(f, "not_role_{s}")
-            }
+            Self::None => write!(f, "none"),
+            Self::InGroup(s) => write!(f, "group_{s}"),
+            Self::NotInGroup(s) => write!(f, "not_group_{s}"),
+            Self::HasRole(s) => write!(f, "role_{s}"),
+            Self::HasNotRole(s) => write!(f, "not_role_{s}"),
         }
     }
 }
@@ -487,12 +480,10 @@ impl EmailJob {
 
     #[inline]
     fn last_user_ts(&self) -> (&str, i64) {
-        if let Some(last_user_ts) = &self.last_user_ts {
+        self.last_user_ts.as_ref().map_or(("", 0), |last_user_ts| {
             let (ts, email) = last_user_ts.split_at(10);
             (email, ts.parse().unwrap())
-        } else {
-            ("", 0)
-        }
+        })
     }
 
     #[inline]

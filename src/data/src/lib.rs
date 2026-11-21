@@ -101,13 +101,13 @@ pub enum ListenScheme {
 impl Display for ListenScheme {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ListenScheme::Http => write!(f, "http"),
-            ListenScheme::Https => write!(f, "https"),
-            ListenScheme::HttpHttps => write!(f, "{{http|https}}"),
+            Self::Http => write!(f, "http"),
+            Self::Https => write!(f, "https"),
+            Self::HttpHttps => write!(f, "{{http|https}}"),
             #[cfg(not(target_os = "windows"))]
-            ListenScheme::UnixHttp => write!(f, "unix+http"),
+            Self::UnixHttp => write!(f, "unix+http"),
             #[cfg(not(target_os = "windows"))]
-            ListenScheme::UnixHttps => write!(f, "unix+https"),
+            Self::UnixHttps => write!(f, "unix+https"),
         }
     }
 }

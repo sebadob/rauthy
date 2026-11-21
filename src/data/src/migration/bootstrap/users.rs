@@ -10,7 +10,6 @@ use crate::rauthy_config::RauthyConfig;
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
 use hiqlite::macros::params;
-use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::HashPassword;
 use rauthy_common::utils::new_store_id;
@@ -147,19 +146,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)";
         }
 
         if user.preferred_username.is_some() || user.user_values.is_some() {
-            let values = if let Some(values) = user.user_values {
-                UserValuesRequest {
-                    birthdate: values.birthdate,
-                    phone: values.phone,
-                    street: values.street,
-                    zip: values.zip,
-                    city: values.city,
-                    country: values.country,
-                    tz: values.tz,
-                }
-            } else {
-                UserValuesRequest::default()
-            };
+            let values = user.user_values.unwrap_or_default();
 
             UserValues::insert(id.clone(), values, user.preferred_username).await?;
         }

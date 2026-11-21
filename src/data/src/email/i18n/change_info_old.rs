@@ -14,7 +14,7 @@ pub struct I18nEmailChangeInfoOld<'a> {
 
 impl I18nEmailChangeInfoOld<'_> {
     #[must_use]
-    pub fn build(lang: Language) -> Self {
+    pub const fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
@@ -35,7 +35,7 @@ impl I18nEmailChangeInfoOld<'_> {
 }
 
 impl I18nEmailChangeInfoOld<'_> {
-    fn build_en() -> Self {
+    const fn build_en() -> Self {
         Self {
             subject: "E-Mail Change Request",
             header: "E-Mail change request for",
@@ -47,7 +47,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_es() -> Self {
+    const fn build_es() -> Self {
         Self {
             subject: "Solicitud de cambio de correo electrónico",
             header: "Solicitud de cambio de correo electrónico para",
@@ -59,7 +59,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_cs() -> Self {
+    const fn build_cs() -> Self {
         Self {
             subject: "Žádost o změnu e-mailu",
             header: "Žádost o změnu e-mailu –",
@@ -71,7 +71,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_de() -> Self {
+    const fn build_de() -> Self {
         Self {
             subject: "E-Mail Wechsel Bestätigung",
             header: "E-Mail Wechsel angefordert für",
@@ -83,7 +83,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_fr() -> Self {
+    const fn build_fr() -> Self {
         Self {
             subject: "Demande de modification de l'e-mail",
             header: "Demande de modification par e-mail pour",
@@ -95,7 +95,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_uk() -> Self {
+    const fn build_uk() -> Self {
         Self {
             subject: "Запит на зміну адреси E-mail",
             header: "Запит на зміну E-mail для",
@@ -107,7 +107,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_ru() -> Self {
+    const fn build_ru() -> Self {
         Self {
             subject: "Запрос на смену E-Mail",
             header: "Запрос на смену E-Mail для",
@@ -119,7 +119,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_zh_hans() -> Self {
+    const fn build_zh_hans() -> Self {
         Self {
             subject: "电子邮件更改请求",
             header: "电子邮件更改请求：",
@@ -131,7 +131,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_ja() -> Self {
+    const fn build_ja() -> Self {
         Self {
             subject: "メールアドレス変更のご依頼",
             header: "メールアドレス変更のご依頼 -",
@@ -143,7 +143,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_ko() -> Self {
+    const fn build_ko() -> Self {
         Self {
             subject: "이메일 변경 요청",
             header: "이메일 변경 요청:",
@@ -155,7 +155,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_nl() -> Self {
+    const fn build_nl() -> Self {
         Self {
             subject: "E-Mail wijzigingsverzoek",
             header: "E-Mail wijzigingsverzoek voor",
@@ -167,7 +167,7 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
-    fn build_pt() -> Self {
+    const fn build_pt() -> Self {
         Self {
             subject: "Pedido de alteração de e-mail",
             header: "Pedido de alteração de e-mail para",

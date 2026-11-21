@@ -57,7 +57,7 @@ static PICTURE_S3_BUCKET: LazyLock<s3_simple::Bucket> = LazyLock::new(|| {
         .expect("Cannot connect to Picture S3 Bucket")
 });
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PictureStorage {
     DB,
@@ -83,7 +83,7 @@ impl From<&str> for PictureStorage {
 
 impl PictureStorage {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::DB => "db",
             Self::File => "file",
@@ -354,22 +354,26 @@ impl UserPicture {
         cors_origin: Option<(HeaderName, HeaderValue)>,
     ) -> Result<HttpResponse, ErrorResponse> {
         let slf = Self::find(id).await?;
+        let content_type = HeaderValue::from_str(&slf.content_type)?;
 
-        let mut resp = HttpResponseBuilder::new(StatusCode::OK);
-        resp.insert_header((CONTENT_TYPE, HeaderValue::from_str(&slf.content_type)?));
-        resp.insert_header((
-            CONTENT_SECURITY_POLICY,
-            "connect-src 'none'; script-src 'none';",
-        ));
-        resp.insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE));
-        if let Some((n, v)) = cors_origin {
-            resp.insert_header((n, v));
-        }
+        let build_resp = || {
+            let mut resp = HttpResponseBuilder::new(StatusCode::OK);
+            resp.insert_header((CONTENT_TYPE, content_type));
+            resp.insert_header((
+                CONTENT_SECURITY_POLICY,
+                "connect-src 'none'; script-src 'none';",
+            ));
+            resp.insert_header((CACHE_CONTROL, CACHE_CTRL_PICTURE));
+            if let Some((n, v)) = cors_origin {
+                resp.insert_header((n, v));
+            }
+            resp
+        };
 
         match PictureStorage::from(slf.storage.as_str()) {
             PictureStorage::DB => {
                 if let Some(data) = slf.data {
-                    Ok(resp.body(data))
+                    Ok(build_resp().body(data))
                 } else {
                     error!("PictureStorage::DB but `data` is NULL: {slf:?}");
                     Err(ErrorResponse::new(
@@ -381,13 +385,13 @@ impl UserPicture {
             PictureStorage::File => {
                 // TODO stream from file instead of loading into memory upfront
                 let bytes = fs::read(Self::local_file_path(&slf.id, &slf.content_type)).await?;
-                Ok(resp.body(bytes))
+                Ok(build_resp().body(bytes))
             }
             PictureStorage::S3 => {
                 let res = PICTURE_S3_BUCKET
                     .get(&Self::file_name(&slf.id, &slf.content_type))
                     .await?;
-                Ok(resp.streaming(res.bytes_stream()))
+                Ok(build_resp().streaming(res.bytes_stream()))
             }
             PictureStorage::Disabled => unreachable!(),
         }

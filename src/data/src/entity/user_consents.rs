@@ -284,7 +284,7 @@ enum PgRevokeStep {
 /// `Client::delete` and, for the tables they share, `User::delete` take the same tables in the
 /// same order, so that they and a revoke running at the same time are serialized instead of
 /// deadlocking.
-fn pg_revoke_steps(drop_legacy: bool) -> &'static [PgRevokeStep] {
+const fn pg_revoke_steps(drop_legacy: bool) -> &'static [PgRevokeStep] {
     use PgRevokeStep::{Consent, DeviceTokens, LegacyTokens, LockTokens, RefreshTokens};
     if drop_legacy {
         &[
@@ -370,7 +370,7 @@ RETURNING access_token_jti",
         Ok(())
     }
 
-    fn revoked(&self) -> ConsentRevoked {
+    const fn revoked(&self) -> ConsentRevoked {
         ConsentRevoked {
             consent_deleted: self.consent_rows > 0,
             refresh_tokens_deleted: self.rt_rows,
@@ -411,7 +411,7 @@ enum RevokeRows {
 /// access tokens are revoked before the refresh tokens they are looked up from are deleted.
 /// hiqlite applies the transaction as one raft log entry, so no other write sees a part of it;
 /// the order mirrors [`pg_revoke_steps`].
-fn hql_revoke() -> [(&'static str, RevokeParams); 4] {
+const fn hql_revoke() -> [(&'static str, RevokeParams); 4] {
     [
         (SQL_DELETE, RevokeParams::Resource),
         (

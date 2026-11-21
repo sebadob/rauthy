@@ -27,6 +27,7 @@ pub struct SelfSignedCA {
     cert: String,
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<&mut hiqlite::Row<'_>> for SelfSignedCA {
     fn from(row: &mut hiqlite::Row) -> Self {
         let bytes: Vec<u8> = row.get("data");
@@ -34,6 +35,7 @@ impl From<&mut hiqlite::Row<'_>> for SelfSignedCA {
     }
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<tokio_postgres::Row> for SelfSignedCA {
     fn from(row: tokio_postgres::Row) -> Self {
         let bytes: Vec<u8> = row.get("data");

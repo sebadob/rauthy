@@ -46,7 +46,7 @@ impl From<i64> for MdsCertLevel {
 impl MdsCertLevel {
     #[inline]
     #[must_use]
-    pub fn as_u8(self) -> u8 {
+    pub const fn as_u8(self) -> u8 {
         self as u8
     }
 }
@@ -102,14 +102,14 @@ macro_rules! mds_bitmask {
 
         impl $mask {
             #[inline]
-            pub fn contains(self, flag: $flag) -> bool {
+            pub const fn contains(self, flag: $flag) -> bool {
                 self.0 & flag as u32 != 0
             }
 
             /// Sets the bit of `flag`.
             #[inline]
             #[must_use]
-            pub fn insert(self, flag: $flag) -> Self {
+            pub const fn insert(self, flag: $flag) -> Self {
                 Self(self.0 | flag as u32)
             }
 
@@ -117,12 +117,12 @@ macro_rules! mds_bitmask {
             /// subset of `other`. Since every flag variant is exactly one bit, this stays correct
             /// as new variants are appended to the flag enum without touching any check site.
             #[inline]
-            pub fn is_subset_of(self, other: Self) -> bool {
+            pub const fn is_subset_of(self, other: Self) -> bool {
                 self.0 & !other.0 == 0
             }
 
             #[inline]
-            pub fn bits(self) -> u32 {
+            pub const fn bits(self) -> u32 {
                 self.0
             }
 

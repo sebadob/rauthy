@@ -119,7 +119,7 @@ impl WellKnown {
             .filter(|l| langs.iter().any(|f| l.starts_with(&f.as_ref()[..2])))
             .collect::<Vec<&str>>();
 
-        WellKnown {
+        Self {
             issuer: String::from(issuer),
             authorization_endpoint,
             backchannel_logout_supported: true,

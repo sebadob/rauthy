@@ -120,7 +120,7 @@ pub async fn get_authorize(
     let force_new_session = if params.prompt.as_ref().is_some_and(|p| p.contains("login")) {
         true
     } else if let Some(max_age) = params.max_age {
-        if let Some(session) = &principal.session {
+        principal.session.as_ref().is_none_or(|session| {
             let session_created = session.exp
                 - RauthyConfig::get()
                     .vars
@@ -128,9 +128,7 @@ pub async fn get_authorize(
                     .session_lifetime
                     .as_secs() as i64;
             Utc::now().timestamp() > session_created + max_age
-        } else {
-            true
-        }
+        })
     } else {
         // TODO we should add a new DB table that tracks to which clients a user has logged-in
         //  in the past. When we have that information and we find a `consent` prompt, we would
@@ -386,12 +384,12 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
-            if let ErrorResponseType::PasswordRefresh = err.error {
+            if err.error == ErrorResponseType::PasswordRefresh {
                 info!("User password has expired");
                 return Err(err);
             }
 
-            if let ErrorResponseType::Forbidden = err.error {
+            if err.error == ErrorResponseType::Forbidden {
                 // We only get a forbidden if there is a mismatch in group prefix restriction,
                 // and we can return the "true" error directly for best UX.
                 error!("User login with not matching client group prefix");

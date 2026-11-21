@@ -19,8 +19,8 @@ impl EMailCallback {
     #[inline]
     async fn call_inner(self) -> Result<(), ErrorResponse> {
         match self {
-            EMailCallback::None => {}
-            EMailCallback::PasswordExp { user_id } => {
+            Self::None => {}
+            Self::PasswordExp { user_id } => {
                 PasswordExpMail::upsert_now(user_id).await?;
             }
         }

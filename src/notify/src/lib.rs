@@ -11,7 +11,7 @@ use tracing::info;
 pub mod matrix;
 pub mod slack;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NotificationLevel {
     Info,
     Notice,
@@ -21,22 +21,22 @@ pub enum NotificationLevel {
 
 impl NotificationLevel {
     #[must_use]
-    pub fn as_hex_color(&self) -> &str {
+    pub const fn as_hex_color(&self) -> &str {
         match self {
-            NotificationLevel::Info => "#388c51",
-            NotificationLevel::Notice => "#3d5d99",
-            NotificationLevel::Warning => "#c29a4f",
-            NotificationLevel::Critical => "#993d49",
+            Self::Info => "#388c51",
+            Self::Notice => "#3d5d99",
+            Self::Warning => "#c29a4f",
+            Self::Critical => "#993d49",
         }
     }
 
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            NotificationLevel::Info => "INFO",
-            NotificationLevel::Notice => "NOTICE",
-            NotificationLevel::Warning => "WARNING",
-            NotificationLevel::Critical => "CRITICAL",
+            Self::Info => "INFO",
+            Self::Notice => "NOTICE",
+            Self::Warning => "WARNING",
+            Self::Critical => "CRITICAL",
         }
     }
 }

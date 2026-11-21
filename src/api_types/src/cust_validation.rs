@@ -23,8 +23,9 @@ pub fn validate_vec_attr(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
-/// Custom claims attached to a client and emitted into `client_credentials`
-/// tokens. Must be a JSON object (it is emitted nested under the `custom` claim)
+/// Custom claims attached to a client and emitted into `client_credentials` tokens.
+///
+/// Must be a JSON object (it is emitted nested under the `custom` claim)
 /// and is capped to keep tokens small, since they are frequently stored in
 /// cookies. The cap applies to the client's custom JSON only, not the full token.
 #[inline]
@@ -104,9 +105,10 @@ pub fn validate_vec_uri(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
-/// RFC 8707 resource indicators (client `allowed_resources` / `default_aud`). Same as a URI
-/// but a fragment (`#`) is not allowed, since a resource indicator MUST be an absolute URI
-/// without a fragment (RFC 8707 §2). Matches the request-side `resource` validation.
+/// RFC 8707 resource indicators (client `allowed_resources` / `default_aud`).
+///
+/// Same as a URI but a fragment (`#`) is not allowed, since a resource indicator MUST be an
+/// absolute URI without a fragment (RFC 8707 §2). Matches the request-side `resource` validation.
 #[inline]
 pub fn validate_vec_resource(value: &[String]) -> Result<(), ValidationError> {
     for v in value {
@@ -117,11 +119,12 @@ pub fn validate_vec_resource(value: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
-/// Grant-type validation for ephemeral (CIMD) client documents. Strict by default: an
-/// advertised grant type Rauthy does not support is rejected. An operator can opt into
-/// accepting such a document by enabling `ephemeral_clients.ignore_unknown_auth_flows`,
-/// which strips the unknown grant types in `Client::ephemeral_from_url` *before* this
-/// validation runs, so the sanitized list passes here.
+/// Grant-type validation for ephemeral (CIMD) client documents.
+///
+/// Strict by default: an advertised grant type Rauthy does not support is rejected.
+/// An operator can opt into accepting such a document by enabling
+/// `ephemeral_clients.ignore_unknown_auth_flows`, which strips the unknown grant types in
+/// `Client::ephemeral_from_url` *before* this validation runs, so the sanitized list passes here.
 ///
 /// This is the one grant-type field that stays a `Vec<String>` rather than a `Vec<GrantType>`:
 /// the document is deserialized from a remote source, so an unknown grant type has to survive

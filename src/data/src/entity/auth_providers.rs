@@ -36,7 +36,7 @@ use std::str::FromStr;
 use tracing::{debug, error};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, postgres_types::FromSql)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, postgres_types::FromSql)]
 #[postgres(rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum AuthProviderType {
@@ -48,7 +48,7 @@ pub enum AuthProviderType {
 
 impl AuthProviderType {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::Custom => "custom",
             Self::GitHub => "github",
@@ -134,7 +134,7 @@ impl FromStr for AuthProviderLinkCookie {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let bytes = base64_decode(value)?;
-        let slf = deserialize::<AuthProviderLinkCookie>(bytes.as_slice())?;
+        let slf = deserialize::<Self>(bytes.as_slice())?;
         Ok(slf)
     }
 }
@@ -672,13 +672,12 @@ impl AuthProviderCallback {
             .get_remove(Cache::AuthProviderCallback, callback_id)
             .await?;
 
-        match opt {
-            None => Err(ErrorResponse::new(
+        opt.ok_or_else(|| {
+            ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "Callback Code not found - timeout reached?",
-            )),
-            Some(slf) => Ok(slf),
-        }
+            )
+        })
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
@@ -757,16 +756,13 @@ impl AuthProviderCallback {
 
         // return early if we got any error
         if !res.status().is_success() {
-            let err = match res.text().await {
-                Ok(body) => format!(
-                    "HTTP {status} during POST {} for upstream auth provider '{}'\n{body}",
-                    provider.token_endpoint, provider.client_id
-                ),
-                Err(_) => format!(
+            let err = res.text().await.map_or_else(|_| format!(
                     "HTTP {status} during POST {} for upstream auth provider '{}' without any body",
                     provider.token_endpoint, provider.client_id
-                ),
-            };
+                ), |body| format!(
+                    "HTTP {status} during POST {} for upstream auth provider '{}'\n{body}",
+                    provider.token_endpoint, provider.client_id
+                ));
             error!("{}", err);
             return Err(ErrorResponse::new(ErrorResponseType::Internal, err));
         }
@@ -991,13 +987,13 @@ pub struct AuthProviderAddressClaims<'a> {
     pub country: Option<&'a str>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ProviderMfaLogin {
     Yes,
     No,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum NewFederatedUserCreated {
     Yes,
     No,
@@ -1059,17 +1055,9 @@ impl AuthProviderIdClaims<'_> {
     }
 
     fn family_name(&self) -> Option<&str> {
-        if let Some(family_name) = &self.family_name {
-            Some(family_name)
-        } else if let Some(name) = &self.name {
-            if let Some((_, family_name)) = name.split_once(' ') {
-                Some(family_name)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+        self.family_name
+            .as_deref()
+            .or_else(|| self.name.as_deref()?.split_once(' ').map(|(_, f)| f))
     }
 
     fn apply_provider_email(&self, user: &mut User, email: String) -> Option<String> {
@@ -1300,21 +1288,19 @@ impl AuthProviderIdClaims<'_> {
 
         let now = Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
-            let mut forbidden_error = None;
-
-            // validate federation_uid
-            // we must reject any upstream login, if a non-federated local user with the same email
-            // exists, as it could lead to an account takeover
-            if user.federation_uid.is_none()
+            // validate federation_uid and auth_provider_id:
+            // we must reject any upstream login if a non-federated local user with the same email
+            // exists, as it could lead to an account takeover, or if the auth provider mismatches
+            let forbidden_error = if user.auth_provider_id.as_deref() != Some(provider.id.as_str())
+            {
+                Some("invalid login from wrong auth provider")
+            } else if user.federation_uid.is_none()
                 || user.federation_uid.as_deref() != Some(claims_user_id.as_str())
             {
-                forbidden_error = Some("non-federated user or ID mismatch");
-            }
-
-            // validate auth_provider_id
-            if user.auth_provider_id.as_deref() != Some(provider.id.as_str()) {
-                forbidden_error = Some("invalid login from wrong auth provider");
-            }
+                Some("non-federated user or ID mismatch")
+            } else {
+                None
+            };
 
             if let Some(err) = forbidden_error {
                 user.save_login_failure().await?;
@@ -1444,11 +1430,10 @@ impl AuthProviderIdClaims<'_> {
             found_values = true;
         }
 
-        let preferred_username = if let Some(username) = &self.preferred_username {
-            Some(username.to_string())
-        } else {
-            self.login.as_ref().map(ToString::to_string)
-        };
+        let preferred_username = self.preferred_username.as_ref().map_or_else(
+            || self.login.as_ref().map(ToString::to_string),
+            |username| Some(username.to_string()),
+        );
         if let Some(username) = preferred_username {
             // Check via local read first, which is a lot cheaper than write through the Raft.
             if UserValues::validate_preferred_username_free(username.clone())

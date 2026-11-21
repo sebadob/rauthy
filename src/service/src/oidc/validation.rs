@@ -51,20 +51,18 @@ pub async fn validate_auth_code_req_params(
         }
         // 'plain' is the default method to be assumed by the OAuth specification when it is not
         // further specified.
-        let method = if let Some(m) = code_challenge_method {
-            m.to_owned()
-        } else {
-            String::from("plain")
-        };
-        client.validate_challenge_method(&method)?;
+        let method = code_challenge_method.as_deref().unwrap_or("plain");
+        client.validate_challenge_method(method)?;
     }
 
     Ok((client, header))
 }
 
-/// `resource` is the optional RFC 8707 `resource` of the token request. It may only narrow the
-/// resource granted to the refresh token, which with a single granted resource means it must
-/// match it. Without it, the granted resource is carried forward unchanged.
+/// `resource` is the optional RFC 8707 `resource` of the token request.
+///
+/// It may only narrow the resource granted to the refresh token,
+/// which with a single granted resource means it must match it.
+/// Without it, the granted resource is carried forward unchanged.
 pub async fn validate_and_refresh_token(
     client: Client,
     refresh_token: &str,
@@ -247,15 +245,14 @@ pub async fn validate_and_refresh_token(
     // here - otherwise `auth_time` (derived from `last_login`) would advance on every refresh.
     // The `auth_time` is carried on the refresh token claims instead (see below).
 
-    let auth_time = if let Some(ts) = claims.auth_time {
-        AuthTime::given(ts)
-    } else {
+    let auth_time = claims.auth_time.map_or_else(
         // This is not 100% correct but will make the migration from older to new refresh
         // tokens smooth. In a future release, the `auth_time` can be set to 'required' in the
         // claims. Optional for now to still accept older tokens.
         // As soon as no old refresh tokens exist anymore, this branch will never be used anyway.
-        AuthTime::now()
-    };
+        AuthTime::now,
+        AuthTime::given,
+    );
 
     let result = TokenSet::from_user(
         &user,

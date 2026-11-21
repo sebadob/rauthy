@@ -19,7 +19,7 @@ use std::fmt::Debug;
 use tokio::task;
 use tracing::{debug, error, info};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ClientScim {
     pub client_id: String,
     // TODO migrate this value to an encrypted one
@@ -55,7 +55,7 @@ impl From<&mut hiqlite::Row<'_>> for ClientScim {
 }
 
 impl From<tokio_postgres::Row> for ClientScim {
-    fn from(row: tokio_postgres::Row) -> ClientScim {
+    fn from(row: tokio_postgres::Row) -> Self {
         let bearer_token = Self::decrypt_bearer_token(row.get("bearer_token"))
             .expect("Column clients_scim.bearer_token corrupted");
         Self {
@@ -219,7 +219,7 @@ impl ClientScim {
 
     /// Returns `true` if the `group_sync_prefix` matches any `user.group` or is `None`
     fn is_user_group_sync_prefix_match(&self, user: &User) -> bool {
-        if let Some(prefix) = &self.group_sync_prefix {
+        self.group_sync_prefix.as_ref().is_none_or(|prefix| {
             if user.groups.as_deref().unwrap_or_default().contains(prefix) {
                 true
             } else {
@@ -230,9 +230,7 @@ impl ClientScim {
                 );
                 false
             }
-        } else {
-            true
-        }
+        })
     }
 
     /// Triggers a complete SCIM sync for this client.
@@ -1301,10 +1299,10 @@ fn json_patch_remove_member(user_id_remote: &str) -> String {
 /// `None` for `external_id` to unlink the remote group from Rauthy. The raw (unescaped) values
 /// are encoded by serde, so any input produces a valid JSON document.
 fn json_patch_replace_group_name(group_name: &str, external_id: Option<&str>) -> String {
-    let value = match external_id {
-        Some(id) => serde_json::json!({ "displayName": group_name, "externalId": id }),
-        None => serde_json::json!({ "displayName": group_name, "externalId": null }),
-    };
+    let value = external_id.map_or_else(
+        || serde_json::json!({ "displayName": group_name, "externalId": null }),
+        |id| serde_json::json!({ "displayName": group_name, "externalId": id }),
+    );
     serde_json::json!({
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [{ "op": "replace", "value": value }]

@@ -81,13 +81,10 @@ impl PamToken {
     }
 
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        match DB::hql().get(Cache::PAM, id).await? {
-            Some(slf) => Ok(slf),
-            None => Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid PAM token",
-            )),
-        }
+        DB::hql()
+            .get(Cache::PAM, id)
+            .await?
+            .ok_or_else(|| ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid PAM token"))
     }
 
     pub async fn delete(self) -> Result<(), ErrorResponse> {

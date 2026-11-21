@@ -91,7 +91,7 @@ VALUES ($1, $2, $3, $4, $5, $6)";
 
         let enc_key_active = EncKeys::get_static().enc_key_active.clone();
 
-        ApiKeyEntity {
+        Self {
             name,
             secret: secret_enc,
             created,
@@ -140,7 +140,7 @@ VALUES ($1, $2, $3, $4, $5, $6)";
     }
 
     pub async fn generate_secret(name: &str) -> Result<String, ErrorResponse> {
-        let entity = ApiKeyEntity::find(name).await?;
+        let entity = Self::find(name).await?;
         let api_key = entity.into_api_key()?;
 
         // generate a new secret
@@ -186,7 +186,7 @@ VALUES ($1, $2, $3, $4, $5, $6)";
         expires: Option<i64>,
         access: Vec<ApiKeyAccess>,
     ) -> Result<(), ErrorResponse> {
-        let entity = ApiKeyEntity::find(name).await?;
+        let entity = Self::find(name).await?;
         let mut api_key = entity.into_api_key()?;
 
         let secret_enc = EncValue::encrypt(&api_key.secret)?.into_bytes().to_vec();
@@ -353,7 +353,7 @@ impl ApiKeyEntity {
 
 // NOTE: If you expand this list in the future, make sure to only add new types at the end to never
 // run into deserialization issues!
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AccessGroup {
     Blacklist,
     Clients,
@@ -371,7 +371,7 @@ pub enum AccessGroup {
     ApiKeys,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AccessRights {
     Read,
@@ -380,7 +380,7 @@ pub enum AccessRights {
     Delete,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ApiKeyAccess {
     pub group: AccessGroup,
     pub access_rights: Vec<AccessRights>,

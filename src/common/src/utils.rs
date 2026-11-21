@@ -165,8 +165,8 @@ pub fn real_ip_from_svc_req(req: &ServiceRequest) -> Result<IpAddr, ErrorRespons
 
 #[inline(always)]
 fn parse_peer_addr(peer_addr: Option<&str>, use_dummy_addr: bool) -> Result<IpAddr, ErrorResponse> {
-    match peer_addr {
-        None => {
+    peer_addr.map_or_else(
+        || {
             if use_dummy_addr {
                 Ok(DUMMY_ADDRESS)
             } else {
@@ -175,15 +175,15 @@ fn parse_peer_addr(peer_addr: Option<&str>, use_dummy_addr: bool) -> Result<IpAd
                     "No IP Addr in Connection Info - this should only happen in tests",
                 ))
             }
-        }
-        Some(peer) => match IpAddr::from_str(peer) {
+        },
+        |peer| match IpAddr::from_str(peer) {
             Ok(ip) => Ok(ip),
             Err(err) => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("Cannot parse peer IP address: {err}"),
             )),
         },
-    }
+    )
 }
 
 #[inline(always)]

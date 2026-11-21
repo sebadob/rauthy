@@ -91,7 +91,7 @@ VALUES ($1, $2, $3, $4, $5)";
 
 impl Jwk {
     #[must_use]
-    pub fn new(
+    pub const fn new(
         kid: String,
         created_at: time::OffsetDateTime,
         signature: JwkKeyPairAlg,
@@ -116,7 +116,7 @@ pub struct JWKS {
 
 // CRUD
 impl JWKS {
-    pub async fn find_pk() -> Result<JWKS, ErrorResponse> {
+    pub async fn find_pk() -> Result<Self, ErrorResponse> {
         let client = DB::hql();
 
         if let Some(slf) = client.get(Cache::App, IDX_JWKS).await? {
@@ -130,7 +130,7 @@ impl JWKS {
             DB::pg_query(sql, &[], 8).await?
         };
 
-        let mut jwks = JWKS::default();
+        let mut jwks = Self::default();
         for cert in res {
             let jwk_decrypted = EncValue::try_from(cert.jwk)?.decrypt()?.to_vec();
             let kp = JwkKeyPair {
@@ -314,14 +314,9 @@ pub struct JWKSPublicKey {
 impl JWKSPublicKey {
     #[inline]
     pub fn alg(&self) -> Result<&JwkKeyPairAlg, ErrorResponse> {
-        if let Some(alg) = &self.alg {
-            Ok(alg)
-        } else {
-            Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
-                "No 'alg' in JwkKeyPublicKey",
-            ))
-        }
+        self.alg.as_ref().ok_or_else(|| {
+            ErrorResponse::new(ErrorResponseType::Internal, "No 'alg' in JwkKeyPublicKey")
+        })
     }
 
     #[inline]
@@ -418,24 +413,25 @@ impl JWKSPublicKey {
             Ok(res) => {
                 if res.status().is_success() {
                     match res.json::<JWKS>().await {
-                        Ok(jwks) => {
-                            if let Some(key) = jwks
-                                .keys
-                                .into_iter()
-                                .find(|k| k.kid.as_deref() == Some(kid.as_str()))
-                            {
-                                if let Err(err) = key.validate_self() {
-                                    Err(err)
-                                } else {
-                                    Ok(key)
-                                }
-                            } else {
-                                Err(ErrorResponse::new(
-                                    ErrorResponseType::NotFound,
-                                    "cannot find given `kid` in JWKS",
-                                ))
-                            }
-                        }
+                        Ok(jwks) => jwks
+                            .keys
+                            .into_iter()
+                            .find(|k| k.kid.as_deref() == Some(kid.as_str()))
+                            .map_or_else(
+                                || {
+                                    Err(ErrorResponse::new(
+                                        ErrorResponseType::NotFound,
+                                        "cannot find given `kid` in JWKS",
+                                    ))
+                                },
+                                |key| {
+                                    if let Err(err) = key.validate_self() {
+                                        Err(err)
+                                    } else {
+                                        Ok(key)
+                                    }
+                                },
+                            ),
                         Err(err) => {
                             error!("{}", err);
                             Err(ErrorResponse::new(
@@ -644,27 +640,27 @@ impl JwkKeyPair {
 
         let kid = jwk_entity.kid.clone();
         let res = match key_pair_type {
-            JwkKeyPairAlg::RS256 => JwkKeyPair {
+            JwkKeyPairAlg::RS256 => Self {
                 kid,
                 typ: JwkKeyPairAlg::RS256,
                 bytes: jwk_decrypted,
             },
-            JwkKeyPairAlg::RS384 => JwkKeyPair {
+            JwkKeyPairAlg::RS384 => Self {
                 kid,
                 typ: JwkKeyPairAlg::RS384,
                 bytes: jwk_decrypted,
             },
-            JwkKeyPairAlg::RS512 => JwkKeyPair {
+            JwkKeyPairAlg::RS512 => Self {
                 kid,
                 typ: JwkKeyPairAlg::RS512,
                 bytes: jwk_decrypted,
             },
-            JwkKeyPairAlg::EdDSA => JwkKeyPair {
+            JwkKeyPairAlg::EdDSA => Self {
                 kid,
                 typ: JwkKeyPairAlg::EdDSA,
                 bytes: jwk_decrypted,
             },
-            JwkKeyPairAlg::Ed25519 => JwkKeyPair {
+            JwkKeyPairAlg::Ed25519 => Self {
                 kid,
                 typ: JwkKeyPairAlg::Ed25519,
                 bytes: jwk_decrypted,
@@ -690,7 +686,7 @@ impl JwkKeyPair {
             DB::pg_query_one(sql, &[&kid]).await?
         };
 
-        let kp = JwkKeyPair::decrypt(&jwk, jwk.signature)?;
+        let kp = Self::decrypt(&jwk, jwk.signature)?;
         client.put(Cache::App, idx, &kp, CACHE_TTL_APP).await?;
 
         Ok(kp)
@@ -728,7 +724,7 @@ LIMIT 1";
             DB::pg_query_one(sql, &[&signature]).await?
         };
 
-        let jwk = JwkKeyPair::decrypt(&jwk_latest, key_pair_alg)?;
+        let jwk = Self::decrypt(&jwk_latest, key_pair_alg)?;
         client.put(Cache::App, idx, &jwk, CACHE_TTL_APP).await?;
 
         Ok(jwk)
@@ -868,7 +864,7 @@ impl JwkKeyPair {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JwkKeyPairType {
     RSA,
     #[default]
@@ -878,10 +874,10 @@ pub enum JwkKeyPairType {
 impl JwkKeyPairType {
     #[inline]
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            JwkKeyPairType::RSA => "RSA",
-            JwkKeyPairType::OKP => "OKP",
+            Self::RSA => "RSA",
+            Self::OKP => "OKP",
         }
     }
 }
@@ -901,18 +897,18 @@ pub enum JwkKeyPairAlg {
 impl From<&mut hiqlite::Row<'_>> for JwkKeyPairAlg {
     fn from(row: &mut hiqlite::Row<'_>) -> Self {
         let sig: String = row.get("signature");
-        JwkKeyPairAlg::from_str(&sig).expect("corrupted signature in database")
+        Self::from_str(&sig).expect("corrupted signature in database")
     }
 }
 
 impl From<String> for JwkKeyPairAlg {
     fn from(value: String) -> Self {
         match value.as_str() {
-            "RS256" => JwkKeyPairAlg::RS256,
-            "RS384" => JwkKeyPairAlg::RS384,
-            "RS512" => JwkKeyPairAlg::RS512,
-            "EdDSA" => JwkKeyPairAlg::EdDSA,
-            "Ed25519" => JwkKeyPairAlg::Ed25519,
+            "RS256" => Self::RS256,
+            "RS384" => Self::RS384,
+            "RS512" => Self::RS512,
+            "EdDSA" => Self::EdDSA,
+            "Ed25519" => Self::Ed25519,
             _ => unreachable!(),
         }
     }
@@ -921,7 +917,7 @@ impl From<String> for JwkKeyPairAlg {
 impl postgres_types::FromSql<'_> for JwkKeyPairAlg {
     fn from_sql(_ty: &Type, raw: &[u8]) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
         let sig = String::from_utf8_lossy(raw);
-        let slf = JwkKeyPairAlg::from_str(sig.as_ref()).expect("corrupted signature in database");
+        let slf = Self::from_str(sig.as_ref()).expect("corrupted signature in database");
         Ok(slf)
     }
 
@@ -935,13 +931,13 @@ impl postgres_types::FromSql<'_> for JwkKeyPairAlg {
 impl JwkKeyPairAlg {
     #[inline]
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            JwkKeyPairAlg::RS256 => "RS256",
-            JwkKeyPairAlg::RS384 => "RS384",
-            JwkKeyPairAlg::RS512 => "RS512",
-            JwkKeyPairAlg::EdDSA => "EdDSA",
-            JwkKeyPairAlg::Ed25519 => "Ed25519",
+            Self::RS256 => "RS256",
+            Self::RS384 => "RS384",
+            Self::RS512 => "RS512",
+            Self::EdDSA => "EdDSA",
+            Self::Ed25519 => "Ed25519",
         }
     }
 
@@ -955,9 +951,7 @@ impl JwkKeyPairAlg {
     #[allow(clippy::similar_names)]
     pub fn is_compatible_with(&self, other: &Self) -> bool {
         match self {
-            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
-                other == &Self::EdDSA || other == &Self::Ed25519
-            }
+            Self::EdDSA | Self::Ed25519 => other == &Self::EdDSA || other == &Self::Ed25519,
             slf => slf == other,
         }
     }
@@ -975,11 +969,11 @@ impl FromStr for JwkKeyPairAlg {
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "RS256" => Ok(JwkKeyPairAlg::RS256),
-            "RS384" => Ok(JwkKeyPairAlg::RS384),
-            "RS512" => Ok(JwkKeyPairAlg::RS512),
-            "EdDSA" => Ok(JwkKeyPairAlg::EdDSA),
-            "Ed25519" => Ok(JwkKeyPairAlg::Ed25519),
+            "RS256" => Ok(Self::RS256),
+            "RS384" => Ok(Self::RS384),
+            "RS512" => Ok(Self::RS512),
+            "EdDSA" => Ok(Self::EdDSA),
+            "Ed25519" => Ok(Self::Ed25519),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Token algorithm",

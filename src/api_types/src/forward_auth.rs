@@ -30,6 +30,6 @@ pub struct ForwardAuthCallbackParams {
 }
 
 #[inline]
-fn redirect_state() -> u16 {
+const fn redirect_state() -> u16 {
     401
 }

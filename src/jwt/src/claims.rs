@@ -147,11 +147,13 @@ pub struct JwtAccessClaims<'a> {
 }
 
 /// RFC 8693 §4.1 `act` (actor) claim. Identifies the party acting on behalf of the `sub`.
+///
 /// Nests recursively, so a chain of delegation keeps the whole history: the outermost `act`
 /// is the current actor, and each nested `act` is the one it in turn acts for.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActClaim<'a> {
     pub sub: &'a str,
+    #[allow(clippy::use_self)]
     #[serde(borrow, skip_serializing_if = "Option::is_none")]
     pub act: Option<Box<ActClaim<'a>>>,
 }
@@ -269,7 +271,9 @@ pub const RESERVED_ROOT_CLAIMS: &[&str] = &[
 ];
 
 /// Ensures no key of a flattened, root-promoted custom claim map collides with a
-/// [`RESERVED_ROOT_CLAIMS`] name. On collision, returns an error listing the
+/// [`RESERVED_ROOT_CLAIMS`] name.
+///
+/// On collision, returns an error listing the
 /// offending keys so the misconfigured scope can be fixed; the token is never
 /// issued with a shadowed claim.
 pub fn validate_no_reserved_collision<S: ::std::hash::BuildHasher>(
@@ -346,7 +350,7 @@ pub enum JwtTokenType {
 
 impl JwtTokenType {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::Bearer => "Bearer",
             Self::DPoP => "DPoP",
@@ -392,7 +396,7 @@ impl Display for JwtAmrValue {
 
 impl JwtAmrValue {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::Pwd => "pwd",
             Self::Mfa => "mfa",

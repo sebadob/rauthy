@@ -44,7 +44,7 @@ impl FromStr for ContinuationToken {
 
 impl ContinuationToken {
     #[must_use]
-    pub fn new(id: String, ts: i64) -> Self {
+    pub const fn new(id: String, ts: i64) -> Self {
         Self { id, ts }
     }
 

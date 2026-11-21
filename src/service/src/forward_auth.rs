@@ -395,22 +395,24 @@ fn percent_encode_header_value(value: &str) -> Cow<'_, str> {
 
 #[inline]
 fn get_header<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, ErrorResponse> {
-    match req.headers().get(key) {
-        None => {
+    req.headers().get(key).map_or_else(
+        || {
             debug!("Missing header {key}");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("Missing header {key}"),
             ))
-        }
-        Some(v) => v.to_str().map_err(|err| {
-            debug!("Header {key} is not valid UTF-8: {err:?}");
-            ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("Header {key} is not valid UTF-8"),
-            )
-        }),
-    }
+        },
+        |v| {
+            v.to_str().map_err(|err| {
+                debug!("Header {key} is not valid UTF-8: {err:?}");
+                ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    format!("Header {key} is not valid UTF-8"),
+                )
+            })
+        },
+    )
 }
 
 #[inline]
@@ -419,20 +421,15 @@ fn get_header_alt<'a>(
     key_second: &str,
     req: &'a HttpRequest,
 ) -> Result<&'a str, ErrorResponse> {
-    match get_header(key_first, req) {
-        Ok(v) => Ok(v),
-        Err(_) => {
-            if let Ok(v) = get_header(key_second, req) {
-                Ok(v)
-            } else {
-                debug!("Missing at least one of headers {key_first} / {key_second}");
-                Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Missing at least one of headers {key_first} / {key_second}"),
-                ))
-            }
-        }
-    }
+    get_header(key_first, req)
+        .or_else(|_| get_header(key_second, req))
+        .map_err(|_| {
+            debug!("Missing at least one of headers {key_first} / {key_second}");
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("Missing at least one of headers {key_first} / {key_second}"),
+            )
+        })
 }
 
 #[inline]

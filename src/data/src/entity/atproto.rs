@@ -58,7 +58,7 @@ impl std::fmt::Debug for Client {
 impl Client {
     pub fn get() -> Self {
         ATPROTO_CLIENT
-            .get_or_init(|| Client::new().expect("failed to initialize ATProto client"))
+            .get_or_init(|| Self::new().expect("failed to initialize ATProto client"))
             .clone()
     }
 
@@ -119,7 +119,7 @@ impl Client {
                 }),
                 handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
                     dns_txt_resolver: DnsTxtResolver::default(),
-                    http_client: http_client.clone(),
+                    http_client,
                 }),
                 authorization_server_metadata: Default::default(),
                 protected_resource_metadata: Default::default(),

@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::env;
+use std::str::FromStr;
 use std::sync::{LazyLock, OnceLock};
 
-#[derive(Debug, Default, PartialEq, Deserialize)]
+#[derive(Debug, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CookieMode {
     #[default]
@@ -12,26 +13,26 @@ pub enum CookieMode {
     DangerInsecure,
 }
 
-impl From<&str> for CookieMode {
-    fn from(s: &str) -> Self {
+impl FromStr for CookieMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "host" => Self::Host,
-            "secure" => Self::Secure,
-            "danger-insecure" => Self::DangerInsecure,
-            v => {
-                panic!("Cannot parse {v} as CookieMode");
-            }
+            "host" => Ok(Self::Host),
+            "secure" => Ok(Self::Secure),
+            "danger-insecure" => Ok(Self::DangerInsecure),
+            v => Err(format!("Cannot parse {v} as CookieMode")),
         }
     }
 }
 
 impl CookieMode {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            CookieMode::Host => "host",
-            CookieMode::Secure => "secure",
-            CookieMode::DangerInsecure => "danger-insecure",
+            Self::Host => "host",
+            Self::Secure => "secure",
+            Self::DangerInsecure => "danger-insecure",
         }
     }
 }
@@ -113,6 +114,7 @@ pub static IDX_WEBAUTHN_MDS_CA_LIST: &str = "webauthn_mds_ca_list";
 pub static APP_START: LazyLock<DateTime<Utc>> = LazyLock::new(Utc::now);
 pub static RAUTHY_ADMIN_ROLE: &str = "rauthy_admin";
 /// Prefix for delegated group-admin roles, e.g. `rauthy_admin:my_group`.
+///
 /// A role with this prefix grants group-scoped user administration.
 /// `rauthy_admin:<group>` is an exact group-name match, a trailing `*`
 /// (`rauthy_admin:<prefix>*`) is a prefix glob, and `rauthy_admin:*` matches every

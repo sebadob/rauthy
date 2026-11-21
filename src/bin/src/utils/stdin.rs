@@ -3,7 +3,7 @@ use colored::Colorize;
 use std::fmt::Write;
 use tokio::io::{AsyncBufReadExt, BufReader, stdin};
 
-pub(crate) async fn read_line_stdin() -> Result<String, StdError> {
+pub async fn read_line_stdin() -> Result<String, StdError> {
     let (tx, rx) = flume::unbounded::<Option<String>>();
 
     tokio::spawn(async move {
@@ -29,7 +29,7 @@ pub(crate) async fn read_line_stdin() -> Result<String, StdError> {
     Ok(res)
 }
 
-pub(crate) async fn read_line_stdin_yes() -> Result<bool, StdError> {
+pub async fn read_line_stdin_yes() -> Result<bool, StdError> {
     loop {
         let v = read_line_stdin().await?.trim().to_lowercase();
         if v == "yes" || v == "y" {

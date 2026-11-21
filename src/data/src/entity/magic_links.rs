@@ -17,7 +17,7 @@ use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::warn;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MagicLinkUsage {
     EmailChange(String),
@@ -39,19 +39,19 @@ impl FromStr for MagicLinkUsage {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let (ty, v) = value.split_once('$').unwrap_or((value, ""));
         let slf = match ty {
-            "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
+            "email_change" => Self::EmailChange(v.to_string()),
             "new_user" => {
                 if v.is_empty() {
-                    MagicLinkUsage::NewUser(None)
+                    Self::NewUser(None)
                 } else {
-                    MagicLinkUsage::NewUser(Some(v.to_string()))
+                    Self::NewUser(Some(v.to_string()))
                 }
             }
             "password_reset" => {
                 if v.is_empty() {
-                    MagicLinkUsage::PasswordReset(None)
+                    Self::PasswordReset(None)
                 } else {
-                    MagicLinkUsage::PasswordReset(Some(v.to_string()))
+                    Self::PasswordReset(Some(v.to_string()))
                 }
             }
             _ => {
@@ -71,15 +71,15 @@ impl Display for MagicLinkUsage {
         // For types with a value, `$` was chosen as the separating characters since it is URL safe.
         // It also makes splitting of the value quite easy.
         match self {
-            MagicLinkUsage::EmailChange(email) => write!(f, "email_change${email}"),
-            MagicLinkUsage::NewUser(redirect_uri) => {
+            Self::EmailChange(email) => write!(f, "email_change${email}"),
+            Self::NewUser(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
                     write!(f, "new_user${uri}")
                 } else {
                     write!(f, "new_user")
                 }
             }
-            MagicLinkUsage::PasswordReset(redirect_uri) => {
+            Self::PasswordReset(redirect_uri) => {
                 if let Some(uri) = redirect_uri {
                     write!(f, "password_reset${uri}")
                 } else {
@@ -127,7 +127,7 @@ impl MagicLink {
     ) -> Result<Self, ErrorResponse> {
         let id = get_rand(64);
         let exp = OffsetDateTime::now_utc().add(lifetime).unix_timestamp();
-        let link = MagicLink {
+        let link = Self {
             id,
             user_id,
             csrf_token: get_rand(48),
@@ -195,7 +195,7 @@ VALUES ($1, $2, $3, $4, $5, $6)";
         Ok(res)
     }
 
-    pub async fn find_by_user(user_id: String) -> Result<MagicLink, ErrorResponse> {
+    pub async fn find_by_user(user_id: String) -> Result<Self, ErrorResponse> {
         let sql = "SELECT * FROM magic_links WHERE user_id = $1";
         let res = if is_hiqlite() {
             DB::hql().query_as_one(sql, params!(user_id)).await?

@@ -215,7 +215,7 @@ pub struct UpdateUserSelfRequest {
     pub user_values: Option<UserValuesRequest>,
 }
 
-#[derive(Debug, Default, PartialEq, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Default, PartialEq, Eq, Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UserValuesRequest {
     /// Validation: `[0-9]{4}-[0-9]{2}-[0-9]{2}`
@@ -265,9 +265,9 @@ impl FromStr for UserAttrConfigTyp {
 
 impl UserAttrConfigTyp {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            UserAttrConfigTyp::Email => "email",
+            Self::Email => "email",
         }
     }
 }
@@ -456,11 +456,11 @@ pub enum OtpKind {
 
 impl OtpKind {
     #[must_use]
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            OtpKind::Email => "email",
-            OtpKind::Phone => "phone",
-            OtpKind::Time => "time",
+            Self::Email => "email",
+            Self::Phone => "phone",
+            Self::Time => "time",
         }
     }
 }

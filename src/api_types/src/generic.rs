@@ -32,7 +32,7 @@ pub enum I18nContent {
     Register,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     Cs,
@@ -121,7 +121,7 @@ pub struct SearchParams {
     pub limit: Option<u16>,
 }
 
-#[derive(PartialEq, Deserialize, ToSchema)]
+#[derive(PartialEq, Eq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchParamsIdx {
     // user params
@@ -133,7 +133,7 @@ pub enum SearchParamsIdx {
     Ip,
 }
 
-#[derive(PartialEq, Deserialize, ToSchema)]
+#[derive(PartialEq, Eq, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchParamsType {
     User,

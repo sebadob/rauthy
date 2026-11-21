@@ -24,7 +24,7 @@ pub struct Role {
 // CRUD
 impl Role {
     pub async fn create(role_req: RoleRequest) -> Result<Self, ErrorResponse> {
-        for role in Role::find_all().await? {
+        for role in Self::find_all().await? {
             if role.name == role_req.role {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -33,7 +33,7 @@ impl Role {
             }
         }
 
-        let new_role = Role {
+        let new_role = Self {
             id: new_store_id(),
             name: role_req.role,
             meta: role_req
@@ -63,7 +63,7 @@ impl Role {
     }
 
     pub async fn delete(id: &str) -> Result<(), ErrorResponse> {
-        let role = Role::find(id).await?;
+        let role = Self::find(id).await?;
 
         // prevent deletion of 'rauthy_admin'
         if role.name == "rauthy_admin" {
@@ -147,7 +147,7 @@ impl Role {
         new_name: String,
         meta: Option<serde_json::Value>,
     ) -> Result<Self, ErrorResponse> {
-        let role = Role::find(&id).await?;
+        let role = Self::find(&id).await?;
         let users = User::find_with_role(&role.name).await?;
 
         let new_role = Self {
@@ -218,7 +218,7 @@ impl Role {
 impl Role {
     pub async fn sanitize(rls: Vec<String>) -> Result<String, ErrorResponse> {
         let mut res = String::with_capacity(rls.len());
-        Role::find_all().await?.into_iter().for_each(|r| {
+        Self::find_all().await?.into_iter().for_each(|r| {
             if rls.contains(&r.name) {
                 res.push_str(r.name.as_str());
                 res.push(',');

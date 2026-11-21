@@ -12,7 +12,7 @@ pub struct I18nEmailLoginLocation<'a> {
 
 impl I18nEmailLoginLocation<'_> {
     #[must_use]
-    pub fn build(lang: Language) -> Self {
+    pub const fn build(lang: Language) -> Self {
         match lang {
             Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
@@ -32,7 +32,7 @@ impl I18nEmailLoginLocation<'_> {
 }
 
 impl I18nEmailLoginLocation<'_> {
-    fn build_cs() -> Self {
+    const fn build_cs() -> Self {
         Self {
             subject: "Bezpečnostní upozornění",
             unknown_location: "Přihlášení z neznámého místa",
@@ -43,7 +43,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_de() -> Self {
+    const fn build_de() -> Self {
         Self {
             subject: "Sicherheitswarnung",
             unknown_location: "Login von unbekannter Adresse",
@@ -54,7 +54,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_en() -> Self {
+    const fn build_en() -> Self {
         Self {
             subject: "Security Warning",
             unknown_location: "Login from unknown location",
@@ -65,7 +65,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_es() -> Self {
+    const fn build_es() -> Self {
         Self {
             subject: "Aviso de seguridad",
             unknown_location: "Inicio de sesión desde una ubicación desconocida",
@@ -75,7 +75,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_fr() -> Self {
+    const fn build_fr() -> Self {
         Self {
             subject: "Avertissement de sécurité",
             unknown_location: "Connexion depuis un emplacement inconnu",
@@ -86,7 +86,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_ja() -> Self {
+    const fn build_ja() -> Self {
         Self {
             subject: "セキュリティの警告",
             unknown_location: "見慣れない場所からのログイン",
@@ -96,7 +96,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_ko() -> Self {
+    const fn build_ko() -> Self {
         Self {
             subject: "Security Warning",
             unknown_location: "Login from unknown location",
@@ -107,7 +107,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_nb() -> Self {
+    const fn build_nb() -> Self {
         Self {
             subject: "Sikkerhetsvarsel",
             unknown_location: "Innlogging fra ukjent adresse",
@@ -118,7 +118,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_nl() -> Self {
+    const fn build_nl() -> Self {
         Self {
             subject: "Beveiligingswaarschuwing",
             unknown_location: "Inloggen vanaf onbekende locatie",
@@ -129,7 +129,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_pt() -> Self {
+    const fn build_pt() -> Self {
         Self {
             subject: "Aviso de segurança",
             unknown_location: "Início de sessão a partir de uma localização desconhecida",
@@ -139,7 +139,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_uk() -> Self {
+    const fn build_uk() -> Self {
         Self {
             subject: "Попередження безпеки",
             unknown_location: "Вхід з невідомого місця",
@@ -150,7 +150,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_ru() -> Self {
+    const fn build_ru() -> Self {
         Self {
             subject: "Предупреждение безопасности",
             unknown_location: "Вход с неизвестного местоположения",
@@ -161,7 +161,7 @@ impl I18nEmailLoginLocation<'_> {
         }
     }
 
-    fn build_zh_hans() -> Self {
+    const fn build_zh_hans() -> Self {
         Self {
             subject: "Security Warning",
             unknown_location: "Login from unknown location",

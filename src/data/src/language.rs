@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 use tracing::debug;
 
 // Note: Updating this enum will require an update on the LANGUAGES constant for the frontend too
-#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize, strum::EnumIter)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::EnumIter)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     Cs,
@@ -28,7 +28,7 @@ pub enum Language {
 
 impl Language {
     #[must_use]
-    pub fn all_available() -> [&'static str; 27] {
+    pub const fn all_available() -> [&'static str; 27] {
         [
             "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja",
             "ja-JP", "ko", "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pt", "pt-PT", "ru",
@@ -37,22 +37,22 @@ impl Language {
     }
 
     #[must_use]
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         // must return results that work with serde::Deserialize from lowercase
         match self {
-            Language::Cs => "cs",
-            Language::De => "de",
-            Language::En => "en",
-            Language::Es => "es",
-            Language::Fr => "fr",
-            Language::Ja => "ja",
-            Language::Ko => "ko",
-            Language::Nb => "nb",
-            Language::Nl => "nl",
-            Language::Pt => "pt",
-            Language::Ru => "ru",
-            Language::Uk => "uk",
-            Language::ZhHans => "zhhans",
+            Self::Cs => "cs",
+            Self::De => "de",
+            Self::En => "en",
+            Self::Es => "es",
+            Self::Fr => "fr",
+            Self::Ja => "ja",
+            Self::Ko => "ko",
+            Self::Nb => "nb",
+            Self::Nl => "nl",
+            Self::Pt => "pt",
+            Self::Ru => "ru",
+            Self::Uk => "uk",
+            Self::ZhHans => "zhhans",
         }
     }
 
@@ -62,30 +62,30 @@ impl Language {
     /// browsers and CLDR, and `zhhans` is not a valid tag. The frontend only
     /// reads the first two characters back, so this changes nothing else.
     #[must_use]
-    pub fn html_lang(&self) -> &'static str {
+    pub const fn html_lang(&self) -> &'static str {
         match self {
-            Language::Cs => "cs-CZ",
-            Language::De => "de-DE",
-            Language::En => "en-US",
-            Language::Es => "es-ES",
-            Language::Fr => "fr-FR",
-            Language::Ja => "ja-JP",
-            Language::Ko => "ko-KR",
-            Language::Nb => "nb-NO",
-            Language::Nl => "nl-NL",
-            Language::Pt => "pt-PT",
-            Language::Ru => "ru-RU",
-            Language::Uk => "uk-UA",
-            Language::ZhHans => "zh-Hans",
+            Self::Cs => "cs-CZ",
+            Self::De => "de-DE",
+            Self::En => "en-US",
+            Self::Es => "es-ES",
+            Self::Fr => "fr-FR",
+            Self::Ja => "ja-JP",
+            Self::Ko => "ko-KR",
+            Self::Nb => "nb-NO",
+            Self::Nl => "nl-NL",
+            Self::Pt => "pt-PT",
+            Self::Ru => "ru-RU",
+            Self::Uk => "uk-UA",
+            Self::ZhHans => "zh-Hans",
         }
     }
 
     /// The bare BCP 47 language tag, without a region, e.g. for the `lang` query of a remote
     /// consent source.
     #[must_use]
-    pub fn as_bcp47(&self) -> &'static str {
+    pub const fn as_bcp47(&self) -> &'static str {
         match self {
-            Language::ZhHans => "zh-Hans",
+            Self::ZhHans => "zh-Hans",
             lang => lang.as_str(),
         }
     }
@@ -99,7 +99,7 @@ impl Display for Language {
 
 impl From<&HeaderValue> for Language {
     fn from(value: &HeaderValue) -> Self {
-        Language::from(value.to_str().unwrap_or_default())
+        Self::from(value.to_str().unwrap_or_default())
     }
 }
 
@@ -138,16 +138,16 @@ impl TryFrom<&HttpRequest> for Language {
         // set via the UI and JS
         if let Some(cookie) = value.cookie(COOKIE_LOCALE) {
             debug!(?cookie);
-            return Ok(Language::from(cookie.value()));
+            return Ok(Self::from(cookie.value()));
         }
 
         if let Some(accept_lang) = value.headers().get(ACCEPT_LANGUAGE) {
             let accept_as_str = accept_lang.to_str().unwrap_or_default();
             let common_languages =
-                accept_language::intersection(accept_as_str, &Language::all_available());
+                accept_language::intersection(accept_as_str, &Self::all_available());
             debug!(?common_languages);
             if !common_languages.is_empty() {
-                return Ok(Language::from(common_languages.first().unwrap().as_str()));
+                return Ok(Self::from(common_languages.first().unwrap().as_str()));
             }
         }
 

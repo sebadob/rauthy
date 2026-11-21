@@ -27,7 +27,7 @@ const RES_PROVIDER_LOGO: u32 = 20;
 // The default height for any logo how it will be saved for possible later use
 const RES_LATER_USE: u32 = 128;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, postgres_types::FromSql)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, postgres_types::FromSql)]
 #[serde(rename_all = "lowercase")]
 #[postgres(rename_all = "lowercase")]
 pub enum LogoRes {
@@ -54,19 +54,19 @@ impl From<String> for LogoRes {
 
 impl LogoRes {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            LogoRes::Small => "small",
-            LogoRes::Medium => "medium",
-            LogoRes::Large => "large",
-            LogoRes::Svg => "svg",
-            LogoRes::Custom => "custom",
-            LogoRes::Favicon => "favicon",
+            Self::Small => "small",
+            Self::Medium => "medium",
+            Self::Large => "large",
+            Self::Svg => "svg",
+            Self::Custom => "custom",
+            Self::Favicon => "favicon",
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum LogoType {
     Client,
     AuthProvider,

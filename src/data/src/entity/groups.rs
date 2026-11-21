@@ -25,7 +25,7 @@ pub struct Group {
 impl Group {
     // Inserts a new group into the database
     pub async fn create(group_req: GroupRequest) -> Result<Self, ErrorResponse> {
-        for group in Group::find_all().await? {
+        for group in Self::find_all().await? {
             if group.name == group_req.group {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
@@ -34,7 +34,7 @@ impl Group {
             }
         }
 
-        let new_group = Group {
+        let new_group = Self {
             id: new_store_id(),
             name: group_req.group,
             meta: group_req
@@ -65,7 +65,7 @@ impl Group {
 
     // Deletes a group
     pub async fn delete(id: String) -> Result<(), ErrorResponse> {
-        let group = Group::find(id).await?;
+        let group = Self::find(id).await?;
         let users = User::find_with_group(&group.name).await?;
 
         let sql = "DELETE FROM groups WHERE id = $1";
@@ -144,7 +144,7 @@ impl Group {
         meta: Option<serde_json::Value>,
     ) -> Result<Self, ErrorResponse> {
         let client = DB::hql();
-        let group = Group::find(id).await?;
+        let group = Self::find(id).await?;
         let users = User::find_with_group(&group.name).await?;
 
         let new_group = Self {
@@ -228,7 +228,7 @@ impl Group {
 
         let groups = groups_opt.unwrap();
         let mut res = String::with_capacity(groups.len() * 8);
-        Group::find_all().await?.into_iter().for_each(|g| {
+        Self::find_all().await?.into_iter().for_each(|g| {
             if groups.contains(&g.name) {
                 res.push_str(g.name.as_str());
                 res.push(',');

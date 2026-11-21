@@ -126,21 +126,24 @@ ON CONFLICT(id) DO UPDATE SET data = $1";
                     )
                 })?;
 
-                let tag_name = if let Some(tag_name) = json.get("tag_name") {
-                    let tag_name = tag_name.as_str().unwrap_or_default();
-                    let (_, v) = tag_name.split_once('v').unwrap_or(("", RAUTHY_VERSION));
-                    semver::Version::parse(v).map_err(|err| {
-                        ErrorResponse::new(
+                let tag_name = json.get("tag_name").map_or_else(
+                    || {
+                        Err(ErrorResponse::new(
                             ErrorResponseType::Internal,
-                            format!("parsing remote Rauthy App version. {err:?}"),
-                        )
-                    })
-                } else {
-                    Err(ErrorResponse::new(
-                        ErrorResponseType::Internal,
-                        "Could not find 'tag_name' in Rauthy App Version lookup response",
-                    ))
-                }?;
+                            "Could not find 'tag_name' in Rauthy App Version lookup response",
+                        ))
+                    },
+                    |tag_name| {
+                        let tag_name = tag_name.as_str().unwrap_or_default();
+                        let (_, v) = tag_name.split_once('v').unwrap_or(("", RAUTHY_VERSION));
+                        semver::Version::parse(v).map_err(|err| {
+                            ErrorResponse::new(
+                                ErrorResponseType::Internal,
+                                format!("parsing remote Rauthy App version. {err:?}"),
+                            )
+                        })
+                    },
+                )?;
 
                 let html_url = json.get("html_url").map_or_else(
                     || format!("https://github.com/sebadob/rauthy/releases/tag/v{tag_name}"),

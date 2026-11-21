@@ -24,7 +24,7 @@ impl SponsorReminder {
                 .map(|r| r.get::<_, Vec<u8>>("data"))
         };
 
-        res.and_then(|data| deserialize::<SponsorReminder>(&data).ok())
+        res.and_then(|data| deserialize::<Self>(&data).ok())
             .map(|slf| slf.timestamp)
     }
 

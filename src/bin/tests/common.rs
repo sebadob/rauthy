@@ -52,7 +52,7 @@ pub async fn check_status(res: Response, code: u16) -> Result<Response, Box<dyn 
 }
 
 #[allow(dead_code)]
-pub async fn get_auth_headers() -> Result<HeaderMap, Box<dyn Error>> {
+pub async fn get_auth_headers() -> Result<HeaderMap, std::convert::Infallible> {
     if let Some(headers) = SESSION_HEADERS.get() {
         Ok(headers.clone())
     } else {
@@ -232,9 +232,9 @@ pub async fn session_headers_for_client(
     (headers, ts)
 }
 
-/// Logs in as an arbitrary user (must have a usable password) and returns the
-/// authenticated session headers (cookie + CSRF). Mirrors [`session_headers`] but with
-/// caller-provided credentials, used to obtain a delegated group-admin session.
+/// Logs in as an arbitrary user (must have a usable password) and returns the authenticated session headers (cookie + CSRF).
+///
+/// Mirrors [`session_headers`] but with caller-provided credentials, used to obtain a delegated group-admin session.
 pub async fn session_headers_with(email: &str, password: &str) -> HeaderMap {
     prepare_login(email, password).await.send().await
 }
@@ -273,9 +273,10 @@ impl PreparedLogin {
     }
 }
 
-/// Opens a session, solves its proof of work and builds the login without sending it, so callers
-/// can send several at once through [`PreparedLogin::send`], or [`PreparedLogin::response`] for a
-/// login expected to fail.
+/// Opens a session, solves its proof of work and builds the login without sending it.
+///
+/// Callers can send several at once through [`PreparedLogin::send`],
+/// or [`PreparedLogin::response`] for a login expected to fail.
 pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
     let backend_url = get_backend_url();
     let client = reqwest::Client::new();

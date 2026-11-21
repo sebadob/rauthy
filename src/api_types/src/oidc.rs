@@ -42,7 +42,7 @@ pub enum GrantType {
 impl GrantType {
     #[inline]
     #[must_use]
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::AuthorizationCode => "authorization_code",
             Self::ClientCredentials => "client_credentials",
@@ -56,11 +56,7 @@ impl GrantType {
     /// Joins the given flows into the CSV format used for `clients.flows_enabled`.
     #[must_use]
     pub fn csv(flows: &[Self]) -> String {
-        flows
-            .iter()
-            .map(GrantType::as_str)
-            .collect::<Vec<_>>()
-            .join(",")
+        flows.iter().map(Self::as_str).collect::<Vec<_>>().join(",")
     }
 }
 
@@ -92,7 +88,9 @@ impl Display for GrantType {
     }
 }
 
-/// The RFC 8693 token type identifiers (RFC 8693 §3). These are a different URN namespace from
+/// The RFC 8693 token type identifiers (RFC 8693 §3).
+///
+/// These are a different URN namespace from
 /// [`GrantType`]: `urn:ietf:params:oauth:token-type:*` rather than
 /// `urn:ietf:params:oauth:grant-type:*`, so the two are not interchangeable.
 ///
@@ -123,7 +121,7 @@ pub enum TokenType {
 impl TokenType {
     #[inline]
     #[must_use]
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::AccessToken => "urn:ietf:params:oauth:token-type:access_token",
             Self::RefreshToken => "urn:ietf:params:oauth:token-type:refresh_token",
@@ -557,7 +555,7 @@ pub struct JktClaim<'a> {
     pub jkt: &'a str,
 }
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum JwkKeyPairAlg {
     RS256,
     RS384,
@@ -572,11 +570,11 @@ pub enum JwkKeyPairAlg {
 impl Display for JwkKeyPairAlg {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            JwkKeyPairAlg::RS256 => "RS256",
-            JwkKeyPairAlg::RS384 => "RS384",
-            JwkKeyPairAlg::RS512 => "RS512",
-            JwkKeyPairAlg::EdDSA => "EdDSA",
-            JwkKeyPairAlg::Ed25519 => "Ed25519",
+            Self::RS256 => "RS256",
+            Self::RS384 => "RS384",
+            Self::RS512 => "RS512",
+            Self::EdDSA => "EdDSA",
+            Self::Ed25519 => "Ed25519",
         };
         write!(f, "{s}")
     }
@@ -667,8 +665,9 @@ pub struct SessionInfoResponse<'a> {
     pub state: SessionState,
 }
 
-/// RFC 7519 `aud` (audience) claim value: a single audience string, or an array of
-/// them. Rauthy serializes a single audience as a plain string (so there is no change
+/// RFC 7519 `aud` (audience) claim value: a single audience string, or an array of them.
+///
+/// Rauthy serializes a single audience as a plain string (so there is no change
 /// for existing consumers) and only emits a JSON array when two or more audiences are
 /// present (RFC 8707 `resource` indicators, the per-client `default_aud`, or the
 /// `solid` audience for Solid-OIDC ephemeral clients). Both forms are valid per the RFC.

@@ -54,7 +54,7 @@ impl ForwardAuthSession {
     }
 
     #[inline]
-    fn cookie_name(danger_insecure: bool) -> &'static str {
+    const fn cookie_name(danger_insecure: bool) -> &'static str {
         if danger_insecure {
             "Rauthy-Ext-Session"
         } else {
@@ -63,7 +63,7 @@ impl ForwardAuthSession {
     }
 
     #[inline]
-    fn cookie_name_csrf(danger_insecure: bool) -> &'static str {
+    const fn cookie_name_csrf(danger_insecure: bool) -> &'static str {
         if danger_insecure {
             "Rauthy-Ext-Session-CSRF"
         } else {

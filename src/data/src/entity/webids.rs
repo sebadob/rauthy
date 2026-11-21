@@ -69,7 +69,7 @@ impl WebId {
         Ok(slf)
     }
 
-    pub async fn upsert(web_id: WebId) -> Result<(), ErrorResponse> {
+    pub async fn upsert(web_id: Self) -> Result<(), ErrorResponse> {
         let sql = r"
 INSERT INTO webids (user_id, custom_triples, expose_email)
 VALUES ($1, $2, $3)
@@ -154,14 +154,14 @@ impl WebId {
         &self,
         formatter: &mut TurtleFormatter<Vec<u8>>,
     ) -> Result<(), ErrorResponse> {
-        if let Some(custom_triples) = self.custom_triples.as_ref() {
-            NTriplesParser::new(custom_triples.as_bytes()).parse_all(&mut |t| {
-                formatter.format(&t)?;
-                Ok(())
+        self.custom_triples
+            .as_ref()
+            .map_or(Ok(()), |custom_triples| {
+                NTriplesParser::new(custom_triples.as_bytes()).parse_all(&mut |t| {
+                    formatter.format(&t)?;
+                    Ok(())
+                })
             })
-        } else {
-            Ok(())
-        }
     }
 
     fn triple<'a>(s: impl Into<Subject<'a>>, p: &'a str, o: impl Into<Term<'a>>) -> Triple<'a> {
@@ -177,12 +177,12 @@ impl WebId {
         resp: WebIdResponse,
         formatter: &mut TurtleFormatter<Vec<u8>>,
     ) -> Result<(), ErrorResponse> {
-        let webid: WebId = resp.webid.into();
+        let webid: Self = resp.webid.into();
         let t_user = NamedNode {
-            iri: &WebId::resolve_webid_uri(&webid.user_id),
+            iri: &Self::resolve_webid_uri(&webid.user_id),
         };
         let t_card = NamedNode {
-            iri: &WebId::resolve_webid_card_uri(
+            iri: &Self::resolve_webid_card_uri(
                 &webid.user_id,
                 RauthyConfig::get().pub_url_with_scheme.as_str(),
             ),
@@ -255,7 +255,7 @@ impl WebId {
 
     pub fn try_into_turtle(resp: WebIdResponse) -> Result<String, ErrorResponse> {
         let mut formatter = TurtleFormatter::new(Vec::<u8>::new());
-        WebId::serialize_turtle(resp, &mut formatter)?;
+        Self::serialize_turtle(resp, &mut formatter)?;
 
         let finished = formatter.finish()?;
         Ok(String::from_utf8(finished).expect("Must be a valid turtle string."))

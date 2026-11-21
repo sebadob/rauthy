@@ -53,13 +53,13 @@ impl FromStr for ScimAction {
 impl Display for ScimAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ScimAction::UserCreateUpdate(uid) => write!(f, "uc_{uid}"),
-            ScimAction::UserDelete(uid) => write!(f, "ud_{uid}"),
-            ScimAction::UsersSync(created_ts) => write!(f, "us_{created_ts}"),
-            ScimAction::GroupCreateUpdate(gid) => write!(f, "gc_{gid}"),
-            ScimAction::GroupDelete(gid) => write!(f, "gd_{gid}"),
-            ScimAction::GroupsSync => write!(f, "gs_"),
-            ScimAction::Unknown => write!(f, "unknown"),
+            Self::UserCreateUpdate(uid) => write!(f, "uc_{uid}"),
+            Self::UserDelete(uid) => write!(f, "ud_{uid}"),
+            Self::UsersSync(created_ts) => write!(f, "us_{created_ts}"),
+            Self::GroupCreateUpdate(gid) => write!(f, "gc_{gid}"),
+            Self::GroupDelete(gid) => write!(f, "gd_{gid}"),
+            Self::GroupsSync => write!(f, "gs_"),
+            Self::Unknown => write!(f, "unknown"),
         }
     }
 }

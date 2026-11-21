@@ -48,7 +48,7 @@ pub struct GeneratedSecretEntry {
 }
 
 impl GeneratedSecretEntry {
-    pub fn new(key: GeneratedSecretKey, value: impl Into<String>) -> GeneratedSecretEntry {
+    pub fn new(key: GeneratedSecretKey, value: impl Into<String>) -> Self {
         Self {
             kind: key.kind,
             id: key.id,
@@ -130,12 +130,12 @@ fn now_utc() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
-fn is_expired(deadline: i64, now: i64) -> bool {
+const fn is_expired(deadline: i64, now: i64) -> bool {
     deadline > 0 && now >= deadline
 }
 
 #[must_use]
-pub fn deadline_from_ttl(ttl: Duration, now: i64) -> i64 {
+pub const fn deadline_from_ttl(ttl: Duration, now: i64) -> i64 {
     if ttl.is_zero() {
         0
     } else {

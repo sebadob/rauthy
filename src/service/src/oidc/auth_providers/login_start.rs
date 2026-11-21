@@ -137,30 +137,30 @@ fn validate_atproto_identifier(input: &str) -> Result<(), ErrorResponse> {
 
     let host = host.trim();
 
-    let ip_literal = if let Some(rest) = host.strip_prefix('[') {
-        rest.split(']').next().unwrap_or("")
-    } else if host.parse::<std::net::IpAddr>().is_ok() {
-        host
-    } else if let Some((h, _)) = host.rsplit_once(':') {
-        if h.parse::<std::net::IpAddr>().is_ok() {
-            h
-        } else {
-            host
-        }
-    } else {
-        host
-    };
+    let ip_literal = host
+        .strip_prefix('[')
+        .map(|rest| rest.split_once(']').map_or(rest, |(ip, _)| ip))
+        .or_else(|| host.parse::<std::net::IpAddr>().is_ok().then_some(host))
+        .or_else(|| {
+            host.rsplit_once(':')
+                .map(|(addr, _)| addr)
+                .filter(|addr| addr.parse::<std::net::IpAddr>().is_ok())
+        })
+        .unwrap_or(host);
 
-    let host_plain = if let Some(rest) = host.strip_prefix('[') {
-        rest.split(']').next().unwrap_or(rest)
-    } else if let Some((prefix, port)) = host.rsplit_once(':')
-        && !prefix.ends_with(':')
-        && port.chars().all(|c| c.is_ascii_digit())
-    {
-        prefix
-    } else {
-        host.trim_matches(['[', ']'])
-    };
+    let host_plain = host.strip_prefix('[').map_or_else(
+        || {
+            if let Some((prefix, port)) = host.rsplit_once(':')
+                && !prefix.ends_with(':')
+                && port.chars().all(|c| c.is_ascii_digit())
+            {
+                prefix
+            } else {
+                host.trim_matches(['[', ']'])
+            }
+        },
+        |rest| rest.split(']').next().unwrap_or(rest),
+    );
     if host_plain.is_empty() || host_plain.eq_ignore_ascii_case("localhost") {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,

@@ -803,7 +803,8 @@ different source will be blocked."
 
             'outer: loop {
                 println!("IP address range (e.g. 192.168.0.0/24): ");
-                match read_line_stdin().await?.trim().parse::<IpCidr>() {
+                let line = read_line_stdin().await?;
+                match line.trim().parse::<IpCidr>() {
                     Ok(ip) => {
                         slf.trusted_proxies.push(ip);
 

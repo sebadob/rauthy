@@ -181,7 +181,7 @@ impl Client {
         } else {
             None
         };
-        let mut client = Client::try_from(client_req)?;
+        let mut client = Self::try_from(client_req)?;
         client.secret_kid = kid;
         client.created_micros = Some(Utc::now().timestamp_micros());
 
@@ -866,7 +866,7 @@ WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)";
         client_dyn.last_used = Some(Utc::now().timestamp());
 
         if RauthyConfig::get().vars.dynamic_clients.secret_auto_rotate {
-            let (_secret_plain, registration_token) = Client::generate_new_secret()?;
+            let (_secret_plain, registration_token) = Self::generate_new_secret()?;
             client_dyn.registration_token = registration_token;
         }
 
@@ -993,27 +993,30 @@ WHERE id = $4";
         client_id: &str,
         secret: &str,
     ) -> Result<(), ErrorResponse> {
-        match DB::hql().get_bytes(Cache::ClientSecret, secret).await? {
-            None => {
-                debug!("No cached secret found for client {client_id}");
-                Err(ErrorResponse::new(
-                    ErrorResponseType::Unauthorized,
-                    "client_secret does not exist or is invalid",
-                ))
-            }
-            Some(bytes) => {
-                if bytes == client_id.as_bytes() {
-                    debug!("Matching cached client_secret for {client_id}");
-                    Ok(())
-                } else {
-                    debug!("Found cached client_secret, but for a different client.");
+        DB::hql()
+            .get_bytes(Cache::ClientSecret, secret)
+            .await?
+            .map_or_else(
+                || {
+                    debug!("No cached secret found for client {client_id}");
                     Err(ErrorResponse::new(
                         ErrorResponseType::Unauthorized,
                         "client_secret does not exist or is invalid",
                     ))
-                }
-            }
-        }
+                },
+                |bytes| {
+                    if bytes == client_id.as_bytes() {
+                        debug!("Matching cached client_secret for {client_id}");
+                        Ok(())
+                    } else {
+                        debug!("Found cached client_secret, but for a different client.");
+                        Err(ErrorResponse::new(
+                            ErrorResponseType::Unauthorized,
+                            "client_secret does not exist or is invalid",
+                        ))
+                    }
+                },
+            )
     }
 }
 
@@ -1051,17 +1054,15 @@ impl Client {
     #[inline]
     #[must_use]
     pub fn get_allowed_origins(&self) -> Option<Vec<String>> {
-        if let Some(origins) = &self.allowed_origins {
+        self.allowed_origins.as_ref().map(|origins| {
             let mut res = Vec::with_capacity(1);
             for o in origins.split(',') {
                 if !o.is_empty() {
                     res.push(o.to_string());
                 }
             }
-            Some(res)
-        } else {
-            None
-        }
+            res
+        })
     }
 
     /// Borrowed, allocation-free view of the `allowed_resources` CSV (empties skipped).
@@ -1256,17 +1257,15 @@ impl Client {
 
     #[must_use]
     pub fn get_contacts(&self) -> Option<Vec<String>> {
-        if let Some(contacts) = &self.contacts {
+        self.contacts.as_ref().map(|contacts| {
             let mut res = Vec::with_capacity(1);
             for c in contacts.split(',') {
                 if !c.is_empty() {
                     res.push(c.to_string());
                 }
             }
-            Some(res)
-        } else {
-            None
-        }
+            res
+        })
     }
 
     /// Decrypts the client secret (if it exists) and then returns it as clear text.
@@ -1304,16 +1303,17 @@ impl Client {
         self.flows_enabled
             .split(',')
             .filter_map(|f| {
-                if let Ok(flow) = GrantType::from_str(f.trim()) {
-                    Some(flow)
-                } else {
-                    warn!(
-                        client_id = self.id,
-                        flow = f,
-                        "Skipping unknown `flows_enabled` entry"
-                    );
-                    None
-                }
+                GrantType::from_str(f.trim()).map_or_else(
+                    |_| {
+                        warn!(
+                            client_id = self.id,
+                            flow = f,
+                            "Skipping unknown `flows_enabled` entry"
+                        );
+                        None
+                    },
+                    Some,
+                )
             })
             .collect()
     }
@@ -1321,17 +1321,15 @@ impl Client {
     #[inline]
     #[must_use]
     pub fn get_post_logout_uris(&self) -> Option<Vec<String>> {
-        if let Some(uris) = &self.post_logout_redirect_uris {
+        self.post_logout_redirect_uris.as_ref().map(|uris| {
             let mut res = Vec::with_capacity(1);
             for uri in uris.split(',') {
                 if !uri.is_empty() {
                     res.push(uri.to_string());
                 }
             }
-            Some(res)
-        } else {
-            None
-        }
+            res
+        })
     }
 
     #[inline]
@@ -1576,11 +1574,10 @@ impl Client {
                 "invalid redirect_uri - must contain an origin",
             ));
         };
-        let req_path_query = if let Some(q) = req_url.query() {
-            format!("{}?{}", req_url.path(), q)
-        } else {
-            req_url.path().to_string()
-        };
+        let req_path_query = req_url.query().map_or_else(
+            || req_url.path().to_string(),
+            |q| format!("{}?{}", req_url.path(), q),
+        );
 
         let is_loopback = rfc_8252_enable
             && (req_host == "localhost"
@@ -1845,7 +1842,7 @@ impl Client {
         let a = <&[u8; 64]>::try_from(cleartext.as_ref()).unwrap();
         let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
         if constant_time_eq::constant_time_eq_64(a, b)
-            || Client::validate_cached_secret(&self.id, &secret)
+            || Self::validate_cached_secret(&self.id, &secret)
                 .await
                 .is_ok()
         {
@@ -1861,18 +1858,18 @@ impl Client {
 
     #[inline]
     pub fn validate_user_groups(&self, user: &User) -> Result<(), ErrorResponse> {
-        if let Some(prefix) = &self.restrict_group_prefix {
-            if user.get_groups().iter().any(|g| g.starts_with(prefix)) {
-                Ok(())
-            } else {
-                Err(ErrorResponse::new(
-                    ErrorResponseType::Forbidden,
-                    "You don't have access to this client, please contact your Administrator",
-                ))
-            }
-        } else {
-            Ok(())
-        }
+        self.restrict_group_prefix
+            .as_ref()
+            .map_or(Ok(()), |prefix| {
+                if user.get_groups().iter().any(|g| g.starts_with(prefix)) {
+                    Ok(())
+                } else {
+                    Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        "You don't have access to this client, please contact your Administrator",
+                    ))
+                }
+            })
     }
 }
 
@@ -1998,16 +1995,13 @@ pub fn is_wildcard_prefix_match(registered: &str, requested: &str) -> bool {
     let Some(prefix) = registered.strip_suffix('*') else {
         return false;
     };
-    match requested.strip_prefix(prefix) {
-        None => false,
-        Some(rest) => {
-            rest.is_empty()
-                || rest.starts_with('/')
-                || rest.starts_with('?')
-                || prefix.ends_with('/')
-                || prefix.ends_with('?')
-        }
-    }
+    requested.strip_prefix(prefix).is_some_and(|rest| {
+        rest.is_empty()
+            || rest.starts_with('/')
+            || rest.starts_with('?')
+            || prefix.ends_with('/')
+            || prefix.ends_with('?')
+    })
 }
 
 impl Client {
@@ -2319,7 +2313,7 @@ impl TryFrom<NewClientRequest> for Client {
 impl Client {
     /// Called on `self` freshly built by `try_from_dyn_reg` for an RFC 7592 self-update: copies
     /// every value from `current` that the client must not change with its registration token.
-    fn keep_admin_set_values(&mut self, current: Client) {
+    fn keep_admin_set_values(&mut self, current: Self) {
         // `challenge` is derived from `token_endpoint_auth_method`, but an admin may have
         // changed it. Keep the admin value unless the client switches between public and
         // confidential, where the derived value (`S256` for public, none for confidential)
@@ -3587,7 +3581,7 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
         }
     }
 
-    pub(crate) fn redirect_test_client(id: &str, redirect_uris: &str) -> Client {
+    pub fn redirect_test_client(id: &str, redirect_uris: &str) -> Client {
         Client {
             id: id.to_string(),
             name: None,

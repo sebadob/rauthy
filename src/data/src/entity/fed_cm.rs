@@ -170,7 +170,7 @@ impl FedCMIdPConfig {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, ToSchema)]
 pub enum FedCMLoginStatus {
     LoggedIn,
     LoggedOut,
@@ -178,15 +178,15 @@ pub enum FedCMLoginStatus {
 
 impl FedCMLoginStatus {
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            FedCMLoginStatus::LoggedIn => "logged-in",
-            FedCMLoginStatus::LoggedOut => "logged-out",
+            Self::LoggedIn => "logged-in",
+            Self::LoggedOut => "logged-out",
         }
     }
 
     #[must_use]
-    pub fn as_header_pair(&self) -> (&str, &str) {
+    pub const fn as_header_pair(&self) -> (&str, &str) {
         ("Set-Login", self.as_str())
     }
 }

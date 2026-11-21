@@ -179,7 +179,7 @@ async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AccountType {
     // New -> neither password nor a passkey has been set yet
     New,
@@ -344,7 +344,7 @@ impl User {
     }
 
     pub async fn create(
-        new_user: User,
+        new_user: Self,
         post_reset_redirect_uri: Option<String>,
         user_tz: Option<&str>,
     ) -> Result<Self, ErrorResponse> {
@@ -361,11 +361,11 @@ impl User {
         Ok(slf)
     }
 
-    pub async fn create_federated(new_user: User) -> Result<Self, ErrorResponse> {
+    pub async fn create_federated(new_user: Self) -> Result<Self, ErrorResponse> {
         Self::insert(new_user).await
     }
 
-    pub async fn create_from_new(mut new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
+    pub async fn create_from_new(mut new_user_req: NewUserRequest) -> Result<Self, ErrorResponse> {
         // The UserValuesValidator is intentionally not used on this path (see post_users), but a
         // broken tz would otherwise be stored as-is, so validate the format here.
         if let Some(tz) = &new_user_req.tz
@@ -386,8 +386,8 @@ impl User {
         // neither value is read by `from_new_user_req()`, so both can be moved out directly
         let tz = mem::take(&mut new_user_req.tz);
         let preferred_username = mem::take(&mut new_user_req.preferred_username);
-        let new_user = User::from_new_user_req(new_user_req).await?;
-        let user = User::create(new_user, None, tz.as_deref()).await?;
+        let new_user = Self::from_new_user_req(new_user_req).await?;
+        let user = Self::create(new_user, None, tz.as_deref()).await?;
 
         // UTC is the implicit default and is not persisted into the user values.
         let store_tz = if tz.as_deref() != Some("UTC") && tz.as_deref() != Some("Etc/UTC") {
@@ -414,9 +414,9 @@ impl User {
     pub async fn create_from_reg(
         req_data: NewUserRegistrationRequest,
         lang: Language,
-    ) -> Result<User, ErrorResponse> {
+    ) -> Result<Self, ErrorResponse> {
         // pre-uniqueness checks for better UX and error handling
-        User::validate_email_free(req_data.email.clone()).await?;
+        Self::validate_email_free(req_data.email.clone()).await?;
         if let Some(preferred_username) = &req_data.preferred_username {
             UserValues::validate_preferred_username_free(preferred_username.clone()).await?;
         }
@@ -428,7 +428,7 @@ impl User {
             ..Default::default()
         };
         new_user.language = lang;
-        let new_user = User::create(
+        let new_user = Self::create(
             new_user,
             req_data.redirect_uri,
             req_data
@@ -459,17 +459,14 @@ impl User {
         let deleted: Option<Option<String>> = if is_hiqlite() {
             // A picture changed after this read is left behind as an orphan.
             // No `Row` may live past this statement: it is not `Send`.
-            let (found, picture_id): (bool, Option<String>) = match DB::hql()
+            let (found, picture_id): (bool, Option<String>) = DB::hql()
                 .query_raw(
                     "SELECT picture_id FROM users WHERE id = $1",
                     params!(&self.id),
                 )
                 .await?
                 .pop()
-            {
-                Some(mut row) => (true, row.get("picture_id")),
-                None => (false, None),
-            };
+                .map_or((false, None), |mut row| (true, row.get("picture_id")));
             // Revokes the access tokens of the user and of its refresh tokens before the cascade
             // of the user row deletes those.
             let res = DB::hql()
@@ -637,7 +634,7 @@ WHERE user_id = $1
         Ok(slf)
     }
 
-    pub async fn find_by_email(email: String) -> Result<User, ErrorResponse> {
+    pub async fn find_by_email(email: String) -> Result<Self, ErrorResponse> {
         let email = email.to_lowercase();
 
         let idx = format!("{IDX_USERS}_{email}");
@@ -892,7 +889,7 @@ OFFSET $2";
         Ok((res, token))
     }
 
-    pub async fn insert(new_user: User) -> Result<Self, ErrorResponse> {
+    pub async fn insert(new_user: Self) -> Result<Self, ErrorResponse> {
         let lang = new_user.language.as_str();
         let sql = r"
 INSERT INTO users
@@ -1171,7 +1168,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)";
     /// [`Self::set_picture_id`] updates, then drops the cached user, also under `old_email`.
     pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
-            User::is_email_free(self.email.clone()).await?;
+            Self::is_email_free(self.email.clone()).await?;
         }
 
         let lang = self.language.as_str();
@@ -1595,7 +1592,7 @@ LIMIT $2";
         user_id: String,
         payload: PatchOp,
     ) -> Result<(UpdateUserRequest, Option<String>), ErrorResponse> {
-        let (mut upd_req, preferred_username) = User::upd_req_from_db(user_id).await?;
+        let (mut upd_req, preferred_username) = Self::upd_req_from_db(user_id).await?;
         let mut uv = upd_req.user_values.unwrap_or_default();
 
         for put in payload.put {
@@ -1705,13 +1702,13 @@ LIMIT $2";
     pub async fn update(
         id: String,
         mut upd_user: UpdateUserRequest,
-        user: Option<User>,
+        user: Option<Self>,
         preferred_username: Option<String>,
         is_self_update: bool,
         password_reset_by: Option<&str>,
-    ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
+    ) -> Result<(Self, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
-            None => User::find(id).await?,
+            None => Self::find(id).await?,
             Some(user) => user,
         };
         upd_user.email = upd_user.email.to_lowercase();
@@ -1815,11 +1812,10 @@ LIMIT $2";
     pub async fn update_self_req(
         id: String,
         upd_user: UpdateUserSelfRequest,
-    ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
-        let user = User::find(id.clone()).await?;
+    ) -> Result<(Self, Option<UserValues>, bool), ErrorResponse> {
+        let user = Self::find(id.clone()).await?;
 
-        let mut password = None;
-        if let Some(pwd_new) = upd_user.password_new {
+        let password = if let Some(pwd_new) = upd_user.password_new {
             if let Some(pwd_curr) = upd_user.password_current {
                 user.validate_password(pwd_curr).await?;
             } else if let Some(mfa_code) = upd_user.mfa_code {
@@ -1837,8 +1833,10 @@ LIMIT $2";
                     "Cannot set a new password without the current one",
                 ));
             }
-            password = Some(pwd_new);
-        }
+            Some(pwd_new)
+        } else {
+            None
+        };
 
         let email_updated = if let Some(email) = upd_user.email.map(|email| email.to_lowercase()) {
             // if the email should be updated, we do not do it directly -> send out confirmation
@@ -1894,7 +1892,7 @@ LIMIT $2";
 
         // a user cannot become a new admin from a self-req
         let (user, user_values, _is_new_admin) =
-            User::update(id, req, Some(user), preferred_username, true, None).await?;
+            Self::update(id, req, Some(user), preferred_username, true, None).await?;
 
         Ok((user, user_values, email_updated))
     }
@@ -1902,7 +1900,7 @@ LIMIT $2";
     /// Converts a user account from as password account type to passkey only with all necessary
     /// checks included.
     pub async fn convert_to_passkey(id: String) -> Result<(), ErrorResponse> {
-        let mut user = User::find(id.clone()).await?;
+        let mut user = Self::find(id.clone()).await?;
 
         if user.account_type() != AccountType::Password {
             return Err(ErrorResponse::new(
@@ -1960,7 +1958,7 @@ LIMIT $2";
 impl User {
     #[inline]
     #[must_use]
-    pub fn account_type(&self) -> AccountType {
+    pub const fn account_type(&self) -> AccountType {
         if self.federation_uid.is_some() {
             if self.password.is_some() {
                 AccountType::FederatedPassword
@@ -2207,11 +2205,10 @@ impl User {
 
     #[must_use]
     pub fn email_recipient_name(&self) -> String {
-        if let Some(n) = &self.family_name {
-            format!("{} {n}", self.given_name)
-        } else {
-            self.given_name.clone()
-        }
+        self.family_name.as_ref().map_or_else(
+            || self.given_name.clone(),
+            |n| format!("{} {n}", self.given_name),
+        )
     }
 
     /// The `name` claim for the `id_token` and `/userinfo`. With
@@ -2253,11 +2250,9 @@ impl User {
 
     #[inline]
     pub fn get_groups(&self) -> Vec<String> {
-        if let Some(groups) = &self.groups {
+        self.groups.as_ref().map_or_else(Vec::default, |groups| {
             groups.split(',').map(String::from).collect::<Vec<_>>()
-        } else {
-            Vec::default()
-        }
+        })
     }
 
     #[inline]
@@ -2310,7 +2305,7 @@ impl User {
 
     #[inline(always)]
     #[must_use]
-    pub fn has_webauthn_enabled(&self) -> bool {
+    pub const fn has_webauthn_enabled(&self) -> bool {
         self.webauthn_user_id.is_some()
     }
 
@@ -2380,7 +2375,7 @@ impl User {
     }
 
     async fn is_email_free(email: String) -> Result<(), ErrorResponse> {
-        match User::find_by_email(email).await {
+        match Self::find_by_email(email).await {
             Ok(_) => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "E-Mail is already in use",

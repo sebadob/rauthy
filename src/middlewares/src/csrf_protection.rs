@@ -127,9 +127,9 @@ where
 
 #[inline(always)]
 fn is_path_csrf_exception(path: &str) -> bool {
-    match path.strip_prefix("/auth/v1") {
-        None => path.starts_with("/.well-known/"),
-        Some(path) => {
+    path.strip_prefix("/auth/v1").map_or_else(
+        || path.starts_with("/.well-known/"),
+        |path| {
             // have their own custom validation
             path == "/oidc/authorize"
                 || path == "/oidc/token"
@@ -150,8 +150,8 @@ fn is_path_csrf_exception(path: &str) -> bool {
                 || path.starts_with("/.well-known/")
                 // Webauthn has additional validation via Origin internally
                 || path.contains("/webauthn/auth/")
-        }
-    }
+        },
+    )
 }
 
 #[cfg(test)]

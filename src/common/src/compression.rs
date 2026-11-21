@@ -1,5 +1,7 @@
 //! The values for static and dynamic compression were found by benchmarking the implementations
-//! using a rather simple HTML file. The highest values are definitely NOT the best! The "static"
+//! using a rather simple HTML file.
+//!
+//! The highest values are definitely NOT the best! The "static"
 //! compression functions here are used for cached assets that only need to be compressed rarely.
 //! The `*_dyn` ones are of e.g. /authroize, which needs to be dynamically compressed for each
 //! single request. The very low compressions levels already provide quite a bit of benefit without

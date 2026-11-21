@@ -277,10 +277,9 @@ impl OneTimePassword {
         let hash = hash.as_ref();
 
         // Unreachable should never panic since the tag should never be empty
-        let offset = match hash.last() {
-            Some(e) => (e & 0xf) as usize,
-            None => unreachable!(),
-        };
+        let offset = hash
+            .last()
+            .map_or_else(|| unreachable!(), |e| (e & 0xf) as usize);
 
         let binary = [
             hash[offset] & 0x7f,
@@ -421,13 +420,7 @@ impl OtpData {
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
         let res = DB::hql().get(Cache::OneTimePassword, code).await?;
-        match res {
-            None => Err(ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                "Otp Data not found",
-            )),
-            Some(res) => Ok(res),
-        }
+        res.ok_or_else(|| ErrorResponse::new(ErrorResponseType::NotFound, "Otp Data not found"))
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
@@ -543,13 +536,12 @@ impl OtpLoginReq {
 
     pub async fn find(code: &String) -> Result<Self, ErrorResponse> {
         let res: Option<Self> = DB::hql().get(Cache::OneTimePassword, code).await?;
-        match res {
-            None => Err(ErrorResponse::new(
+        res.ok_or_else(|| {
+            ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "OneTimePassword Login Request Data not found",
-            )),
-            Some(res) => Ok(res),
-        }
+            )
+        })
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
@@ -586,13 +578,12 @@ impl OtpServiceReq {
 
     pub async fn find(code: String) -> Result<Self, ErrorResponse> {
         let res = DB::hql().get(Cache::OneTimePassword, code).await?;
-        match res {
-            None => Err(ErrorResponse::new(
+        res.ok_or_else(|| {
+            ErrorResponse::new(
                 ErrorResponseType::NotFound,
                 "OTP Service Request Data not found",
-            )),
-            Some(res) => Ok(res),
-        }
+            )
+        })
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {

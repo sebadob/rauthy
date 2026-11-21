@@ -104,37 +104,25 @@ impl ResponseError for ErrorResponse {
             }
 
             ErrorResponseType::DPoP(header_origin) => {
+                let mut resp = HttpResponseBuilder::new(status);
+                resp.insert_header((WWW_AUTHENTICATE, "DPoP error=invalid_dpop_proof"))
+                    .content_type(APPLICATION_JSON);
                 if let Some(origin) = header_origin {
-                    HttpResponseBuilder::new(status)
-                        .insert_header((WWW_AUTHENTICATE, "DPoP error=invalid_dpop_proof"))
-                        .content_type(APPLICATION_JSON)
-                        .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, origin.as_str()))
-                        .body(serde_json::to_string(&self).unwrap())
-                } else {
-                    HttpResponseBuilder::new(status)
-                        .insert_header((WWW_AUTHENTICATE, "DPoP error=invalid_dpop_proof"))
-                        .content_type(APPLICATION_JSON)
-                        .body(serde_json::to_string(&self).unwrap())
+                    resp.insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, origin.as_str()));
                 }
+                resp.body(serde_json::to_string(&self).unwrap())
             }
 
             ErrorResponseType::UseDpopNonce((header_origin, value)) => {
+                let mut resp = HttpResponseBuilder::new(status);
+                resp.insert_header((WWW_AUTHENTICATE, "DPoP error=use_dpop_nonce"))
+                    .insert_header((HEADER_DPOP_NONCE, value.as_str()))
+                    .content_type(APPLICATION_JSON);
                 if let Some(origin) = header_origin {
-                    HttpResponseBuilder::new(status)
-                        .insert_header((WWW_AUTHENTICATE, "DPoP error=use_dpop_nonce"))
-                        .insert_header((HEADER_DPOP_NONCE, value.as_str()))
-                        .content_type(APPLICATION_JSON)
-                        .insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, origin.as_str()))
-                        .insert_header((ACCESS_CONTROL_EXPOSE_HEADERS, HEADER_DPOP_NONCE))
-                        .content_type(APPLICATION_JSON)
-                        .body(serde_json::to_string(&self).unwrap())
-                } else {
-                    HttpResponseBuilder::new(status)
-                        .insert_header((WWW_AUTHENTICATE, "DPoP error=use_dpop_nonce"))
-                        .insert_header((HEADER_DPOP_NONCE, value.as_str()))
-                        .content_type(APPLICATION_JSON)
-                        .body(serde_json::to_string(&self).unwrap())
+                    resp.insert_header((ACCESS_CONTROL_ALLOW_ORIGIN, origin.as_str()))
+                        .insert_header((ACCESS_CONTROL_EXPOSE_HEADERS, HEADER_DPOP_NONCE));
                 }
+                resp.body(serde_json::to_string(&self).unwrap())
             }
 
             ErrorResponseType::WWWAuthenticate(msg) => HttpResponseBuilder::new(status)
@@ -161,14 +149,14 @@ impl ResponseError for ErrorResponse {
 impl From<std::io::Error> for ErrorResponse {
     fn from(value: std::io::Error) -> Self {
         debug!("{:?}", value);
-        ErrorResponse::new(ErrorResponseType::BadRequest, format!("IO Error: {value}"))
+        Self::new(ErrorResponseType::BadRequest, format!("IO Error: {value}"))
     }
 }
 
 impl From<actix_web::Error> for ErrorResponse {
     fn from(err: actix_web::Error) -> Self {
         debug!("actix_web::Error: {:?}", err);
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Internal,
             format!("actix_web::Error: {err}"),
         )
@@ -178,7 +166,7 @@ impl From<actix_web::Error> for ErrorResponse {
 impl From<actix_web::error::HttpError> for ErrorResponse {
     fn from(err: actix_web::error::HttpError) -> Self {
         debug!("HttpError: {err:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Internal,
             format!("actix_web::error::HttpError: {err}"),
         )
@@ -188,7 +176,7 @@ impl From<actix_web::error::HttpError> for ErrorResponse {
 impl From<argon2::Error> for ErrorResponse {
     fn from(err: argon2::Error) -> Self {
         debug!("argon2::Error: {err:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Internal,
             format!("Argon2Id Error: {err}"),
         )
@@ -198,7 +186,7 @@ impl From<argon2::Error> for ErrorResponse {
 impl From<chrono::ParseError> for ErrorResponse {
     fn from(value: chrono::ParseError) -> Self {
         debug!("chrono::ParseError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             "Unable to parse the correct DateTime",
         )
@@ -208,7 +196,7 @@ impl From<chrono::ParseError> for ErrorResponse {
 impl From<BlockingError> for ErrorResponse {
     fn from(value: BlockingError) -> Self {
         debug!("BlockingError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Internal,
             "Database Pool is gone, please re-try later",
         )
@@ -218,21 +206,21 @@ impl From<BlockingError> for ErrorResponse {
 impl From<chacha20poly1305::Error> for ErrorResponse {
     fn from(e: chacha20poly1305::Error) -> Self {
         error!("chacha20poly1305::Error: {e}");
-        ErrorResponse::new(ErrorResponseType::Internal, "Internal Encryption Error")
+        Self::new(ErrorResponseType::Internal, "Internal Encryption Error")
     }
 }
 
 impl From<deadpool::managed::BuildError> for ErrorResponse {
     fn from(e: BuildError) -> Self {
         debug!("deadpool::managed::BuildError: {e}");
-        ErrorResponse::new(ErrorResponseType::DatabaseIo, e.to_string())
+        Self::new(ErrorResponseType::DatabaseIo, e.to_string())
     }
 }
 
 impl From<deadpool::managed::PoolError<tokio_postgres::Error>> for ErrorResponse {
     fn from(e: PoolError<tokio_postgres::Error>) -> Self {
         debug!("PoolError<tokio_postgres::Error>: {e}");
-        ErrorResponse::new(ErrorResponseType::DatabaseIo, e.to_string())
+        Self::new(ErrorResponseType::DatabaseIo, e.to_string())
     }
 }
 
@@ -252,7 +240,7 @@ impl From<tokio_postgres::Error> for ErrorResponse {
             };
 
             error!("SqlState({code}) -> {msg}");
-            ErrorResponse::new(typ, msg)
+            Self::new(typ, msg)
         } else {
             let msg = e.to_string();
 
@@ -289,10 +277,8 @@ impl From<hiqlite::Error> for ErrorResponse {
             | hiqlite::Error::Request(err)
             | hiqlite::Error::S3(err)
             | hiqlite::Error::Timeout(err)
-            | hiqlite::Error::WebSocket(err) => (ErrorResponseType::Connection, err.clone().into()),
-            hiqlite::Error::ConstraintViolation(err) => {
-                (ErrorResponseType::BadRequest, err.clone().into())
-            }
+            | hiqlite::Error::WebSocket(err) => (ErrorResponseType::Connection, err.into()),
+            hiqlite::Error::ConstraintViolation(err) => (ErrorResponseType::BadRequest, err.into()),
             hiqlite::Error::LeaderChange(err) => {
                 (ErrorResponseType::Connection, err.to_string().into())
             }
@@ -306,14 +292,14 @@ impl From<hiqlite::Error> for ErrorResponse {
             err => (ErrorResponseType::Database, err.to_string().into()),
         };
 
-        ErrorResponse::new(error, msg)
+        Self::new(error, msg)
     }
 }
 
 impl From<ParseColorError> for ErrorResponse {
     fn from(value: ParseColorError) -> Self {
         debug!("ParseColorError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             "Cannot parse input to valid CSS color",
         )
@@ -347,28 +333,28 @@ impl From<actix_multipart::MultipartError> for ErrorResponse {
             _ => "MultipartError::Unknown",
         };
 
-        ErrorResponse::new(ErrorResponseType::BadRequest, text)
+        Self::new(ErrorResponseType::BadRequest, text)
     }
 }
 
 impl From<error::PayloadError> for ErrorResponse {
     fn from(value: error::PayloadError) -> Self {
         debug!("PayloadError: {value:?}");
-        ErrorResponse::new(ErrorResponseType::BadRequest, value.to_string())
+        Self::new(ErrorResponseType::BadRequest, value.to_string())
     }
 }
 
 impl From<FromUtf8Error> for ErrorResponse {
     fn from(value: FromUtf8Error) -> Self {
         debug!("FromUtf8Error: {value:?}");
-        ErrorResponse::new(ErrorResponseType::Internal, value.to_string())
+        Self::new(ErrorResponseType::Internal, value.to_string())
     }
 }
 
 impl From<validator::ValidationErrors> for ErrorResponse {
     fn from(value: validator::ValidationErrors) -> Self {
         debug!("ValidationErrors: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("Payload validation error: {value:?}"),
         )
@@ -378,7 +364,7 @@ impl From<validator::ValidationErrors> for ErrorResponse {
 impl From<validator::ValidationError> for ErrorResponse {
     fn from(value: ValidationError) -> Self {
         debug!("ValidationError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("Payload validation error: {value:?}"),
         )
@@ -388,7 +374,7 @@ impl From<validator::ValidationError> for ErrorResponse {
 impl From<serde_json::Error> for ErrorResponse {
     fn from(value: serde_json::Error) -> Self {
         debug!("serde_json::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("Payload deserialization error: {value:?}"),
         )
@@ -398,7 +384,7 @@ impl From<serde_json::Error> for ErrorResponse {
 impl From<reqwest::header::ToStrError> for ErrorResponse {
     fn from(value: reqwest::header::ToStrError) -> Self {
         debug!("reqwest::header::ToStrError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("Request headers contained non ASCII characters: {value:?}"),
         )
@@ -408,7 +394,7 @@ impl From<reqwest::header::ToStrError> for ErrorResponse {
 impl From<reqwest::Error> for ErrorResponse {
     fn from(value: reqwest::Error) -> Self {
         debug!("reqwest::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Connection,
             format!("Cannot send out HTTP request: {value:?}"),
         )
@@ -418,7 +404,7 @@ impl From<reqwest::Error> for ErrorResponse {
 impl From<TurtleError> for ErrorResponse {
     fn from(value: TurtleError) -> Self {
         debug!("TurtleError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("Cannot format / parse turtle data: {value:?}"),
         )
@@ -428,21 +414,21 @@ impl From<TurtleError> for ErrorResponse {
 impl From<CryptrError> for ErrorResponse {
     fn from(value: CryptrError) -> Self {
         debug!("CryptrError: {value:?}");
-        ErrorResponse::new(ErrorResponseType::Encryption, value.to_string())
+        Self::new(ErrorResponseType::Encryption, value.to_string())
     }
 }
 
 impl From<PowError> for ErrorResponse {
     fn from(value: PowError) -> Self {
         debug!("PowError: {value:?}");
-        ErrorResponse::new(ErrorResponseType::Forbidden, value.to_string())
+        Self::new(ErrorResponseType::Forbidden, value.to_string())
     }
 }
 
 impl From<serde_json_path::ParseError> for ErrorResponse {
     fn from(value: ParseError) -> Self {
         debug!("serde_json_path::ParseError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("JsonPath error: {value}"),
         )
@@ -452,7 +438,7 @@ impl From<serde_json_path::ParseError> for ErrorResponse {
 impl From<serde_urlencoded::de::Error> for ErrorResponse {
     fn from(value: serde_urlencoded::de::Error) -> Self {
         debug!("serde_urlencoded::de::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("URL encoded error: {value}"),
         )
@@ -462,7 +448,7 @@ impl From<serde_urlencoded::de::Error> for ErrorResponse {
 impl From<ImageError> for ErrorResponse {
     fn from(value: ImageError) -> Self {
         debug!("ImageError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("Cannot parse the image data: {value}"),
         )
@@ -472,7 +458,7 @@ impl From<ImageError> for ErrorResponse {
 impl From<actix_web::http::header::ToStrError> for ErrorResponse {
     fn from(value: actix_web::http::header::ToStrError) -> Self {
         debug!("ToStrError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("Request headers contained non ASCII characters: {value:?}"),
         )
@@ -482,7 +468,7 @@ impl From<actix_web::http::header::ToStrError> for ErrorResponse {
 impl From<header::InvalidHeaderValue> for ErrorResponse {
     fn from(value: InvalidHeaderValue) -> Self {
         debug!("header::InvalidHeaderValue: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Internal,
             format!("Cannot convert to HeaderValue: {value:?}"),
         )
@@ -492,14 +478,14 @@ impl From<header::InvalidHeaderValue> for ErrorResponse {
 impl From<std::fmt::Error> for ErrorResponse {
     fn from(value: std::fmt::Error) -> Self {
         debug!("{value:?}");
-        ErrorResponse::new(ErrorResponseType::Internal, format!("fmt error: {value:?}"))
+        Self::new(ErrorResponseType::Internal, format!("fmt error: {value:?}"))
     }
 }
 
 impl From<svg_hush::FError> for ErrorResponse {
     fn from(value: FError) -> Self {
         debug!("svg_hush::FError: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("svg sanitization error: {value:?}"),
         )
@@ -509,7 +495,7 @@ impl From<svg_hush::FError> for ErrorResponse {
 impl From<s3_simple::S3Error> for ErrorResponse {
     fn from(value: S3Error) -> Self {
         debug!("s3_simple::S3Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Connection,
             format!("S3 error: {value:?}"),
         )
@@ -519,7 +505,7 @@ impl From<s3_simple::S3Error> for ErrorResponse {
 impl From<rusqlite::Error> for ErrorResponse {
     fn from(value: rusqlite::Error) -> Self {
         debug!("rusqlite::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::Database,
             format!("rusqlite error: {value:?}"),
         )
@@ -529,7 +515,7 @@ impl From<rusqlite::Error> for ErrorResponse {
 impl From<rsa::Error> for ErrorResponse {
     fn from(value: rsa::Error) -> Self {
         debug!("rsa::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("rsa error: {value:?}"),
         )
@@ -539,7 +525,7 @@ impl From<rsa::Error> for ErrorResponse {
 impl From<rsa::pkcs1::Error> for ErrorResponse {
     fn from(value: Error) -> Self {
         debug!("rsa::pkcs1::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("rsa::pkcs1::Error: {value:?}"),
         )
@@ -549,7 +535,7 @@ impl From<rsa::pkcs1::Error> for ErrorResponse {
 impl From<rsa::pkcs8::Error> for ErrorResponse {
     fn from(value: rsa::pkcs8::Error) -> Self {
         debug!("rsa::pkcs8::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("rsa::pkcs8::Error: {value:?}"),
         )
@@ -559,7 +545,7 @@ impl From<rsa::pkcs8::Error> for ErrorResponse {
 impl From<ed25519_compact::Error> for ErrorResponse {
     fn from(value: ed25519_compact::Error) -> Self {
         debug!("ed25519_compact::Error: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("ed25519 error: {value:?}"),
         )
@@ -569,7 +555,7 @@ impl From<ed25519_compact::Error> for ErrorResponse {
 impl From<openssl::error::ErrorStack> for ErrorResponse {
     fn from(value: ErrorStack) -> Self {
         debug!("openssl::error::ErrorStack: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("openssl::error::ErrorStack: {value:?}"),
         )
@@ -579,7 +565,7 @@ impl From<openssl::error::ErrorStack> for ErrorResponse {
 impl From<ring::error::KeyRejected> for ErrorResponse {
     fn from(value: KeyRejected) -> Self {
         debug!("ring::error::KeyRejected: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("ring::error::KeyRejected: {value:?}"),
         )
@@ -589,7 +575,7 @@ impl From<ring::error::KeyRejected> for ErrorResponse {
 impl From<ring::error::Unspecified> for ErrorResponse {
     fn from(value: Unspecified) -> Self {
         debug!("ring::error::Unspecified: {value:?}");
-        ErrorResponse::new(
+        Self::new(
             ErrorResponseType::BadRequest,
             format!("ring::error::Unspecified: {value:?}"),
         )

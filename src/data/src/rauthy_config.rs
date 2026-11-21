@@ -1501,7 +1501,7 @@ impl Vars {
     }
 
     async fn parse(
-        mut slf: Vars,
+        mut slf: Self,
         config: String,
         path_secrets: String,
     ) -> (Self, hiqlite::NodeConfig) {
@@ -1572,11 +1572,10 @@ impl Vars {
         // can be managed in version control and does not need an adjustment to the service def
         // on each node.
         // -> `secrets_file` at the root of the config always has the higher priority
-        if let Some(path) = t_str(table, "", "secrets_file", "SECRETS_FILE") {
-            RauthySecrets::read_or_default(path)
-        } else {
-            RauthySecrets::read_or_default(path_secrets_file)
-        }
+        t_str(table, "", "secrets_file", "SECRETS_FILE").map_or_else(
+            || RauthySecrets::read_or_default(path_secrets_file),
+            RauthySecrets::read_or_default,
+        )
     }
 
     fn parse_dev(&mut self, table: &mut toml::Table) {
@@ -1666,7 +1665,10 @@ impl Vars {
             self.access.peer_ip_header_name = Some(v);
         }
         if let Some(v) = t_str(&mut table, "access", "cookie_mode", "COOKIE_MODE") {
-            self.access.cookie_mode = CookieMode::from(v.as_str());
+            match CookieMode::from_str(v.as_str()) {
+                Ok(mode) => self.access.cookie_mode = mode,
+                Err(err) => panic!("{err}"),
+            }
         }
         if let Some(v) = t_bool(&mut table, "access", "cookie_set_path", "COOKIE_SET_PATH") {
             self.access.cookie_set_path = v;
@@ -2333,7 +2335,7 @@ impl Vars {
         }
         self.email.root_ca = t_str(&mut table, "email", "root_ca", "SMTP_ROOT_CA");
         if let Some(v) = t_str(&mut table, "email", "smtp_conn_mode", "SMTP_CONN_MODE") {
-            self.email.smtp_conn_mode = SmtpConnMode::from(v.as_str());
+            self.email.smtp_conn_mode = SmtpConnMode::from_str(v.as_str()).unwrap();
         }
 
         self.email.xoauth_url = t_str(&mut table, "email", "xoauth_url", "SMTP_XOAUTH2_URL");
@@ -3188,7 +3190,7 @@ impl Vars {
     }
 
     async fn parse_hiqlite_config(
-        &mut self,
+        &self,
         table: &mut toml::Table,
         secrets: RauthySecrets,
     ) -> hiqlite::NodeConfig {
@@ -4136,34 +4138,41 @@ impl Vars {
     }
 
     fn parse_user_values(&mut self, table: &mut toml::Table) {
+        fn parse_cfg_val(v: &str) -> UserValueConfigValue {
+            match v.parse() {
+                Ok(val) => val,
+                Err(err) => panic!("{err}"),
+            }
+        }
+
         let mut table = t_table(table, "user_values");
 
         if let Some(v) = t_str(&mut table, "user_values", "given_name", "") {
-            self.user_values.given_name = UserValueConfigValue::from(v.as_str());
+            self.user_values.given_name = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "family_name", "") {
-            self.user_values.family_name = UserValueConfigValue::from(v.as_str());
+            self.user_values.family_name = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "birthdate", "") {
-            self.user_values.birthdate = UserValueConfigValue::from(v.as_str());
+            self.user_values.birthdate = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "street", "") {
-            self.user_values.street = UserValueConfigValue::from(v.as_str());
+            self.user_values.street = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "zip", "") {
-            self.user_values.zip = UserValueConfigValue::from(v.as_str());
+            self.user_values.zip = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "city", "") {
-            self.user_values.city = UserValueConfigValue::from(v.as_str());
+            self.user_values.city = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "country", "") {
-            self.user_values.country = UserValueConfigValue::from(v.as_str());
+            self.user_values.country = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "phone", "") {
-            self.user_values.phone = UserValueConfigValue::from(v.as_str());
+            self.user_values.phone = parse_cfg_val(&v);
         }
         if let Some(v) = t_str(&mut table, "user_values", "tz", "") {
-            self.user_values.tz = UserValueConfigValue::from(v.as_str());
+            self.user_values.tz = parse_cfg_val(&v);
         }
 
         if let Some(v) = t_bool(
@@ -4199,8 +4208,7 @@ impl Vars {
             "preferred_username",
             "PREFERRED_USERNAME",
         ) {
-            self.user_values.preferred_username.preferred_username =
-                UserValueConfigValue::from(v.as_str());
+            self.user_values.preferred_username.preferred_username = parse_cfg_val(&v);
         }
         if let Some(v) = t_bool(
             &mut pref_username,
@@ -4573,6 +4581,7 @@ impl VarsConsent {
     /// `true` if an ephemeral client must request a `resource`: `consent.enable` is set and
     /// `[[consent.sources]]` is not empty.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
     pub fn requires_resource(&self) -> bool {
         self.enable && !self.sources.is_empty()
     }
@@ -4701,7 +4710,7 @@ pub struct VarsEmail {
     pub password_exp: Duration,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EmailTlsMode {
     Tls,
     StartTls,
@@ -4711,9 +4720,9 @@ pub enum EmailTlsMode {
 impl Display for EmailTlsMode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            EmailTlsMode::Tls => f.write_str("TLS"),
-            EmailTlsMode::StartTls => f.write_str("STARTTLS"),
-            EmailTlsMode::DangerInsecure => f.write_str("DANGER-INSECURE (Unencrypted)"),
+            Self::Tls => f.write_str("TLS"),
+            Self::StartTls => f.write_str("STARTTLS"),
+            Self::DangerInsecure => f.write_str("DANGER-INSECURE (Unencrypted)"),
         }
     }
 }
@@ -5148,7 +5157,7 @@ pub struct VarsUserPreferredUsername {
     pub email_fallback: bool,
 }
 
-#[derive(Debug, PartialEq, Serialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum UserValueConfigValue {
     Required,
@@ -5156,13 +5165,17 @@ pub enum UserValueConfigValue {
     Hidden,
 }
 
-impl From<&str> for UserValueConfigValue {
-    fn from(s: &str) -> Self {
+impl FromStr for UserValueConfigValue {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "required" => Self::Required,
-            "optional" => Self::Optional,
-            "hidden" => Self::Hidden,
-            _ => panic!("Invalid value for `UserValueConfig` in `user_values`: {s}"),
+            "required" => Ok(Self::Required),
+            "optional" => Ok(Self::Optional),
+            "hidden" => Ok(Self::Hidden),
+            _ => Err(format!(
+                "Invalid value for `UserValueConfig` in `user_values`: {s}"
+            )),
         }
     }
 }
@@ -5206,7 +5219,7 @@ impl VarsWebauthn {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PasskeyRegType {
     Default,
     ResidentKey,
@@ -5214,7 +5227,7 @@ pub enum PasskeyRegType {
 
 impl PasskeyRegType {
     #[must_use]
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Default => "default",
             Self::ResidentKey => "resident_key",
@@ -5345,8 +5358,8 @@ fn t_duration(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> 
     }
 
     match value? {
-        Value::String(s) => match parse_duration(&s) {
-            None => {
+        Value::String(s) => parse_duration(&s).map_or_else(
+            || {
                 panic!(
                     "{}",
                     err_t(
@@ -5355,9 +5368,9 @@ fn t_duration(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> 
                         "Duration (Integer as seconds, or e.g. '60s', '10h', ...)"
                     )
                 )
-            }
-            Some(d) => Some(d),
-        },
+            },
+            Some,
+        ),
         Value::Integer(i) => {
             if i < 0 {
                 None
@@ -5395,42 +5408,36 @@ fn t_i64(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Optio
 }
 
 fn t_u32(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u32> {
-    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
+    t_i64(map, parent, key, env_overwrite).map(|v| {
         assert!(
             !(v < 0 || v > i64::from(u32::MAX)),
             "{}",
             err_t(key, parent, "u32")
         );
-        Some(v as u32)
-    } else {
-        None
-    }
+        v as u32
+    })
 }
 
 fn t_u16(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u16> {
-    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
+    t_i64(map, parent, key, env_overwrite).map(|v| {
         assert!(
             !(v < 0 || v > i64::from(u16::MAX)),
             "{}",
             err_t(key, parent, "u16")
         );
-        Some(v as u16)
-    } else {
-        None
-    }
+        v as u16
+    })
 }
 
 fn t_u8(map: &mut toml::Table, parent: &str, key: &str, env_overwrite: &str) -> Option<u8> {
-    if let Some(v) = t_i64(map, parent, key, env_overwrite) {
+    t_i64(map, parent, key, env_overwrite).map(|v| {
         assert!(
             !(v < 0 || v > i64::from(u8::MAX)),
             "{}",
             err_t(key, parent, "u16")
         );
-        Some(v as u8)
-    } else {
-        None
-    }
+        v as u8
+    })
 }
 
 pub fn t_str(map: &mut toml::Table, parent: &str, key: &str, env_var: &str) -> Option<String> {
