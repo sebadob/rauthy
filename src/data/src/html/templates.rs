@@ -109,7 +109,7 @@ impl HtmlTemplate {
             Self::OtpLength(_) => "tpl_otp_length",
             Self::PasskeyRegType => "tpl_passkey_reg_type",
             Self::PasswordReset(_) => "tpl_password_reset",
-            Self::RegAccInitImmediate => "tpl_reg_acc_init_immediate",
+            Self::RegAccInitImmediate(_) => "tpl_reg_acc_init_immediate",
             Self::PasswordResetLinkAlways(_) => "tpl_password_reset_link_always",
             Self::RestrictedEmailDomain(_) => "tpl_restricted_email_domain",
             Self::StatusCode(_) => "tpl_status_code",
