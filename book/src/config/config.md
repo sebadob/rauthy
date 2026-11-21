@@ -892,10 +892,11 @@ backup_keep_for_local = '3d'
 # This feature is still in progress. Currently, it makes the
 # authorization code exchange, FedCM and a refresh require the
 # user's consent grant for the client (password, device code and
-# token exchange tokens are exempt), a client deletion also delete
-# all legacy refresh tokens (issued before refresh tokens were bound
-# to a client) of all users, and a user's consent revoke also delete
-# that user's legacy refresh tokens.
+# token exchange tokens issued by this version are exempt), a
+# client deletion also delete all legacy refresh tokens (issued
+# before refresh tokens were bound to a client) of all users, and a
+# user's consent revoke also delete that user's legacy refresh
+# tokens.
 #
 # Until the consent screen lands, no grant can be given. While it is
 # enabled:
