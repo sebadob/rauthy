@@ -23,7 +23,8 @@
         "test:editor-toolbar": "npm run build && node --test tests/editor-toolbar.node.mjs",
         "lint": "prettier --check . && eslint .",
         "format": "./node_modules/prettier/bin/prettier.cjs --write .",
-        "format-check": "./node_modules/prettier/bin/prettier.cjs -c ."
+        "format-check": "./node_modules/prettier/bin/prettier.cjs -c .",
+        "test:e2e": "playwright test -c playwright.e2e.config.js"
     },
     "devDependencies": {
         "@internationalized/date": "^3.5.5",

@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { useI18n } from '#state/i18n.svelte.ts';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import IconDocText from '#icons/IconDocText.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import Tabs from '#lib/tabs/Tabs.svelte';
     import type { UserAttrConfigValueResponse } from '#api/types/user_attrs.ts';
     import AttrConfig from '#lib/admin/attrs/AttrConfig.svelte';
-    import AttrDelete from '#lib/admin/attrs/AttrDelete.svelte';
 
     let {
         attr,
@@ -16,29 +16,21 @@
         onSave: () => void;
     } = $props();
 
-    let t = useI18n();
     let ta = useI18nAdmin();
-
-    const tabs = [ta.nav.config, t.common.delete];
-    let selected = $state(tabs[0]);
-
-    let focusFirst: undefined | (() => void) = $state();
-
-    $effect(() => {
-        if (attr.name) {
-            requestAnimationFrame(() => {
-                focusFirst?.();
-            });
-        }
-    });
 </script>
 
-<div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst />
-</div>
+<EntityHeader title={attr.name} subtitle={ta.nav.attributes}>
+    {#snippet actions()}
+        {#key attr.name}
+            <EntityDelete
+                url={`/auth/v1/users/attr/${attr.name}`}
+                name={attr.name}
+                message={ta.attrs.delete1}
+                onDelete={onSave}
+            />
+        {/key}
+    {/snippet}
+    <IconDocText width="28px" />
+</EntityHeader>
 
-{#if selected === ta.nav.config}
-    <AttrConfig {attr} {attrs} {onSave} />
-{:else if selected === t.common.delete}
-    <AttrDelete {attr} {onSave} />
-{/if}
+<AttrConfig {attr} {attrs} {onSave} />

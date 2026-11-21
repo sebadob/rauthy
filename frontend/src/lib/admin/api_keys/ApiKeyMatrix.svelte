@@ -197,7 +197,7 @@
     }
 </script>
 
-<div class="matrix">
+<div class="matrix admin-permissions-matrix">
     {#snippet btnRight(r: AccessRight)}
         <div class="center">
             <Button ariaLabel={`Toggle: ${r}`} invisible onclick={() => toggleRight(r)}>
@@ -252,5 +252,30 @@
     .row {
         display: grid;
         grid-template-columns: 7.25rem 4rem 3rem 4rem 4rem;
+    }
+
+    .admin-permissions-matrix :global(.row) {
+        display: grid;
+        grid-template-columns: minmax(88px, 1fr) repeat(4, minmax(42px, 1fr));
+        gap: 4px;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--ui-outline);
+    }
+    .admin-permissions-matrix :global(.admin-control[data-variant]) {
+        width: 100%;
+        min-width: 0;
+        padding: 0 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .admin-permissions-matrix
+        :global(.row)
+        > :global(div:first-child)
+        :global(.admin-control)
+        > :global(.children) {
+        justify-content: flex-start;
+    }
+    .admin-permissions-matrix :global(.row) > :global(div) {
+        min-width: 0;
     }
 </style>

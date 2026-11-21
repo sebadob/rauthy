@@ -1,5 +1,9 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import IconCircleStack from '#icons/IconCircleStack.svelte';
+    import { onMount, untrack } from 'svelte';
+    import { MediaQuery } from 'svelte/reactivity';
     import { fetchGet, fetchPost } from '#api/fetch.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import NavSub from '#lib/nav/NavSub.svelte';
@@ -7,12 +11,11 @@
     import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import type { KVNamespaceRequest, KVNamespaceResponse } from '#api/types/kv.ts';
     import KVDetails from '#lib/admin/kv/KVDetails.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
     import KVAccess from '#lib/admin/kv/KVAccess.svelte';
-    import KVDelete from '#lib/admin/kv/KVDelete.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import Form from '#lib/form/Form.svelte';
     import Input from '#lib/form/Input.svelte';
     import Button from '#lib/button/Button.svelte';
@@ -20,30 +23,36 @@
     import { PATTERN_GROUP } from '#utils/patterns.ts';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import KVNamespaceEdit from '#lib/admin/kv/KVNamespaceEdit.svelte';
+    import Pagination from '#lib/pagination/Pagination.svelte';
+    import { PAGE_SIZE_DEFAULT, type PageSize } from '#lib/pagination/props.ts';
 
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    let refAddNew: undefined | HTMLButtonElement = $state();
     let refInput: undefined | HTMLInputElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
     let ns = useParam('ns');
+    const mobile = new MediaQuery('(width < 800px)', false);
 
     let err = $state('');
 
     // order: data, access, delete
     let tab = $state(ta.kv.tabs[0]);
     let namespaces: KVNamespaceResponse[] = $state([]);
-    let selected: undefined | KVNamespaceResponse = $derived(
-        namespaces.find(namespace => namespace.name === ns.get()),
-    );
+    let namespacesPaginated: KVNamespaceResponse[] = $state([]);
+    let page = $state(1);
+    let pageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
+    let selected = $derived(namespaces.find(namespace => namespace.name === ns.get()));
 
     onMount(() => {
         fetchData();
+    });
+
+    $effect(() => {
+        const index = selected ? namespaces.indexOf(selected) : -1;
+        if (index >= 0) page = Math.floor(index / untrack(() => pageSize)) + 1;
     });
 
     $effect(() => {
@@ -58,7 +67,7 @@
         let res = await fetchGet<KVNamespaceResponse[]>('/auth/v1/kv/ns');
         if (res.body) {
             namespaces = res.body;
-            if (!ns.get() && res.body.length > 0) {
+            if (!mobile.current && !ns.get() && res.body.length > 0) {
                 ns.set(res.body[0].name);
             }
         } else {
@@ -93,13 +102,14 @@
     }
 </script>
 
-<NavSub width="min(16rem, 100dvw - .5rem)" buttonTilesAriaControls="kv" paddingTop="2.35rem">
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={namespaces.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+<NavSub
+    detail={!!selected}
+    onBack={() => ns.set(undefined)}
+    error={err}
+    buttonTilesAriaControls="kv"
+>
+    <AdminListHeading title={ta.nav.kvStore} count={namespaces.length} />
+    <ButtonAddModal level={namespaces.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <div class="alignLeft">
             <Form action="/auth/v1/kv/ns" {onSubmit}>
                 <h3>{ta.kv.addNewNs}</h3>
@@ -128,7 +138,7 @@
 
     {#snippet buttonTiles()}
         <div class="nsList">
-            {#each namespaces as namespace (namespace.name)}
+            {#each namespaces.length > PAGE_SIZE_DEFAULT ? namespacesPaginated : namespaces as namespace (namespace.name)}
                 <NavButtonTile
                     onclick={() => ns.set(namespace.name)}
                     selected={ns.get() === namespace.name}
@@ -143,13 +153,38 @@
             {/each}
         </div>
     {/snippet}
+    {#snippet listFooter()}
+        {#if namespaces.length > PAGE_SIZE_DEFAULT}
+            <Pagination
+                bind:items={namespaces}
+                bind:itemsPaginated={namespacesPaginated}
+                bind:page
+                bind:pageSize
+            />
+        {/if}
+    {/snippet}
 </NavSub>
 
 <ContentAdmin>
     <div id="kv" aria-label={ta.common.details}>
         {#if selected}
-            <div class="tabs">
-                <Tabs tabs={ta.kv.tabs} bind:selected={tab} />
+            <EntityHeader title={selected.name} subtitle={ta.nav.kvStore}>
+                {#snippet actions()}
+                    {#if selected}
+                        {#key selected.name}
+                            <EntityDelete
+                                url={`/auth/v1/kv/ns/${selected.name}`}
+                                name={selected.name}
+                                message={ta.kv.delNsMsg}
+                                {onDelete}
+                            />
+                        {/key}
+                    {/if}
+                {/snippet}
+                <IconCircleStack width="28px" />
+            </EntityHeader>
+            <div class="admin-tabs-wrapper">
+                <Tabs tabs={ta.kv.tabs.slice(0, 3)} bind:selected={tab} />
             </div>
 
             {#if tab === ta.kv.tabs[0]}
@@ -158,8 +193,6 @@
                 <KVAccess {ns} />
             {:else if tab === ta.kv.tabs[2]}
                 <KVNamespaceEdit ns={selected} {onSave} />
-            {:else if tab === ta.kv.tabs[3]}
-                <KVDelete {ns} {onDelete} />
             {/if}
         {/if}
     </div>
@@ -193,7 +226,7 @@
         overflow-y: auto;
     }
 
-    .tabs {
+    .admin-tabs-wrapper {
         display: flex;
         margin-bottom: 0.5rem;
     }

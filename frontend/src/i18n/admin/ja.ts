@@ -36,6 +36,7 @@ export let I18nAdminJa: I18nAdmin = {
         size: 'サイズ',
     },
     clients: {
+        settings: { general: '一般', tokens: 'トークン', integrations: '連携' },
         allowedResources: '許可するリソース',
         defaultAud: '既定の Audience',
         actorSameClient: 'Actor token from this client only',
@@ -47,6 +48,17 @@ export let I18nAdminJa: I18nAdmin = {
         backchannelLogout:
             'この Client が {{ OIDC_BCL }} に対応している場合は、ここに URI を入力できます。',
         branding: {
+            title: '外観',
+            theme: 'テーマ',
+            light: 'ライトテーマ',
+            dark: 'ダークテーマ',
+            preview: 'プレビュー',
+            assets: 'ロゴとファビコン',
+            logo: 'ロゴ',
+            advanced: '高度な CSS',
+            resetTheme: 'テーマをリセット',
+            resetThemeConfirm: '既定の色と角の丸みを復元しますか？',
+            assetsImmediate: 'ファイルの変更はすぐに反映されます。',
             descHsl:
                 '次の値は HSL 値で指定してください。指定するのは基本色だけです。アルファチャンネルなどの値は、テーマが動的に調整します。',
             descFullCss:
@@ -129,6 +141,20 @@ export let I18nAdminJa: I18nAdmin = {
         },
     },
     common: {
+        about: 'Rauthy について',
+        date: '日付',
+        time: '時刻',
+        preferences: '環境設定',
+        profile: 'プロフィール',
+        contactDetails: '連絡先',
+        access: 'アクセス',
+        activity: 'アクティビティ',
+
+        compactNavigation: 'コンパクトナビゲーション',
+        administration: '管理',
+        selectEntry: '項目を選択してください',
+        selectEntryHint: '一覧から項目を選択すると、詳細の表示と管理ができます。',
+
         account: 'アカウント',
         addNew: '新規追加',
         back: '戻る',
@@ -209,8 +235,9 @@ export let I18nAdminJa: I18nAdmin = {
         },
         openapi:
             '外部のアプリケーションを連携させて Rauthy の API を使いたい場合は、次をご覧ください:',
-        openapiNote:
-            '既定の設定では、上のリンクから Swagger UI は使えません。設定の「server.swagger_ui_enable」と、必要に応じて「server.swagger_ui_public」で有効にできます。',
+        openapiNote: '既定の設定では、上のリンクから Swagger UI は使えません。',
+        openapiEnable:
+            '設定の「server.swagger_ui_enable」と、必要に応じて「server.swagger_ui_public」で有効にできます。',
         source: 'ソースコードはこちら',
     },
     editor: {
@@ -249,6 +276,12 @@ export let I18nAdminJa: I18nAdmin = {
             'Rauthy の管理者アカウントでは、<b>多要素認証を有効にする</b>必要があります。<br>お使いの<b>アカウント</b>の画面で多要素認証を有効にしてください。<br>その後、一度ログアウトしてから、もう一度ログインしてください。',
     },
     events: {
+        searchContent: '内容',
+        timestamp: '日時',
+        level: 'レベル',
+        type: '種類',
+        allLevels: 'すべてのレベル',
+        sendTest: 'テストイベントを送信',
         eventLevel: 'イベントのレベル',
         eventType: 'イベントの種類',
     },
@@ -269,6 +302,7 @@ export let I18nAdminJa: I18nAdmin = {
         rotateKeys: '鍵をローテーション',
     },
     kv: {
+        limit: '上限',
         accessTestDesc:
             'Access Key は、<code>Authorization</code> ヘッダーで <code>Bearer</code> Token として渡す必要があります。試すには、次の <code>curl</code> コマンドを使えます。',
         addNewKey: '新しい Access Key',
@@ -301,6 +335,7 @@ export let I18nAdminJa: I18nAdmin = {
         value: 'JSON の値',
     },
     nav: {
+        kvStore: 'KV ストア',
         apiKeys: 'API Keys',
         attributes: '属性',
         blacklist: 'ブロックリスト',

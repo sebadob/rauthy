@@ -2,6 +2,10 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminEn: I18nAdmin = {
     api_key: {
+        validity: 'Validity',
+        permissions: 'Permissions',
+        secret: 'Secret',
+        examples: 'Usage examples',
         delete1: 'Are you sure, that you want to delete this API Key?',
         expires: 'Expiry',
         generate1: 'Here you can generate a new secret for this API Key.',
@@ -29,6 +33,7 @@ export let I18nAdminEn: I18nAdmin = {
         userEditable: 'User Editable',
     },
     backup: {
+        title: 'Backups',
         createBackup: 'Create Backup',
         disabledDesc: 'This functionality only exists, if Hiqlite is configured as the database.',
         lastModified: 'Last Modified',
@@ -37,6 +42,7 @@ export let I18nAdminEn: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        settings: { general: 'General', tokens: 'Tokens', integrations: 'Integrations' },
         allowedResources: 'Allowed Resources',
         defaultAud: 'Default Audiences',
         actorSameClient: 'Actor token from this client only',
@@ -45,6 +51,17 @@ export let I18nAdminEn: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            title: 'Branding',
+            theme: 'Theme',
+            light: 'Light Theme',
+            dark: 'Dark Theme',
+            preview: 'Preview',
+            assets: 'Logo and favicon',
+            logo: 'Logo',
+            advanced: 'Advanced CSS',
+            resetTheme: 'Reset theme',
+            resetThemeConfirm: 'Restore the default colors and corner radius?',
+            assetsImmediate: 'File changes take effect immediately.',
             descHsl: `The following values must be given as HSL values. You only provide the base colors.
             Alpha channels and other values are manipulated dynamically by the theme.`,
             descFullCss: `The following values must be fully valid CSS <code>color</code> values.
@@ -140,6 +157,20 @@ export let I18nAdminEn: I18nAdmin = {
         },
     },
     common: {
+        about: 'About',
+        date: 'Date',
+        time: 'Time',
+        preferences: 'Preferences',
+        profile: 'Profile',
+        contactDetails: 'Contact details',
+        access: 'Access',
+        activity: 'Activity',
+
+        compactNavigation: 'Compact navigation',
+        administration: 'Administration',
+        selectEntry: 'Select an entry',
+        selectEntryHint: 'Choose an item from the list to view and manage its details.',
+
         account: 'Account',
         addNew: 'Add New',
         back: 'Back',
@@ -242,11 +273,15 @@ export let I18nAdminEn: I18nAdmin = {
         },
         openapi:
             "If you want to integrate an external application and use Rauthy's API, take a look at the",
-        openapiNote: `In the default configuration, the Swagger UI is not active via the link above. It can be activated
-            via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.`,
+        openapiNote:
+            'In the default configuration, the Swagger UI is not active via the link above.',
+        openapiEnable:
+            "It can be activated via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.",
         source: 'The source code can be found here',
     },
     editor: {
+        format: 'Format',
+        plainText: 'Plain text',
         bold: 'Bold',
         code: 'Code',
         heading1: 'Heading 1',
@@ -264,11 +299,14 @@ export let I18nAdminEn: I18nAdmin = {
         textArea: 'Edit Text',
     },
     email: {
+        delivery: 'Delivery',
         cancelJob: 'Cancel Job',
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
         immediate: 'Immediate',
         jobs: 'E-Mail Jobs',
+        recipients: 'Recipients',
         scheduled: 'Scheduled Dispatch',
+        scheduledDelivery: 'Scheduled',
         sendAllUsers: 'This E-Mail will be sent to all users.',
         sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
         sendMail: 'Send E-Mail',
@@ -283,6 +321,12 @@ export let I18nAdminEn: I18nAdmin = {
             Afterward, you need to do a logout and log back in.`,
     },
     events: {
+        searchContent: 'Content',
+        timestamp: 'Timestamp',
+        level: 'Level',
+        type: 'Type',
+        allLevels: 'All levels',
+        sendTest: 'Send test event',
         eventLevel: 'Event Level',
         eventType: 'Event Type',
     },
@@ -307,6 +351,7 @@ export let I18nAdminEn: I18nAdmin = {
         rotateKeys: 'Rotate Keys',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -344,6 +389,7 @@ export let I18nAdminEn: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV Store',
         apiKeys: 'API Keys',
         attributes: 'Attributes',
         blacklist: 'Blacklist',
@@ -401,6 +447,9 @@ export let I18nAdminEn: I18nAdmin = {
             for security reasons.`,
     },
     passwordPolicy: {
+        lengthRules: 'Password length',
+        characterRules: 'Character requirements',
+        expiryRules: 'Expiry and reuse',
         configDesc: 'Policy for new passwords.',
         resetSet0: 'The value 0 deactivates the requirement.',
         validForDays: 'Valid For Days',
@@ -408,6 +457,16 @@ export let I18nAdminEn: I18nAdmin = {
     },
     providers: {
         config: {
+            sections: {
+                tokenAuth: 'Token authentication',
+                adminMapping: 'Admin access',
+                mfaMapping: 'Multi-factor authentication',
+                claimHelp: 'JSONPath syntax and examples',
+                access: 'Access and linking',
+                endpoints: 'Endpoints',
+                client: 'Client credentials',
+                claims: 'Claim mapping',
+            },
             allowInsecureTls: 'Allow insecure TLS',
             autoLink: 'Auto-Link User',
             autoLinkDesc1: `If Auto-Link User is activated, the login via this provider will automatically link a
@@ -467,6 +526,7 @@ export let I18nAdminEn: I18nAdmin = {
         },
     },
     scopes: {
+        defaultBadge: 'default',
         claimsAtRoot: 'Emit claims at token root',
         claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped

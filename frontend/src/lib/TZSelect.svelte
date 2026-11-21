@@ -22,10 +22,10 @@
 </script>
 
 <div class="tz">
-    <div class="label">
+    <div class="label admin-field-label">
         {t.common.timezone}
     </div>
-    <div class="opts">
+    <div class="opts admin-field-select">
         <Options ariaLabel={t.common.timezone} {options} bind:value withSearch />
     </div>
 </div>
@@ -41,5 +41,8 @@
 
     .opts {
         margin: 0.5rem 0;
+    }
+    :global(.ui-shell) .opts {
+        margin: 0;
     }
 </style>

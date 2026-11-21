@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
@@ -11,13 +12,8 @@
     import type { GroupResponse } from '#api/types/groups.ts';
     import GroupAddNew from '#lib/admin/groups/GroupAddNew.svelte';
     import GroupDetails from '#lib/admin/groups/GroupDetails.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -83,17 +79,13 @@
 </script>
 
 <NavSub
-    paddingTop="2.35rem"
+    detail={!!group}
+    onBack={() => gid.set(undefined)}
+    error={err}
     buttonTilesAriaControls="groups"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
 >
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={groups.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <AdminListHeading title={ta.nav.groups} count={groupsFiltered.length} />
+    <ButtonAddModal level={groups.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <GroupAddNew onSave={onAddNew} {groups} />
     </ButtonAddModal>
     <OrderSearchBar

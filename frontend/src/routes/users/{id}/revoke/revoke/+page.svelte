@@ -1,9 +1,6 @@
 <script lang="ts">
-    import LangSelector from '#lib/LangSelector.svelte';
-    import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
+    import PublicPage from '#lib/PublicPage.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import A from '#lib/A.svelte';
 
     let t = useI18n();
@@ -13,29 +10,18 @@
     <title>{t.userRevoke.title || 'Login Revoke'}</title>
 </svelte:head>
 
-<Main>
-    <ContentCenter>
-        <div class="container">
-            <h1>{t.userRevoke.title}</h1>
-            <p>{t.userRevoke.desc1}</p>
-            <p class="err">{t.userRevoke.desc2}</p>
+<PublicPage>
+    <div class="public-card">
+        <h1>{t.userRevoke.title}</h1>
+        <p>{t.userRevoke.desc1}</p>
+        <p class="err">{t.userRevoke.desc2}</p>
 
-            <A href="/auth/v1/account">Account</A>
-        </div>
-
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
-    </ContentCenter>
-</Main>
+        <A href="/auth/v1/account" reload>Account</A>
+    </div>
+</PublicPage>
 
 <style>
     p {
         margin: 0.5rem 0;
-    }
-
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
     }
 </style>

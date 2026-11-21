@@ -1,12 +1,9 @@
 <script lang="ts">
-    import LangSelector from '#lib/LangSelector.svelte';
     import Button from '#lib/button/Button.svelte';
-    import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
+    import PublicPage from '#lib/PublicPage.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
     import { TPL_EMAIL_NEW, TPL_EMAIL_OLD } from '#utils/constants.js';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
 
     let t = useI18n();
 
@@ -21,28 +18,23 @@
 <Template id={TPL_EMAIL_OLD} bind:value={emailOld} />
 <Template id={TPL_EMAIL_NEW} bind:value={emailNew} />
 
-<Main>
-    <ContentCenter>
-        <div class="container">
-            <h1>{t.emailChange.title}</h1>
-            <p>
-                {t.emailChange.textChanged}:<br />
-                <b>{emailOld}</b>
-                {t.emailChange.to}
-                <b>{emailNew}</b>
-            </p>
-            <p>{t.emailChange.textLogin}</p>
-            <div class="btn">
-                <Button onclick={() => window.location.replace('/auth/v1/account')}>
-                    {t.authorize.login}
-                </Button>
-            </div>
+<PublicPage>
+    <div class="public-card">
+        <h1>{t.emailChange.title}</h1>
+        <p>
+            {t.emailChange.textChanged}:<br />
+            <b>{emailOld}</b>
+            {t.emailChange.to}
+            <b>{emailNew}</b>
+        </p>
+        <p>{t.emailChange.textLogin}</p>
+        <div class="btn">
+            <Button onclick={() => window.location.replace('/auth/v1/account')}>
+                {t.authorize.login}
+            </Button>
         </div>
-
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
-    </ContentCenter>
-</Main>
+    </div>
+</PublicPage>
 
 <style>
     p {
@@ -52,11 +44,5 @@
     .btn {
         margin-left: -5px;
         width: 7.5rem;
-    }
-
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
     }
 </style>

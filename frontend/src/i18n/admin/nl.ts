@@ -40,6 +40,7 @@ export let I18nAdminNl: I18nAdmin = {
         size: 'Grootte',
     },
     clients: {
+        settings: { general: 'Algemeen', tokens: 'Tokens', integrations: 'Integraties' },
         allowedResources: 'Toegestane resources',
         defaultAud: 'Standaard audiences',
         actorSameClient: 'Actor token from this client only',
@@ -49,6 +50,17 @@ export let I18nAdminNl: I18nAdmin = {
         backchannelLogout:
             'Als deze client {{ OIDC_BCL }} ondersteunt, kunt u de URI hier opgeven.',
         branding: {
+            title: 'Vormgeving',
+            theme: 'Thema',
+            light: 'Licht thema',
+            dark: 'Donker thema',
+            preview: 'Voorbeeld',
+            assets: 'Logo en favicon',
+            logo: 'Logo',
+            advanced: 'Geavanceerde CSS',
+            resetTheme: 'Thema herstellen',
+            resetThemeConfirm: 'Standaardkleuren en hoekradius herstellen?',
+            assetsImmediate: 'Bestandswijzigingen worden direct toegepast.',
             descHsl: `De volgende waarden moeten worden opgegeven als HSL-waarden. U geeft alleen de basiskleuren op.
             Alfakanalen en andere waarden worden dynamisch gemanipuleerd door het thema.`,
             descFullCss: `De volgende waarden moeten volledig geldige CSS <code>color</code>-waarden zijn.
@@ -146,6 +158,20 @@ export let I18nAdminNl: I18nAdmin = {
         },
     },
     common: {
+        about: 'Over Rauthy',
+        date: 'Datum',
+        time: 'Tijd',
+        preferences: 'Voorkeuren',
+        profile: 'Profiel',
+        contactDetails: 'Contactgegevens',
+        access: 'Toegang',
+        activity: 'Activiteit',
+
+        compactNavigation: 'Compacte navigatie',
+        administration: 'Beheer',
+        selectEntry: 'Selecteer een item',
+        selectEntryHint: 'Kies een item uit de lijst om de details te bekijken en te beheren.',
+
         account: 'Account',
         addNew: 'Nieuw toevoegen',
         back: 'Terug',
@@ -254,8 +280,10 @@ export let I18nAdminNl: I18nAdmin = {
         },
         openapi:
             "Als u een externe applicatie wilt integreren en Rauthy's API wilt gebruiken, kijk dan naar het",
-        openapiNote: `In de standaardconfiguratie is de Swagger UI niet actief via de bovenstaande link. Het kan worden 
-            geactiveerd via configuratie 'server.swagger_ui_enable' en mogelijk 'server.swagger_ui_public'.`,
+        openapiNote:
+            'In de standaardconfiguratie is de Swagger UI niet actief via de bovenstaande link.',
+        openapiEnable:
+            "Het kan worden geactiveerd via configuratie 'server.swagger_ui_enable' en mogelijk 'server.swagger_ui_public'.",
         source: 'De broncode is hier te vinden',
     },
     editor: {
@@ -295,6 +323,12 @@ export let I18nAdminNl: I18nAdmin = {
             Daarna moet u uitloggen en opnieuw inloggen.`,
     },
     events: {
+        searchContent: 'Inhoud',
+        timestamp: 'Tijdstempel',
+        level: 'Niveau',
+        type: 'Type',
+        allLevels: 'Alle niveaus',
+        sendTest: 'Testgebeurtenis sturen',
         eventLevel: 'Gebeurtenisniveau',
         eventType: 'Gebeurtenistype',
     },
@@ -319,6 +353,7 @@ export let I18nAdminNl: I18nAdmin = {
         rotateKeys: 'Sleutels roteren',
     },
     kv: {
+        limit: 'Limiet',
         accessTestDesc: `De toegangssleutel moet worden opgegeven in de <code>Authorization</code>-header als
             <code>Bearer</code>-token. De volgende <code>curl</code>-opdracht kan worden gebruikt voor testen.`,
         addNewKey: 'Nieuwe toegangssleutel',
@@ -355,6 +390,7 @@ export let I18nAdminNl: I18nAdmin = {
         value: 'JSON-waarde',
     },
     nav: {
+        kvStore: 'KV-opslag',
         apiKeys: 'API-sleutels',
         attributes: 'Attributen',
         blacklist: 'Zwarte lijst',

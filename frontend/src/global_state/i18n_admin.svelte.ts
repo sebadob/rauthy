@@ -5,6 +5,7 @@ import { I18nAdminDe } from '../i18n/admin/de';
 import { I18nAdminEn } from '../i18n/admin/en';
 import { I18nAdminEs } from '../i18n/admin/es';
 import { I18nAdminFr } from '../i18n/admin/fr';
+import { I18nAdminIt } from '../i18n/admin/it';
 import { I18nAdminJa } from '../i18n/admin/ja';
 import { I18nAdminKo } from '../i18n/admin/ko';
 import { I18nAdminNb } from '../i18n/admin/nb';
@@ -40,6 +41,7 @@ const i18nMap: Record<string, I18nAdmin> = {
     en: I18nAdminEn,
     es: I18nAdminEs,
     fr: I18nAdminFr,
+    it: I18nAdminIt,
     ja: I18nAdminJa,
     ko: I18nAdminKo,
     nb: I18nAdminNb,

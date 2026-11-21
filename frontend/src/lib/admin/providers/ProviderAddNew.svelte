@@ -26,7 +26,7 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const inputWidth = 'min(calc(100dvw - 1.75rem), 30rem)';
+    const inputWidth = '100%';
 
     let isLoading = $state(false);
     let err = $state('');
@@ -397,9 +397,11 @@
     }
 
     .container {
-        height: 90dvh;
-        max-height: 90dvh;
-        width: min(40rem, calc(100dvw - 1.75rem));
-        overflow-y: auto;
+        width: min(36rem, calc(100dvw - 96px));
+        max-width: 100%;
+    }
+
+    .container :global(form > section) {
+        margin-block: var(--ui-space);
     }
 </style>

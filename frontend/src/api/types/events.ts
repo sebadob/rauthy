@@ -1,4 +1,5 @@
-export type EventLevel = 'info' | 'notice' | 'warning' | 'critical';
+export const EVENT_LEVELS = ['info', 'notice', 'warning', 'critical'] as const;
+export type EventLevel = (typeof EVENT_LEVELS)[number];
 export type EventType =
     | 'InvalidLogins'
     | 'IpBlacklisted'

@@ -3,7 +3,7 @@
     import Button from '#lib/button/Button.svelte';
     import { slide } from 'svelte/transition';
     import IconCheck from '#icons/IconCheck.svelte';
-    import LabeledValue from '#lib/LabeledValue.svelte';
+    import Section from '#lib/Section.svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
     import type { ApiKeyAccess, ApiKeyRequest, ApiKeyResponse } from '#api/types/api_keys.ts';
@@ -94,28 +94,28 @@
     }
 </script>
 
-<LabeledValue label={ta.api_key.keyName}>
-    {key.name}
-</LabeledValue>
-
-<InputCheckbox ariaLabel={ta.api_key.limitedValidity} bind:checked={doesExpire}>
-    {ta.api_key.limitedValidity}
-</InputCheckbox>
-
-{#if doesExpire}
-    <div transition:slide={{ duration: 150 }}>
-        <InputDateTimeCombo
-            label={ta.api_key.expires}
-            bind:value={expDate}
-            bind:timeValue={expTime}
-            withTime
-            min={minDate}
-            required
-        />
-    </div>
-{/if}
-
-<ApiKeyMatrix {key} bind:finalize={finalizeMatrix} />
+<div class="sections">
+    <Section title={ta.api_key.validity ?? 'Validity'}>
+        <InputCheckbox ariaLabel={ta.api_key.limitedValidity} bind:checked={doesExpire}>
+            {ta.api_key.limitedValidity}
+        </InputCheckbox>
+        {#if doesExpire}
+            <div class="expiry" transition:slide={{ duration: 150 }}>
+                <InputDateTimeCombo
+                    label={ta.api_key.expires}
+                    bind:value={expDate}
+                    bind:timeValue={expTime}
+                    withTime
+                    min={minDate}
+                    required
+                />
+            </div>
+        {/if}
+    </Section>
+    <Section title={ta.api_key.permissions ?? 'Permissions'}>
+        <ApiKeyMatrix {key} bind:finalize={finalizeMatrix} />
+    </Section>
+</div>
 
 <div class="btn">
     <Button onclick={onSubmit}>
@@ -134,6 +134,15 @@
 </div>
 
 <style>
+    .sections {
+        display: grid;
+        gap: var(--ui-space);
+    }
+
+    .expiry {
+        max-width: 28rem;
+    }
+
     .btn {
         margin-top: 1rem;
         display: flex;

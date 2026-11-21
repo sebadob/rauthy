@@ -37,6 +37,7 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        settings: { general: '常规', tokens: '令牌', integrations: '集成' },
         allowedResources: '允许的资源',
         defaultAud: '默认受众 (aud)',
         actorSameClient: 'Actor token from this client only',
@@ -45,6 +46,17 @@ export let I18nAdminZh: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
+            title: '外观',
+            theme: '主题',
+            light: '浅色主题',
+            dark: '深色主题',
+            preview: '预览',
+            assets: '徽标和网站图标',
+            logo: '徽标',
+            advanced: '高级 CSS',
+            resetTheme: '重置主题',
+            resetThemeConfirm: '恢复默认颜色和圆角半径？',
+            assetsImmediate: '文件更改会立即生效。',
             descHsl: `以下值必须以HSL值形式给出。您只需提供基本颜色。
             透明度通道和其他值由主题动态调整。`,
             descFullCss: `以下值必须是完全有效的CSS <code>color</code>值。
@@ -137,6 +149,20 @@ export let I18nAdminZh: I18nAdmin = {
         },
     },
     common: {
+        about: '关于',
+        date: '日期',
+        time: '时间',
+        preferences: '偏好设置',
+        profile: '个人资料',
+        contactDetails: '联系信息',
+        access: '访问权限',
+        activity: '活动',
+
+        compactNavigation: '紧凑导航',
+        administration: '管理',
+        selectEntry: '选择条目',
+        selectEntryHint: '从列表中选择一个条目以查看和管理其详细信息。',
+
         account: '账户',
         addNew: '新增',
         back: '返回',
@@ -231,8 +257,9 @@ export let I18nAdminZh: I18nAdmin = {
             必须针对每个部署进行调整。`,
         },
         openapi: '如果您想集成外部应用程序并使用Rauthy的API，请查看',
-        openapiNote: `在默认配置中，Swagger UI不会通过上面的链接激活。它 
-            可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。`,
+        openapiNote: '在默认配置中，Swagger UI不会通过上面的链接激活。',
+        openapiEnable:
+            '它 可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。',
         source: '源代码可以在这里找到',
     },
     editor: {
@@ -272,6 +299,12 @@ export let I18nAdminZh: I18nAdmin = {
             之后，您需要注销并重新登录。`,
     },
     events: {
+        searchContent: '内容',
+        timestamp: '时间戳',
+        level: '级别',
+        type: '类型',
+        allLevels: '所有级别',
+        sendTest: '发送测试事件',
         eventLevel: '事件级别',
         eventType: '事件类型',
     },
@@ -295,6 +328,7 @@ export let I18nAdminZh: I18nAdmin = {
         rotateKeys: '轮换密钥',
     },
     kv: {
+        limit: '上限',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -332,6 +366,7 @@ export let I18nAdminZh: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV 存储',
         apiKeys: 'API密钥',
         attributes: '属性',
         blacklist: '黑名单',

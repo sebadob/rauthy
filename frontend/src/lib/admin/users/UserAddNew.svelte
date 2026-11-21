@@ -18,7 +18,6 @@
     import SelectList from '#lib/select_list/SelectList.svelte';
     import type { SelectItem } from '#lib/select_list/props.ts';
     import { untrack } from 'svelte';
-    import LabeledValue from '#lib/LabeledValue.svelte';
     import { useI18nConfig } from '#state/i18n_config.svelte.ts';
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
     import TZSelect from '#lib/TZSelect.svelte';
@@ -46,8 +45,6 @@
     // use entirely: no role editor, and `groupsItems` below is filtered to the groups it manages.
     // Editing an existing user still shows everything (see UserInfo).
     let isGroupAdmin = $derived(!session.isAdmin());
-
-    let ref: undefined | HTMLInputElement = $state();
 
     let err = $state('');
     let email = $state('');
@@ -90,12 +87,6 @@
     let expDate = $state(fmtDateInput());
     let expTime = $state(fmtTimeInput());
 
-    $effect(() => {
-        requestAnimationFrame(() => {
-            ref?.focus();
-        });
-    });
-
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
@@ -125,9 +116,9 @@
     <Form action="/auth/v1/users" {onSubmit}>
         <Input
             typ="email"
-            bind:ref
             bind:value={email}
             autocomplete="off"
+            data-bwignore
             label="E-Mail"
             placeholder="E-Mail"
             required
@@ -149,19 +140,23 @@
             pattern={PATTERN_USER_NAME}
         />
 
-        <TZSelect bind:value={tz} />
-        {#if languages}
-            <div style:margin-left="0.25rem">
-                <LabeledValue label={ta.common.language}>
+        <div class="locale-fields">
+            <TZSelect bind:value={tz} />
+            {#if languages}
+                <div class="admin-field-select">
+                    <div class="admin-field-label">{ta.common.language}</div>
                     <Options
                         ariaLabel={t.common.selectI18n}
                         options={languages}
                         bind:value={language}
-                        borderless
+                        uppercase
+                        hideScrollbar
+                        fitViewport
+                        placement="above"
                     />
-                </LabeledValue>
-            </div>
-        {/if}
+                </div>
+            {/if}
+        </div>
 
         {#if !isGroupAdmin}
             <SelectList bind:items={rolesItems}>
@@ -202,8 +197,14 @@
 </div>
 
 <style>
+    .locale-fields {
+        display: grid;
+        gap: var(--ui-space);
+        margin-bottom: var(--ui-space);
+    }
+
     .container {
-        width: min(calc(100dvw - 1.75rem), 22rem);
+        width: min(22rem, calc(100dvw - 34px - 2 * var(--dialog-padding, 32px)));
         min-height: 33.5rem;
         text-align: left;
     }

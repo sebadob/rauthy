@@ -1,6 +1,8 @@
 <script lang="ts">
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import UserPicture from '#lib/UserPicture.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
     import type { RoleResponse } from '#api/types/roles.ts';
     import type { GroupResponse } from '#api/types/groups.ts';
@@ -13,11 +15,11 @@
     import UserMfa from './UserMfa.svelte';
     import Devices from '#lib/devices/Devices.svelte';
     import UserForceLogout from './UserForceLogout.svelte';
-    import UserDelete from '#lib/admin/users/UserDelete.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
     import { useSession } from '#state/session.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
 
     let {
         userValuesConfig,
@@ -51,21 +53,25 @@
     const TAB_MFA = t.account.navMfa;
     const TAB_DEVICES = t.account.devices;
     const TAB_LOGOUT = t.account.navLogout;
-    const TAB_DELETE = t.common.delete;
-
-    let tabs = $derived(
-        isGroupAdmin
-            ? [TAB_INFO, TAB_PASSWORD, TAB_MFA, TAB_LOGOUT]
-            : [TAB_INFO, TAB_ATTR, TAB_PASSWORD, TAB_MFA, TAB_DEVICES, TAB_LOGOUT, TAB_DELETE],
+    const sections = [
+        { id: 'info', label: TAB_INFO, fullAdmin: false },
+        { id: 'attributes', label: TAB_ATTR, fullAdmin: true },
+        { id: 'password', label: TAB_PASSWORD, fullAdmin: false },
+        { id: 'mfa', label: TAB_MFA, fullAdmin: false },
+        { id: 'devices', label: TAB_DEVICES, fullAdmin: true },
+        { id: 'logout', label: TAB_LOGOUT, fullAdmin: false },
+    ];
+    const sectionParam = useParam('userTab');
+    let available = $derived(sections.filter(section => !section.fullAdmin || !isGroupAdmin));
+    let tabs = $derived(available.map(section => section.label));
+    let selected = $derived(
+        available.find(section => section.id === sectionParam.get())?.label ?? TAB_INFO,
     );
-    let selected = $state(TAB_INFO);
 
-    let focusFirst: undefined | (() => void) = $state();
-    useTrigger().set('navSubSub', () => {
-        requestAnimationFrame(() => {
-            focusFirst?.();
-        });
-    });
+    function select(label: string) {
+        const section = available.find(section => section.label === label);
+        sectionParam.set(section?.id === 'info' ? undefined : section?.id, 'replace');
+    }
 
     let err = $state('');
     // a group admin opened an ordinary user that is not in any of its groups yet (HTTP 428):
@@ -78,15 +84,16 @@
     });
 
     async function fetchUser() {
+        const requestedId = userId;
         err = '';
         notManaged = false;
-        let res = await fetchGet<UserResponse>(`/auth/v1/users/${userId}`);
+        let res = await fetchGet<UserResponse>(`/auth/v1/users/${requestedId}`);
+        if (userId !== requestedId) return;
         if (res.body) {
             user = undefined;
             requestAnimationFrame(() => {
-                user = res.body;
+                if (userId === requestedId) user = res.body;
             });
-            focusFirst?.();
         } else if (res.status === 428) {
             user = undefined;
             notManaged = true;
@@ -102,6 +109,36 @@
     }
 </script>
 
+{#if user && !err}
+    <EntityHeader
+        title={[user.given_name, user.family_name].filter(Boolean).join(' ') || user.email}
+        subtitle={user.email}
+    >
+        {#snippet actions()}
+            {#if user && !isGroupAdmin}
+                {#key user.id}
+                    <EntityDelete
+                        url={`/auth/v1/users/${user.id}`}
+                        name={user.email}
+                        message={ta.users.deleteUser}
+                        disabledReason={session.get()?.user_id === user.id
+                            ? ta.users.antiLockout.delete
+                            : undefined}
+                        onDelete={onSave}
+                    />
+                {/key}
+            {/if}
+        {/snippet}
+        <UserPicture
+            fallbackCharacters={(user.given_name?.[0] || user.email[0]) +
+                (user.family_name?.[0] || '')}
+            userId={user.id}
+            pictureId={user.picture_id}
+            size="large"
+        />
+    </EntityHeader>
+{/if}
+
 {#if err}
     <!-- a group admin reaching a user it cannot manage (e.g. another admin) gets a clean
          notice instead of a raw API error and an empty tab bar -->
@@ -112,7 +149,7 @@
     <UserAddToGroups {userId} {groups} onAdded={onSaveLocal} />
 {:else}
     <div class="flex">
-        <Tabs {tabs} bind:selected bind:focusFirst />
+        <Tabs {tabs} bind:selected={() => selected, select} />
     </div>
 {/if}
 
@@ -137,8 +174,6 @@
         <Devices {userId} />
     {:else if selected === TAB_LOGOUT}
         <UserForceLogout {userId} />
-    {:else if selected === TAB_DELETE}
-        <UserDelete {userId} {onSave} />
     {/if}
 {/if}
 

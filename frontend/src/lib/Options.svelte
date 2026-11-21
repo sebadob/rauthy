@@ -15,8 +15,13 @@
         offsetTop,
         offsetLeft,
         anchored,
+        fitViewport,
+        placement,
+        showTitle = true,
         borderless = false,
         withSearch = false,
+        uppercase = false,
+        hideScrollbar = false,
         onChange,
         onLeft,
         onRight,
@@ -32,8 +37,13 @@
         offsetTop?: string;
         offsetLeft?: string;
         anchored?: boolean;
+        fitViewport?: boolean;
+        placement?: 'above' | 'below';
+        showTitle?: boolean;
         borderless?: boolean;
         withSearch?: boolean;
+        uppercase?: boolean;
+        hideScrollbar?: boolean;
         onChange?: (value: string | number | undefined) => void;
         onLeft?: () => void;
         onRight?: () => void;
@@ -175,6 +185,8 @@
     {offsetTop}
     {offsetLeft}
     {anchored}
+    {fitViewport}
+    {placement}
     {onToggle}
     {onLeft}
     {onRight}
@@ -182,8 +194,8 @@
     {onDown}
 >
     {#snippet button()}
-        <div class="btn" data-border={!borderless}>
-            <div class="btnText" title={ariaLabel}>
+        <div class="btn admin-select-trigger" data-border={!borderless}>
+            <div class="btnText" class:uppercase title={showTitle ? ariaLabel : undefined}>
                 {value}
             </div>
             <IconChevronDown width=".8rem" />
@@ -199,11 +211,12 @@
             />
         {/if}
 
-        <div bind:this={refOptions} class="popoverOptions">
+        <div bind:this={refOptions} class="popoverOptions" class:hide-scrollbar={hideScrollbar}>
             {#each optionsFiltered as option, i}
                 <Button invisible invisibleOutline onclick={ev => select(ev, option)}>
                     <div
                         class="optPopover"
+                        class:uppercase
                         aria-selected={value === option}
                         data-focus={selected === i}
                     >
@@ -233,6 +246,10 @@
         border-radius: var(--border-radius);
     }
 
+    .uppercase {
+        text-transform: uppercase;
+    }
+
     .btnText {
         margin: 0 0.25rem;
         text-wrap: nowrap;
@@ -245,8 +262,8 @@
     .optPopover {
         width: 100%;
         text-align: left;
-        /* to the right, big scrollbars like in chrome can crash with not enough space */
-        padding: 0.25rem 1rem 0.25rem 0.7rem;
+        padding: 0.25rem 0.7rem;
+        overflow-wrap: anywhere;
         color: hsl(var(--text));
         font-weight: normal;
         border-radius: var(--border-radius);
@@ -270,14 +287,79 @@
     .popover {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        inline-size: max-content;
+        max-inline-size: calc(100dvw - 2rem);
     }
 
     .popoverOptions {
-        /*height: 100%;*/
-        width: 100%;
         display: flex;
         flex-direction: column;
-        overflow-y: auto;
+        min-block-size: 0;
+        overflow: auto;
+        scrollbar-gutter: stable both-edges;
+    }
+
+    .popoverOptions.hide-scrollbar {
+        scrollbar-width: none;
+        scrollbar-gutter: auto;
+    }
+
+    .popoverOptions.hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    :global(.ui-shell) .admin-select-trigger:not(:global(.branding-preview *)) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: var(--ui-option-height, 36px);
+        padding: var(--ui-option-padding, 0 12px);
+        border: 1px solid transparent;
+        border-radius: var(--border-radius);
+        font-family: inherit;
+        font-size: var(--ui-control-font-size);
+        font-weight: var(--ui-option-font-weight, 500);
+        line-height: var(--ui-control-line-height);
+        color: var(--ui-text);
+        background: transparent;
+    }
+    :global(.ui-shell) .admin-select-trigger[data-border='true']:not(:global(.branding-preview *)) {
+        border-color: var(--ui-outline);
+        background: var(--ui-surface);
+    }
+    :global(.ui-shell) .admin-select-trigger:not(:global(.branding-preview *)) :global(.btnText) {
+        margin: 0;
+        line-height: var(--ui-control-line-height);
+    }
+    :global(.ui-shell) .popoverOptions:not(:global(.branding-preview *)) {
+        padding: 4px;
+    }
+    :global(.ui-shell) .popoverOptions:not(:global(.branding-preview *)) :global(.admin-control) {
+        width: 100%;
+        justify-content: flex-start;
+        height: auto;
+        min-height: 40px;
+        padding: 0;
+        border-radius: var(--border-radius);
+    }
+    :global(.ui-shell)
+        .popoverOptions:not(:global(.branding-preview *))
+        :global(.admin-control)
+        > :global(.children) {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    :global(.ui-shell) .optPopover:not(:global(.branding-preview *)) {
+        width: 100%;
+        padding: 10px 12px;
+        text-align: left;
+        border-radius: var(--border-radius);
+        font-size: 14px;
+        line-height: 20px;
+    }
+    :global(.ui-shell) .optPopover[aria-selected='true']:not(:global(.branding-preview *)) {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
     }
 </style>

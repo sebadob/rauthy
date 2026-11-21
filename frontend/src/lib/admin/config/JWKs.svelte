@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import Button from '#lib/button/Button.svelte';
+    import Section from '#lib/Section.svelte';
     import { fetchGet, fetchPost } from '#api/fetch.ts';
     import type { JWKSCerts, JWKSPublicKeyCerts } from '#api/types/oidc.ts';
     import Expandable from '#lib/Expandable.svelte';
@@ -47,78 +48,71 @@
     }
 </script>
 
-<h2>Json Web Keys</h2>
-<p>{ta.jwks.p1}</p>
-<p>{ta.jwks.p2}</p>
-<p>{ta.jwks.p3}</p>
+<h2 class="ui-page-title">Json Web Keys</h2>
 
-{#each certs as jwk (jwk.kid)}
-    <Expandable>
-        {#snippet summary()}
-            <div class="font-mono">
-                {jwk.alg}
-                /
-                {jwk.kid}
+<div class="ui-section-stack">
+    <Section>
+        {#snippet actions()}
+            <div class="flex gap-05">
+                <Button onclick={onSubmit} {isLoading}>{ta.jwks.rotateKeys}</Button>
+                {#if success}<IconCheck />{/if}
             </div>
         {/snippet}
-        {#snippet details()}
-            <LabeledValue label="Key ID" mono>
-                {jwk.kid}
-            </LabeledValue>
-            <LabeledValue label={ta.jwks.type} mono>
-                {jwk.kty}
-            </LabeledValue>
-            <LabeledValue label={ta.jwks.alg} mono>
-                {jwk.alg}
-            </LabeledValue>
-
-            {#if jwk.crv}
-                <LabeledValue label="Curve" mono>
-                    {jwk.crv}
-                </LabeledValue>
-            {/if}
-            {#if jwk.n}
-                <LabeledValue label="n" mono>
-                    <div class="n">
-                        {jwk.n}
+        <p class="ui-muted-copy">{ta.jwks.p1}</p>
+        <p class="ui-muted-copy">{ta.jwks.p2}</p>
+        <p class="ui-muted-copy">{ta.jwks.p3}</p>
+        {#if err}<p class="err" role="alert">{err}</p>{/if}
+    </Section>
+    <div class="ui-section-stack">
+        {#each certs as jwk (jwk.kid)}
+            <Expandable>
+                {#snippet summary()}
+                    <div class="font-mono">
+                        {jwk.alg}
+                        /
+                        {jwk.kid}
                     </div>
-                </LabeledValue>
-            {/if}
-            {#if jwk.e}
-                <LabeledValue label="e" mono>
-                    {jwk.e}
-                </LabeledValue>
-            {/if}
-            {#if jwk.x}
-                <LabeledValue label="x" mono>
-                    {jwk.x}
-                </LabeledValue>
-            {/if}
-        {/snippet}
-    </Expandable>
-{/each}
+                {/snippet}
+                {#snippet details()}
+                    <LabeledValue label="Key ID" mono>
+                        {jwk.kid}
+                    </LabeledValue>
+                    <LabeledValue label={ta.jwks.type} mono>
+                        {jwk.kty}
+                    </LabeledValue>
+                    <LabeledValue label={ta.jwks.alg} mono>
+                        {jwk.alg}
+                    </LabeledValue>
 
-<div class="btn flex gap-05">
-    <Button onclick={onSubmit} {isLoading}>
-        {ta.jwks.rotateKeys}
-    </Button>
-
-    {#if success}
-        <IconCheck />
-    {/if}
+                    {#if jwk.crv}
+                        <LabeledValue label="Curve" mono>
+                            {jwk.crv}
+                        </LabeledValue>
+                    {/if}
+                    {#if jwk.n}
+                        <LabeledValue label="n" mono>
+                            <div class="n">
+                                {jwk.n}
+                            </div>
+                        </LabeledValue>
+                    {/if}
+                    {#if jwk.e}
+                        <LabeledValue label="e" mono>
+                            {jwk.e}
+                        </LabeledValue>
+                    {/if}
+                    {#if jwk.x}
+                        <LabeledValue label="x" mono>
+                            {jwk.x}
+                        </LabeledValue>
+                    {/if}
+                {/snippet}
+            </Expandable>
+        {/each}
+    </div>
 </div>
 
-{#if err}
-    <div class="err">
-        {err}
-    </div>
-{/if}
-
 <style>
-    .btn {
-        margin-top: 1rem;
-    }
-
     .n {
         max-width: 35rem;
         word-break: break-all;

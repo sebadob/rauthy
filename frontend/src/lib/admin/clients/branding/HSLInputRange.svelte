@@ -1,24 +1,23 @@
 <script lang="ts">
-    import { genKey } from '#utils/helpers.ts';
     import InputRange from '#lib/form/InputRange.svelte';
     import InputColor from '#lib/form/InputColor.svelte';
 
     let {
         label,
+        group,
         h = $bindable(),
         s = $bindable(),
         l = $bindable(),
     }: {
         label: string;
+        group: string;
         h: number;
         s: number;
         l: number;
     } = $props();
 
-    const id = genKey();
-    const widthRange = '15rem';
+    const widthRange = '100%';
 
-    let hsl = $derived(`hsl(${h} ${s}% ${l}%)`);
     let hex = $derived(hslToHex(h, s, l));
 
     function hslToHex(h: number, s: number, l: number) {
@@ -53,88 +52,103 @@
     }
 </script>
 
-<div class="outer">
-    <div class="container" style:border-color={hsl}>
-        <div>
-            <h5>
-                <label for={id} class="font-label">
-                    {label}
-                </label>
-            </h5>
-            <div {id} class="values">
-                <InputRange
-                    label="Hue"
-                    bind:value={h}
-                    min={0}
-                    max={359}
-                    {widthRange}
-                    bgMode="hue"
-                    hue={h}
-                    sat={s}
-                    lum={l}
-                />
-                <InputRange
-                    label="Sat"
-                    bind:value={s}
-                    min={0}
-                    max={100}
-                    {widthRange}
-                    bgMode="sat"
-                    hue={h}
-                    sat={s}
-                    lum={l}
-                />
-                <InputRange
-                    label="Lum"
-                    bind:value={l}
-                    min={0}
-                    max={100}
-                    {widthRange}
-                    bgMode="lum"
-                    hue={h}
-                    sat={s}
-                    lum={l}
-                />
-            </div>
+<div class="container" role="group" aria-label={label}>
+    <details name={group}>
+        <summary><h4 class="font-mono">{label}</h4></summary>
+        <div class="values">
+            <InputRange
+                label="Hue"
+                bind:value={h}
+                min={0}
+                max={359}
+                {widthRange}
+                bgMode="hue"
+                hue={h}
+                sat={s}
+                lum={l}
+            />
+            <InputRange
+                label="Sat"
+                bind:value={s}
+                min={0}
+                max={100}
+                {widthRange}
+                bgMode="sat"
+                hue={h}
+                sat={s}
+                lum={l}
+            />
+            <InputRange
+                label="Lum"
+                bind:value={l}
+                min={0}
+                max={100}
+                {widthRange}
+                bgMode="lum"
+                hue={h}
+                sat={s}
+                lum={l}
+            />
         </div>
-        <div class="color">
-            <InputColor {label} bind:value={() => hex, v => setHex(v)} />
-        </div>
+    </details>
+    <div class="color">
+        <InputColor {label} bind:value={() => hex, v => setHex(v)} />
     </div>
 </div>
 
 <style>
-    h5 {
-        margin: 0 0 0.25rem 0;
-    }
-
-    label {
-        color: hsl(var(--text-high));
-        margin-left: 0.5rem;
-    }
-
-    .color {
-        height: 8.5rem;
-        width: 3rem;
-        border-radius: 0 var(--border-radius) var(--border-radius) 0;
-        overflow: clip;
-    }
-
     .container {
-        height: 8.5rem;
-        display: flex;
-        gap: 0.5rem;
-        background: hsla(var(--bg-high) / 0.2);
-        border: 1px solid hsl(var(--bg-high));
+        position: relative;
+        min-width: 0;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+    }
+
+    summary {
+        min-height: 2.75rem;
+        padding: 0.625rem 3rem 0.625rem 0.75rem;
+        color: var(--ui-muted);
+        cursor: pointer;
         border-radius: var(--border-radius);
     }
 
-    .outer {
-        margin: 0.5rem 0;
+    summary:hover {
+        background: var(--ui-hover);
+    }
+
+    h4 {
+        display: inline;
+        margin: 0;
+        color: var(--ui-text);
+        font-size: var(--ui-control-font-size);
+    }
+
+    .color {
+        position: absolute;
+        inset-block-start: 0.5rem;
+        inset-inline-end: 0.5rem;
+        width: 2rem;
+        height: 1.75rem;
+    }
+
+    .color :global(input) {
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+    }
+
+    .color :global(input::-webkit-color-swatch) {
+        border-radius: inherit;
+    }
+
+    .color :global(input::-moz-color-swatch) {
+        border-radius: inherit;
     }
 
     .values {
-        width: 17rem;
-        line-height: 1rem;
+        display: grid;
+        gap: 0.25rem;
+        padding: 0.75rem;
+        border-top: 1px solid var(--ui-outline);
     }
 </style>

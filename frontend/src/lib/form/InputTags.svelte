@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick } from 'svelte';
     import { genKey } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
     import IconStop from '#icons/IconStop.svelte';
@@ -65,6 +66,7 @@
     const idDatalist = genKey();
 
     let value = $state('');
+    let editing = $state<{ index: number; original: string }>();
     let validateErr = $state('');
     let list = $derived(datalist && datalist.length > 0 ? idDatalist : undefined);
 
@@ -74,37 +76,75 @@
         values = values.filter(v => v !== value);
     }
 
-    function onblur(event: FocusEvent & { currentTarget: EventTarget & HTMLInputElement }) {
-        isValid();
-        onBlur?.();
-        handleOnEnter();
+    async function startEdit(event: MouseEvent, index: number) {
+        event.stopPropagation();
+        if (!commitValue()) {
+            ref?.focus();
+            return;
+        }
+        editing = { index, original: values[index] };
+        value = values[index];
+        await tick();
+        ref?.focus();
+        ref?.select();
     }
 
-    function oninput(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
+    function resetEntry() {
+        editing = undefined;
+        value = '';
+        validateErr = '';
+        ref?.setCustomValidity('');
+        isError = false;
+    }
+
+    function onblur() {
+        commitValue();
+        onBlur?.();
+    }
+
+    function oninput() {
         isValid();
         onInput?.(value);
     }
 
-    function oninvalid(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
+    function oninvalid(event: Event) {
         event.preventDefault();
         isError = true;
     }
 
-    function onkeydown(ev: KeyboardEvent) {
-        switch (ev.code) {
-            case 'Enter':
-                ev.preventDefault();
-                handleOnEnter();
-                onEnter?.();
-                break;
+    async function onkeydown(event: KeyboardEvent) {
+        if (event.isComposing) return;
+        if (event.key === 'Escape' && editing) {
+            event.preventDefault();
+            event.stopPropagation();
+            resetEntry();
+        } else if (event.key === 'Enter') {
+            event.preventDefault();
+            const wasEditing = !!editing;
+            commitValue();
+            onEnter?.();
+            if (!wasEditing || editing) return;
+        } else {
+            return;
         }
+        await tick();
+        ref?.focus();
     }
 
-    function handleOnEnter() {
-        if (value && isValid()) {
+    function commitValue() {
+        if (!editing && !value) return true;
+        if (!isValid()) return false;
+        if (editing) {
+            const { index, original } = editing;
+            if (values[index] === original) {
+                values[index] = value;
+            }
+            resetEntry();
+        } else {
             values.push(value);
             value = '';
         }
+        return true;
     }
 
     function focus() {
@@ -128,55 +168,72 @@
     }
 </script>
 
-<div role="none" class="container" onclick={focus} style:width>
+{#snippet entryField()}
+    <input
+        bind:this={ref}
+        type={typ}
+        {id}
+        {name}
+        {list}
+        bind:value
+        autocomplete="off"
+        title={errMsg}
+        aria-label={label || placeholder}
+        {placeholder}
+        aria-placeholder={placeholder}
+        {disabled}
+        aria-disabled={disabled}
+        required={!!editing || (required && values.length < 1)}
+        aria-required={!!editing || (required && values.length < 1)}
+        maxlength={maxLength || undefined}
+        min={min || undefined}
+        max={max || undefined}
+        {pattern}
+        {onkeydown}
+        {oninput}
+        {oninvalid}
+        {onblur}
+    />
+
+    {#if datalist && datalist.length > 1}
+        <datalist id={idDatalist} class="absolute">
+            {#each datalist as value}
+                <option {value}></option>
+            {/each}
+        </datalist>
+    {/if}
+{/snippet}
+
+<div role="none" class="container admin-tags-field" onclick={focus} style:width>
     <ul style:max-height={maxHeightList}>
-        {#each values as value}
-            <li class="value">
-                <div class="label">
-                    {value}
-                </div>
-                <div class="btnClose">
-                    <Button invisible onclick={() => deleteValue(value)}>
-                        <IconStop width="1.2rem" />
-                    </Button>
-                </div>
+        {#each values as tag, index}
+            <li class="value" class:editing={editing?.index === index}>
+                {#if editing?.index === index}
+                    {@render entryField()}
+                {:else}
+                    <button
+                        type="button"
+                        class="label"
+                        aria-label={`${t.common.edit}: ${tag}`}
+                        {disabled}
+                        onclick={event => startEdit(event, index)}>{tag}</button
+                    >
+                    <div class="btnClose">
+                        <Button
+                            ariaLabel={`${t.common.delete}: ${tag}`}
+                            invisible
+                            isDisabled={disabled || !!editing}
+                            onclick={() => deleteValue(tag)}
+                        >
+                            <IconStop width="1.2rem" />
+                        </Button>
+                    </div>
+                {/if}
             </li>
         {/each}
-        <li>
-            <input
-                bind:this={ref}
-                type={typ}
-                {id}
-                {name}
-                {list}
-                bind:value
-                autocomplete="off"
-                title={errMsg}
-                aria-label={label || placeholder}
-                {placeholder}
-                aria-placeholder={placeholder}
-                {disabled}
-                aria-disabled={disabled}
-                required={required && values.length < 1}
-                aria-required={required && values.length < 1}
-                maxlength={maxLength || undefined}
-                min={min || undefined}
-                max={max || undefined}
-                {pattern}
-                {onkeydown}
-                {oninput}
-                {oninvalid}
-                {onblur}
-            />
-
-            {#if datalist && datalist.length > 1}
-                <datalist id={idDatalist} class="absolute">
-                    {#each datalist as value}
-                        <option {value}></option>
-                    {/each}
-                </datalist>
-            {/if}
-        </li>
+        {#if !editing}
+            <li>{@render entryField()}</li>
+        {/if}
     </ul>
     <label for={id} class="font-label noselect" data-required={required}>
         {label}
@@ -245,7 +302,77 @@
         margin-bottom: -0.5rem;
     }
 
+    .value > .label {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+    }
+
+    .value > .label:hover:not(:disabled),
+    .value > .label:focus-visible {
+        text-decoration: underline;
+    }
+
+    .value.editing {
+        flex: 1;
+        min-width: min(14rem, 100%);
+    }
+
+    .value.editing input {
+        width: 100%;
+    }
+
     .value {
         background: hsla(var(--accent) / 0.2);
+    }
+
+    :global(.admin-shell) .admin-tags-field {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        margin: 16px 0;
+    }
+    :global(.admin-shell) .admin-tags-field > :global(label) {
+        order: -1;
+        margin: 0 0 6px;
+    }
+    :global(.admin-shell) .admin-tags-field > :global(ul) {
+        min-height: 44px;
+        padding: 6px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        gap: 6px;
+        overflow-y: auto;
+    }
+    :global(.admin-shell) .admin-tags-field :global(li) {
+        padding: 0;
+        align-items: center;
+    }
+    :global(.admin-shell) .admin-tags-field :global(li.value) {
+        padding-left: 10px;
+        background: var(--ui-tonal);
+        border-radius: var(--border-radius);
+        font-size: 12px;
+    }
+    :global(.admin-shell) .admin-tags-field :global(li) :global(.label) {
+        margin: 0;
+    }
+    :global(.admin-shell) .admin-tags-field :global(.btnClose) {
+        margin: 0;
+    }
+    :global(.admin-shell) .admin-tags-field :global(input) {
+        min-height: 30px;
+        padding: 3px 8px;
+        border: 0 !important;
+        outline: 0;
+        background: transparent;
     }
 </style>

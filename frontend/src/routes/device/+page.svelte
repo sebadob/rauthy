@@ -1,17 +1,14 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { redirectToLogin } from '#utils/helpers.ts';
-    import LangSelector from '#lib/LangSelector.svelte';
     import Input from '#lib/form/Input.svelte';
     import Button from '#lib/button/Button.svelte';
     import { TPL_DEVICE_USER_CODE_LENGTH } from '#utils/constants.ts';
     import { fetchSolvePow } from '#utils/pow.ts';
-    import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
+    import PublicPage from '#lib/PublicPage.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
     import { useParam } from '#state/param.svelte.ts';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import type { SessionResponse } from '#api/types/session.ts';
     import { fetchGet, fetchPost } from '#api/fetch.ts';
     import { PATTERN_ALNUM } from '#utils/patterns.ts';
@@ -109,75 +106,68 @@
 
 <Template id={TPL_DEVICE_USER_CODE_LENGTH} bind:value={userCodeLength} />
 
-<Main>
-    <ContentCenter>
-        {#if session}
-            <div class="container">
-                <div class="name">
-                    <h2>{t.device.title}</h2>
+<PublicPage>
+    {#if session}
+        <div class="public-card">
+            <h2>{t.device.title}</h2>
+
+            {#if scopes === undefined}
+                <div class="desc">
+                    {t.device.desc.replace('{{count}}', userCodeLength.toString())}
                 </div>
 
-                {#if scopes === undefined}
-                    <div class="desc">
-                        {t.device.desc.replace('{{count}}', userCodeLength.toString())}
-                    </div>
+                <Input
+                    name="userCode"
+                    autocomplete="off"
+                    label={t.device.userCode}
+                    placeholder={t.device.userCode}
+                    bind:value={userCode}
+                    bind:isError
+                    required
+                    min={userCodeLength.toString()}
+                    max={userCodeLength.toString()}
+                    pattern={PATTERN_ALNUM}
+                />
 
-                    <Input
-                        name="userCode"
-                        autocomplete="off"
-                        label={t.device.userCode}
-                        placeholder={t.device.userCode}
-                        bind:value={userCode}
-                        bind:isError
-                        required
-                        min={userCodeLength.toString()}
-                        max={userCodeLength.toString()}
-                        pattern={PATTERN_ALNUM}
-                    />
+                <div class="btn">
+                    <Button onclick={() => onSubmit('pending')} {isLoading}>
+                        {t.device.submit}
+                    </Button>
+                </div>
+            {:else if isAccepted}
+                <div class="desc">
+                    <p>{t.device.isAccepted}</p>
+                    <p>{t.device.autoRedirectAccount}</p>
+                </div>
+            {:else if isDeclined}
+                <div class="desc">
+                    <p class="declined">{t.device.isDeclined}</p>
+                    <p>{t.device.closeWindow}</p>
+                </div>
+            {:else}
+                <div class="desc">
+                    {t.device.descScopes}
+                    <ul>
+                        {#each scopes as scope}
+                            <li>{scope}</li>
+                        {/each}
+                    </ul>
+                </div>
 
-                    <div class="btn">
-                        <Button onclick={() => onSubmit('pending')} {isLoading}>
-                            {t.device.submit}
-                        </Button>
-                    </div>
-                {:else if isAccepted}
-                    <div class="desc">
-                        <p>{t.device.isAccepted}</p>
-                        <p>{t.device.autoRedirectAccount}</p>
-                    </div>
-                {:else if isDeclined}
-                    <div class="desc">
-                        <p class="declined">{t.device.isDeclined}</p>
-                        <p>{t.device.closeWindow}</p>
-                    </div>
-                {:else}
-                    <div class="desc">
-                        {t.device.descScopes}
-                        <ul>
-                            {#each scopes as scope}
-                                <li>{scope}</li>
-                            {/each}
-                        </ul>
-                    </div>
+                <div class="inline">
+                    <Button onclick={() => onSubmit('accept')} {isLoading}>
+                        {t.device.accept}
+                    </Button>
+                    <Button level={-1} onclick={() => onSubmit('decline')} {isLoading}>
+                        {t.device.decline}
+                    </Button>
+                </div>
+            {/if}
 
-                    <div class="inline">
-                        <Button onclick={() => onSubmit('accept')} {isLoading}>
-                            {t.device.accept}
-                        </Button>
-                        <Button level={-1} onclick={() => onSubmit('decline')} {isLoading}>
-                            {t.device.decline}
-                        </Button>
-                    </div>
-                {/if}
-
-                <div class="err">{err}</div>
-            </div>
-        {/if}
-
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
-    </ContentCenter>
-</Main>
+            {#if err}<div class="err">{err}</div>{/if}
+        </div>
+    {/if}
+</PublicPage>
 
 <style>
     ul {
@@ -192,24 +182,12 @@
         margin-top: 0.5rem;
     }
 
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        max-width: 18rem;
-        padding: 1rem;
-        border: 1px solid hsl(var(--bg-high));
-        border-radius: var(--border-radius);
-        box-shadow: 0.2rem 0.2rem 0.2rem rgba(128, 128, 128, 0.1);
-    }
-
     .declined {
         color: hsl(var(--error));
     }
 
-    .err,
     .desc {
-        margin: 0 0.33rem 1rem 0.33rem;
+        margin-block: 0.75rem;
     }
 
     .err {
@@ -217,12 +195,8 @@
     }
 
     .inline {
-        padding: 0.5rem;
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
-    }
-
-    .name {
-        margin: -10px 5px 0 5px;
     }
 </style>

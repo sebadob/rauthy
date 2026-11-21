@@ -53,6 +53,9 @@ export const I18nEn: I18n = {
         year: 'Year',
     },
     account: {
+        noEditableAttributes: 'No editable attributes.',
+        attributes: 'Attributes',
+        stringOrJson: 'String / JSON',
         account: 'User Account',
         accType: 'Account Type',
         accTypePasskeyText1: `This account is currently a passkey only account.\nThis means, that 
@@ -85,6 +88,7 @@ export const I18nEn: I18n = {
         deviceName: 'Name',
         devices: 'Devices',
         devicesDesc: 'Devices linked to this account',
+        devicesEmpty: 'No devices linked yet.',
         emailUpdateConfirm: `The E-Mail address has not been updated yet. A message has been\nsent 
             out to your new address. You need to click the confirmation link inside it. Once it 
             has been\nconfirmed, your new address will be updated.`,
@@ -219,8 +223,8 @@ export const I18nEn: I18n = {
         passwordForgotten: 'Password forgotten?',
         passwordRequest: 'Request',
         passwordRequired: 'Password is required',
-        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your 
-            address exists in out database, you will receive a link via E-Mail.`,
+        passwordResetDesc: `Enter your email address to request a password reset link. If an account
+            exists for that address, you will receive a link by email.`,
         passwordResetSuccess: 'Request received. You can close this window now.',
         requestExpires: 'Request expires',
         requestExpired: 'Request has expired',
@@ -264,6 +268,7 @@ export const I18nEn: I18n = {
     },
     mfa: {
         webauthn: {
+            empty: 'No passkeys registered.',
             title: 'Passkeys',
             p1: `If you plan on using your MFA key with multiple systems like Windows and Android, 
                 you should do the registration with Android.`,
@@ -277,6 +282,9 @@ export const I18nEn: I18n = {
                 'Your browser does not support Webauthn credentials and must be updated.',
         },
         otp: {
+            empty: 'No one-time password methods registered.',
+            active: 'Active',
+            inactive: 'Inactive',
             title: 'One Time Password',
             titleEmail: 'Email-based OTP',
             activationCode: 'Please enter the OTP code that was sent to your email address.',
@@ -303,6 +311,7 @@ export const I18nEn: I18n = {
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 non-special characters',
         passwordInvalid: 'Password Invalid',
+        testPasskey: 'Test passkey',
         test: 'Test',
         testError: 'Error starting the Test',
         testSuccess: 'Test successful',

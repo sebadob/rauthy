@@ -39,6 +39,7 @@ export let I18nAdminUk: I18nAdmin = {
         size: 'Розмір',
     },
     clients: {
+        settings: { general: 'Загальні', tokens: 'Токени', integrations: 'Інтеграції' },
         allowedResources: 'Дозволені ресурси',
         defaultAud: 'Аудиторії за замовчуванням',
         actorSameClient: 'Actor token from this client only',
@@ -47,6 +48,17 @@ export let I18nAdminUk: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
+            title: 'Оформлення',
+            theme: 'Тема',
+            light: 'Світла тема',
+            dark: 'Темна тема',
+            preview: 'Перегляд',
+            assets: 'Логотип і значок сайту',
+            logo: 'Логотип',
+            advanced: 'Розширений CSS',
+            resetTheme: 'Скинути тему',
+            resetThemeConfirm: 'Відновити типові кольори й радіус заокруглення?',
+            assetsImmediate: 'Зміни файлів набувають чинності одразу.',
             descHsl: `Наступні значення мають бути вказані як HSL-значення. Ви вказуєте лише базові кольори.
             Альфа-канали та інші значення динамічно змінюються темою.`,
             descFullCss: `Наступні значення мають бути повністю валідними CSS-значеннями <code>color</code>.
@@ -142,6 +154,20 @@ export let I18nAdminUk: I18nAdmin = {
         },
     },
     common: {
+        about: 'Про Rauthy',
+        date: 'Дата',
+        time: 'Час',
+        preferences: 'Налаштування',
+        profile: 'Профіль',
+        contactDetails: 'Контактні дані',
+        access: 'Доступ',
+        activity: 'Активність',
+
+        compactNavigation: 'Компактна навігація',
+        administration: 'Адміністрування',
+        selectEntry: 'Виберіть запис',
+        selectEntryHint: 'Виберіть елемент зі списку, щоб переглянути та змінити його дані.',
+
         account: 'Акаунт',
         addNew: 'Додати',
         back: 'Назад',
@@ -249,8 +275,10 @@ export let I18nAdminUk: I18nAdmin = {
         },
         openapi:
             'Якщо ви хочете інтегрувати зовнішній додаток і використовувати API Rauthy, перегляньте',
-        openapiNote: `У стандартній конфігурації інтерфейс Swagger не активний через посилання вище. Це можна 
-            активувати за допомогою конфігурації 'server.swagger_ui_enable' і, можливо, 'server.swagger_ui_public'.`,
+        openapiNote:
+            'У стандартній конфігурації інтерфейс Swagger не активний через посилання вище.',
+        openapiEnable:
+            "Це можна активувати за допомогою конфігурації 'server.swagger_ui_enable' і, можливо, 'server.swagger_ui_public'.",
         source: 'Вихідний код можна знайти тут',
     },
     editor: {
@@ -290,6 +318,12 @@ export let I18nAdminUk: I18nAdmin = {
             Після цього вам потрібно вийти і увійти знову.`,
     },
     events: {
+        searchContent: 'Вміст',
+        timestamp: 'Дата й час',
+        level: 'Рівень',
+        type: 'Тип',
+        allLevels: 'Усі рівні',
+        sendTest: 'Надіслати тестову подію',
         eventLevel: 'Рівень події',
         eventType: 'Тип події',
     },
@@ -314,6 +348,7 @@ export let I18nAdminUk: I18nAdmin = {
         rotateKeys: 'Ротувати ключі',
     },
     kv: {
+        limit: 'Ліміт',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -351,6 +386,7 @@ export let I18nAdminUk: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'Сховище KV',
         apiKeys: 'API Ключі',
         attributes: 'Атрибути',
         blacklist: 'Чорний список',

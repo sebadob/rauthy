@@ -107,6 +107,7 @@
     />
     <Input
         bind:value={defaultValue}
+        formatBadge={t.account.stringOrJson ?? 'String / JSON'}
         autocomplete="off"
         label={ta.attrs.defaultValue}
         placeholder={ta.attrs.defaultValue}

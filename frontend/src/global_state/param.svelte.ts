@@ -1,4 +1,5 @@
-import { goto } from '$app/navigation';
+import { goto, replaceState } from '$app/navigation';
+import { page } from '$app/state';
 
 // Record<> or Map<> do not work reactively in this case
 let _signals: any = $state({});
@@ -12,7 +13,7 @@ export interface IParam {
     get: () => undefined | string;
     getNum: () => undefined | number;
     true: () => boolean;
-    set: (value?: string | number | boolean) => void;
+    set: (value?: string | number | boolean, mode?: 'replace') => void;
 }
 
 export const useParam = (key: string, initialValue?: string | number | boolean): IParam => {
@@ -53,7 +54,7 @@ export const useParam = (key: string, initialValue?: string | number | boolean):
         true(): boolean {
             return _signals[key] === true || _signals[key] === 'true';
         },
-        set(value?: string | number | boolean) {
+        set(value?: string | number | boolean, mode?: 'replace') {
             if (value) {
                 _signals[key] = value.toString();
                 if (_params) {
@@ -65,14 +66,24 @@ export const useParam = (key: string, initialValue?: string | number | boolean):
                     _params.delete(key);
                 }
             }
-            go();
+            go(mode);
         },
     };
 };
 
-function go() {
+// Browser history and mobile section links can change the query without calling set().
+export function syncParamsFromUrl(search: string) {
+    _params = new URLSearchParams(search);
+    _signals = Object.fromEntries(_params);
+}
+
+function go(mode?: 'replace') {
     if (typeof window !== 'undefined' && _params) {
         let params = _params.toString().replace(' ', '+');
+        if (mode === 'replace') {
+            replaceState(`?${params}${window.location.hash}`, page.state);
+            return;
+        }
         goto(`?${params}`, {}).catch(err => console.error(err));
     }
 }

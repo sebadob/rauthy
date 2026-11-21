@@ -4,10 +4,10 @@ use crate::entity::logos::{Logo, LogoType};
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
     AdminConfigArgon2Html, AdminConfigBackupsHtml, AdminConfigEncryptionHtml, AdminConfigJwksHtml,
-    AdminConfigPolicyHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml, AdminKVHtml, AdminPAMHtml,
-    AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml, DeviceHtml, FedCMHtml,
-    HtmlTemplate, IndexHtml, LogoutHtml, ProviderCallbackHtml, ProvidersHtml,
-    UserPasswordResetHtml, UserRegisterHtml,
+    AdminConfigPolicyHtml, AdminConfigToSHtml, AdminEventsHtml, AdminGroupsHtml, AdminHtml,
+    AdminKVHtml, AdminPAMHtml, AdminRolesHtml, AdminScopesHtml, AdminSessionsHtml, AdminUsersHtml,
+    DeviceHtml, FedCMHtml, HtmlTemplate, IndexHtml, LogoutHtml, ProviderCallbackHtml,
+    ProvidersHtml, UserPasswordResetHtml, UserRegisterHtml,
 };
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
@@ -48,6 +48,7 @@ pub enum HtmlCached {
     ConfigEncryption,
     ConfigJwks,
     ConfigPolicy,
+    ConfigToS,
     Device,
     Docs,
     FedCM,
@@ -82,6 +83,7 @@ impl HtmlCached {
             Self::ConfigEncryption => "cfg_encryption",
             Self::ConfigJwks => "cfg_jwks",
             Self::ConfigPolicy => "cfg_policy",
+            Self::ConfigToS => "cfg_tos",
             Self::Device => "device",
             Self::Docs => "docs",
             Self::FedCM => "fed_cm",
@@ -172,6 +174,7 @@ impl HtmlCached {
             Self::ConfigEncryption => AdminConfigEncryptionHtml::build(&lang, theme_ts),
             Self::ConfigJwks => AdminConfigJwksHtml::build(&lang, theme_ts),
             Self::ConfigPolicy => AdminConfigPolicyHtml::build(&lang, theme_ts),
+            Self::ConfigToS => AdminConfigToSHtml::build(&lang, theme_ts),
             Self::Device => DeviceHtml::build(&lang, theme_ts),
             Self::Docs => AdminDocsHtml::build(&lang, theme_ts),
             Self::FedCM => FedCMHtml::build(&lang, theme_ts),

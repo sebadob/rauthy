@@ -408,7 +408,8 @@
     }
 </script>
 
-<Button invisible {onclick}>
+<!-- keep the editor selection: a mousedown on the button would clear it -->
+<Button ariaLabel={title} invisible {onclick} onmousedown={(ev: MouseEvent) => ev.preventDefault()}>
     <div {title}>
         {@render children()}
     </div>

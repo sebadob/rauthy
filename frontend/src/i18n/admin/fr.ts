@@ -41,6 +41,7 @@ export let I18nAdminFr: I18nAdmin = {
         size: 'Taille',
     },
     clients: {
+        settings: { general: 'Général', tokens: 'Jetons', integrations: 'Intégrations' },
         allowedResources: 'Ressources autorisées',
         defaultAud: 'Audiences par défaut',
         actorSameClient: 'Actor token from this client only',
@@ -49,6 +50,17 @@ export let I18nAdminFr: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: `Si ce client prend en charge {{ OIDC_BCL }}, vous pouvez fournir l'URI ici.`,
         branding: {
+            title: 'Apparence',
+            theme: 'Thème',
+            light: 'Thème clair',
+            dark: 'Thème sombre',
+            preview: 'Aperçu',
+            assets: 'Logo et favicon',
+            logo: 'Logo',
+            advanced: 'CSS avancé',
+            resetTheme: 'Réinitialiser le thème',
+            resetThemeConfirm: 'Rétablir les couleurs et le rayon par défaut ?',
+            assetsImmediate: 'Les modifications de fichiers prennent effet immédiatement.',
             descHsl: `Les valeurs suivantes doivent être fournies au format HSL. Seules les couleurs de base sont
                 fournies. Les canaux alpha et les autres valeurs sont gérés dynamiquement par le thème.`,
             descFullCss: `Les valeurs suivantes doivent être des valeurs CSS <code>color</code> entièrement valides.
@@ -150,6 +162,20 @@ export let I18nAdminFr: I18nAdmin = {
         },
     },
     common: {
+        about: 'À propos',
+        date: 'Date',
+        time: 'Heure',
+        preferences: 'Préférences',
+        profile: 'Profil',
+        contactDetails: 'Coordonnées',
+        access: 'Accès',
+        activity: 'Activité',
+
+        compactNavigation: 'Navigation compacte',
+        administration: 'Administration',
+        selectEntry: 'Sélectionnez une entrée',
+        selectEntryHint: 'Choisissez un élément dans la liste pour consulter et gérer ses détails.',
+
         account: 'Compte',
         addNew: 'Ajouter',
         back: 'Précédent',
@@ -259,9 +285,10 @@ export let I18nAdminFr: I18nAdmin = {
         },
         openapi:
             "Si vous souhaitez intégrer une application externe et utiliser l'API de Rauthy, consultez",
-        openapiNote: `Dans la configuration par défaut, l'interface Swagger n'est pas active via le lien ci-dessus. Elle
-            peut être activée via la configuration « server.swagger_ui_enable » et éventuellement 
-            « server.swagger_ui_public ».`,
+        openapiNote:
+            "Dans la configuration par défaut, l'interface Swagger n'est pas active via le lien ci-dessus.",
+        openapiEnable:
+            'Elle peut être activée via la configuration « server.swagger_ui_enable » et éventuellement « server.swagger_ui_public ».',
         source: 'Le code source est disponible ici',
     },
     editor: {
@@ -301,6 +328,12 @@ export let I18nAdminFr: I18nAdmin = {
             Ensuite, vous devrez vous déconnecter puis vous reconnecter.`,
     },
     events: {
+        searchContent: 'Contenu',
+        timestamp: 'Horodatage',
+        level: 'Niveau',
+        type: 'Type',
+        allLevels: 'Tous les niveaux',
+        sendTest: 'Envoyer un événement de test',
         eventLevel: `Niveau d'événement`,
         eventType: `Type d'événement`,
     },
@@ -326,6 +359,7 @@ export let I18nAdminFr: I18nAdmin = {
         rotateKeys: 'Rotation des clés',
     },
     kv: {
+        limit: 'Limite',
         accessTestDesc: `La clé d'accès doit être fournie dans l'en-tête <code>Authorization</code> sous forme de jeton
             <code>Bearer</code>. La commande <code>curl</code> suivante peut être utilisée pour les tests.`,
         addNewKey: `Nouvelle clé d'accès`,
@@ -363,6 +397,7 @@ export let I18nAdminFr: I18nAdmin = {
         value: 'Valeur JSON',
     },
     nav: {
+        kvStore: 'Stockage KV',
         apiKeys: 'Clés API',
         attributes: 'Attributs',
         blacklist: 'Liste noire',

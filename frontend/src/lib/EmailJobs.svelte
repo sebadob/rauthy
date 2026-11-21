@@ -1,6 +1,6 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
-    import IconCircleStack from '#icons/IconCircleStack.svelte';
+    import IconEnvelope from '#icons/IconEnvelope.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import Modal from '#lib/Modal.svelte';
     import type { EmailJobResponse } from '#api/types/email.ts';
@@ -49,12 +49,17 @@
     }
 </script>
 
-<Button onclick={() => (showModal = true)} invisible>
-    <IconCircleStack />
+<Button ariaLabel={ta.email.jobs} onclick={() => (showModal = true)} invisible>
+    <span class="jobs-icon"><IconEnvelope /><span><IconClock width="0.875rem" /></span></span>
 </Button>
 
-<Modal bind:showModal bind:closeModal>
-    <div class="modal">
+<Modal
+    bind:showModal
+    bind:closeModal
+    ariaLabel={ta.email.jobs}
+    --dialog-padding="clamp(16px, 4vw, 32px)"
+>
+    <div class="jobs-panel">
         <h3>{ta.email.jobs}</h3>
 
         <div class="jobs">
@@ -62,44 +67,44 @@
                 -
             {/if}
 
-            {#each jobs as job}
+            {#each jobs as job (job.id)}
                 <Expandable>
                     {#snippet summary()}
-                        <div>
-                            <div class="flex gap-10">
-                                <div>{formatDateFromTs(job.id)}</div>
-                                <div class="flex gap-05">
-                                    {#if job.status === 'Finished'}
-                                        <IconCheck />
-                                    {:else if job.status === 'Open'}
-                                        <IconClock />
-                                    {:else if job.status === 'Canceled'}
-                                        <IconStop />
-                                    {/if}
-                                    {job.status}
+                        <div class="job-summary">
+                            <div class="job-copy">
+                                <strong
+                                    >{job.subject.length > 79
+                                        ? job.subject.slice(0, 79) + '…'
+                                        : job.subject}</strong
+                                >
+                                <div class="job-meta">
+                                    <time class="job-date">{formatDateFromTs(job.id)}</time>
+                                    <span class="job-status">
+                                        {#if job.status === 'Finished'}
+                                            <IconCheck width="1rem" />
+                                        {:else if job.status === 'Open'}
+                                            <IconClock width="1rem" />
+                                        {:else if job.status === 'Canceled'}
+                                            <IconStop width="1rem" />
+                                        {/if}
+                                        {job.status}
+                                    </span>
                                     {#if job.status !== 'Open'}
-                                        <span class="muted">({formatDateFromTs(job.updated)})</span>
+                                        <time class="job-date"
+                                            >({formatDateFromTs(job.updated)})</time
+                                        >
                                     {/if}
                                 </div>
-                                {#if job.status === 'Open'}
-                                    <Button
-                                        ariaLabel={ta.email.cancelJob}
-                                        invisible
-                                        onclick={() => cancelJob(job)}
-                                    >
-                                        <IconStop />
-                                    </Button>
-                                {/if}
                             </div>
-                            <div>
-                                <b>
-                                    {#if job.subject.length > 79}
-                                        {job.subject.slice(0, 79)}(...)
-                                    {:else}
-                                        {job.subject}
-                                    {/if}
-                                </b>
-                            </div>
+                            {#if job.status === 'Open'}
+                                <Button
+                                    ariaLabel={ta.email.cancelJob}
+                                    invisible
+                                    onclick={() => cancelJob(job)}
+                                >
+                                    <IconStop width="1rem" />
+                                </Button>
+                            {/if}
                         </div>
                     {/snippet}
                     {#snippet details()}
@@ -148,11 +153,25 @@
 </Modal>
 
 <style>
+    .jobs-icon {
+        display: grid;
+        position: relative;
+    }
+
+    .jobs-icon > span {
+        position: absolute;
+        inset: auto -0.2rem -0.125rem auto;
+        border-radius: 50%;
+        background: var(--ui-surface);
+    }
+
     .emailBody {
         margin: 0.5rem 0;
         padding: 0.25rem 0.5rem;
         background: hsla(var(--bg-high) / 0.1);
         border-radius: var(--border-radius);
+        overflow-wrap: anywhere;
+        overflow-x: auto;
     }
 
     .info {
@@ -162,17 +181,65 @@
     }
 
     .info > div {
-        min-width: 10.5rem;
-        flex: 1;
+        flex: 1 1 10.5rem;
+        min-width: 0;
     }
 
-    .modal {
-        max-height: 90dvh;
+    .jobs-panel {
+        width: min(40rem, calc(100dvw - 34px - 2 * var(--dialog-padding, 32px)));
         min-height: 15rem;
-        width: min(calc(467pt + 3rem), 90dvw);
+        overflow-wrap: anywhere;
     }
 
-    .muted {
-        color: hsla(var(--text) / 0.6);
+    .jobs {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .job-summary {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        --ui-button-padding: 0 0.375rem;
+    }
+
+    .job-copy {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .job-copy strong {
+        color: var(--ui-text);
+    }
+
+    .job-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem 0.75rem;
+        margin-top: 0.25rem;
+        font-size: 0.8125rem;
+        line-height: 1.25rem;
+    }
+
+    .job-date {
+        color: var(--ui-muted);
+    }
+
+    .job-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    @media (width < 520px) {
+        .jobs :global(.admin-expandable > .header) {
+            gap: 0.375rem;
+            padding: 0.75rem 0.5rem;
+        }
+
+        .job-meta > :first-child {
+            flex-basis: 100%;
+        }
     }
 </style>

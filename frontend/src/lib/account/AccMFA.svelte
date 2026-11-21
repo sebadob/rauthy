@@ -1,6 +1,8 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
     import { onMount, untrack } from 'svelte';
+    import MfaMethod from '#lib/MfaMethod.svelte';
+    import { I18nEn } from '../../i18n/common/en';
     import Input from '#lib/form/Input.svelte';
     import { useI18n } from '#state/i18n.svelte.js';
     import { useSession } from '#state/session.svelte.js';
@@ -58,6 +60,8 @@
     let closeModal: undefined | (() => void) = $state();
 
     let passkeys: PasskeyResponse[] = $state([]);
+    let loadingPasskeys = $state(true);
+    let passkeyError = $state<string>();
     let residentKey = $state(false);
     let mfaModToken: undefined | MfaModTokenResponse = $state();
     let mfaModSecs: undefined | number = $state();
@@ -66,11 +70,13 @@
     let isOtpEnabled = $state(false);
     let otpSize = $state(6);
     let otps: OtpResponse[] = $state([]);
+    let loadingOtps = $state(true);
+    let otpError = $state<string>();
     let otpKind: undefined | OtpKind = $state();
     let otpName: undefined | string = $state();
     let otpId: undefined | string = $state();
     let otpValueNew = $state('');
-    let hasOtp = $state(false);
+    let hasOtp = $derived(otps.some(otp => otp.is_active));
 
     let isUserFederatedOnly = $derived(user.account_type === 'federated');
 
@@ -83,6 +89,7 @@
 
     onMount(() => {
         fetchPasskeys();
+        return () => clearInterval(interval);
     });
 
     $effect(() => {
@@ -145,16 +152,10 @@
     }
 
     async function fetchPasskeys() {
-        err = false;
-
-        let res = await fetchGet<PasskeyResponse[]>(
-            `/auth/v1/users/${session.get()?.user_id}/webauthn`,
-        );
-        if (res.body) {
-            passkeys = res.body;
-        } else {
-            err = true;
-        }
+        let res = await fetchGet<PasskeyResponse[]>(`/auth/v1/users/${user.id}/webauthn`);
+        loadingPasskeys = false;
+        passkeyError = res.body ? undefined : res.error?.message || 'Error';
+        if (res.body) passkeys = res.body;
     }
 
     // `webauthn_user_id` is set by the backend with the very first passkey, and reset with the
@@ -228,6 +229,7 @@
             await fetchPasskeys();
             await fetchUser();
         } else {
+            err = true;
             msg = res.error?.message || 'Error';
         }
     }
@@ -261,20 +263,10 @@
     }
 
     async function fetchOtps() {
-        err = false;
-
-        let res = await fetchGet<OtpResponse[]>(`/auth/v1/users/${session.get()?.user_id}/otp`);
-        if (res.body) {
-            otps = res.body;
-            res.body.forEach(otp => {
-                if (otp.is_active) {
-                    hasOtp = true;
-                    return;
-                }
-            });
-        } else {
-            err = true;
-        }
+        let res = await fetchGet<OtpResponse[]>(`/auth/v1/users/${user.id}/otp`);
+        loadingOtps = false;
+        otpError = res.body ? undefined : res.error?.message || 'Error';
+        if (res.body) otps = res.body;
     }
 
     async function handleCreateOtp() {
@@ -303,7 +295,9 @@
 
         let res = await postOtp(userId, otpKind, otpName, tokenId);
         if (res.data) {
-            otps.push(res.data);
+            const otp = res.data;
+            otpId = otp.id;
+            otps = [...otps.filter(existing => existing.id !== otp.id), otp];
             showOtpInput = true;
             otpKind = undefined;
             otpName = '';
@@ -314,8 +308,6 @@
     }
 
     async function handleActivateOtp(form?: HTMLFormElement, params?: URLSearchParams) {
-        // 'email' is the only implemented type for now
-        otpId = otps[0].id.toString();
         resetMsgErr();
 
         if (isInputError || !userId || !showOtpInput || !otpId) {
@@ -340,7 +332,6 @@
             for (let otp of otps) {
                 if (otp.id == otpId) {
                     otp.is_active = true;
-                    hasOtp = true;
                     return;
                 }
             }
@@ -366,9 +357,6 @@
             msg = res.error || 'Error';
         } else {
             await fetchOtps();
-            if (otps.length == 0) {
-                hasOtp = false;
-            }
         }
     }
 
@@ -501,47 +489,69 @@
 <Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 <Template id={TPL_OTP_LENGTH} bind:value={otpSize} />
 
-<div class="container">
+<div class="methods">
     {#if mfaModSecs && mfaModSecs > 0}
         <div class="modToken">
             <div>
                 {t.account.canModifyFor}
-                <span class="timeLeft">
-                    {mfaModSecs}
-                    {t.common.seconds}
-                </span>
+                <strong>{mfaModSecs} {t.common.seconds}</strong>
             </div>
             <Button ariaLabel={t.common.refresh} invisible onclick={mfaTokenRefresh}>
-                <div class="btnRefresh">
-                    <IconArrowPathSquare />
-                </div>
+                <IconArrowPathSquare width="1rem" />
             </Button>
         </div>
     {/if}
-    {#if !isWebauthnSupported}
-        <div class="err">
-            <b>{t.mfa.webauthn.unsupportedText}</b>
-        </div>
-    {:else}
-        <b>{t.mfa.webauthn.title}</b>
 
-        {#if mfaPurpose && mfaKind == 'webauthn'}
+    <MfaMethod
+        title={t.mfa.webauthn.title}
+        loading={loadingPasskeys}
+        error={passkeyError}
+        empty={passkeys.length === 0 && !showPasskeyInput
+            ? (t.mfa.webauthn.empty ?? I18nEn.mfa.webauthn.empty)
+            : undefined}
+    >
+        {#snippet actions()}
+            {#if isWebauthnSupported && !showPasskeyInput}
+                <div class="actions">
+                    {#if passkeys.length > 0}
+                        <Button
+                            level={2}
+                            onclick={() => {
+                                mfaPurpose = 'Test';
+                                mfaKind = 'webauthn';
+                            }}
+                        >
+                            {t.mfa.testPasskey ?? t.mfa.test}
+                        </Button>
+                    {/if}
+                    <Button
+                        level={passkeys.length === 0 ? 1 : 2}
+                        onclick={() => onRegisterPasskeyClick('passkey')}
+                    >
+                        {t.mfa.webauthn.registerNew}
+                    </Button>
+                </div>
+            {/if}
+        {/snippet}
+
+        {#if !isWebauthnSupported}
+            <p>{t.mfa.webauthn.unsupportedText}</p>
+        {:else if mfaPurpose && mfaKind === 'webauthn'}
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
         {/if}
 
         {#if showPasskeyInput}
-            <p>
-                {t.mfa.webauthn.p1}
-                <br /><br />
-                {t.mfa.webauthn.p2}
-                <br /><br />
-                {t.mfa.webauthn.p3}
-                <a href="https://sebadob.github.io/rauthy/config/passkeys.html"
-                    >{t.mfa.webauthn.docLinkText}</a
-                >.
-            </p>
-
-            <div class="pkReg">
+            <div class="setup">
+                <div class="guidance">
+                    <p>{t.mfa.webauthn.p1}</p>
+                    <p>{t.mfa.webauthn.p2}</p>
+                    <p>
+                        {t.mfa.webauthn.p3}
+                        <a href="https://sebadob.github.io/rauthy/config/passkeys.html"
+                            >{t.mfa.webauthn.docLinkText}</a
+                        >.
+                    </p>
+                </div>
                 <Form action="" onSubmit={handleRegisterPasskey}>
                     <PasskeyTypeSelect bind:residentKey />
                     <Input
@@ -555,62 +565,37 @@
                         bind:isError={isInputError}
                         required
                     />
-                    <div class="regBtns">
-                        <Button type="submit">
-                            {t.mfa.register}
+                    <div class="actions">
+                        <Button type="submit">{t.mfa.register}</Button>
+                        <Button level={2} onclick={() => (showPasskeyInput = false)}>
+                            {t.common.cancel}
                         </Button>
-                        <Button level={3} onclick={() => (showPasskeyInput = false)}
-                            >{t.common.cancel}</Button
-                        >
                     </div>
                 </Form>
             </div>
-        {:else}
-            <div class="regNewBtn">
-                <Button
-                    level={passkeys.length === 0 ? 1 : 2}
-                    onclick={() => onRegisterPasskeyClick('passkey')}
-                >
-                    {t.mfa.webauthn.registerNew}
-                </Button>
-            </div>
         {/if}
-    {/if}
 
-    {#if passkeys.length > 0}
-        <div class="keysHeader">
-            {t.mfa.registeredKeys}
-        </div>
-    {/if}
-    <div class="keysContainer">
         {#each passkeys as passkey (passkey.name)}
             <UserPasskey {passkey} {showDelete} onDelete={handleDeletePasskey} />
         {/each}
-    </div>
-    {#if passkeys.length > 0}
-        <div class="button">
-            <Button
-                onclick={() => {
-                    mfaPurpose = 'Test';
-                    mfaKind = 'webauthn';
-                }}
-            >
-                {t.mfa.test}
-            </Button>
-
-            {#if testSuccess}
-                <div>
-                    <IconCheck />
-                </div>
-            {/if}
-        </div>
-    {/if}
+    </MfaMethod>
 
     {#if isOtpEnabled}
-        <div class="modOtp">
-            <b>{t.mfa.otp.title}</b>
+        <MfaMethod
+            title={t.mfa.otp.title}
+            loading={loadingOtps}
+            error={otpError}
+            empty={!hasOtp && !(mfaModToken && showOtpInput)
+                ? (t.mfa.otp.empty ?? I18nEn.mfa.otp.empty)
+                : undefined}
+        >
+            {#snippet actions()}
+                {#if !hasOtp && !(mfaModToken && showOtpInput)}
+                    <Button level={2} onclick={handleCreateOtp}>{t.mfa.otp.registerNew}</Button>
+                {/if}
+            {/snippet}
 
-            {#if mfaPurpose && mfaKind == 'otp'}
+            {#if mfaPurpose && mfaKind === 'otp'}
                 <OtpRequest
                     activeOtps={otps}
                     purpose={mfaPurpose}
@@ -620,45 +605,43 @@
             {/if}
 
             {#if mfaModToken && showOtpInput}
-                <p>{t.mfa.otp.activationCode}</p>
-                <Form action="" onSubmit={handleActivateOtp}>
-                    <InputOtp
-                        bind:ref={refInput}
-                        bind:isError={isInputError}
-                        bind:value={otpValueNew}
-                    />
-                    <div class="mh-05 flex gap-05">
-                        <Button type="submit">{t.mfa.register}</Button>
-                        <Button level={3} onclick={() => (showOtpInput = false)}>
-                            {t.common.cancel}
-                        </Button>
-                    </div>
-                </Form>
-            {:else if !hasOtp}
-                <div class="button">
-                    <Button level={2} onclick={handleCreateOtp}>
-                        {t.mfa.otp.registerNew}
-                    </Button>
+                <div class="setup">
+                    <p>{t.mfa.otp.activationCode}</p>
+                    <Form action="" onSubmit={handleActivateOtp}>
+                        <InputOtp
+                            bind:ref={refInput}
+                            bind:isError={isInputError}
+                            bind:value={otpValueNew}
+                        />
+                        <div class="actions">
+                            <Button type="submit">{t.mfa.register}</Button>
+                            <Button level={2} onclick={() => (showOtpInput = false)}>
+                                {t.common.cancel}
+                            </Button>
+                        </div>
+                    </Form>
                 </div>
             {/if}
 
             {#if hasOtp}
-                <div class="keysHeader">
-                    {t.mfa.registeredOtps}
-                </div>
+                <h4>{t.mfa.registeredOtps}</h4>
             {/if}
-            <div class="keysContainer">
-                {#each otps as otp}
-                    <!-- Todo: inactive otp could be shown when having other kind of otp? -->
-                    <UserOtp {otp} showInactive={false} onDelete={handleDeleteOtp} />
-                {/each}
-            </div>
-        </div>
+            {#each otps as otp (otp.id)}
+                <UserOtp {otp} showInactive={false} onDelete={handleDeleteOtp} />
+            {/each}
+        </MfaMethod>
     {/if}
 
-    <div class:success={!err} class:err>
-        {msg}
-    </div>
+    {#if msg}
+        {#if err}
+            <p class="err" role="alert">{msg}</p>
+        {:else}
+            <p class="success" role="status">
+                {#if testSuccess}<IconCheck width="1rem" />{/if}
+                {msg}
+            </p>
+        {/if}
+    {/if}
 </div>
 
 <Modal bind:showModal bind:closeModal onClose={onMfaModalClose}>
@@ -718,84 +701,52 @@
 </Modal>
 
 <style>
-    p {
-        margin: 0.5rem 0;
+    .methods,
+    .setup,
+    .guidance {
+        display: grid;
+        gap: var(--ui-space);
     }
 
-    .btnRefresh {
-        color: hsla(var(--text) / 0.5);
+    .setup {
+        padding: 0.75rem;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-hover);
     }
 
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: flex-start;
+    .guidance {
+        gap: 0.5rem;
+        max-width: 65ch;
+        color: var(--ui-muted);
     }
 
-    .modOtp {
-        margin: 1rem 0;
-    }
-
-    .button {
-        margin-top: 0.33rem;
+    .actions,
+    .modToken,
+    .success {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 0.5rem;
-    }
-
-    .keysContainer {
-        width: 100%;
-        max-height: 20rem;
-        overflow-y: auto;
-    }
-
-    .keysHeader {
-        margin-top: 0.5rem;
-        font-weight: bold;
     }
 
     .modToken {
-        display: flex;
-        gap: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: var(--border-radius);
+        background: var(--ui-tonal);
+        font-size: var(--ui-control-font-size);
+    }
+
+    .success {
+        color: var(--ui-primary);
     }
 
     .pwdInvalid {
         color: hsl(var(--error));
-        margin: 0.5rem 0;
+        margin-top: 0.5rem;
     }
 
-    .success,
-    .err {
-        margin: 0.5rem -0.3rem;
-        text-align: left;
-    }
-
-    .pkReg {
-        margin: 1rem 0;
-        padding: 0.5rem 1rem;
-        background-color: hsla(var(--bg-high) / 0.25);
-        border: 1px solid hsl(var(--bg-high));
-        border-radius: var(--border-radius);
-    }
-
-    .success {
-        margin-left: 0.2rem;
-        color: hsl(var(--action));
-    }
-
-    .timeLeft {
-        color: hsl(var(--action));
-    }
-
-    .regBtns {
-        margin: 0.5rem 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .regNewBtn {
-        margin: 0.5rem 0;
+    h4 {
+        font-size: var(--ui-control-font-size);
     }
 </style>

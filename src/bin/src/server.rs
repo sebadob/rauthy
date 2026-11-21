@@ -557,6 +557,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_config_encryption_html)
                 .service(html::get_admin_config_jwks_html)
                 .service(html::get_admin_config_policy_html)
+                .service(html::get_admin_config_tos_html)
                 .service(html::get_admin_docs_html)
                 .service(html::get_admin_events_html)
                 .service(html::get_admin_groups_html)

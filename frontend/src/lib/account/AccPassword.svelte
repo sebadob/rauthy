@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from '#lib/button/Button.svelte';
+    import Section from '#lib/Section.svelte';
     import { fade } from 'svelte/transition';
     import AccModPwd from '#lib/account/AccModPwd.svelte';
     import WebauthnRequest from '#lib/WebauthnRequest.svelte';
@@ -20,16 +21,14 @@
     let {
         user = $bindable(),
         authProvider,
-        viewModePhone,
     }: {
         user: UserResponse;
         authProvider: undefined | AuthProviderTemplate;
-        viewModePhone?: boolean;
     } = $props();
 
     let t = useI18n();
 
-    let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
+    const inputWidth = 'min(100%, 22rem)';
 
     let accType = $state(user.account_type);
     let passkeys: PasskeyResponse[] = $state([]);
@@ -176,7 +175,7 @@
     }
 </script>
 
-<div class="container">
+<div class="ui-section-stack">
     {#if mfaPurpose}
         <WebauthnRequest
             purpose={mfaPurpose}
@@ -186,10 +185,9 @@
     {/if}
 
     {#if accType === 'federated'}
-        <div class="m-05">
+        <Section title={t.account.passwordReset}>
             <p>{t.account.federatedConvertPassword1}</p>
             <p><b>{authProvider?.name || 'UNKNOWN'}</b></p>
-            <div style:height=".3rem"></div>
             <p>{t.account.federatedConvertPassword2}</p>
             {#if success}
                 <CheckIcon checked />
@@ -198,22 +196,23 @@
                     {t.account.passwordReset}
                 </Button>
             {/if}
-        </div>
+        </Section>
     {/if}
 
     {#if (accType === 'passkey' || accType === 'federated_passkey') && !convertAccount}
-        <p>{t.account.accTypePasskeyText1}</p>
-        <p>{t.account.accTypePasskeyText2}</p>
-        <p>{t.account.accTypePasskeyText3}</p>
-        <div>
-            <Button level={2} onclick={() => (convertAccount = true)}>
-                {t.account.convertAccount}
-            </Button>
-        </div>
+        <Section title={t.account.convertAccount}>
+            <p class="ui-muted-copy">{t.account.accTypePasskeyText1}</p>
+            <p class="ui-muted-copy">{t.account.accTypePasskeyText2}</p>
+            <div>
+                <Button level={2} onclick={() => (convertAccount = true)}
+                    >{t.account.convertAccount}</Button
+                >
+            </div>
+        </Section>
     {/if}
 
     {#if accType === 'password' || accType === 'federated_password' || convertAccount}
-        <div>
+        <Section title={convertAccount ? t.account.convertAccount : t.account.changePassword}>
             <AccModPwd
                 bind:passwords
                 bind:isValid={isPwdValid}
@@ -241,45 +240,30 @@
                     </div>
                 {/if}
             </div>
-        </div>
+        </Section>
 
         {#if !convertAccount && canConvertToPasskey}
-            <div class="convertPasskey">
-                <h3>{t.account.convertAccount}</h3>
-                <p>{t.account.convertAccountP1}</p>
-                <Button level={2} onclick={convertToPasskeyOnly}>
-                    {t.account.convertAccount}
-                </Button>
-            </div>
+            <Section title={t.account.convertAccount}>
+                <p class="ui-muted-copy">{t.account.convertAccountP1}</p>
+                <div>
+                    <Button level={2} onclick={convertToPasskeyOnly}>
+                        {t.account.convertAccount}
+                    </Button>
+                </div>
+            </Section>
         {/if}
     {/if}
 </div>
 
 <style>
-    .container {
-        padding: 0 5px;
-        display: flex;
-        flex-direction: column;
-        overflow-x: clip;
-    }
-
-    .convertPasskey {
-        margin: 1rem 0;
-    }
-
-    .m-05 {
-        margin: 0.5rem;
-    }
-
     .save {
-        margin-top: 1rem;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 0.66rem;
+        gap: 0.5rem;
     }
 
     .success {
-        margin-bottom: -0.25rem;
-        color: hsl(var(--action));
+        color: var(--ui-primary);
     }
 </style>

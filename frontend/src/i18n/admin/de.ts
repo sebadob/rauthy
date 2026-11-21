@@ -40,6 +40,7 @@ export let I18nAdminDe: I18nAdmin = {
         size: 'Größe',
     },
     clients: {
+        settings: { general: 'Allgemein', tokens: 'Tokens', integrations: 'Integrationen' },
         allowedResources: 'Erlaubte Ressourcen',
         defaultAud: 'Standard-Audiences',
         actorSameClient: 'Actor token from this client only',
@@ -49,6 +50,17 @@ export let I18nAdminDe: I18nAdmin = {
         backchannelLogout:
             'Sollte dieser client {{ OIDC_BCL }} unterstützen, kann die URI hier angegeben werden.',
         branding: {
+            title: 'Erscheinungsbild',
+            theme: 'Design',
+            light: 'Helles Design',
+            dark: 'Dunkles Design',
+            preview: 'Vorschau',
+            assets: 'Logo und Favicon',
+            logo: 'Logo',
+            advanced: 'Erweitertes CSS',
+            resetTheme: 'Design zurücksetzen',
+            resetThemeConfirm: 'Standardfarben und Eckenradius wiederherstellen?',
+            assetsImmediate: 'Dateiänderungen werden sofort wirksam.',
             descHsl: `Die folgenden Werte müssen als HSL angegeben werden. Hier wird nur die Basis-Farbe
                 definiert. Alpha Kanäle und andere Werte werden vom Theme dynamisch angepasst.`,
             descFullCss: `Die folgenden Werte müssen vollständig gültige Angaben für CSS <code>color</code> sein.
@@ -155,6 +167,21 @@ export let I18nAdminDe: I18nAdmin = {
         },
     },
     common: {
+        about: 'Über Rauthy',
+        date: 'Datum',
+        time: 'Uhrzeit',
+        preferences: 'Einstellungen',
+        profile: 'Profil',
+        contactDetails: 'Kontaktdaten',
+        access: 'Zugriff',
+        activity: 'Aktivität',
+
+        compactNavigation: 'Kompakte Navigation',
+        administration: 'Verwaltung',
+        selectEntry: 'Eintrag auswählen',
+        selectEntryHint:
+            'Wähle einen Eintrag aus der Liste, um seine Details anzuzeigen und zu bearbeiten.',
+
         account: 'Account',
         addNew: 'Neu Hinzufügen',
         back: 'Zurück',
@@ -264,8 +291,10 @@ export let I18nAdminDe: I18nAdmin = {
             mCost3: 'Der minimal erlaubte Wert für <code>m_cost</code> ist <code>32768</code>.',
         },
         openapi: "Zur Integration einer externen Applikation via Rauthy's API gibt es das",
-        openapiNote: `In der Standard Konfiguration ist das Swagger UI über den oben genannten Link nicht aktiv. Es
-            kann per Konfiguration 'server.swagger_ui_enable' und ggf. 'server.swagger_ui_public' aktiviert werden.`,
+        openapiNote:
+            'In der Standard Konfiguration ist das Swagger UI über den oben genannten Link nicht aktiv.',
+        openapiEnable:
+            "Es kann per Konfiguration 'server.swagger_ui_enable' und ggf. 'server.swagger_ui_public' aktiviert werden.",
         source: 'Der source code kann hier gefunden werden',
     },
     editor: {
@@ -304,6 +333,12 @@ export let I18nAdminDe: I18nAdmin = {
             Danach muss ein Logout und neuer Login folgen`,
     },
     events: {
+        searchContent: 'Inhalt',
+        timestamp: 'Zeitstempel',
+        level: 'Stufe',
+        type: 'Typ',
+        allLevels: 'Alle Stufen',
+        sendTest: 'Testereignis senden',
         eventLevel: 'Event Level',
         eventType: 'Event Typ',
     },
@@ -327,6 +362,7 @@ export let I18nAdminDe: I18nAdmin = {
         rotateKeys: 'Keys Rotieren',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `Der Access Key muss im <code>Authorization</code> header als
             <code>Bearer</code> token angegeben werden. Der folgende <code>curl</code> Befehl kann
             zum Testen genutzt werden.`,
@@ -365,6 +401,7 @@ export let I18nAdminDe: I18nAdmin = {
         value: 'JSON Wert',
     },
     nav: {
+        kvStore: 'KV-Speicher',
         apiKeys: 'API Keys',
         attributes: 'Attribute',
         blacklist: 'Blacklist',

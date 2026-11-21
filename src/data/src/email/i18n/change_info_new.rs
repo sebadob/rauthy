@@ -19,6 +19,7 @@ impl I18nEmailChangeInfoNew<'_> {
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
@@ -85,6 +86,17 @@ impl I18nEmailChangeInfoNew<'_> {
             validity: "Ce lien n'est valable que pendant une courte période pour des raisons de sécurité.",
             expires: "Le lien expire :",
             button_text: "Confirmer l'e-mail",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "Richiesta di cambio indirizzo email",
+            header: "Richiesta di cambio indirizzo email per",
+            click_link: "Apri il link qui sotto per confermare il tuo indirizzo email.",
+            validity: "Per motivi di sicurezza, il link è valido solo per un breve periodo.",
+            expires: "Il link scade il:",
+            button_text: "Conferma indirizzo email",
         }
     }
 

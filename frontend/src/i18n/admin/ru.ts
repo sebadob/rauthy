@@ -40,6 +40,7 @@ export let I18nAdminRu: I18nAdmin = {
         size: 'Размер',
     },
     clients: {
+        settings: { general: 'Общие', tokens: 'Токены', integrations: 'Интеграции' },
         allowedResources: 'Разрешённые ресурсы',
         defaultAud: 'Аудитории по умолчанию',
         actorSameClient: 'Actor token from this client only',
@@ -49,6 +50,17 @@ export let I18nAdminRu: I18nAdmin = {
         backchannelLogout:
             'Если этот клиент поддерживает {{ OIDC_BCL }}, вы можете указать URI здесь.',
         branding: {
+            title: 'Оформление',
+            theme: 'Тема',
+            light: 'Светлая тема',
+            dark: 'Тёмная тема',
+            preview: 'Предпросмотр',
+            assets: 'Логотип и значок сайта',
+            logo: 'Логотип',
+            advanced: 'Расширенный CSS',
+            resetTheme: 'Сбросить тему',
+            resetThemeConfirm: 'Восстановить цвета и скругление по умолчанию?',
+            assetsImmediate: 'Изменения файлов вступают в силу сразу.',
             descHsl: `Следующие значения должны быть указаны в формате HSL. Вы задаёте только базовые цвета.
             Альфа-каналы и другие значения динамически изменяются темой.`,
             descFullCss: `Следующие значения должны быть полностью допустимыми CSS-значениями <code>color</code>.
@@ -144,6 +156,20 @@ export let I18nAdminRu: I18nAdmin = {
         },
     },
     common: {
+        about: 'О программе',
+        date: 'Дата',
+        time: 'Время',
+        preferences: 'Настройки',
+        profile: 'Профиль',
+        contactDetails: 'Контактные данные',
+        access: 'Доступ',
+        activity: 'Активность',
+
+        compactNavigation: 'Компактная навигация',
+        administration: 'Администрирование',
+        selectEntry: 'Выберите запись',
+        selectEntryHint: 'Выберите элемент в списке, чтобы просмотреть и изменить его данные.',
+
         account: 'Аккаунт',
         addNew: 'Добавить',
         back: 'Назад',
@@ -247,8 +273,9 @@ export let I18nAdminRu: I18nAdmin = {
         },
         openapi:
             'Если вы хотите интегрировать внешнее приложение и использовать API Rauthy, ознакомьтесь с',
-        openapiNote: `В стандартной конфигурации интерфейс Swagger не активен по ссылке выше. Это можно активировать с 
-            помощью конфигурации 'server.swagger_ui_enable' и, возможно, 'server.swagger_ui_public'.`,
+        openapiNote: 'В стандартной конфигурации интерфейс Swagger не активен по ссылке выше.',
+        openapiEnable:
+            "Это можно активировать с помощью конфигурации 'server.swagger_ui_enable' и, возможно, 'server.swagger_ui_public'.",
         source: 'Исходный код можно найти здесь',
     },
     editor: {
@@ -288,6 +315,12 @@ export let I18nAdminRu: I18nAdmin = {
             После этого необходимо выйти и войти снова.`,
     },
     events: {
+        searchContent: 'Содержимое',
+        timestamp: 'Дата и время',
+        level: 'Уровень',
+        type: 'Тип',
+        allLevels: 'Все уровни',
+        sendTest: 'Отправить тестовое событие',
         eventLevel: 'Уровень события',
         eventType: 'Тип события',
     },
@@ -312,6 +345,7 @@ export let I18nAdminRu: I18nAdmin = {
         rotateKeys: 'Ротировать ключи',
     },
     kv: {
+        limit: 'Лимит',
         accessTestDesc: `Ключ доступа должен быть передан в заголовке <code>Authorization</code> как
             токен <code>Bearer</code>. Для тестирования можно использовать следующую команду
             <code>curl</code>.`,
@@ -350,6 +384,7 @@ export let I18nAdminRu: I18nAdmin = {
         value: 'JSON-значение',
     },
     nav: {
+        kvStore: 'Хранилище KV',
         apiKeys: 'API-ключи',
         attributes: 'Атрибуты',
         blacklist: 'Чёрный список',
