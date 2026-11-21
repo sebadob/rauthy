@@ -2798,20 +2798,6 @@ pub async fn put_user_self(
     let id = id.into_inner();
     principal.is_user(&id)?;
 
-    // self-service e-mail change can be denied globally: reject before any DB work, no Magic Link is
-    // created and no E-Mail is sent out
-    if RauthyConfig::get()
-        .vars
-        .user_values
-        .self_service_email_change_deny
-        && payload.email.is_some()
-    {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "Self-service E-Mail change is denied by the configuration",
-        ));
-    }
-
     // the payload replaces the stored values, omitted `user_values` delete them
     let (stored, preferred_username) = User::upd_req_from_db(id.clone()).await?;
     UserValuesValidator {

@@ -3204,7 +3204,7 @@ reject_plus_subaddressing = false
 #   'security', 'support', 'uucp', 'usenet', 'webmaster', 'www'
 # ]
 # overwritten by: USER_REG_RESERVED_NAMES - single String, \n separated values
-reserved_names = ['ceo', 'root']
+reserved_names = []
 
 # Ask for the password in the open registration form and init the account
 # right away, instead of sending out the password reset Magic Link.

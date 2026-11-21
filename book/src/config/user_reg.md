@@ -219,7 +219,7 @@ cannot be protected by any list at all, so it cannot use this flag.
 Rauthy refuses to start with this flag set unless all of these are configured, and it prints the
 missing values:
 
-```
+```toml
 user_registration.enable = true
 user_registration.domain_restriction = '<your domain>'
 user_registration.reject_plus_subaddressing = true

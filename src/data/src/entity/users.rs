@@ -1910,8 +1910,8 @@ LIMIT $2"#
             // if the email should be updated, we do not do it directly -> send out confirmation
             // email to old AND new address
             if email != user.email {
-                // defence-in-depth: the endpoint rejects this already, and `confirm_email_address`
-                // refuses to apply such a link, so a config change mid-flight stays without effect
+                // the gate for a self-service change, and `confirm_email_address` refuses to apply
+                // such a link, so a config change mid-flight stays without effect
                 if RauthyConfig::get()
                     .vars
                     .user_values

@@ -6737,6 +6737,17 @@ default_scopes = ['profile']
         vars
     }
 
+    /// The full hardened set `danger_reg_acc_init_immediate` requires on top of `vars_minimally_valid()`.
+    fn vars_hardened_acc_init_immediate() -> Vars {
+        let mut vars = vars_minimally_valid();
+        vars.user_registration.danger_reg_acc_init_immediate = true;
+        vars.user_registration.enable = true;
+        vars.user_registration.domain_restriction = Some("localhost".to_string());
+        vars.user_registration.reject_plus_subaddressing = true;
+        vars.user_values.self_service_email_change_deny = true;
+        vars
+    }
+
     #[test]
     #[should_panic(expected = "danger_reg_acc_init_immediate` is only allowed with all of these")]
     fn validate_reg_acc_init_immediate_lists_the_hardened_requirements() {
@@ -6747,15 +6758,7 @@ default_scopes = ['profile']
 
     #[test]
     fn validate_reg_acc_init_immediate_accepts_the_hardened_config() {
-        let mut vars = vars_minimally_valid();
-        vars.user_registration.danger_reg_acc_init_immediate = true;
-        vars.user_registration.enable = true;
-        vars.user_registration.domain_restriction = Some("localhost".to_string());
-        vars.user_registration.reject_plus_subaddressing = true;
-        vars.user_values.self_service_email_change_deny = true;
-        vars.access.password_reset_cookie_binding = true;
-        vars.access.cookie_mode = CookieMode::Secure;
-        vars.validate();
+        vars_hardened_acc_init_immediate().validate();
     }
 
     fn parse_user_reg(toml_src: &str) -> VarsUserRegistration {

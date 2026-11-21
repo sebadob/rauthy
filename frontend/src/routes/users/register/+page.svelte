@@ -38,7 +38,7 @@
     import { generateNonce, generatePKCE } from '#utils/pkce.ts';
     import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
     import { execProviderLogin } from '#utils/login.ts';
-    import { genKey, saveCsrfToken, generatePassword } from '#utils/helpers.ts';
+    import { emailDomainMatches, genKey, saveCsrfToken, generatePassword } from '#utils/helpers.ts';
     import type { SessionInfoResponse } from '#api/types/session.ts';
     import type { RegAccInitImmediate } from '#api/templates/RegAccInitImmediate.ts';
 
@@ -220,7 +220,7 @@
             }
         }
 
-        if (restrictedDomain && !values.email.endsWith(restrictedDomain)) {
+        if (restrictedDomain && !emailDomainMatches(values.email, restrictedDomain)) {
             err = t.register.domainErr;
             return;
         }
