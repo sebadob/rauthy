@@ -750,8 +750,8 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         // the access token is revoked while the row still names it
         for (i, sql) in SQL_RT_DISCARD.hql.iter().enumerate() {
             exec(sql, "rt_2");
-            let row = ids(SELECT_RT_IDS).contains(&"rt_2".to_string());
-            let revoked = ids(SELECT_REVOKED).contains(&"j_2".to_string());
+            let row = ids(SELECT_RT_IDS).iter().any(|i| i == "rt_2");
+            let revoked = ids(SELECT_REVOKED).iter().any(|i| i == "j_2");
             assert!(
                 row || revoked,
                 "after statement {i}: row gone, jti not revoked"
@@ -836,8 +836,8 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
                 .step(&txn, &SQL_RT_DISCARD, step, "rt_2")
                 .await
                 .unwrap();
-            let row = ids(&txn, SELECT_RT_IDS).await.contains(&"rt_2".to_string());
-            let revoked = ids(&txn, SELECT_REVOKED).await.contains(&"j_2".to_string());
+            let row = ids(&txn, SELECT_RT_IDS).await.iter().any(|i| i == "rt_2");
+            let revoked = ids(&txn, SELECT_REVOKED).await.iter().any(|i| i == "j_2");
             match step {
                 PgDiscardStep::Delete => {
                     assert!(!row && !revoked, "after statement {i}: {row} {revoked}")

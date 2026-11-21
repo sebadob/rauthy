@@ -37,3 +37,6 @@ chrono = { version = "0.4", default-features = false, features = ["now"] }
 
 [dev-dependencies]
 pretty_assertions = "1"
+
+[lints]
+workspace = true

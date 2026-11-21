@@ -16,6 +16,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_service::oidc::logout;
 use std::cmp::max;
+use std::str::FromStr;
 use tokio::task;
 use tracing::error;
 use validator::Validate;
@@ -58,7 +59,7 @@ pub async fn get_sessions(
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
-            Some(ContinuationToken::try_from(token.as_str())?)
+            Some(ContinuationToken::from_str(token.as_str())?)
         } else {
             None
         };

@@ -2920,14 +2920,8 @@ mod tests {
         stale.delete().await.unwrap();
 
         let pictures = hql_picture_ids().await;
-        assert!(
-            pictures.contains(&"del_pic_old".to_string()),
-            "{pictures:?}"
-        );
-        assert!(
-            !pictures.contains(&"del_pic_new".to_string()),
-            "{pictures:?}"
-        );
+        assert!(pictures.iter().any(|i| i == "del_pic_old"), "{pictures:?}");
+        assert!(!pictures.iter().any(|i| i == "del_pic_new"), "{pictures:?}");
     }
 
     /// Inserts for the user `{user_id}` an access token `{user_id}_at`, a refresh token

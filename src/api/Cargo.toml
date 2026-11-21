@@ -39,3 +39,6 @@ utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 validator = { workspace = true }
 zeroize = { workspace = true }
+
+[lints]
+workspace = true

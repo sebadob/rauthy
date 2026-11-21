@@ -103,3 +103,6 @@ percent-encoding = { workspace = true }
 pretty_assertions = "1"
 rstest = "0.26"
 tokio-test = "*"
+
+[lints]
+workspace = true
