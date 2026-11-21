@@ -12,22 +12,23 @@
     }: {
         otp: OtpResponse;
         showInactive: boolean;
-        onDelete: (name: string) => void;
+        onDelete: (id: string, name: string) => void;
     } = $props();
 
     let t = useI18n();
+    let name = $derived(otp.name || (otp.kind === 'email' ? t.mfa.otp.titleEmail : otp.kind));
 </script>
 
 {#if otp.is_active || showInactive}
     <MfaCredential
-        name={otp.name.toString() || (otp.kind === 'email' ? t.mfa.otp.titleEmail : otp.kind)}
+        {name}
         metadata={[
             {
                 label: t.mfa.lastUsed,
                 value: otp.last_used ? formatDateFromTs(otp.last_used) : t.common.never,
             },
         ]}
-        onDelete={() => onDelete(otp.id.toString())}
+        onDelete={() => onDelete(otp.id, name)}
     >
         {#snippet badges()}
             <span class="status" class:active={otp.is_active}>

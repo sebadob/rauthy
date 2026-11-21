@@ -131,11 +131,7 @@
             empty={otps.length === 0 ? ta.users.mfa.otp.noMfaOtps : undefined}
         >
             {#each otps as otp (otp.id)}
-                <UserOtp
-                    {otp}
-                    showInactive
-                    onDelete={id => ask('otp', id, otp.name.toString() || id)}
-                />
+                <UserOtp {otp} showInactive onDelete={(id, name) => ask('otp', id, name)} />
             {/each}
         </MfaMethod>
     {/if}

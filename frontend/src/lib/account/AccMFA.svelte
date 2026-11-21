@@ -296,7 +296,7 @@
         let res = await postOtp(userId, otpKind, otpName, tokenId);
         if (res.data) {
             const otp = res.data;
-            otpId = otp.id.toString();
+            otpId = otp.id;
             otps = [...otps.filter(existing => existing.id !== otp.id), otp];
             showOtpInput = true;
             otpKind = undefined;
