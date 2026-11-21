@@ -294,7 +294,7 @@ pub async fn post_fed_cm_token(
     // client already, at an authorization request without a `resource`
     exists_consent_grant(&user.id, &client.id, None)
         .await
-        .map_err(consent_required)?;
+        .map_err(consent_required_as_www_authenticate)?;
 
     // We are good - issue a TokenSet
     let ts = TokenSet::from_user(
@@ -308,12 +308,11 @@ pub async fn post_fed_cm_token(
         None,
         AuthCodeFlow::No,
         DeviceCodeFlow::No,
-        // The refresh token is never handed out -> fail closed should that ever change. A
-        // revoke after the check above: the refresh token is only inserted with the grant.
+        // The refresh token is never handed out -> fail closed should that ever change.
         ConsentCheck::Required,
     )
     .await
-    .map_err(consent_required)?;
+    .map_err(consent_required_as_www_authenticate)?;
 
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_CREDENTIALS)
@@ -359,9 +358,7 @@ fn is_fed_cm_enabled() -> Result<(), ErrorResponse> {
     }
 }
 
-/// A missing consent grant (`ConsentRequired`) as a FedCM denial: like the other denials of this
-/// API, `401` with `WWW-Authenticate`. Any other error is returned as is.
-fn consent_required(err: ErrorResponse) -> ErrorResponse {
+fn consent_required_as_www_authenticate(err: ErrorResponse) -> ErrorResponse {
     if err.error == ErrorResponseType::ConsentRequired {
         ErrorResponse::new(
             ErrorResponseType::WWWAuthenticate("consent-required".to_string()),
@@ -496,16 +493,15 @@ mod tests {
         assert_eq!(err.status_code(), 401);
     }
 
-    /// A missing grant, from the check or the refresh token insert, denies the assertion. Any
-    /// other error, an unrelated `invalid_grant` included, is returned as is.
     #[test]
     fn test_consent_required() {
-        assert_consent_required(consent_required(ErrorResponse::new(
+        assert_consent_required(consent_required_as_www_authenticate(ErrorResponse::new(
             ErrorResponseType::ConsentRequired,
             "no consent grant for this client",
         )));
         for typ in [ErrorResponseType::Database, ErrorResponseType::InvalidGrant] {
-            let err = consent_required(ErrorResponse::new(typ.clone(), "other"));
+            let err =
+                consent_required_as_www_authenticate(ErrorResponse::new(typ.clone(), "other"));
             assert_eq!(err.error, typ);
         }
     }
