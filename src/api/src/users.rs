@@ -168,7 +168,7 @@ pub async fn post_users(
     payload.validate()?;
     // A group admin may create users too, but only without any role and into at least
     // one group it manages, so the new account stays within its scope.
-    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_ref())?;
+    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_deref())?;
     // We are not using the UserValuesValidator on purpose here.
     // When an admin registers a new user, the user details view will be shown immediately anyway,
     // and an admin may have good reason to not set some values, like e.g. the preferred username.
@@ -429,7 +429,7 @@ pub async fn post_users_register_handle(
         given_name: payload.given_name.as_deref(),
         family_name: payload.family_name.as_deref(),
         preferred_username: payload.preferred_username.as_deref(),
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate()?;
 
@@ -2604,7 +2604,7 @@ pub async fn put_user_by_id(
         family_name: payload.family_name.as_deref(),
         // has its own endpoint for updates
         preferred_username: None,
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate()?;
 
@@ -2799,7 +2799,7 @@ pub async fn put_user_self(
         given_name: payload.given_name.as_deref(),
         family_name: payload.family_name.as_deref(),
         preferred_username: preferred_username.as_deref(),
-        user_values: &payload.user_values,
+        user_values: payload.user_values.as_ref(),
     }
     .validate_update(&UserValuesValidator::from_update_req(
         &stored,

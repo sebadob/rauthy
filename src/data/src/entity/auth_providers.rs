@@ -449,7 +449,7 @@ impl AuthProvider {
 
     fn try_from_id_req(id: String, req: ProviderRequest) -> Result<Self, ErrorResponse> {
         let scope = Self::cleanup_scope(&req.scope);
-        let secret = Self::secret_encrypted(&req.client_secret)?;
+        let secret = Self::secret_encrypted(req.client_secret.as_deref())?;
 
         Ok(Self {
             id,
@@ -593,8 +593,8 @@ impl AuthProvider {
         })
     }
 
-    fn secret_encrypted(secret: &Option<String>) -> Result<Option<Vec<u8>>, ErrorResponse> {
-        if let Some(secret) = &secret {
+    fn secret_encrypted(secret: Option<&str>) -> Result<Option<Vec<u8>>, ErrorResponse> {
+        if let Some(secret) = secret {
             Ok(Some(
                 EncValue::encrypt(secret.as_bytes())?.into_bytes().to_vec(),
             ))
