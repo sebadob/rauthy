@@ -550,7 +550,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
     let vars = &RauthyConfig::get().vars.suspicious_requests;
     if vars.log && path.len() > 1 {
         // TODO create a new event type for these? maybe too many events ...?
-        warn!("Suspicious request path '{}' from {}", path, ip)
+        warn!("Suspicious request path '{}' from {}", path, ip);
     }
 
     if !vars.blacklist.is_zero()

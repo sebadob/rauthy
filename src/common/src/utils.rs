@@ -86,7 +86,7 @@ pub fn base64_url_no_pad_encode(input: &[u8]) -> String {
 
 #[inline(always)]
 pub fn base64_url_no_pad_encode_buf(input: &[u8], buf: &mut String) {
-    B64_URL_SAFE_NO_PAD.encode_string(input, buf)
+    B64_URL_SAFE_NO_PAD.encode_string(input, buf);
 }
 
 #[inline(always)]

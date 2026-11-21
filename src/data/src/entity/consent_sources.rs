@@ -144,7 +144,7 @@ impl ConsentContent {
             warn!(
                 "Consent source {url} unavailable for client {}, using `local`: {}",
                 client.id, err.message
-            )
+            );
         }) else {
             return Some(Self::build(None, name, scopes));
         };

@@ -303,7 +303,7 @@ pub async fn get_kv_ns_values(
     let values = KVValue::find_all(ns.into_inner(), params.into_inner()).await?;
     let mut resp = Vec::with_capacity(values.len());
     for value in values {
-        resp.push(value.try_into_response()?)
+        resp.push(value.try_into_response()?);
     }
 
     Ok(HttpResponse::Ok().json(resp))
@@ -484,7 +484,7 @@ pub async fn get_kv_values_ext(
     let values = KVValue::find_all(access.ns, params.into_inner()).await?;
     let mut resp = Vec::with_capacity(values.len());
     for value in values {
-        resp.push(value.try_into_response()?)
+        resp.push(value.try_into_response()?);
     }
 
     Ok(HttpResponse::Ok().json(resp))

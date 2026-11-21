@@ -432,7 +432,7 @@ impl TokenSet {
                 }
 
                 if let Some(zone) = &uv.tz {
-                    claims.zoneinfo = Some(zone)
+                    claims.zoneinfo = Some(zone);
                 }
             }
 
