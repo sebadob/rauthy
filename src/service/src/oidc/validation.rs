@@ -118,7 +118,10 @@ pub async fn validate_and_refresh_token(
             match RefreshToken::find_opt(validation_str).await {
                 Ok(Some(rt)) => rt.delete().await,
                 Ok(None) => Ok(()),
-                Err(err) => Err(err),
+                Err(err) => {
+                    error!(?err, "looking up the refresh token of a client.id mismatch");
+                    Ok(())
+                }
             }
         };
         if let Err(err) = deleted {
