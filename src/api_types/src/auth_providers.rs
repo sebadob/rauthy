@@ -1,4 +1,5 @@
 use crate::cust_validation::validate_vec_scopes;
+use crate::oidc::LoginConsent;
 use rauthy_common::regex::{
     RE_ALNUM, RE_ATPROTO_HANDLE, RE_CLIENT_ID, RE_CLIENT_NAME, RE_CODE_CHALLENGE, RE_RESOURCE,
     RE_SCOPE_SPACE, RE_URI,
@@ -160,6 +161,10 @@ pub struct ProviderLoginRequest {
     /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
     /// do additional state lookup checks.
     pub fwda: Option<bool>,
+    /// The consent given on the login page, see [`LoginRequest::consent`]. Checked once the
+    /// upstream login finished.
+    #[validate(nested)]
+    pub consent: Option<LoginConsent>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]

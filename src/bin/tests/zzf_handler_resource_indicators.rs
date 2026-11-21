@@ -1,6 +1,6 @@
 use crate::common::{
     PASSWORD, USERNAME, code_state_from_headers, cookie_csrf_headers_from_res_direct,
-    decode_claims, get_auth_headers, get_backend_url, get_solved_pow,
+    decode_claims, get_auth_headers, get_backend_url, get_solved_pow, send_login,
 };
 use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
@@ -278,13 +278,9 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         resource: Some(RES_REFRESH.to_string()),
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
-    let res = http
-        .post(&url_auth)
-        .headers(session_headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(&http, &url_auth, &session_headers, req_login).await;
     let res = expect_status!(res, 202);
     let (code, _state) = code_state_from_headers(res)?;
 

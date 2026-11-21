@@ -1174,7 +1174,7 @@ impl Client {
 
     /// The consent source for a login to this client with the optional RFC 8707 `resource`.
     /// `None` only without `consent.enable`. Precedence: `[[consent.sources]]` entry for the
-    /// `resource`, the client's own `consent`, `Local`. Not called yet, the consent screen will.
+    /// `resource`, the client's own `consent`, `Local`.
     pub fn consent_source(&self, resource: Option<&str>) -> Option<ConsentSource> {
         self.consent_source_with(resource, &RauthyConfig::get().vars.consent)
     }

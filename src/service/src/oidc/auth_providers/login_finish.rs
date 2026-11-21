@@ -99,6 +99,7 @@ pub async fn login_finish<'a>(
     let header_origin = client.get_validated_origin_header(req)?;
 
     let auth_step = oidc::authorize::finish_authorize(
+        req,
         user,
         client,
         &mut session,
@@ -110,6 +111,7 @@ pub async fn login_finish<'a>(
             code_challenge: slf.req_code_challenge,
             code_challenge_method: slf.req_code_challenge_method,
             resource: slf.req_resource,
+            consent: slf.req_consent,
             header_origin,
             require_webauthn,
             require_otp,

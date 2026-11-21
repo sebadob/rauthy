@@ -17,6 +17,7 @@ use rauthy_api_types::auth_providers::{
     ProviderCallbackRequest, ProviderLinkedUserResponse, ProviderLookupResponse, ProviderResponse,
 };
 use rauthy_api_types::auth_providers::{ProviderLookupRequest, ProviderRequest};
+use rauthy_api_types::oidc::LoginConsent;
 use rauthy_api_types::users::UserValuesRequest;
 use rauthy_common::constants::{
     APPLICATION_JSON, CACHE_TTL_APP, CACHE_TTL_AUTH_PROVIDER_CALLBACK, IDX_AUTH_PROVIDER,
@@ -664,6 +665,7 @@ pub struct AuthProviderCallback {
     /// during a rolling upgrade.
     #[serde(default)]
     pub req_resource: Option<String>,
+    pub req_consent: Option<LoginConsent>,
 
     pub provider_id: String,
 

@@ -2,7 +2,7 @@ use crate::user_values_validator::UserValuesValidator;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_api_types::oidc::{GrantType, LoginRefreshRequest, LoginRequest};
+use rauthy_api_types::oidc::{GrantType, LoginConsent, LoginRefreshRequest, LoginRequest};
 use rauthy_common::constants::COOKIE_MFA;
 use rauthy_common::sha256;
 use rauthy_common::utils::{get_rand, real_ip_from_req};
@@ -11,15 +11,18 @@ use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::auth_providers::ProviderMfaLogin;
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::consent_sources::{ConsentContent, LoginConsentContent};
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::{MfaAssurance, Session};
+use rauthy_data::entity::user_consents::{ConsentGrant, UserConsent};
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
+use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_data::{
     AuthStep, AuthStepAwaitOtp, AuthStepAwaitWebauthn, AuthStepLoggedIn, AwaitToSAccept,
@@ -197,6 +200,7 @@ pub async fn post_authorize(
     }
 
     finish_authorize(
+        req,
         user,
         client,
         &mut session,
@@ -208,6 +212,7 @@ pub async fn post_authorize(
             code_challenge: req_data.code_challenge,
             code_challenge_method: req_data.code_challenge_method,
             resource: req_data.resource,
+            consent: req_data.consent,
             header_origin,
             require_webauthn,
             require_otp,
@@ -234,6 +239,7 @@ fn update_time_taken_fp(start: Instant) {
 }
 
 pub async fn post_authorize_refresh(
+    req: &HttpRequest,
     mut session: Session,
     client: Client,
     header_origin: Option<(HeaderName, HeaderValue)>,
@@ -257,6 +263,7 @@ pub async fn post_authorize_refresh(
         && user.has_otp_enabled().await;
 
     finish_authorize(
+        req,
         user,
         client,
         &mut session,
@@ -270,6 +277,7 @@ pub async fn post_authorize_refresh(
             // the silent re-auth authorize request still carries the RFC 8707 `resource`,
             // thread it through so audience-bound tokens survive subsequent logins
             resource: req_data.resource,
+            consent: req_data.consent,
             header_origin,
             require_webauthn,
             require_otp,
@@ -289,6 +297,7 @@ pub(crate) struct AuthorizeData {
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
     pub resource: Option<String>,
+    pub consent: Option<LoginConsent>,
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub require_webauthn: bool,
     pub require_otp: bool,
@@ -298,7 +307,14 @@ pub(crate) struct AuthorizeData {
 /// Expects the user checks already been done, but does all the necessary client validations.
 /// `user_needs_mfa` is used to add a login delay during `POST /authorize` and not necessary
 /// otherwise.
+///
+/// With `consent.enable`, fails with `ConsentRequired` carrying the [`LoginConsentContent`] JSON
+/// as message when `data.consent` is missing and the user's grant does not cover the request, or
+/// when `data.consent` is for other content or not valid for the client. A valid consent is
+/// written as the user's grant, after the WebAuthn ceremony if one is required, and the auth code
+/// gets only its accepted scopes.
 pub(crate) async fn finish_authorize(
+    req: &HttpRequest,
     user: User,
     client: Client,
     session: &mut Session,
@@ -335,7 +351,80 @@ pub(crate) async fn finish_authorize(
         client.validate_resource_request(resource)?;
     }
 
-    let scopes = client.sanitize_login_scopes(&data.scopes)?;
+    let mut scopes = client.sanitize_login_scopes(&data.scopes)?;
+
+    let resource = data.resource.as_deref();
+    if RauthyConfig::get().vars.consent.requires_resource()
+        && client.is_ephemeral()
+        && resource.is_none()
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "a `resource` is required",
+        ));
+    }
+    let lang = Language::try_from(req).unwrap_or_default();
+    let consent_grant = match ConsentContent::resolve(&client, resource, &scopes, lang).await {
+        None => None,
+        Some(content) => match data.consent {
+            None => {
+                let grant = UserConsent::find(&user.id, &client.id, resource).await?;
+                let is_covered = match &grant {
+                    None => false,
+                    Some(grant) => grant.covers(&client, resource, &scopes, lang).await,
+                };
+                if !is_covered {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::ConsentRequired,
+                        LoginConsentContent::new(content, &client, grant.as_ref())
+                            .to_json_escaped(),
+                    ));
+                }
+                None
+            }
+            Some(consent) => {
+                let accepted = &consent.accepted_scopes;
+                let is_valid = consent.content_hash == content.content_hash
+                    && client
+                        .default_scopes
+                        .split(',')
+                        .filter(|s| !s.is_empty())
+                        .all(|d| accepted.iter().any(|a| a == d))
+                    && accepted.iter().all(|a| scopes.contains(a));
+                if !is_valid {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::ConsentRequired,
+                        LoginConsentContent::new(content, &client, None).to_json_escaped(),
+                    ));
+                }
+                let is_all_accepted = scopes.iter().all(|s| accepted.contains(s));
+                let content_hash = if is_all_accepted {
+                    content.content_hash
+                } else {
+                    scopes.retain(|s| accepted.contains(s));
+                    ConsentContent::resolve(&client, resource, &scopes, lang)
+                        .await
+                        .expect("consent content to exist with `consent.enable`")
+                        .content_hash
+                };
+                // the auth code owns the scopes and the resource as well
+                Some(ConsentGrant {
+                    client_id: client.id.clone(),
+                    resource: data.resource.clone(),
+                    scopes: scopes.clone(),
+                    content_hash,
+                })
+            }
+        },
+    };
+    // a WebAuthn ceremony may be the only factor, the grant waits for it
+    let consent_grant = match consent_grant {
+        Some(grant) if !data.require_webauthn => {
+            grant.upsert(&user, req).await?;
+            None
+        }
+        grant => grant,
+    };
 
     let config = RauthyConfig::get();
     let mut code_lifetime = Duration::from_secs(client.auth_code_lifetime as u64);
@@ -425,6 +514,7 @@ pub(crate) async fn finish_authorize(
             }),
             needs_user_update,
             session_id: session.id.clone(),
+            consent_grant,
         }
         .save()
         .await?;

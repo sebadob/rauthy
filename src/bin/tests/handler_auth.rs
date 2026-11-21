@@ -2,7 +2,7 @@ use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
     authorization_response_params_decoded, code_state_from_headers, cookie_csrf_headers_from_res,
     decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
-    init_client_bcl_uri, refresh, session_headers,
+    init_client_bcl_uri, refresh, send_login, session_headers,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
@@ -245,6 +245,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     let bad_redirect_uri = format!("{good_redirect_uri}&iss=x");
@@ -270,12 +271,7 @@ async fn test_authorize_rejects_reserved_query_key_in_redirect_uri() -> Result<(
     // the same login without the reserved key succeeds
     let mut req_login = login(PASSWORD, &good_redirect_uri);
     req_login.pow = get_solved_pow().await;
-    let res = client
-        .post(&url_auth)
-        .headers(headers)
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(&client, &url_auth, &headers, req_login).await;
     let res = expect_status!(res, 202);
     let location = res
         .headers()
@@ -326,6 +322,7 @@ async fn test_authorize_post_marks_expired_session() -> Result<(), Box<dyn Error
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     // With a live `Init` session a rejected password is an interactive form error.
@@ -519,6 +516,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
     // An email-only submission must not expose whether the account exists.
     for email in [USERNAME, "nonexistent@example.test"] {
@@ -560,13 +558,14 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     req_login.password = Some(PASSWORD.to_string());
     req_login.pow = get_solved_pow().await;
-    let mut res = reqwest::Client::new()
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
-    res = expect_status!(res, 202);
+    let res = send_login(
+        &reqwest::Client::new(),
+        &url_auth,
+        &headers,
+        req_login.clone(),
+    )
+    .await;
+    let res = expect_status!(res, 202);
 
     // Step 3: extract values from callback location header
     let decoded = authorization_response_params_decoded(&res)?;
@@ -604,12 +603,13 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
-    let res = reqwest::Client::new()
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(
+        &reqwest::Client::new(),
+        &url_auth,
+        &headers,
+        req_login.clone(),
+    )
+    .await;
     let res = expect_status!(res, 202);
     let (code, _) = code_state_from_headers(res)?;
     req_token.code = Some(code);
@@ -625,12 +625,13 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
 
     // each failed attempt invalidates the auth code, we need to re-fetch
     req_login.pow = get_solved_pow().await;
-    let res = reqwest::Client::new()
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(
+        &reqwest::Client::new(),
+        &url_auth,
+        &headers,
+        req_login.clone(),
+    )
+    .await;
     let res = expect_status!(res, 202);
     let (code, _) = code_state_from_headers(res)?;
     req_token.code = Some(code);
@@ -939,6 +940,7 @@ async fn test_concurrent_logins() -> Result<(), Box<dyn Error>> {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -1295,13 +1297,9 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
-    let res = client
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await?;
+    let res = send_login(&client, &url_auth, &headers, req_login).await;
     assert!(res.status().is_success());
     let (code, state) = code_state_from_headers(res)?;
     assert!(state.is_none());

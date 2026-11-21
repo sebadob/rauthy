@@ -30,6 +30,7 @@ use rauthy_data::entity::auth_providers::{
 };
 use rauthy_data::entity::browser_id::{BrowserId, BrowserIdSetNew};
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::consent_sources::{ConsentContent, LoginConsentContent};
 use rauthy_data::entity::devices::DeviceAuthCode;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
@@ -40,6 +41,7 @@ use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
+use rauthy_data::entity::user_consents::UserConsent;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::well_known::WellKnown;
 use rauthy_data::html::templates::{
@@ -159,26 +161,77 @@ pub async fn get_authorize(
         }
     }
 
-    // check for `prompt=none` and redirect if we don't have a valid session
-    if !force_new_session
-        && params
-            .prompt
-            .as_ref()
-            .map(|p| p.contains("none"))
-            .unwrap_or(false)
-        && principal.validate_session_auth().is_err()
-    {
-        // RFC 9207 - error responses carry `iss` as well
+    // RFC 9207 - error responses carry `iss` as well
+    let redirect_error = |error: &str| {
         let loc = authorization_redirect(
             &params.redirect_uri,
-            &[("error", "login_required")],
+            &[("error", error)],
             params.state.as_deref(),
             &RauthyConfig::get().issuer,
         );
-
-        return Ok(HttpResponse::Found()
+        HttpResponse::Found()
             .insert_header(("location", loc))
-            .finish());
+            .finish()
+    };
+
+    // check for `prompt=none` and redirect if we don't have a valid session
+    let prompt_none = params.prompt.as_ref().is_some_and(|p| p.contains("none"));
+    let is_session_valid = !force_new_session && principal.validate_session_auth().is_ok();
+    if !force_new_session && prompt_none && !is_session_valid {
+        return Ok(redirect_error("login_required"));
+    }
+
+    let resource = params.resource.as_deref();
+    if let Some(resource) = resource
+        && let Err(err) = client.validate_resource_request(resource)
+    {
+        warn!(
+            "Invalid `resource` in the authorization request: {}",
+            err.message
+        );
+        return Ok(redirect_error("invalid_target"));
+    }
+    if RauthyConfig::get().vars.consent.requires_resource()
+        && client.is_ephemeral()
+        && resource.is_none()
+    {
+        warn!("Authorization request without the `resource` the consent requires");
+        return Ok(redirect_error("consent_required"));
+    }
+
+    // the consent to ask for, if the user's grant does not cover the request
+    let prompt_consent = params
+        .prompt
+        .as_ref()
+        .is_some_and(|p| p.contains("consent"));
+    let scopes = client.sanitize_login_scopes(&Some(
+        params.scope.split_whitespace().map(String::from).collect(),
+    ))?;
+    let consent = match ConsentContent::resolve(&client, resource, &scopes, lang).await {
+        None => None,
+        Some(content) => {
+            let user_id = principal
+                .session
+                .as_ref()
+                .and_then(|s| s.user_id.as_deref())
+                .filter(|_| is_session_valid);
+            let grant = match user_id {
+                None => None,
+                Some(user_id) => UserConsent::find(user_id, &client.id, resource).await?,
+            };
+            let is_covered = match &grant {
+                None => false,
+                Some(grant) => grant.covers(&client, resource, &scopes, lang).await,
+            };
+            if !prompt_consent && is_covered {
+                None
+            } else {
+                Some(LoginConsentContent::new(content, &client, grant.as_ref()))
+            }
+        }
+    };
+    if prompt_none && consent.is_some() {
+        return Ok(redirect_error("consent_required"));
     }
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
@@ -186,7 +239,7 @@ pub async fn get_authorize(
     let favicon_updated =
         Logo::find_updated_with_res(&client.id, LogoRes::Favicon, &LogoType::Client).await?;
 
-    let mut templates = Vec::with_capacity(10);
+    let mut templates = Vec::with_capacity(12);
     templates.push(HtmlTemplate::AuthProviders(auth_providers_json));
     templates.push(HtmlTemplate::ClientName(client.name.unwrap_or_default()));
     templates.push(HtmlTemplate::ClientUrl(
@@ -206,17 +259,18 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::AtprotoId(provider_atproto.id));
     }
 
-    // if the user is still authenticated and everything is valid -> immediate refresh
-    let prompt_consent = params
-        .prompt
-        .as_ref()
-        .map(|p| p.contains("consent"))
-        .unwrap_or(false);
-    if !force_new_session && !prompt_consent && principal.validate_session_auth().is_ok() {
+    // if the user is still authenticated and everything is valid -> immediate refresh, after the
+    // consent if one is needed
+    if is_session_valid && (consent.is_some() || !prompt_consent) {
         let csrf = principal.get_session_csrf_token()?;
 
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
-        templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
+        if let Some(consent) = consent {
+            templates.push(HtmlTemplate::ConsentContent(consent));
+            templates.push(HtmlTemplate::LoginAction(FrontendAction::RefreshConsent));
+        } else {
+            templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
+        }
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
@@ -247,6 +301,9 @@ pub async fn get_authorize(
 
         templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
         templates.push(HtmlTemplate::LoginAction(action));
+        if let Some(consent) = consent {
+            templates.push(HtmlTemplate::ConsentContent(consent));
+        }
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(
@@ -405,6 +462,11 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
+            if let ErrorResponseType::ConsentRequired = err.error {
+                // Only returned after the user checks, with the consent content to ask for.
+                return Err(err);
+            }
+
             // Normalize by the submitted form step, even when the account does not exist.
             // Safari can retry a challenged POST and reuse its already consumed proof of work.
             let (kind, message) = match (uses_password_form, has_password) {
@@ -472,7 +534,7 @@ pub async fn post_authorize_refresh(
     .await?;
 
     let auth_step =
-        authorize::post_authorize_refresh(session, client, header_origin, payload).await?;
+        authorize::post_authorize_refresh(&req, session, client, header_origin, payload).await?;
     map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await
 }
 

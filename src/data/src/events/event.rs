@@ -167,6 +167,7 @@ pub enum EventType {
     EmailSendError,
     ConsentRevoked,
     LdapLogin,
+    ConsentGranted,
 }
 
 impl Display for EventType {
@@ -198,6 +199,7 @@ impl Display for EventType {
             Self::EmailSendError => write!(f, "E-Mail send error"),
             Self::ConsentRevoked => write!(f, "User consent revoked"),
             Self::LdapLogin => write!(f, "LDAP login"),
+            Self::ConsentGranted => write!(f, "User consent granted"),
         }
     }
 }
@@ -233,6 +235,7 @@ impl From<rauthy_api_types::events::EventType> for EventType {
             rauthy_api_types::events::EventType::EmailSendError => Self::EmailSendError,
             rauthy_api_types::events::EventType::ConsentRevoked => Self::ConsentRevoked,
             rauthy_api_types::events::EventType::LdapLogin => Self::LdapLogin,
+            rauthy_api_types::events::EventType::ConsentGranted => Self::ConsentGranted,
         }
     }
 }
@@ -266,6 +269,7 @@ impl From<EventType> for rauthy_api_types::events::EventType {
             EventType::EmailSendError => Self::EmailSendError,
             EventType::ConsentRevoked => Self::ConsentRevoked,
             EventType::LdapLogin => Self::LdapLogin,
+            EventType::ConsentGranted => Self::ConsentGranted,
         }
     }
 }
@@ -299,6 +303,7 @@ impl EventType {
             Self::EmailSendError => "EmailSendError",
             Self::ConsentRevoked => "ConsentRevoked",
             Self::LdapLogin => "LdapLogin",
+            Self::ConsentGranted => "ConsentGranted",
         }
     }
 
@@ -333,6 +338,7 @@ impl EventType {
             EventType::EmailSendError => 23,
             EventType::ConsentRevoked => 24,
             EventType::LdapLogin => 25,
+            EventType::ConsentGranted => 26,
         }
     }
 }
@@ -366,6 +372,7 @@ impl From<String> for EventType {
             "EmailSendError" => Self::EmailSendError,
             "ConsentRevoked" => Self::ConsentRevoked,
             "LdapLogin" => Self::LdapLogin,
+            "ConsentGranted" => Self::ConsentGranted,
             // just return test to never panic
             s => {
                 error!("EventType::from() for invalid String: {s}");
@@ -410,6 +417,7 @@ impl From<i64> for EventType {
             23 => EventType::EmailSendError,
             24 => EventType::ConsentRevoked,
             25 => EventType::LdapLogin,
+            26 => EventType::ConsentGranted,
             _ => EventType::Test,
         }
     }
@@ -523,6 +531,7 @@ impl From<&Event> for Notification {
             EventType::EmailSendError => value.text.clone(),
             EventType::ConsentRevoked => value.text.clone(),
             EventType::LdapLogin => value.text.clone(),
+            EventType::ConsentGranted => value.text.clone(),
         };
 
         Self {
@@ -740,6 +749,35 @@ impl Event {
                 .level_consent_revoked
                 .clone(),
             EventType::ConsentRevoked,
+            Some(ip.to_string()),
+            None,
+            Some(text),
+        )
+    }
+
+    /// A consent given on the login page, with the accepted `scopes`.
+    pub fn consent_granted(
+        user_email: &str,
+        client_id: &str,
+        resource: Option<&str>,
+        scopes: &[String],
+        ip: IpAddr,
+    ) -> Self {
+        let scopes = scopes.join(" ");
+        let text = match resource {
+            None => format!("Consent of `{user_email}` for client `{client_id}` granted: {scopes}"),
+            Some(resource) => format!(
+                "Consent of `{user_email}` for client `{client_id}` / `{resource}` granted: \
+                {scopes}"
+            ),
+        };
+        Self::new(
+            RauthyConfig::get()
+                .vars
+                .events
+                .level_consent_granted
+                .clone(),
+            EventType::ConsentGranted,
             Some(ip.to_string()),
             None,
             Some(text),
@@ -1114,6 +1152,7 @@ impl Event {
             EventType::EmailSendError => self.text.clone().unwrap_or_default(),
             EventType::ConsentRevoked => self.text.clone().unwrap_or_default(),
             EventType::LdapLogin => self.text.clone().unwrap_or_default(),
+            EventType::ConsentGranted => self.text.clone().unwrap_or_default(),
         }
     }
 

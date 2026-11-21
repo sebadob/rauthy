@@ -308,6 +308,7 @@ enum EventType {
   EmailSendError,
   ConsentRevoked,
   LdapLogin,
+  ConsentGranted,
 }
 ```
 
@@ -498,6 +499,12 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user gave
+# consent to a client on the login page.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_GRANTED
+level_consent_granted = 'notice'
 # The level for the generated Event after a user consent
 # for a client has been revoked, either by the user
 # themselves, by an admin or through an API key.

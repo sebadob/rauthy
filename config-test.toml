@@ -21,6 +21,9 @@ password_dashboard = "JGFyZ29uMmlkJHY9MTkkbT0zMix0PTIscD0xJE9FbFZURnAwU0V0bFJ6ZF
 secret_raft = "SuperSecureSecret1337"
 secret_api = "SuperSecureSecret1337"
 
+[consent]
+enable = true
+
 [database]
 pg_host = 'localhost'
 pg_user = 'rauthy'

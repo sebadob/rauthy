@@ -39,6 +39,7 @@ pub enum EventType {
     EmailSendError,
     ConsentRevoked,
     LdapLogin,
+    ConsentGranted,
 }
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]

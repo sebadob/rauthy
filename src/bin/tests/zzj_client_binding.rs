@@ -2,7 +2,7 @@ mod common;
 
 use common::{
     CLIENT_ID, PASSWORD, USERNAME, code_state_from_headers, cookie_csrf_headers_from_res_direct,
-    get_auth_headers, get_backend_url, get_solved_pow, session_headers_for_client,
+    get_auth_headers, get_backend_url, get_solved_pow, send_login, session_headers_for_client,
 };
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
@@ -110,26 +110,23 @@ async fn auth_code(client_id: &str) -> Result<String, Box<dyn Error>> {
         "{backend_url}/oidc/authorize?client_id={client_id}&redirect_uri={REDIRECT_URI}\
         &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
     );
-    let res = http
-        .post(&url_auth)
-        .headers(headers)
-        .json(&LoginRequest {
-            email: Some(USERNAME.to_string()),
-            password: Some(PASSWORD.to_string()),
-            pow: get_solved_pow().await,
-            client_id: client_id.to_string(),
-            redirect_uri: REDIRECT_URI.to_string(),
-            scopes: None,
-            state: None,
-            nonce: None,
-            code_challenge: Some(challenge),
-            code_challenge_method: Some("S256".to_string()),
-            resource: None,
-            resident_key_token: None,
-            fwda: None,
-        })
-        .send()
-        .await?;
+    let req = LoginRequest {
+        email: Some(USERNAME.to_string()),
+        password: Some(PASSWORD.to_string()),
+        pow: get_solved_pow().await,
+        client_id: client_id.to_string(),
+        redirect_uri: REDIRECT_URI.to_string(),
+        scopes: None,
+        state: None,
+        nonce: None,
+        code_challenge: Some(challenge),
+        code_challenge_method: Some("S256".to_string()),
+        resource: None,
+        resident_key_token: None,
+        fwda: None,
+        consent: None,
+    };
+    let res = send_login(&http, &url_auth, &headers, req).await;
     let res = expect_status!(res, 202);
 
     let (code, _) = code_state_from_headers(res)?;

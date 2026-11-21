@@ -882,32 +882,31 @@ backup_keep_for_local = '3d'
 #HQL_DANGER_RAFT_STATE_RESET=true
 
 [consent]
-# Not active yet: until the consent screen lands, consent content
-# (`[[consent.sources]]` and the client consent sources) is only
-# validated and stored, never fetched or shown, whatever `enable`
-# is.
-#
-# Set to `true` to enable user consent for clients. Without it,
+# Set to `true` to ask users for their consent to a client on the
+# login page. The consent content comes from `[[consent.sources]]`
+# below, the client's consent source in the Admin UI, or the
+# built-in one, which shows the requested scopes. Without it,
 # configured `[[consent.sources]]` log a warning at startup.
-# This feature is still in progress. Currently, it makes the
-# authorization code exchange, FedCM and a refresh require the
-# user's consent grant for the client (password, device code and
-# token exchange tokens issued by this version are exempt), a
-# client deletion also delete all legacy refresh tokens (issued
-# before refresh tokens were bound to a client) of all users, and a
-# user's consent revoke also delete that user's legacy refresh
-# tokens.
 #
-# Until the consent screen lands, no grant can be given. While it is
-# enabled:
-# - every `authorization_code` login, the Admin UI included, and
-#   every FedCM login fails: the user signs in, but the client's
-#   token request (code exchange / FedCM) is rejected with
-#   `invalid_grant` "no consent grant for this client", and rauthy
-#   logs a warning
-# - every non-exempt refresh token is deleted, and its access token
-#   revoked, on its next refresh. Turning the flag off again does not
-#   restore them.
+# While it is enabled:
+# - the login page asks for consent, the Admin UI included, when the
+#   user's consent grant for the client and `resource` does not
+#   cover the requested scopes for the current consent content, and
+#   with `prompt=consent`. The client's `default_scopes` are always
+#   accepted, other requested scopes can be declined. The grant is
+#   stored with the time, IP and user agent of the login.
+# - the authorization code exchange, FedCM and a refresh require the
+#   user's consent grant for the client (password, device code and
+#   token exchange tokens issued by this version are exempt). FedCM
+#   has no consent screen: it needs a grant from an earlier login
+#   on the login page.
+# - a client deletion also deletes all legacy refresh tokens (issued
+#   before refresh tokens were bound to a client) of all users, and a
+#   user's consent revoke also deletes that user's legacy refresh
+#   tokens.
+# - every non-exempt refresh token without a consent grant is
+#   deleted, and its access token revoked, on its next refresh.
+#   Turning the flag off again does not restore them.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
@@ -973,6 +972,8 @@ backup_keep_for_local = '3d'
 # The `lang=en` response is required and the default: the
 # response for the user's language is used, the `lang=en` one
 # if that is unavailable.
+# A scope `description` may contain HTML, which is sanitized
+# before it is shown. All other fields are shown as plain text.
 # The version of the consent content is the hash of the content
 # as shown: the name, intro, terms_url and the requested scopes
 # with their title, description and warning (the warnings of
@@ -986,8 +987,6 @@ backup_keep_for_local = '3d'
 # the built-in content while `lang=en` is unavailable or
 # invalid, and the `lang=en` content while the translation is
 # unavailable.
-# This is the planned contract: nothing compares the version
-# with the one a consent was given for yet.
 #source = 'local'
 # The name of the resource shown on the consent screen. It wins
 # over the `name` of a remote consent document, which is only
@@ -1949,6 +1948,12 @@ level_secrets_migrated = 'notice'
 # default: warning
 # overwritten by: EVENT_LEVEL_USER_LOGIN_REVOKE
 level_user_login_revoke = 'warning'
+# The level for the generated Event after a user gave
+# consent to a client on the login page.
+#
+# default: notice
+# overwritten by: EVENT_LEVEL_CONSENT_GRANTED
+level_consent_granted = 'notice'
 # The level for the generated Event after a user consent
 # for a client has been revoked, either by the user
 # themselves, by an admin or through an API key.

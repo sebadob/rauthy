@@ -4,8 +4,8 @@ use crate::sessions::SessionState;
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use rauthy_common::regex::{
-    RE_ALNUM, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER, RE_LOWERCASE,
-    RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
+    RE_ALNUM, RE_ALNUM_64, RE_BASE64, RE_CLIENT_ID, RE_CODE_CHALLENGE_METHOD, RE_CODE_VERIFIER,
+    RE_LOWERCASE, RE_RESOURCE, RE_SCOPE_SPACE, RE_URI,
 };
 use rauthy_common::utils::base64_decode;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -291,9 +291,29 @@ pub struct LoginRequest {
     /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
     /// do additional state lookup checks.
     pub fwda: Option<bool>,
+    /// The consent given on the login page. Required with `consent.enable`, unless the user's
+    /// consent grant already covers the requested scopes for the current consent content.
+    #[validate(nested)]
+    pub consent: Option<LoginConsent>,
+}
+
+/// The consent a user gives on the login page for the consent content shown there.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate, ToSchema)]
+pub struct LoginConsent {
+    /// The `content_hash` of the consent content that was shown.
+    ///
+    /// Validation: `^[a-zA-Z0-9]{64}$`
+    #[validate(regex(path = "*RE_ALNUM_64", code = "^[a-zA-Z0-9]{64}$"))]
+    pub content_hash: String,
+    /// Must contain all `default_scopes` of the client, and only requested scopes.
+    ///
+    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
+    #[validate(custom(function = "validate_vec_scopes"))]
+    pub accepted_scopes: Vec<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct LoginRefreshRequest {
     /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,128}$`
     #[validate(regex(
@@ -328,6 +348,9 @@ pub struct LoginRefreshRequest {
     /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
     /// do additional state lookup checks.
     pub fwda: Option<bool>,
+    /// The consent given on the login page, see [`LoginRequest::consent`].
+    #[validate(nested)]
+    pub consent: Option<LoginConsent>,
 }
 
 #[derive(Default, Deserialize, Validate, ToSchema, IntoParams)]

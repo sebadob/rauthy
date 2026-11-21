@@ -43,6 +43,7 @@ pub async fn login_start<'a>(
         req_code_challenge: payload.code_challenge,
         req_code_challenge_method: payload.code_challenge_method,
         req_resource: payload.resource,
+        req_consent: payload.consent,
 
         provider_id: provider.id,
 

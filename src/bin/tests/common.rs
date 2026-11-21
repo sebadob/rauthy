@@ -1,12 +1,16 @@
 #![allow(dead_code)]
 use rauthy_api_types::generic::Language;
-use rauthy_api_types::oidc::{GrantType, LoginRequest, SessionInfoResponse, TokenRequest};
+use rauthy_api_types::oidc::{
+    GrantType, LoginConsent, LoginRequest, SessionInfoResponse, TokenRequest,
+};
 use rauthy_api_types::users::{
     NewUserRequest, UpdateUserRequest, UserResponse, UserResponseSimple,
 };
 use rauthy_common::constants::CSRF_HEADER;
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
+use rauthy_data::entity::consent_sources::LoginConsentContent;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
 use reqwest::header::{HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Response, header};
@@ -244,15 +248,10 @@ pub async fn session_headers_for_client(
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
-    let res = client
-        .post(&url_auth)
-        .headers(headers.clone())
-        .json(&req_login)
-        .send()
-        .await
-        .unwrap();
+    let res = send_login(&client, &url_auth, &headers, req_login).await;
     let res = expect_status!(res, 202);
 
     let (code, _state) = code_state_from_headers(res).unwrap();
@@ -302,7 +301,13 @@ impl PreparedLogin {
     pub async fn send(self) -> HeaderMap {
         let email = self.req.email.clone().unwrap_or_default();
         let headers = self.headers.clone();
-        let res = self.response().await;
+        let res = send_login(
+            &reqwest::Client::new(),
+            &self.url_auth,
+            &self.headers,
+            self.req,
+        )
+        .await;
         let status = res.status();
         if status != 202 {
             let body = res.text().await.unwrap_or_default();
@@ -311,7 +316,7 @@ impl PreparedLogin {
         headers
     }
 
-    /// Sends the login and returns its response, whatever its status.
+    /// Sends the login without consent and returns its response, whatever its status.
     pub async fn response(self) -> Response {
         reqwest::Client::new()
             .post(&self.url_auth)
@@ -320,6 +325,72 @@ impl PreparedLogin {
             .send()
             .await
             .unwrap()
+    }
+}
+
+/// Sends the login `req`. When it fails with `ConsentRequired`, it is sent once more with a new
+/// proof of work and the consent it asks for, accepting all requested scopes.
+///
+/// # Panics
+///
+/// On any other 400, whose body is read for the check. Logins expected to fail with a 400 are
+/// sent directly.
+pub async fn send_login(
+    client: &reqwest::Client,
+    url_auth: &str,
+    headers: &HeaderMap,
+    mut req: LoginRequest,
+) -> Response {
+    let send = async |req: &LoginRequest| {
+        client
+            .post(url_auth)
+            .headers(headers.clone())
+            .json(req)
+            .send()
+            .await
+            .unwrap()
+    };
+
+    let res = send(&req).await;
+    if res.status() != 400 {
+        return res;
+    }
+    let err = res.json::<ErrorResponse>().await.unwrap();
+    assert_eq!(
+        err.error,
+        ErrorResponseType::ConsentRequired,
+        "login failed: {}",
+        err.message
+    );
+    req.consent = Some(accept_all(&consent_content(&err.message)));
+    req.pow = get_solved_pow().await;
+    send(&req).await
+}
+
+/// The [`LoginConsentContent`] of a `ConsentRequired` message or a login page template.
+pub fn consent_content(json: &str) -> LoginConsentContent {
+    serde_json::from_str(json).expect("LoginConsentContent JSON")
+}
+
+/// The consent template of a login page, `None` if it asks for no consent.
+pub fn consent_template(html: &str) -> Option<LoginConsentContent> {
+    let (_, tpl) = html.split_once("<template id=\"tpl_consent_content\">")?;
+    let (json, _) = tpl
+        .split_once("</template>")
+        .expect("closed consent template");
+    Some(consent_content(json))
+}
+
+/// The consent to `content` with all requested scopes.
+pub fn accept_all(content: &LoginConsentContent) -> LoginConsent {
+    LoginConsent {
+        content_hash: content.content.content_hash.clone(),
+        accepted_scopes: content
+            .content
+            .scopes
+            .iter()
+            .map(|s| s.name.clone())
+            .collect(),
     }
 }
 
@@ -359,6 +430,7 @@ pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
     PreparedLogin {

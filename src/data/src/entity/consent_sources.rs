@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::clients::Client;
+use crate::entity::user_consents::UserConsent;
 use crate::http_client::{GuardedFetcher, consent_fetcher};
 use crate::language::Language;
 use crate::rauthy_config::{RauthyConfig, VarsConsent};
@@ -84,7 +85,7 @@ pub struct ConsentContent {
 impl ConsentContent {
     /// The consent content for a login to `client` with the optional RFC 8707 `resource`.
     /// `None` without `consent.enable`. An unavailable or invalid remote source degrades to
-    /// the `local` content and never fails the login. Not called yet, the consent screen will.
+    /// the `local` content and never fails the login.
     ///
     /// For a remote source, the content is shown from the `lang` document, or the `en` one if
     /// that fails, with the scope warnings of the `en` document added. The `content_hash` is
@@ -252,6 +253,50 @@ impl ConsentContent {
         }
         slf.content_hash = content_hash(&value);
         slf
+    }
+}
+
+/// The consent content of a login with what the login page needs to ask for it: the requested
+/// scopes are the `scopes` of the content.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct LoginConsentContent {
+    #[serde(flatten)]
+    pub content: ConsentContent,
+    /// Always accepted, shown checked and locked.
+    pub default_scopes: Vec<String>,
+    /// The scopes of the user's current grant, empty without one.
+    pub granted_scopes: Vec<String>,
+}
+
+impl LoginConsentContent {
+    pub fn new(content: ConsentContent, client: &Client, grant: Option<&UserConsent>) -> Self {
+        Self {
+            content,
+            default_scopes: client
+                .default_scopes
+                .split(',')
+                .filter(|s| !s.is_empty())
+                .map(String::from)
+                .collect(),
+            granted_scopes: grant.map(UserConsent::scopes_vec).unwrap_or_default(),
+        }
+    }
+
+    /// The JSON with `<`, `>` and `&` escaped, which only occur inside JSON strings. Inside an
+    /// HTML `<template>`, remote content can then neither close the element nor be changed by
+    /// the HTML parser.
+    pub fn to_json_escaped(&self) -> String {
+        let json = serde_json::to_string(self).expect("LoginConsentContent to always serialize");
+        let mut res = String::with_capacity(json.len());
+        for c in json.chars() {
+            match c {
+                '<' => res.push_str("\\u003c"),
+                '>' => res.push_str("\\u003e"),
+                '&' => res.push_str("\\u0026"),
+                c => res.push(c),
+            }
+        }
+        res
     }
 }
 
@@ -637,6 +682,25 @@ mod tests {
 
     fn strs(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn login_consent_content_json_escaped() {
+        let content = ConsentContent::hashed(
+            ConsentSourceType::Remote,
+            None,
+            Vec::new(),
+            Some("</template><script>a && b</script>".to_string()),
+            None,
+        );
+        let tpl = LoginConsentContent {
+            content,
+            default_scopes: vec!["openid".to_string()],
+            granted_scopes: Vec::new(),
+        };
+        let json = tpl.to_json_escaped();
+        assert!(!json.contains(['<', '>', '&']), "{json}");
+        assert_eq!(serde_json::from_str::<LoginConsentContent>(&json).unwrap(), tpl);
     }
 
     const REMOTE: &str = r#"{

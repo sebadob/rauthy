@@ -74,6 +74,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
             pkce_challenge: base64_url_encode(sha256!(PKCE_VERIFIER.as_bytes())),
             handle: None,
             fwda: None,
+            consent: None,
         })
         .send()
         .await?;

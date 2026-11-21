@@ -240,15 +240,6 @@ impl RauthyConfig {
                 slf.vars.consent.sources.len()
             );
         }
-        if slf.vars.consent.enable {
-            warn!(
-                "`consent.enable` is `true`, but there is no consent screen yet: no consent grant \
-                can be given, so every `authorization_code` login, the Admin UI included, and \
-                every FedCM login fails, and every non-exempt refresh token is deleted and its \
-                access token revoked on its next refresh - disabling `consent.enable` later does \
-                not restore them"
-            );
-        }
         if slf.vars.consent.danger_allow_private_addresses {
             warn!("`consent.danger_allow_private_addresses` is enabled");
         }
@@ -543,6 +534,7 @@ impl Default for Vars {
                 level_backchannel_logout_failed: EventLevel::Critical,
                 level_force_logout: EventLevel::Notice,
                 level_user_login_revoke: EventLevel::Warning,
+                level_consent_granted: EventLevel::Notice,
                 level_consent_revoked: EventLevel::Notice,
                 level_scim_task_failed: EventLevel::Critical,
                 level_email_send_error: EventLevel::Critical,
@@ -3052,6 +3044,15 @@ impl Vars {
         if let Some(v) = t_str(
             &mut table,
             "events",
+            "level_consent_granted",
+            "EVENT_LEVEL_CONSENT_GRANTED",
+        ) {
+            self.events.level_consent_granted =
+                EventLevel::from_str(&v).expect("Cannot parse EventLevel for consent_granted");
+        }
+        if let Some(v) = t_str(
+            &mut table,
+            "events",
             "level_consent_revoked",
             "EVENT_LEVEL_CONSENT_REVOKED",
         ) {
@@ -5101,6 +5102,7 @@ pub struct VarsEvents {
     pub level_backchannel_logout_failed: EventLevel,
     pub level_force_logout: EventLevel,
     pub level_user_login_revoke: EventLevel,
+    pub level_consent_granted: EventLevel,
     pub level_consent_revoked: EventLevel,
     pub level_scim_task_failed: EventLevel,
     pub level_email_send_error: EventLevel,
@@ -6072,13 +6074,17 @@ url = 'https://consent.example.com'
     }
 
     #[test]
-    fn consent_revoked_event_level() {
+    fn consent_event_levels() {
         let mut vars = Vars::default();
+        assert_eq!(vars.events.level_consent_granted, EventLevel::Notice);
         assert_eq!(vars.events.level_consent_revoked, EventLevel::Notice);
 
-        let mut table: toml::Table =
-            toml::from_str("[events]\nlevel_consent_revoked = 'critical'").unwrap();
+        let mut table: toml::Table = toml::from_str(
+            "[events]\nlevel_consent_granted = 'info'\nlevel_consent_revoked = 'critical'",
+        )
+        .unwrap();
         vars.parse_events(&mut table, &mut RauthySecrets::default());
+        assert_eq!(vars.events.level_consent_granted, EventLevel::Info);
         assert_eq!(vars.events.level_consent_revoked, EventLevel::Critical);
     }
 

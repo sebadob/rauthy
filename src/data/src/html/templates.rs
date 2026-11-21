@@ -1,3 +1,4 @@
+use crate::entity::consent_sources::LoginConsentContent;
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::http::StatusCode;
@@ -12,6 +13,8 @@ use std::fmt::{Debug, Display, Formatter};
 #[derive(Debug, Clone)]
 pub enum FrontendAction {
     Refresh,
+    /// The session is still valid, but the user has to give consent before the refresh.
+    RefreshConsent,
     MfaLogin(String),
     None,
 }
@@ -20,6 +23,7 @@ impl Display for FrontendAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             FrontendAction::Refresh => write!(f, "Refresh"),
+            FrontendAction::RefreshConsent => write!(f, "RefreshConsent"),
             FrontendAction::MfaLogin(s) => write!(f, "MfaLogin {s}"),
             FrontendAction::None => write!(f, "None"),
         }
@@ -56,6 +60,7 @@ pub enum HtmlTemplate {
     ClientUrl(String),
     ClientFaviconUpdated(Option<i64>),
     ClientLogoUpdated(Option<i64>),
+    ConsentContent(LoginConsentContent),
     CsrfToken(String),
     EmailOld(String),
     EmailNew(String),
@@ -85,6 +90,7 @@ impl HtmlTemplate {
             Self::ClientUrl(_) => "tpl_client_url",
             Self::ClientFaviconUpdated(_) => "tpl_client_favicon_updated",
             Self::ClientLogoUpdated(_) => "tpl_client_logo_updated",
+            Self::ConsentContent(_) => "tpl_consent_content",
             Self::CsrfToken(_) => "tpl_csrf_token",
             Self::EmailOld(_) => "tpl_email_old",
             Self::EmailNew(_) => "tpl_email_new",
@@ -115,6 +121,7 @@ impl HtmlTemplate {
             Self::ClientUrl(i) => i.to_string(),
             Self::ClientFaviconUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
             Self::ClientLogoUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
+            Self::ConsentContent(i) => i.to_json_escaped(),
             Self::CsrfToken(i) => i.to_string(),
             Self::EmailOld(i) => i.to_string(),
             Self::EmailNew(i) => i.to_string(),

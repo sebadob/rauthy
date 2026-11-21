@@ -20,6 +20,7 @@ mod common;
 
 use crate::common::{
     PASSWORD, USERNAME, cookie_csrf_headers_from_res_direct, get_backend_url, get_solved_pow,
+    send_login,
 };
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::Language;
@@ -105,18 +106,14 @@ async fn login(email: &str, password: &str, session: &HeaderMap) -> reqwest::Res
         resource: None,
         resident_key_token: None,
         fwda: None,
+        consent: None,
     };
 
-    Client::new()
-        .post(format!(
-            "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
-            &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
-        ))
-        .headers(session.clone())
-        .json(&req)
-        .send()
-        .await
-        .unwrap()
+    let url_auth = format!(
+        "{backend}/oidc/authorize?client_id=rauthy&redirect_uri={backend}/oidc/callback\
+        &response_type=code&code_challenge={challenge}&code_challenge_method=S256"
+    );
+    send_login(&Client::new(), &url_auth, session, req).await
 }
 
 /// Creates a user with the given roles and password and returns its id, re-using and re-setting a

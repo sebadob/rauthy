@@ -168,7 +168,7 @@ pub struct NewClientRequest {
     /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
     /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
     /// precedence over this value, which in turn takes precedence over `local`. `None` falls back
-    /// to `local`. Stored but not used yet, the consent screen will.
+    /// to `local`.
     ///
     /// Validation: `^(local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
     /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch.
@@ -259,7 +259,7 @@ pub struct UpdateClientRequest {
     /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
     /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
     /// precedence over this value, which in turn takes precedence over `local`. `None` falls back
-    /// to `local`. Stored but not used yet, the consent screen will.
+    /// to `local`.
     ///
     /// Validation: `^(local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
     /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch.
