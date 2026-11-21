@@ -177,13 +177,15 @@ pub async fn validate_and_refresh_token(
         ConsentCheck::Required
     };
 
-    // Both kinds of refresh tokens are kept until their replacement exists, so that a logout,
-    // consent revoke or device deletion committing in between still fences the rotation.
+    enum Source {
+        Token(RefreshToken),
+        Device(RefreshTokenDevice),
+    }
+
+    // Both kinds of refresh tokens are kept until their replacement exists, to fence the rotation.
     // A failed row check is permanent for the token -> it is deleted.
     let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
-    let (rt_scope, session_id, pending_refresh, pending_device) = if let Some(device_id) =
-        claims.common.did
-    {
+    let (rt_scope, session_id, source) = if let Some(device_id) = claims.common.did {
         let mut rt = RefreshTokenDevice::find_opt(validation_str)
             .await?
             .ok_or_else(|| {
@@ -245,7 +247,7 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
-        (rt.scope.take(), None, None, Some(rt))
+        (rt.scope.take(), None, Source::Device(rt))
     } else {
         let mut rt = RefreshToken::find_opt(validation_str)
             .await?
@@ -328,8 +330,7 @@ pub async fn validate_and_refresh_token(
         (
             rt_scope,
             rt.session_id.take().map(SessionId),
-            Some(rt),
-            None,
+            Source::Token(rt),
         )
     };
 
@@ -369,12 +370,9 @@ pub async fn validate_and_refresh_token(
     .await;
     let ts = match result {
         Err(err) => {
-            let deleted = if let Some(rt) = &pending_refresh {
-                rt.delete().await
-            } else if let Some(rt) = &pending_device {
-                rt.delete().await
-            } else {
-                Ok(())
+            let deleted = match &source {
+                Source::Token(rt) => rt.delete().await,
+                Source::Device(rt) => rt.delete().await,
             };
             if let Err(err) = deleted {
                 error!(?err, "deleting the refresh token of a failed refresh");
@@ -397,20 +395,21 @@ pub async fn validate_and_refresh_token(
                 })
         })
         .transpose()?;
-    if let Some(rt) = pending_refresh {
-        let Some(replacement_id) = replacement_id else {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
-                "Missing rotated refresh token",
-            ));
-        };
-        rt.finish_rotation(replacement_id).await?;
-    } else if let Some(rt) = pending_device {
-        match replacement_id {
+    match source {
+        Source::Token(rt) => {
+            let Some(replacement_id) = replacement_id else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Missing rotated refresh token",
+                ));
+            };
+            rt.finish_rotation(replacement_id).await?;
+        }
+        Source::Device(rt) => match replacement_id {
             // nothing to fence: the device token is consumed
             None => rt.delete_checked().await?,
             Some(replacement_id) => rt.finish_rotation(replacement_id).await?,
-        }
+        },
     }
 
     if RauthyConfig::get().vars.events.generate_token_issued {
