@@ -62,7 +62,6 @@ serde = { workspace = true }
 validator = { workspace = true }
 zeroize = { workspace = true }
 
-# jemalloc does not work properly on msvc targets
 [target.'cfg(all(not(target_env = "msvc"), not(target_os = "openbsd"), not(target_os = "linux")))'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
 

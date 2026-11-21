@@ -341,6 +341,15 @@ pub async fn put_password_policy(
     let mut rules = PasswordPolicy::find().await?;
     rules.apply_req(payload);
     rules.save().await?;
+
+    if RauthyConfig::get()
+        .vars
+        .user_registration
+        .danger_reg_acc_init_immediate
+    {
+        DB::hql().clear_cache(Cache::Html).await?;
+    }
+
     Ok(HttpResponse::Ok().json(PasswordPolicyResponse::from(rules)))
 }
 
