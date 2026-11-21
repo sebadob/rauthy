@@ -16,6 +16,9 @@ full restart of all nodes, independent of `consent.enable`.
 - There is no backfill of consent grants for existing users. As long as `consent.enable` is
   `false` (the default), nothing changes for existing logins and refresh tokens. See the
   `[consent]` section in the config reference before you enable it.
+- The consent exemption of the password and device code grants does not cover refresh tokens
+  issued before this version, nor device refresh tokens that were already rotated. With
+  `consent.enable`, those need a new login.
 
 ### Security
 
