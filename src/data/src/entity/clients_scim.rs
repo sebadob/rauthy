@@ -560,9 +560,7 @@ impl ClientScim {
         group_remote: ScimGroup,
         remove_ext_id_link: bool,
     ) -> Result<(), ErrorResponse> {
-        let remote_id = if let Some(id) = group_remote.id {
-            id
-        } else {
+        let Some(remote_id) = group_remote.id else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 "Remote SCIM group without an ID",
@@ -635,9 +633,7 @@ impl ClientScim {
             debug!("Should delete remote group but does not exist - nothing to do");
             return Ok(());
         }
-        let remote_id = if let Some(id) = remote_group.unwrap().id {
-            id
-        } else {
+        let Some(remote_id) = remote_group.unwrap().id else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 "Remote SCIM group without an ID",
@@ -1073,9 +1069,7 @@ impl ClientScim {
             debug!("Should delete remote user but does not exist - nothing to do");
             return Ok(());
         }
-        let remote_id = if let Some(id) = remote_user.unwrap().id {
-            id
-        } else {
+        let Some(remote_id) = remote_user.unwrap().id else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Scim,
                 "Remote SCIM user without an ID",
@@ -1121,14 +1115,11 @@ impl ClientScim {
         if let Some(prefix) = &self.group_sync_prefix {
             user_groups_local.retain(|g| g.starts_with(prefix));
         }
-        let user_id_remote = match &user_remote.id {
-            Some(id) => id,
-            None => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::Scim,
-                    format!("empty remote user id for SCIM user {user_remote:?}"),
-                ));
-            }
+        let Some(user_id_remote) = &user_remote.id else {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Scim,
+                format!("empty remote user id for SCIM user {user_remote:?}"),
+            ));
         };
         let mut user_groups_remote = user_remote.groups.unwrap_or_default();
         debug!(?user_groups_local);

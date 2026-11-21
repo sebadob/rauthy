@@ -1468,15 +1468,10 @@ impl Client {
         pub_url_with_scheme: &str,
         additional_allowed_origin_schemes: &[String],
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
-        let origin = match extract_external_origin(
-            req,
-            pub_url_with_scheme,
-            additional_allowed_origin_schemes,
-        )? {
-            Some(o) => o,
-            None => {
-                return Ok(None);
-            }
+        let Some(origin) =
+            extract_external_origin(req, pub_url_with_scheme, additional_allowed_origin_schemes)?
+        else {
+            return Ok(None);
         };
 
         let err_msg = || {

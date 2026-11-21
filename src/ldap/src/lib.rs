@@ -96,12 +96,10 @@ pub async fn run(tls: Option<Arc<rustls::ServerConfig>>) {
                 handle_conn(stream, ip).await;
                 return;
             };
-            let stream = match timeout(TLS_HANDSHAKE_TIMEOUT, acceptor.accept(stream)).await {
-                Ok(Ok(s)) => s,
-                _ => {
-                    debug!("LDAP TLS handshake with {ip} failed");
-                    return;
-                }
+            let Ok(Ok(stream)) = timeout(TLS_HANDSHAKE_TIMEOUT, acceptor.accept(stream)).await
+            else {
+                debug!("LDAP TLS handshake with {ip} failed");
+                return;
             };
             handle_conn(stream, ip).await;
         });
