@@ -55,9 +55,9 @@ pub async fn get_clients(principal: ReqPrincipal) -> Result<HttpResponse, ErrorR
     let clients = Client::find_all().await?;
 
     let mut res = Vec::new();
-    clients
-        .into_iter()
-        .for_each(|c| res.push(c.into_response(None)));
+    for c in clients {
+        res.push(c.into_response(None));
+    }
 
     Ok(HttpResponse::Ok().json(res))
 }
