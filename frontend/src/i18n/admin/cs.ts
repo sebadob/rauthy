@@ -37,6 +37,7 @@ export let I18nAdminCs: I18nAdmin = {
         size: 'Velikost',
     },
     clients: {
+        settings: { general: 'Obecné', tokens: 'Tokeny', integrations: 'Integrace' },
         allowedResources: 'Povolené zdroje',
         defaultAud: 'Výchozí příjemci (audience)',
         actorSameClient: 'Actor token from this client only',
@@ -45,6 +46,17 @@ export let I18nAdminCs: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Pokud tento klient podporuje {{ OIDC_BCL }}, zadejte sem jeho URI.',
         branding: {
+            title: 'Vzhled',
+            theme: 'Motiv',
+            light: 'Světlý motiv',
+            dark: 'Tmavý motiv',
+            preview: 'Náhled',
+            assets: 'Logo a ikona webu',
+            logo: 'Logo',
+            advanced: 'Pokročilé CSS',
+            resetTheme: 'Obnovit motiv',
+            resetThemeConfirm: 'Obnovit výchozí barvy a zaoblení rohů?',
+            assetsImmediate: 'Změny souborů se projeví okamžitě.',
             descHsl: `Následující hodnoty se zadávají jako HSL. Zadáváte jen základní barvy.
             Průhlednost a další hodnoty si vzhled dopočítá sám.`,
             descFullCss: `Následující hodnoty musí být platné CSS hodnoty <code>color</code>.
@@ -140,6 +152,19 @@ export let I18nAdminCs: I18nAdmin = {
         },
     },
     common: {
+        about: 'O aplikaci',
+        date: 'Datum',
+        time: 'Čas',
+        preferences: 'Předvolby',
+        profile: 'Profil',
+        contactDetails: 'Kontaktní údaje',
+        access: 'Přístup',
+        activity: 'Aktivita',
+        compactNavigation: 'Kompaktní navigace',
+        administration: 'Administrace',
+        selectEntry: 'Vyberte položku',
+        selectEntryHint: 'Vyberte položku ze seznamu a zobrazte nebo upravte její údaje.',
+
         account: 'Účet',
         addNew: 'Přidat',
         back: 'Zpět',
@@ -242,8 +267,9 @@ export let I18nAdminCs: I18nAdmin = {
             je potřeba ho vyladit pro každé nasazení.`,
         },
         openapi: 'Chcete-li napojit externí aplikaci a používat API Rauthy, podívejte se do',
-        openapiNote: `Ve výchozím nastavení není Swagger UI přes odkaz výše dostupné. Zapnout ho lze
-            v konfiguraci 'server.swagger_ui_enable', případně 'server.swagger_ui_public'.`,
+        openapiNote: 'Ve výchozím nastavení není Swagger UI přes odkaz výše dostupné.',
+        openapiEnable:
+            "Zapnout ho lze v konfiguraci 'server.swagger_ui_enable', případně 'server.swagger_ui_public'.",
         source: 'Zdrojový kód najdete zde',
     },
     editor: {
@@ -283,6 +309,12 @@ export let I18nAdminCs: I18nAdmin = {
             Pak se odhlaste a znovu přihlaste.`,
     },
     events: {
+        searchContent: 'Obsah',
+        timestamp: 'Čas',
+        level: 'Úroveň',
+        type: 'Typ',
+        allLevels: 'Všechny úrovně',
+        sendTest: 'Odeslat testovací událost',
         eventLevel: 'Úroveň události',
         eventType: 'Typ události',
     },
@@ -307,6 +339,7 @@ export let I18nAdminCs: I18nAdmin = {
         rotateKeys: 'Vyměnit klíče',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `Klíč k úložišti se zadává v hlavičce <code>Authorization</code> jako
             token <code>Bearer</code>. K vyzkoušení můžete použít následující příkaz
             <code>curl</code>.`,
@@ -344,6 +377,7 @@ export let I18nAdminCs: I18nAdmin = {
         value: 'Hodnota JSON',
     },
     nav: {
+        kvStore: 'Úložiště KV',
         apiKeys: 'API klíče',
         attributes: 'Atributy',
         blacklist: 'Blokované adresy',

@@ -6,6 +6,7 @@
     import { slide } from 'svelte/transition';
     import { useI18n } from '#state/i18n.svelte.ts';
     import Button from '#lib/button/Button.svelte';
+    import { genKey } from '#utils/helpers.ts';
 
     let {
         ref = $bindable(),
@@ -14,9 +15,11 @@
         name = 'password',
         value = $bindable(''),
         label = 'Password',
-        ariaLabel = 'Password',
+        // the accessible name follows the visible label unless it is set on its own
+        ariaLabel,
         autocomplete = 'current-password',
         placeholder = 'Password',
+        description,
         disabled = false,
         maxLength,
         required,
@@ -39,6 +42,7 @@
         ariaLabel?: string;
         autocomplete?: FullAutoFill | null | undefined;
         placeholder?: string;
+        description?: string;
         disabled?: boolean | null | undefined;
         maxLength?: number | null | undefined;
         min?: string;
@@ -56,6 +60,7 @@
     } = $props();
 
     let t = useI18n();
+    const helpId = genKey();
 
     let isError = $state(false);
 
@@ -111,7 +116,7 @@
     }
 </script>
 
-<div class="container" style:width>
+<div class="container admin-password-field" style:width>
     <div aria-live="assertive" class="label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
@@ -124,7 +129,8 @@
             {id}
             {name}
             title={errMsg}
-            aria-label={ariaLabel}
+            aria-label={ariaLabel || label}
+            aria-describedby={description ? helpId : undefined}
             style:padding-right={showCopy ? '3.8rem' : '2.2rem'}
             bind:value
             {autocomplete}
@@ -132,6 +138,7 @@
             {disabled}
             required={required || undefined}
             aria-required={required || false}
+            aria-invalid={isError}
             maxlength={maxLength || undefined}
             pattern={pattern || undefined}
             class:invalid={isError}
@@ -169,6 +176,7 @@
             </div>
         </div>
     </div>
+    {#if description}<p class="ui-field-hint" id={helpId}>{description}</p>{/if}
     {#if isError}
         <div class="error" transition:slide={{ duration: 150 }}>
             {#if !label}
@@ -233,5 +241,59 @@
     .rel {
         position: relative;
         /*border: 1px solid green;*/
+    }
+
+    :global(.ui-shell) .label:not(:global(.branding-preview *)) {
+        padding: 0;
+        margin: 0 0 var(--ui-label-gap);
+        line-height: var(--ui-label-height);
+    }
+    :global(.ui-shell)
+        input:where(
+            :not([type='checkbox']):not([type='hidden']):not([type='file']):not([type='range'])
+        ):not(:global(.branding-preview *)) {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        margin: 0;
+        padding: 11px 14px;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        color: var(--ui-text);
+        font: inherit;
+        font-size: 14px;
+        line-height: 20px;
+        box-shadow: none;
+    }
+    :global(.ui-shell) input:not(:global(.branding-preview *))::placeholder {
+        color: hsl(var(--text) / 0.65);
+    }
+    :global(.ui-shell) input:focus:not(:global(.branding-preview *)) {
+        outline: 2px solid var(--ui-primary);
+        outline-offset: -1px;
+    }
+    :global(.ui-shell) input.invalid:not(:global(.branding-preview *)) {
+        border-color: hsl(var(--error));
+    }
+
+    :global(.ui-shell) .admin-password-field:not(:global(.branding-preview *)) {
+        max-width: 100%;
+        min-width: 0;
+    }
+    :global(.ui-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.btn) {
+        top: 4px;
+        right: 4px;
+        margin: 0;
+    }
+    :global(.ui-shell) .admin-password-field:not(:global(.branding-preview *)) :global(.clip) {
+        right: 40px;
+    }
+    :global(.ui-shell) .admin-password-field input[type] {
+        padding-right: 44px;
+    }
+    :global(.ui-shell) .admin-password-field:has(:global(.clip)) input[type] {
+        padding-right: 84px;
     }
 </style>

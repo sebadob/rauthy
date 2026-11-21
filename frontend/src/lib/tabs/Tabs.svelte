@@ -54,7 +54,13 @@
     }
 </script>
 
-<div bind:this={ref} class="tabs" class:center style:border-radius={borderRadius} style:width>
+<div
+    bind:this={ref}
+    class="tabs"
+    class:center
+    style:border-radius={borderRadius}
+    style:--tabs-width={width}
+>
     {#each tabs as tab, i}
         <Button
             ariaCurrent={tab === selected ? 'step' : undefined}
@@ -72,6 +78,7 @@
 
 <style>
     .tabs {
+        width: var(--tabs-width);
         padding: 0.5rem 0.25rem;
         display: flex;
         column-gap: 0.25rem;
@@ -101,5 +108,62 @@
     .tab[data-selected='true'] {
         color: hsl(var(--action));
         background: hsl(var(--bg));
+    }
+
+    :global(.ui-shell) .tabs {
+        width: 100%;
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        margin: var(--ui-tabs-margin, 0 0 28px);
+        border: 0;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+    }
+    :global(.ui-shell) .tabs :global(.admin-control) {
+        flex: 1;
+        height: 38px;
+        min-height: 38px;
+        padding: 0 10px;
+        border-radius: var(--border-radius);
+    }
+    :global(.ui-shell) .tabs :global(.admin-control[aria-current='step']) {
+        background: var(--ui-surface);
+        box-shadow: 0 1px 3px #00000012;
+    }
+    :global(.ui-shell) .tabs .tab {
+        padding: 0;
+        background: transparent;
+        color: var(--ui-muted);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 20px;
+        border-radius: 0;
+        white-space: nowrap;
+    }
+    :global(.ui-shell) .tabs .tab[data-selected='true'] {
+        color: var(--ui-text);
+        background: transparent;
+        font-weight: 600;
+    }
+    @media (max-width: 800px) {
+        :global(.ui-shell) .tabs {
+            justify-content: flex-start;
+            gap: 0.25rem;
+        }
+        :global(.ui-shell) .tabs :global(.admin-control) {
+            flex: 0 0 auto;
+        }
+    }
+    :global(.ui-shell) .tabs {
+        width: 100%;
+        flex: 1;
+        min-width: 0;
+    }
+    :global(.ui-shell) .tabs :global(.admin-control[data-variant]) {
+        min-width: max-content;
+        padding: 0 12px;
+        border-radius: var(--border-radius);
     }
 </style>

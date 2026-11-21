@@ -21,3 +21,6 @@ utoipa = { workspace = true }
 
 [dev-dependencies]
 ed25519-compact = { workspace = true }
+
+[lints]
+workspace = true

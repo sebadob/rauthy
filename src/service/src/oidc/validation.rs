@@ -1,5 +1,7 @@
+use crate::oidc::consent_grant::{consent_as_invalid_grant, effective_scope};
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenScopes, TokenSet,
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, DpopFingerprint, SessionId, TokenScopes,
+    TokenSet,
 };
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -11,6 +13,7 @@ use rauthy_data::entity::devices::DeviceEntity;
 use rauthy_data::entity::dpop_proof::DPoPProof;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
+use rauthy_data::entity::user_consents::UserConsent;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -99,14 +102,31 @@ pub async fn validate_and_refresh_token(
     if client.id != claims.common.azp {
         // If this is a non-matching client.id, this is most probably a malicious request.
         // -> invalidate the refresh token immediately
-        if claims.common.did.is_some()
-            && let Ok(Some(rt)) = RefreshTokenDevice::find_opt(validation_str).await
-        {
-            rt.delete().await?;
-        } else if let Ok(Some(rt)) = RefreshToken::find_opt(validation_str).await {
-            rt.delete().await?;
+        let device = if claims.common.did.is_some() {
+            RefreshTokenDevice::find_opt(validation_str)
+                .await
+                .unwrap_or_else(|err| {
+                    error!(?err, "looking up the refresh token of a client.id mismatch");
+                    None
+                })
+        } else {
+            None
         };
-
+        let deleted = if let Some(rt) = device {
+            rt.delete().await
+        } else {
+            match RefreshToken::find_opt(validation_str).await {
+                Ok(Some(rt)) => rt.delete().await,
+                Ok(None) => Ok(()),
+                Err(err) => {
+                    error!(?err, "looking up the refresh token of a client.id mismatch");
+                    Ok(())
+                }
+            }
+        };
+        if let Err(err) = deleted {
+            error!(?err, "deleting the refresh token of a failed refresh");
+        }
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "Mismatch in client.id",
@@ -126,7 +146,7 @@ pub async fn validate_and_refresh_token(
     let header_origin = client.get_validated_origin_header(req)?;
 
     // validate DPoP proof
-    let (dpop_fingerprint, dpop_nonce) = if let Some(cnf) = claims.common.cnf {
+    let (dpop_fingerprint, dpop_nonce) = if let Some(cnf) = &claims.common.cnf {
         // if the refresh token contains the 'cnf' header, we must validate the DPoP as well
         if let Some(proof) = DPoPProof::opt_validated_from(req, &header_origin).await? {
             let fingerprint = proof.jwk_fingerprint()?;
@@ -153,42 +173,76 @@ pub async fn validate_and_refresh_token(
     user.check_expired()?;
     client.validate_user_groups(&user)?;
 
+    // a device token issued before `consent_exempt` existed is exempt by its signed `did`
+    let consent = if claims.consent_exempt || claims.common.did.is_some() {
+        ConsentCheck::Exempt
+    } else {
+        ConsentCheck::Required
+    };
+
+    enum Source {
+        Token(RefreshToken),
+        Device(RefreshTokenDevice),
+    }
+
+    // Both kinds of refresh tokens are kept until their replacement exists, to fence the rotation.
+    // A failed row check is permanent for the token -> it is deleted.
     let now_plus_skew = Utc::now().add(clock_skew_secs).timestamp();
-    let (rt_scope, session_id, pending_refresh) = if let Some(device_id) = &claims.common.did {
-        let rt = RefreshTokenDevice::find_delete(validation_str)
-            .await
-            .map_err(|mut err| {
-                if matches!(err.error, ErrorResponseType::NotFound) {
-                    err.message = "Device Refresh Token not found".into();
-                }
-                err
+    let (rt_scope, session_id, source) = if let Some(device_id) = claims.common.did {
+        let mut rt = RefreshTokenDevice::find_opt(validation_str)
+            .await?
+            .ok_or_else(|| {
+                ErrorResponse::new(
+                    ErrorResponseType::NotFound,
+                    "Device Refresh Token not found",
+                )
             })?;
 
-        if rt.exp < now_plus_skew {
-            return Err(ErrorResponse::new(
+        let check = if rt.exp < now_plus_skew {
+            Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Device Refresh Token has expired",
-            ));
-        }
-        if &rt.device_id != device_id {
-            return Err(ErrorResponse::new(
+            ))
+        } else if rt.device_id != device_id {
+            Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "'device_id' does not match",
-            ));
-        }
-        if rt.user_id != user.id {
-            return Err(ErrorResponse::new(
+            ))
+        } else if rt.user_id != user.id {
+            Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "'user_id' does not match",
-            ));
+            ))
+        } else {
+            Ok(())
+        };
+        if let Err(err) = check {
+            if let Err(err) = rt.delete().await {
+                error!(?err, "deleting the refresh token of a failed refresh");
+            }
+            return Err(err);
         }
-        let device = DeviceEntity::find(device_id).await.map_err(|_| {
-            ErrorResponse::new(ErrorResponseType::Unauthorized, "Invalid refresh token")
-        })?;
+
+        let device = match DeviceEntity::find(device_id).await {
+            Err(err) if err.error == ErrorResponseType::NotFound => {
+                if let Err(err) = rt.delete().await {
+                    error!(?err, "deleting the refresh token of a failed refresh");
+                }
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Invalid refresh token",
+                ));
+            }
+            Err(err) => return Err(err),
+            Ok(device) => device,
+        };
         if !device.is_for_client(&client) {
             // cascades to the device's refresh tokens
             if let Err(err) = DeviceEntity::invalidate(device_id).await {
                 error!(?err, "deleting device authorized for a deleted client");
+                if let Err(err) = rt.delete().await {
+                    error!(?err, "deleting the refresh token of a failed refresh");
+                }
             }
             return Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
@@ -196,49 +250,91 @@ pub async fn validate_and_refresh_token(
             ));
         }
 
-        (rt.scope, None, None)
+        (rt.scope.take(), None, Source::Device(rt))
     } else {
-        // Sessionless tokens are kept until their replacement exists as well, so a per-client
-        // revocation fences the rotation just like a logout does.
         let mut rt = RefreshToken::find_opt(validation_str)
             .await?
             .ok_or_else(|| {
                 ErrorResponse::new(ErrorResponseType::NotFound, "Refresh Token not found")
             })?;
 
-        if rt.exp < now_plus_skew {
-            rt.delete().await?;
-            return Err(ErrorResponse::new(
+        let check = if rt.exp < now_plus_skew {
+            Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "Refresh Token has expired",
-            ));
-        }
-        if rt.user_id != user.id {
-            rt.delete().await?;
-            return Err(ErrorResponse::new(
+            ))
+        } else if rt.user_id != user.id {
+            Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "'user_id' does not match",
-            ));
-        }
-        // `client_id` is NULL for legacy rows issued before the column existed -> accept those
-        if rt.client_id.as_deref().is_some_and(|c| c != client.id) {
-            rt.delete().await?;
-            return Err(ErrorResponse::new(
+            ))
+        } else if rt.client_id.as_deref().is_some_and(|c| c != client.id) {
+            // `client_id` is NULL for legacy rows issued before the column existed -> accept those
+            Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "'client_id' does not match",
-            ));
-        }
-        if !rt.is_for_client(&client) {
-            rt.delete().await?;
-            return Err(ErrorResponse::new(
+            ))
+        } else if !rt.is_for_client(&client) {
+            Err(ErrorResponse::new(
                 ErrorResponseType::Unauthorized,
                 "Invalid refresh token",
-            ));
+            ))
+        } else {
+            Ok(())
+        };
+        if let Err(err) = check {
+            if let Err(err) = rt.delete().await {
+                error!(?err, "deleting the refresh token of a failed refresh");
+            }
+            return Err(err);
         }
 
-        let session_id = rt.session_id.clone().map(SessionId);
-        let scope = rt.scope.take();
-        (scope, session_id, Some(rt))
+        let rt_scope = rt.scope.take();
+        let vars = &RauthyConfig::get().vars.consent;
+        let rt_scope = if vars.enable && consent == ConsentCheck::Required {
+            if vars.requires_resource() && client.is_ephemeral() && claims.resource.is_none() {
+                tracing::warn!("refresh token without a `resource` for a client that requires one");
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidGrant,
+                    "a `resource` is required",
+                ));
+            }
+            let Some(grant) = UserConsent::find(&user.id, &client.id, claims.resource).await?
+            else {
+                tracing::warn!("no consent grant for the refresh token");
+                // it may have escaped a revocation and must not come back with a new consent
+                RefreshToken::discard(&rt.id).await?;
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidGrant,
+                    "no consent grant for this client",
+                ));
+            };
+            // `None` means the client's `default_scopes`, which the grant never narrows
+            match rt_scope {
+                None => None,
+                Some(rt_scope) => {
+                    let scope = effective_scope(&rt_scope, &grant, &client);
+                    if scope.is_empty() {
+                        tracing::warn!(
+                            "no scope of the refresh token is covered by the consent grant"
+                        );
+                        return Err(ErrorResponse::new(
+                            ErrorResponseType::InvalidGrant,
+                            "the consent grant covers no scope of the refresh token",
+                        ));
+                    }
+                    Some(scope)
+                }
+            }
+        } else {
+            rt_scope
+        };
+
+        (
+            rt_scope,
+            rt.session_id.take().map(SessionId),
+            Source::Token(rt),
+        )
     };
 
     // at this point, everything has been validated -> we can issue a new TokenSet safely
@@ -272,30 +368,51 @@ pub async fn validate_and_refresh_token(
         AuthCodeFlow::No,
         // TODO I guess we need to provide the ID if this is a refresh from a device flow?
         DeviceCodeFlow::No,
+        consent,
     )
     .await;
     let ts = match result {
-        Ok(ts) => ts,
         Err(err) => {
-            if let Some(source) = pending_refresh {
-                source.delete().await?;
+            let deleted = match &source {
+                Source::Token(rt) => rt.delete().await,
+                Source::Device(rt) => rt.delete().await,
+            };
+            if let Err(err) = deleted {
+                error!(?err, "deleting the refresh token of a failed refresh");
             }
-            return Err(err);
+            return Err(consent_as_invalid_grant(err));
         }
+        Ok(ts) => ts,
     };
-    if let Some(source) = pending_refresh {
-        let replacement = ts.refresh_token.as_deref().ok_or_else(|| {
-            ErrorResponse::new(ErrorResponseType::Internal, "Missing rotated refresh token")
-        })?;
-        let replacement_id = replacement
-            .len()
-            .checked_sub(REFRESH_TOKEN_VALIDATION_LEN)
-            .and_then(|start| replacement.get(start..))
-            .ok_or_else(|| {
-                ErrorResponse::new(ErrorResponseType::Internal, "Invalid rotated refresh token")
-            })?;
-        // Keep the source until its replacement exists, so logout fences publication.
-        source.finish_rotation(replacement_id).await?;
+
+    let replacement_id = ts
+        .refresh_token
+        .as_deref()
+        .map(|replacement| {
+            replacement
+                .len()
+                .checked_sub(REFRESH_TOKEN_VALIDATION_LEN)
+                .and_then(|start| replacement.get(start..))
+                .ok_or_else(|| {
+                    ErrorResponse::new(ErrorResponseType::Internal, "Invalid rotated refresh token")
+                })
+        })
+        .transpose()?;
+    match source {
+        Source::Token(rt) => {
+            let Some(replacement_id) = replacement_id else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Internal,
+                    "Missing rotated refresh token",
+                ));
+            };
+            rt.finish_rotation(replacement_id).await?;
+        }
+        Source::Device(rt) => match replacement_id {
+            // nothing to fence: the device token is consumed
+            None => rt.delete_checked().await?,
+            Some(replacement_id) => rt.finish_rotation(replacement_id).await?,
+        },
     }
 
     if RauthyConfig::get().vars.events.generate_token_issued {

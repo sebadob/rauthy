@@ -4,7 +4,7 @@
     import { untrack } from 'svelte';
     import CheckIcon from '#lib/CheckIcon.svelte';
     import Input from '#lib/form/Input.svelte';
-    import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
+    import type { UserResponse } from '#api/types/user.ts';
     import type { RoleResponse } from '#api/types/roles.ts';
     import type { GroupResponse } from '#api/types/groups.ts';
     import type { SelectItem } from '#lib/select_list/props.ts';
@@ -26,10 +26,8 @@
     import Options from '#lib/Options.svelte';
     import SelectList from '#lib/select_list/SelectList.svelte';
     import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
-    import { slide } from 'svelte/transition';
     import type { Language } from '#api/types/i18n.ts';
     import { useI18nConfig } from '#state/i18n_config.svelte.ts';
-    import UserPicture from '#lib/UserPicture.svelte';
     import type { PatchOp } from '#api/types/generic.ts';
     import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
     import { useSession } from '#state/session.svelte.ts';
@@ -268,19 +266,6 @@
         }
     });
 
-    function fallbackCharacters(user: UserResponseSimple) {
-        let chars = '';
-        if (user.given_name) {
-            chars = user.given_name[0];
-        } else {
-            chars = user.email[0];
-        }
-        if (user.family_name) {
-            chars += user.family_name[0];
-        }
-        return chars;
-    }
-
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
 
@@ -435,19 +420,10 @@
 
 <Template id={TPL_IS_OTP_ENABLED} bind:value={isOtpEnabled} />
 
-<div class="container" style:border-color={isUnsaved ? 'hsla(var(--action) / .7)' : 'transparent'}>
+<div class="admin-user-info" data-unsaved={isUnsaved}>
     {#if user}
-        <div class="picture">
-            <UserPicture
-                fallbackCharacters={fallbackCharacters(user)}
-                userId={user.id}
-                pictureId={user.picture_id}
-                size="large"
-            />
-        </div>
-
         <Form action={`/auth/v1/users/${user.id}`} {onSubmit}>
-            <div class="values">
+            <div class="admin-metadata two-columns">
                 <div>
                     <LabeledValue label="ID" mono>
                         {user.id}
@@ -463,7 +439,7 @@
                 </div>
             </div>
 
-            <div class="values">
+            <div class="admin-status-settings two-columns">
                 {#if isSelf}
                     <div>
                         <Tooltip
@@ -508,14 +484,15 @@
                 {/if}
             </div>
 
-            <div class="values">
-                <div>
+            <div class="admin-profile-grid two-columns">
+                <section class="admin-form-section edit-fields">
+                    <h3>{ta.common.profile}</h3>
                     <Input
                         typ="email"
                         bind:value={email}
                         autocomplete="off"
-                        label="E-Mail"
-                        placeholder="E-Mail"
+                        label={t.common.email}
+                        placeholder={t.common.email}
                         required
                     />
 
@@ -552,20 +529,22 @@
                     />
 
                     {#if languages}
-                        <div style:padding=".25rem">
-                            <LabeledValue label={ta.common.language}>
-                                <Options
-                                    ariaLabel={t.common.selectI18n}
-                                    options={languages}
-                                    bind:value={language}
-                                    offsetTop="-12rem"
-                                />
-                            </LabeledValue>
+                        <div class="admin-field-select">
+                            <div class="admin-field-label">{ta.common.language}</div>
+                            <Options
+                                ariaLabel={t.common.selectI18n}
+                                options={languages}
+                                bind:value={language}
+                                uppercase
+                                hideScrollbar
+                                anchored
+                            />
                         </div>
                     {/if}
-                </div>
+                </section>
 
-                <div>
+                <section class="admin-form-section edit-fields">
+                    <h3>{ta.common.contactDetails}</h3>
                     <Input
                         bind:value={street}
                         autocomplete="off"
@@ -608,18 +587,29 @@
                         required={config.phone === 'required'}
                         pattern={PATTERN_PHONE}
                     />
-                </div>
+                </section>
             </div>
 
-            <SelectList bind:items={rolesItems} disabledItems={rolesDisabled}>
-                {t.account.roles.replaceAll(',', ' ')}
-            </SelectList>
-            <SelectList bind:items={groupsItems} disabledItems={groupsDisabled}>
-                {t.account.groups.replaceAll(',', ' ')}
-            </SelectList>
+            <section class="admin-form-section admin-access-section">
+                <h3>{ta.common.access}</h3>
+                <div class="two-columns">
+                    <SelectList
+                        bind:items={rolesItems}
+                        disabledItems={rolesDisabled}
+                        maxWidth="100%"
+                    >
+                        {t.account.roles.replaceAll(',', ' ')}
+                    </SelectList>
+                    <SelectList
+                        bind:items={groupsItems}
+                        disabledItems={groupsDisabled}
+                        maxWidth="100%"
+                    >
+                        {t.account.groups.replaceAll(',', ' ')}
+                    </SelectList>
+                </div>
 
-            <div class="values">
-                <div style:margin-top=".5rem">
+                <div class="access-expiration">
                     {#if !expires && isSelf}
                         <Tooltip
                             text={`${ta.users.antiLockout.rule}: ${ta.users.antiLockout.disable}`}
@@ -637,11 +627,11 @@
                             {t.account.accessExp}
                         </InputCheckbox>
                     {/if}
-                </div>
-                {#if expires}
-                    <div transition:slide={{ duration: 150 }}>
+
+                    {#if expires}
                         <InputDateTimeCombo
-                            label={t.account.accessExp}
+                            label={ta.common.date}
+                            labelTime={ta.common.time}
                             bind:value={expDate}
                             bind:timeValue={expTime}
                             withTime
@@ -649,39 +639,40 @@
                             required
                             openTop
                         />
+                    {/if}
+                </div>
+            </section>
+            <section class="admin-form-section admin-activity-section">
+                <h3>{ta.common.activity}</h3>
+                <div class="two-columns activity-values">
+                    <div>
+                        <LabeledValue label={t.account.userCreated}>
+                            {formatDateFromTs(user.created_at)}
+                        </LabeledValue>
+                        <LabeledValue label={ta.users.lastLogin}>
+                            {#if user.last_login}
+                                {formatDateFromTs(user.last_login)}
+                            {:else}
+                                {t.common.never}
+                            {/if}
+                        </LabeledValue>
                     </div>
-                {/if}
-            </div>
 
-            <div class="values">
-                <div>
-                    <LabeledValue label={t.account.userCreated}>
-                        {formatDateFromTs(user.created_at)}
-                    </LabeledValue>
-                    <LabeledValue label={ta.users.lastLogin}>
-                        {#if user.last_login}
-                            {formatDateFromTs(user.last_login)}
-                        {:else}
-                            {t.common.never}
-                        {/if}
-                    </LabeledValue>
+                    <div>
+                        <LabeledValue label={t.account.passwordExpiry}>
+                            {#if user.password_expires}
+                                {formatDateFromTs(user.password_expires)}
+                            {:else}
+                                {t.common.never}
+                            {/if}
+                        </LabeledValue>
+                        <LabeledValue label={t.account.mfaActivated}>
+                            <CheckIcon checked={!!user.webauthn_user_id || hasOtp} />
+                        </LabeledValue>
+                    </div>
                 </div>
-
-                <div>
-                    <LabeledValue label={t.account.passwordExpiry}>
-                        {#if user.password_expires}
-                            {formatDateFromTs(user.password_expires)}
-                        {:else}
-                            {t.common.never}
-                        {/if}
-                    </LabeledValue>
-                    <LabeledValue label={t.account.mfaActivated}>
-                        <CheckIcon checked={!!user.webauthn_user_id || hasOtp} />
-                    </LabeledValue>
-                </div>
-            </div>
-
-            <div class="btn">
+            </section>
+            <div class="admin-save-bar">
                 <Button type="submit">
                     {t.common.save}
                 </Button>
@@ -701,36 +692,110 @@
 </div>
 
 <style>
-    .btn {
+    .admin-user-info {
+        container-type: inline-size;
+        --section-gap: 1.25rem;
+    }
+
+    .two-columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--ui-space) var(--section-gap);
+    }
+
+    .admin-metadata {
+        margin-block-end: var(--ui-space);
+    }
+
+    .admin-status-settings {
+        padding: 0.5rem var(--ui-space);
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+        margin-block-end: var(--section-gap);
+    }
+
+    .admin-form-section {
+        padding: clamp(1rem, 3cqi, 1.5rem);
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        min-width: 0;
+    }
+
+    .admin-form-section h3 {
+        margin: 0 0 var(--ui-space);
+        color: var(--ui-text);
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.5rem;
+    }
+
+    .edit-fields {
+        display: grid;
+        grid-auto-rows: max-content;
+        gap: var(--ui-space);
+    }
+
+    .edit-fields h3 {
+        margin: 0;
+    }
+
+    .edit-fields > :global(.admin-input-field),
+    .admin-access-section :global(.admin-selection-field) {
+        min-width: 0;
+        margin: 0;
+    }
+    .edit-fields > :global(.admin-input-field) {
+        --ui-field-margin: 0;
+    }
+
+    .admin-access-section,
+    .admin-activity-section {
+        margin-block: var(--section-gap);
+    }
+
+    .access-expiration {
+        display: grid;
+        gap: 0.5rem;
+        max-width: 25rem;
+        margin-top: var(--ui-space);
+    }
+
+    .activity-values > div {
+        display: grid;
+        align-content: start;
+        gap: var(--ui-space);
+    }
+
+    .activity-values :global(.admin-labeled-value),
+    .admin-metadata :global(.admin-labeled-value) {
+        margin: 0;
+    }
+
+    @container (width < 35rem) {
+        .two-columns:not(.admin-metadata, .admin-status-settings) {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    .admin-save-bar {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
+        gap: 12px;
+        position: sticky;
+        bottom: -32px;
+        z-index: 2;
+        margin: 24px -1px -32px;
+        padding: 16px 1px;
+        background: var(--ui-surface);
+        border-top: 1px solid var(--ui-outline);
     }
-
-    .container {
-        padding-left: 0.5rem;
-        border-left: 2px solid transparent;
+    .admin-user-info[data-unsaved='true'] .admin-save-bar {
+        border-top-color: var(--ui-primary);
     }
-
-    .picture {
-        margin: 1rem 0;
-    }
-
-    .values {
-        display: flex;
-        column-gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .values > div {
-        /* half the size of <p> max-width */
-        width: min(calc(234pt - 0.5rem), calc(100dvw - 0.5rem));
-    }
-
-    @media (max-width: 467pt) {
-        .values > div {
-            width: min(25rem, calc(100dvw - 0.5rem));
+    @media (max-width: 800px) {
+        .admin-save-bar {
+            bottom: -24px;
+            margin-bottom: -24px;
         }
     }
 </style>

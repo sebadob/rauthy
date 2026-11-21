@@ -1,19 +1,18 @@
 <script lang="ts">
     import { onMount, untrack } from 'svelte';
     import { redirectToLogin } from '#utils/helpers.ts';
-    import Button from '#lib/button/Button.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import Pagination from '#lib/pagination/Pagination.svelte';
     import SessionRow from './SessionRow.svelte';
     import type { SessionResponse } from '#api/types/session.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
-    import { fetchDelete, fetchGet } from '#api/fetch.ts';
+    import { fetchGet } from '#api/fetch.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import { useSession } from '#state/session.svelte.ts';
     import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
     import { loadPageSize, type PageSize } from '#lib/pagination/props.ts';
     import { fetchSearchServer, type SearchParamsIdxSession } from '#utils/search.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
 
@@ -21,10 +20,6 @@
     // session deletion is a full-admin action; group admins log a user out from the user
     // details tab instead, so these buttons are hidden for them
     let isAdmin = $derived(session.isAdmin());
-
-    let refOpts: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refOpts?.focus());
 
     let err = $state('');
     let sessions: SessionResponse[] = $state([]);
@@ -180,36 +175,31 @@
             window.location.reload();
         }
     }
-
-    async function invalidateSessions() {
-        let res = await fetchDelete('/auth/v1/sessions');
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            redirectToLogin();
-        }
-    }
 </script>
 
-<ContentAdmin>
-    <div class="top">
+<ContentAdmin wide>
+    <h2 class="admin-page-title">{ta.nav.sessions}</h2>
+    <div class="admin-page-toolbar">
         <OrderSearchBar
-            bind:ref={refOpts}
             bind:value={searchValue}
             {searchOptions}
             bind:searchOption
             {orderOptions}
             {onChangeOrder}
-            searchWidth="min(25rem, calc(100dvw - 1rem))"
+            searchWidth="100%"
             firstDirReverse
-        />
-        {#if isAdmin}
-            <div class="btn">
-                <Button level={-1} onclick={invalidateSessions}>
-                    {ta.sessions.invalidateAll}
-                </Button>
-            </div>
-        {/if}
+            inline
+        >
+            {#snippet actions()}
+                {#if isAdmin}
+                    <EntityDelete
+                        url="/auth/v1/sessions"
+                        label={ta.sessions.invalidateAll}
+                        onDelete={() => redirectToLogin()}
+                    />
+                {/if}
+            {/snippet}
+        </OrderSearchBar>
     </div>
 
     {#if err}
@@ -246,18 +236,8 @@
 
 <style>
     #sessions {
-        max-height: calc(100dvh - 7rem);
-        overflow-y: auto;
-    }
-
-    .btn {
-        margin: 0 0.25rem;
-    }
-
-    .top {
-        margin-bottom: 0.5rem;
         display: flex;
-        gap: 0.5rem 1rem;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 12px;
     }
 </style>

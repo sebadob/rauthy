@@ -68,7 +68,7 @@
 </script>
 
 <div class="container">
-    <h1>{ta.pam.addUser}</h1>
+    <h2>{ta.pam.addUser}</h2>
 
     <Form action="/auth/v1/pam/users" {onSubmit}>
         <Input
@@ -115,7 +115,7 @@
 </div>
 
 <style>
-    h1 {
+    h2 {
         font-size: 1.1rem;
     }
 

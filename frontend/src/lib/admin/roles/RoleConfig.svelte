@@ -91,6 +91,7 @@
                 placeholder={ta.common.jsonMeta}
                 rows={15}
                 bind:value={jsonMeta}
+                formatBadge={t.account.stringOrJson ?? 'String / JSON'}
             />
         </div>
 

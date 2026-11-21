@@ -212,19 +212,20 @@
     }
 </script>
 
-<div style:width>
+<div class="admin-time-field" style:width>
     <div
         aria-live="assertive"
-        class="label"
-        style:height={noEmptyLabelHeight ? 'inherit' : '1.75rem'}
+        class="label admin-field-label"
+        style:--time-label-height={noEmptyLabelHeight ? 'auto' : '1.75rem'}
     >
-        <label for={id} class="font-label noselect" data-required={required}>
+        <label for={id} class="font-label noselect" data-required={required && !!label}>
             {label}
         </label>
     </div>
 
-    <div class="flex">
+    <div class="flex time-control">
         <input
+            class="ui-text-input"
             bind:this={refInput}
             type="text"
             {id}
@@ -249,7 +250,7 @@
         <div class="relative">
             <div class="absolute indicator">
                 <Popover
-                    ariaLabel="Show Popover Example"
+                    ariaLabel={label || t.common.hours}
                     offsetLeft="-3.8rem"
                     offsetTop={openTop ? '-5rem' : '-.1rem'}
                     bind:close
@@ -270,6 +271,7 @@
                                     options={optionHour}
                                     bind:value={hour}
                                     maxHeight="13rem"
+                                    hideScrollbar
                                     borderless
                                     onRight={() => refMinutes?.focus()}
                                 />
@@ -282,6 +284,7 @@
                                     options={optionMinute}
                                     bind:value={minute}
                                     maxHeight="13rem"
+                                    hideScrollbar
                                     borderless
                                     onLeft={() => refHours?.focus()}
                                 />
@@ -314,6 +317,7 @@
     }
 
     .label {
+        height: var(--time-label-height);
         /*height: 1.75rem;*/
         width: 100%;
         margin-bottom: -0.37rem;
@@ -340,5 +344,31 @@
         padding: 0.5rem;
         border-radius: var(--border-radius);
         cursor: default;
+    }
+
+    :global(.ui-shell) .admin-time-field :global(.indicator) {
+        top: 50%;
+        right: 4px;
+        transform: translateY(-50%);
+        padding: 0;
+    }
+    :global(.ui-shell) .time-control {
+        position: relative;
+    }
+    :global(.ui-shell) .time-control > :global(.relative) {
+        position: static;
+    }
+    :global(.ui-shell) .admin-time-field {
+        width: var(--ui-time-width, 7rem);
+        min-width: 0;
+    }
+    :global(.ui-shell) .admin-time-field > .label {
+        height: var(--ui-label-height);
+        margin: 0 0 var(--ui-label-gap);
+        padding: 0;
+    }
+
+    :global(.ui-shell) .admin-time-field input[type='text']:not([type='hidden']) {
+        padding-right: 40px;
     }
 </style>

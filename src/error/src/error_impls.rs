@@ -64,10 +64,12 @@ impl ResponseError for ErrorResponse {
         match self.error {
             ErrorResponseType::BadRequest
             | ErrorResponseType::ConsentRequired
+            | ErrorResponseType::InvalidCredentials
             | ErrorResponseType::InvalidClientMetadata
             | ErrorResponseType::InvalidGrant
             | ErrorResponseType::InvalidRequest
             | ErrorResponseType::InvalidTarget
+            | ErrorResponseType::PasswordRequired
             | ErrorResponseType::UseDpopNonce(_) => StatusCode::BAD_REQUEST,
             ErrorResponseType::Blocked
             | ErrorResponseType::Forbidden

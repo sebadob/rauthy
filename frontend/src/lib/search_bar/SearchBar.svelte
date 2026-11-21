@@ -83,9 +83,9 @@
 </script>
 
 <search
-    class="flex container"
-    style:border={borderless ? undefined : '1px solid hsl(var(--bg-high))'}
-    style:width
+    class="flex container admin-search"
+    style:--search-border={borderless ? '0' : '1px solid hsl(var(--bg-high))'}
+    style:--search-width={width}
 >
     {#if options}
         <div class="options">
@@ -122,7 +122,7 @@
         </datalist>
     {/if}
 
-    <div class="relative">
+    <div class="relative clear-slot" class:empty={!value}>
         <div class="absolute btnDelete">
             <Button ariaLabel={t.common.delete} invisible onclick={() => (value = '')}>
                 <span class="backspace">
@@ -172,6 +172,8 @@
     }
 
     .container {
+        width: var(--search-width);
+        border: var(--search-border);
         border-radius: var(--border-radius);
         overflow: clip;
     }
@@ -181,5 +183,70 @@
         background: hsl(var(--bg-high));
         border-right: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius) 0 0 var(--border-radius);
+    }
+
+    :global(.admin-shell) .admin-search:not(:global(.branding-preview *)) {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-width: 0;
+        height: var(--ui-search-height);
+        margin: 0;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
+        overflow: hidden;
+    }
+    :global(.admin-shell) .admin-search:focus-within:not(:global(.branding-preview *)) {
+        border-color: var(--ui-primary);
+        outline: 2px solid hsl(var(--action) / 0.16);
+    }
+    :global(.admin-shell) .admin-search:not(:global(.branding-preview *)) input[type='search'] {
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        padding: 0 0.625rem;
+        border: 0;
+        border-radius: 0;
+        outline: 0;
+        background: transparent;
+        font-family: inherit;
+        font-size: var(--ui-control-font-size);
+        line-height: var(--ui-control-line-height);
+        appearance: none;
+    }
+
+    :global(.admin-shell) .admin-search input[type='search']::-webkit-search-cancel-button {
+        appearance: none;
+    }
+    :global(.admin-shell) .admin-search:not(:global(.branding-preview *)) :global(.options) {
+        margin: 0;
+        background: transparent;
+        border: 0;
+        border-right: 1px solid var(--ui-outline);
+        border-radius: 0;
+    }
+    :global(.admin-shell) .admin-search .clear-slot {
+        display: flex;
+        align-items: center;
+        flex: none;
+    }
+
+    :global(.admin-shell) .admin-search .clear-slot.empty {
+        visibility: hidden;
+    }
+
+    :global(.admin-shell) .admin-search .btnDelete {
+        position: static;
+    }
+
+    :global(.admin-shell) .admin-search .backspace {
+        display: flex;
+        bottom: auto;
+    }
+    :global(.admin-shell)
+        .admin-search:not(:global(.branding-preview *))
+        :global(.admin-select-trigger) {
+        padding: 0 10px;
     }
 </style>

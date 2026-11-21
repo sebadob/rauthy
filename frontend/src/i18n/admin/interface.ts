@@ -5,6 +5,10 @@
  */
 export interface I18nAdmin {
     api_key: {
+        validity?: string;
+        permissions?: string;
+        secret?: string;
+        examples?: string;
         delete1: string;
         expires: string;
         generate1: string;
@@ -31,6 +35,7 @@ export interface I18nAdmin {
         userEditable: string;
     };
     backup: {
+        title?: string;
         createBackup: string;
         disabledDesc: string;
         lastModified: string;
@@ -39,8 +44,20 @@ export interface I18nAdmin {
         size: string;
     };
     clients: {
+        settings: { general: string; tokens: string; integrations: string };
         backchannelLogout: string;
         branding: {
+            title: string;
+            theme: string;
+            light: string;
+            dark: string;
+            preview: string;
+            assets: string;
+            logo: string;
+            advanced: string;
+            resetTheme: string;
+            resetThemeConfirm: string;
+            assetsImmediate: string;
             descHsl: string;
             // inserted as html
             descFullCss: string;
@@ -118,6 +135,19 @@ export interface I18nAdmin {
         };
     };
     common: {
+        about: string;
+        date: string;
+        time: string;
+        preferences: string;
+        profile: string;
+        contactDetails: string;
+        access: string;
+        activity: string;
+
+        compactNavigation: string;
+        administration: string;
+        selectEntry: string;
+        selectEntryHint: string;
         account: string;
         addNew: string;
         back: string;
@@ -199,9 +229,12 @@ export interface I18nAdmin {
         };
         openapi: string;
         openapiNote: string;
+        openapiEnable: string;
         source: string;
     };
     editor: {
+        format?: string;
+        plainText?: string;
         bold: string;
         code: string;
         heading1: string;
@@ -219,13 +252,16 @@ export interface I18nAdmin {
         textArea: string;
     };
     email: {
+        delivery?: string;
         cancelJob: string;
         // MUST be in the order:
         // 'none' | 'in_group' | 'not_in_group' | 'has_role' | 'has_not_role'
         filterType: string[];
         immediate: string;
         jobs: string;
+        recipients?: string;
         scheduled: string;
+        scheduledDelivery?: string;
         sendAllUsers: string;
         sendAllUsersFiltered: string;
         sendMail: string;
@@ -239,6 +275,12 @@ export interface I18nAdmin {
         noAdmin: string;
     };
     events: {
+        searchContent: string;
+        timestamp: string;
+        level: string;
+        type: string;
+        allLevels: string;
+        sendTest: string;
         eventLevel: string;
         eventType: string;
     };
@@ -259,6 +301,7 @@ export interface I18nAdmin {
         rotateKeys: string;
     };
     kv: {
+        limit: string;
         // inserted as HTML
         accessTestDesc: string;
         addNewKey: string;
@@ -294,6 +337,7 @@ export interface I18nAdmin {
         value: string;
     };
     nav: {
+        kvStore: string;
         apiKeys: string;
         attributes: string;
         blacklist: string;
@@ -341,6 +385,9 @@ export interface I18nAdmin {
         usernameNewDesc: string;
     };
     passwordPolicy: {
+        lengthRules?: string;
+        characterRules?: string;
+        expiryRules?: string;
         configDesc: string;
         resetSet0: string;
         validForDays: string;
@@ -348,6 +395,16 @@ export interface I18nAdmin {
     };
     providers: {
         config: {
+            sections?: {
+                access: string;
+                endpoints: string;
+                client: string;
+                claims: string;
+                tokenAuth?: string;
+                adminMapping?: string;
+                mfaMapping?: string;
+                claimHelp?: string;
+            };
             allowInsecureTls: string;
             autoLink: string;
             autoLinkDesc1: string;
@@ -403,6 +460,7 @@ export interface I18nAdmin {
         };
     };
     scopes: {
+        defaultBadge?: string;
         claimsAtRoot: string;
         claimsAtRootWarning: string;
         defaultNoMod: string;
@@ -440,6 +498,8 @@ export interface I18nAdmin {
         tos: string;
     };
     users: {
+        searchName?: string;
+        searchUsername?: string;
         antiLockout: {
             rule: string;
             delete: string;

@@ -1,12 +1,11 @@
 <script lang="ts">
+    import PublicPage from '#lib/PublicPage.svelte';
     import { getProviderToken, getVerifierUpstreamFromStorage } from '#utils/helpers.ts';
     import { onMount } from 'svelte';
     import WebauthnRequest from '#lib/WebauthnRequest.svelte';
-    import LangSelector from '#lib/LangSelector.svelte';
     import Button from '#lib/button/Button.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useParam } from '#state/param.svelte.ts';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
     import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
     import type {
@@ -18,7 +17,6 @@
     import { IS_DEV } from '#utils/constants.ts';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
     import TosAccept from '#lib/TosAccept.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
     import type { MfaPurpose } from '#api/types/mfa.ts';
     import OtpRequest from '#lib/OtpRequest.svelte';
     import type { OtpAdditionalData } from '#mfa/otp/types.ts';
@@ -177,7 +175,7 @@
     <title>Callback</title>
 </svelte:head>
 
-<ContentCenter>
+<PublicPage>
     {#if mfaPurpose}
         {#if mfaKind == 'webauthn'}
             <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
@@ -190,11 +188,11 @@
             />
         {/if}
     {:else if clientMfaForce}
-        <div class="btn flex-col">
+        <div class="public-card">
             <Button onclick={() => (window.location.href = '/auth/v1/account')}>Account</Button>
         </div>
     {:else if needsValuesUpdate}
-        <div>
+        <div class="public-card ui-section-stack">
             <p>{t.authorize.needsUserUpdate}</p>
             <Button onclick={() => window.location.replace('/auth/v1/account')}>
                 {t.authorize.navigateToAccount}
@@ -209,23 +207,8 @@
             {onToSCancel}
         />
     {:else if error}
-        <div class="err">
+        <div class="public-card err">
             {error}
         </div>
     {/if}
-</ContentCenter>
-
-<ThemeSwitch absolute />
-<LangSelector absolute />
-
-<style>
-    .btn {
-        margin: 5px 0;
-        display: flex;
-    }
-
-    .flex-col {
-        display: flex;
-        flex-direction: column;
-    }
-</style>
+</PublicPage>

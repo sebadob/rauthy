@@ -18,6 +18,7 @@ impl I18nEmailLoginLocation<'_> {
             Language::En => Self::build_en(),
             Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
             Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
@@ -83,6 +84,16 @@ impl I18nEmailLoginLocation<'_> {
                 vos identifiants !",
             revoke_link: "Révoquer l’accès",
             account_link: "Tableau de bord du compte",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "Avviso di sicurezza",
+            unknown_location: "Accesso da una posizione sconosciuta",
+            if_invalid: "Se non riconosci questo accesso, revocalo subito e cambia le tue credenziali.",
+            revoke_link: "Revoca accesso",
+            account_link: "Il tuo account",
         }
     }
 

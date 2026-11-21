@@ -6,6 +6,7 @@
         ref = $bindable(),
         href,
         target,
+        reload,
         selectedStep = false,
         hideUnderline = false,
         highlight = false,
@@ -18,6 +19,7 @@
         ref?: undefined | HTMLAnchorElement;
         href: string;
         target?: string;
+        reload?: boolean;
         selectedStep?: boolean;
         hideUnderline?: boolean;
         highlight?: boolean;
@@ -73,6 +75,7 @@
     class:hideUnderline
     {href}
     {target}
+    data-sveltekit-reload={reload ? '' : undefined}
     aria-current={ariaCurrentType}
     data-highlight={highlight}
     {onclick}

@@ -25,14 +25,16 @@ pub enum Language {
     Ru,
     Uk,
     ZhHans,
+    // Keep new variants at the end to preserve existing binary discriminants.
+    It,
 }
 
 impl Language {
-    pub fn all_available() -> [&'static str; 29] {
+    pub fn all_available() -> [&'static str; 31] {
         [
-            "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "ja",
-            "ja-JP", "ko", "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pl", "pl-PL", "pt",
-            "pt-PT", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
+            "cs", "cs-CZ", "en", "en-US", "de", "de-DE", "es", "es-ES", "fr", "fr-FR", "it",
+            "it-IT", "ja", "ja-JP", "ko", "ko-KR", "nb", "nb-NO", "no-NO", "nl", "nl-NL", "pl",
+            "pl-PL", "pt", "pt-PT", "ru", "ru-RU", "uk", "uk-UA", "zh", "zh-Hans",
         ]
     }
 
@@ -44,6 +46,7 @@ impl Language {
             Language::En => "en",
             Language::Es => "es",
             Language::Fr => "fr",
+            Language::It => "it",
             Language::Ja => "ja",
             Language::Ko => "ko",
             Language::Nb => "nb",
@@ -68,6 +71,7 @@ impl Language {
             Language::En => "en-US",
             Language::Es => "es-ES",
             Language::Fr => "fr-FR",
+            Language::It => "it-IT",
             Language::Ja => "ja-JP",
             Language::Ko => "ko-KR",
             Language::Nb => "nb-NO",
@@ -116,6 +120,7 @@ impl From<&str> for Language {
             "de" | "de-DE" => Self::De,
             "es" | "es-ES" => Self::Es,
             "fr" | "fr-FR" => Self::Fr,
+            "it" | "it-IT" => Self::It,
             "ja" | "ja-JP" => Self::Ja,
             "ko" | "ko-KR" => Self::Ko,
             "nb" | "nb-NO" | "no-NO" => Self::Nb,
@@ -166,6 +171,7 @@ impl From<rauthy_api_types::generic::Language> for Language {
             rauthy_api_types::generic::Language::En => Self::En,
             rauthy_api_types::generic::Language::Es => Self::Es,
             rauthy_api_types::generic::Language::Fr => Self::Fr,
+            rauthy_api_types::generic::Language::It => Self::It,
             rauthy_api_types::generic::Language::Ja => Self::Ja,
             rauthy_api_types::generic::Language::Ko => Self::Ko,
             rauthy_api_types::generic::Language::Nb => Self::Nb,
@@ -187,6 +193,7 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::En => Self::En,
             Language::Es => Self::Es,
             Language::Fr => Self::Fr,
+            Language::It => Self::It,
             Language::Ja => Self::Ja,
             Language::Ko => Self::Ko,
             Language::Nb => Self::Nb,
@@ -197,5 +204,40 @@ impl From<Language> for rauthy_api_types::generic::Language {
             Language::Uk => Self::Uk,
             Language::ZhHans => Self::ZhHans,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Language;
+    use actix_web::test::TestRequest;
+    use rauthy_common::utils::{deserialize, serialize};
+
+    #[test]
+    fn italian_is_negotiated_and_round_trips_as_it() {
+        let req = TestRequest::default()
+            .insert_header(("Accept-Language", "it-IT,it;q=0.9,en;q=0.5"))
+            .to_http_request();
+        let lang = Language::try_from(&req).unwrap();
+        assert_eq!(lang, Language::It);
+        assert_eq!(lang.html_lang(), "it-IT");
+        assert_eq!(lang.as_str(), "it");
+        let api: rauthy_api_types::generic::Language = serde_json::from_str("\"it\"").unwrap();
+        assert_eq!(Language::from(api), lang);
+    }
+
+    #[test]
+    fn existing_binary_locale_values_keep_their_discriminants() {
+        let old_japanese = 5_u32.to_le_bytes();
+        let old_chinese = 13_u32.to_le_bytes();
+        assert_eq!(
+            deserialize::<Language>(&old_japanese).unwrap(),
+            Language::Ja
+        );
+        assert_eq!(
+            deserialize::<Language>(&old_chinese).unwrap(),
+            Language::ZhHans
+        );
+        assert_eq!(serialize(&Language::It).unwrap(), 14_u32.to_le_bytes());
     }
 }

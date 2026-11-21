@@ -19,3 +19,6 @@ tokio-rustls = { workspace = true }
 tokio-util = { workspace = true, features = ["codec"] }
 tracing = { workspace = true }
 zeroize = { workspace = true }
+
+[lints]
+workspace = true

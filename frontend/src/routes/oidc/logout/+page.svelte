@@ -2,14 +2,11 @@
     import { getCsrfToken, purgeStorage, saveCsrfToken } from '#utils/helpers.ts';
     import Button from '#lib/button/Button.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
-    import LangSelector from '#lib/LangSelector.svelte';
+    import PublicPage from '#lib/PublicPage.svelte';
     import type { LogoutParams } from '#api/types/logout.ts';
     import Template from '#lib/Template.svelte';
     import { IS_DEV, TPL_CSRF_TOKEN } from '#utils/constants.ts';
     import { useParam } from '#state/param.svelte.ts';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import { formDataFromObj } from '#api/fetch.ts';
 
     let t = useI18n();
@@ -71,47 +68,35 @@
 
 <Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
 
-<Main>
-    <ContentCenter>
-        <div class="container">
-            <h1>{t.logout.logout}</h1>
-            <p>{t.logout.confirmMsg}</p>
+<PublicPage>
+    <div class="public-card">
+        <h1>{t.logout.logout}</h1>
+        <p>{t.logout.confirmMsg}</p>
 
-            <div class="btn">
-                <Button onclick={handleLogout} {isLoading}>
-                    {t.logout.logout}
-                </Button>
-                <Button level={3} onclick={handleCancel}>
-                    {t.common.cancel}
-                </Button>
-            </div>
-
-            {#if err}
-                <div class:err>
-                    {err}
-                </div>
-            {/if}
+        <div class="btn">
+            <Button onclick={handleLogout} {isLoading}>
+                {t.logout.logout}
+            </Button>
+            <Button level={2} onclick={handleCancel}>
+                {t.common.cancel}
+            </Button>
         </div>
 
-        <ThemeSwitch absolute />
-        <LangSelector absolute />
-    </ContentCenter>
-</Main>
+        {#if err}
+            <div class:err>
+                {err}
+            </div>
+        {/if}
+    </div>
+</PublicPage>
 
 <style>
     .btn {
         margin-top: 1rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
-    }
-
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: 1rem;
+        gap: 0.5rem;
+        flex-wrap: wrap;
     }
 
     .err {

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { tick, type Snippet } from 'svelte';
     import Button from '#lib/button/Button.svelte';
     import { genKey } from '#utils/helpers.ts';
 
@@ -12,6 +12,8 @@
         offsetTop = '0px',
         absolute,
         anchored,
+        placement = 'above',
+        fitViewport,
         lazy,
         btnDisabled,
         btnInvisible,
@@ -35,6 +37,8 @@
         // when set, the popover is positioned by the browser relative to its toggle
         // button via CSS anchor positioning instead of the manual offset math below
         anchored?: boolean;
+        placement?: 'above' | 'below';
+        fitViewport?: boolean;
         lazy?: boolean;
         btnDisabled?: boolean;
         btnInvisible?: boolean;
@@ -67,6 +71,19 @@
         }
     });
 
+    $effect(() => {
+        if (!fitViewport || !isOpen) return;
+
+        function onScroll(event: Event) {
+            if (event.target instanceof Node && ref && event.target.contains(ref)) {
+                positionInViewport();
+            }
+        }
+
+        window.addEventListener('scroll', onScroll, true);
+        return () => window.removeEventListener('scroll', onScroll, true);
+    });
+
     function onclick(ev: Event) {
         ev.stopPropagation();
 
@@ -76,7 +93,7 @@
 
         if (ref && refPopover) {
             // anchored popovers are placed declaratively by CSS, nothing to do here
-            if (!anchored) {
+            if (!anchored && !fitViewport) {
                 if (absolute) {
                     refPopover.style.top = offsetTop;
                     refPopover.style.left = offsetLeft;
@@ -91,12 +108,34 @@
         }
     }
 
+    function positionInViewport() {
+        if (!ref || !refPopover?.matches(':popover-open')) return;
+
+        const inset = 8;
+        const rect = ref.getBoundingClientRect();
+        const { offsetWidth: width, offsetHeight: height } = refPopover;
+        const above = rect.top - height - inset;
+        const below = rect.bottom + inset;
+        const fitsAbove = above >= inset;
+        const fitsBelow = below + height <= window.innerHeight - inset;
+        const y = (placement === 'above' && fitsAbove) || !fitsBelow ? above : below;
+        const x = roleButton === 'combobox' ? rect.left : rect.right - width;
+        refPopover.style.top = `${Math.max(inset, Math.min(y, window.innerHeight - height - inset))}px`;
+        refPopover.style.left = `${Math.max(inset, Math.min(x, window.innerWidth - width - inset))}px`;
+    }
+
     function ontoggle(ev: ToggleEvent) {
         let st = ev.newState as 'open' | 'closed';
         isOpen = 'open' === st;
+        if (fitViewport && isOpen) positionInViewport();
         onToggle?.(st);
+        if (fitViewport && isOpen) {
+            void tick().then(positionInViewport);
+        }
     }
 </script>
+
+<svelte:window onresize={fitViewport ? positionInViewport : undefined} />
 
 <div>
     <Button
@@ -105,6 +144,7 @@
         id={idButton}
         {ariaLabel}
         ariaControls={idPopover}
+        ariaExpanded={isOpen}
         popovertarget={idPopover}
         {onclick}
         invisible={btnInvisible}
@@ -126,6 +166,8 @@
         aria-expanded={isOpen}
         class="popover"
         class:anchored
+        class:fitViewport
+        class:below={placement === 'below'}
         popover="auto"
         {ontoggle}
     >
@@ -160,6 +202,17 @@
         position-area: top span-right;
         margin-bottom: 0.4rem;
         position-try-fallbacks: flip-block;
+    }
+    .popover.anchored.below {
+        position-area: bottom span-right;
+        margin: 0.4rem 0 0;
+    }
+
+    .popover.fitViewport {
+        position: fixed;
+        max-width: calc(100dvw - 16px);
+        max-height: calc(100dvh - 16px);
+        overflow: auto;
     }
 
     .inner {

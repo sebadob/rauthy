@@ -889,10 +889,25 @@ backup_keep_for_local = '3d'
 #
 # Set to `true` to enable user consent for clients. Without it,
 # configured `[[consent.sources]]` log a warning at startup.
-# This feature is still in progress. Currently, it makes a client
-# deletion also delete all legacy refresh tokens (issued before
-# refresh tokens were bound to a client) of all users, and a user's
-# consent revoke also delete that user's legacy refresh tokens.
+# This feature is still in progress. Currently, it makes the
+# authorization code exchange, FedCM and a refresh require the
+# user's consent grant for the client (password, device code and
+# token exchange tokens issued by this version are exempt), a
+# client deletion also delete all legacy refresh tokens (issued
+# before refresh tokens were bound to a client) of all users, and a
+# user's consent revoke also delete that user's legacy refresh
+# tokens.
+#
+# Until the consent screen lands, no grant can be given. While it is
+# enabled:
+# - every `authorization_code` login, the Admin UI included, and
+#   every FedCM login fails: the user signs in, but the client's
+#   token request (code exchange / FedCM) is rejected with
+#   `invalid_grant` "no consent grant for this client", and rauthy
+#   logs a warning
+# - every non-exempt refresh token is deleted, and its access token
+#   revoked, on its next refresh. Turning the flag off again does not
+#   restore them.
 #
 # default: false
 # overwritten by: CONSENT_ENABLE
@@ -1526,6 +1541,9 @@ smtp_url = 'localhost'
 # default: '%d/%m/%Y %T (%Z)'
 # overwritten by: TZ_FMT_FR
 #fr = '%d/%m/%Y %T (%Z)'
+# default: '%d/%m/%Y %T (%Z)'
+# overwritten by: TZ_FMT_IT
+#it = '%d/%m/%Y %T (%Z)'
 # default: '%Y/%m/%d %T (%Z)'
 # overwritten by: TZ_FMT_JA
 #ja = '%Y/%m/%d %T (%Z)'
@@ -2250,13 +2268,17 @@ max_hash_threads = 2
 # space-separated value.
 #
 # Languages for all user-facing pages.
-# Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_COMMON
-filter_lang_common = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_common = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pl', 'pt', 'ru', 'uk', 'zhhans',
+]
 # Languages for the Admin UI.
-# Available Options: en cs de es fr ja ko nb nl pl pt ru uk zhhans
+# Available Options: en cs de es fr it ja ko nb nl pl pt ru uk zhhans
 # overwritten by: FILTER_LANG_ADMIN
-filter_lang_admin = ['en', 'cs', 'de', 'es', 'fr', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans']
+filter_lang_admin = [
+  'en', 'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'nb', 'nl', 'pt', 'ru', 'uk', 'zhhans',
+]
 
 [lifetimes]
 # Set the grace time duration for how long in seconds the refresh
@@ -2859,7 +2881,7 @@ swagger_ui_enable = false
 # NOTE: This is an array value, and you can specify it multiple
 # times for different `lang` / `typ` combinations.
 
-# one of: en de es fr ja ko nb nl pl pt ru uk zh_hans
+# one of: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans
 #lang = 'en'
 
 # pme of: password_new, password_reset

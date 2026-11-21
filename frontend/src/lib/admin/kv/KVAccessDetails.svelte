@@ -4,6 +4,7 @@
     import LabeledValue from '#lib/LabeledValue.svelte';
     import InputPassword from '#lib/form/InputPassword.svelte';
     import Button from '#lib/button/Button.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
     import Input from '#lib/form/Input.svelte';
     import { PATTERN_GROUP } from '#utils/patterns.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
@@ -11,7 +12,7 @@
     import { slide } from 'svelte/transition';
     import { untrack } from 'svelte';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
-    import { fetchDelete, fetchPost, fetchPut } from '#api/fetch.ts';
+    import { fetchPost, fetchPut } from '#api/fetch.ts';
     import IconCheck from '#icons/IconCheck.svelte';
     import HiddenValueArea from '#lib/HiddenValueArea.svelte';
 
@@ -31,21 +32,11 @@
     let name = $state(untrack(() => key.name));
     let success = $state(false);
     let successSecret = $state(false);
-    let delConfirm = $state(false);
 
     let bearer = $derived(`${key.id}$${key.secret}`);
     let curl = $derived(
         `curl -s -H 'Authorization: Bearer ${bearer}' ${window.location.origin}/auth/v1/kv/test | jq`,
     );
-
-    async function deleteKey() {
-        let res = await fetchDelete(`${urlAccess}/${key.id}`);
-        if (res.error) {
-            console.error(res.error);
-        } else {
-            onDelete(key.id);
-        }
-    }
 
     async function generateSecret() {
         let res = await fetchPost<KVAccessResponse>(`${urlAccess}/${key.id}/secret`);
@@ -120,36 +111,26 @@
             disabled
             showCopy
         />
-        <HiddenValueArea ariaLabel="curl test-command" rows={5} value={curl} width="100%" />
+        <HiddenValueArea
+            ariaLabel="curl test-command"
+            language="bash"
+            rows={3}
+            value={curl}
+            width="100%"
+        />
     </div>
 {/if}
 
 <div class="delBtn">
-    <div class="alignRight">
-        {#if delConfirm}
-            <div transition:slide={{ duration: 150 }}>
-                <p>{ta.kv.delConfirm}</p>
-
-                <Button level={-1} onclick={deleteKey}>
-                    {t.common.delete}
-                </Button>
-                <Button level={3} onclick={() => (delConfirm = false)}>
-                    {t.common.cancel}
-                </Button>
-            </div>
-        {:else}
-            <Button level={-1} onclick={() => (delConfirm = true)}>
-                {t.common.delete}
-            </Button>
-        {/if}
-    </div>
+    <EntityDelete
+        url={`${urlAccess}/${key.id}`}
+        name={key.name}
+        message={ta.kv.delConfirm}
+        onDelete={() => onDelete(key.id)}
+    />
 </div>
 
 <style>
-    .alignRight {
-        text-align: right;
-    }
-
     .delBtn {
         margin-top: 1rem;
         display: flex;

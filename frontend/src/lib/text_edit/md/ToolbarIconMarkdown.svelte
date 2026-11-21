@@ -5,6 +5,7 @@
     let {
         ref,
         title,
+        shortcut,
         content = $bindable(),
         addLeft,
         addRight,
@@ -13,6 +14,7 @@
     }: {
         ref: undefined | HTMLDivElement;
         title: string;
+        shortcut?: string;
         content: string;
         addLeft: string;
         addRight?: string;
@@ -138,8 +140,8 @@
             range.insertNode(node);
 
             if (isCaret) {
-                range.setStart(node, 2);
-                range.setEnd(node, 2);
+                range.setStart(node, addLeft.length);
+                range.collapse(true);
             } else {
                 range.setStartBefore(node);
                 range.setEndAfter(node);
@@ -155,8 +157,11 @@
 </script>
 
 <!-- a mousedown would move the focus to the button and drop the editor selection -->
-<Button invisible {onclick} onmousedown={(ev: MouseEvent) => ev.preventDefault()}>
-    <div {title}>
+<Button ariaLabel={title} invisible {onclick} onmousedown={(ev: MouseEvent) => ev.preventDefault()}>
+    <div
+        data-shortcut={shortcut}
+        title={shortcut ? `${title} (Ctrl / ⌘ + ${shortcut.toUpperCase()})` : title}
+    >
         {@render children()}
     </div>
 </Button>

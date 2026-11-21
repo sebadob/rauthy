@@ -13,7 +13,10 @@
         label = '',
 
         autocomplete = 'on',
+        'data-bwignore': bitwardenIgnore,
         placeholder = '',
+        description,
+        formatBadge,
         disabled = false,
 
         minLength,
@@ -45,7 +48,10 @@
         value?: string | number | null;
         label?: string;
         autocomplete?: FullAutoFill | null | undefined;
+        'data-bwignore'?: boolean;
         placeholder?: string;
+        description?: string;
+        formatBadge?: string;
         disabled?: boolean | null | undefined;
         minLength?: number | null | undefined;
         maxLength?: number | null | undefined;
@@ -69,6 +75,8 @@
     } = $props();
 
     let t = useI18n();
+    const helpId = genKey();
+    const badgeId = genKey();
 
     let touched = $state(false);
 
@@ -135,41 +143,50 @@
     }
 </script>
 
-<div style:width>
-    <div aria-live="assertive" class="label">
+<div class="admin-input-field" style:width>
+    <div aria-live="assertive" class="label admin-field-label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
     </div>
-    <input
-        bind:this={ref}
-        type={typ}
-        {id}
-        {name}
-        title={errMsg}
-        aria-label={label || placeholder}
-        bind:value
-        {autocomplete}
-        {placeholder}
-        aria-placeholder={placeholder}
-        {disabled}
-        aria-disabled={disabled}
-        minlength={minLength || undefined}
-        maxlength={maxLength || undefined}
-        min={min || undefined}
-        max={max || undefined}
-        {step}
-        required={required || undefined}
-        aria-required={required || false}
-        aria-invalid={isError}
-        pattern={pattern || undefined}
-        class:invalid={isError}
-        {oninput}
-        {oninvalid}
-        {onblur}
-        {onkeydown}
-        onsubmit={onSubmit}
-    />
+    <div class="control" class:with-badge={formatBadge}>
+        <input
+            class="ui-text-input"
+            bind:this={ref}
+            type={typ}
+            {id}
+            {name}
+            title={errMsg}
+            aria-label={label || placeholder}
+            aria-describedby={[description && helpId, formatBadge && badgeId]
+                .filter(Boolean)
+                .join(' ') || undefined}
+            bind:value
+            {autocomplete}
+            data-bwignore={bitwardenIgnore ? true : undefined}
+            {placeholder}
+            aria-placeholder={placeholder}
+            {disabled}
+            aria-disabled={disabled}
+            minlength={minLength || undefined}
+            maxlength={maxLength || undefined}
+            min={min || undefined}
+            max={max || undefined}
+            {step}
+            required={required || undefined}
+            aria-required={required || false}
+            aria-invalid={isError}
+            pattern={pattern || undefined}
+            class:invalid={isError}
+            {oninput}
+            {oninvalid}
+            {onblur}
+            {onkeydown}
+            onsubmit={onSubmit}
+        />
+        {#if formatBadge}<span class="ui-format-badge" id={badgeId}>{formatBadge}</span>{/if}
+    </div>
+    {#if description}<p class="ui-field-hint" id={helpId}>{description}</p>{/if}
     {#if isError}
         <div
             aria-relevant="all"
@@ -183,6 +200,19 @@
 </div>
 
 <style>
+    .control {
+        display: contents;
+    }
+
+    .with-badge {
+        display: grid;
+        position: relative;
+    }
+
+    :global(.ui-shell) .with-badge input.ui-text-input {
+        padding-inline-end: 7.5rem;
+    }
+
     label {
         font-size: 0.9em;
         flex-wrap: wrap;
@@ -200,5 +230,13 @@
         margin-top: -0.4rem;
         padding-left: 0.1rem;
         font-size: 0.8rem;
+    }
+
+    :global(.ui-shell) .admin-input-field:not(:global(.branding-preview *)) {
+        max-width: 100%;
+        margin-bottom: var(--ui-field-margin, var(--ui-space));
+    }
+    :global(.ui-shell) input.invalid:not(:global(.branding-preview *)) {
+        border-color: hsl(var(--error));
     }
 </style>

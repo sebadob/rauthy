@@ -157,6 +157,13 @@ pub async fn get_admin_config_policy_html(req: HttpRequest) -> Result<HttpRespon
         .await
 }
 
+#[get("/admin/config/tos")]
+pub async fn get_admin_config_tos_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
+    HtmlCached::ConfigToS
+        .handle(req, ThemeCssFull::find_theme_ts_rauthy().await?, true)
+        .await
+}
+
 #[get("/admin/docs")]
 pub async fn get_admin_docs_html(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     HtmlCached::Docs

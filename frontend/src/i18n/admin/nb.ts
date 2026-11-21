@@ -39,6 +39,7 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
+        settings: { general: 'Generelt', tokens: 'Tokener', integrations: 'Integrasjoner' },
         allowedResources: 'Tillatte ressurser',
         defaultAud: 'Standard-mottakere (aud)',
         actorSameClient: 'Actor token from this client only',
@@ -47,6 +48,17 @@ export let I18nAdminNb: I18nAdmin = {
         descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
+            title: 'Utseende',
+            theme: 'Tema',
+            light: 'Lyst tema',
+            dark: 'Mørkt tema',
+            preview: 'Forhåndsvisning',
+            assets: 'Logo og favicon',
+            logo: 'Logo',
+            advanced: 'Avansert CSS',
+            resetTheme: 'Tilbakestill tema',
+            resetThemeConfirm: 'Gjenopprette standardfargene og hjørneradiusen?',
+            assetsImmediate: 'Filendringer trer i kraft med en gang.',
             descHsl: `Fargene må angis som HSL. Her defineres kun basisfargen.
                 Alpha kanaler og andre verdier justeres dynamisk av temaet.`,
             descFullCss: `Fargene må angis som fullstendige, gyldige CSS <code>color</code> verdier.
@@ -144,6 +156,20 @@ export let I18nAdminNb: I18nAdmin = {
         },
     },
     common: {
+        about: 'Om Rauthy',
+        date: 'Dato',
+        time: 'Tid',
+        preferences: 'Innstillinger',
+        profile: 'Profil',
+        contactDetails: 'Kontaktinformasjon',
+        access: 'Tilgang',
+        activity: 'Aktivitet',
+
+        compactNavigation: 'Kompakt navigasjon',
+        administration: 'Administrasjon',
+        selectEntry: 'Velg en oppføring',
+        selectEntryHint: 'Velg et element fra listen for å se og administrere detaljene.',
+
         account: 'Konto',
         addNew: 'Legg til ny',
         back: 'Tilbake',
@@ -250,8 +276,10 @@ export let I18nAdminNb: I18nAdmin = {
             mCost3: 'Den minimale tillatte verdien for <code>m_cost</code> er <code>32768</code>.',
         },
         openapi: 'For integrering av en ekstern applikasjon via Rauthys API, se',
-        openapiNote: `I standardkonfigurasjonen er ikke Swagger-grensesnittet aktivt via lenken ovenfor. Det kan 
-            aktiveres via konfigurasjon 'server.swagger_ui_enable' og muligens 'server.swagger_ui_public'.`,
+        openapiNote:
+            'I standardkonfigurasjonen er ikke Swagger-grensesnittet aktivt via lenken ovenfor.',
+        openapiEnable:
+            "Det kan aktiveres via konfigurasjon 'server.swagger_ui_enable' og muligens 'server.swagger_ui_public'.",
         source: 'Kildekoden finnes her',
     },
     editor: {
@@ -290,6 +318,12 @@ export let I18nAdminNb: I18nAdmin = {
             Deretter må du logge ut og inn igjen`,
     },
     events: {
+        searchContent: 'Innhold',
+        timestamp: 'Tidsstempel',
+        level: 'Nivå',
+        type: 'Type',
+        allLevels: 'Alle nivåer',
+        sendTest: 'Send testhendelse',
         eventLevel: 'Hendelsesnivå',
         eventType: 'Hendelsestype',
     },
@@ -310,6 +344,7 @@ export let I18nAdminNb: I18nAdmin = {
         rotateKeys: 'Roter nøkler',
     },
     kv: {
+        limit: 'Grense',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -347,6 +382,7 @@ export let I18nAdminNb: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV-lager',
         apiKeys: 'API-nøkler',
         attributes: 'Attributter',
         blacklist: 'Svarteliste',

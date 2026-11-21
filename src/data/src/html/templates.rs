@@ -630,6 +630,28 @@ impl AdminConfigPolicyHtml<'_> {
 }
 
 #[derive(Default, Template)]
+#[template(path = "html/admin/config/tos.html")]
+pub struct AdminConfigToSHtml<'a> {
+    lang: &'a str,
+    client_id: &'a str,
+    theme_ts: i64,
+    templates: &'a [HtmlTemplate],
+}
+
+impl AdminConfigToSHtml<'_> {
+    pub fn build(lang: &Language, theme_ts: i64) -> String {
+        let res = AdminConfigToSHtml {
+            lang: lang.html_lang(),
+            client_id: "rauthy",
+            theme_ts,
+            ..Default::default()
+        };
+
+        res.render().unwrap()
+    }
+}
+
+#[derive(Default, Template)]
 #[template(path = "html/admin/docs.html")]
 pub struct AdminDocsHtml<'a> {
     lang: &'a str,

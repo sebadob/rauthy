@@ -12,196 +12,248 @@
     import IconCode from '#icons/editor/IconCode.svelte';
     import IconQuote from '#icons/editor/IconQuote.svelte';
     import IconLink from '#icons/editor/IconLink.svelte';
-    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Button from '#lib/button/Button.svelte';
     import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         markdown = $bindable(),
-        withPreview = false,
-        onblur,
+        height,
     }: {
         markdown: string;
-        withPreview?: boolean;
-        onblur?: () => void;
+        height: string;
     } = $props();
 
-    const iconSize = '1.3rem';
-
+    const iconSize = '1.125rem';
     let ta = useI18nAdmin();
-    let worker = useMarkdownWorker();
-
+    let t = useI18n();
     let ref: undefined | HTMLDivElement = $state();
     let preview = $state(false);
+    let toolbar: HTMLDivElement;
 
-    $effect(() => {
-        worker.renderMarkdown(markdown);
-    });
-
-    $effect(() => {
-        if (!withPreview && preview) {
-            preview = false;
+    function onkeydown(event: KeyboardEvent) {
+        if (
+            !(event.ctrlKey || event.metaKey) ||
+            event.altKey ||
+            event.shiftKey ||
+            event.isComposing
+        ) {
+            return;
         }
-    });
+        const key = event.key.toLowerCase();
+        if (key === 'b' || key === 'i' || key === 'k') {
+            event.preventDefault();
+            toolbar.querySelector(`[data-shortcut="${key}"]`)?.closest('button')?.click();
+        }
+    }
 </script>
 
-<div role="none" class="editor" onclick={() => ref?.focus()}>
-    <div class="toolbar">
-        <div>
-            {#if withPreview}
-                <InputCheckbox ariaLabel={ta.common.preview} bind:checked={preview}>
-                    {ta.common.preview}
-                </InputCheckbox>
-            {/if}
+<div class="editor" style:height>
+    <div class="toolbar" bind:this={toolbar}>
+        <div class="view" role="group" aria-label="Markdown">
+            <Button invisible ariaPressed={!preview} onclick={() => (preview = false)}>
+                {t.common.edit}
+            </Button>
+            <Button invisible ariaPressed={preview} onclick={() => (preview = true)}>
+                {ta.common.preview}
+            </Button>
         </div>
 
-        <div class="actions" class:toolbarPreview={preview}>
-            <ToolbarIcon {ref} title={ta.editor.heading1} bind:content={markdown} addLeft="# ">
-                <IconH1 width={iconSize} />
-            </ToolbarIcon>
-            <ToolbarIcon {ref} title={ta.editor.heading2} bind:content={markdown} addLeft="## ">
-                <IconH2 width={iconSize} />
-            </ToolbarIcon>
-            <ToolbarIcon {ref} title={ta.editor.heading3} bind:content={markdown} addLeft="### ">
-                <IconH3 width={iconSize} />
-            </ToolbarIcon>
+        {#if !preview}
+            <div class="actions">
+                <ToolbarIcon {ref} title={ta.editor.heading1} bind:content={markdown} addLeft="# ">
+                    <IconH1 width={iconSize} />
+                </ToolbarIcon>
+                <ToolbarIcon {ref} title={ta.editor.heading2} bind:content={markdown} addLeft="## ">
+                    <IconH2 width={iconSize} />
+                </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.heading3}
+                    bind:content={markdown}
+                    addLeft="### "
+                >
+                    <IconH3 width={iconSize} />
+                </ToolbarIcon>
 
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.bold}
-                bind:content={markdown}
-                addLeft="**"
-                addRight="**"
-            >
-                <IconBold width={iconSize} />
-            </ToolbarIcon>
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.italic}
-                bind:content={markdown}
-                addLeft="*"
-                addRight="*"
-            >
-                <IconItalic width={iconSize} />
-            </ToolbarIcon>
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.strikeThrough}
-                bind:content={markdown}
-                addLeft="~~"
-                addRight="~~"
-            >
-                <IconStrikeThrough width={iconSize} />
-            </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.bold}
+                    shortcut="b"
+                    bind:content={markdown}
+                    addLeft="**"
+                    addRight="**"
+                >
+                    <IconBold width={iconSize} />
+                </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.italic}
+                    shortcut="i"
+                    bind:content={markdown}
+                    addLeft="*"
+                    addRight="*"
+                >
+                    <IconItalic width={iconSize} />
+                </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.strikeThrough}
+                    bind:content={markdown}
+                    addLeft="~~"
+                    addRight="~~"
+                >
+                    <IconStrikeThrough width={iconSize} />
+                </ToolbarIcon>
 
-            <ToolbarIcon {ref} title={ta.editor.listBullet} bind:content={markdown} addLeft="- ">
-                <IconListBullet width={iconSize} />
-            </ToolbarIcon>
-            <ToolbarIcon {ref} title={ta.editor.listNumbered} bind:content={markdown} addLeft="1. ">
-                <IconListNumbered width={iconSize} />
-            </ToolbarIcon>
-            <ToolbarIcon {ref} title={ta.editor.listTasks} bind:content={markdown} addLeft="- [ ] ">
-                <IconQueueList width={iconSize} />
-            </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.listBullet}
+                    bind:content={markdown}
+                    addLeft="- "
+                >
+                    <IconListBullet width={iconSize} />
+                </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.listNumbered}
+                    bind:content={markdown}
+                    addLeft="1. "
+                >
+                    <IconListNumbered width={iconSize} />
+                </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.listTasks}
+                    bind:content={markdown}
+                    addLeft="- [ ] "
+                >
+                    <IconQueueList width={iconSize} />
+                </ToolbarIcon>
 
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.code}
-                bind:content={markdown}
-                addLeft="`"
-                addRight="`"
-            >
-                <IconCode width={iconSize} />
-            </ToolbarIcon>
-            <ToolbarIcon {ref} title={ta.editor.quote} bind:content={markdown} addLeft="> ">
-                <IconQuote width={iconSize} />
-            </ToolbarIcon>
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.code}
+                    bind:content={markdown}
+                    addLeft="`"
+                    addRight="`"
+                >
+                    <IconCode width={iconSize} />
+                </ToolbarIcon>
+                <ToolbarIcon {ref} title={ta.editor.quote} bind:content={markdown} addLeft="> ">
+                    <IconQuote width={iconSize} />
+                </ToolbarIcon>
 
-            <!-- TODO needs a custom way of focussing via offset -->
-            <ToolbarIcon
-                {ref}
-                title={ta.editor.link}
-                bind:content={markdown}
-                addLeft="["
-                addRightLink="https://..."
-            >
-                <IconLink width={iconSize} />
-            </ToolbarIcon>
-
-            <!--{#if showImageButton}-->
-            <!--    <ToolbarIcon-->
-            <!--            {ref}-->
-            <!--            title="Image with upload TODO"-->
-            <!--            bind:markdown-->
-            <!--            addLeft="!["-->
-            <!--            addRightLink="https://..."-->
-            <!--    >-->
-            <!--        <IconImage width={iconSize}/>-->
-            <!--    </ToolbarIcon>-->
-            <!--{/if}-->
-        </div>
+                <!-- TODO needs a custom way of focussing via offset -->
+                <ToolbarIcon
+                    {ref}
+                    title={ta.editor.link}
+                    shortcut="k"
+                    bind:content={markdown}
+                    addLeft="["
+                    addRightLink="https://..."
+                >
+                    <IconLink width={iconSize} />
+                </ToolbarIcon>
+            </div>
+        {/if}
     </div>
 
     {#if preview}
         <div class="renderer">
-            <MarkdownRenderer />
+            <MarkdownRenderer {markdown} />
         </div>
     {:else}
         <div
             role="textbox"
             tabindex="0"
+            aria-multiline="true"
             bind:this={ref}
             class="edit font-mono"
             aria-label={ta.editor.textArea}
             bind:innerText={markdown}
             contenteditable="plaintext-only"
             spellcheck="false"
-            {onblur}
+            {onkeydown}
         ></div>
     {/if}
 </div>
 
 <style>
-    .actions {
-        text-align: right;
-    }
-
-    .edit {
-        height: 100%;
-        padding: 0.5rem;
-        outline: none;
-        border-radius: var(--border-radius);
-        overflow-y: auto;
-    }
-
     .editor {
-        height: 100%;
         display: flex;
         flex-direction: column;
-        border: 1px solid hsl(var(--bg-high));
+        border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
-        cursor: text;
-    }
-
-    .renderer {
-        height: 100%;
-        padding: 0.5rem;
-        overflow-y: auto;
-        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        background: var(--ui-surface);
+        min-width: 0;
     }
 
     .toolbar {
-        padding: 0 0.5rem;
         display: flex;
-        justify-content: space-between;
+        flex: none;
         align-items: center;
-        gap: 1rem;
-        border-bottom: 1px solid hsla(var(--bg-high) / 0.8);
-        cursor: default;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--ui-outline);
+        background: var(--ui-container);
     }
 
-    .toolbarPreview {
-        opacity: 0;
+    .view,
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .toolbar {
+        --ui-button-min-height: 32px;
+        --ui-button-height: 32px;
+        --ui-button-padding: 0 8px;
+    }
+
+    .view :global(.admin-control) {
+        min-width: 4rem;
+        font-size: var(--ui-control-font-size);
+        font-weight: 600;
+    }
+
+    .toolbar .view :global(.admin-control[aria-pressed='true'][data-variant]) {
+        background: var(--ui-tonal);
+        border-color: var(--ui-primary);
+        color: var(--ui-primary);
+    }
+
+    .actions {
+        flex-wrap: nowrap;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        padding: 4px;
+    }
+
+    .actions :global(button) {
+        width: 32px;
+        min-width: 32px;
+        padding: 0;
+    }
+
+    .edit,
+    .renderer {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        padding: 0.75rem;
+        overflow-wrap: anywhere;
+    }
+
+    .edit {
+        white-space: pre-wrap;
+        outline-offset: -2px;
     }
 </style>

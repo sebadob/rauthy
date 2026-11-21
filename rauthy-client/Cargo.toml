@@ -69,3 +69,39 @@ time = { version = "0.3.47", optional = true }
 
 # device-code
 qrcode = { version = "0.14.0", optional = true }
+
+[lints.rust]
+warnings = { level = "deny", priority = -2 }
+unknown_lints = { level = "allow", priority = -1 } # allow nightly lints
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+
+# Permanently allowed (intentional disagreement with pedantic)
+assert_is_empty = "allow"
+manual_assert = "allow"
+missing_errors_doc = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+uninlined_format_args = "allow"
+
+# Temporarily allowed (to be reviewed and enabled incrementally)
+cast_lossless = "allow"
+doc_markdown = "allow"
+explicit_deref_methods = "allow"
+if_not_else = "allow"
+ignored_unit_patterns = "allow"
+inline_always = "allow"
+manual_let_else = "allow"
+manual_string_new = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+needless_pass_by_value = "allow"
+single_char_pattern = "allow"
+unnecessary_semicolon = "allow"
+unnecessary_wraps = "allow"
+unsafe_derive_deserialize = "allow"
+unused_async = "allow"
+unused_async_trait_impl = "allow"

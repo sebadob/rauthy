@@ -86,19 +86,25 @@ mint tokens for an arbitrary audience.
 
 ### Consent sources
 
-With `consent.enable`, a consent source is resolved per client and `resource`. This is not active
-yet, it is used once the consent screen lands. A `[[consent.sources]]` entry for the requested
-`resource` wins, then the client's own consent source from the Admin UI, then the built-in `local`
-one:
+With `consent.enable`, a consent source is resolved per client and `resource`. It is used once
+the consent screen lands. A `[[consent.sources]]` entry for the requested `resource` wins, then the
+client's own consent source from the Admin UI, then the built-in `local` one:
 
 ```toml
 [consent]
-enable = true
+#enable = true
 
 [[consent.sources]]
 resource = 'https://api.example.com'
 source = 'https://consent.example.com/api'
 name = 'Example API'
+```
+
+```admonish warning
+Until the consent screen lands, no consent grant can be given. While `consent.enable` is on, every
+`authorization_code` login, the Admin UI included, and every FedCM login fails with `invalid_grant`,
+and every non-exempt refresh token, including those of `authorization_code` logins, is deleted and
+its access token revoked on its next refresh. Turning the flag off again does not restore them.
 ```
 
 Ephemeral clients have no stored configuration, so their consent comes from this registry or the

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
@@ -16,13 +17,8 @@
     import ScopeDetails from '#lib/admin/scopes/ScopeDetails.svelte';
     import ScopeAddNew from './ScopeAddNew.svelte';
     import { isDefaultScope } from '#utils/helpers.ts';
-    import { useTrigger } from '#state/callback.svelte.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -100,17 +96,13 @@
 </script>
 
 <NavSub
-    paddingTop="2.35rem"
+    detail={!!scope}
+    onBack={() => sid.set(undefined)}
+    error={err}
     buttonTilesAriaControls="scopes"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
 >
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={scopes.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <AdminListHeading title={ta.nav.scopes} count={scopesFiltered.length} />
+    <ButtonAddModal level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ScopeAddNew onSave={onAddNew} {scopes} />
     </ButtonAddModal>
     <OrderSearchBar
@@ -125,13 +117,14 @@
     {#snippet buttonTiles()}
         <div class="scopesList">
             {#each scopesFiltered as scope (scope.id)}
-                <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
-                    {scope.name}
-                    {#if isDefaultScope(scope.name)}
-                        <span class="default">
-                            <i>default</i>
-                        </span>
-                    {/if}
+                <NavButtonTile
+                    badge={isDefaultScope(scope.name)
+                        ? (ta.scopes.defaultBadge ?? 'default')
+                        : undefined}
+                    onclick={() => sid.set(scope.id)}
+                    selected={sid.get() === scope.id}
+                >
+                    <span class="scope-name">{scope.name}</span>
                 </NavButtonTile>
             {/each}
         </div>
@@ -153,9 +146,9 @@
 </ContentAdmin>
 
 <style>
-    .default {
-        font-size: 0.8rem;
-        color: hsla(var(--text) / 0.5);
+    .scope-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .scopesList {

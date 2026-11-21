@@ -28,7 +28,7 @@
     }
 </script>
 
-<label class="font-label noselect" data-disabled={disabled}>
+<label class="font-label noselect admin-checkbox" data-disabled={disabled}>
     <input
         type="checkbox"
         style:border-color={borderColor}
@@ -41,9 +41,7 @@
         {onclick}
         {onkeydown}
     />
-    <span>
-        {@render children?.()}
-    </span>
+    {#if children}<span>{@render children()}</span>{/if}
 </label>
 
 <style>
@@ -103,5 +101,43 @@
 
     label > span {
         transform: translateY(0.05rem);
+    }
+
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 36px;
+        margin: 0;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 20px;
+    }
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input) {
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        padding: 0;
+        border: 2px solid hsl(var(--text) / 0.6);
+        border-radius: var(--border-radius);
+        transform: none;
+        background: transparent;
+    }
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input:checked) {
+        background: var(--ui-primary);
+        border-color: var(--ui-primary);
+    }
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) :global(input::before) {
+        width: 11px;
+        height: 11px;
+        background: var(--ui-on-primary);
+    }
+    :global(.ui-shell) .admin-checkbox:not(:global(.branding-preview *)) > :global(span) {
+        transform: none;
+    }
+    :global(.ui-shell) .admin-checkbox[data-disabled='true']:not(:global(.branding-preview *)) {
+        opacity: 0.5;
     }
 </style>

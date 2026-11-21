@@ -246,6 +246,15 @@ impl RauthyConfig {
                 slf.vars.consent.sources.len()
             );
         }
+        if slf.vars.consent.enable {
+            warn!(
+                "`consent.enable` is `true`, but there is no consent screen yet: no consent grant \
+                can be given, so every `authorization_code` login, the Admin UI included, and \
+                every FedCM login fails, and every non-exempt refresh token is deleted and its \
+                access token revoked on its next refresh - disabling `consent.enable` later does \
+                not restore them"
+            );
+        }
         if slf.vars.consent.danger_allow_private_addresses {
             warn!("`consent.danger_allow_private_addresses` is enabled");
         }
@@ -470,6 +479,7 @@ impl Default for Vars {
                     en: "%m/%d/%Y %T (%Z)".into(),
                     es: "%d/%m/%Y %T (%Z)".into(),
                     fr: "%d/%m/%Y %T (%Z)".into(),
+                    it: "%d/%m/%Y %T (%Z)".into(),
                     ja: "%Y/%m/%d %T (%Z)".into(),
                     ko: "%Y-%m-%d %T (%Z)".into(),
                     nl: "%d-%m-%Y %T (%Z)".into(),
@@ -593,6 +603,7 @@ impl Default for Vars {
                     "en".into(),
                     "es".into(),
                     "fr".into(),
+                    "it".into(),
                     "ja".into(),
                     "ko".into(),
                     "nb".into(),
@@ -609,6 +620,7 @@ impl Default for Vars {
                     "en".into(),
                     "es".into(),
                     "fr".into(),
+                    "it".into(),
                     "ja".into(),
                     "ko".into(),
                     "nb".into(),
@@ -775,6 +787,17 @@ impl Default for Vars {
                                 .into()),
                         expires: Some("Le lien expire :".into()),
                         button: Some("Définir le mot de passe".into()),
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    it: VarsTemplate {
+                        subject: "Nuova password".into(),
+                        header: "Nuova password per".into(),
+                        text: None,
+                        click_link: Some("Apri il link qui sotto per impostare la password.".into()),
+                        validity: Some("Per motivi di sicurezza, il link è valido solo per un breve periodo.".into()),
+                        expires: Some("Il link scade il:".into()),
+                        button: Some("Imposta password".into()),
                         footer: None,
                         button_text_request_new: None,
                     },
@@ -966,6 +989,17 @@ impl Default for Vars {
                         button: Some("Réinitialiser le mot de passe".into()),
                         footer: Some("Si ce lien a expiré, vous pouvez en demander un nouveau.".into()),
                         button_text_request_new: Some("Demander un nouveau lien".into()),
+                    },
+                    it: VarsTemplate {
+                        subject: "Richiesta di reimpostazione della password".into(),
+                        header: "Richiesta di reimpostazione della password per".into(),
+                        text: None,
+                        click_link: Some("Apri il link qui sotto per reimpostare la password.".into()),
+                        validity: Some("Per motivi di sicurezza, il link è valido solo per un breve periodo.".into()),
+                        expires: Some("Il link scade il:".into()),
+                        button: Some("Reimposta password".into()),
+                        footer: Some("Se il link è scaduto, puoi richiederne uno nuovo.".into()),
+                        button_text_request_new: Some("Richiedi un nuovo link".into()),
                     },
                     ja: VarsTemplate {
                         subject: "パスワードリセットのご依頼".into(),
@@ -1166,6 +1200,22 @@ Votre compte n'a pas été compromis et aucune donnée n'a été divulguée."#.i
                         footer: None,
                         button_text_request_new: Some("Demander un lien de réinitialisation du mot de passe".into()),
                     },
+                    it: VarsTemplate {
+                        subject: "Indirizzo email già registrato".into(),
+                        header: "Indirizzo email già registrato –".into(),
+                        text: Some(r#"Qualcuno ha provato a registrare un nuovo account con il tuo indirizzo email,
+ma esiste già un account associato a questo indirizzo. Se sei stato tu e si è
+trattato di un errore, puoi ignorare questo messaggio. Se hai dimenticato la
+password, puoi reimpostarla usando il link qui sotto.
+Se non hai richiesto tu la registrazione, il tuo account è al sicuro e nessun
+dato è stato divulgato."#.into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: Some("Richiedi un link per reimpostare la password".into()),
+                    },
                     ja: VarsTemplate {
                         subject: "このメールアドレスは登録済みです".into(),
                         header: "このメールアドレスは登録済みです -".into(),
@@ -1359,6 +1409,17 @@ Your account has not been compromised and no data was leaked."#.into()),
                         subject: "One Time Password".into(),
                         header: "One Time Password for".into(),
                         text: Some("Your OTP is the following:".into()),
+                        click_link: None,
+                        validity: None,
+                        expires: None,
+                        button: None,
+                        footer: None,
+                        button_text_request_new: None,
+                    },
+                    it: VarsTemplate {
+                        subject: "Codice monouso".into(),
+                        header: "Codice monouso per".into(),
+                        text: Some("Il tuo codice monouso è:".into()),
                         click_link: None,
                         validity: None,
                         expires: None,
@@ -2529,6 +2590,9 @@ impl Vars {
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "fr", "TZ_FMT_FR") {
             self.email.tz_fmt.fr = v.into();
+        }
+        if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "it", "TZ_FMT_IT") {
+            self.email.tz_fmt.it = v.into();
         }
         if let Some(v) = t_str(&mut tz_fmt, "email.tz_fmt", "ja", "TZ_FMT_JA") {
             self.email.tz_fmt.ja = v.into();
@@ -3877,6 +3941,13 @@ impl Vars {
                         self.templates.password_reset.fr.clone()
                     }
                 }
+                "it" => {
+                    if is_password_new {
+                        self.templates.password_new.it.clone()
+                    } else {
+                        self.templates.password_reset.it.clone()
+                    }
+                }
                 "ja" => {
                     if is_password_new {
                         self.templates.password_new.ja.clone()
@@ -3942,7 +4013,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de es fr ja ko nb nl pl pt ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans"
                     )
                 }
             };
@@ -4006,6 +4077,13 @@ impl Vars {
                         self.templates.password_new.fr = tpl;
                     } else {
                         self.templates.password_reset.fr = tpl;
+                    }
+                }
+                "it" => {
+                    if is_password_new {
+                        self.templates.password_new.it = tpl;
+                    } else {
+                        self.templates.password_reset.it = tpl;
                     }
                 }
                 "ja" => {
@@ -4073,7 +4151,7 @@ impl Vars {
                 }
                 _ => {
                     panic!(
-                        "Invalid value for `templates.lang`, allowed are: en de es fr ja ko nb nl pl pt ru uk zh_hans"
+                        "Invalid value for `templates.lang`, allowed are: en cs de es fr it ja ko nb nl pl pt ru uk zh_hans"
                     )
                 }
             }
@@ -4995,6 +5073,7 @@ pub struct VarsEmailTzFmt {
     pub en: Cow<'static, str>,
     pub es: Cow<'static, str>,
     pub fr: Cow<'static, str>,
+    pub it: Cow<'static, str>,
     pub ja: Cow<'static, str>,
     pub ko: Cow<'static, str>,
     pub nl: Cow<'static, str>,
@@ -5351,6 +5430,7 @@ pub struct VarsTemplatesLanguages {
     pub en: VarsTemplate,
     pub es: VarsTemplate,
     pub fr: VarsTemplate,
+    pub it: VarsTemplate,
     pub ja: VarsTemplate,
     pub ko: VarsTemplate,
     pub nb: VarsTemplate,
@@ -5894,6 +5974,55 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn italian_email_overrides_keep_localized_defaults() -> Result<(), toml::de::Error> {
+        let mut vars = Vars::default();
+        let mut table: toml::Table = toml::from_str(
+            r#"
+            [email.tz_fmt]
+            it = "%d-%m-%Y %T"
+
+            [[templates]]
+            lang = "it"
+            typ = "password_new"
+            subject = "Crea la tua password"
+
+            [[templates]]
+            lang = "it"
+            typ = "password_reset"
+            subject = "Cambia la tua password"
+            "#,
+        )?;
+        vars.parse_email(&mut table, &mut RauthySecrets::default());
+        vars.parse_templates(&mut table);
+
+        assert_eq!(vars.email.tz_fmt.it, "%d-%m-%Y %T");
+        assert_eq!(vars.email.tz_fmt.en, "%m/%d/%Y %T (%Z)");
+        assert_eq!(
+            vars.templates.password_new.it.subject,
+            "Crea la tua password"
+        );
+        assert_eq!(
+            vars.templates.password_new.it.button.as_deref(),
+            Some("Imposta password")
+        );
+        assert_eq!(
+            vars.templates.password_reset.it.subject,
+            "Cambia la tua password"
+        );
+        assert_eq!(
+            vars.templates
+                .password_reset
+                .it
+                .button_text_request_new
+                .as_deref(),
+            Some("Richiedi un nuovo link"),
+        );
+        assert_eq!(vars.templates.password_new.en.subject, "New Password");
+
+        Ok(())
+    }
 
     #[test]
     fn consent_enable() {

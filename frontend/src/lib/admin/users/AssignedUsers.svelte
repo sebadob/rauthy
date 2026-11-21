@@ -82,6 +82,8 @@
     }
 
     async function onRemove(userId: string) {
+        const assignment = name;
+        const url = usersUrl;
         err = '';
 
         // the list only holds the minified `UserResponseSimple`, but a PATCH operates on the whole
@@ -93,7 +95,7 @@
         }
 
         let current = patchKey === 'groups' ? (resUser.body.groups ?? []) : resUser.body.roles;
-        let remaining = current.filter(v => v !== name);
+        let remaining = current.filter(v => v !== assignment);
 
         // anti-lockout: an admin must not strip the `rauthy_admin` role from its own account
         if (
@@ -118,109 +120,120 @@
         if (res.error) {
             err = res.error.message;
         } else {
-            await fetchUsers(usersUrl);
+            await fetchUsers(url);
         }
     }
 </script>
 
-<div class="search">
-    <SearchBar bind:value={searchValue} width="min(36rem, 100%)" />
+<div class="members">
+    <SearchBar bind:value={searchValue} width="100%" />
+
+    {#if err}
+        <p class="err" role="alert">{err}</p>
+    {/if}
+
+    {#if users.length === 0}
+        <p class="ui-muted-copy">{msgEmpty}</p>
+    {:else}
+        <ul class="users-list" role="list">
+            {#each usersPaginated as user (user.id)}
+                {@const name = [user.given_name, user.family_name].filter(Boolean).join(' ')}
+                <li class="member">
+                    <div class="identity">
+                        <UserPicture
+                            fallbackCharacters={fallbackCharacters(user)}
+                            userId={user.id}
+                            pictureId={user.picture_id}
+                            size="small"
+                            disableUpload
+                        />
+                        <div class="user-data">
+                            <div class="name">{name || user.email}</div>
+                            {#if name}<div class="secondary">{user.email}</div>{/if}
+                            <div class="secondary font-mono">{user.id}</div>
+                        </div>
+                    </div>
+                    {#if canDelete}
+                        <Button ariaLabel={msgRemove} invisible onclick={() => onRemove(user.id)}>
+                            <Tooltip text={msgRemove}>
+                                <IconTrash width="1.125rem" />
+                            </Tooltip>
+                        </Button>
+                    {/if}
+                </li>
+            {/each}
+        </ul>
+    {/if}
+
+    <Pagination bind:items={usersFiltered} bind:itemsPaginated={usersPaginated} />
 </div>
 
-{#if err}
-    <div class="err">
-        {err}
-    </div>
-{/if}
-
-{#if users.length === 0}
-    <p class="empty">{msgEmpty}</p>
-{:else}
-    <div class="usersList">
-        {#each usersPaginated ?? [] as user (user.id)}
-            <div class="row">
-                <div class="picture">
-                    <UserPicture
-                        fallbackCharacters={fallbackCharacters(user)}
-                        userId={user.id}
-                        pictureId={user.picture_id}
-                        size="small"
-                        disableUpload
-                    />
-                </div>
-                <div class="userData">
-                    <div>{user.email}</div>
-                    <div class="names">
-                        {user.given_name}
-                        {user.family_name}
-                        <span class="uid font-mono">{user.id}</span>
-                    </div>
-                </div>
-                {#if canDelete}
-                    <Button invisible onclick={() => onRemove(user.id)}>
-                        <Tooltip text={msgRemove}>
-                            <IconTrash width="1.15rem" />
-                        </Tooltip>
-                    </Button>
-                {/if}
-            </div>
-        {/each}
-    </div>
-{/if}
-
-<Pagination bind:items={usersFiltered} bind:itemsPaginated={usersPaginated} />
-
 <style>
-    /* a fixed list width makes every row the same size, so rows and their hover highlight align */
-    .usersList {
-        display: flex;
-        flex-direction: column;
-        gap: 0.125rem;
-        width: min(36rem, 100%);
-    }
-
-    .row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .members,
+    .users-list {
+        display: grid;
         gap: 0.5rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: var(--border-radius);
-        overflow: clip;
-    }
-
-    .row:hover {
-        background: hsl(var(--bg-high));
-    }
-
-    .picture {
-        flex: none;
-    }
-
-    .userData {
-        display: flex;
-        flex: 1 1 auto;
-        flex-direction: column;
-        align-items: flex-start;
         min-width: 0;
-        line-height: 1.1rem;
-        overflow-x: clip;
     }
 
-    .names {
-        opacity: 0.65;
-        font-size: 0.8rem;
+    .users-list {
+        padding: 0;
+        margin: 0;
+        list-style: none;
     }
 
-    .search {
-        margin: 1rem 0 0.5rem 0;
+    .member,
+    .identity {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-width: 0;
     }
 
-    .uid {
-        margin-left: 0.5rem;
+    .member {
+        margin: 0;
+        justify-content: space-between;
+        padding: 0.75rem;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
     }
 
-    .empty {
-        margin: 1rem 0.5rem;
+    .member > :global(.admin-control) {
+        --ui-button-height: 40px;
+        --ui-button-padding: 0 0.5rem;
+        --ui-muted: hsl(var(--error));
+    }
+
+    .member:hover,
+    .member:focus-within {
+        background: var(--ui-container);
+    }
+
+    .identity :global(.avatar) {
+        --avatar-background: var(--ui-tonal);
+    }
+
+    .identity :global(.avatar span) {
+        color: var(--ui-primary);
+        font-size: 0.875rem;
+        line-height: 1;
+    }
+
+    .user-data {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .name {
+        color: var(--ui-text);
+        font-size: var(--ui-control-font-size);
+        font-weight: 600;
+    }
+
+    .secondary {
+        color: var(--ui-muted);
+        font-size: 0.8125rem;
+        line-height: 1.4;
     }
 </style>

@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
-    import { useTrigger } from '#state/callback.svelte.ts';
     import NavSub from '#lib/nav/NavSub.svelte';
     import SearchBar from '#lib/search_bar/SearchBar.svelte';
     import Tabs from '#lib/tabs/Tabs.svelte';
@@ -25,10 +24,6 @@
     import type { PamGroupsSorted } from '#lib/admin/pam/types.js';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
     let searchValue = $state('');
@@ -104,6 +99,16 @@
         }
     });
 
+    function clearSelection() {
+        if (isUser) {
+            selectedUser = undefined;
+        } else if (isGroup) {
+            selectedGroup = undefined;
+        } else {
+            selectedHost = undefined;
+        }
+    }
+
     async function fetchGroups() {
         let res = await fetchGet<PamGroupResponse[]>('/auth/v1/pam/groups');
         if (res.body) {
@@ -152,12 +157,12 @@
 </script>
 
 <NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="scopes"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
+    detail={!!((isUser && selectedUser) || (isGroup && selectedGroup) || (isHost && selectedHost))}
+    onBack={clearSelection}
+    buttonTilesAriaControls="pam"
 >
-    <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
+    <AdminListHeading title="PAM" />
+    <ButtonAddModal level={2} bind:closeModal alignRight>
         {#if isUser}
             <PAMUserAdd onCreate={onCreateUser} />
         {:else if isGroup}
@@ -215,12 +220,10 @@
                 {:else}
                     {#each groupsFiltered as group (group.id)}
                         <NavButtonTile
+                            badge={group.typ}
                             onclick={() => (selectedGroup = group)}
                             selected={group.id === selectedGroup?.id}
                         >
-                            <span class="typ font-mono">
-                                {group.typ[0].toUpperCase()}
-                            </span>
                             {group.name}
                         </NavButtonTile>
                     {/each}
@@ -282,12 +285,6 @@
         font-size: 0.8rem;
     }
 
-    .navBtn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
     .navList {
         max-height: calc(100dvh - 10.25rem);
         margin-top: 0.5rem;
@@ -306,7 +303,9 @@
         overflow-x: clip;
     }
 
-    .typ {
-        color: hsl(var(--accent));
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 </style>

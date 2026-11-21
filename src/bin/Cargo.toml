@@ -80,3 +80,49 @@ pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
 ring = { workspace = true }
 tokio-test = "*"
+
+[lints.rust]
+warnings = { level = "deny", priority = -2 }
+unknown_lints = { level = "allow", priority = -1 } # allow nightly lints
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+
+# Permanently allowed (intentional disagreement with pedantic)
+assert_is_empty = "allow"
+manual_assert = "allow"
+missing_errors_doc = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+uninlined_format_args = "allow"
+
+# Temporarily allowed (to be reviewed and enabled incrementally)
+assigning_clones = "allow"
+cast_lossless = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+deprecated_attributes_without_since = "allow"
+doc_markdown = "allow"
+ignored_unit_patterns = "allow"
+ignore_without_reason = "allow"
+implicit_clone = "allow"
+large_futures = "allow"
+map_unwrap_or = "allow"
+match_same_arms = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+needless_pass_by_value = "allow"
+needless_raw_string_hashes = "allow"
+redundant_closure_for_method_calls = "allow"
+redundant_else = "allow"
+semicolon_if_nothing_returned = "allow"
+single_char_pattern = "allow"
+struct_excessive_bools = "allow"
+struct_field_names = "allow"
+unchecked_time_subtraction = "allow"
+unnecessary_semicolon = "allow"
+unreadable_literal = "allow"
+unused_async = "allow"
+wildcard_imports = "allow"

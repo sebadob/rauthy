@@ -4,7 +4,7 @@ export type PageSize = 5 | 10 | 15 | 20 | 30 | 50 | 100 | 500 | 1000;
 
 export const PAGE_SIZE_DEFAULT: PageSize = 20;
 
-export const PAGE_SIZE_OPTIONS: PageSize[] = [5, 10, 20, 30, 50, 100, 500, 1000];
+export const PAGE_SIZE_OPTIONS: PageSize[] = [5, 10, 15, 20, 30, 50, 100, 500, 1000];
 
 // the same key for every pagination, so the chosen count is shared across the whole Admin UI
 const PAGE_SIZE_KEY = 'pageSize';

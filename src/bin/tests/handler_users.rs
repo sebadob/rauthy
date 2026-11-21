@@ -1,7 +1,7 @@
 use crate::common::{
-    CLIENT_ID, PASSWORD, USERNAME, create_login_user, get_auth_headers, get_backend_url,
-    get_solved_pow, get_token_set, get_token_set_init_client, password_grant, password_token_set,
-    prepare_login, refresh, session_headers_with,
+    CLIENT_ID, PASSWORD, USERNAME, create_login_user, decode_claims, get_auth_headers,
+    get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client, password_grant,
+    password_token_set, prepare_login, refresh, session_headers_with,
 };
 use futures::{StreamExt, stream};
 use pretty_assertions::assert_eq;
@@ -78,23 +78,11 @@ async fn test_users() -> Result<(), Box<dyn Error>> {
     assert_eq!(alfred.email, "alfred@batcave.io");
     assert_eq!(alfred.given_name.as_deref(), Some("Alfred"));
     assert_eq!(alfred.family_name.as_deref(), Some("Batman"));
-    assert!(alfred.roles.contains(&"admin".to_string()));
-    assert!(alfred.roles.contains(&"user".to_string()));
+    assert!(alfred.roles.iter().any(|i| i == "admin"));
+    assert!(alfred.roles.iter().any(|i| i == "user"));
     assert!(alfred.groups.is_some());
-    assert!(
-        alfred
-            .groups
-            .as_ref()
-            .unwrap()
-            .contains(&"admin".to_string())
-    );
-    assert!(
-        alfred
-            .groups
-            .as_ref()
-            .unwrap()
-            .contains(&"user".to_string())
-    );
+    assert!(alfred.groups.as_ref().unwrap().iter().any(|i| i == "admin"));
+    assert!(alfred.groups.as_ref().unwrap().iter().any(|i| i == "user"));
     assert_eq!(alfred.enabled, true);
     assert_eq!(alfred.email_verified, false);
 
@@ -330,7 +318,7 @@ async fn test_userinfo() -> Result<(), Box<dyn Error>> {
     let info = expect_status_json!(res, 200, Userinfo);
     assert_eq!(info.sub, "m4PJ3TnyP32LA8hzY23deme3");
     assert_eq!(info.name, "Admin Init");
-    assert!(info.roles.contains(&"rauthy_admin".to_string()));
+    assert!(info.roles.iter().any(|i| i == "rauthy_admin"));
 
     // `init_client` has the `profile` scope, the admin has no `preferred_username`
     // -> `email_fallback` (default: true) must apply, like in the ID token
@@ -602,6 +590,12 @@ async fn assert_refresh_not_found(client: &Client, refresh_token: String) {
     assert!(body.contains("Refresh Token not found"), "{body}");
 }
 
+/// The password grant has no consent step, its refresh tokens are exempt from the consent check.
+fn assert_consent_exempt(ts: &TokenSet) {
+    let claims = decode_claims(ts.refresh_token.as_deref().unwrap());
+    assert_eq!(claims["consent_exempt"], json!(true), "{claims}");
+}
+
 /// The texts of the `ConsentRevoked` events for `email` since `from`, sorted.
 async fn consent_revoked_events(
     client: &Client,
@@ -771,10 +765,13 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
 
     // --- revocation drops the refresh tokens of the user for the client
     let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
+    assert_consent_exempt(&ts);
 
     time::sleep(Duration::from_secs(2)).await;
     let res = refresh(&client, ts.refresh_token.unwrap()).await;
     let ts = expect_status_json!(res, 200, TokenSet);
+    // the rotation keeps the exemption
+    assert_consent_exempt(&ts);
 
     // another user's refresh token for the same client
     let other = password_token_set(&client, USERNAME, PASSWORD).await;
@@ -1426,8 +1423,13 @@ async fn test_user_picture_survives_concurrent_failed_logins() -> Result<(), Box
         // upload while the logins wait for their password hash, one at a time
         time::sleep(Duration::from_millis(20)).await;
         let picture_id = upload_picture(&client, &url_user, &admin).await?;
+        let expected = if authorize {
+            StatusCode::BAD_REQUEST
+        } else {
+            StatusCode::UNAUTHORIZED
+        };
         for login in logins {
-            assert_eq!(login.await?, StatusCode::UNAUTHORIZED, "round {round}");
+            assert_eq!(login.await?, expected, "round {round}");
         }
 
         let res = client.get(&url_user).headers(admin.clone()).send().await?;

@@ -1,11 +1,9 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Main from '#lib/Main.svelte';
+    import AdminShell from '#lib/admin/AdminShell.svelte';
     import Button from '#lib/button/Button.svelte';
-    import NavSide from '#lib/nav/NavSide.svelte';
     import { useSession } from '#state/session.svelte.ts';
     import { fetchGet } from '#api/fetch.ts';
-    import Events from '#lib/admin/events/Events.svelte';
     import { initI18nAdmin, useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
@@ -18,9 +16,6 @@
 
     let ta = useI18nAdmin();
     let session = useSession('admin');
-
-    let innerWidth: undefined | number = $state();
-
     let isAdmin = $state(false);
     let needsAdminRole = $state(false);
     let mfaReqErr = $state(false);
@@ -49,8 +44,6 @@
     }
 </script>
 
-<svelte:window bind:innerWidth />
-
 <svelte:head>
     <title>Rauthy Admin</title>
 </svelte:head>
@@ -76,17 +69,7 @@
         </div>
     </div>
 {:else if isAdmin}
-    <NavSide />
-    <Main>
-        <div class="content">
-            {@render children()}
-        </div>
-        {#if innerWidth && innerWidth > 1024}
-            <div class="events">
-                <Events />
-            </div>
-        {/if}
-    </Main>
+    <AdminShell {children} />
 {/if}
 
 <style>
@@ -96,11 +79,6 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-    }
-
-    .content {
-        flex: 1;
-        display: flex;
     }
 
     .text {

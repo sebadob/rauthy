@@ -83,3 +83,42 @@ pub async fn send_email_otp(code: &str, user: &User) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::language::Language;
+    use crate::rauthy_config::Vars;
+
+    #[test]
+    fn italian_otp_renders_in_html_and_plain_text() -> Result<(), askama::Error> {
+        let vars = Vars::default();
+        let template = &vars.templates.email_otp.it;
+        let text = template.text.as_deref().unwrap();
+        let code = "123456";
+        let html = EmailOtpHtml {
+            lang: Language::It.as_str(),
+            code,
+            header: &template.header,
+            text,
+            ..Default::default()
+        }
+        .render()?;
+        let plain = EmailOtpTxt {
+            code,
+            header: &template.header,
+            text,
+            ..Default::default()
+        }
+        .render()?;
+
+        assert_eq!(template.subject, "Codice monouso");
+        assert!(html.contains("<html lang=\"it\">"));
+        for body in [html, plain] {
+            assert!(body.contains("Il tuo codice monouso è:"));
+            assert!(body.contains(code));
+        }
+
+        Ok(())
+    }
+}
