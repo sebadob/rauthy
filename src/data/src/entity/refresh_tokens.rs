@@ -94,7 +94,7 @@ impl RefreshToken {
 pub enum RefreshTokenGrant<'a> {
     Unchecked,
     /// The token is only inserted while the grant of the user for the client and this RFC 8707
-    /// `resource` exists, see [`RefreshToken::create`].
+    /// `resource` exists, else [`RefreshToken::create`] fails with `ConsentRequired`.
     Required {
         resource: Option<&'a str>,
     },
@@ -102,15 +102,6 @@ pub enum RefreshTokenGrant<'a> {
 
 // CRUD
 impl RefreshToken {
-    /// With [`RefreshTokenGrant::Required`], the row is only inserted while the user's consent
-    /// grant exists, checked in the insert itself, else this fails with `ConsentRequired`. A grant
-    /// revoked before the insert keeps it out. A revoke after the insert deletes it, since it
-    /// deletes the grant and then the refresh tokens of the client in one transaction: on
-    /// hiqlite, both are single raft log entries applied in order. On Postgres, the insert holds
-    /// a key share lock on the grant row, so a revoke that deleted the grant first makes it find
-    /// no row, and a revoke that comes after waits for the insert to commit, and its later
-    /// refresh token delete sees the new row. Only [`RefreshTokenGrant::Unchecked`] updates an
-    /// existing row with the same `id`, with the grant check a duplicate `id` fails.
     #[allow(clippy::too_many_arguments)]
     pub async fn create(
         id: String,
@@ -127,99 +118,126 @@ impl RefreshToken {
         client: &Client,
         grant: RefreshTokenGrant<'_>,
     ) -> Result<(), ErrorResponse> {
-        // the column list of both inserts with the values `$1` to `$10`. The grant check binds
-        // its own `$11` to `$13` (user, client, resource): Postgres rejects `$2` / `$9` used for
-        // both, it deduces `text` from the `SELECT` list and `varchar` from the `WHERE`.
-        macro_rules! insert {
-            ($values:literal) => {
-                concat!(
-                    r#"
+        match grant {
+            RefreshTokenGrant::Unchecked => {
+                let sql = r#"
 INSERT INTO refresh_tokens
 (id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
-client_created_micros)"#,
-                    $values
-                )
-            };
-        }
-        let (sql, resource) = match grant {
-            RefreshTokenGrant::Unchecked => (
-                insert!(
-                    r#"
+client_created_micros)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $2, nbf = $3, exp = $4, scope = $5, session_id = $7, access_token_jti = $8,
-    client_id = $9, client_created_micros = $10"#
-                ),
-                None,
-            ),
-            RefreshTokenGrant::Required { resource } if is_hiqlite() => (
-                insert!(
-                    r#"
+    client_id = $9, client_created_micros = $10"#;
+
+                if is_hiqlite() {
+                    DB::hql()
+                        .execute(
+                            sql,
+                            params!(
+                                id,
+                                user_id,
+                                nbf,
+                                exp,
+                                scope,
+                                is_mfa,
+                                session_id,
+                                access_token_jti,
+                                client.id.as_str(),
+                                client.created_micros
+                            ),
+                        )
+                        .await?;
+                } else {
+                    DB::pg_execute(
+                        sql,
+                        &[
+                            &id,
+                            &user_id,
+                            &nbf,
+                            &exp,
+                            &scope,
+                            &is_mfa,
+                            &session_id,
+                            &access_token_jti,
+                            &client.id,
+                            &client.created_micros,
+                        ],
+                    )
+                    .await?;
+                }
+            }
+            RefreshTokenGrant::Required { resource } => {
+                let resource = resource_key(resource);
+                let rows = if is_hiqlite() {
+                    let sql = r#"
+INSERT INTO refresh_tokens
+(id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
+client_created_micros)
 SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 WHERE EXISTS (
-    SELECT 1 FROM user_consents WHERE user_id = $11 AND client_id = $12 AND resource = $13
-)"#
-                ),
-                Some(resource_key(resource)),
-            ),
-            RefreshTokenGrant::Required { resource } => (
-                insert!(
-                    r#"
+    SELECT 1 FROM user_consents WHERE user_id = $2 AND client_id = $9 AND resource = $11
+)"#;
+
+                    DB::hql()
+                        .execute(
+                            sql,
+                            params!(
+                                id,
+                                user_id,
+                                nbf,
+                                exp,
+                                scope,
+                                is_mfa,
+                                session_id,
+                                access_token_jti,
+                                client.id.as_str(),
+                                client.created_micros,
+                                resource
+                            ),
+                        )
+                        .await?
+                } else {
+                    // `$11` / `$12` repeat `$2` / `$9`: Postgres deduces `text` for them from the
+                    // `SELECT` list and `varchar` from the `WHERE`, and rejects one bind for both.
+                    // `FOR KEY SHARE` makes a concurrent consent revoke wait for this insert.
+                    let sql = r#"
+INSERT INTO refresh_tokens
+(id, user_id, nbf, exp, scope, is_mfa, session_id, access_token_jti, client_id,
+client_created_micros)
 SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 WHERE EXISTS (
     SELECT 1 FROM user_consents WHERE user_id = $11 AND client_id = $12 AND resource = $13
     FOR KEY SHARE
-)"#
-                ),
-                Some(resource_key(resource)),
-            ),
-        };
+)"#;
 
-        let rows = if is_hiqlite() {
-            let mut params = params!(
-                id,
-                user_id.as_str(),
-                nbf,
-                exp,
-                scope,
-                is_mfa,
-                session_id,
-                access_token_jti,
-                client.id.as_str(),
-                client.created_micros
-            );
-            if let Some(resource) = resource {
-                params.push(user_id.as_str().into());
-                params.push(client.id.as_str().into());
-                params.push(resource.into());
-            }
-            DB::hql().execute(sql, params).await?
-        } else {
-            let mut params: Vec<&(dyn postgres_types::ToSql + Sync)> = vec![
-                &id,
-                &user_id,
-                &nbf,
-                &exp,
-                &scope,
-                &is_mfa,
-                &session_id,
-                &access_token_jti,
-                &client.id,
-                &client.created_micros,
-            ];
-            if let Some(resource) = &resource {
-                params.push(&user_id);
-                params.push(&client.id);
-                params.push(resource);
-            }
-            DB::pg_execute(sql, &params).await?
-        };
+                    DB::pg_execute(
+                        sql,
+                        &[
+                            &id,
+                            &user_id,
+                            &nbf,
+                            &exp,
+                            &scope,
+                            &is_mfa,
+                            &session_id,
+                            &access_token_jti,
+                            &client.id,
+                            &client.created_micros,
+                            &user_id,
+                            &client.id,
+                            &resource,
+                        ],
+                    )
+                    .await?
+                };
 
-        if resource.is_some() && rows == 0 {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::ConsentRequired,
-                "no consent grant for this client",
-            ));
+                if rows == 0 {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::ConsentRequired,
+                        "no consent grant for this client",
+                    ));
+                }
+            }
         }
         Ok(())
     }
