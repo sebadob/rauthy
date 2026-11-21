@@ -254,8 +254,8 @@
             <div class="absolute indicator">
                 <Popover
                     ariaLabel={label || t.common.month}
-                    offsetLeft="-7.4rem"
-                    offsetTop={openTop ? '-17.75rem' : '.1rem'}
+                    fitViewport
+                    placement={openTop ? 'above' : 'below'}
                     bind:close
                     {onToggle}
                     btnInvisible
@@ -263,7 +263,7 @@
                 >
                     {#snippet button()}
                         <div title={label} class="pointer">
-                            <IconCalendar color="hsl(var(--text)" width="1.2rem" />
+                            <IconCalendar color="hsl(var(--text))" width="1.2rem" />
                         </div>
                     {/snippet}
                     <div class="popup">

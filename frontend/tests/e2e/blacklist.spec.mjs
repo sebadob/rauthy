@@ -271,6 +271,13 @@ test.describe('ip blacklist', () => {
             const entry = main(page).getByRole('button', { name: ip, exact: true });
             await expect(entry).toBeVisible();
             const del = await rowDeleteButton(page, entry, ip);
+            const offset = await del.evaluate(button => {
+                const card = button.closest('.blacklisted')?.getBoundingClientRect();
+                const icon = button.querySelector('svg')?.getBoundingClientRect();
+                if (!card || !icon) throw new Error('Missing blacklist card or delete icon');
+                return Math.abs(card.y + card.height / 2 - icon.y - icon.height / 2);
+            });
+            expect(offset).toBeLessThanOrEqual(1);
             await del.scrollIntoViewIfNeeded();
             await expect(del).toBeInViewport();
             await del.click();

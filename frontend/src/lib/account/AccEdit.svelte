@@ -303,7 +303,7 @@
                 label={t.common.delete.toUpperCase()}
                 placeholder={t.common.delete.toUpperCase()}
                 bind:value={deleteConfirmValue}
-                width="15rem"
+                width="100%"
             />
             <div class="bottom">
                 <Button level={2} onclick={() => closeDelete?.()}>{t.common.cancel}</Button>
@@ -324,12 +324,14 @@
         margin-top: 0.35rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
     }
 
     .container {
         display: flex;
         flex-direction: column;
+        min-width: 0;
     }
 
     .err {
@@ -346,12 +348,17 @@
         max-width: 60rem;
     }
 
+    .formInner > :global(*) {
+        min-width: 0;
+    }
+
     .formInner + .bottom {
         margin-top: var(--ui-space);
     }
 
     .selfDelete {
         width: min(28rem, calc(100dvw - 4rem));
+        overflow-wrap: anywhere;
     }
 
     .selfDelete h5 {
@@ -361,5 +368,11 @@
 
     .success {
         margin-bottom: -0.25rem;
+    }
+
+    @media (width < 520px) {
+        .formInner {
+            grid-template-columns: minmax(0, 1fr);
+        }
     }
 </style>

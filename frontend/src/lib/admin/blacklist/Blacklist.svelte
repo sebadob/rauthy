@@ -189,13 +189,15 @@
                         {formatDateFromTs(entry.exp)}
                     </div>
                     {#if isAdmin}
-                        <EntityDelete
-                            url={`/auth/v1/blacklist/${entry.ip}`}
-                            name={entry.ip}
-                            ariaLabel={`${t.common.delete}: ${entry.ip}`}
-                            iconOnly
-                            onDelete={fetchBlacklist}
-                        />
+                        <div class="blacklist-action">
+                            <EntityDelete
+                                url={`/auth/v1/blacklist/${entry.ip}`}
+                                name={entry.ip}
+                                ariaLabel={`${t.common.delete}: ${entry.ip}`}
+                                iconOnly
+                                onDelete={fetchBlacklist}
+                            />
+                        </div>
                     {/if}
                 </div>
             {/snippet}
@@ -274,8 +276,13 @@
             padding-inline: 0.625rem;
         }
         .date {
+            grid-column: 1;
             grid-row: 2;
             padding-inline: 0.375rem;
+        }
+        .blacklist-action {
+            grid-column: 2;
+            grid-row: 1 / span 2;
         }
     }
 </style>

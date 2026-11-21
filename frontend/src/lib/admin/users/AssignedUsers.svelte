@@ -154,7 +154,7 @@
                         </div>
                     </div>
                     {#if canDelete}
-                        <Button ariaLabel={msgRemove} level={-3} onclick={() => onRemove(user.id)}>
+                        <Button ariaLabel={msgRemove} invisible onclick={() => onRemove(user.id)}>
                             <Tooltip text={msgRemove}>
                                 <IconTrash width="1.125rem" />
                             </Tooltip>
@@ -191,11 +191,18 @@
     }
 
     .member {
+        margin: 0;
         justify-content: space-between;
         padding: 0.75rem;
         border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
         background: var(--ui-surface);
+    }
+
+    .member > :global(.admin-control) {
+        --ui-button-height: 40px;
+        --ui-button-padding: 0 0.5rem;
+        --ui-muted: hsl(var(--error));
     }
 
     .member:hover,

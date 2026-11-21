@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { tick, type Snippet } from 'svelte';
     import Button from '#lib/button/Button.svelte';
     import { genKey } from '#utils/helpers.ts';
 
@@ -13,6 +13,7 @@
         absolute,
         anchored,
         placement = 'above',
+        fitViewport,
         lazy,
         btnDisabled,
         btnInvisible,
@@ -37,6 +38,7 @@
         // button via CSS anchor positioning instead of the manual offset math below
         anchored?: boolean;
         placement?: 'above' | 'below';
+        fitViewport?: boolean;
         lazy?: boolean;
         btnDisabled?: boolean;
         btnInvisible?: boolean;
@@ -78,7 +80,7 @@
 
         if (ref && refPopover) {
             // anchored popovers are placed declaratively by CSS, nothing to do here
-            if (!anchored) {
+            if (!anchored && !fitViewport) {
                 if (absolute) {
                     refPopover.style.top = offsetTop;
                     refPopover.style.left = offsetLeft;
@@ -93,12 +95,32 @@
         }
     }
 
+    function positionInViewport() {
+        if (!ref || !refPopover?.matches(':popover-open')) return;
+
+        const inset = 8;
+        const rect = ref.getBoundingClientRect();
+        const { offsetWidth: width, offsetHeight: height } = refPopover;
+        const above = rect.top - height - inset;
+        const below = rect.bottom + inset;
+        const fitsAbove = above >= inset;
+        const fitsBelow = below + height <= window.innerHeight - inset;
+        const y = (placement === 'above' && fitsAbove) || !fitsBelow ? above : below;
+        refPopover.style.top = `${Math.max(inset, Math.min(y, window.innerHeight - height - inset))}px`;
+        refPopover.style.left = `${Math.max(inset, Math.min(rect.right - width, window.innerWidth - width - inset))}px`;
+    }
+
     function ontoggle(ev: ToggleEvent) {
         let st = ev.newState as 'open' | 'closed';
         isOpen = 'open' === st;
         onToggle?.(st);
+        if (fitViewport && isOpen) {
+            void tick().then(positionInViewport);
+        }
     }
 </script>
+
+<svelte:window onresize={fitViewport ? positionInViewport : undefined} />
 
 <div>
     <Button
@@ -129,6 +151,7 @@
         aria-expanded={isOpen}
         class="popover"
         class:anchored
+        class:fitViewport
         class:below={placement === 'below'}
         popover="auto"
         {ontoggle}
@@ -168,6 +191,13 @@
     .popover.anchored.below {
         position-area: bottom span-right;
         margin: 0.4rem 0 0;
+    }
+
+    .popover.fitViewport {
+        position: fixed;
+        max-width: calc(100dvw - 16px);
+        max-height: calc(100dvh - 16px);
+        overflow: auto;
     }
 
     .inner {

@@ -234,15 +234,15 @@ We need the onclick listener here to make easy click-outside work.
         box-shadow: 0 18px 60px #0003;
     }
     :global(.admin-shell) dialog:not(:global(.branding-preview *)) > :global(div) {
-        padding: 32px;
+        padding: var(--dialog-padding, 32px);
         box-shadow: none;
     }
     :global(.admin-shell) dialog:not(:global(.branding-preview *))::backdrop {
         background: #0006;
     }
     :global(.admin-shell) dialog:not(:global(.branding-preview *)) :global(.close) {
-        top: -20px;
-        right: -20px;
+        top: max(-20px, calc(4px - var(--dialog-padding, 32px)));
+        right: max(-20px, calc(4px - var(--dialog-padding, 32px)));
     }
 
     :global(.admin-shell) dialog {

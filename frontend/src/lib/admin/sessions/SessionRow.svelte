@@ -44,7 +44,7 @@
 <div class="container admin-session-card" class:expired={session.exp < now}>
     <Expandable>
         {#snippet summary()}
-            <div class="header admin-session-summary">
+            <div class="admin-session-summary" class:withDelete={isAdmin}>
                 <div class="admin-session-identity">
                     <span class="admin-session-state">{session.state}</span>
                     <Tooltip text="User ID">
@@ -56,7 +56,7 @@
                         </div>
                     </Tooltip>
                 </div>
-                <div class="headerRight" class:withDelete={isAdmin}>
+                <div class="session-meta">
                     <Tooltip text={ta.options.lastSeen}>
                         <div class="date">
                             <span class="admin-field-caption">{ta.options.lastSeen}</span>
@@ -71,16 +71,18 @@
                             </div>
                         </Tooltip>
                     </Button>
+                </div>
 
-                    {#if isAdmin}
+                {#if isAdmin}
+                    <div class="session-action">
                         <EntityDelete
                             url={`/auth/v1/sessions/id/${session.id}`}
                             name={session.id}
                             iconOnly
                             onDelete={() => onDeleted(session.id)}
                         />
-                    {/if}
-                </div>
+                    </div>
+                {/if}
             </div>
         {/snippet}
 
@@ -128,6 +130,9 @@
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 1rem;
     }
+    .admin-session-summary.withDelete {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    }
     .admin-session-identity {
         display: flex;
         flex-direction: column;
@@ -149,17 +154,22 @@
         font-size: 0.75rem;
         line-height: 1.25rem;
     }
-    .headerRight {
+    .session-meta {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: center;
         gap: 0.625rem;
     }
-    .headerRight.withDelete {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-    }
-    .headerRight > :global(.admin-control) {
+    .session-meta > :global(.admin-control) {
+        justify-self: start;
         min-width: 0;
+        max-width: 100%;
+        --ui-button-height: auto;
+        --ui-button-padding: 0;
+    }
+    .session-action {
+        justify-self: end;
+        --ui-button-padding: 0 0.375rem;
     }
     .admin-field-caption {
         display: block;
@@ -179,6 +189,26 @@
         .admin-session-summary,
         .admin-session-details {
             grid-template-columns: minmax(0, 1fr);
+        }
+        .admin-session-summary {
+            gap: 0.5rem;
+        }
+        .admin-session-summary.withDelete {
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .admin-session-identity,
+        .session-meta {
+            grid-column: 1;
+        }
+        .session-action {
+            grid-column: 2;
+            grid-row: 1 / span 2;
+        }
+    }
+    @media (width < 420px) {
+        .session-meta {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0.125rem;
         }
     }
 </style>

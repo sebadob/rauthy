@@ -357,6 +357,19 @@ test.describe('sessions at phone size', () => {
             await openSessions(page);
             await searchBox(main(page)).fill(user.id);
             await expect(rows(page)).toHaveCount(1);
+            const collapsed = page.locator('.admin-session-card .admin-expandable > .header');
+            const offsets = await collapsed.evaluate(el => {
+                const card = el.getBoundingClientRect();
+                const center = card.y + card.height / 2;
+                return [
+                    ...el.querySelectorAll(':scope > button svg, .session-action button svg'),
+                ].map(icon => {
+                    const rect = icon.getBoundingClientRect();
+                    return Math.abs(rect.y + rect.height / 2 - center);
+                });
+            });
+            expect(offsets).toHaveLength(2);
+            expect(Math.max(...offsets)).toBeLessThanOrEqual(1);
             await rows(page).first().click();
             const sid = main(page).getByText(other.info.id, { exact: true });
             await sid.scrollIntoViewIfNeeded();

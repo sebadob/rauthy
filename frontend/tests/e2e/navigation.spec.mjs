@@ -167,7 +167,9 @@ test.describe('admin navigation', () => {
         ['groups', 'group', 'gid'],
         ['roles', 'role', 'rid'],
     ]) {
-        test(`shows the users assigned to a ${key} alongside its settings`, async ({ page }) => {
+        test(`shows the users assigned to a ${key} alongside its settings @mobile`, async ({
+            page,
+        }) => {
             await page.goto(`/auth/v1/admin/${area}`);
             const name = `membership-${Date.now()}`;
             const entity = await api(page, 'POST', area, { [key]: name });
@@ -187,6 +189,16 @@ test.describe('admin navigation', () => {
                     await expect(
                         main.getByRole('button', { name: `Remove from this ${key}` }),
                     ).toBeVisible();
+                    const alignment = await main.locator('.members').evaluate(members => {
+                        const search = members.querySelector('search')?.getBoundingClientRect();
+                        const row = members.querySelector('li.member')?.getBoundingClientRect();
+                        if (!search || !row) throw new Error('Missing search or member row');
+                        return Math.max(
+                            Math.abs(row.left - search.left),
+                            Math.abs(row.right - search.right),
+                        );
+                    });
+                    expect(alignment).toBeLessThanOrEqual(1);
                     await main.getByRole('button', { name: 'Config', exact: true }).click();
                     const field = key === 'group' ? 'Group Name' : 'Role Name';
                     await expect(main.getByRole('textbox', { name: field })).toHaveValue(name);
@@ -233,6 +245,80 @@ test.describe('admin navigation', () => {
         await page.setViewportSize({ width: 390, height: 850 });
         await expect(password).toHaveAttribute('aria-current', 'step');
         await expect(main.getByRole('button', { name: 'Logout', exact: true })).toBeVisible();
+    });
+
+    test('fits the full account form and birthdate calendar on a narrow phone @mobile @webkit', async ({
+        page,
+        allowErrors,
+    }) => {
+        allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
+        await page.setViewportSize({ width: 320, height: 568 });
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.route(
+            url => url.pathname === '/auth/v1/account',
+            async route => {
+                const response = await route.fetch();
+                const html = await response.text();
+                const body = html.replace(
+                    /(<template id="tpl_user_values_config">)([\s\S]*?)(<\/template>)/,
+                    (_, start, json, end) => {
+                        const config = JSON.parse(json);
+                        for (const key of [
+                            'birthdate',
+                            'street',
+                            'zip',
+                            'city',
+                            'country',
+                            'phone',
+                            'tz',
+                        ]) {
+                            config[key] = 'optional';
+                        }
+                        config.preferred_username.preferred_username = 'optional';
+                        return start + JSON.stringify(config) + end;
+                    },
+                );
+                await route.fulfill({ response, body });
+            },
+        );
+        await page.route('**/auth/v1/users/*/self/delete', route =>
+            route.request().method() === 'GET' ? route.fulfill({ status: 202 }) : route.abort(),
+        );
+
+        await page.goto('/auth/v1/account?v=info');
+        const main = page.getByRole('main');
+        await main.locator('.tabs').getByRole('button', { name: 'Edit', exact: true }).click();
+        await expect(main.getByRole('textbox', { name: 'Phone' })).toBeVisible();
+        await expect(main.getByRole('button', { name: 'Delete Account' })).toBeVisible();
+        const spills = await main.locator('.formInner').evaluate(form => {
+            const section = form.closest('section');
+            if (!section) throw new Error('Missing account section');
+            const rect = section.getBoundingClientRect();
+            const style = getComputedStyle(section);
+            const right =
+                rect.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth);
+            return [...form.querySelectorAll('input:not([type=hidden]), button')].some(control => {
+                const box = control.getBoundingClientRect();
+                return box.width > 0 && box.right > right + 1;
+            });
+        });
+        expect(spills).toBe(false);
+        await main.getByRole('button', { name: 'Birthdate', exact: true }).click();
+        const calendar = main.locator('.admin-date-field [popover]:popover-open').first();
+        await expect(calendar).toBeVisible();
+        await expect
+            .poll(() =>
+                calendar.evaluate(el => {
+                    const rect = el.getBoundingClientRect();
+                    return Math.min(
+                        rect.left,
+                        rect.top,
+                        innerWidth - rect.right,
+                        innerHeight - rect.bottom,
+                    );
+                }),
+            )
+            .toBeGreaterThanOrEqual(7);
     });
 
     test('links, renames and revokes a device from Account', async ({

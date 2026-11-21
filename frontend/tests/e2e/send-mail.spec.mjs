@@ -36,6 +36,49 @@ const filters = dialog => dialog.getByRole('combobox', { name: /^(User Filter|Gr
 test.describe('send e-mail', () => {
     // some tests start on the account page to get a session for the API helpers
     test.use({ allowErrors: ACCOUNT_EXPECTED_ERRORS });
+    test('shows full email job metadata and details on an iPhone SE @mobile @webkit', async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        const subject = 'Workspace maintenance and delivery status for the monthly newsletter';
+        await page.route(
+            url => url.pathname === '/auth/v1/email',
+            route =>
+                route.fulfill({
+                    json: [
+                        {
+                            id: 1795273200,
+                            updated: 1795273560,
+                            subject,
+                            status: 'Finished',
+                            filter_type: 'All',
+                            content_type: 'text',
+                            body: 'Your workspace will be available again shortly.',
+                        },
+                    ],
+                }),
+        );
+        await page.goto('/auth/v1/admin/users');
+        await page.getByRole('button', { name: 'E-Mail Jobs' }).click();
+        const dialog = page.getByRole('dialog', { name: 'E-Mail Jobs' });
+        const row = dialog.locator('.admin-expandable');
+        await expect(row.getByText(subject, { exact: true })).toBeVisible();
+        const metadata = row.locator('.job-meta');
+        await expect(metadata.locator('time')).toHaveCount(2);
+        await expect(metadata.getByText('Finished', { exact: true })).toBeVisible();
+        const fits = await metadata.evaluate(el => {
+            const width = el.getBoundingClientRect().right;
+            return [...el.children].every(
+                child => child.getBoundingClientRect().right <= width + 1,
+            );
+        });
+        expect(fits).toBe(true);
+        await row.getByRole('button', { name: 'Expand content' }).click();
+        await expect(
+            row.getByText('Your workspace will be available again shortly.'),
+        ).toBeVisible();
+    });
+
     test('opens the compose dialog with safe defaults and closes it again @mobile', async ({
         page,
     }) => {
