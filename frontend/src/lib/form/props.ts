@@ -27,5 +27,4 @@ export interface PropsInputDateCombo extends PropsInputDate {
 
     withDelete?: boolean;
     withTime?: boolean;
-    openTop?: boolean;
 }

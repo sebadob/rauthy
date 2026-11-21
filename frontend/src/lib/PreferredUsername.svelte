@@ -1,27 +1,32 @@
 <script lang="ts">
-    import Input from '$lib/form/Input.svelte';
-    import type { UserValuesPreferredUsername } from '$api/templates/UserValuesConfig';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import { fetchPut } from '$api/fetch';
-    import type { PreferredUsernameRequest } from '$api/types/user';
+    import { tick } from 'svelte';
+    import Input from '#lib/form/Input.svelte';
+    import type { UserValuesPreferredUsername } from '#api/templates/UserValuesConfig.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import { fetchPut } from '#api/fetch.ts';
+    import type { PreferredUsernameRequest } from '#api/types/user.ts';
     import { slide } from 'svelte/transition';
-    import Tooltip from '$lib/Tooltip.svelte';
-    import IconInfo from '$icons/IconInfo.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import Form from '$lib/form/Form.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import IconInfo from '#icons/IconInfo.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Form from '#lib/form/Form.svelte';
 
     let {
         userId,
         preferred_username = $bindable(),
         config,
         isAdmin,
+        isGroupAdmin,
     }: {
         userId: string;
         preferred_username: string | undefined;
         config: UserValuesPreferredUsername;
         isAdmin?: boolean;
+        // a delegated group admin may only set the username while it is still
+        // empty; overwriting an existing one is reserved for full admins
+        isGroupAdmin?: boolean;
     } = $props();
 
     let t = useI18n();
@@ -36,6 +41,11 @@
     let nameExists = $state(false);
     let required = $derived(config.preferred_username === 'required');
 
+    let isEmpty = $derived(!preferred_username || preferred_username.length === 0);
+    // who may open the editor: a full admin always; a group admin only while empty; the
+    // user itself while empty or when the value is not immutable
+    let canEdit = $derived(isAdmin || (isGroupAdmin ? isEmpty : isEmpty || !config.immutable));
+
     $effect(() => {
         username = preferred_username || '';
         forceOverwrite = false;
@@ -43,7 +53,7 @@
 
     $effect(() => {
         if (ref) {
-            requestAnimationFrame(() => {
+            tick().then(() => {
                 ref?.focus();
             });
         }
@@ -78,7 +88,7 @@
 
 {#if config.preferred_username !== 'hidden'}
     <div class="container">
-        <div class="label font-label" data-required={required}>
+        <div class="label font-label admin-field-label" data-required={required}>
             {t.account.preferredUsername.preferredUsername}
         </div>
 
@@ -88,12 +98,8 @@
             </div>
 
             <div class="btn">
-                {#if isAdmin || preferred_username?.length === 0 || !config.immutable}
-                    <Button
-                        ariaLabel={t.common.edit}
-                        level={required && !preferred_username ? -1 : 3}
-                        onclick={() => (showModal = true)}
-                    >
+                {#if canEdit}
+                    <Button ariaLabel={t.common.edit} level={3} onclick={() => (showModal = true)}>
                         {t.common.edit}
                     </Button>
 
@@ -227,5 +233,34 @@
 
     .value[data-required='true'] {
         border-bottom: 1px solid hsl(var(--error));
+    }
+
+    :global(.ui-shell) .container {
+        margin: 0;
+    }
+    :global(.ui-shell) .value {
+        align-items: center;
+        gap: 0.5rem;
+        min-height: var(--ui-field-height);
+        height: auto;
+        padding: 0 4px 0 14px;
+        border-color: var(--ui-outline);
+        font-size: var(--ui-control-font-size);
+        line-height: var(--ui-control-line-height);
+    }
+    :global(.ui-shell) .value[data-required='true'] {
+        border-color: hsl(var(--error));
+    }
+    :global(.ui-shell) .name {
+        padding: 0;
+        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+    :global(.ui-shell) .btn {
+        margin: 0;
+    }
+    :global(.ui-shell) .immutableInfo {
+        margin: 0 0.5rem 0 0;
+        transform: none;
     }
 </style>

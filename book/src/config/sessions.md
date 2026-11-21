@@ -44,16 +44,20 @@ be the same for each client connecting through it. However, a reverse proxy adds
 contain the clients real IP, like e.g., the `X-FORWARDED-FOR` header and maybe others (depending on
 the proxy).
 
+Rauthy uses the `X-REAL-IP` header for the real client IP and falls back to the first value of
+`X-FORWARDED-FOR` when it is missing. Any other header, like the RFC 7239 `Forwarded` header, is
+ignored. Without `proxy_mode = true`, Rauthy uses the IP of the direct connection only and looks
+at none of these headers.
+
 These headers can be spoofed from an attacker if the source IP is not validated. This is what
 Rauthy needs you to set the trusted proxies config for:
 
 ```toml
 [server]
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests with a
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -99,7 +103,8 @@ peer_ip_header_name = 'CF-Connecting-IP'
 
 The CDN usually adds some other headers than the default `X-FORWARDED-FOR` headers, like in this
 example `CF-Connecting-IP` to the request. If this is the case, you can tell Rauthy to always check
-for this header first and only use the other methods as fallback if this does not exist.
+for this header first and only use the other methods as fallback if this does not exist. This
+header has to contain a single IP address, and it is only used when `proxy_mode = true`.
 
 ### Session peer IP binding
 
@@ -161,13 +166,14 @@ strict. You can adjust them with the following config variables:
 
 ```toml
 [lifetimes]
-# Session lifetime in seconds - the session can not be extended
+# Session lifetime duration - the session cannot be extended
 # beyond this time and a new login will be forced. This is the
 # session for the authorization code flow.
 #
-# default: 14400
+# type: duration
+# default: '10h'
 # overwritten by: SESSION_LIFETIME
-session_lifetime = 14400
+session_lifetime = '10h'
 
 # If 'true', a 2FA / MFA check will be done with each automatic
 # token generation, even with an active session, which kind of
@@ -179,16 +185,17 @@ session_lifetime = 14400
 # overwritten by: SESSION_RENEW_MFA
 session_renew_mfa = false
 
-# Session timeout in seconds. When a new token / login is requested
+# Session timeout duration. When a new token / login is requested
 # before this timeout hits the limit, the user will be authenticated
 # without prompting for the credentials again.
 #
-# This is the value which can extend the session, until it hits its
-# maximum lifetime set with session_lifetime.
+# This is the duration that can extend an expiring session until
+# it hits its maximum lifetime set with session_lifetime.
 #
-# default: 5400
+# type: duration
+# default: '90m'
 # overwritten by: SESSION_TIMEOUT
-session_timeout = 5400
+session_timeout = '90m'
 ```
 
 ## Security

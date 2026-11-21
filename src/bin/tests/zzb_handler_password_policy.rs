@@ -1,4 +1,4 @@
-use crate::common::{check_status, get_auth_headers, get_backend_url};
+use crate::common::{get_auth_headers, get_backend_url};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::generic::{Language, PasswordPolicyRequest, PasswordPolicyResponse};
 use rauthy_api_types::users::{NewUserRequest, UpdateUserRequest, UserResponse};
@@ -20,8 +20,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let rules = res.json::<PasswordPolicyResponse>().await?;
+    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
     assert_eq!(rules.length_min, 14);
     assert_eq!(rules.length_max, 128);
     assert_eq!(rules.include_lower_case, Some(1));
@@ -48,8 +47,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         .json(&new_rules)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let rules = res.json::<PasswordPolicyResponse>().await?;
+    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
     assert_eq!(rules.length_min, 12);
     assert_eq!(rules.length_max, 112);
     assert_eq!(rules.include_lower_case, Some(2));
@@ -65,8 +63,7 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let rules = res.json::<PasswordPolicyResponse>().await?;
+    let rules = expect_status_json!(res, 200, PasswordPolicyResponse);
     assert_eq!(rules.length_min, 12);
     assert_eq!(rules.length_max, 112);
     assert_eq!(rules.include_lower_case, Some(2));
@@ -84,22 +81,20 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         given_name: Some("IT Test".to_string()),
         family_name: Some("Testy".to_string()),
         email: "alfred@batcave.io".to_string(),
+        preferred_username: None,
         language: Language::En,
         roles: vec!["user".to_string()],
         groups: None,
         user_expires: None,
         tz: None,
     };
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .post(&url)
         .headers(auth_headers.clone())
         .json(&new_user)
         .send()
         .await?;
-    res = check_status(res, 200).await?;
-    let user = res.json::<UserResponse>().await?;
-
-    println!("4");
+    let user = expect_status_json!(res, 200, UserResponse);
 
     // Set a password and enable
     let mut upd_req = UpdateUserRequest {
@@ -116,100 +111,80 @@ async fn test_password_policy() -> Result<(), Box<dyn Error>> {
         user_values: None,
     };
     let user_url = format!("{}/{}", url, user.id);
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
         .json(&upd_req)
         .send()
         .await?;
-    println!("{:?}", res);
-    res = check_status(res, 400).await?;
-    let err = res.json::<ErrorResponse>().await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("Minimum password length is 12"));
 
-    println!("5");
-
     upd_req.password = Some("sosuperdamnsafe".to_string());
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
         .json(&upd_req)
         .send()
         .await?;
-    res = check_status(res, 400).await?;
-    let err = res.json::<ErrorResponse>().await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum upper character count: 3"));
 
-    println!("6");
-
     upd_req.password = Some("SOSUPERDAMNSAFE".to_string());
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
         .json(&upd_req)
         .send()
         .await?;
-    res = check_status(res, 400).await?;
-    let err = res.json::<ErrorResponse>().await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum lower character count: 2"));
 
-    println!("7");
-
     upd_req.password = Some("soSuperDamnSafe".to_string());
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
         .json(&upd_req)
         .send()
         .await?;
-    res = check_status(res, 400).await?;
-    let err = res.json::<ErrorResponse>().await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum digit count: 4"));
 
-    println!("8");
-
     upd_req.password = Some("1so2Super3Damn4Safe".to_string());
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
         .json(&upd_req)
         .send()
         .await?;
-    res = check_status(res, 400).await?;
-    let err = res.json::<ErrorResponse>().await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("minimum special character count: 5"));
 
-    println!("9");
-
     upd_req.password = Some("!1so$%2Super/3D\"am\\n4^Safe'".to_string());
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
         .json(&upd_req)
         .send()
         .await?;
-    res = check_status(res, 200).await?;
-    let resp = res.json::<UserResponse>().await?;
+    let resp = expect_status_json!(res, 200, UserResponse);
     assert_eq!(resp.id, user.id);
     assert_eq!(resp.email, upd_req.email);
     assert_eq!(resp.enabled, true);
 
-    println!("10");
-
     // the password should not work again - recently used passwords constraint
-    let mut res = reqwest::Client::new()
+    let res = reqwest::Client::new()
         .put(&user_url)
         .headers(auth_headers.clone())
         .json(&upd_req)
         .send()
         .await?;
-    res = check_status(res, 400).await?;
-    let err = res.json::<ErrorResponse>().await?;
+    let err = expect_status_json!(res, 400, ErrorResponse);
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert!(err.message.contains("last 7 used passwords"));
 

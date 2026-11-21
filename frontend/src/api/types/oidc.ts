@@ -1,4 +1,4 @@
-export type JwkKeyPairAlg = 'RS256' | 'RS384' | 'RS512' | 'EdDSA';
+export type JwkKeyPairAlg = 'RS256' | 'RS384' | 'RS512' | 'EdDSA' | 'Ed25519';
 export type JwkKeyPairType = 'RSA' | 'OKP';
 
 export interface JWKSPublicKeyCerts {

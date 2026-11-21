@@ -10,7 +10,7 @@ use rauthy_common::utils::{base64_url_no_pad_decode, get_rand};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
-use std::ops::{Add, Sub};
+use std::ops::Add;
 use tracing::error;
 
 /// A DPoP nonce that only live inside the cache to limit client's DPoP lifetimes
@@ -29,8 +29,8 @@ impl Debug for DPoPNonce {
 impl DPoPNonce {
     /// Creates a new DPoP nonce, inserts it into the cache and returns its value.
     pub async fn new_value() -> Result<String, ErrorResponse> {
-        let nonce_exp = RauthyConfig::get().vars.dpop.nonce_exp as i64;
-        let exp = Utc::now().add(chrono::Duration::seconds(nonce_exp));
+        let nonce_exp = RauthyConfig::get().vars.dpop.nonce_exp;
+        let exp = Utc::now().add(nonce_exp);
         let slf = Self {
             exp,
             value: get_rand(32),
@@ -38,13 +38,23 @@ impl DPoPNonce {
 
         let client = DB::hql();
         client
-            .put(Cache::DPoPNonce, "latest", &slf, Some(nonce_exp))
+            .put(
+                Cache::DPoPNonce,
+                "latest",
+                &slf,
+                Some(nonce_exp.as_secs() as i64),
+            )
             .await?;
 
         // we need by its own value additionally, because the "latest" may be overwritten
         // before its expiration
         client
-            .put(Cache::DPoPNonce, slf.value.clone(), &slf, Some(nonce_exp))
+            .put(
+                Cache::DPoPNonce,
+                slf.value.clone(),
+                &slf,
+                Some(nonce_exp.as_secs() as i64),
+            )
             .await?;
 
         Ok(slf.value)
@@ -52,9 +62,32 @@ impl DPoPNonce {
 
     /// Checks the validity of the given DPoP nonce value
     pub async fn is_valid(value: String) -> bool {
-        let slf: Result<Option<Self>, hiqlite::Error> =
-            DB::hql().get(Cache::DPoPNonce, value).await;
-        slf.is_ok()
+        let lookup: Result<Option<Self>, hiqlite::Error> =
+            DB::hql().get(Cache::DPoPNonce, value.as_str()).await;
+        Self::accepts(&value, lookup, Utc::now())
+    }
+
+    /// A nonce handed out must stay valid long enough for the client's retry.
+    fn expires_soon(exp: DateTime<Utc>, now: DateTime<Utc>) -> bool {
+        exp < now.add(chrono::Duration::seconds(15))
+    }
+
+    /// Only a nonce this cluster issued and that has not expired is valid. A lookup that finds
+    /// nothing, or fails, is not. The nonce must also be the entry's own value, because the
+    /// same cache holds a copy of the current nonce under the fixed key `latest`.
+    fn accepts(
+        value: &str,
+        lookup: Result<Option<Self>, hiqlite::Error>,
+        now: DateTime<Utc>,
+    ) -> bool {
+        match lookup {
+            Ok(Some(slf)) => slf.value == value && slf.exp > now,
+            Ok(None) => false,
+            Err(err) => {
+                error!(?err, "Cache lookup error during DPoP nonce validation");
+                false
+            }
+        }
     }
 
     /// Always returns the value of the latest valid DPoP nonce which is valid for at least
@@ -64,8 +97,7 @@ impl DPoPNonce {
         match slf {
             None => Self::new_value().await,
             Some(slf) => {
-                let now_minus_15 = Utc::now().sub(chrono::Duration::seconds(15));
-                if slf.exp < now_minus_15 {
+                if Self::expires_soon(slf.exp, Utc::now()) {
                     Self::new_value().await
                 } else {
                     Ok(slf.value)
@@ -408,7 +440,7 @@ mod tests {
     #[test]
     fn test_dpop_validation_rsa() {
         // manually build up a dpop token
-        let mut rng = argon2::password_hash::rand_core::OsRng;
+        let mut rng = rand_08::thread_rng();
         let rsa_sk = rsa::RsaPrivateKey::new(&mut rng, 2048).unwrap();
         let rsa_pk = rsa_sk.to_public_key();
         let n = rsa_pk.n().to_bytes_be();
@@ -464,5 +496,40 @@ mod tests {
         // token signature validation itself for the 2 others is tested already in
         // jwk::test_signature_validation
         // -> no need to test it again here
+    }
+
+    #[test]
+    fn test_dpop_nonce_accepts() {
+        use crate::entity::dpop_proof::DPoPNonce;
+        use chrono::Duration;
+        use std::borrow::Cow;
+
+        let now = Utc::now();
+        let issued = |value: &str, exp| {
+            Ok(Some(DPoPNonce {
+                exp,
+                value: value.to_string(),
+            }))
+        };
+        let later = now + Duration::seconds(60);
+
+        // issued and live
+        assert!(DPoPNonce::accepts("n1", issued("n1", later), now));
+        // never issued, or no longer in the cache (expired and evicted, or the cache was
+        // replaced): the lookup finds nothing
+        assert!(!DPoPNonce::accepts("forged", Ok(None), now));
+        // still in the cache but past its expiry
+        let earlier = now - Duration::seconds(1);
+        assert!(!DPoPNonce::accepts("n1", issued("n1", earlier), now));
+        assert!(!DPoPNonce::accepts("n1", issued("n1", now), now));
+        // the fixed key `latest` finds the current nonce, whose value is not `latest`
+        assert!(!DPoPNonce::accepts("latest", issued("n1", later), now));
+        // `get_latest` replaces a nonce with less than 15 s left
+        assert!(DPoPNonce::expires_soon(now + Duration::seconds(14), now));
+        assert!(!DPoPNonce::expires_soon(now + Duration::seconds(16), now));
+
+        // the cache could not be read
+        let err = hiqlite::Error::Cache(Cow::Borrowed("test"));
+        assert!(!DPoPNonce::accepts("n1", Err(err), now));
     }
 }

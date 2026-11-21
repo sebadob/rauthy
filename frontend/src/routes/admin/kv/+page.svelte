@@ -1,5 +1,5 @@
 <script>
-    import KV from '$lib/admin/kv/KV.svelte';
+    import KV from '#lib/admin/kv/KV.svelte';
 </script>
 
 <svelte:head>

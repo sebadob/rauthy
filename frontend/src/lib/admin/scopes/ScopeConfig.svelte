@@ -1,20 +1,21 @@
 <script lang="ts">
-    import { isDefaultScope } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import type { UserAttrConfigValueResponse } from '$api/types/user_attrs.ts';
-    import type { ScopeRequest, ScopeResponse } from '$api/types/scopes.ts';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import Switch from '$lib5/Switch.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { fetchPut } from '$api/fetch';
-    import Form from '$lib5/form/Form.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import type { SelectItem } from '$lib5/select_list/props.ts';
-    import SelectList from '$lib5/select_list/SelectList.svelte';
-    import { PATTERN_ROLE_SCOPE } from '$utils/patterns';
+    import { isDefaultScope } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import type { UserAttrConfigValueResponse } from '#api/types/user_attrs.ts';
+    import type { ScopeRequest, ScopeResponse } from '#api/types/scopes.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchPut } from '#api/fetch.ts';
+    import Form from '#lib/form/Form.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import Section from '#lib/Section.svelte';
+    import type { SelectItem } from '#lib/select_list/props.ts';
+    import SelectList from '#lib/select_list/SelectList.svelte';
+    import { PATTERN_ROLE_SCOPE } from '#utils/patterns.ts';
     import { untrack } from 'svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
 
     let {
         attrs,
@@ -112,54 +113,66 @@
 </script>
 
 <Form action={`/auth/v1/scopes/${scope.id}`} {onSubmit}>
-    <LabeledValue label="ID" mono>
-        {scope.id}
-    </LabeledValue>
+    <div class="ui-section-stack">
+        <Section title={ta.common.information}>
+            <div class="ui-field-grid">
+                <LabeledValue label="ID" mono copyToClip={scope.id}>
+                    {scope.id}
+                </LabeledValue>
 
-    <Input
-        bind:value={name}
-        autocomplete="off"
-        label={ta.scopes.name}
-        placeholder={ta.scopes.name}
-        disabled={isDefault}
-        width="14.5rem"
-        required
-        pattern={PATTERN_ROLE_SCOPE}
-    />
+                <Input
+                    bind:value={name}
+                    autocomplete="off"
+                    label={ta.scopes.name}
+                    placeholder={ta.scopes.name}
+                    disabled={isDefault}
+                    width="100%"
+                    required
+                    pattern={PATTERN_ROLE_SCOPE}
+                />
+            </div>
+            {#if isDefault}<p class="ui-muted-copy">{ta.scopes.defaultNoMod}</p>{/if}
+        </Section>
+        {#if !isDefault}
+            <Section>
+                <p class="ui-muted-copy">{ta.scopes.mapping1}</p>
+                <p class="ui-muted-copy">{ta.scopes.mapping2}</p>
+                <div class="ui-field-grid">
+                    {#if itemsAccess}
+                        <SelectList maxWidth="100%" bind:items={itemsAccess}
+                            >Access Token Mappings</SelectList
+                        >
+                    {/if}
 
-    {#if isDefault}
-        <p>{ta.scopes.defaultNoMod}</p>
-    {:else}
-        <p>{ta.scopes.mapping1}</p>
-        <p>{ta.scopes.mapping2}</p>
-
-        {#if itemsAccess}
-            <SelectList bind:items={itemsAccess}>Access Token Mappings</SelectList>
+                    {#if itemsId}
+                        <SelectList maxWidth="100%" bind:items={itemsId}
+                            >Id Token Mappings</SelectList
+                        >
+                    {/if}
+                </div>
+                <div class="rootClaims">
+                    <InputCheckbox bind:checked={claimsAtRoot} ariaLabel={ta.scopes.claimsAtRoot}>
+                        {ta.scopes.claimsAtRoot}
+                    </InputCheckbox>
+                </div>
+                {#if claimsAtRoot}
+                    <p class="warn">
+                        {ta.scopes.claimsAtRootWarning}
+                        <a
+                            href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            IANA JWT Claims Registry
+                        </a>
+                    </p>
+                {/if}
+            </Section>
         {/if}
-
-        {#if itemsId}
-            <SelectList bind:items={itemsId}>Id Token Mappings</SelectList>
-        {/if}
-
-        <div class="rootClaims">
-            <Switch bind:checked={claimsAtRoot} ariaLabel={ta.scopes.claimsAtRoot}>
-                {ta.scopes.claimsAtRoot}
-            </Switch>
-        </div>
-        <p class="warn">
-            {ta.scopes.claimsAtRootWarning}
-            <a
-                href="https://www.iana.org/assignments/jwt/jwt.xhtml"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                IANA JWT Claims Registry
-            </a>
-        </p>
-    {/if}
+    </div>
 
     {#if !isDefault}
-        <div class="flex gap-05">
+        <div class="flex gap-05 actions">
             <Button type="submit">
                 {t.common.save}
             </Button>
@@ -179,11 +192,22 @@
 
 <style>
     .rootClaims {
-        margin: 1rem 0 0.25rem 0;
+        padding-block-start: 0.75rem;
+        border-top: 1px solid var(--ui-outline);
+    }
+
+    .actions {
+        margin-block: var(--ui-space);
+    }
+
+    .ui-muted-copy,
+    .warn {
+        margin: 0;
     }
 
     .warn {
         max-width: 30rem;
+        color: hsl(var(--error));
         font-size: 0.9rem;
         opacity: 0.8;
     }

@@ -1,34 +1,34 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Section from '#lib/Section.svelte';
     import { fade } from 'svelte/transition';
-    import AccModPwd from '$lib5/account/AccModPwd.svelte';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import CheckIcon from '$lib5/CheckIcon.svelte';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { UpdateUserSelfRequest, UserResponse } from '$api/types/user.ts';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider.ts';
-    import IconCheck from '$icons/IconCheck.svelte';
+    import AccModPwd from '#lib/account/AccModPwd.svelte';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
+    import CheckIcon from '#lib/CheckIcon.svelte';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { UpdateUserSelfRequest, UserResponse } from '#api/types/user.ts';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
     import type { PropsPassword } from './props.ts';
-    import { fetchGet, fetchPost, fetchPut } from '$api/fetch';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
-    import type { PasskeyResponse } from '$api/types/webauthn.ts';
+    import { fetchGet, fetchPost, fetchPut } from '#api/fetch.ts';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.js';
+    import type { PasskeyResponse } from '#api/types/webauthn.ts';
     import { onMount } from 'svelte';
-    import type { RequestResetRequest } from '$api/types/authorize.ts';
-    import { fetchSolvePow } from '$utils/pow';
+    import type { RequestResetRequest } from '#api/types/authorize.ts';
+    import { fetchSolvePow } from '#utils/pow.ts';
+    import type { MfaPurpose } from '#api/types/mfa.js';
 
     let {
         user = $bindable(),
         authProvider,
-        viewModePhone,
     }: {
         user: UserResponse;
         authProvider: undefined | AuthProviderTemplate;
-        viewModePhone?: boolean;
     } = $props();
 
     let t = useI18n();
 
-    let inputWidth = $derived(viewModePhone ? 'calc(100vw - 1.5rem)' : '300px');
+    const inputWidth = 'min(100%, 22rem)';
 
     let accType = $state(user.account_type);
     let passkeys: PasskeyResponse[] = $state([]);
@@ -94,8 +94,28 @@
 
         isLoading = true;
 
+        // The self-update endpoint replaces the whole profile with what it receives, so send the
+        // current profile values along with the password, normalized the same way as in
+        // `AccEdit.svelte`. Otherwise a password change would clear them.
+        let values = user.user_values;
+        let tz = values?.tz || undefined;
+        if (tz === 'Etc/UTC' || tz === 'UTC') {
+            tz = undefined;
+        }
+
         let payload: UpdateUserSelfRequest = {
+            given_name: user.given_name || undefined,
+            family_name: user.family_name || undefined,
             password_new: passwords.new,
+            user_values: {
+                birthdate: values?.birthdate || undefined,
+                phone: values?.phone || undefined,
+                street: values?.street || undefined,
+                zip: values?.zip || undefined,
+                city: values?.city || undefined,
+                country: values?.country || undefined,
+                tz,
+            },
         };
         if (mfaCode) {
             payload.mfa_code = mfaCode;
@@ -155,10 +175,9 @@
     }
 </script>
 
-<div class="container">
+<div class="ui-section-stack">
     {#if mfaPurpose}
         <WebauthnRequest
-            userId={user.id}
             purpose={mfaPurpose}
             onSuccess={onWebauthnSuccess}
             onError={onWebauthnError}
@@ -166,10 +185,9 @@
     {/if}
 
     {#if accType === 'federated'}
-        <div class="m-05">
+        <Section title={t.account.passwordReset}>
             <p>{t.account.federatedConvertPassword1}</p>
             <p><b>{authProvider?.name || 'UNKNOWN'}</b></p>
-            <div style:height=".3rem"></div>
             <p>{t.account.federatedConvertPassword2}</p>
             {#if success}
                 <CheckIcon checked />
@@ -178,22 +196,23 @@
                     {t.account.passwordReset}
                 </Button>
             {/if}
-        </div>
+        </Section>
     {/if}
 
     {#if (accType === 'passkey' || accType === 'federated_passkey') && !convertAccount}
-        <p>{t.account.accTypePasskeyText1}</p>
-        <p>{t.account.accTypePasskeyText2}</p>
-        <p>{t.account.accTypePasskeyText3}</p>
-        <div>
-            <Button level={2} onclick={() => (convertAccount = true)}>
-                {t.account.convertAccount}
-            </Button>
-        </div>
+        <Section title={t.account.convertAccount}>
+            <p class="ui-muted-copy">{t.account.accTypePasskeyText1}</p>
+            <p class="ui-muted-copy">{t.account.accTypePasskeyText2}</p>
+            <div>
+                <Button level={2} onclick={() => (convertAccount = true)}
+                    >{t.account.convertAccount}</Button
+                >
+            </div>
+        </Section>
     {/if}
 
     {#if accType === 'password' || accType === 'federated_password' || convertAccount}
-        <div>
+        <Section title={convertAccount ? t.account.convertAccount : t.account.changePassword}>
             <AccModPwd
                 bind:passwords
                 bind:isValid={isPwdValid}
@@ -221,45 +240,30 @@
                     </div>
                 {/if}
             </div>
-        </div>
+        </Section>
 
         {#if !convertAccount && canConvertToPasskey}
-            <div class="convertPasskey">
-                <h3>{t.account.convertAccount}</h3>
-                <p>{t.account.convertAccountP1}</p>
-                <Button level={2} onclick={convertToPasskeyOnly}>
-                    {t.account.convertAccount}
-                </Button>
-            </div>
+            <Section title={t.account.convertAccount}>
+                <p class="ui-muted-copy">{t.account.convertAccountP1}</p>
+                <div>
+                    <Button level={2} onclick={convertToPasskeyOnly}>
+                        {t.account.convertAccount}
+                    </Button>
+                </div>
+            </Section>
         {/if}
     {/if}
 </div>
 
 <style>
-    .container {
-        padding: 0 5px;
-        display: flex;
-        flex-direction: column;
-        overflow-x: clip;
-    }
-
-    .convertPasskey {
-        margin: 1rem 0;
-    }
-
-    .m-05 {
-        margin: 0.5rem;
-    }
-
     .save {
-        margin-top: 1rem;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 0.66rem;
+        gap: 0.5rem;
     }
 
     .success {
-        margin-bottom: -0.25rem;
-        color: hsl(var(--action));
+        color: var(--ui-primary);
     }
 </style>

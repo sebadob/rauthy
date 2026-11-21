@@ -1,9 +1,10 @@
 use actix_web::http::StatusCode;
-use actix_web::http::header::LOCATION;
+use actix_web::http::header::{HeaderName, HeaderValue, LOCATION};
 use actix_web::{HttpRequest, HttpResponse};
 use chrono::Utc;
 use rauthy_api_types::forward_auth::{ForwardAuthCallbackParams, ForwardAuthParams};
 use rauthy_common::constants::TRUSTED_PROXIES;
+use rauthy_common::sha256;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::clients::Client;
@@ -13,6 +14,7 @@ use rauthy_data::entity::users::User;
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::borrow::Cow;
 use std::net::IpAddr;
 use std::str::FromStr;
 use tracing::{debug, error};
@@ -25,8 +27,8 @@ pub async fn get_forward_auth_client(
     validate_proxy(&req)?;
 
     let proto = get_header("X-Forwarded-Proto", &req)?;
-    if !params.danger_cookie_insecure && proto.eq_ignore_ascii_case("http")
-        || proto.eq_ignore_ascii_case("ws")
+    if !params.danger_cookie_insecure
+        && (proto.eq_ignore_ascii_case("http") || proto.eq_ignore_ascii_case("ws"))
     {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -51,7 +53,7 @@ pub async fn get_forward_auth_client(
         }
         Some(s) => {
             debug!(fwd_auth_session = ?s);
-            if s.validate(&req).is_ok() {
+            if s.validate(&req, &client.id).is_ok() {
                 if check_csrf {
                     match s.validate_csrf(&req, params.danger_cookie_insecure) {
                         Ok(_) => Some(s),
@@ -112,8 +114,14 @@ pub async fn get_forward_auth_client(
             danger_cookie_insecure: params.danger_cookie_insecure,
         }
         .encrypted_str()?;
+        // The `redirect_uri` is admin-configured and may itself contain query characters, so it
+        // must be percent-encoded inside the Location query string.
+        let redirect_uri_enc = percent_encoding::percent_encode(
+            redirect_uri.as_bytes(),
+            percent_encoding::NON_ALPHANUMERIC,
+        );
         let location = format!(
-            "{iss}oidc/authorize?client_id={cid}&redirect_uri={redirect_uri}&response_type=code&state={state}"
+            "{iss}oidc/authorize?client_id={cid}&redirect_uri={redirect_uri_enc}&response_type=code&state={state}&fwda=true"
         );
 
         let status =
@@ -129,8 +137,7 @@ pub async fn get_forward_auth_client(
     // we don't have the middleware auto-updater for last_seen at this point
     let now = Utc::now().timestamp();
     if session.last_seen < now - 10 {
-        session.last_seen = now;
-        session.upsert().await?;
+        session.touch_last_seen().await?;
     }
 
     debug!("Checking user and client validity");
@@ -145,7 +152,7 @@ pub async fn get_forward_auth_client(
     user.check_enabled()?;
     user.check_expired()?;
     client.validate_user_groups(&user)?;
-    client.validate_mfa(&user, None)?;
+    client.validate_mfa(&user, None).await?;
 
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
@@ -157,24 +164,24 @@ pub async fn get_forward_auth_client(
         };
 
         let mut builder = HttpResponse::Ok();
-        builder
-            .insert_header((headers.user.as_ref(), user.id))
-            .insert_header((headers.roles.as_ref(), user.roles))
-            .insert_header((headers.groups.as_ref(), user.groups.unwrap_or_default()))
-            .insert_header((headers.email.as_ref(), user.email))
-            .insert_header((
-                headers.email_verified.as_ref(),
-                user.email_verified.to_string(),
-            ))
-            .insert_header((
-                headers.family_name.as_ref(),
-                user.family_name.unwrap_or_default(),
-            ))
-            .insert_header((headers.given_name.as_ref(), user.given_name))
-            .insert_header((headers.mfa.as_ref(), mfa_enabled.to_string()));
+        for (name, value) in [
+            auth_header(&headers.user, &user.id)?,
+            auth_header(&headers.roles, &user.roles)?,
+            auth_header(&headers.groups, user.groups.as_deref().unwrap_or_default())?,
+            auth_header(&headers.email, &user.email)?,
+            auth_header(&headers.email_verified, &user.email_verified.to_string())?,
+            auth_header(
+                &headers.family_name,
+                user.family_name.as_deref().unwrap_or_default(),
+            )?,
+            auth_header(&headers.given_name, &user.given_name)?,
+            auth_header(&headers.mfa, &mfa_enabled.to_string())?,
+        ] {
+            builder.insert_header((name, value));
+        }
 
         if let Some(username) = pref_username {
-            builder.insert_header((headers.preferred_username.as_ref(), username));
+            builder.insert_header(auth_header(&headers.preferred_username, &username)?);
         }
 
         Ok(builder.finish())
@@ -196,11 +203,11 @@ pub async fn get_forward_auth_client_callback(
     let origin = format!("{proto}://{host}");
     debug!(origin);
 
-    let state = ForwardAuthCallbackState::try_from(params.state.as_str())?;
+    let state = ForwardAuthCallbackState::from_str(params.state.as_str())?;
     debug!(?state);
 
-    if !state.danger_cookie_insecure && proto.eq_ignore_ascii_case("http")
-        || proto.eq_ignore_ascii_case("ws")
+    if !state.danger_cookie_insecure
+        && (proto.eq_ignore_ascii_case("http") || proto.eq_ignore_ascii_case("ws"))
     {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -214,7 +221,7 @@ pub async fn get_forward_auth_client_callback(
             "Mismatch in client_id",
         ));
     }
-    if state.peer_ip != ip {
+    if RauthyConfig::get().vars.access.session_validate_ip && state.peer_ip != ip {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "State created from different IP",
@@ -230,17 +237,38 @@ pub async fn get_forward_auth_client_callback(
     let client = get_client_validated(client_id, &origin).await?;
     client.validate_enabled()?;
 
-    let Some(auth_code) = AuthCode::find(params.code).await? else {
+    let Some(auth_code) = AuthCode::find_remove(params.code).await? else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
             "Invalid auth code or code expired",
         ));
     };
-    auth_code.delete().await?;
     if auth_code.client_id != client.id {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "Mismatch in AuthCode.client_id",
+        ));
+    }
+    if !auth_code.is_for_client(&client) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid auth code or code expired",
+        ));
+    }
+    // Bind the presented `state` to this exact authorization code. Without this check, an
+    // attacker on the same proxy IP could pair their own valid `state` with a victim's
+    // unconsumed auth code.
+    if let Some(st) = auth_code.state {
+        if st.as_slice() != sha256!(params.state.as_bytes()) {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "The `state` does not match this authorization code",
+            ));
+        }
+    } else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "The internal `state` binding is missing",
         ));
     }
     let now = Utc::now().timestamp();
@@ -261,12 +289,19 @@ pub async fn get_forward_auth_client_callback(
     user.check_enabled()?;
     user.check_expired()?;
     client.validate_user_groups(&user)?;
-    client.validate_mfa(&user, None)?;
+    client.validate_mfa(&user, None).await?;
+
+    let mut session = Session::find(sid).await?;
+    if session.user_id.as_deref() != Some(user.id.as_str()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Internal,
+            "The Session and the AuthCode belong to different users",
+        ));
+    }
 
     // all good
 
     // update session metadata
-    let mut session = Session::find(sid).await?;
     if session.state != SessionState::Auth {
         // A Session is only set to `SessionState::Auth` AFTER a successful and complete
         // auth code flow. Because of this, it is possible to get here with an `init` session.
@@ -279,8 +314,11 @@ pub async fn get_forward_auth_client_callback(
     session.last_seen = Utc::now().timestamp();
     session.upsert().await?;
 
-    let fwd_session = ForwardAuthSession { inner: session };
-    let (cookie_session, cookie_csrf) = fwd_session.build_cookies(state.danger_cookie_insecure);
+    let fwd_session = ForwardAuthSession {
+        client_id: client.id,
+        inner: session,
+    };
+    let (cookie_session, cookie_csrf) = fwd_session.build_cookies(state.danger_cookie_insecure)?;
 
     Ok(HttpResponse::build(StatusCode::from_u16(302).unwrap())
         .insert_header((LOCATION, state.forwarded_uri))
@@ -325,6 +363,37 @@ async fn get_client_validated(client_id: String, origin: &str) -> Result<Client,
 }
 
 #[inline]
+pub fn auth_header(name: &str, value: &str) -> Result<(HeaderName, HeaderValue), ErrorResponse> {
+    let name = HeaderName::from_str(name).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Invalid header name '{name}'"),
+        )
+    })?;
+    let value = if RauthyConfig::get().vars.auth_headers.percent_encode {
+        percent_encode_header_value(value)
+    } else {
+        Cow::Borrowed(value)
+    };
+    let value = HeaderValue::from_str(&value).map_err(|_| {
+        ErrorResponse::new(
+            ErrorResponseType::Internal,
+            format!("Invalid value for header '{name}'"),
+        )
+    })?;
+
+    Ok((name, value))
+}
+
+/// Percent-encodes (UTF-8) non-ASCII bytes, control characters and `%` itself.
+/// Other ASCII characters, including spaces and commas, stay the same.
+#[inline]
+fn percent_encode_header_value(value: &str) -> Cow<'_, str> {
+    const SET: &percent_encoding::AsciiSet = &percent_encoding::CONTROLS.add(b'%');
+    percent_encoding::utf8_percent_encode(value, SET).into()
+}
+
+#[inline]
 fn get_header<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, ErrorResponse> {
     match req.headers().get(key) {
         None => {
@@ -334,7 +403,13 @@ fn get_header<'a>(key: &str, req: &'a HttpRequest) -> Result<&'a str, ErrorRespo
                 format!("Missing header {key}"),
             ))
         }
-        Some(v) => Ok(v.to_str().unwrap_or_default()),
+        Some(v) => v.to_str().map_err(|err| {
+            debug!("Header {key} is not valid UTF-8: {err:?}");
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("Header {key} is not valid UTF-8"),
+            )
+        }),
     }
 }
 
@@ -398,5 +473,22 @@ fn validate_proxy(req: &HttpRequest) -> Result<(), ErrorResponse> {
             ErrorResponseType::Forbidden,
             "Invalid proxy peer IP",
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_percent_encode_header_value() {
+        assert_eq!(
+            percent_encode_header_value("admin,user_1 x@y.z"),
+            "admin,user_1 x@y.z"
+        );
+        assert_eq!(percent_encode_header_value("admins,users"), "admins,users");
+        assert_eq!(percent_encode_header_value("山田"), "%E5%B1%B1%E7%94%B0");
+        assert_eq!(percent_encode_header_value("100%"), "100%25");
+        assert_eq!(percent_encode_header_value("a\nb\x7f"), "a%0Ab%7F");
     }
 }

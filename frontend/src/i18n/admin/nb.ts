@@ -39,8 +39,26 @@ export let I18nAdminNb: I18nAdmin = {
         size: 'Størrelse',
     },
     clients: {
+        settings: { general: 'Generelt', tokens: 'Tokener', integrations: 'Integrasjoner' },
+        allowedResources: 'Tillatte ressurser',
+        defaultAud: 'Standard-mottakere (aud)',
+        actorSameClient: 'Actor token from this client only',
+        descAllowedResources: `Valgfrie RFC 8707 ressursindikatorer denne klienten kan be om. En tom liste avviser enhver 'resource'-parameter med 'invalid_target'.`,
+        descDefaultAud: `Mottakere (aud) som alltid legges til i denne klientens tokens, uavhengig av en 'resource'-parameter.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Hvis denne klienten støtter {{ OIDC_BCL }}, kan URIen angis her.',
         branding: {
+            title: 'Utseende',
+            theme: 'Tema',
+            light: 'Lyst tema',
+            dark: 'Mørkt tema',
+            preview: 'Forhåndsvisning',
+            assets: 'Logo og favicon',
+            logo: 'Logo',
+            advanced: 'Avansert CSS',
+            resetTheme: 'Tilbakestill tema',
+            resetThemeConfirm: 'Gjenopprette standardfargene og hjørneradiusen?',
+            assetsImmediate: 'Filendringer trer i kraft med en gang.',
             descHsl: `Fargene må angis som HSL. Her defineres kun basisfargen.
                 Alpha kanaler og andre verdier justeres dynamisk av temaet.`,
             descFullCss: `Fargene må angis som fullstendige, gyldige CSS <code>color</code> verdier.
@@ -48,10 +66,25 @@ export let I18nAdminNb: I18nAdmin = {
             descVariables: `Hver påfølgende etikett er samtidig navnet på CSS variabelen. Det betyr at
                 for eksempel fritekst kan referere til variablene, like som med
                 <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Forhåndsvisning av klientens favicon',
+            faviconUpload: 'Last opp favicon',
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `This client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Max 1024 serialized characters.`,
         confidential: 'Følsomt',
         confidentialNoSecret: 'Dette er ikke en følsom klient, og har derfor ingen hemmelighet.',
         config: 'Klient konfigurasjon',
+        consent: {
+            builtIn: 'Innebygd',
+            desc: `Hvor innholdet i samtykkesiden kommer fra, når 'consent.enable' er satt. Innebygd viser de forespurte scopes. En URL må levere samtykkeinnholdet som JSON. En '[[consent.sources]]'-oppføring for den forespurte ressursen har forrang. Ikke aktiv ennå: verdien lagres bare til samtykkesiden er på plass.`,
+            source: 'Samtykkekilde',
+        },
         delete1: 'Skal denne klienten slettes?',
         descAuthCode: `Gyldigheten til Auth kodene kan justeres for å oppnå ekstra sikkerhet.
             Auth kodene kan kun brukes en gang og er normalt gyldige i 60 sekunder. Jo kortere, jo bedre
@@ -76,6 +109,10 @@ export let I18nAdminNb: I18nAdmin = {
         forceMfa: 'Tving MFA',
         groupLoginPrefix: 'Gruppepåloggingsprefiks',
         name: 'Klientnavn',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `SCIM Base URI'en må være den som underordnede ruter som
                 <code>{base_uri}/Users/{id}</code> kan avledes korrekt fra.`,
@@ -119,6 +156,20 @@ export let I18nAdminNb: I18nAdmin = {
         },
     },
     common: {
+        about: 'Om Rauthy',
+        date: 'Dato',
+        time: 'Tid',
+        preferences: 'Innstillinger',
+        profile: 'Profil',
+        contactDetails: 'Kontaktinformasjon',
+        access: 'Tilgang',
+        activity: 'Aktivitet',
+
+        compactNavigation: 'Kompakt navigasjon',
+        administration: 'Administrasjon',
+        selectEntry: 'Velg en oppføring',
+        selectEntryHint: 'Velg et element fra listen for å se og administrere detaljene.',
+
         account: 'Konto',
         addNew: 'Legg til ny',
         back: 'Tilbake',
@@ -153,13 +204,13 @@ export let I18nAdminNb: I18nAdmin = {
             migrate: 'Migrere',
             migrateToKey: 'Migrere alle verdiene til følgende krypteringsnøkkel',
             p1: `Disse nøklene brukes for ekstra kryptering i forskjellige situasjoner, som for eksempel
-            visse verdier i databasen eller sesjonscookies. De er statisk konfigurert, men kan roteres
-            manuelt som en beste praksis.`,
+                visse verdier i databasen eller sesjonscookies. De er statisk konfigurert, men kan roteres
+                manuelt som en beste praksis.`,
             p2: `Den aktive nøkkelen er også statisk satt i Rauthy konfigurasjonsfilen. Alle ny-krypterte
-            verdier vil bli kryptert med den aktive nøkkelen, mens gamle kan eksistere parallelt for
-            bakoverkompatibilitet.`,
+                verdier vil bli kryptert med den aktive nøkkelen, mens gamle kan eksistere parallelt for
+                bakoverkompatibilitet.`,
             p3: `Migrering av alle krypterte verdier på dette tidspunktet kan, avhengig av systemet,
-            ta litt tid.`,
+                ta litt tid.`,
             pNotPossible: 'For å migrere må det finnes minst 2 kypteringsnøkler.',
         },
         hashing: {
@@ -168,58 +219,67 @@ export let I18nAdminNb: I18nAdmin = {
             currValuesHead: 'Nåværende verdier',
             currValues1: 'Nåværende konfigurerte veridene i backenden er følgende:',
             currValuesNote: `Notat: Logintiden fra backenden vil kun være en god retningslinje etter at minst
-            5 gylidge Logins har blitt gjort siden siste omstart. Startverdien er alltid 2000 ms og vil
-            tilpasses med hver gylidg Login.`,
+                5 gylidge Logins har blitt gjort siden siste omstart. Startverdien er alltid 2000 ms og vil
+                tilpasses med hver gylidg Login.`,
             currValuesThreadsAccess: 'Tråder (p_cost) tilgjengelig for Rauthy',
 
             loginTimeHead: 'Noe ord om login tid',
             loginTime1: `Generelt ønsker brukere at alt skal gå så raskt som mulig. For en sikker
-            login prosedyre bør imidlertid en tid på minst 500 - 1000 ms siktes mot og bør ikke være
-            et problem. Tiden for passord hashing bør ikke være for kort, da dette vil redusere styrken
-            til hashen.`,
+                login prosedyre bør imidlertid en tid på minst 500 - 1000 ms siktes mot og bør ikke være
+                et problem. Tiden for passord hashing bør ikke være for kort, da dette vil redusere styrken
+                til hashen.`,
             loginTime2: `For å sikre tilstrekkelig sikkerhet som standard, tillater dette verktøyet ikke
-            småere verider enn 500ms for login tid.`,
+                småere verider enn 500ms for login tid.`,
 
             mCost1: `<code>m_cost</code> definerer mengden <b>minne (i kB)</b> som brukes til hashing. Jo høyere
-            denne verdien er,jo bedre (sikrere), men de nødvendige ressursene må selvfølgelig være tilgjengelige.<br>
-            Hvis f.eks. 4 passord skal hashes samtidig, vil det naturligvis kreves <code>4 x m_cost</code> minne, som
-            alltid må være tilgjengelig.`,
+                denne verdien er,jo bedre (sikrere), men de nødvendige ressursene må selvfølgelig være tilgjengelige.<br>
+                Hvis f.eks. 4 passord skal hashes samtidig, vil det naturligvis kreves <code>4 x m_cost</code> minne, som
+                alltid må være tilgjengelig.`,
             mCost2: `Å finne den "riktige" verdien for <code>m_cost</code> er heldigvis veldig enkelt.
-            Definer maksimum minne Rauthy skal bruke, del mengden på antall parallelle innlogginger som skal
-            være mulig (<code>MAX_HASH_THREADS</code>) og trekk fra en viss statisk mengde.
-            Mengden statisk minne som trengs avhenger av valgt database og antall brukere, men vil i de fleste
-            tilfeller ligge mellom 32 - 96 MB.`,
+                Definer maksimum minne Rauthy skal bruke, del mengden på antall parallelle innlogginger som skal
+                være mulig (<code>MAX_HASH_THREADS</code>) og trekk fra en viss statisk mengde.
+                Mengden statisk minne som trengs avhenger av valgt database og antall brukere, men vil i de fleste
+                tilfeller ligge mellom 32 - 96 MB.`,
 
             pCost1: `<code>p_cost</code> definerer parallellismen for hashing.<br>
-            I de fleste tilfeller vil verdier over 8 ikke øke den nødvendige tiden, fordi algoritmen vil være mettet. Dette er også standardverdien for Rauthy.`,
+                I de fleste tilfeller vil verdier over 8 ikke øke den nødvendige tiden, fordi algoritmen vil være mettet. 
+                Dette er også standardverdien for Rauthy.`,
             pCost2: `Den generelle regelen er:<br>
-            Sett <code>p_cost</code> til det dobbelte av antall tilgjengelige CPU-kjerner.<br>
-            Hvis f.eks. 4 kjerner er tilgjengelig, vil en <code>p_cost</code> på 8 være en god verdi.<br>
-            Verdien må imidlertid ta hensyn til maksimalt antall tillatte parallelle innlogginger (<code>MAX_HASH_THREADS</code>) og eventuelt justeres deretter.`,
+                Sett <code>p_cost</code> til det dobbelte av antall tilgjengelige CPU-kjerner.<br>
+                Hvis f.eks. 4 kjerner er tilgjengelig, vil en <code>p_cost</code> på 8 være en god verdi.<br>
+                Verdien må imidlertid ta hensyn til maksimalt antall tillatte parallelle innlogginger 
+                (<code>MAX_HASH_THREADS</code>) og eventuelt justeres deretter.`,
 
-            tCost1: `<code>t_cost</code> er en multiplikator for <b>tiden</b> til hashing. Dette er den eneste verdien som må finnes ved testing på målarkitekturen, fordi <code>m_cost</code> og <code>p_cost</code> i stor grad er forhåndsdefinert.`,
-            tCost2: `Å finne verdien er enkelt: Sett <code>m_cost</code> og <code>p_cost</code> som forklart ovenfor og øk <code>t_cost</code> til ønsket innloggingstid er oppnådd.`,
+            tCost1: `<code>t_cost</code> er en multiplikator for <b>tiden</b> til hashing. Dette er den eneste verdien 
+                som må finnes ved testing på målarkitekturen, fordi <code>m_cost</code> og <code>p_cost</code> i stor 
+                grad er forhåndsdefinert.`,
+            tCost2: `Å finne verdien er enkelt: Sett <code>m_cost</code> og <code>p_cost</code> som forklart ovenfor 
+                og øk <code>t_cost</code> til ønsket innloggingstid er oppnådd.`,
 
             utilityHead: 'Parameter Beregningsverktøy',
-            utility1: `Verktøyet nedenfor kan brukes til å finne passende verdier for denne Rauthy-installasjonen. Siden verdiene avhenger av mange faktorer, bør de settes på den endelige arkitekturen, helst på tidspunkter med forventet høyest belastning, for å unngå å sette for høye verdier.`,
+            utility1: `Verktøyet nedenfor kan brukes til å finne passende verdier for denne Rauthy-installasjonen. 
+                Siden verdiene avhenger av mange faktorer, bør de settes på den endelige arkitekturen, helst på 
+                tidspunkter med forventet høyest belastning, for å unngå å sette for høye verdier.`,
             utility2: `<code>m_cost</code> er valgfritt og den minimale sikre verdien på 32768 vil automatisk
             vælges. Skulle <code>p_cost</code> heller ikke være angitt, vil Rauthy bruke den maksimale
             tilgjengelige mengden kjerner.`,
             time: 'Tid',
             targetTime: 'Mål-Tid',
             tune: 'Viktig: Disse verdiene må settes på den endelige arkitekturen!',
-            pDetials: `For en mer detaljert innføring i Argon2ID-algoritmen finnes det mange kilder på nettet.
-            Her forklares bare verdiene veldig kort. De følgende tre verdiene må konfigureres:`,
+            pDetails: `For en mer detaljert innføring i Argon2ID-algoritmen finnes det mange kilder på nettet.
+                Her forklares bare verdiene veldig kort. De følgende tre verdiene må konfigureres:`,
             pTune: `Verdiene kan variere sterkt avhengig av systemet og den generelle systembelastningen. Jo
-            kraftigere systemet er, desto sikrere verdier kan velges.`,
+                kraftigere systemet er, desto sikrere verdier kan velges.`,
             pUtility: `Dette verktøyet er en hjelp til å finne de beste Argon2ID-verdiene for det aktuelle systemet.
-            Argon2ID er den for tiden sikreste tilgjengelige passordhash-algoritmen. For å kunne utnytte det fulle potensialet
-            må imidlertid verdiene tilpasses systemet.`,
+                Argon2ID er den for tiden sikreste tilgjengelige passordhash-algoritmen. For å kunne utnytte det fulle potensialet
+                må imidlertid verdiene tilpasses systemet.`,
             mCost3: 'Den minimale tillatte verdien for <code>m_cost</code> er <code>32768</code>.',
         },
         openapi: 'For integrering av en ekstern applikasjon via Rauthys API, se',
-        openapiNote: `Avhengig av konfigurasjonen er Swagger UI kanskje ikke offentlig tilgjengelig via lenken over.
-            Den er imidlertid (som standard) tilgjengelig via den interne metrics-serveren for å redusere angrepsflaten.`,
+        openapiNote:
+            'I standardkonfigurasjonen er ikke Swagger-grensesnittet aktivt via lenken ovenfor.',
+        openapiEnable:
+            "Det kan aktiveres via konfigurasjon 'server.swagger_ui_enable' og muligens 'server.swagger_ui_public'.",
         source: 'Kildekoden finnes her',
     },
     editor: {
@@ -258,12 +318,22 @@ export let I18nAdminNb: I18nAdmin = {
             Deretter må du logge ut og inn igjen`,
     },
     events: {
+        searchContent: 'Innhold',
+        timestamp: 'Tidsstempel',
+        level: 'Nivå',
+        type: 'Type',
+        allLevels: 'Alle nivåer',
+        sendTest: 'Send testhendelse',
         eventLevel: 'Hendelsesnivå',
         eventType: 'Hendelsestype',
     },
     groups: {
         delete1: 'Skal denne gruppen slettes?',
         name: 'Gruppenavn',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algoritme',
@@ -274,6 +344,7 @@ export let I18nAdminNb: I18nAdmin = {
         rotateKeys: 'Roter nøkler',
     },
     kv: {
+        limit: 'Grense',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -311,6 +382,7 @@ export let I18nAdminNb: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV-lager',
         apiKeys: 'API-nøkler',
         attributes: 'Attributter',
         blacklist: 'Svarteliste',
@@ -408,10 +480,14 @@ export let I18nAdminNb: I18nAdmin = {
         adminNoMod: 'Rollen <code>rauthy_admin</code> kan ikke endres.',
         delete1: 'Skal denne rollen slettes?',
         name: 'Rollenavn',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
             attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
@@ -462,12 +538,31 @@ export let I18nAdminNb: I18nAdmin = {
         deleteUser: 'Skal denne brukeren slettes?',
         descAttr: `Sett individuelle bruker-attributter. Alle nøkkel/verdi-par håndteres som String/JSON-verdi.`,
         forceLogout: `Skal alle økter for denne brukeren invalidiseres og alle refresh tokens slettes?`,
+        groupAdmin: {
+            notManagedTitle: 'Bruker utenfor gruppene dine',
+            notManagedDesc: `Denne brukeren er ikke medlem av noen gruppe du administrerer, så detaljene er skjult.
+                Legg brukeren til i en eller flere av gruppene dine for å administrere den.
+                Medlemskap utenfor gruppene dine beholdes.`,
+            addToGroups: 'Legg til i mine grupper',
+        },
         lastLogin: 'Siste innlogging',
         manualInitDesc: `Brukeren kan også initialiseres her. I så fall må passordet kommuniseres direkte.`,
         manualInit: 'Manuell initialisering',
-        mfaDelete1: 'Passnøkler for denne brukeren kan slettes.',
-        mfaDelete2: `Advarsel! Sletting av en passnøkkel <b>kan ikke angres</b> uten at brukeren registrerer seg på nytt.`,
-        noMfaKeys: 'Denne brukeren har ingen registrerte passnøkler.',
+        mfa: {
+            otp: {
+                title: 'Engangspassord',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passnøkler',
+                mfaDelete1: 'Passnøkler for denne brukeren kan slettes.',
+                mfaDelete2: `Advarsel! Sletting av en passnøkkel <b>kan ikke angres</b> uten at brukeren registrerer seg på nytt.`,
+                noMfaKeys: 'Denne brukeren har ingen registrerte passnøkler.',
+            },
+        },
         pkOnly1: 'Dette er en passkey-only-konto.',
         pkOnly2:
             'Det betyr at denne brukeren bruker passordløs innlogging og ikke har noe passord satt.',
@@ -485,5 +580,15 @@ export let I18nAdminNb: I18nAdmin = {
         css: 'Gyldig CSS-verdi',
         origin: 'Gyldig origin',
         uri: 'Gyldig URI',
+        redirectUri: {
+            comma: 'En redirect-URI kan ikke inneholde komma (,)',
+            controlChar:
+                'En redirect-URI kan ikke inneholde kontrolltegn i navnet på en spørringsparameter',
+            fragment: 'En redirect-URI kan ikke inneholde et fragment (#)',
+            reservedKey:
+                'En redirect-URI kan ikke inneholde spørringsparameteren "{{ KEY }}", fordi den settes av autorisasjonssvaret',
+            reservedKeyLogout:
+                'En redirect-URI etter utlogging kan ikke inneholde spørringsparameteren "{{ KEY }}", fordi den settes ved utlogging',
+        },
     },
 };

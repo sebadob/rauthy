@@ -1,17 +1,17 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import { fetchPost, fetchPut } from '$api/fetch';
+    import Button from '#lib/button/Button.svelte';
+    import { fetchPost, fetchPut } from '#api/fetch.ts';
     import type {
         ClientResponse,
         ClientSecretRequest,
         ClientSecretResponse,
-    } from '$api/types/clients.ts';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
+    } from '#api/types/clients.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
     import { slide } from 'svelte/transition';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
 
     let {
         client,
@@ -27,6 +27,7 @@
 
     let secret: undefined | string = $state();
     let showConfirm = $state(false);
+    let confirmation: HTMLDivElement | undefined = $state();
     let cacheSecret = $state(false);
     let cacheCurrentHours = $state('1');
 
@@ -77,6 +78,10 @@
             err = res.error?.message || 'Error';
         }
     }
+
+    function scrollConfirmation() {
+        confirmation?.scrollIntoView({ block: 'end', inline: 'nearest' });
+    }
 </script>
 
 <div class="container">
@@ -95,7 +100,12 @@
         />
 
         {#if showConfirm}
-            <div transition:slide={{ duration: 150 }}>
+            <div
+                class="confirmation"
+                bind:this={confirmation}
+                transition:slide={{ duration: 150 }}
+                onintroend={scrollConfirmation}
+            >
                 <p>{ta.clients.secret.rotateDesc1}</p>
                 <p><b>{ta.clients.secret.rotateDesc2}</b></p>
 
@@ -104,7 +114,7 @@
                 </InputCheckbox>
 
                 {#if cacheSecret}
-                    <div transition:slide={{ duration: 150 }}>
+                    <div transition:slide={{ duration: 150 }} onintroend={scrollConfirmation}>
                         <Input
                             typ="number"
                             label={ta.clients.secret.cacheDuration}
@@ -140,5 +150,9 @@
         margin: 0.5rem 0;
         /* matches <p> max width */
         max-width: 467pt;
+    }
+
+    .confirmation {
+        scroll-margin-block-end: 0.75rem;
     }
 </style>

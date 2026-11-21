@@ -6,7 +6,3 @@ onmessage = ev => {
         self.close();
     });
 };
-
-onclose = () => {
-    console.log('PoW WebWorker closed');
-};

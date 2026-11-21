@@ -15,11 +15,18 @@ pub struct I18nEmailChangeInfoOld<'a> {
 impl I18nEmailChangeInfoOld<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
+            Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_en(),
+            Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
+            Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -37,6 +44,30 @@ impl I18nEmailChangeInfoOld<'_> {
             validity: "This link is only valid for a short period of time for security reasons.",
             expires: "Link expires:",
             button_text: "Block Address Change",
+        }
+    }
+
+    fn build_es() -> Self {
+        Self {
+            subject: "Solicitud de cambio de correo electrónico",
+            header: "Solicitud de cambio de correo electrónico para",
+            change_info: "Se ha solicitado el cambio de su dirección de correo electrónico. Nueva dirección:",
+            click_link: "Si no ha solicitado este cambio, haga clic en el enlace de abajo",
+            validity: "Por motivos de seguridad, este enlace solo es válido durante un breve período de tiempo.",
+            expires: "El enlace caduca el:",
+            button_text: "Bloquear cambio de dirección",
+        }
+    }
+
+    fn build_cs() -> Self {
+        Self {
+            subject: "Žádost o změnu e-mailu",
+            header: "Žádost o změnu e-mailu –",
+            change_info: "Byla vyžádána změna vaší e-mailové adresy. Nová adresa:",
+            click_link: "Pokud jste o tuto změnu nežádali, klikněte na odkaz níže.",
+            validity: "Z bezpečnostních důvodů platí odkaz jen krátkou dobu.",
+            expires: "Odkaz platí do:",
+            button_text: "Zablokovat změnu adresy",
         }
     }
 
@@ -100,6 +131,30 @@ impl I18nEmailChangeInfoOld<'_> {
         }
     }
 
+    fn build_it() -> Self {
+        Self {
+            subject: "Richiesta di cambio indirizzo email",
+            header: "Richiesta di cambio indirizzo email per",
+            change_info: "È stato richiesto un cambio del tuo indirizzo email. Nuovo indirizzo:",
+            click_link: "Se non hai richiesto questa modifica, apri il link qui sotto.",
+            validity: "Per motivi di sicurezza, il link è valido solo per un breve periodo.",
+            expires: "Il link scade il:",
+            button_text: "Blocca il cambio di indirizzo",
+        }
+    }
+
+    fn build_ja() -> Self {
+        Self {
+            subject: "メールアドレス変更のご依頼",
+            header: "メールアドレス変更のご依頼 -",
+            change_info: "メールアドレスの変更が依頼されました。新しいアドレス:",
+            click_link: "この変更に心当たりがない場合は、下のリンクをクリックしてください",
+            validity: "このリンクは、安全のため短い時間だけ有効です。",
+            expires: "リンクの有効期限:",
+            button_text: "アドレスの変更を止める",
+        }
+    }
+
     fn build_ko() -> Self {
         Self {
             subject: "이메일 변경 요청",
@@ -109,6 +164,42 @@ impl I18nEmailChangeInfoOld<'_> {
             validity: "이 링크는 보안상의 이유로 짧은 시간 동안에만 유효합니다.",
             expires: "링크 만료일:",
             button_text: "주소 변경 차단",
+        }
+    }
+
+    fn build_nl() -> Self {
+        Self {
+            subject: "E-Mail wijzigingsverzoek",
+            header: "E-Mail wijzigingsverzoek voor",
+            change_info: "Er is een wijziging van uw e-mailadres aangevraagd. Nieuw adres:",
+            click_link: "Als u deze wijziging niet heeft aangevraagd, klik dan op de onderstaande link",
+            validity: "Deze link is om veiligheidsredenen slechts korte tijd geldig.",
+            expires: "Link vervalt:",
+            button_text: "Adreswijziging blokkeren",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            subject: "Prośba o zmianę adresu e-mail",
+            header: "Prośba o zmianę adresu e-mail dla",
+            change_info: "Poproszono o zmianę Twojego adresu e-mail. Nowy adres:",
+            click_link: "Jeśli to nie Ty prosiłeś o tę zmianę, kliknij poniższy link",
+            validity: "Ze względów bezpieczeństwa ten link jest ważny tylko przez krótki czas.",
+            expires: "Link wygasa:",
+            button_text: "Zablokuj zmianę adresu",
+        }
+    }
+
+    fn build_pt() -> Self {
+        Self {
+            subject: "Pedido de alteração de e-mail",
+            header: "Pedido de alteração de e-mail para",
+            change_info: "Foi pedida a alteração do seu endereço de e-mail. Novo endereço:",
+            click_link: "Se não pediu esta alteração, clique na ligação abaixo",
+            validity: "Por motivos de segurança, esta ligação só é válida durante um curto período de tempo.",
+            expires: "A ligação expira em:",
+            button_text: "Bloquear alteração de endereço",
         }
     }
 }

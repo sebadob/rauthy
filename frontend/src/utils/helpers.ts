@@ -11,11 +11,11 @@ import {
     PROVIDER_TOKEN,
     REDIRECT_URI,
 } from './constants.js';
-import { decode, encode } from 'base64-arraybuffer';
-import type { PasswordPolicyResponse } from '$api/types/password_policy.ts';
-import type { EventLevel } from '$api/types/events.ts';
-import { generateNonce, generatePKCE } from '$utils/pkce';
-import { fetchGet } from '$api/fetch';
+import { encode } from 'base64-arraybuffer';
+import type { PasswordPolicyResponse } from '#api/types/password_policy.ts';
+import type { EventLevel } from '#api/types/events.ts';
+import { generateNonce, generatePKCE } from '#utils/pkce.ts';
+import { fetchGet } from '#api/fetch.ts';
 
 export function buildWebIdUri(userId: string) {
     return `${window.location.origin}/auth/${userId}/profile#me`;
@@ -34,6 +34,21 @@ export function isDefaultScope(name: string) {
         name === 'address' ||
         name === 'phone'
     );
+}
+
+/**
+ * Normalizes a client home URI (a validated `client_uri` / `redirect_uri`) for navigation.
+ * Values that already start with an `http(s)://` scheme or with `/` are returned unchanged:
+ * the latter still resolves against the IdP origin, so they cannot escape it. Any other value
+ * gets an `https://` prefix, so values like `javascript:alert(1)` can never be executed when
+ * used as a link target.
+ */
+export function normalizeClientUri(uri: string): string {
+    const lower = uri.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://') || uri.startsWith('/')) {
+        return uri;
+    }
+    return `https://${uri}`;
 }
 
 export const redirectToLogin = (state?: string) => {
@@ -208,61 +223,53 @@ export const formatDateFromTs = (ts: number, fmtIso?: boolean) => {
     return `${yyyy}/${mm}/${dd} ${hr}:${mn}:${sc}`;
 };
 
+const PWD_LOWER = 'abcdefghijklmnopqrstuvwxyz';
+const PWD_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const PWD_DIGIT = '0123456789';
+const PWD_SPECIAL = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~';
+
+// Uniform random index in [0, max) via rejection sampling to avoid modulo bias.
+function randomIndex(max: number) {
+    const limit = 256 - (256 % max);
+    const buf = new Uint8Array(1);
+    do {
+        crypto.getRandomValues(buf);
+    } while (buf[0] >= limit);
+    return buf[0] % max;
+}
+
+// Returns '' if the policy's required counts cannot fit into `length_max`.
 export const generatePassword = (policy: PasswordPolicyResponse) => {
-    const length = policy.length_min > 20 ? policy.length_min : 20;
-    const lowerCaseNeeded = policy.include_lower_case || 1;
-    const upperCaseNeeded = policy.include_upper_case || 1;
-    const digitNeeded = policy.include_digits || 1;
-    const specialNeeded = policy.include_digits || 1;
-
-    while (true) {
-        let lowerCaseIncluded = 0;
-        let upperCaseIncluded = 0;
-        let digitIncluded = 0;
-        let specialIncluded = 0;
-        let pwdArr = [];
-
-        for (let i = 0; i < length; i += 1) {
-            let nextNumber = 60;
-            while ((nextNumber > 57 && nextNumber < 65) || (nextNumber > 90 && nextNumber < 97)) {
-                nextNumber = Math.floor(Math.random() * 74) + 33;
-            }
-
-            // check if a lower case char was already included
-            if (nextNumber >= 91 && nextNumber <= 122) {
-                lowerCaseIncluded += 1;
-            }
-
-            // check if a upper case char was already included
-            if (nextNumber >= 65 && nextNumber <= 90) {
-                upperCaseIncluded += 1;
-            }
-
-            // check if a digit was already included
-            if (nextNumber >= 48 && nextNumber <= 57) {
-                digitIncluded += 1;
-            }
-
-            // check if a special char was already included
-            if (nextNumber >= 33 && nextNumber <= 47) {
-                specialIncluded += 1;
-            }
-
-            pwdArr.push(String.fromCharCode(nextNumber));
-        }
-
-        // If not all types are included, start fresh and try again -> most random approach
-        if (
-            lowerCaseIncluded < lowerCaseNeeded ||
-            upperCaseIncluded < upperCaseNeeded ||
-            specialIncluded < specialNeeded ||
-            digitIncluded < digitNeeded
-        ) {
-            continue;
-        }
-
-        return pwdArr.join('');
+    // unset or <= 0 means not required, same as the backend's `unwrap_or(0)`
+    const need = (n?: number) => Math.max(n ?? 0, 0);
+    const classes: [string, number][] = [
+        [PWD_LOWER, need(policy.include_lower_case)],
+        [PWD_UPPER, need(policy.include_upper_case)],
+        [PWD_DIGIT, need(policy.include_digits)],
+        [PWD_SPECIAL, need(policy.include_special)],
+    ];
+    const required = classes.reduce((sum, [, n]) => sum + n, 0);
+    if (required > policy.length_max) {
+        return '';
     }
+    const length = Math.min(Math.max(20, policy.length_min, required), policy.length_max);
+
+    const all = PWD_LOWER + PWD_UPPER + PWD_DIGIT + PWD_SPECIAL;
+    const pwd: string[] = [];
+    for (const [chars, n] of classes) {
+        for (let i = 0; i < n; i++) {
+            pwd.push(chars[randomIndex(chars.length)]);
+        }
+    }
+    while (pwd.length < length) {
+        pwd.push(all[randomIndex(all.length)]);
+    }
+    // Fisher-Yates shuffle
+    for (let i = pwd.length - 1; i > 0; i--) {
+        const j = randomIndex(i + 1);
+        [pwd[i], pwd[j]] = [pwd[j], pwd[i]];
+    }
+    return pwd.join('');
 };
 
 // Returns a short random key, which can be used in components to identify them uniquely.
@@ -334,6 +341,3 @@ export function promiseTimeout<T>(prom: Promise<T>, time: number): Promise<T | u
         }),
     ]).finally(() => clearTimeout(timer));
 }
-
-// async sleep in ms
-export const sleepAwait = async (ms: number) => await new Promise(x => setTimeout(x, ms));

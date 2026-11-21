@@ -27,7 +27,7 @@
 use crate::handler::OidcCookieInsecure;
 use crate::provider::OidcProvider;
 use crate::rauthy_error::RauthyError;
-use crate::tokens::jwks::jwks_handler;
+use crate::tokens::jwks::JwksCerts;
 use base64::{Engine as _, engine, engine::general_purpose};
 use rand::{RngExt, distr};
 pub use reqwest::Certificate as RootCertificate;
@@ -188,7 +188,7 @@ impl DangerAcceptInvalidCerts {
 /// This will panic if it is called more than once.
 pub async fn init() -> Result<(), RauthyError> {
     OidcProvider::init_client(None, RauthyHttpsOnly::Yes, DangerAcceptInvalidCerts::No)?;
-    jwks_handler().await;
+    JwksCerts::spawn_update_task();
     Ok(())
 }
 
@@ -204,7 +204,7 @@ pub async fn init_with(
     danger_accept_invalid_certs: DangerAcceptInvalidCerts,
 ) -> Result<(), RauthyError> {
     OidcProvider::init_client(root_certificate, https_only, danger_accept_invalid_certs)?;
-    jwks_handler().await;
+    JwksCerts::spawn_update_task();
     Ok(())
 }
 

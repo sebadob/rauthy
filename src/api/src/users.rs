@@ -16,6 +16,7 @@ use rauthy_common::constants::{
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::email::email_registered_already::send_email_registered_already;
+use rauthy_data::email::notification::send_email_passkey_removed;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
@@ -26,22 +27,29 @@ use rauthy_data::entity::email_rate_limit::EmailRateLimit;
 use rauthy_data::entity::groups::Group;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_mod_token::MfaModToken;
+use rauthy_data::entity::one_time_password::{
+    self, OneTimePassword, OtpAdditionalData, OtpServiceReq,
+};
 use rauthy_data::entity::password::PasswordPolicy;
 use rauthy_data::entity::pictures::{PICTURE_STORAGE_TYPE, PictureStorage, UserPicture};
 use rauthy_data::entity::pow::PowEntity;
+use rauthy_data::entity::principal::Principal;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaAssurance, Session};
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::tos::ToS;
 use rauthy_data::entity::tos_user_accept::ToSUserAccept;
 use rauthy_data::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use rauthy_data::entity::user_consents::{ConsentRevoked, UserConsent};
 use rauthy_data::entity::user_revoke::UserRevoke;
-use rauthy_data::entity::users::User;
+use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::users_values::UserValues;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::{PasskeyEntity, WebauthnAdditionalData, WebauthnServiceReq};
+use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
+use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
+use rauthy_data::entity::webauthn::passkey::PasskeyEntity;
 use rauthy_data::entity::webids::WebId;
-use rauthy_data::events::event::Event;
+use rauthy_data::events::event::{ConsentRevokedBy, Event};
 use rauthy_data::html::HtmlCached;
 use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
@@ -59,6 +67,8 @@ use spow::pow::Pow;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::str::FromStr;
+use std::time::Duration;
 use tokio::task;
 use tracing::{debug, error, info, warn};
 use validator::Validate;
@@ -89,7 +99,10 @@ pub async fn get_users(
     principal: ReqPrincipal,
     Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    // Group admins see the full (minified) user list as well. The
+    // per-user write scoping is enforced on the individual modify endpoints, never
+    // here, so list visibility intentionally does not imply mutate permission.
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     params.validate()?;
 
     let user_count = User::count().await?;
@@ -99,7 +112,7 @@ pub async fn get_users(
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
-            Some(ContinuationToken::try_from(token.as_str())?)
+            Some(ContinuationToken::from_str(token.as_str())?)
         } else {
             None
         };
@@ -151,8 +164,11 @@ pub async fn post_users(
     principal: ReqPrincipal,
     Json(payload): Json<NewUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Create)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Create)?;
     payload.validate()?;
+    // A group admin may create users too, but only without any role and into at least
+    // one group it manages, so the new account stays within its scope.
+    principal.validate_group_admin_user_create(&payload.roles, payload.groups.as_ref())?;
     // We are not using the UserValuesValidator on purpose here.
     // When an admin registers a new user, the user details view will be shown immediately anyway,
     // and an admin may have good reason to not set some values, like e.g. the preferred username.
@@ -444,19 +460,7 @@ pub async fn post_users_register_handle(
     if let Some(redirect_uri) = &payload.redirect_uri
         && !reg.allow_open_redirect
     {
-        let mut allow = false;
-        for uri in Client::find_all_client_uris().await? {
-            if uri.starts_with(redirect_uri) {
-                allow = true;
-                break;
-            }
-        }
-        if !allow {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "given `redirect_uri` not allowed",
-            ));
-        }
+        validate_reg_redirect_uri(redirect_uri).await?;
     }
 
     let lang = Language::try_from(&req).unwrap_or_default();
@@ -518,6 +522,56 @@ pub async fn post_users_register_handle(
         .finish())
 }
 
+/// A `client_uri` can only serve as a prefix anchor for a `redirect_uri` if it carries a
+/// non-empty host part. Otherwise, the remainder of `redirect_uri` could supply the host itself:
+/// e.g. a stored `client_uri` of `"https://"` (or `"/"`) would allow any absolute URL to pass,
+/// and the WHATWG parser resolves `https:///evil.com/x` with host `evil.com`.
+fn client_uri_has_non_empty_host(uri: &str) -> bool {
+    let authority_start = uri.find("//").map_or(0, |i| i + 2);
+    let Some(authority) = uri.get(authority_start..) else {
+        return false;
+    };
+    let host = authority
+        .split(|c: char| ['/', '?', '#'].contains(&c))
+        .next()
+        .unwrap_or("");
+    !host.is_empty()
+}
+
+/// Returns `true` if `redirect_uri` equals `client_uri` or continues it at a path, query or
+/// fragment boundary. The prefix must carry a non-empty host (see
+/// [`client_uri_has_non_empty_host`]), otherwise the remainder of `redirect_uri` could supply
+/// the host itself (open redirect).
+pub(crate) fn redirect_uri_matches_client(redirect_uri: &str, client_uri: &str) -> bool {
+    if !client_uri_has_non_empty_host(client_uri) {
+        return false;
+    }
+    match redirect_uri.strip_prefix(client_uri) {
+        None => false,
+        Some(rest) => {
+            rest.is_empty()
+                || rest.starts_with('/')
+                || rest.starts_with('?')
+                || rest.starts_with('#')
+        }
+    }
+}
+
+/// Validates a registration or password-reset redirect URI against configured clients.
+#[inline]
+pub(super) async fn validate_reg_redirect_uri(redirect_uri: &str) -> Result<(), ErrorResponse> {
+    for uri in Client::find_all_client_uris().await? {
+        if redirect_uri_matches_client(redirect_uri, &uri) {
+            return Ok(());
+        }
+    }
+
+    Err(ErrorResponse::new(
+        ErrorResponseType::BadRequest,
+        "given `redirect_uri` not allowed",
+    ))
+}
+
 /// Returns a single user by its *id*
 #[utoipa::path(
     get,
@@ -535,16 +589,25 @@ pub async fn get_user_by_id(
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = path.into_inner();
 
-    // principal must either be an admin or have the same user id
-    let api_key_or_admin = principal
-        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)
+    // principal must be an admin, a group admin, or the user itself
+    let elevated = principal
+        .validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)
         .is_ok();
-    if !api_key_or_admin {
+    if !elevated {
         principal.validate_session_auth()?;
         principal.is_user(&id)?;
     }
 
     let user = User::find(id).await?;
+    // a group admin only gets the full details of a user it manages; for anyone else it
+    // only sees the minified entry from the user list. The view gate returns a
+    // `428` (instead of a `403`) for an ordinary, not-yet-managed user, so the Admin UI can
+    // offer to add the user to one of the admin's groups; an admin target stays a `403`.
+    // A group admin may always view its own account though (it is an admin, so the gate would
+    // otherwise reject it), which the account dashboard relies on for self-management.
+    if principal.is_session_group_admin() && principal.user_id() != Ok(user.id.as_str()) {
+        principal.validate_group_admin_can_view(user.roles_iter(), user.groups_iter())?;
+    }
     let values = UserValues::find(&user.id).await?;
 
     Ok(HttpResponse::Ok().json(user.into_response(values)))
@@ -727,7 +790,9 @@ pub async fn post_user_mfa_token(
     let user = User::find(user_id.to_string()).await?;
 
     if let Some(password) = payload.password {
-        if user.has_webauthn_enabled() {
+        if user.has_webauthn_enabled()
+            || (RauthyConfig::get().vars.otp.enable && user.has_otp_enabled().await)
+        {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "must provide `mfa_code` instead of `password`",
@@ -741,20 +806,43 @@ pub async fn post_user_mfa_token(
             ));
         }
     } else if let Some(code) = payload.mfa_code {
-        if !user.has_webauthn_enabled() {
+        if user.has_webauthn_enabled() {
+            let svc_req = WebauthnServiceReq::find(code).await?;
+            if svc_req.user_id != user.id {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "mismatch in UserID",
+                ));
+            }
+            svc_req.delete().await?;
+        } else if RauthyConfig::get().vars.otp.enable && user.has_otp_enabled().await {
+            let svc_req = OtpServiceReq::find(code).await?;
+            if svc_req.user_id != user.id {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "mismatch in UserID",
+                ));
+            }
+            svc_req.delete().await?;
+        } else {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "must provide `password`",
             ));
         }
-        let svc_req = WebauthnServiceReq::find(code).await?;
-        if svc_req.user_id != user.id {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "mismatch in UserID",
-            ));
-        }
-        svc_req.delete().await?;
+    } else if user.account_type() == AccountType::Federated {
+        // This is a special case. If the account is federated only, it means that the user has
+        // neither a password nor a passkey. In this situation, we cannot request authentication,
+        // because the user has no option to provide any. To make everything work, for the very
+        // first MFA key added, we allow fetching a mod token without any further authentication.
+        //
+        // This could be improved in the future by requesting a "special" OTP via E-Mail without
+        // the user even having registered any, but this would require quite a bit of rework and
+        // special case handling in lots of situations. For now, we grant the token without any
+        // further validation.
+        debug!(
+            "MFA Mod Token request from federated-only user - granting token without further authentication"
+        );
     } else {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -801,7 +889,10 @@ pub async fn put_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Update)
             .is_err()
     {
-        return Err(err);
+        // the only remaining allowed caller is a delegated group admin managing this user
+        principal.validate_group_admin_session().map_err(|_| err)?;
+        let target = User::find(user_id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
     }
 
     content_len_limit(&req, RauthyConfig::get().vars.user_pictures.upload_limit_mb)?;
@@ -850,7 +941,7 @@ pub async fn get_user_picture(
 
     {
         let user = User::find(user_id).await?;
-        if user.picture_id.as_deref() != Some(&picture_id) {
+        if user.picture_id.as_deref() != Some(picture_id.as_str()) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "invalid picture_id for user",
@@ -877,11 +968,21 @@ async fn validate_user_picture_access(
         {
             return Ok(None);
         }
+        // a delegated group admin may view the picture of a user it manages
+        if principal.validate_group_admin_session().is_ok() {
+            let user = User::find(user_id.to_string()).await?;
+            if principal
+                .validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())
+                .is_ok()
+            {
+                return Ok(None);
+            }
+        }
     }
 
     if let Ok(bearer) = get_bearer_token_from_header(req.headers()) {
         let mut buf = Vec::with_capacity(512);
-        if JwtToken::validate_claims_into(&bearer, None, 0, &mut buf)
+        if JwtToken::validate_claims_into(&bearer, None, Duration::from_secs(0), &mut buf, false)
             .await
             .is_ok()
         {
@@ -928,7 +1029,10 @@ pub async fn delete_user_picture(
             .validate_api_key(AccessGroup::Users, AccessRights::Delete)
             .is_err()
     {
-        return Err(err);
+        // the only remaining allowed caller is a delegated group admin managing this user
+        principal.validate_group_admin_session().map_err(|_| err)?;
+        let target = User::find(user_id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
     }
 
     UserPicture::remove(picture_id, user_id.clone()).await?;
@@ -1029,16 +1133,198 @@ pub async fn delete_user_device(
     payload.validate()?;
 
     let device = DeviceEntity::find(&payload.device_id).await?;
-    if device.user_id.as_deref() != Some(&user_id) {
+    if device.user_id.as_deref() != Some(user_id.as_str()) {
         return Err(ErrorResponse::new(
             ErrorResponseType::Forbidden,
             "You don't have access to this device".to_string(),
         ));
     }
 
-    DeviceEntity::revoke_refresh_tokens(&payload.device_id).await?;
+    DeviceEntity::delete_refresh_tokens(&payload.device_id).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// GET all consents this user has given to clients
+///
+/// `resource` filters by resource, an empty value returns consents without a resource.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - a group admin, for a user it manages
+/// - the user itself
+/// - an API key with `users: read`
+#[utoipa::path(
+    get,
+    path = "/users/{id}/consents",
+    tag = "users",
+    params(UserConsentsParams),
+    responses(
+        (status = 200, description = "Ok", body = [UserConsentResponse]),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/consents")]
+pub async fn get_user_consents(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    Query(params): Query<UserConsentsParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    validate_consent_access(&principal, &user_id, AccessRights::Read).await?;
+    params.validate()?;
+
+    let consents = UserConsent::find_for_user(&user_id, params.resource.as_deref()).await?;
+    let mut resp = Vec::with_capacity(consents.len());
+    for consent in consents {
+        // the client may be gone or ephemeral
+        let client_name = match Client::find(consent.client_id.clone()).await {
+            Ok(client) => client.name,
+            Err(err) if err.error == ErrorResponseType::NotFound => None,
+            Err(err) => return Err(err),
+        };
+        resp.push(consent.into_response(client_name));
+    }
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+/// DELETE a consent and all refresh tokens of this user for the client
+///
+/// `resource` is left out for a consent without a resource. Refresh tokens are revoked
+/// for the client as a whole, independent of `resource`. With `consent.enable` on, the user's
+/// legacy refresh tokens issued without a `client_id` are deleted as well; with it off, they are
+/// kept. Only the access token of each deleted refresh token, the one issued with its latest
+/// rotation, is revoked. Access tokens from earlier rotations and access tokens issued without a
+/// refresh token stay valid until they expire. With `consent.enable` off, an authorization code
+/// issued before the revoke can still be exchanged within its lifetime.
+///
+/// The request is idempotent: `consent_deleted` is `false` when there was no consent to delete.
+///
+/// **Permissions**
+/// - rauthy_admin
+/// - a group admin, for a user it manages
+/// - the user itself
+/// - an API key with `users: delete`
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/consents",
+    tag = "users",
+    params(UserConsentDeleteParams),
+    responses(
+        (status = 200, description = "Ok", body = UserConsentDeleteResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[delete("/users/{id}/consents")]
+pub async fn delete_user_consent(
+    path: web::Path<String>,
+    principal: ReqPrincipal,
+    Query(params): Query<UserConsentDeleteParams>,
+    req: HttpRequest,
+) -> Result<HttpResponse, ErrorResponse> {
+    let user_id = path.into_inner();
+    validate_consent_access(&principal, &user_id, AccessRights::Delete).await?;
+    params.validate()?;
+
+    let user = User::find(user_id).await?;
+    // an API key authorized the request even with a session, see `validate_consent_access`
+    let admin_email = match (&principal.api_key, principal.user_id()) {
+        (None, Ok(id)) if id != user.id => Some(User::find(id.to_string()).await?.email),
+        _ => None,
+    };
+    let revoked_by = match (&principal.api_key, &admin_email) {
+        (Some(key), _) => ConsentRevokedBy::ApiKey(&key.name),
+        (None, Some(email)) => ConsentRevokedBy::Admin(email),
+        (None, None) => ConsentRevokedBy::User,
+    };
+
+    let ip = real_ip_from_req(&req)?;
+    let resource = params.resource.as_deref();
+    let ConsentRevoked {
+        consent_deleted,
+        refresh_tokens_deleted,
+    } = UserConsent::revoke(&user.id, &params.client_id, resource).await?;
+
+    // the revoke is committed at this point, a failing event must not turn it into an error
+    if (consent_deleted || refresh_tokens_deleted > 0)
+        && let Err(err) = Event::consent_revoked(
+            &user.email,
+            &params.client_id,
+            resource.unwrap_or_default(),
+            revoked_by,
+            ip,
+        )
+        .send()
+        .await
+    {
+        error!(?err, "Cannot send the consent revoked event");
+    }
+
+    Ok(HttpResponse::Ok().json(UserConsentDeleteResponse {
+        consent_deleted,
+        refresh_tokens_deleted,
+    }))
+}
+
+/// An API key with `rights` on users, else the user itself, an admin session or a group admin
+/// session that manages the user. A key without these rights is rejected even with a valid
+/// session. Admin and group admin sessions pass the `admin_force_mfa` gate.
+async fn validate_consent_access(
+    principal: &Principal,
+    user_id: &str,
+    rights: AccessRights,
+) -> Result<(), ErrorResponse> {
+    match principal.validate_api_key(AccessGroup::Users, rights) {
+        Err(err) if err.error == ErrorResponseType::Unauthorized => {}
+        res => return res,
+    }
+
+    match consent_session_role(principal, user_id)? {
+        ConsentSessionRole::Owner => Ok(()),
+        ConsentSessionRole::Admin => principal.validate_admin_session(),
+        ConsentSessionRole::GroupAdmin => {
+            principal.validate_group_admin_session()?;
+            let target = User::find(user_id.to_string()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())
+        }
+    }
+}
+
+/// The role a session acts in on the consents of `user_id`, checked in this order.
+#[derive(Debug, PartialEq)]
+enum ConsentSessionRole {
+    /// The user itself, also when it is an admin or a group admin
+    Owner,
+    /// A full admin
+    Admin,
+    /// A group admin, which may only access a user it manages
+    GroupAdmin,
+}
+
+fn consent_session_role(
+    principal: &Principal,
+    user_id: &str,
+) -> Result<ConsentSessionRole, ErrorResponse> {
+    principal.validate_session_auth()?;
+    if principal.is_user(user_id).is_ok() {
+        Ok(ConsentSessionRole::Owner)
+    } else if principal.is_admin() {
+        Ok(ConsentSessionRole::Admin)
+    } else if principal.is_group_admin() {
+        Ok(ConsentSessionRole::GroupAdmin)
+    } else {
+        Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Access is forbidden with this user",
+        ))
+    }
 }
 
 /// Endpoint for resetting passwords
@@ -1186,6 +1472,7 @@ pub async fn put_user_password_reset(
     password_reset::handle_put_user_password_reset(req, path.into_inner(), payload)
         .await
         .map(|(cookie, location)| {
+            debug!("user reset redirect uri loc: {location:?}");
             if let Some(loc) = location {
                 HttpResponse::Ok()
                     .insert_header((LOCATION, loc))
@@ -1266,6 +1553,358 @@ async fn user_revoke_handle(
     Ok(())
 }
 
+/// Get status of all registered OTP of a user
+///
+/// **Permissions**
+/// - authenticated and logged in user for this very {id}
+/// - authenticated and logged in admin
+#[utoipa::path(
+    get,
+    path = "/users/{id}/otp",
+    tag = "users",
+    responses(
+        (status = 200, description = "Ok", body = [OtpGetResponse]),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[get("/users/{id}/otp")]
+pub async fn get_user_otps(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    if !&RauthyConfig::get().vars.otp.enable {
+        warn!("Request to get OTPs but `otp.enable` is set to `false`");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "feature disabled",
+        ));
+    }
+
+    if principal
+        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)
+        .is_err()
+    {
+        principal.validate_session_auth()?;
+        if principal.is_user(&id).is_err() {
+            principal.validate_group_admin_session()?;
+            let target = User::find(id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+        }
+    }
+
+    let user_id = id.into_inner();
+
+    let resp = OneTimePassword::find_for_user(&user_id)
+        .await?
+        .into_iter()
+        .map(OtpGetResponse::from)
+        .collect::<Vec<OtpGetResponse>>();
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+/// Create a new OTP
+///
+/// **Permissions**
+/// - authenticated and logged in user for this very {id}
+#[utoipa::path(
+    post,
+    path = "/users/{id}/otp",
+    tag = "users",
+    request_body = OtpCreateRequest,
+    responses(
+        (status = 201, description = "Created", body = OtpGetResponse),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 406, description = "NotAcceptable", body = ErrorResponse),
+    )
+)]
+#[post("/users/{id}/otp")]
+pub async fn post_user_otp(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<OtpCreateRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    if !&RauthyConfig::get().vars.otp.enable {
+        warn!("Request to create an OTP but `otp.enable` is set to `false`");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "feature disabled",
+        ));
+    }
+    payload.validate()?;
+
+    let user_id: String = id.into_inner();
+    principal.validate_user_session(&user_id)?;
+
+    let token = MfaModToken::find(&payload.mfa_mod_token_id).await?;
+    let ip = real_ip_from_req(&req)?;
+    token.validate(principal.user_id()?, ip)?;
+
+    // Prevents users from having multiple OTPs of the same kind, except for time-base OTPs.
+    let mut otp = if payload.otp_kind.ne(&OtpKind::Time)
+        && let Ok(mut otp) = OneTimePassword::find_kind_for_user(&payload.otp_kind, &user_id).await
+    {
+        if otp.is_active {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::NotAccepted,
+                "otp already exist",
+            ));
+        }
+        // reuse the existing inactive row, but keep the name requested in this call
+        otp.name = payload.otp_name;
+        otp
+    } else {
+        OneTimePassword::create(user_id, payload.otp_name, payload.otp_kind).await?
+    };
+    otp.request_otp().await?;
+    let resp: OtpGetResponse = otp.into();
+    Ok(HttpResponse::Created().json(resp))
+}
+
+/// Activate an OTP
+///
+/// **Permissions**
+/// - authenticated and logged in user for this very {id}
+#[utoipa::path(
+    put,
+    path = "/users/{id}/otp",
+    tag = "users",
+    request_body = OtpActivateRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    )
+)]
+#[put("/users/{id}/otp")]
+pub async fn put_user_otp(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<OtpActivateRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    if !&RauthyConfig::get().vars.otp.enable {
+        warn!("Request to activate an OTP but `otp.enable` is set to `false`");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "feature disabled",
+        ));
+    }
+    payload.validate()?;
+
+    let user_id: String = id.into_inner();
+    principal.validate_user_session(&user_id)?;
+
+    let token = MfaModToken::find(&payload.mfa_mod_token_id).await?;
+    let ip = real_ip_from_req(&req)?;
+    token.validate(principal.user_id()?, ip)?;
+
+    let mut otp = OneTimePassword::find_by_id_for_user(&payload.otp_id, &user_id).await?;
+    otp.validate(&payload.otp_code).await?;
+    otp.activate().await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// Delete an OTP
+///
+/// **Permissions**
+/// - authenticated and logged in user for this very {id}
+/// - authenticated and logged in admin
+#[utoipa::path(
+    delete,
+    path = "/users/{id}/otp",
+    tag = "users",
+    request_body = OtpDeleteRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    )
+)]
+#[delete("/users/{id}/otp")]
+pub async fn delete_user_otp(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+    req: HttpRequest,
+    Json(payload): Json<OtpDeleteRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    if !&RauthyConfig::get().vars.otp.enable {
+        warn!("Request to delete an OTP but `otp.enable` is set to `false`");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Feature disabled",
+        ));
+    }
+    payload.validate()?;
+
+    let user_id: String = id.into_inner();
+
+    if principal
+        .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)
+        .is_ok()
+    {
+        if principal.is_admin() {
+            warn!(
+                "Otp delete request from admin for user {} for otp {}",
+                user_id, payload.otp_id
+            );
+        } else {
+            warn!(
+                "Otp delete request from API for user {} for otp {}",
+                user_id, payload.otp_id
+            );
+        }
+    } else {
+        principal.validate_session_auth()?;
+
+        if principal.is_user(&user_id).is_ok() {
+            let Some(token_id) = payload.mfa_mod_token_id else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "missing `mfa_mod_token_id`",
+                ));
+            };
+            let token = MfaModToken::find(&token_id).await?;
+            let ip = real_ip_from_req(&req)?;
+            token.validate(principal.user_id()?, ip)?;
+            warn!(
+                "Otp delete request from user {} for otp {}",
+                user_id, payload.otp_id
+            );
+        } else {
+            principal.validate_group_admin_session()?;
+            let target = User::find(user_id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+            warn!(
+                "Otp delete from group admin for user {} for otp {}",
+                user_id, payload.otp_id
+            );
+        }
+    }
+
+    let otp = OneTimePassword::find_by_id_for_user(&payload.otp_id, &user_id).await?;
+    OneTimePassword::delete(&otp.id).await?;
+    // make sure to delete any existing MFA cookie when a key is deleted
+    let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
+    Ok(HttpResponse::Ok().cookie(cookie).finish())
+}
+
+/// Starts the authentication process using OTP for this user. This only works during
+/// the login. Service requests need to use the user-specific endpoint.
+#[utoipa::path(
+    post,
+    path = "/users/otp_start",
+    tag = "mfa",
+    request_body = OtpAuthStartRequest,
+    responses(
+        (status = 200, description = "Ok", body = OtpAuthStartResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/otp_start")]
+pub async fn post_otp_auth_start_login(
+    principal: ReqPrincipal,
+    Json(payload): Json<OtpAuthStartRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+    let id = match payload.purpose {
+        MfaPurpose::Login(_) => {
+            // During Login, the session is allowed to be in init-only state. Realistically, the
+            // session middleware will not accept an init-session on this path, only authenticated
+            // ones, but we keep the logic here correct.
+            principal.validate_session_auth_or_init()?;
+            // The user.id might not exist in the session yet at this point. However, it's stored
+            // inside the Otp login data. The `start_start()` will take care of it.
+            None
+        }
+        MfaPurpose::PasswordReset => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Password requests must use the user-specific otp start endpoint",
+            ));
+        }
+        _ => {
+            // for all other purposes, we need an authenticated session
+            principal.validate_session_auth()?;
+            Some(principal.user_id()?.to_string())
+        }
+    };
+    one_time_password::auth_start(id, &payload)
+        .await
+        .map(|res| HttpResponse::Ok().json(res))
+}
+
+/// Request another send of an active code in the authentication process for this user.
+///
+/// *Permissions**
+/// - authenticated and logged in user
+#[utoipa::path(
+    post,
+    path = "/users/otp_resend",
+    tag = "mfa",
+    request_body = OtpAuthResendRequest,
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    )
+)]
+#[post("/users/otp_resend")]
+pub async fn post_otp_auth_resend(
+    Json(payload): Json<OtpAuthResendRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    // We do not need to validate the principal here.
+    // All of this is done at the /start endpoint.
+    // This here will simply fail, if the secret code from the /start does not exist
+    // -> indirect validation through existing code.
+    one_time_password::auth_resend(payload).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// Finishes the authentication process using OTP for this user.
+///
+/// **Permissions**
+/// - authenticated and logged in user
+#[utoipa::path(
+    post,
+    path = "/users/otp_finish",
+    tag = "mfa",
+    request_body = OtpAuthFinishRequest,
+    responses(
+        (status = 200, description = "Ok", body = OtpAdditionalData),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/otp_finish")]
+pub async fn post_otp_auth_finish_login(
+    req: HttpRequest,
+    browser_id: BrowserId,
+    principal: ReqPrincipal,
+    Json(payload): Json<OtpAuthFinishRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    // We do not need to further validate the principal here.
+    // All of this is done at the /start endpoint.
+    // This here will simply fail, if the secret code from the /start does not exist
+    // -> indirect validation through existing code.
+
+    let principal = principal.into_inner();
+    let res = one_time_password::auth_finish(&req, browser_id, principal.session, payload).await?;
+    Ok(res.into_response())
+}
+
 /// Get all registered Webauthn Passkeys for a user
 ///
 /// **Permissions**
@@ -1294,14 +1933,17 @@ pub async fn get_user_webauthn_passkeys(
     {
         // make sure a non-admin can only access its own information
         principal.validate_session_auth()?;
-        principal.is_user(&id)?;
+        if principal.is_user(&id).is_err() {
+            // a group admin may view the MFA devices of a user it manages (the MFA tab in
+            // the Admin UI, mirroring `delete_webauthn`); the cheap group-admin check runs
+            // before the DB lookup
+            principal.validate_group_admin_session()?;
+            let target = User::find(id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+        }
     }
 
-    let pks = PasskeyEntity::find_for_user(&id)
-        .await?
-        .into_iter()
-        .map(PasskeyResponse::from)
-        .collect::<Vec<PasskeyResponse>>();
+    let pks = PasskeyEntity::find_for_user_with_details(&id).await?;
 
     Ok(HttpResponse::Ok().json(pks))
 }
@@ -1333,11 +1975,13 @@ pub async fn post_webauthn_auth_start(
     payload.validate()?;
 
     let id = match payload.purpose {
-        // only for a Login purpose, this can be accessed without authentication (yet)
         MfaPurpose::Login(_) => {
-            // During Login, the session is allowed to be in init only state
-            principal.validate_session_auth_or_init()?;
-            id.into_inner()
+            // A Login should never be done via this endpoint to never possibly leak a `user_id`.
+            // Logins must use the user id agnostic endpoint.
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid endpoint for Webauthn auth ceremony",
+            ));
         }
 
         MfaPurpose::PasswordReset => {
@@ -1376,7 +2020,7 @@ pub async fn post_webauthn_auth_start(
         }
     };
 
-    webauthn::auth_start(id, payload.purpose)
+    webauthn::authenticate::auth_start(Some(id), payload.purpose)
         .await
         .map(|res| HttpResponse::Ok().json(res))
 }
@@ -1398,7 +2042,7 @@ pub async fn post_webauthn_auth_start(
 )]
 #[post("/users/{id}/webauthn/auth/finish")]
 pub async fn post_webauthn_auth_finish(
-    id: web::Path<String>,
+    _id: web::Path<String>,
     req: HttpRequest,
     browser_id: BrowserId,
     principal: ReqPrincipal,
@@ -1406,7 +2050,105 @@ pub async fn post_webauthn_auth_finish(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let id = id.into_inner();
+    // We do not need to further validate the principal here.
+    // All of this is done at the /start endpoint.
+    // This here will simply fail if the secret code from the /start does not exist
+    // -> indirect validation through existing code.
+
+    let principal = principal.into_inner();
+    let res =
+        webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload).await?;
+    Ok(res.into_response())
+}
+
+/// Starts the authentication process for a WebAuthn Device for this user. This only works during
+/// the login. Service requests need to use the user-specific endpoint.
+#[utoipa::path(
+    post,
+    path = "/users/webauthn_start",
+    tag = "mfa",
+    request_body = WebauthnAuthStartRequest,
+    responses(
+        (status = 200, description = "Ok", body = WebauthnAuthStartResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/webauthn_start")]
+pub async fn post_webauthn_auth_start_login(
+    principal: ReqPrincipal,
+    Json(payload): Json<WebauthnAuthStartRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    let (id, is_discover) = match payload.purpose {
+        MfaPurpose::Login(_) => {
+            // During Login, the session is allowed to be in init-only state. Realistically, the
+            // session middleware will not accept an init-session on this path, only authenticated
+            // ones, but we keep the logic here correct.
+            principal.validate_session_auth_or_init()?;
+            // The user.id might not exist in the session yet at this point. However, it's stored
+            // inside the webauthn login data. The `start_start()` will take care of it.
+            (None, false)
+        }
+
+        MfaPurpose::Discover => {
+            principal.validate_session_auth_or_init()?;
+            (None, true)
+        }
+
+        MfaPurpose::PasswordReset => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Password requests must use the user-specific webauthn start endpoint",
+            ));
+        }
+
+        _ => {
+            // for all other purposes, we need an authenticated session
+            principal.validate_session_auth()?;
+            (Some(principal.user_id()?.to_string()), false)
+        }
+    };
+
+    if is_discover {
+        webauthn::authenticate_rk::auth_start_discover().await
+    } else {
+        webauthn::authenticate::auth_start(id, payload.purpose).await
+    }
+    .map_err(|err| {
+        error!("Webauthn Auth Start error: {err:?}");
+        ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "Error during Webauthn auth start ceremony",
+        )
+    })
+    .map(|res| HttpResponse::Ok().json(res))
+}
+
+/// Finishes the authentication process for a WebAuthn Device for this user
+///
+/// **Permissions**
+/// - authenticated and logged in user for this very {id}
+#[utoipa::path(
+    post,
+    path = "/users/webauthn_finish",
+    tag = "mfa",
+    request_body = WebauthnAuthFinishRequest,
+    responses(
+        (status = 200, description = "Ok", body = WebauthnAdditionalData),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[post("/users/webauthn_finish")]
+pub async fn post_webauthn_auth_finish_login(
+    req: HttpRequest,
+    browser_id: BrowserId,
+    principal: ReqPrincipal,
+    Json(payload): Json<WebauthnAuthFinishRequest>,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
 
     // We do not need to further validate the principal here.
     // All of this is done at the /start endpoint.
@@ -1414,7 +2156,23 @@ pub async fn post_webauthn_auth_finish(
     // -> indirect validation through existing code.
 
     let principal = principal.into_inner();
-    let res = webauthn::auth_finish(id, &req, browser_id, principal.session, payload).await?;
+    let res = webauthn::authenticate::auth_finish(&req, browser_id, principal.session, payload)
+        .await
+        .map_err(|err| {
+            error!("Webauthn Auth Finish error: {err:?}");
+
+            // It's important to forward the 406 as-is. The UI is matching on that status to show
+            // the correctly translated error message. This only happens when the passkey does not
+            // meet attestation requirements.
+            if err.error == ErrorResponseType::NotAccepted {
+                err
+            } else {
+                ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Error during Webauthn auth finish ceremony",
+                )
+            }
+        })?;
     Ok(res.into_response())
 }
 
@@ -1422,7 +2180,12 @@ pub async fn post_webauthn_auth_finish(
 ///
 /// **Permissions**
 /// - rauthy_admin
+/// - API key with Users + Delete
+/// - group admin for a user it manages
 /// - authenticated and logged in user for this very {id}
+///
+/// API keys are administrative principals. Any deletion by someone other than the user itself
+/// triggers an informational email to the affected user.
 #[utoipa::path(
     delete,
     path = "/users/{id}/webauthn/delete/{name}",
@@ -1443,44 +2206,50 @@ pub async fn delete_webauthn(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    // Note: Currently, this is not allowed with an ApiKey on purpose
-    let is_admin = match principal.validate_admin_session() {
-        Ok(()) => true,
-        Err(_) => {
-            principal.validate_session_auth()?;
-            false
+    let (id, name) = path.into_inner();
+    let ip = real_ip_from_req(&req)?;
+
+    // If this deletion is triggered via the Account Dashboard, no matter if it's an admin or not,
+    // the payload will always carry an MFA Mod Token. In this case, *this* user must match the
+    // path. If no MFA Mod Token is present, we must validate for an admin-triggered action, and
+    // send a notification to the target user.
+    let notify_user = if let Some(token_id) = payload.mfa_mod_token_id {
+        principal.is_user(&id)?;
+        let token = MfaModToken::find(&token_id).await?;
+        token.validate(principal.user_id()?, ip)?;
+        warn!("Passkey delete for user {} for key {}", id, name);
+        None
+    } else {
+        if principal
+            .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)
+            .is_err()
+        {
+            principal.validate_group_admin_session()?;
         }
+        let target = User::find(id.clone()).await?;
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+        warn!(
+            "Passkey delete from admin for user {} for key {} from {}",
+            id, name, ip
+        );
+        Some(target)
     };
 
-    let (id, name) = path.into_inner();
+    PasskeyEntity::delete(id, name.clone()).await?;
 
-    // validate that Principal matches the user or is an admin
-    if !is_admin {
-        principal.is_user(&id)?;
-
-        let Some(token_id) = payload.mfa_mod_token_id else {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "missing `mfa_mod_token_id`",
-            ));
-        };
-        let token = MfaModToken::find(&token_id).await?;
-        let ip = real_ip_from_req(&req)?;
-        token.validate(principal.user_id()?, ip)?;
-
-        warn!("Passkey delete for user {} for key {}", id, name);
-    } else if principal.is_user(&id).is_err() {
-        warn!("Passkey delete from admin for user {} for key {}", id, name);
-    }
-
-    PasskeyEntity::delete(id, name).await?;
-
-    // make sure to delete any existing MFA cookie when a key is deleted
-    let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
     let mut resp = HttpResponse::Ok().finish();
-    if let Err(err) = resp.add_cookie(&cookie) {
-        error!("Error deleting MFA cookie in post_webauthn_delete: {}", err);
+
+    if let Some(user) = notify_user {
+        send_email_passkey_removed(&user, &name).await;
+    } else {
+        // Make sure to delete any existing MFA cookie when a key is deleted, but only when this was
+        // a self-delete via the account dashboard.
+        let cookie = ApiCookie::build(COOKIE_MFA, "", 0);
+        if let Err(err) = resp.add_cookie(&cookie) {
+            error!("Error deleting MFA cookie in post_webauthn_delete: {}", err);
+        }
     }
+
     Ok(resp)
 }
 
@@ -1531,7 +2300,7 @@ pub async fn post_webauthn_reg_start(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_start(id, payload)
+        webauthn::register::reg_start(id, payload)
             .await
             .map(|ccr| HttpResponse::Ok().json(ccr))
     }
@@ -1575,7 +2344,21 @@ pub async fn post_webauthn_reg_finish(
         let id = id.into_inner();
         principal.is_user(&id)?;
 
-        webauthn::reg_finish(id, payload).await?;
+        webauthn::register::reg_finish(id, payload, false).await?;
+
+        // The registration ceremony is a fresh proof of possession for this very session, and
+        // starting it already required an `MfaModToken`. Upgrade the session in place so the user
+        // does not need a logout / login round-trip to satisfy `admin_force_mfa`.
+        //
+        // The session lookup is deliberately graceful: the passkey has already been persisted at
+        // this point, so a flow that gets here without a session (during an initial account setup,
+        // for instance) must never have its successful registration turned into an error.
+        if let Some(mut session) = principal.into_inner().session
+            && !session.is_mfa_completed()
+        {
+            session.set_mfa(MfaAssurance::Ceremony).await?;
+        }
+
         Ok(HttpResponse::Created().finish())
     }
 }
@@ -1737,6 +2520,17 @@ pub async fn post_user_password_request_reset(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
+    // Keep password-reset redirects on the configured client allow-list.
+    if let Some(redirect_uri) = &payload.redirect_uri
+        && !RauthyConfig::get()
+            .vars
+            .user_registration
+            .allow_open_redirect
+    {
+        validate_reg_redirect_uri(redirect_uri).await?;
+    }
+    debug!("Reset requested with uri: {:?}", payload.redirect_uri);
+
     match User::find_by_email(payload.email).await {
         Ok(user) => user
             .request_password_reset(payload.redirect_uri)
@@ -1768,9 +2562,14 @@ pub async fn get_user_by_email(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
 
     let user = User::find_by_email(path.into_inner()).await?;
+    // same per-target view gate as get_user_by_id: a group admin only gets the full details of
+    // a user it manages, otherwise this endpoint would leak any user's profile by email.
+    if principal.is_session_group_admin() && principal.user_id() != Ok(user.id.as_str()) {
+        principal.validate_group_admin_can_view(user.roles_iter(), user.groups_iter())?;
+    }
     let values = UserValues::find(&user.id).await?;
 
     Ok(HttpResponse::Ok().json(user.into_response(values)))
@@ -1798,7 +2597,6 @@ pub async fn put_user_by_id(
     principal: ReqPrincipal,
     Json(payload): Json<UpdateUserRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
     payload.validate()?;
 
     UserValuesValidator {
@@ -1810,8 +2608,26 @@ pub async fn put_user_by_id(
     }
     .validate()?;
 
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
+
+    let id = id.into_inner();
+    let target = User::find(id.clone()).await?;
+    // a group admin may only modify a managed, non-admin user, and within that may not
+    // change roles or group memberships outside its prefix. It may always manage
+    // itself though (the admin-target guard would otherwise reject the self-edit), so the
+    // per-target manage check is skipped for self; the role / group guards still apply.
+    if principal.user_id() != Ok(target.id.as_str()) {
+        principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+    }
+    principal.validate_group_admin_user_change(
+        target.roles_iter(),
+        target.groups_iter(),
+        &payload.roles,
+        payload.groups.as_deref().unwrap_or_default(),
+    )?;
+
     let preferred_username = UserValues::find_preferred_username(&id).await?;
-    handle_put_user_by_id(id.into_inner(), req, payload, preferred_username).await
+    handle_put_user_by_id(id, req, principal, payload, preferred_username).await
 }
 
 /// Modifies a user via a patch operation
@@ -1836,24 +2652,93 @@ pub async fn patch_user(
     principal: ReqPrincipal,
     Json(payload): Json<PatchOp>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Update)?;
 
     let user_id = id.into_inner();
-    let (upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
+    let target = User::find(user_id.clone()).await?;
+    // a group admin may always manage itself: it reaches its own detail view from the account
+    // dashboard, and the admin-target guards below would otherwise reject the self-edit (it is
+    // a `rauthy_admin:*` itself). The role / group guards still apply, so it cannot escalate.
+    let is_self = principal.user_id() == Ok(target.id.as_str());
+
+    let (mut upd_req, has_preferred_username) = User::patch(user_id.clone(), payload).await?;
+
+    // A group admin may also patch an as-yet-unmanaged ordinary user to add it to one of its
+    // groups (the "add to my groups" flow). In that case the admin never saw the
+    // user's existing memberships, so the submitted groups are scoped: out-of-scope
+    // memberships are preserved and only in-scope additions are applied, instead of replacing
+    // the whole set. This is a no-op for users the admin already manages (the UI submits the
+    // full set there) and for full admins / ApiKeys / self-edits.
+    if principal.is_session_group_admin()
+        && !is_self
+        && !principal.group_admin_can_manage(target.roles_iter(), target.groups_iter())
+    {
+        let submitted = upd_req.groups.take().unwrap_or_default();
+        upd_req.groups =
+            Some(principal.group_admin_scoped_groups(target.groups_iter(), &submitted));
+    }
+
     upd_req.validate()?;
 
-    handle_put_user_by_id(user_id, req, upd_req, has_preferred_username).await
+    let new_groups = upd_req.groups.as_deref().unwrap_or_default();
+    // only managed groups may be changed and roles may never be touched (applies to self too) ...
+    principal.validate_group_admin_user_change(
+        target.roles_iter(),
+        target.groups_iter(),
+        &upd_req.roles,
+        new_groups,
+    )?;
+    // ... and the admin must be able to manage the user either before or after the change, so
+    // a patch that brings a previously unmanaged user into scope is allowed. A group admin may
+    // always manage itself, so this gate is skipped for the self-edit.
+    if !is_self {
+        principal.validate_group_admin_can_manage_change(
+            target.roles_iter(),
+            target.groups_iter(),
+            &upd_req.roles,
+            new_groups,
+        )?;
+    }
+
+    handle_put_user_by_id(user_id, req, principal, upd_req, has_preferred_username).await
 }
 
 #[inline]
 async fn handle_put_user_by_id(
     user_id: String,
     req: HttpRequest,
+    principal: ReqPrincipal,
     payload: UpdateUserRequest,
     preferred_username: Option<String>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (user, user_values, is_new_admin) =
-        User::update(user_id, payload, None, preferred_username).await?;
+    let actor_id = principal.user_id();
+    if actor_id.is_err() && principal.api_key.is_none() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "No authenticated user or API key for user update",
+        ));
+    }
+    let is_self_update = actor_id == Ok(user_id.as_str());
+    let password_reset_by = if payload.password.is_some() && !is_self_update {
+        Some(match actor_id {
+            Ok(actor_id) => User::find(actor_id.to_string()).await?.email,
+            Err(err) => {
+                let api_key = principal.api_key.as_ref().ok_or(err)?;
+                format!("API key {}", api_key.name)
+            }
+        })
+    } else {
+        None
+    };
+    let (user, user_values, is_new_admin) = User::update(
+        user_id,
+        payload,
+        None,
+        preferred_username,
+        is_self_update,
+        password_reset_by.as_deref(),
+    )
+    .await?;
 
     if is_new_admin {
         RauthyConfig::get()
@@ -1907,6 +2792,19 @@ pub async fn put_user_self(
     // make sure the logged-in user can only update itself
     let id = id.into_inner();
     principal.is_user(&id)?;
+
+    // the payload replaces the stored values, omitted `user_values` delete them
+    let (stored, preferred_username) = User::upd_req_from_db(id.clone()).await?;
+    UserValuesValidator {
+        given_name: payload.given_name.as_deref(),
+        family_name: payload.family_name.as_deref(),
+        preferred_username: preferred_username.as_deref(),
+        user_values: &payload.user_values,
+    }
+    .validate_update(&UserValuesValidator::from_update_req(
+        &stored,
+        preferred_username.as_deref(),
+    ))?;
 
     let (user, user_values, email_updated) = User::update_self_req(id, payload).await?;
 
@@ -2086,10 +2984,9 @@ pub async fn post_user_self_convert_passkey(
 pub async fn get_user_values_config(
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    // There is no need to validate session or API key if the registration is open anyway.
-    // In this case, anyone can pull out the same information from the HTML.
+    // Open registration exposes this config in the registration page.
     if !RauthyConfig::get().vars.user_registration.enable {
-        principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Read)?;
+        principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
     }
     Ok(HttpResponse::Ok().json(&RauthyConfig::get().vars.user_values))
 }
@@ -2127,14 +3024,30 @@ pub async fn put_user_self_preferred_username(
         .validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Update)
         .is_err()
     {
-        // make sure the logged-in, non-admin can only update its own username
-        principal.validate_user_session(&id)?;
-
+        // neither an ApiKey nor a full admin: force-overwrite is reserved for full admins,
+        // whether the caller is the user itself or a delegated group admin
         if force_overwrite {
             return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Only an admin can 'force_overwrite' the 'preferred_username'",
+                ErrorResponseType::Forbidden,
+                "Only a full admin can 'force_overwrite' the 'preferred_username'",
             ));
+        }
+        // not the logged-in user updating its own username: then it must be a group admin
+        // that manages the target, and it may only set the name while it is still empty
+        if principal.validate_user_session(&id).is_err() {
+            principal.validate_group_admin_session()?;
+            let target = User::find(id.clone()).await?;
+            principal.validate_group_admin_can_manage(target.roles_iter(), target.groups_iter())?;
+            if UserValues::find(&id)
+                .await?
+                .and_then(|v| v.preferred_username)
+                .is_some()
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::Forbidden,
+                    "Group admins cannot overwrite an existing 'preferred_username'",
+                ));
+            }
         }
     }
 
@@ -2208,4 +3121,132 @@ pub async fn delete_user_by_id(
     principal.validate_api_key_or_admin_session(AccessGroup::Users, AccessRights::Delete)?;
     let user = User::find(id.into_inner()).await?;
     handle_user_delete(user).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rauthy_data::entity::sessions::SessionState;
+
+    fn session_principal(user_id: &str, roles: &[&str], is_mfa: bool) -> Principal {
+        let now = Utc::now().timestamp();
+        Principal {
+            session: Some(Session {
+                id: "session_id_0123".to_string(),
+                csrf_token: "csrf_token_0123".to_string(),
+                user_id: Some(user_id.to_string()),
+                roles: Some(roles.join(",")),
+                groups: None,
+                is_mfa,
+                state: SessionState::Auth,
+                exp: now + 3600,
+                last_seen: now,
+                remote_ip: None,
+            }),
+            api_key: None,
+            roles: roles.iter().map(|r| r.to_string()).collect(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_consent_access_plain_user_gets_the_user_error() {
+        let user = session_principal("alice", &["user"], true);
+        let err = validate_consent_access(&user, "bob", AccessRights::Read)
+            .await
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert_eq!(err.message, "Access is forbidden with this user");
+    }
+
+    #[test]
+    fn test_consent_session_role() {
+        // a full admin on another user's consents must go through the admin session gate,
+        // which enforces `admin_force_mfa`
+        let admin = session_principal("admin", &["rauthy_admin"], false);
+        assert_eq!(
+            consent_session_role(&admin, "bob").unwrap(),
+            ConsentSessionRole::Admin
+        );
+        // own consents, also for admins and group admins
+        assert_eq!(
+            consent_session_role(&admin, "admin").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        let ga = session_principal("ga", &["rauthy_admin:dev"], false);
+        assert_eq!(
+            consent_session_role(&ga, "ga").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        assert_eq!(
+            consent_session_role(&ga, "bob").unwrap(),
+            ConsentSessionRole::GroupAdmin
+        );
+        let user = session_principal("alice", &["user"], false);
+        assert_eq!(
+            consent_session_role(&user, "alice").unwrap(),
+            ConsentSessionRole::Owner
+        );
+        let err = consent_session_role(&user, "bob").unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Forbidden);
+        assert_eq!(err.message, "Access is forbidden with this user");
+        // no session at all
+        let err = consent_session_role(&Principal::default(), "bob").unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Unauthorized);
+    }
+
+    #[test]
+    fn test_redirect_uri_matches_client() {
+        // Host-locked prefixes match themselves and continuations at a boundary.
+        assert!(redirect_uri_matches_client(
+            "https://app.example.com",
+            "https://app.example.com"
+        ));
+        assert!(redirect_uri_matches_client(
+            "https://app.example.com/callback?x=1#f",
+            "https://app.example.com"
+        ));
+        assert!(redirect_uri_matches_client(
+            "app.example.com/x",
+            "app.example.com"
+        ));
+        assert!(redirect_uri_matches_client(
+            "https://app.example.com/cb/",
+            "https://app.example.com/cb/"
+        ));
+
+        // Boundary violations must not match.
+        assert!(!redirect_uri_matches_client(
+            "https://app.example.com.evil.com/x",
+            "https://app.example.com"
+        ));
+        assert!(!redirect_uri_matches_client(
+            "https://evil.com/app.example.com/",
+            "https://app.example.com/"
+        ));
+
+        // Degenerate `client_uri`s without a non-empty host must never match, no matter what
+        // the remainder of `redirect_uri` is (open redirect).
+        for bad in ["https://", "http://", "/", "//", "///", "?x=1", "#f", ""] {
+            assert!(
+                !redirect_uri_matches_client("https://evil.com/phish", bad),
+                "client_uri={bad:?}"
+            );
+            assert!(
+                !redirect_uri_matches_client("javascript:alert(1)//x", bad),
+                "client_uri={bad:?}"
+            );
+        }
+
+        // A `javascript:` prefix still locks the final URL to itself (the resolved URL is
+        // unparseable, and the frontend normalizes it before navigating), so only its own
+        // continuations may match.
+        assert!(redirect_uri_matches_client(
+            "javascript:alert(1)//x",
+            "javascript:alert(1)/"
+        ));
+        assert!(!redirect_uri_matches_client(
+            "https://evil.com/phish",
+            "javascript:alert(1)/"
+        ));
+    }
 }

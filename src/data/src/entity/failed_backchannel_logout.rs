@@ -25,10 +25,10 @@ impl FailedBackchannelLogout {
         let sid = sid.unwrap_or_default();
 
         let sql = r#"
-INSERT INTO failed_backchannel_logouts (client_id, sub, sid, retry_count)
+INSERT INTO failed_backchannel_logouts AS f (client_id, sub, sid, retry_count)
 VALUES ($1, $2, $3, 0)
 ON CONFLICT (client_id, sub, sid)
-DO UPDATE SET retry_count = retry_count + 1"#;
+DO UPDATE SET retry_count = f.retry_count + 1"#;
 
         if is_hiqlite() {
             DB::hql().execute(sql, params!(client_id, sub, sid)).await?;
@@ -61,6 +61,27 @@ WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
                 .await?;
         } else {
             DB::pg_execute(sql, &[&self.client_id, &self.sub, &self.sid]).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn delete_by(
+        client_id: String,
+        sub: Option<String>,
+        sid: Option<String>,
+    ) -> Result<(), ErrorResponse> {
+        let sub = sub.unwrap_or_default();
+        let sid = sid.unwrap_or_default();
+
+        let sql = r#"
+DELETE FROM failed_backchannel_logouts
+WHERE client_id = $1 AND sub = $2 AND sid = $3"#;
+
+        if is_hiqlite() {
+            DB::hql().execute(sql, params!(client_id, sub, sid)).await?;
+        } else {
+            DB::pg_execute(sql, &[&client_id, &sub, &sid]).await?;
         }
 
         Ok(())

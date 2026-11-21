@@ -11,6 +11,9 @@ use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::Add;
+use std::str::FromStr;
+use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::warn;
 
@@ -26,14 +29,14 @@ impl TryFrom<&String> for MagicLinkUsage {
     type Error = ErrorResponse;
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
+        Self::from_str(value.as_str())
     }
 }
 
-impl TryFrom<&str> for MagicLinkUsage {
-    type Error = ErrorResponse;
+impl FromStr for MagicLinkUsage {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let (ty, v) = value.split_once('$').unwrap_or((value, ""));
         let slf = match ty {
             "email_change" => MagicLinkUsage::EmailChange(v.to_string()),
@@ -119,11 +122,11 @@ impl Debug for MagicLink {
 impl MagicLink {
     pub async fn create(
         user_id: String,
-        lifetime_minutes: i64,
+        lifetime: Duration,
         usage: MagicLinkUsage,
     ) -> Result<Self, ErrorResponse> {
         let id = get_rand(64);
-        let exp = OffsetDateTime::now_utc().unix_timestamp() + lifetime_minutes * 60;
+        let exp = OffsetDateTime::now_utc().add(lifetime).unix_timestamp();
         let link = MagicLink {
             id,
             user_id,
@@ -255,7 +258,12 @@ impl MagicLink {
                 .password_reset_cookie_binding;
             if let Some(cookie) = ApiCookie::from_req(req, PWD_RESET_COOKIE) {
                 // the extracted cookie from the request starts with 'rauthy-pwd-reset='
-                if !cookie.ends_with(cookie_slf) {
+                let binding_matches = cookie.len() >= cookie_slf.len()
+                    && constant_time_eq::constant_time_eq(
+                        &cookie.as_bytes()[cookie.len() - cookie_slf.len()..],
+                        cookie_slf.as_bytes(),
+                    );
+                if !binding_matches {
                     if cookie_binding {
                         return Err(err);
                     } else {
@@ -288,7 +296,10 @@ impl MagicLink {
                     ));
                 }
                 Some(token) => {
-                    if self.csrf_token != token.to_str().unwrap_or("") {
+                    if !constant_time_eq::constant_time_eq(
+                        self.csrf_token.as_bytes(),
+                        token.to_str().unwrap_or("").as_bytes(),
+                    ) {
                         return Err(ErrorResponse::new(
                             ErrorResponseType::Unauthorized,
                             "Invalid CSRF Token",

@@ -28,7 +28,8 @@ use rauthy_data::entity::pam::tokens::PamToken;
 use rauthy_data::entity::pam::users::PamUser;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::{WebauthnAdditionalData, WebauthnServiceReq};
+use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
+use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::cmp::max;
@@ -588,6 +589,10 @@ pub async fn post_host_whoami(
 
 /// Login via a PAM host
 ///
+/// CAUTION: If you create a custom integration, you MUST request a preflight (`/pam/preflight`)
+/// beforehand. Otherwise, things like `force_mfa` could be bypassed. You MUST adhere to the
+/// response from the preflight check to make everything work properly.
+///
 /// **Permissions**
 /// - any authenticated PAM host
 #[utoipa::path(
@@ -633,9 +638,7 @@ pub async fn post_login(
 
     #[inline]
     async fn pwd_login_fail(user: &mut User, err: ErrorResponse) -> Result<(), ErrorResponse> {
-        user.last_failed_login = Some(Utc::now().timestamp());
-        user.failed_login_attempts = Some(user.failed_login_attempts.unwrap_or(0) + 1);
-        user.save(None).await?;
+        user.save_login_failure().await?;
 
         // Note: We don't want to increase the FailedLoginCounter for the IP here, because
         // this could be abused for DoS and block remote hosts with enough failed login attempts.
@@ -649,6 +652,12 @@ pub async fn post_login(
     }
 
     if let Some(password) = payload.password {
+        // Note: Theoretically, we could have a TOCTOU here if an admin decides to switch this
+        // host to `force_mfa` between a preflight check and the actual login from the PAM module.
+        // However, we specifically do not return an error in that case to not screw up the whole
+        // login, which could end up in a weird locked state then. If the preflight returns
+        // a not-forced MFA requirement, we stick with it here. The PAM module has internal timeouts
+        // anyway. The PAM module will not send a local `password` if MFA is forced.
         if !host.local_password_only && user.has_webauthn_enabled() {
             pwd_login_fail(
                 &mut user,
@@ -697,10 +706,7 @@ pub async fn post_login(
 
     // TODO should we even do this user update here? The PAM user belongs to this user, but on the
     //  other hand, these metrics are for all non-PAM logins.
-    user.last_login = Some(Utc::now().timestamp());
-    user.last_failed_login = None;
-    user.failed_login_attempts = None;
-    user.save(None).await?;
+    user.save_login_success().await?;
 
     info!("New PAM login for user {}", user.email);
 
@@ -729,10 +735,14 @@ pub async fn post_mfa_start(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
+    let host = PamHost::find_simple(payload.host_id).await?;
+    host.validate_secret(payload.host_secret)?;
+
     let pam_user = PamUser::find_by_name(payload.username).await?;
     let user = User::find_by_email(pam_user.email).await?;
 
-    let resp = webauthn::auth_start(user.id, MfaPurpose::PamLogin).await?;
+    // No need for resident key support here - user must provide username anyway
+    let resp = webauthn::authenticate::auth_start(Some(user.id), MfaPurpose::PamLogin).await?;
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -757,14 +767,11 @@ pub async fn post_mfa_finish(
 ) -> Result<HttpResponse, ErrorResponse> {
     payload.validate()?;
 
-    let resp = webauthn::auth_finish(
-        payload.user_id,
-        &req,
-        BrowserId::default(),
-        None,
-        payload.data,
-    )
-    .await?;
+    let host = PamHost::find_simple(payload.host_id).await?;
+    host.validate_secret(payload.host_secret)?;
+
+    let resp =
+        webauthn::authenticate::auth_finish(&req, BrowserId::default(), None, payload.data).await?;
     Ok(resp.into_response())
 }
 
@@ -896,6 +903,20 @@ pub async fn post_pam_users(
 
     let user = User::find_by_email(payload.email).await?;
     let pam_user = PamUser::insert(payload.username, user.email).await?;
+
+    if let Some(mut groups) = payload.groups {
+        for g in groups.iter_mut() {
+            g.uid = pam_user.id;
+        }
+        // update_groups does delete-all + re-insert, so include the user's
+        // own group (already created by insert) to avoid removing it.
+        groups.push(rauthy_api_types::pam::PamGroupUserLink {
+            uid: pam_user.id,
+            gid: pam_user.gid,
+            wheel: false,
+        });
+        PamUser::update_groups(pam_user.id, groups).await?;
+    }
 
     Ok(HttpResponse::Ok().json(pam_user.build_response(None)))
 }
@@ -1228,7 +1249,12 @@ pub async fn get_validate_user(
             "User ID mismatch",
         ));
     }
-    // TODO maybe additional token validation or rely on cache ttl?
+    if token.exp < Utc::now().timestamp() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Forbidden,
+            "Token has expired",
+        ));
+    }
 
     let user = User::find(user_id).await?;
     user.check_enabled()?;

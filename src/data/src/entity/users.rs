@@ -5,18 +5,21 @@ use crate::email::password_reset::send_pwd_reset;
 use crate::entity::continuation_token::ContinuationToken;
 use crate::entity::groups::Group;
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
+use crate::entity::one_time_password::OneTimePassword;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::PasswordPolicy;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
-use crate::entity::refresh_tokens::RefreshToken;
+use crate::entity::pwd_exp_mails::PasswordExpMail;
+use crate::entity::refresh_tokens::{PgDeletedJtis, RefreshToken};
 use crate::entity::roles::Role;
 use crate::entity::sessions::Session;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::users_values::UserValues;
-use crate::entity::webauthn::{PasskeyEntity, WebauthnServiceReq};
+use crate::entity::webauthn::auth_req::WebauthnServiceReq;
+use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::events::event::Event;
 use crate::html::templates::{HtmlTemplate, UserEmailChangeConfirmHtml};
 use crate::language::Language;
@@ -30,33 +33,151 @@ use hiqlite::macros::params;
 use rauthy_api_types::PatchOp;
 use rauthy_api_types::generic::SearchParamsIdx;
 use rauthy_api_types::users::{
-    NewUserRegistrationRequest, NewUserRequest, UpdateUserRequest, UpdateUserSelfRequest,
-    UserAccountTypeResponse, UserResponse, UserResponseSimple, UserValuesRequest,
-    UserValuesResponse,
+    ActiveOtp, NewUserRegistrationRequest, NewUserRequest, OtpKind, UpdateUserRequest,
+    UpdateUserSelfRequest, UserAccountTypeResponse, UserResponse, UserResponseSimple,
+    UserValuesRequest, UserValuesResponse,
 };
 use rauthy_common::constants::{
     CACHE_TTL_APP, CACHE_TTL_USER, IDX_USER_COUNT, IDX_USERS, RAUTHY_ADMIN_ROLE,
 };
 use rauthy_common::is_hiqlite;
 use rauthy_common::password_hasher::{ComparePasswords, HashPassword};
-use rauthy_common::utils::{new_store_id, real_ip_from_req};
+use rauthy_common::utils::{csv_remove, csv_rename, new_store_id, real_ip_from_req};
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::default::Default;
 use std::fmt::{Debug, Formatter};
+use std::mem;
 use std::ops::Add;
+use std::str::FromStr;
+use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::{debug, error, trace};
+
+/// A statement of the Postgres transaction of [`User::delete`], each binding the user id as `$1`
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PgDeleteStep {
+    /// A table that references the user. The refresh token deletes return the
+    /// `access_token_jti` of their rows.
+    Rows(&'static str),
+    /// The user row, returning its `picture_id`
+    User,
+    /// Revokes the access tokens of the deleted refresh tokens
+    RevokeAccessTokens,
+    /// Revokes every access token issued to the user
+    RevokeUserAccessTokens,
+}
+
+/// The statements of the Postgres transaction of [`User::delete`], in order. The user row
+/// cascades into the consents and refresh tokens of the user, in the order of the foreign key
+/// triggers. A consent revoke (`UserConsent::revoke`) and `Client::delete` take these tables in
+/// another order: consents, device refresh tokens, legacy refresh tokens, the other refresh
+/// tokens, then `issued_tokens`. Run at the same time, each could wait for a row the other one
+/// holds, and Postgres would abort one of them as a deadlock. So they are deleted in that order
+/// first, then the user row, and `issued_tokens` last.
+///
+/// The access tokens of the deleted refresh tokens are revoked in the same transaction. A
+/// discard of one of these refresh tokens that runs at the same time and finds its row deleted
+/// leaves the access token to this transaction.
+///
+/// A refresh rotation can still commit its replacement refresh token, device refresh token
+/// included, after the token deletes and before the user row is deleted: its foreign key check
+/// only takes a `KEY SHARE` lock on the user row. The cascade of the user row then removes it
+/// without returning its access token. Its access token was committed before it, so the last
+/// statement revokes every access token of the user by `user_id`. A refresh that comes later
+/// fails its foreign key check, so its access token is never handed out. The user row is not
+/// locked first instead: a device refresh token insert holds a `KEY SHARE` lock on its device
+/// while it waits for the user row, and the cascade of the user row into that device would then
+/// deadlock with it.
+pub(crate) const PG_DELETE_STEPS: [PgDeleteStep; 7] = [
+    PgDeleteStep::Rows("DELETE FROM user_consents WHERE user_id = $1"),
+    PgDeleteStep::Rows(
+        "DELETE FROM refresh_tokens_devices WHERE user_id = $1 RETURNING access_token_jti",
+    ),
+    PgDeleteStep::Rows(
+        "DELETE FROM refresh_tokens WHERE user_id = $1 AND client_id IS NULL \
+        RETURNING access_token_jti",
+    ),
+    PgDeleteStep::Rows("DELETE FROM refresh_tokens WHERE user_id = $1 RETURNING access_token_jti"),
+    PgDeleteStep::User,
+    PgDeleteStep::RevokeAccessTokens,
+    PgDeleteStep::RevokeUserAccessTokens,
+];
+
+/// Whether the hiqlite delete of a user removed the user, when its transaction failed (`res` is
+/// `Err`) or deleted no user row (`Ok(0)`). Either can come from a transaction that committed
+/// while its result was lost, or from a re-run of a committed one. `found` tells whether the read
+/// before the delete saw the user, and `gone` is the answer of a read on the leader after it: a
+/// user that was there before and is gone after was deleted by this call. A user that was gone
+/// before was not, so its original error, or `Ok(false)` for no user row, stands.
+fn hql_delete_recovered(
+    res: Result<usize, ErrorResponse>,
+    found: bool,
+    gone: bool,
+) -> Result<bool, ErrorResponse> {
+    if found && gone {
+        return Ok(true);
+    }
+    res.map(|rows| rows > 0)
+}
+
+/// The state of the Postgres transaction of [`User::delete`]
+#[derive(Debug, Default)]
+pub(crate) struct PgDelete {
+    jtis: PgDeletedJtis,
+    /// `Some` with the `picture_id` of the user row once [`PgDeleteStep::User`] deleted it
+    pub(crate) deleted: Option<Option<String>>,
+}
+
+impl PgDelete {
+    pub(crate) async fn step(
+        &mut self,
+        txn: &deadpool_postgres::Transaction<'_>,
+        step: PgDeleteStep,
+        user_id: &str,
+    ) -> Result<(), ErrorResponse> {
+        match step {
+            PgDeleteStep::Rows(sql) => self.jtis.delete(txn, sql, &[&user_id]).await?,
+            PgDeleteStep::User => {
+                self.deleted = txn
+                    .query_opt(
+                        "DELETE FROM users WHERE id = $1 RETURNING picture_id",
+                        &[&user_id],
+                    )
+                    .await?
+                    .map(|row| row.get::<_, Option<String>>(0));
+            }
+            PgDeleteStep::RevokeAccessTokens => self.jtis.revoke(txn).await?,
+            PgDeleteStep::RevokeUserAccessTokens => {
+                txn.execute(
+                    "UPDATE issued_tokens SET revoked = true WHERE user_id = $1",
+                    &[&user_id],
+                )
+                .await?;
+            }
+        }
+        Ok(())
+    }
+}
 
 static SQL_SAVE: &str = r#"
 UPDATE USERS SET
 email = $1, given_name = $2, family_name = $3, password = $4, roles = $5, groups = $6, enabled = $7,
 email_verified = $8, password_expires = $9, last_login = $10, last_failed_login = $11,
 failed_login_attempts = $12, language = $13, webauthn_user_id = $14, user_expires = $15,
-auth_provider_id = $16, federation_uid = $17, picture_id = $18
-WHERE id = $19"#;
+auth_provider_id = $16, federation_uid = $17
+WHERE id = $18"#;
+
+/// Drops the sessions and refresh tokens of the disabled user `id`.
+async fn drop_tokens_of_disabled(id: &str) -> Result<(), ErrorResponse> {
+    Session::invalidate_for_user(id).await?;
+    RefreshToken::invalidate_for_user(id).await?;
+    // TODO trigger backchannel logout and SCIM updates as well?
+    //  -> compare with old value beforehand somehow, probably in calling fn before updates
+    Ok(())
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccountType {
@@ -106,6 +227,7 @@ pub struct User {
     pub user_expires: Option<i64>,
     pub auth_provider_id: Option<String>,
     pub federation_uid: Option<String>,
+    /// Updated only by [`Self::set_picture_id`]: [`Self::save`] does not write it.
     pub picture_id: Option<String>,
 }
 
@@ -142,17 +264,31 @@ impl Debug for User {
 }
 
 // CRUD
+// Keyset cursors over a composite key: `created_at` alone (seconds) is not unique, so a
+// plain comparison on it skips users at batch boundaries (same reasoning as `find_paginated`).
+const SQL_FIND_BATCH: &str = r#"
+SELECT * FROM users
+WHERE (created_at, email) > ($1, $2)
+ORDER BY created_at ASC, email ASC
+LIMIT $3"#;
+
+const SQL_FIND_FOR_SCIM_SYNC: &str = r#"
+SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
+    created_at, language, picture_id, birthdate, phone, street, zip, city, country,
+    preferred_username, tz
+FROM users u
+LEFT JOIN users_values uv ON u.id = uv.id
+WHERE (u.created_at, u.id) > ($1, $2)
+ORDER BY u.created_at ASC, u.id ASC
+LIMIT $3"#;
+
 impl User {
     pub async fn invalidate_cache(user_id: &str, email: &str) -> Result<(), ErrorResponse> {
-        let client = DB::hql();
-
-        let idx = format!("{IDX_USERS}_{user_id}");
-        client.delete(Cache::User, idx).await?;
-
-        let idx = format!("{IDX_USERS}_{email}");
-        client.delete(Cache::User, idx).await?;
-
-        Ok(())
+        DB::cache_delete_delayed([
+            (Cache::User, Some(format!("{IDX_USERS}_{user_id}"))),
+            (Cache::User, Some(format!("{IDX_USERS}_{email}"))),
+        ])
+        .await
     }
 
     pub async fn count() -> Result<i64, ErrorResponse> {
@@ -212,7 +348,7 @@ impl User {
 
         let magic_link = MagicLink::create(
             slf.id.clone(),
-            RauthyConfig::get().vars.lifetimes.magic_link_pwd_first as i64,
+            RauthyConfig::get().vars.lifetimes.magic_link_pwd_first,
             MagicLinkUsage::NewUser(post_reset_redirect_uri),
         )
         .await?;
@@ -225,24 +361,44 @@ impl User {
         Self::insert(new_user).await
     }
 
-    pub async fn create_from_new(new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
-        let tz = new_user_req.tz.clone();
+    pub async fn create_from_new(mut new_user_req: NewUserRequest) -> Result<User, ErrorResponse> {
+        // The UserValuesValidator is intentionally not used on this path (see post_users), but a
+        // broken tz would otherwise be stored as-is, so validate the format here.
+        if let Some(tz) = &new_user_req.tz
+            && chrono_tz::Tz::from_str(tz).is_err()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'tz' cannot be parsed",
+            ));
+        }
+
+        // pre-uniqueness check for better UX and error handling; the DB unique index on
+        // `users_values.preferred_username` is the authoritative guard (see UserValues::insert).
+        if let Some(preferred_username) = &new_user_req.preferred_username {
+            UserValues::validate_preferred_username_free(preferred_username.clone()).await?;
+        }
+
+        // neither value is read by `from_new_user_req()`, so both can be moved out directly
+        let tz = mem::take(&mut new_user_req.tz);
+        let preferred_username = mem::take(&mut new_user_req.preferred_username);
         let new_user = User::from_new_user_req(new_user_req).await?;
         let user = User::create(new_user, None, tz.as_deref()).await?;
 
-        if tz.is_some() && tz.as_deref() != Some("UTC") && tz.as_deref() != Some("Etc/UTC") {
+        // UTC is the implicit default and is not persisted into the user values.
+        let store_tz = if tz.as_deref() != Some("UTC") && tz.as_deref() != Some("Etc/UTC") {
+            tz
+        } else {
+            None
+        };
+        if store_tz.is_some() || preferred_username.is_some() {
             UserValues::insert(
                 user.id.clone(),
                 UserValuesRequest {
-                    birthdate: None,
-                    phone: None,
-                    street: None,
-                    zip: None,
-                    city: None,
-                    country: None,
-                    tz,
+                    tz: store_tz,
+                    ..Default::default()
                 },
-                None,
+                preferred_username,
             )
             .await?;
         }
@@ -294,19 +450,141 @@ impl User {
 
         Session::delete_by_user(&self.id).await?;
 
-        if let Some(picture_id) = &self.picture_id {
-            UserPicture::remove(picture_id.clone(), self.id.clone()).await?;
-        }
-
-        let sql = "DELETE FROM users WHERE id = $1";
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(&self.id)).await?;
+        // The stored `picture_id`, not the one of `self`, which may be an older copy. Postgres
+        // takes it from the deleted row (RETURNING), hiqlite from a read just before the delete.
+        let deleted: Option<Option<String>> = if is_hiqlite() {
+            // A picture changed after this read is left behind as an orphan.
+            // No `Row` may live past this statement: it is not `Send`.
+            let (found, picture_id): (bool, Option<String>) = match DB::hql()
+                .query_raw(
+                    "SELECT picture_id FROM users WHERE id = $1",
+                    params!(&self.id),
+                )
+                .await?
+                .pop()
+            {
+                Some(mut row) => (true, row.get("picture_id")),
+                None => (false, None),
+            };
+            // Revokes the access tokens of the user and of its refresh tokens before the cascade
+            // of the user row deletes those.
+            let res = DB::hql()
+                .txn([
+                    (
+                        r#"
+UPDATE issued_tokens SET revoked = true
+WHERE user_id = $1
+   OR jti IN (
+       SELECT access_token_jti FROM refresh_tokens WHERE user_id = $1
+       UNION
+       SELECT access_token_jti FROM refresh_tokens_devices WHERE user_id = $1
+   )"#,
+                        params!(&self.id),
+                    ),
+                    ("DELETE FROM users WHERE id = $1", params!(&self.id)),
+                ])
+                .await
+                .map_err(ErrorResponse::from)
+                .and_then(|res| {
+                    res.into_iter()
+                        .try_fold(0, |_, rows| rows.map_err(ErrorResponse::from))
+                });
+            let user_deleted = match res {
+                Ok(rows) if rows > 0 => true,
+                // A user gone before this call was not deleted by it: another delete got there
+                // first. Only for a user that was there, a read on the leader tells whether the
+                // failed or empty delete removed it.
+                res => {
+                    let gone = found
+                        && match DB::hql()
+                            .query_consistent(
+                                "SELECT 1 FROM users WHERE id = $1",
+                                params!(&self.id),
+                            )
+                            .await
+                        {
+                            Ok(rows) => rows.is_empty(),
+                            Err(err) => {
+                                error!(
+                                    user_id = self.id,
+                                    ?err,
+                                    "Error checking whether a failed delete removed the user"
+                                );
+                                false
+                            }
+                        };
+                    hql_delete_recovered(res, found, gone)?
+                }
+            };
+            user_deleted.then_some(picture_id)
         } else {
-            DB::pg_execute(sql, &[&self.id]).await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl
+                .build_transaction()
+                .isolation_level(tokio_postgres::IsolationLevel::ReadCommitted)
+                .start()
+                .await?;
+            let mut delete = PgDelete::default();
+            for step in PG_DELETE_STEPS {
+                delete.step(&txn, step, &self.id).await?;
+            }
+            if delete.deleted.is_some() {
+                txn.commit().await?;
+            }
+            delete.deleted
+        };
+        // Another delete of the same user got there first and did the rest. A `User::save` of
+        // an older copy may have put the user back into the cache after that delete cleared it,
+        // so clear it again.
+        let Some(picture_id) = deleted else {
+            if let Err(err) = Self::invalidate_cache(&self.id, &self.email).await {
+                error!(
+                    user_id = self.id,
+                    ?err,
+                    "Error clearing the cache of a user deleted by another delete"
+                );
+            }
+            return Err(ErrorResponse::new(
+                ErrorResponseType::NotFound,
+                "user does not exist",
+            ));
+        };
+
+        // The user is gone, so the delete succeeded. What follows only cleans up after it, and
+        // a failure is logged, so that the caller still runs its own follow-up work.
+        if let Err(err) = Self::invalidate_cache(&self.id, &self.email).await {
+            error!(
+                user_id = self.id,
+                ?err,
+                "Error clearing the cache of a deleted user"
+            );
+        }
+        if let Err(err) = Self::count_dec().await {
+            error!(user_id = self.id, ?err, "Error counting a deleted user");
         }
 
-        Self::invalidate_cache(&self.id, &self.email).await?;
-        Self::count_dec().await?;
+        // Only once the user is gone: a failed delete keeps the user with its picture. The
+        // picture is not referenced anymore, so a failure here leaves an orphan, not an error.
+        if let Some(picture_id) = picture_id {
+            match UserPicture::delete_with_data(picture_id.clone()).await {
+                Ok(()) => {}
+                Err(err) if err.error == ErrorResponseType::NotFound => {
+                    debug!(
+                        picture_id,
+                        user_id = self.id,
+                        "The picture of a deleted user was already removed"
+                    );
+                }
+                Err(err) => {
+                    error!(
+                        picture_id,
+                        user_id = self.id,
+                        ?err,
+                        "Error deleting the picture of a deleted user"
+                    );
+                }
+            }
+        }
 
         Ok(())
     }
@@ -429,20 +707,17 @@ ORDER BY created_at ASC"#;
         from_created_at: i64,
         batch_size: u16,
     ) -> Result<Vec<Self>, ErrorResponse> {
-        let sql = r#"
-SELECT * FROM users
-WHERE created_at >= $1 AND email > $2
-ORDER BY created_at ASC, email ASC
-LIMIT $3"#;
-
         let batch_size = batch_size as i64;
         let res = if is_hiqlite() {
             DB::hql()
-                .query_as(sql, params!(from_created_at, after_email, batch_size))
+                .query_as(
+                    SQL_FIND_BATCH,
+                    params!(from_created_at, after_email, batch_size),
+                )
                 .await?
         } else {
             DB::pg_query(
-                sql,
+                SQL_FIND_BATCH,
                 &[&from_created_at, &after_email, &batch_size],
                 batch_size as usize,
             )
@@ -457,12 +732,14 @@ LIMIT $3"#;
         let like = format!("%{group_name}%");
         let sql = "SELECT * FROM users WHERE groups LIKE $1";
 
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
             DB::pg_query(sql, &[&like], count).await?
         };
+        // LIKE matches substrings - keep only real members
+        res.retain(|u| u.groups_iter().any(|g| g == group_name));
 
         Ok(res)
     }
@@ -472,12 +749,14 @@ LIMIT $3"#;
         let like = format!("%{role_name}%");
         let sql = "SELECT * FROM users WHERE roles LIKE $1";
 
-        let res = if is_hiqlite() {
+        let mut res: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             let count = Self::count().await? as usize;
             DB::pg_query(sql, &[&like], count).await?
         };
+        // LIKE matches substrings - keep only real members
+        res.retain(|u| u.roles_iter().any(|r| r == role_name));
 
         Ok(res)
     }
@@ -530,12 +809,15 @@ LIMIT $3"#;
         let size_hint = page_size as usize;
 
         let res = if let Some(token) = continuation_token {
+            // Keyset pagination over the composite key (created_at, id): `created_at` alone is
+            // not unique, so without the `id` tie-breaker, rows with an equal `created_at`
+            // would be duplicated or skipped across pages.
             if backwards {
                 let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE created_at <= $1 AND id != $2
-ORDER BY created_at DESC
+WHERE (created_at, id) < ($1, $2)
+ORDER BY created_at DESC, id DESC
 LIMIT $3
 OFFSET $4"#;
 
@@ -553,8 +835,8 @@ OFFSET $4"#;
                 let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE created_at >= $1 AND id != $2
-ORDER BY created_at ASC
+WHERE (created_at, id) > ($1, $2)
+ORDER BY created_at ASC, id ASC
 LIMIT $3
 OFFSET $4"#;
 
@@ -573,7 +855,7 @@ OFFSET $4"#;
             let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $1
 OFFSET $2"#;
 
@@ -588,7 +870,7 @@ OFFSET $2"#;
             let sql = r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-ORDER BY created_at ASC
+ORDER BY created_at ASC, id ASC
 LIMIT $1
 OFFSET $2"#;
 
@@ -690,23 +972,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
     /// Caution: Results will only contain values necessary for SCIM syncs.
     pub async fn find_for_scim_sync(
         last_created_ts: i64,
+        last_user_id: &str,
         limit: u16,
     ) -> Result<Vec<(Self, UserValues)>, ErrorResponse> {
-        let sql = r#"
-SELECT u.id AS user_id, email, email_verified, given_name, family_name, roles, groups, enabled,
-    created_at, language, picture_id, birthdate, phone, street, zip, city, country,
-    preferred_username, tz
-FROM users u
-LEFT JOIN users_values uv ON u.id = uv.id
-WHERE u.created_at > $1
-ORDER BY created_at ASC
-LIMIT $2"#;
-
         let mut res = Vec::with_capacity(limit as usize);
 
         if is_hiqlite() {
             let rows = DB::hql()
-                .query_raw(sql, params!(last_created_ts, limit))
+                .query_raw(
+                    SQL_FIND_FOR_SCIM_SYNC,
+                    params!(last_created_ts, last_user_id, limit),
+                )
                 .await?;
             for mut row in rows {
                 let user = Self {
@@ -745,8 +1021,12 @@ LIMIT $2"#;
                 res.push((user, values));
             }
         } else {
-            let rows = DB::pg_query_rows(sql, &[&last_created_ts, &(limit as i32)], limit as usize)
-                .await?;
+            let rows = DB::pg_query_rows(
+                SQL_FIND_FOR_SCIM_SYNC,
+                &[&last_created_ts, &last_user_id, &(limit as i32)],
+                limit as usize,
+            )
+            .await?;
             for row in rows {
                 let user = Self {
                     id: row.get("user_id"),
@@ -837,7 +1117,6 @@ LIMIT $2"#;
                 self.user_expires,
                 self.auth_provider_id,
                 self.federation_uid,
-                self.picture_id,
                 self.id
             ),
         ));
@@ -876,7 +1155,6 @@ LIMIT $2"#;
                 &self.user_expires,
                 &self.auth_provider_id,
                 &self.federation_uid,
-                &self.picture_id,
                 &self.id,
             ],
         )
@@ -885,6 +1163,8 @@ LIMIT $2"#;
         Ok(())
     }
 
+    /// Writes every column of this copy but `id`, `created_at` and `picture_id`, which only
+    /// [`Self::set_picture_id`] updates, then drops the cached user, also under `old_email`.
     pub async fn save(&self, old_email: Option<String>) -> Result<(), ErrorResponse> {
         if old_email.is_some() {
             User::is_email_free(self.email.clone()).await?;
@@ -915,7 +1195,6 @@ LIMIT $2"#;
                         self.user_expires,
                         &self.auth_provider_id,
                         &self.federation_uid,
-                        &self.picture_id,
                         &self.id
                     ),
                 )
@@ -941,7 +1220,6 @@ LIMIT $2"#;
                     &self.user_expires,
                     &self.auth_provider_id,
                     &self.federation_uid,
-                    &self.picture_id,
                     &self.id,
                 ],
             )
@@ -949,24 +1227,246 @@ LIMIT $2"#;
         }
 
         if !self.enabled {
-            Session::invalidate_for_user(&self.id).await?;
-            RefreshToken::invalidate_for_user(&self.id).await?;
-            // TODO trigger backchannel logout and SCIM updates as well?
-            //  -> compare with old value beforehand somehow, probably in calling fn before updates
+            drop_tokens_of_disabled(&self.id).await?;
         }
 
-        if let Some(email) = old_email {
-            let idx = format!("{IDX_USERS}_{email}");
-            client.delete(Cache::User, idx).await?;
+        // `self` may be a copy read before a concurrent change of a column this save does not
+        // write, like `picture_id`: drop the cached user instead of caching this copy
+        self.invalidate_cache_also(old_email.as_deref()).await
+    }
+
+    /// Sets the `picture_id` of this user alone, in the database and in this copy, then drops
+    /// the cached user, under the email of this copy and under the stored one, if a concurrent
+    /// update changed it. A full-row [`Self::save`] never writes `picture_id`: it works on a copy
+    /// that may predate a concurrent picture change.
+    pub async fn set_picture_id(&mut self, picture_id: Option<&str>) -> Result<(), ErrorResponse> {
+        let sql = "UPDATE users SET picture_id = $1 WHERE id = $2 RETURNING email";
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(picture_id.map(String::from), &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(sql, &[&picture_id, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+
+        self.picture_id = picture_id.map(String::from);
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a successful login: sets `last_login` to now and clears the failed login columns,
+    /// in this copy and in the database. It writes no other column.
+    /// Unlike [`Self::save`], it does not write back the other columns of this copy, which a
+    /// login may have read long before, e.g. before it spent its time on the password hash, so
+    /// a concurrent change of the user (a picture upload, an admin update) is kept. The cached
+    /// user is dropped under the email of this copy, and under the stored one, if a concurrent
+    /// update changed it.
+    pub async fn save_login_success(&mut self) -> Result<(), ErrorResponse> {
+        self.last_login = Some(Utc::now().timestamp());
+        self.last_failed_login = None;
+        self.failed_login_attempts = None;
+
+        let sql = r#"
+UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL
+WHERE id = $2
+RETURNING email"#;
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(self.last_login, &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(sql, &[&self.last_login, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| row.get("email"))
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// [`Self::save_login_success`] for a login that rehashed the password with upgraded
+    /// Argon2ID params: in the same single update, it also replaces the stored password with
+    /// `new_hash`, in the database only, and only while the stored hash is still the one this
+    /// copy holds, the one the login validated: a password changed meanwhile is kept. This copy
+    /// keeps the validated hash.
+    pub async fn save_login_success_with_rehash(
+        &mut self,
+        new_hash: &str,
+    ) -> Result<(), ErrorResponse> {
+        self.last_login = Some(Utc::now().timestamp());
+        self.last_failed_login = None;
+        self.failed_login_attempts = None;
+
+        // SQLite numbers `$n` in the order of first appearance, so they appear in order
+        let sql = r#"
+UPDATE users SET last_login = $1, last_failed_login = NULL, failed_login_attempts = NULL,
+password = CASE WHEN password = $2 THEN $3 ELSE password END
+WHERE id = $4
+RETURNING email"#;
+
+        let stored_email: Option<String> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    sql,
+                    params!(self.last_login, &self.password, new_hash, &self.id),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| row.get("email"))
+        } else {
+            DB::pg_query_rows(
+                sql,
+                &[&self.last_login, &self.password, &new_hash, &self.id],
+                1,
+            )
+            .await?
+            .first()
+            .map(|row| row.get("email"))
+        };
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a failed login: sets `last_failed_login` to now and increments
+    /// `failed_login_attempts` in the database, then sets both in this copy, the counter to the
+    /// stored one. Like [`Self::save_login_success`], it writes no other column, and the counter
+    /// counts every failed login, also those that run at the same time. For a user deleted
+    /// meanwhile, the counter of this copy is incremented instead.
+    pub async fn save_login_failure(&mut self) -> Result<(), ErrorResponse> {
+        self.last_failed_login = Some(Utc::now().timestamp());
+
+        let sql = r#"
+UPDATE users SET last_failed_login = $1,
+failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1
+WHERE id = $2
+RETURNING email, failed_login_attempts"#;
+
+        let stored: Option<(String, i64)> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(sql, params!(self.last_failed_login, &self.id))
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| (row.get("email"), row.get("failed_login_attempts")))
+        } else {
+            DB::pg_query_rows(sql, &[&self.last_failed_login, &self.id], 1)
+                .await?
+                .first()
+                .map(|row| (row.get("email"), row.get("failed_login_attempts")))
+        };
+
+        let (stored_email, attempts) = match stored {
+            Some((email, attempts)) => (Some(email), attempts),
+            None => (None, self.failed_login_attempts.unwrap_or_default() + 1),
+        };
+        self.failed_login_attempts = Some(attempts);
+
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
+
+    /// Saves a password reset: writes the `password` and `password_expires` that
+    /// [`Self::apply_password_rules`] set in this copy, and sets `email_verified` while the
+    /// stored email is still the one of this copy, the one the reset was sent to; this copy
+    /// takes the stored `email_verified`. Unlike [`Self::save`], it does not write back the
+    /// other columns of this copy, which the reset read before it spent its time on the password
+    /// hash, so a concurrent change of the user (an admin update, a failed login) is kept. The
+    /// cached user is dropped under the email of this copy, and under the stored one, if a
+    /// concurrent update changed it. Like [`Self::save`], it drops the sessions and refresh
+    /// tokens of a user the stored row has disabled.
+    pub async fn save_password_reset(&mut self) -> Result<(), ErrorResponse> {
+        // the reset proves the email it was sent to, `$3`: `email_verified` is set only while
+        // the stored email is still that one
+        let sql = r#"
+UPDATE users SET password = $1, password_expires = $2,
+email_verified = CASE WHEN email = $3 THEN true ELSE email_verified END
+WHERE id = $4
+RETURNING email, email_verified, enabled"#;
+
+        /// The columns the reset returns from the stored row.
+        struct StoredReset {
+            email: String,
+            email_verified: bool,
+            enabled: bool,
         }
 
-        let idx = format!("{IDX_USERS}_{}", self.id);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
+        let stored: Option<StoredReset> = if is_hiqlite() {
+            DB::hql()
+                .execute_returning(
+                    sql,
+                    params!(&self.password, self.password_expires, &self.email, &self.id),
+                )
+                .await?
+                .into_iter()
+                .next()
+                .transpose()?
+                .map(|mut row| StoredReset {
+                    email: row.get("email"),
+                    email_verified: row.get("email_verified"),
+                    enabled: row.get("enabled"),
+                })
+        } else {
+            DB::pg_query_rows(
+                sql,
+                &[
+                    &self.password,
+                    &self.password_expires,
+                    &self.email,
+                    &self.id,
+                ],
+                1,
+            )
+            .await?
+            .first()
+            .map(|row| StoredReset {
+                email: row.get("email"),
+                email_verified: row.get("email_verified"),
+                enabled: row.get("enabled"),
+            })
+        };
 
-        let idx = format!("{IDX_USERS}_{}", self.email);
-        client.put(Cache::User, idx, self, CACHE_TTL_USER).await?;
+        let stored_email = match stored {
+            Some(stored) => {
+                self.email_verified = stored.email_verified;
+                if !stored.enabled {
+                    // like `save` does for a disabled user, judged by the stored row, which a
+                    // concurrent update may have disabled
+                    drop_tokens_of_disabled(&self.id).await?;
+                }
+                Some(stored.email)
+            }
+            None => None,
+        };
+        self.invalidate_cache_also(stored_email.as_deref()).await
+    }
 
-        Ok(())
+    /// Drops the cached user under its id and the email of this copy, and under `other_email`
+    /// too, if it differs: the email before a change, or the stored one a write returned, which
+    /// a concurrent update may have changed.
+    async fn invalidate_cache_also(&self, other_email: Option<&str>) -> Result<(), ErrorResponse> {
+        let id = self.id.as_str();
+        let email = self.email.as_str();
+        let mut keys: Vec<String> =
+            vec![format!("{IDX_USERS}_{id}"), format!("{IDX_USERS}_{email}")];
+        if let Some(other) = other_email.filter(|other| *other != email) {
+            keys.push(format!("{IDX_USERS}_{other}"));
+        }
+
+        DB::cache_delete_delayed(keys.into_iter().map(|key| (Cache::User, Some(key)))).await
     }
 
     /// Caution: Uses regex / LIKE on the database -> very costly query
@@ -977,40 +1477,80 @@ LIMIT $2"#;
     ) -> Result<Vec<UserResponseSimple>, ErrorResponse> {
         let q = format!("%{q}%");
         let size_hint = max(limit, 1) as usize;
+        // SQLite has no `ILIKE` and its `LIKE` is case-insensitive for ASCII already
+        let like = if is_hiqlite() { "LIKE" } else { "ILIKE" };
 
         let res = match idx {
             SearchParamsIdx::Id | SearchParamsIdx::UserId => {
-                let sql = r#"
+                let sql = format!(
+                    r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE id LIKE $1
+WHERE id {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2"#
+                );
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
                 }
             }
             SearchParamsIdx::Email => {
-                let sql = r#"
+                let sql = format!(
+                    r#"
 SELECT id, email, given_name, family_name, created_at, last_login, picture_id
 FROM users
-WHERE email LIKE $1
+WHERE email {like} $1
 ORDER BY created_at ASC
-LIMIT $2"#;
+LIMIT $2"#
+                );
 
                 if is_hiqlite() {
                     DB::hql().query_as(sql, params!(q, limit)).await?
                 } else {
-                    DB::pg_query(sql, &[&q, &limit], size_hint).await?
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
+                }
+            }
+            SearchParamsIdx::Name => {
+                let sql = format!(
+                    r#"
+SELECT id, email, given_name, family_name, created_at, last_login, picture_id
+FROM users
+WHERE given_name {like} $1 OR family_name {like} $1
+ORDER BY created_at ASC
+LIMIT $2"#
+                );
+
+                if is_hiqlite() {
+                    DB::hql().query_as(sql, params!(q, limit)).await?
+                } else {
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
+                }
+            }
+            SearchParamsIdx::Username => {
+                // `preferred_username` lives in the `users_values` table
+                let sql = format!(
+                    r#"
+SELECT u.id, u.email, u.given_name, u.family_name, u.created_at, u.last_login, u.picture_id
+FROM users u
+INNER JOIN users_values uv ON u.id = uv.id
+WHERE uv.preferred_username {like} $1
+ORDER BY u.created_at ASC
+LIMIT $2"#
+                );
+
+                if is_hiqlite() {
+                    DB::hql().query_as(sql, params!(q, limit)).await?
+                } else {
+                    DB::pg_query(&sql, &[&q, &limit], size_hint).await?
                 }
             }
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "supported search idx for users: id / user_id, email",
+                    "supported search idx for users: id / user_id, email, name, username",
                 ));
             }
         };
@@ -1215,6 +1755,8 @@ LIMIT $2"#;
         mut upd_user: UpdateUserRequest,
         user: Option<User>,
         preferred_username: Option<String>,
+        is_self_update: bool,
+        password_reset_by: Option<&str>,
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let mut user = match user {
             None => User::find(id).await?,
@@ -1249,11 +1791,12 @@ LIMIT $2"#;
 
         user.save(old_email.clone()).await?;
 
-        if upd_user.password.is_some() {
+        if upd_user.password.is_some() && !is_self_update {
+            let actor = password_reset_by.unwrap_or("admin");
             RauthyConfig::get()
                 .tx_events
                 .send_async(Event::user_password_reset(
-                    format!("Reset done by admin for user {}", user.email),
+                    format!("Reset done by {actor} for user {}", user.email),
                     None,
                 ))
                 .await
@@ -1293,6 +1836,11 @@ LIMIT $2"#;
             UserValues::delete(user.id.clone()).await?;
             None
         };
+
+        // make sure to clean up exp email reminders after a password update
+        if upd_user.password.is_some() {
+            PasswordExpMail::delete(user.id.clone()).await?;
+        }
 
         Ok((user, user_values, is_new_admin))
     }
@@ -1349,7 +1897,7 @@ LIMIT $2"#;
 
                 let ml = MagicLink::create(
                     user.id.clone(),
-                    60,
+                    Duration::from_secs(3600),
                     MagicLinkUsage::EmailChange(email.clone()),
                 )
                 .await?;
@@ -1394,7 +1942,7 @@ LIMIT $2"#;
 
         // a user cannot become a new admin from a self-req
         let (user, user_values, _is_new_admin) =
-            User::update(id, req, Some(user), preferred_username).await?;
+            User::update(id, req, Some(user), preferred_username, true, None).await?;
 
         Ok((user, user_values, email_updated))
     }
@@ -1435,6 +1983,10 @@ LIMIT $2"#;
 
     pub async fn validate_email_free(email: String) -> Result<(), ErrorResponse> {
         let sql = "SELECT 1 FROM users WHERE email = $1";
+
+        // emails are stored lowercased (see from_new_user_req / create_from_reg), so the
+        // pre-check must compare against the normalized form as well
+        let email = email.to_lowercase();
 
         let is_free = if is_hiqlite() {
             DB::hql().query_raw_one(sql, params!(email)).await.is_err()
@@ -1683,57 +2235,21 @@ impl User {
     }
 
     pub fn delete_group(&mut self, group: &str) {
-        if self.groups.is_none() {
-            return;
-        }
-        let old_groups = self.groups.as_ref().unwrap();
-
-        let i_opt = old_groups.find(group);
-        if i_opt.is_none() {
-            return;
-        }
-
-        let i = i_opt.unwrap();
-        if i == 0 {
-            // the group is the first entry
-            if old_groups.len() > group.len() {
-                let g = format!("{group},");
-                self.groups = Some(old_groups.replace(&g, ""));
-            } else {
-                self.groups = None;
-            }
-        } else {
-            // the role is at the end or in the middle
-            let g = format!(",{group}");
-            self.groups = Some(old_groups.replace(&g, ""));
+        if let Some(groups) = &self.groups {
+            self.groups = Some(csv_remove(groups, group)).filter(|g| !g.is_empty());
         }
     }
 
     pub fn delete_role(&mut self, role: &str) {
-        // find the role via index in the string
-        // first entry: delete role + ',' if it exists
-        // last entry: delete role + ',' in front if it exists
-        // middle: delete role + ',' in front if it exists
-        // --> 2 cases: first entry or else
-        let i_opt = self.roles.find(role);
-        if i_opt.is_none() {
-            return;
-        }
+        self.roles = csv_remove(&self.roles, role);
+    }
 
-        let i = i_opt.unwrap();
-        if i == 0 {
-            // the role is the first entry
-            if self.roles.len() > role.len() {
-                let r = format!("{role},");
-                self.roles = self.roles.replace(&r, "");
-            } else {
-                self.roles = String::from("");
-            }
-        } else {
-            // the role is at the end or in the middle
-            let r = format!(",{role}");
-            self.roles = self.roles.replace(&r, "");
-        }
+    pub fn rename_group(&mut self, old: &str, new: &str) {
+        self.groups = self.groups.as_deref().map(|g| csv_rename(g, old, new));
+    }
+
+    pub fn rename_role(&mut self, old: &str, new: &str) {
+        self.roles = csv_rename(&self.roles, old, new);
     }
 
     pub fn email_recipient_name(&self) -> String {
@@ -1742,6 +2258,23 @@ impl User {
         } else {
             self.given_name.to_string()
         }
+    }
+
+    /// The `name` claim for the `id_token` and `/userinfo`. With
+    /// `user_values.name_order_reverse`, the family name comes first.
+    pub fn full_name(&self) -> String {
+        let mut parts = [
+            self.given_name.as_str(),
+            self.family_name.as_deref().unwrap_or_default(),
+        ];
+        if RauthyConfig::get().vars.user_values.name_order_reverse {
+            parts.reverse();
+        }
+        parts
+            .into_iter()
+            .filter(|p| !p.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     pub async fn from_new_user_req(new_user: NewUserRequest) -> Result<Self, ErrorResponse> {
@@ -1791,6 +2324,30 @@ impl User {
     #[inline]
     pub fn roles_iter(&self) -> Split<'_, char> {
         self.roles.as_str().split(',')
+    }
+
+    pub async fn get_otp_kind(&self) -> Result<Vec<ActiveOtp>, ErrorResponse> {
+        Ok(OneTimePassword::find_for_user(&self.id)
+            .await?
+            .into_iter()
+            .map(|f| ActiveOtp {
+                otp_id: f.id,
+                otp_kind: f.kind,
+            })
+            .collect())
+    }
+
+    pub async fn has_otp_of_kind_enabled(&self, kind: &OtpKind) -> bool {
+        OneTimePassword::find_active_kind_for_user(kind, &self.id)
+            .await
+            .is_ok()
+    }
+
+    #[inline(always)]
+    pub async fn has_otp_enabled(&self) -> bool {
+        OneTimePassword::find_active_for_user(&self.id)
+            .await
+            .is_ok_and(|f| !f.is_empty())
     }
 
     #[inline(always)]
@@ -1854,13 +2411,9 @@ impl User {
         let curr_params =
             argon2::Params::try_from(&hash).expect("Could not extract params from hash");
 
-        if curr_params.m_cost() == params.m_cost()
+        Ok(curr_params.m_cost() == params.m_cost()
             && curr_params.t_cost() == params.t_cost()
-            && curr_params.p_cost() == params.p_cost()
-        {
-            return Ok(true);
-        }
-        Ok(false)
+            && curr_params.p_cost() == params.p_cost())
     }
 
     #[inline]
@@ -1956,7 +2509,7 @@ impl User {
         };
         let new_ml = MagicLink::create(
             self.id.clone(),
-            RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+            RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset,
             usage,
         )
         .await?;
@@ -1987,11 +2540,15 @@ impl User {
                 ));
             }
 
-            // if the given password does match, send out a reset link to set a new one
+            // If the given password does match, send out a reset link to set a new one.
             return if self.match_passwords(plain_password.clone()).await? {
+                // Sending a new magic link without rate-limiting may seem bad at first, but the
+                // user has to be in a specific state AND the currently set password must be known.
+                // This means there is no real way for an attacker that knows a users' email that
+                // also has an expired password to trigger email spam.
                 let magic_link = MagicLink::create(
                     self.id.clone(),
-                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset,
                     MagicLinkUsage::PasswordReset(None),
                 )
                 .await?;
@@ -2118,7 +2675,7 @@ mod tests {
         // new sessions should always be in state 1 -> initializing
         assert_eq!(session.state, SessionState::Init);
 
-        assert!(session.csrf_token.len() > 0);
+        assert!(!session.csrf_token.is_empty());
 
         assert_eq!(session.groups_as_vec(), Ok(vec!["admin", "user"]));
         assert_eq!(
@@ -2128,13 +2685,13 @@ mod tests {
     }
 
     fn check_password_expired(user: &User) -> Result<(), ErrorResponse> {
-        if let Some(exp) = user.password_expires {
-            if exp < OffsetDateTime::now_utc().unix_timestamp() {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::PasswordExpired,
-                    String::from("The password has expired"),
-                ));
-            }
+        if let Some(exp) = user.password_expires
+            && exp < Utc::now().timestamp()
+        {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::PasswordExpired,
+                "The password has expired",
+            ));
         }
         Ok(())
     }
@@ -2258,5 +2815,327 @@ mod tests {
         assert_eq!(res, false);
 
         Ok(())
+    }
+
+    /// Serializes the tests on the shared hiqlite node, which share the user count
+    static HQL_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+    /// A user inserted into the test hiqlite node, with the email `{id}@example.com`
+    async fn hql_insert_user(id: &str, picture_id: Option<&str>) -> User {
+        User::insert(User {
+            id: id.to_string(),
+            email: format!("{id}@example.com"),
+            given_name: id.to_string(),
+            roles: "user".to_string(),
+            picture_id: picture_id.map(String::from),
+            ..Default::default()
+        })
+        .await
+        .unwrap()
+    }
+
+    async fn hql_cached(idx: String) -> Option<User> {
+        DB::hql().get(Cache::User, idx).await.unwrap()
+    }
+
+    async fn hql_picture_ids() -> Vec<String> {
+        DB::hql()
+            .query_raw("SELECT id FROM pictures ORDER BY id", params!())
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|mut row| row.get("id"))
+            .collect()
+    }
+
+    /// A hiqlite delete whose transaction committed but whose result was lost, or whose re-run
+    /// deleted no row, counts as done once the leader no longer has the user, if the user was
+    /// there before it. While the user is still there, or was gone before, the original error or
+    /// NotFound stands.
+    #[test]
+    fn test_hql_delete_recovered() {
+        let lost = || ErrorResponse::new(ErrorResponseType::Connection, "lost");
+
+        assert!(hql_delete_recovered(Err(lost()), true, true).unwrap());
+        assert!(hql_delete_recovered(Ok(0), true, true).unwrap());
+
+        let err = hql_delete_recovered(Err(lost()), true, false).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Connection);
+        assert!(!hql_delete_recovered(Ok(0), true, false).unwrap());
+
+        // A user that was gone before the delete was not deleted by it, whatever the leader says.
+        let err = hql_delete_recovered(Err(lost()), false, true).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::Connection);
+        assert!(!hql_delete_recovered(Ok(0), false, true).unwrap());
+    }
+
+    /// A delete through a stale copy of a user another delete already removed returns NotFound
+    /// and leaves the user count alone, but still clears the cache entries a concurrent
+    /// `User::save` may have put back.
+    #[tokio::test]
+    async fn test_delete_twice_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let user = hql_insert_user("del_twice", None).await;
+        let stale = user.clone();
+        user.delete().await.unwrap();
+        let count = User::count().await.unwrap();
+
+        let idx_id = format!("{IDX_USERS}_{}", user.id);
+        let idx_email = format!("{IDX_USERS}_{}", user.email);
+        for idx in [&idx_id, &idx_email] {
+            DB::hql()
+                .put(Cache::User, idx.clone(), &stale, CACHE_TTL_USER)
+                .await
+                .unwrap();
+        }
+
+        let err = stale.delete().await.unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::NotFound);
+        assert_eq!(User::count().await.unwrap(), count);
+        assert!(hql_cached(idx_id).await.is_none());
+        assert!(hql_cached(idx_email).await.is_none());
+    }
+
+    /// The picture removed with a user is the one of the deleted row, not the one of a stale
+    /// copy, and it is gone once the delete returned.
+    #[tokio::test]
+    async fn test_delete_removes_stored_picture_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        for id in ["del_pic_old", "del_pic_new"] {
+            DB::hql()
+                .execute(
+                    "INSERT INTO pictures (id, content_type, storage, data) \
+                    VALUES ($1, 'image/png', 'db', NULL)",
+                    params!(id),
+                )
+                .await
+                .unwrap();
+        }
+        let user = hql_insert_user("del_pic", Some("del_pic_new")).await;
+        let mut stale = user.clone();
+        stale.picture_id = Some("del_pic_old".to_string());
+
+        stale.delete().await.unwrap();
+
+        let pictures = hql_picture_ids().await;
+        assert!(pictures.iter().any(|i| i == "del_pic_old"), "{pictures:?}");
+        assert!(!pictures.iter().any(|i| i == "del_pic_new"), "{pictures:?}");
+    }
+
+    /// Inserts for the user `{user_id}` an access token `{user_id}_at`, a refresh token
+    /// `{user_id}_rt` and a device refresh token `{user_id}_rtd`, whose access tokens are
+    /// `{user_id}_rt_at` and `{user_id}_rtd_at`.
+    async fn hql_insert_tokens(user_id: &str) {
+        let (at, rt_at, rtd_at) = (
+            format!("{user_id}_at"),
+            format!("{user_id}_rt_at"),
+            format!("{user_id}_rtd_at"),
+        );
+        DB::hql()
+            .txn([
+                (
+                    "INSERT INTO issued_tokens (jti, user_id, exp) \
+                    VALUES ($1, $2, 2), ($3, NULL, 2), ($4, NULL, 2)",
+                    params!(at, user_id, rt_at.clone(), rtd_at.clone()),
+                ),
+                (
+                    "INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti) \
+                    VALUES ($1, $2, 1, 2, $3)",
+                    params!(format!("{user_id}_rt"), user_id, rt_at),
+                ),
+                (
+                    "INSERT INTO devices (id, client_id, user_id, created, access_exp, peer_ip, name) \
+                    VALUES ($1, 'rauthy', $2, 1, 2, '127.0.0.1', 'dev')",
+                    params!(format!("{user_id}_dev"), user_id),
+                ),
+                (
+                    "INSERT INTO refresh_tokens_devices \
+                    (id, device_id, user_id, nbf, exp, access_token_jti) \
+                    VALUES ($1, $2, $3, 1, 2, $4)",
+                    params!(
+                        format!("{user_id}_rtd"),
+                        format!("{user_id}_dev"),
+                        user_id,
+                        rtd_at
+                    ),
+                ),
+            ])
+            .await
+            .unwrap()
+            .into_iter()
+            .for_each(|res| {
+                res.unwrap();
+            });
+    }
+
+    /// The ids of the refresh tokens and device refresh tokens of the user
+    async fn hql_refresh_token_ids(user_id: &str) -> Vec<String> {
+        DB::hql()
+            .query_raw(
+                "SELECT id FROM refresh_tokens WHERE user_id = $1 \
+                UNION ALL SELECT id FROM refresh_tokens_devices WHERE user_id = $1",
+                params!(user_id),
+            )
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|mut row| row.get("id"))
+            .collect()
+    }
+
+    async fn hql_revoked(jti: &str) -> bool {
+        let mut rows = DB::hql()
+            .query_raw(
+                "SELECT revoked FROM issued_tokens WHERE jti = $1",
+                params!(jti),
+            )
+            .await
+            .unwrap();
+        let revoked: Option<i64> = rows.pop().unwrap().get("revoked");
+        revoked == Some(1)
+    }
+
+    /// The delete revokes every access token of the user, and the access tokens of its refresh
+    /// tokens, which the cascade of the user row removes, in the same transaction.
+    #[tokio::test]
+    async fn test_delete_revokes_access_tokens_hiqlite() {
+        let _lock = HQL_LOCK.lock().await;
+        crate::database::init_test_hiqlite();
+        let user = hql_insert_user("del_revoke", None).await;
+        hql_insert_user("del_revoke_other", None).await;
+        DB::hql()
+            .txn([
+                (
+                    "INSERT INTO issued_tokens (jti, user_id, exp) \
+                    VALUES ('del_revoke_at', 'del_revoke', 2), \
+                    ('del_revoke_rt_at', NULL, 2), \
+                    ('del_revoke_rt_client_at', NULL, 2), \
+                    ('del_revoke_rtd_at', NULL, 2)",
+                    params!(),
+                ),
+                (
+                    "INSERT INTO refresh_tokens \
+                    (id, user_id, nbf, exp, access_token_jti, client_id) \
+                    VALUES ('del_revoke_rt', 'del_revoke', 1, 2, 'del_revoke_rt_at', NULL), \
+                    ('del_revoke_rt_client', 'del_revoke', 1, 2, \
+                    'del_revoke_rt_client_at', 'rauthy')",
+                    params!(),
+                ),
+                (
+                    "INSERT INTO devices (id, client_id, user_id, created, access_exp, peer_ip, name) \
+                    VALUES ('del_revoke_dev', 'rauthy', 'del_revoke', 1, 2, '127.0.0.1', 'dev')",
+                    params!(),
+                ),
+                (
+                    "INSERT INTO refresh_tokens_devices \
+                    (id, device_id, user_id, nbf, exp, access_token_jti) \
+                    VALUES ('del_revoke_rtd', 'del_revoke_dev', 'del_revoke', 1, 2, \
+                    'del_revoke_rtd_at')",
+                    params!(),
+                ),
+            ])
+            .await
+            .unwrap()
+            .into_iter()
+            .for_each(|res| {
+                res.unwrap();
+            });
+
+        // tokens of another user, whose access tokens have no `user_id`, as for refresh tokens
+        hql_insert_tokens("del_revoke_other").await;
+
+        user.delete().await.unwrap();
+
+        assert!(hql_revoked("del_revoke_at").await);
+        assert!(hql_revoked("del_revoke_rt_at").await);
+        assert!(hql_revoked("del_revoke_rt_client_at").await);
+        assert!(hql_revoked("del_revoke_rtd_at").await);
+        assert!(!hql_revoked("del_revoke_other_at").await);
+        assert!(!hql_revoked("del_revoke_other_rt_at").await);
+        assert!(!hql_revoked("del_revoke_other_rtd_at").await);
+        let mut other_rts = hql_refresh_token_ids("del_revoke_other").await;
+        other_rts.sort();
+        assert_eq!(
+            other_rts,
+            vec!["del_revoke_other_rt", "del_revoke_other_rtd"]
+        );
+        let rts = DB::hql()
+            .query_raw(
+                "SELECT id FROM refresh_tokens WHERE user_id = 'del_revoke' \
+                UNION ALL SELECT id FROM refresh_tokens_devices WHERE user_id = 'del_revoke'",
+                params!(),
+            )
+            .await
+            .unwrap();
+        assert!(rts.is_empty());
+    }
+
+    /// Pages through all users with the real batch SQL on an in-memory SQLite, the way
+    /// `EmailJob::task_execute` and `ClientScim::sync_users_exec` advance their cursors.
+    #[test]
+    fn test_batch_cursors_reach_every_user() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            r#"
+CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, email_verified INT,
+    given_name TEXT, family_name TEXT, roles TEXT, groups TEXT, enabled INT,
+    created_at INT NOT NULL, language TEXT, picture_id TEXT);
+CREATE TABLE users_values (id TEXT PRIMARY KEY, birthdate TEXT, phone TEXT, street TEXT,
+    zip TEXT, city TEXT, country TEXT, preferred_username TEXT, tz TEXT);
+INSERT INTO users (id, email, created_at) VALUES
+    ('a', 'anna@x', 100), ('b', 'zoe@x', 200), ('c', 'bob@x', 300),
+    ('d', 'carl@x', 400), ('e', 'zack@x', 500);
+"#,
+        )
+        .unwrap();
+
+        // email job: cursor is (created_at, email) of the last user in the batch
+        let mut cursor = (0i64, String::new());
+        let mut reached = Vec::new();
+        loop {
+            let rows: Vec<(i64, String)> = conn
+                .prepare(SQL_FIND_BATCH)
+                .unwrap()
+                .query_map(rusqlite::params![cursor.0, cursor.1, 2], |r| {
+                    Ok((r.get("created_at")?, r.get("email")?))
+                })
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            if rows.is_empty() {
+                break;
+            }
+            cursor = rows.last().unwrap().clone();
+            reached.extend(rows.into_iter().map(|(_, email)| email));
+        }
+        assert_eq!(reached, ["anna@x", "zoe@x", "bob@x", "carl@x", "zack@x"]);
+
+        // SCIM sync: several users created in the same second, cursor is the last synced user
+        conn.execute_batch(
+            "DELETE FROM users; INSERT INTO users (id, email, created_at) VALUES
+    ('a', 'a@x', 100), ('b', 'b@x', 100), ('c', 'c@x', 100), ('d', 'd@x', 200);",
+        )
+        .unwrap();
+        let mut cursor = (0i64, String::new());
+        let mut reached = Vec::new();
+        loop {
+            let rows: Vec<(i64, String)> = conn
+                .prepare(SQL_FIND_FOR_SCIM_SYNC)
+                .unwrap()
+                .query_map(rusqlite::params![cursor.0, cursor.1, 2], |r| {
+                    Ok((r.get("created_at")?, r.get("user_id")?))
+                })
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            if rows.is_empty() {
+                break;
+            }
+            cursor = rows.last().unwrap().clone();
+            reached.extend(rows.into_iter().map(|(_, id)| id));
+        }
+        assert_eq!(reached, ["a", "b", "c", "d"]);
     }
 }

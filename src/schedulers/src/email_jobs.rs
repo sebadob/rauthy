@@ -7,13 +7,13 @@ use tokio::time;
 use tracing::{debug, error, info};
 
 pub async fn orphaned_email_jobs() {
-    let mut interval = tokio::time::interval(Duration::from_secs(
-        RauthyConfig::get()
-            .vars
-            .email
-            .jobs
-            .scheduler_interval_seconds as u64,
-    ));
+    let dur = RauthyConfig::get().vars.email.jobs.scheduler_interval;
+    let dur = if !dur.is_zero() {
+        dur
+    } else {
+        Duration::from_secs(10)
+    };
+    let mut interval = tokio::time::interval(dur);
 
     loop {
         interval.tick().await;

@@ -1,7 +1,5 @@
 use crate::database::{Cache, DB};
 use actix_web::web;
-use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use hiqlite::macros::params;
 use rauthy_api_types::generic::{
@@ -89,9 +87,8 @@ impl PasswordHashTimes {
 
         // hashing should not happen on the event loop
         let hash = web::block(move || {
-            let salt = SaltString::generate(&mut OsRng);
             argon2
-                .hash_password(plain_pwd.as_bytes(), &salt)
+                .hash_password(plain_pwd.as_bytes())
                 .expect("Error hashing the Password")
                 .to_string()
         })

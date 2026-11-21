@@ -1,6 +1,7 @@
 use crate::sessions::SessionState;
 use rauthy_common::regex::{RE_ALNUM, RE_SEARCH};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
@@ -35,13 +36,21 @@ pub enum I18nContent {
 #[derive(Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
+    Cs,
     De,
     En,
+    Es,
     Fr,
+    It,
+    Ja,
     Ko,
     Nb,
+    Nl,
+    Pl,
+    Pt,
     Ru,
     Uk,
+    #[serde(alias = "zh")]
     ZhHans,
 }
 
@@ -109,8 +118,13 @@ pub struct SearchParams {
     pub ty: SearchParamsType,
     /// Index
     pub idx: SearchParamsIdx,
-    /// The actual search query - validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+`
-    #[validate(regex(path = "*RE_SEARCH", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%@]+"))]
+    /// The actual search query - validation: `[,:/_&?=~#!$()*+@\p{L}\p{M}\p{N}\p{Zs}'.-]+`, which
+    /// is the `given_name` / `family_name` characters plus everything of an email, id, username,
+    /// session id, or IP
+    #[validate(regex(
+        path = "*RE_SEARCH",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.\\-,:/_&?=~#!$()*+@]+"
+    ))]
     pub q: String,
     pub limit: Option<u16>,
 }
@@ -121,6 +135,8 @@ pub enum SearchParamsIdx {
     // user params
     Id,
     Email,
+    Name,
+    Username,
     // session params
     UserId,
     SessionId,
@@ -170,9 +186,19 @@ pub struct I18nConfigResponse {
 }
 
 #[derive(Serialize, ToSchema)]
+#[cfg_attr(debug_assertions, derive(Deserialize))]
+pub struct KeepAliveResponse {
+    /// The session's next idle timeout deadline.
+    /// format: `OffsetDateTime`
+    #[schema(value_type = str)]
+    #[serde(with = "time::serde::rfc3339")]
+    pub timeout: OffsetDateTime,
+}
+
+#[derive(Serialize, ToSchema)]
 pub struct LoginTimeResponse {
     pub argon2_params: Argon2ParamsResponse,
-    pub login_time: u32,
+    pub login_time: i64,
     pub num_cpus: usize,
 }
 

@@ -21,6 +21,7 @@ use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey};
 use rsa::traits::PublicKeyParts;
 use rsa::{BigUint, sha2};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::default::Default;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
@@ -131,8 +132,6 @@ impl JWKS {
 
         let mut jwks = JWKS::default();
         for cert in res {
-            // let key = data.enc_keys.get(&cert.enc_key_id).unwrap();
-            // let jwk_decrypted = decrypt_legacy(&cert.jwk, key)?;
             let jwk_decrypted = EncValue::try_from(cert.jwk)?.decrypt()?.to_vec();
             let kp = JwkKeyPair {
                 kid: cert.kid.clone(),
@@ -241,35 +240,26 @@ impl JWKS {
         };
         entity.save().await?;
 
-        // clear all latest_jwk from cache
-        let client = DB::hql();
-        client
-            .delete(
+        // clear all latest_jwk from cache, plus the all_certs / JWKS cache
+        //
+        // The explicit `Cow<'static, str>` is what pins the keys to `'static`, which the
+        // `jwks_auto_rotate` scheduler task needs for its spawned future.
+        let mut cache_entries: Vec<(Cache, Option<Cow<'static, str>>)> = Vec::with_capacity(6);
+        cache_entries.push((Cache::App, Some(Cow::Borrowed(IDX_JWKS))));
+        for alg in [
+            JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512,
+            JwkKeyPairAlg::EdDSA,
+            JwkKeyPairAlg::Ed25519,
+        ] {
+            let alg = alg.as_str();
+            cache_entries.push((
                 Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS256.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS384.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::RS512.as_str()),
-            )
-            .await?;
-        client
-            .delete(
-                Cache::App,
-                format!("{IDX_JWK_LATEST}{}", JwkKeyPairAlg::EdDSA.as_str()),
-            )
-            .await?;
-
-        // clear the all_certs / JWKS cache
-        client.delete(Cache::App, IDX_JWKS).await?;
+                Some(Cow::Owned(format!("{IDX_JWK_LATEST}{alg}"))),
+            ));
+        }
+        DB::cache_delete_delayed(cache_entries).await?;
 
         info!("Finished JWKS rotation");
 
@@ -281,15 +271,14 @@ impl JWKS {
 
         Ok(())
     }
-}
 
-impl From<JWKS> for JWKSCerts {
-    fn from(jwks: JWKS) -> Self {
-        let mut keys = Vec::with_capacity(jwks.keys.len());
-        for k in jwks.keys {
-            keys.push(JWKSPublicKeyCerts::from(k));
+    #[inline]
+    pub fn into_certs(self, fmt_rfc_9864: bool) -> JWKSCerts {
+        let mut keys = Vec::with_capacity(self.keys.len());
+        for k in self.keys {
+            keys.push(k.into_pub_cert(fmt_rfc_9864));
         }
-        Self { keys }
+        JWKSCerts { keys }
     }
 }
 
@@ -373,7 +362,7 @@ impl JWKSPublicKey {
                     x: None,
                 }
             }
-            JwkKeyPairAlg::EdDSA => {
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
                 let key = ed25519_compact::SecretKey::from_der(&key_pair.bytes)?;
                 let x = base64_url_encode(key.public_key().as_slice());
                 Self {
@@ -417,7 +406,7 @@ impl JWKSPublicKey {
                             if let Some(key) = jwks
                                 .keys
                                 .into_iter()
-                                .find(|k| k.kid.as_deref() == Some(&kid))
+                                .find(|k| k.kid.as_deref() == Some(kid.as_str()))
                             {
                                 if let Err(err) = key.validate_self() {
                                     Err(err)
@@ -580,30 +569,34 @@ impl JWKSPublicKey {
             }
         }
     }
-}
 
-impl From<JWKSPublicKey> for JWKSPublicKeyCerts {
-    fn from(pk: JWKSPublicKey) -> Self {
-        let kty = match pk.kty {
+    pub fn into_pub_cert(self, fmt_rfc_9864: bool) -> JWKSPublicKeyCerts {
+        let kty = match self.kty {
             JwkKeyPairType::RSA => rauthy_api_types::oidc::JwkKeyPairType::RSA,
             JwkKeyPairType::OKP => rauthy_api_types::oidc::JwkKeyPairType::OKP,
         };
-        let alg = match pk.alg.unwrap_or_default() {
+        let alg = match self.alg.unwrap_or_default() {
             JwkKeyPairAlg::RS256 => rauthy_api_types::oidc::JwkKeyPairAlg::RS256,
             JwkKeyPairAlg::RS384 => rauthy_api_types::oidc::JwkKeyPairAlg::RS384,
             JwkKeyPairAlg::RS512 => rauthy_api_types::oidc::JwkKeyPairAlg::RS512,
-            JwkKeyPairAlg::EdDSA => rauthy_api_types::oidc::JwkKeyPairAlg::EdDSA,
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
+                if fmt_rfc_9864 {
+                    rauthy_api_types::oidc::JwkKeyPairAlg::Ed25519
+                } else {
+                    rauthy_api_types::oidc::JwkKeyPairAlg::EdDSA
+                }
+            }
         };
 
-        Self {
+        JWKSPublicKeyCerts {
             kty,
             _use: "sig",
             alg,
-            crv: pk.crv,
-            kid: pk.kid,
-            n: pk.n,
-            e: pk.e,
-            x: pk.x,
+            crv: self.crv,
+            kid: self.kid,
+            n: self.n,
+            e: self.e,
+            x: self.x,
         }
     }
 }
@@ -654,6 +647,11 @@ impl JwkKeyPair {
                 typ: JwkKeyPairAlg::EdDSA,
                 bytes: jwk_decrypted,
             },
+            JwkKeyPairAlg::Ed25519 => JwkKeyPair {
+                kid,
+                typ: JwkKeyPairAlg::Ed25519,
+                bytes: jwk_decrypted,
+            },
         };
 
         Ok(res)
@@ -692,7 +690,15 @@ impl JwkKeyPair {
             return Ok(slf);
         }
 
-        let signature = key_pair_alg.as_str().to_string();
+        let signature = match &key_pair_alg {
+            // Ed25519 keys are always stored as EdDSA. They mean the same thing,
+            // just different standards.
+            JwkKeyPairAlg::Ed25519 => &JwkKeyPairAlg::EdDSA,
+            alg => alg,
+        }
+        .as_str()
+        .to_string();
+
         let sql = r#"
 SELECT * FROM jwks
 WHERE signature = $1
@@ -713,30 +719,43 @@ LIMIT 1"#;
 }
 
 impl JwkKeyPair {
+    // RSA arms pass an RNG so `rsa` applies blinding (RUSTSEC-2023-0071 / Marvin mitigation).
     pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, ErrorResponse> {
         match self.typ {
             JwkKeyPairAlg::RS256 => {
                 let hash = hmac_sha256::Hash::hash(input);
                 let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha256>(), hash.as_slice())?;
+                let sig = key.sign_with_rng(
+                    &mut rand_08::thread_rng(),
+                    rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                    hash.as_slice(),
+                )?;
                 Ok(sig)
             }
 
             JwkKeyPairAlg::RS384 => {
                 let hash = hmac_sha512::sha384::Hash::hash(input);
                 let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha384>(), hash.as_slice())?;
+                let sig = key.sign_with_rng(
+                    &mut rand_08::thread_rng(),
+                    rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                    hash.as_slice(),
+                )?;
                 Ok(sig)
             }
 
             JwkKeyPairAlg::RS512 => {
                 let hash = hmac_sha512::Hash::hash(input);
                 let key = rsa::RsaPrivateKey::from_pkcs8_der(&self.bytes)?;
-                let sig = key.sign(rsa::Pkcs1v15Sign::new::<sha2::Sha512>(), hash.as_slice())?;
+                let sig = key.sign_with_rng(
+                    &mut rand_08::thread_rng(),
+                    rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                    hash.as_slice(),
+                )?;
                 Ok(sig)
             }
 
-            JwkKeyPairAlg::EdDSA => {
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
                 let key = ed25519_compact::SecretKey::from_der(&self.bytes)?;
                 let sig = key.sign(input, Some(Noise::generate()));
                 Ok(sig.to_vec())
@@ -815,7 +834,7 @@ impl JwkKeyPair {
                 }
             }
 
-            JwkKeyPairAlg::EdDSA => {
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
                 let skey = ed25519_compact::SecretKey::from_der(&self.bytes)?;
                 let signature = ed25519_compact::Signature::from_slice(buf)?;
                 if skey.public_key().verify(message, &signature).is_ok() {
@@ -854,8 +873,11 @@ pub enum JwkKeyPairAlg {
     RS256,
     RS384,
     RS512,
+    // This is the "old" or current notation for Ed25519
     #[default]
     EdDSA,
+    // This is the newer, specific notation for EdDSA (RFC 9864).
+    Ed25519,
 }
 
 impl From<&mut hiqlite::Row<'_>> for JwkKeyPairAlg {
@@ -872,6 +894,7 @@ impl From<String> for JwkKeyPairAlg {
             "RS384" => JwkKeyPairAlg::RS384,
             "RS512" => JwkKeyPairAlg::RS512,
             "EdDSA" => JwkKeyPairAlg::EdDSA,
+            "Ed25519" => JwkKeyPairAlg::Ed25519,
             _ => unreachable!(),
         }
     }
@@ -899,6 +922,22 @@ impl JwkKeyPairAlg {
             JwkKeyPairAlg::RS384 => "RS384",
             JwkKeyPairAlg::RS512 => "RS512",
             JwkKeyPairAlg::EdDSA => "EdDSA",
+            JwkKeyPairAlg::Ed25519 => "Ed25519",
+        }
+    }
+
+    /// Whether this algorithm may be used to verify a token whose header carries `other`.
+    ///
+    /// `EdDSA` (RFC 8812) and `Ed25519` (RFC 9864) name the same underlying OKP key family, so
+    /// tokens carrying either spelling must validate against keys of that family. All other
+    /// algorithms only match themselves exactly — no confusion between families is possible.
+    #[inline]
+    pub fn is_compatible_with(&self, other: &Self) -> bool {
+        match self {
+            JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519 => {
+                other == &Self::EdDSA || other == &Self::Ed25519
+            }
+            slf => slf == other,
         }
     }
 }
@@ -919,6 +958,7 @@ impl FromStr for JwkKeyPairAlg {
             "RS384" => Ok(JwkKeyPairAlg::RS384),
             "RS512" => Ok(JwkKeyPairAlg::RS512),
             "EdDSA" => Ok(JwkKeyPairAlg::EdDSA),
+            "Ed25519" => Ok(JwkKeyPairAlg::Ed25519),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Token algorithm",
@@ -935,13 +975,61 @@ impl From<JwkKeyPairAlg> for rauthy_api_types::oidc::JwkKeyPairAlg {
             JwkKeyPairAlg::RS384 => Self::RS384,
             JwkKeyPairAlg::RS512 => Self::RS512,
             JwkKeyPairAlg::EdDSA => Self::EdDSA,
+            JwkKeyPairAlg::Ed25519 => Self::Ed25519,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::entity::jwk::{JWKSPublicKey, JwkKeyPairAlg, JwkKeyPairType};
+    use crate::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg, JwkKeyPairType};
+    use rauthy_common::utils::base64_url_encode;
+    use rsa::pkcs8::EncodePrivateKey;
+
+    #[test]
+    fn test_rsa_sign_verify_roundtrip() {
+        let key = rsa::RsaPrivateKey::new(&mut rand_08::thread_rng(), 2048).unwrap();
+        let bytes = key.to_pkcs8_der().unwrap().to_bytes().to_vec();
+        for typ in [
+            JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512,
+        ] {
+            let kp = JwkKeyPair {
+                kid: "test".to_string(),
+                typ,
+                bytes: bytes.clone(),
+            };
+            let message = "header.claims";
+            let sig = kp.sign(message.as_bytes()).unwrap();
+            let token = format!("{message}.{}", base64_url_encode(&sig));
+            let mut buf = Vec::new();
+            assert_eq!(kp.verify_token(&token, &mut buf).unwrap(), message);
+        }
+    }
+
+    #[test]
+    fn test_alg_compatibility() {
+        let algs = [
+            JwkKeyPairAlg::RS256,
+            JwkKeyPairAlg::RS384,
+            JwkKeyPairAlg::RS512,
+            JwkKeyPairAlg::EdDSA,
+            JwkKeyPairAlg::Ed25519,
+        ];
+
+        // EdDSA (RFC 8812) and Ed25519 (RFC 9864) name the same underlying OKP key family, so
+        // they must be mutually compatible. Every other algorithm only matches itself — no
+        // confusion between families is allowed.
+        let okp =
+            |alg: &JwkKeyPairAlg| matches!(alg, JwkKeyPairAlg::EdDSA | JwkKeyPairAlg::Ed25519);
+        for a in &algs {
+            for b in &algs {
+                let expected = a == b || (okp(a) && okp(b));
+                assert_eq!(a.is_compatible_with(b), expected, "{a:?} vs {b:?}");
+            }
+        }
+    }
 
     #[test]
     fn test_fingerprint() {

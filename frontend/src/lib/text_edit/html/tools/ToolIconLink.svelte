@@ -1,13 +1,13 @@
 <script lang="ts">
-    import Input from '$lib/form/Input.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { elementsInRangeFiltered } from '$lib/text_edit/html/utils';
-    import ToolbarIconHtml from '$lib/text_edit/html/tools/ToolbarIconHtml.svelte';
-    import IconLink from '$icons/editor/IconLink.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { elementsInRangeFiltered } from '#lib/text_edit/html/utils.js';
+    import ToolbarIconHtml from '#lib/text_edit/html/tools/ToolbarIconHtml.svelte';
+    import IconLink from '#icons/editor/IconLink.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         ref,

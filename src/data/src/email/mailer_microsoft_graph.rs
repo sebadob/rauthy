@@ -1,4 +1,5 @@
 use crate::email::mailer::EMail;
+use crate::email::mailer_callback::EMailCallback;
 use crate::email::smtp_oauth_token::SmtpOauthToken;
 use crate::events::event::Event;
 use crate::rauthy_config::RauthyConfig;
@@ -55,7 +56,7 @@ struct MicrosoftMessage<'a> {
     save_to_sent_items: bool,
 }
 
-pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<EMail>) {
+pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<(EMail, EMailCallback)>) {
     let from = {
         let from: message::Mailbox = RauthyConfig::get()
             .vars
@@ -77,7 +78,7 @@ pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<EMail>) {
 
     loop {
         debug!("Listening for incoming send E-Mail requests");
-        if let Some(req) = rx.recv().await {
+        if let Some((req, callback)) = rx.recv().await {
             debug!("New E-Mail for address: {:?}", req.address);
 
             let body = if let Some(content) = req.html {
@@ -119,20 +120,26 @@ pub async fn sender_microsoft_graph(mut rx: mpsc::Receiver<EMail>) {
                 save_to_sent_items: false,
             };
 
-            if let Err(err) = send_email(&email).await {
-                error!("{err:?}");
+            match send_email(&email).await {
+                Ok(_) => {
+                    callback.call().await;
+                }
+                Err(err) => {
+                    error!("{err:?}");
 
-                // short timeout if sending fails, maybe the network just had a short hiccup
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                    // short timeout if sending fails, maybe the network just had a short hiccup
+                    tokio::time::sleep(Duration::from_millis(500)).await;
 
-                if let Err(err) = send_email(&email).await {
-                    error!(
-                        error = ?err,
-                        "Could not send E-Mail to '{}' even after retrying - dropping it",
-                        recipient
-                    );
-                    if let Err(err) = Event::email_send_err(email_typ, &recipient).send().await {
-                        error!(?err, "Could not push EmailSendError event");
+                    if let Err(err) = send_email(&email).await {
+                        error!(
+                            error = ?err,
+                            "Could not send E-Mail to '{}' even after retrying - dropping it",
+                            recipient
+                        );
+                        if let Err(err) = Event::email_send_err(email_typ, &recipient).send().await
+                        {
+                            error!(?err, "Could not push EmailSendError event");
+                        }
                     }
                 }
             }
@@ -182,7 +189,7 @@ async fn send_email(email: &MicrosoftMessage<'_>) -> Result<(), ErrorResponse> {
         .email_address
         .address;
     if res.status().is_success() {
-        info!("E-Mail to '{to}' sent successfully!",);
+        info!("E-Mail to '{to}' sent successfully!");
         Ok(())
     } else {
         let status = res.status();

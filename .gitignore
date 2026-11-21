@@ -8,9 +8,12 @@ rauthy-client/examples/*/.idea
 .vscode
 .helix
 .lapce
+.DS_store
 .env
 .test_pid
+.tmp
 /data
+/data_old
 frontend/.next
 frontend/node_modules
 frontend/out
@@ -24,3 +27,5 @@ heaptrack.*
 static
 templates/html
 gen-config.toml
+/assets/fido_mds/dataset.bin
+.direnv

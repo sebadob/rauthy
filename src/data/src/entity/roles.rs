@@ -57,7 +57,7 @@ impl Role {
             DB::pg_execute(sql, &[&new_role.id, &new_role.name, &new_role.meta]).await?;
         }
 
-        DB::hql().delete(Cache::App, IDX_ROLES).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES))]).await?;
 
         Ok(new_role)
     }
@@ -103,9 +103,7 @@ impl Role {
             txn.commit().await?;
         }
 
-        let client = DB::hql();
-        client.clear_cache(Cache::User).await?;
-        client.delete(Cache::App, IDX_ROLES).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES)), (Cache::User, None)]).await?;
 
         Ok(())
     }
@@ -168,7 +166,7 @@ impl Role {
                 DB::pg_execute(sql, &[&new_role.meta, &new_role.id]).await?;
             }
 
-            DB::hql().delete(Cache::App, IDX_ROLES).await?;
+            DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES))]).await?;
             return Ok(new_role);
         }
 
@@ -177,7 +175,7 @@ impl Role {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
             for mut user in users {
-                user.roles = user.roles.replace(&role.name, &new_role.name);
+                user.rename_role(&role.name, &new_role.name);
                 user.save_txn_append(&mut txn);
             }
 
@@ -199,7 +197,7 @@ impl Role {
             let txn = cl.transaction().await?;
 
             for mut user in users {
-                user.delete_role(&role.name);
+                user.rename_role(&role.name, &new_role.name);
                 user.save_txn(&txn).await?;
             }
             DB::pg_txn_append(&txn, sql, &[&new_role.name, &new_role.meta, &new_role.id]).await?;
@@ -207,9 +205,7 @@ impl Role {
             txn.commit().await?;
         }
 
-        let client = DB::hql();
-        client.clear_cache(Cache::User).await?;
-        DB::hql().delete(Cache::App, IDX_ROLES).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_ROLES)), (Cache::User, None)]).await?;
 
         Ok(new_role)
     }

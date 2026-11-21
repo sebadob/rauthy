@@ -1,33 +1,41 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { fetchGet } from '$api/fetch';
-    import type { UserResponse, UserResponseSimple } from '$api/types/user.ts';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import type { GroupResponse } from '$api/types/groups.ts';
-    import type { RoleResponse } from '$api/types/roles.ts';
-    import Pagination from '$lib5/pagination/Pagination.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import { useParam } from '$state/param.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import UserAddNew from '$lib5/admin/users/UserAddNew.svelte';
-    import UserDetails from '$lib5/admin/users/UserDetails.svelte';
-    import PaginationServerSide from '$lib5/pagination/PaginationServerSide.svelte';
-    import { PAGE_SIZE_DEFAULT, type PageSize } from '$lib5/pagination/props';
-    import { fetchSearchServer, type SearchParamsIdxUser } from '$utils/search';
-    import UserPicture from '$lib/UserPicture.svelte';
-    import type { AuthProviderTemplate } from '$api/templates/AuthProvider';
-    import { useTrigger } from '$state/callback.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import Button from '$lib/button/Button.svelte';
-    import IconEnvelope from '$icons/IconEnvelope.svelte';
-    import SendMail from '$lib/SendMail.svelte';
-    import EmailJobs from '$lib/EmailJobs.svelte';
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { onMount, untrack } from 'svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import type { UserResponse, UserResponseSimple } from '#api/types/user.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import Pagination from '#lib/pagination/Pagination.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import UserAddNew from '#lib/admin/users/UserAddNew.svelte';
+    import UserDetails from '#lib/admin/users/UserDetails.svelte';
+    import PaginationServerSide from '#lib/pagination/PaginationServerSide.svelte';
+    import { loadPageSize, type PageSize } from '#lib/pagination/props.ts';
+    import { fetchSearchServer, type SearchParamsIdxUser } from '#utils/search.ts';
+    import UserPicture from '#lib/UserPicture.svelte';
+    import type { AuthProviderTemplate } from '#api/templates/AuthProvider.ts';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
+    import Button from '#lib/button/Button.svelte';
+    import IconEnvelope from '#icons/IconEnvelope.svelte';
+    import SendMail from '#lib/SendMail.svelte';
+    import EmailJobs from '#lib/EmailJobs.svelte';
 
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
+    let ta = useI18nAdmin();
+    const t = useI18n();
+    // Both name fields support server-side lookup. Only given and family names are in the list.
+    const SEARCH_EMAIL = t.common.email;
+    const SEARCH_ID = 'ID';
+    const SEARCH_NAME = ta.users.searchName ?? 'Name';
+    const SEARCH_USERNAME = ta.users.searchUsername ?? 'Username';
+    // Limit how often typing can trigger a server search.
+    const SERVER_SEARCH_THROTTLE_MS = 250;
 
     let closeModal: undefined | (() => void) = $state();
     let err = $state('');
@@ -45,13 +53,20 @@
 
     let useServerSide = $state(false);
     let firstFetchHeaders: undefined | Headers = $state();
-    let sspPageSize: PageSize = $state(PAGE_SIZE_DEFAULT);
+    let sspPageSize: PageSize = $state(loadPageSize());
     let isSearchedServer = $state(false);
 
-    let searchOptions = $state(['E-Mail', 'ID']);
-    let searchOption = $state(searchOptions[0]);
+    // 'Name' is filtered in memory as long as the whole list is loaded, 'Username' always needs a
+    // server-side search
+    let searchOptions = $state([SEARCH_EMAIL, SEARCH_ID, SEARCH_NAME, SEARCH_USERNAME]);
+    let searchOption = $state(SEARCH_EMAIL);
     let searchValue = $state('');
-    let orderOptions = $state(['E-Mail', 'ID', 'Created', 'Last Login']);
+    let orderOptions = $state([t.common.email, 'ID', t.account.userCreated, ta.users.lastLogin]);
+
+    let serverSearchTimer: undefined | ReturnType<typeof setTimeout> = undefined;
+    // timestamp of the last fired server-side search - the throttle's anchor
+    let serverSearchTs = 0;
+    let serverSearchId = 0;
 
     onMount(() => {
         fetchUsers('page_size=' + sspPageSize);
@@ -66,37 +81,66 @@
     });
 
     $effect(() => {
-        let search = searchValue.toLowerCase();
+        const search = searchValue.toLowerCase();
+        const option = searchOption;
+        const paginated = useServerSide;
 
-        if (useServerSide) {
+        if (paginated || option === SEARCH_USERNAME) {
+            const searchId = ++serverSearchId;
             if (search.length < 3) {
-                if (isSearchedServer) {
-                    fetchUsers('page_size=' + sspPageSize);
+                untrack(() => {
+                    if (isSearchedServer && paginated) {
+                        fetchUsers('page_size=' + sspPageSize);
+                    }
                     isSearchedServer = false;
-                }
-            } else {
-                searchServer(search);
+                });
+                if (!paginated) usersFiltered = users;
+                return;
             }
+
+            const delay = Math.max(0, SERVER_SEARCH_THROTTLE_MS - (Date.now() - serverSearchTs));
+            const run = () => {
+                void searchServer(search, option, paginated, searchId);
+            };
+            if (delay) serverSearchTimer = setTimeout(run, delay);
+            else untrack(run);
+            return () => {
+                clearTimeout(serverSearchTimer);
+                serverSearchId++;
+            };
+        }
+
+        isSearchedServer = false;
+
+        if (!search) {
+            usersFiltered = users;
+        } else if (searchOption === SEARCH_EMAIL) {
+            usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
+        } else if (searchOption === SEARCH_ID) {
+            usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
         } else {
-            if (!search) {
-                usersFiltered = users;
-            } else if (searchOption === searchOptions[0]) {
-                usersFiltered = users.filter(u => u.email?.toLowerCase().includes(search));
-            } else if (searchOption === searchOptions[1]) {
-                usersFiltered = users.filter(u => u.id.toLowerCase().includes(search));
-            }
+            usersFiltered = users.filter(
+                u =>
+                    u.given_name?.toLowerCase().includes(search) ||
+                    u.family_name?.toLowerCase().includes(search),
+            );
         }
     });
 
-    async function searchServer(q: string) {
+    async function searchServer(q: string, option: string, paginated: boolean, id: number) {
+        serverSearchTs = Date.now();
         firstFetchHeaders = undefined;
         isSearchedServer = true;
 
         let idx: SearchParamsIdxUser;
-        if (searchOption === searchOptions[0]) {
+        if (option === SEARCH_EMAIL) {
             idx = 'email';
-        } else {
+        } else if (option === SEARCH_ID) {
             idx = 'id';
+        } else if (option === SEARCH_NAME) {
+            idx = 'name';
+        } else {
+            idx = 'username';
         }
 
         let res = await fetchSearchServer<UserResponseSimple[]>({
@@ -104,8 +148,16 @@
             idx,
             q,
         });
+        if (id !== serverSearchId) {
+            return;
+        }
         if (res.body) {
-            users = res.body;
+            // in-memory mode keeps the full `users` list intact and only replaces the filter
+            if (paginated) {
+                users = res.body;
+            } else {
+                usersFiltered = res.body;
+            }
         } else {
             console.error(res.error);
         }
@@ -225,14 +277,7 @@
 </script>
 
 {#snippet navTile(user: UserResponseSimple)}
-    <NavButtonTile
-        onclick={() => {
-            uid.set(user.id);
-            tr.trigger('navSubSub');
-        }}
-        selected={uid.get() === user.id}
-        pictureLeft
-    >
+    <NavButtonTile onclick={() => uid.set(user.id)} selected={uid.get() === user.id} pictureLeft>
         <div class="navBtn">
             <div class="picture">
                 <UserPicture
@@ -244,33 +289,29 @@
                 />
             </div>
             <div class="tile">
-                <div>
-                    {user.email}
+                <div class="admin-row-title">
+                    {[user.given_name, user.family_name].filter(Boolean).join(' ') || user.email}
                 </div>
-                <div class="muted">
-                    {user.given_name}
-                    {user.family_name}
-                </div>
+                <div class="muted">{user.email}</div>
             </div>
         </div>
     </NavButtonTile>
 {/snippet}
 
 <NavSub
-    paddingTop="2.35rem"
+    detail={!!userId}
+    onBack={() => uid.set(undefined)}
+    error={err}
     buttonTilesAriaControls="users"
-    width="min(23rem, 100dvw)"
-    thresholdNavSub={700}
 >
+    <AdminListHeading
+        title={ta.nav.users}
+        count={useServerSide ? users.length : usersFiltered.length}
+    />
     <div class="topBtns">
         <SendMail {groups} {roles} />
         <EmailJobs />
-        <ButtonAddModal
-            bind:ref={refAddNew}
-            level={roles.length === 0 ? 1 : 2}
-            bind:closeModal
-            alignRight
-        >
+        <ButtonAddModal level={roles.length === 0 ? 1 : 2} bind:closeModal alignRight>
             <UserAddNew config={userValuesConfig} onSave={onAddNew} {roles} {groups} />
         </ButtonAddModal>
     </div>
@@ -296,7 +337,8 @@
                 {/each}
             {/if}
         </div>
-
+    {/snippet}
+    {#snippet listFooter()}
         {#if firstFetchHeaders}
             <PaginationServerSide
                 bind:pageSize={sspPageSize}
@@ -359,5 +401,11 @@
         align-items: flex-start;
         line-height: 1rem;
         overflow-x: clip;
+    }
+
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 </style>

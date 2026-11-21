@@ -6,6 +6,7 @@ use rauthy_api_types::blacklist::{BlacklistResponse, BlacklistedIp, IpBlacklistR
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::ip_blacklist::IpBlacklist;
 use rauthy_error::ErrorResponse;
+use std::time::Duration;
 use validator::Validate;
 
 /// Returns all blacklisted IP's
@@ -24,7 +25,9 @@ use validator::Validate;
 )]
 #[get("/blacklist")]
 pub async fn get_blacklist(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Blacklist, AccessRights::Read)?;
+    // group admins get a read-only view of the blacklist for user debugging; adding /
+    // removing entries stays full-admin only
+    principal.validate_api_key_or_group_admin(AccessGroup::Blacklist, AccessRights::Read)?;
 
     let ips = IpBlacklist::get_all()
         .await?
@@ -62,12 +65,12 @@ pub async fn post_blacklist(
     payload.validate()?;
 
     let now = Utc::now().timestamp();
-    if payload.exp <= now {
+    if payload.exp < now {
         return Ok(HttpResponse::Ok().finish());
     }
 
     let ttl = payload.exp - now;
-    IpBlacklist::put(payload.ip.to_string(), ttl).await?;
+    IpBlacklist::put(payload.ip.to_string(), Duration::from_secs(ttl as u64)).await?;
 
     Ok(HttpResponse::Ok().finish())
 }

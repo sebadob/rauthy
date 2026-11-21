@@ -17,12 +17,14 @@ use crate::entity::kv::{KVAccess, KVNamespace, KVValue};
 use crate::entity::login_locations::LoginLocation;
 use crate::entity::logos::Logo;
 use crate::entity::magic_links::MagicLink;
+use crate::entity::one_time_password::OneTimePassword;
 use crate::entity::pam::authorized_keys::AuthorizedKey;
 use crate::entity::pam::groups::PamGroup;
 use crate::entity::pam::hosts::PamHost;
 use crate::entity::pam::users::PamUser;
 use crate::entity::password::RecentPasswordsEntity;
 use crate::entity::pictures::UserPicture;
+use crate::entity::pwd_exp_mails::PasswordExpMail;
 use crate::entity::refresh_tokens::RefreshToken;
 use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
 use crate::entity::roles::Role;
@@ -32,13 +34,16 @@ use crate::entity::theme::{ThemeCss, ThemeCssFull};
 use crate::entity::tos::ToS;
 use crate::entity::tos_user_accept::ToSUserAccept;
 use crate::entity::user_attr::{UserAttrConfigEntity, UserAttrValueEntity};
+use crate::entity::user_consents::UserConsent;
 use crate::entity::user_login_states::UserLoginState;
 use crate::entity::user_revoke::UserRevoke;
 use crate::entity::users::User;
 use crate::entity::users_values::UserValues;
-use crate::entity::webauthn::PasskeyEntity;
+use crate::entity::webauthn::passkey::PasskeyEntity;
 use crate::entity::webids::WebId;
 use crate::events::event::{Event, EventLevel, EventType};
+use crate::fido_mds::mds_entry::MdsEntrySimple;
+use crate::fido_mds::metadata::MdsMetadata;
 use crate::migration::inserts;
 use crate::rauthy_config::RauthyConfig;
 use hiqlite::macros::params;
@@ -183,6 +188,11 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = query_sqlite::<MagicLink>(&conn, "SELECT * FROM magic_links").await?;
     inserts::magic_links(before).await?;
+
+    // ONE TIME PASSWORD
+    debug!("Migrating table: one_time_password");
+    let before = query_sqlite::<OneTimePassword>(&conn, "SELECT * FROM one_time_password").await?;
+    inserts::one_time_password(before).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
@@ -594,6 +604,44 @@ pub async fn migrate_from_sqlite(db_from: &str) -> Result<(), ErrorResponse> {
         .collect_vec();
     inserts::kv_values(before).await?;
 
+    // PWD EXP MAILS
+    debug!("Migrating table: pwd_exp_mails");
+    let before = query_sqlite::<PasswordExpMail>(&conn, "SELECT * FROM pwd_exp_mails").await?;
+    inserts::pwd_exp_mails(before).await?;
+
+    // FIDO MDS METADATA
+    debug!("Migrating table: fido_mds_metadata");
+    let before = query_sqlite::<MdsMetadata>(&conn, "SELECT * FROM fido_mds_metadata").await?;
+    inserts::fido_mds_metadata(before).await?;
+
+    // FIDO MDS CERTS
+    debug!("Migrating table: fido_mds_certs");
+    let mut stmt = conn.prepare("SELECT hash, cert_der FROM fido_mds_certs")?;
+    let before: Vec<(Vec<u8>, Vec<u8>)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::fido_mds_certs(before).await?;
+
+    // FIDO MDS ENTRIES
+    debug!("Migrating table: fido_mds_entries");
+    let before = query_sqlite::<MdsEntrySimple>(&conn, "SELECT * FROM fido_mds_entries").await?;
+    inserts::fido_mds_entries(before).await?;
+
+    // FIDO MDS ENTRY CERTS
+    debug!("Migrating table: fido_mds_entry_certs");
+    let mut stmt = conn.prepare("SELECT aaguid, cert_hash FROM fido_mds_entry_certs")?;
+    let before: Vec<(Vec<u8>, Vec<u8>)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .map(|r| r.unwrap())
+        .collect_vec();
+    inserts::fido_mds_entry_certs(before).await?;
+
+    // USER CONSENTS
+    debug!("Migrating table: user_consents");
+    let before = query_sqlite::<UserConsent>(&conn, "SELECT * FROM user_consents").await?;
+    inserts::user_consents(before).await?;
+
     Ok(())
 }
 
@@ -725,6 +773,11 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: magic_links");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM magic_links", &[], 0).await?;
     inserts::magic_links(before).await?;
+
+    // ONE TIME PASSWORD
+    debug!("Migrating table: one_time_password");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM one_time_password", &[], 0).await?;
+    inserts::one_time_password(before).await?;
 
     // REFRESH TOKENS
     debug!("Migrating table: refresh_tokens");
@@ -924,6 +977,57 @@ pub async fn migrate_from_postgres() -> Result<(), ErrorResponse> {
     debug!("Migrating table: kv_values");
     let before = DB::pg_query_map_with(&cl, "SELECT * FROM kv_values", &[], 0).await?;
     inserts::kv_values(before).await?;
+
+    // PWD EXP MAILS
+    debug!("Migrating table: pwd_exp_mails");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM pwd_exp_mails", &[], 0).await?;
+    inserts::pwd_exp_mails(before).await?;
+
+    // FIDO MDS METADATA
+    debug!("Migrating table: fido_mds_metadata");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM fido_mds_metadata", &[], 0).await?;
+    inserts::fido_mds_metadata(before).await?;
+
+    // FIDO MDS CERTS
+    debug!("Migrating table: fido_mds_certs");
+    let before = DB::pg_query_rows_with(&cl, "SELECT hash, cert_der FROM fido_mds_certs", &[], 0)
+        .await?
+        .into_iter()
+        .map(|row| {
+            let hash: Vec<u8> = row.get("hash");
+            let cert_der: Vec<u8> = row.get("cert_der");
+            (hash, cert_der)
+        })
+        .collect::<Vec<_>>();
+    inserts::fido_mds_certs(before).await?;
+
+    // FIDO MDS ENTRIES
+    debug!("Migrating table: fido_mds_entries");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM fido_mds_entries", &[], 0).await?;
+    inserts::fido_mds_entries(before).await?;
+
+    // FIDO MDS ENTRY CERTS
+    debug!("Migrating table: fido_mds_entry_certs");
+    let before = DB::pg_query_rows_with(
+        &cl,
+        "SELECT aaguid, cert_hash FROM fido_mds_entry_certs",
+        &[],
+        0,
+    )
+    .await?
+    .into_iter()
+    .map(|row| {
+        let aaguid: Vec<u8> = row.get("aaguid");
+        let cert_hash: Vec<u8> = row.get("cert_hash");
+        (aaguid, cert_hash)
+    })
+    .collect::<Vec<_>>();
+    inserts::fido_mds_entry_certs(before).await?;
+
+    // USER CONSENTS
+    debug!("Migrating table: user_consents");
+    let before = DB::pg_query_map_with(&cl, "SELECT * FROM user_consents", &[], 0).await?;
+    inserts::user_consents(before).await?;
 
     Ok(())
 }

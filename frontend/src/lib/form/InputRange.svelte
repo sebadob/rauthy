@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
+    import { genKey } from '#utils/helpers.ts';
 
     let {
         name,
@@ -36,20 +36,20 @@
             if (bgMode === 'hue') {
                 return `linear-gradient(
                     to right,
-                    hsl(0 ${sat} ${lum}) 0%,
-                    hsl(60 ${sat} ${lum}) 17%,
-                    hsl(120 ${sat} ${lum}) 33%,
-                    hsl(180 ${sat} ${lum}) 50%,
-                    hsl(240 ${sat} ${lum}) 67%,
-                    hsl(300 ${sat} ${lum}) 83%,
-                    hsl(3600 ${sat} ${lum}) 100%
+                    hsl(0 ${sat}% ${lum}%) 0%,
+                    hsl(60 ${sat}% ${lum}%) 17%,
+                    hsl(120 ${sat}% ${lum}%) 33%,
+                    hsl(180 ${sat}% ${lum}%) 50%,
+                    hsl(240 ${sat}% ${lum}%) 67%,
+                    hsl(300 ${sat}% ${lum}%) 83%,
+                    hsl(360 ${sat}% ${lum}%) 100%
                 )`;
             }
             if (bgMode === 'sat') {
-                return `linear-gradient(to right, hsl(${hue} 0 ${lum}), hsl(${hue} 100 ${lum}))`;
+                return `linear-gradient(to right, hsl(${hue} 0% ${lum}%), hsl(${hue} 100% ${lum}%))`;
             }
             if (bgMode === 'lum') {
-                return `linear-gradient(to right, hsl(${hue} ${sat} 0), hsl(${hue} ${sat} 100))`;
+                return `linear-gradient(to right, hsl(${hue} ${sat}% 0%), hsl(${hue} ${sat}% 100%))`;
             }
         }
 
@@ -85,35 +85,53 @@
 
 <style>
     input {
-        border: none;
-        height: 1rem;
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        height: 1.25rem;
         cursor: pointer;
         appearance: none;
     }
 
-    input[type='range']::-webkit-slider-runnable-track,
-    input[type='range']::-moz-range-track {
-        background: hsl(var(--text) / 0.5);
-        height: 5px;
+    input::-webkit-slider-runnable-track {
+        background: var(--bg-slider);
+        height: 6px;
         border-radius: var(--border-radius);
     }
 
-    input[type='range']::-webkit-slider-thumb,
-    input[type='range']::-moz-range-thumb {
-        height: 1.2rem;
-        width: 0.66rem;
+    input::-moz-range-track {
+        background: var(--bg-slider);
+        height: 6px;
+        border-radius: var(--border-radius);
+    }
+
+    input::-webkit-slider-thumb {
+        appearance: none;
+        margin-top: -4px;
+        width: 14px;
+        height: 14px;
         background: hsl(var(--text-high));
-        border: none;
-        border-radius: var(--border-radius);
+        border: 2px solid hsl(var(--bg));
+        border-radius: 50%;
     }
 
-    input[aria-disabled='true'] {
+    input::-moz-range-thumb {
+        width: 12px;
+        height: 12px;
+        background: hsl(var(--text-high));
+        border: 2px solid hsl(var(--bg));
+        border-radius: 50%;
+    }
+
+    input:focus-visible {
+        outline: 2px solid hsl(var(--action));
+        outline-offset: 2px;
+    }
+
+    input:disabled {
         cursor: not-allowed;
-    }
-
-    input[aria-disabled='true']::-webkit-slider-runnable-track,
-    input[aria-disabled='true']::-moz-range-track {
-        background: hsl(var(--accent));
     }
 
     label {
@@ -122,14 +140,17 @@
         color: hsla(var(--text) / 0.8);
         flex-wrap: wrap;
         width: 100%;
-        padding: 0.5rem;
+        padding: 0;
     }
 
     .label {
-        margin-top: -0.66rem;
+        margin-top: -0.25rem;
     }
 
     .value {
+        min-width: 2.5rem;
+        padding-inline-start: 0.5rem;
+        font-size: 0.8125rem;
         color: hsl(var(--text-high));
     }
 </style>

@@ -13,11 +13,18 @@ pub struct I18nEmailResetInfo<'a> {
 impl I18nEmailResetInfo<'_> {
     pub fn build(lang: &Language) -> Self {
         match lang {
+            Language::Cs => Self::build_cs(),
             Language::De => Self::build_de(),
             Language::En => Self::build_en(),
+            Language::Es => Self::build_es(),
             Language::Fr => Self::build_fr(),
+            Language::It => Self::build_it(),
+            Language::Ja => Self::build_ja(),
             Language::Ko => Self::build_ko(),
             Language::Nb => Self::build_nb(),
+            Language::Nl => Self::build_nl(),
+            Language::Pl => Self::build_pl(),
+            Language::Pt => Self::build_pt(),
             Language::Ru => Self::build_ru(),
             Language::Uk => Self::build_uk(),
             Language::ZhHans => Self::build_zh_hans(),
@@ -26,6 +33,16 @@ impl I18nEmailResetInfo<'_> {
 }
 
 impl I18nEmailResetInfo<'_> {
+    fn build_cs() -> Self {
+        Self {
+            subject: "Platnost hesla brzy vyprší",
+            expires_1: "Vaše heslo ke službě",
+            expires_2: "brzy vyprší:",
+            update: "Heslo můžete změnit zde:",
+            button_text: "Změnit heslo",
+        }
+    }
+
     fn build_de() -> Self {
         Self {
             subject: "Passwort läuft demnächst ab",
@@ -46,6 +63,16 @@ impl I18nEmailResetInfo<'_> {
         }
     }
 
+    fn build_es() -> Self {
+        Self {
+            subject: "Su contraseña está a punto de caducar",
+            expires_1: "Su contraseña para",
+            expires_2: "está a punto de caducar:",
+            update: "Puede actualizarla aquí:",
+            button_text: "Actualizar contraseña",
+        }
+    }
+
     fn build_fr() -> Self {
         Self {
             subject: "Le mot de passe est sur le point d'expirer",
@@ -53,6 +80,26 @@ impl I18nEmailResetInfo<'_> {
             expires_2: "est sur le point d'expirer :",
             update: "Vous pouvez le mettre à jour ici :",
             button_text: "Mettre à jour le mot de passe",
+        }
+    }
+
+    fn build_it() -> Self {
+        Self {
+            subject: "La password sta per scadere",
+            expires_1: "La tua password per",
+            expires_2: "scadrà a breve:",
+            update: "Puoi cambiarla qui:",
+            button_text: "Cambia password",
+        }
+    }
+
+    fn build_ja() -> Self {
+        Self {
+            subject: "パスワードの有効期限が近づいています",
+            expires_1: "お使いの",
+            expires_2: "のパスワードの有効期限が近づいています:",
+            update: "こちらから変更できます:",
+            button_text: "パスワードを変更する",
         }
     }
 
@@ -72,6 +119,36 @@ impl I18nEmailResetInfo<'_> {
             expires_2: "utløper snart:",
             update: "Du kan oppdatere det her:",
             button_text: "Oppdater passord",
+        }
+    }
+
+    fn build_nl() -> Self {
+        Self {
+            subject: "Wachtwoord verloopt binnenkort",
+            expires_1: "Uw wachtwoord voor",
+            expires_2: "verloopt binnenkort:",
+            update: "U kunt het hier bijwerken:",
+            button_text: "Wachtwoord bijwerken",
+        }
+    }
+
+    fn build_pl() -> Self {
+        Self {
+            subject: "Hasło wkrótce wygaśnie",
+            expires_1: "Twoje hasło dla",
+            expires_2: "wkrótce wygaśnie:",
+            update: "Możesz je zmienić tutaj:",
+            button_text: "Zmień hasło",
+        }
+    }
+
+    fn build_pt() -> Self {
+        Self {
+            subject: "A palavra-passe está prestes a expirar",
+            expires_1: "A sua palavra-passe para",
+            expires_2: "está prestes a expirar:",
+            update: "Pode atualizá-la aqui:",
+            button_text: "Atualizar palavra-passe",
         }
     }
 

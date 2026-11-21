@@ -1,28 +1,27 @@
 <script lang="ts">
-    import { generatePassword } from '$utils/helpers';
-    import Button from '$lib5/button/Button.svelte';
-    import PasswordPolicy from '$lib5/PasswordPolicy.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
+    import { generatePassword, normalizeClientUri } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import PasswordPolicy from '#lib/PasswordPolicy.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
     import { slide } from 'svelte/transition';
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import { IS_DEV, TPL_PASSWORD_RESET } from '$utils/constants';
-    import { useI18n } from '$state/i18n.svelte';
-    import Main from '$lib5/Main.svelte';
-    import ContentCenter from '$lib5/ContentCenter.svelte';
-    import type { PasswordResetTemplate } from '$api/templates/PasswordReset';
-    import Template from '$lib5/Template.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
-    import A from '$lib5/A.svelte';
-    import { webauthnReg } from '$webauthn/registration';
-    import Form from '$lib5/form/Form.svelte';
-    import { PATTERN_USER_NAME } from '$utils/patterns';
-    import type { PasswordResetRequest } from '$api/types/password_reset.ts';
+    import { IS_DEV, TPL_PASSWORD_RESET } from '#utils/constants.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import PublicPage from '#lib/PublicPage.svelte';
+    import type { PasswordResetTemplate } from '#api/templates/PasswordReset.ts';
+    import Template from '#lib/Template.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
+    import InputPassword from '#lib/form/InputPassword.svelte';
+    import A from '#lib/A.svelte';
+    import { webauthnReg } from '#mfa/webauthn/registration.ts';
+    import Form from '#lib/form/Form.svelte';
+    import { PATTERN_USER_NAME } from '#utils/patterns.ts';
+    import type { PasswordResetRequest } from '#api/types/password_reset.ts';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
+    import PasskeyTypeSelect from '#lib/PasskeyTypeSelect.svelte';
 
-    const inputWidth = '20rem';
+    const inputWidth = '100%';
 
     let t = useI18n();
 
@@ -37,6 +36,11 @@
     let accountTypeNew = $state('');
     let redirectUri = $state('');
     let success = $state(false);
+    // Falls back to the previous fixed timeout if the template value is missing.
+    let redirectTimeout = $derived(tplData?.redirect_timeout ?? 5);
+    // The success link leads back to the client when it sent a `redirect_uri`,
+    // otherwise to the account dashboard.
+    let redirectsToClient = $derived(!!redirectUri && redirectUri !== '/auth/v1/account');
     let accepted = $state(false);
 
     let mfaPurpose: undefined | MfaPurpose = $state();
@@ -44,6 +48,8 @@
     let passkeyName = $state('');
     let password = $state('');
     let passwordConfirm = $state('');
+
+    let residentKey = $state(false);
 
     let reportValidityNew: undefined | (() => void) = $state();
     let reportValidityConfirm: undefined | (() => void) = $state();
@@ -63,14 +69,16 @@
     });
 
     $effect(() => {
-        if (success) {
-            setTimeout(() => {
+        if (success && redirectTimeout > 0) {
+            let timer = setTimeout(() => {
                 if (redirectUri) {
-                    window.location.replace(redirectUri);
+                    window.location.replace(normalizeClientUri(redirectUri));
                 } else {
                     navigateToAccount();
                 }
-            }, 5000);
+            }, redirectTimeout * 1000);
+
+            return () => clearTimeout(timer);
         }
     });
 
@@ -111,11 +119,20 @@
             t.authorize.requestExpired,
             tplData.magic_link_id,
             tplData.csrf_token,
+            undefined,
+            residentKey,
         );
         if (res.error) {
-            err = `${t.mfa.errorReg} - ${res.error}`;
+            console.log(res.error.toLowerCase());
+            // Either completely missing attestation or no matching requirements.
+            if (res.error.toLowerCase().includes('missing attestation')) {
+                err = t.account.passkeys.missingAttestation;
+            } else {
+                err = `${t.mfa.errorReg} - ${res.error}`;
+            }
         } else {
             resetValues();
+            redirectUri = res.location || '';
             success = true;
         }
     }
@@ -175,7 +192,16 @@
     }
 
     function onWebauthnError(error: string) {
-        err = error;
+        let isAttErr =
+            error.includes('certification level') ||
+            error.includes('key protection') ||
+            error.includes('attachment hint');
+        if (isAttErr) {
+            console.error(error);
+            err = t.account.passkeys.missingAttestation;
+        } else {
+            err = error;
+        }
         mfaPurpose = undefined;
     }
 
@@ -264,29 +290,39 @@
     </div>
 {/if}
 
-<Main>
-    <ContentCenter>
-        {#if mfaPurpose && tplData}
-            <WebauthnRequest
-                userId={tplData.user_id}
-                purpose={mfaPurpose}
-                onSuccess={onWebauthnSuccess}
-                onError={onWebauthnError}
-            />
-        {/if}
+<PublicPage>
+    {#if mfaPurpose && tplData}
+        <WebauthnRequest
+            purpose={mfaPurpose}
+            resetUserId={tplData.user_id}
+            onSuccess={onWebauthnSuccess}
+            onError={onWebauthnError}
+        />
+    {/if}
 
-        {#if success}
-            <p>
-                {t.passwordReset.success1}
+    {#if success}
+        <p class="public-card">
+            {t.passwordReset.success1}
+            {#if redirectTimeout > 0}
                 <br />
-                {t.passwordReset.success2}
+                {t.passwordReset.success2.replace('{{ secs }}', redirectTimeout.toString())}
                 <br />
                 <br />
                 {t.passwordReset.success3}
-                <A href={redirectUri || '/auth/v1/account'}>Account</A>
-            </p>
-        {:else if tplData}
-            <div class="container">
+            {:else}
+                <br />
+                <br />
+            {/if}
+            <A
+                href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}
+                reload={!redirectUri}
+            >
+                {redirectsToClient ? t.passwordReset.continueSignIn : 'Account'}
+            </A>
+        </p>
+    {:else if tplData}
+        <div class="public-card reset-card">
+            <div>
                 {#if requestType.get()?.startsWith('new_user')}
                     <h1>{t.passwordReset.newAccount}</h1>
                     <p>{t.passwordReset.newAccDesc1}</p>
@@ -319,6 +355,7 @@
                     {:else if accountTypeNew === 'passkey'}
                         <div transition:slide>
                             <Form action="" onSubmit={handleRegister}>
+                                <PasskeyTypeSelect bind:residentKey />
                                 <Input
                                     bind:ref={refPasskey}
                                     bind:value={passkeyName}
@@ -330,9 +367,11 @@
                                     pattern={PATTERN_USER_NAME}
                                     required
                                 />
-                                <Button type="submit" level={success ? 2 : 1}>
-                                    {t.mfa.register}
-                                </Button>
+                                <div class="btnReg">
+                                    <Button type="submit" level={success ? 2 : 1}>
+                                        {t.mfa.register}
+                                    </Button>
+                                </div>
                             </Form>
 
                             {#if success}
@@ -347,7 +386,7 @@
                         </div>
                     {/if}
                 {:else if requestType.get()?.startsWith('password_reset')}
-                    <h1>Password Reset</h1>
+                    <h1>{t.passwordReset.passwordReset}</h1>
                     {@render passwordInput()}
                 {/if}
 
@@ -357,20 +396,25 @@
                     </div>
                 {/if}
             </div>
-        {/if}
-
-        <ThemeSwitch absolute />
-    </ContentCenter>
-</Main>
-
-<LangSelector absolute />
+        </div>
+    {/if}
+</PublicPage>
 
 <style>
-    .container {
-        margin-top: -1.75rem;
-        max-height: calc(100dvh - 2.5rem);
-        max-width: 100dvw;
-        overflow-y: auto;
+    .btnReg {
+        margin-top: 1rem;
+    }
+
+    .reset-card {
+        --public-card-width: 32rem;
+    }
+
+    .reset-card h1 {
+        margin-bottom: 0.75rem;
+    }
+
+    .reset-card p + p {
+        margin-top: 0.5rem;
     }
 
     .err {
@@ -393,13 +437,13 @@
     }
 
     .policy {
-        max-width: 100dvw;
-        overflow: clip;
+        margin-bottom: 0.75rem;
     }
 
     .typeChoice {
-        margin-bottom: 1rem;
+        margin-block: 1rem;
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
     }
 </style>

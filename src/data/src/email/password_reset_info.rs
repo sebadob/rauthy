@@ -1,12 +1,13 @@
 use crate::email::email_ts_prettify;
 use crate::email::i18n::reset_info::I18nEmailResetInfo;
 use crate::email::mailer::{EMail, EmailType};
+use crate::email::mailer_callback::EMailCallback;
 use crate::entity::theme::ThemeCssFull;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use askama::Template;
 use std::time::Duration;
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(Default, Template)]
 #[template(path = "email/reset_info.html")]
@@ -35,7 +36,9 @@ pub struct EmailResetInfoTxt<'a> {
     pub update: &'a str,
 }
 
-pub async fn send_pwd_reset_info(user: &User) {
+pub async fn send_pwd_reset_info(user: User) {
+    debug_assert!(user.password_expires.is_some());
+
     let exp = email_ts_prettify(user.password_expires.unwrap(), &user.language, None);
     let link = format!(
         "{}/auth/v1/account",
@@ -85,10 +88,15 @@ pub async fn send_pwd_reset_info(user: &User) {
 
     let res = RauthyConfig::get()
         .tx_email
-        .send_timeout(req, Duration::from_secs(10))
+        .send_timeout(
+            (req, EMailCallback::PasswordExp { user_id: user.id }),
+            Duration::from_secs(60),
+        )
         .await;
     match res {
-        Ok(_) => {}
+        Ok(_) => {
+            debug!("User {} notified about password expiry", user.email);
+        }
         Err(ref e) => {
             error!(
                 user.email, error = ?e,

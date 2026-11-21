@@ -15,11 +15,24 @@ use tracing::{debug, error, info};
 pub enum EventRouterMsg {
     Event(Event),
     ClientReg {
+        client_id: String,
         ip: String,
+        user_id: Option<String>,
+        api_key_name: Option<String>,
         tx: mpsc::Sender<sse::Event>,
         latest: Option<u16>,
         level: EventLevel,
     },
+}
+
+/// A single registered SSE client connection. The router keeps one entry per live connection,
+/// keyed by the random `client_id` from [`EventRouterMsg::ClientReg`].
+struct SseClient {
+    ip: String,
+    user_id: Option<String>,
+    api_key_name: Option<String>,
+    level: i16,
+    tx: mpsc::Sender<sse::Event>,
 }
 
 pub struct EventListener;
@@ -99,8 +112,10 @@ impl EventListener {
     async fn router(rx: flume::Receiver<EventRouterMsg>) {
         debug!("EventListener::router has been started");
 
-        let mut clients: BTreeMap<String, (i16, mpsc::Sender<sse::Event>)> = BTreeMap::new();
-        let mut ips_to_remove = Vec::with_capacity(1);
+        // keyed by a random per-connection client id, since multiple SSE connections can share
+        // the same remote IP (e.g. multiple browser tabs) and must not replace each other
+        let mut clients: BTreeMap<String, SseClient> = BTreeMap::new();
+        let mut ids_to_remove = Vec::with_capacity(2);
 
         let mut event_ids: BTreeSet<String> = BTreeSet::new();
         let mut events = Event::find_latest(EVENTS_LATEST_LIMIT as i64)
@@ -135,32 +150,41 @@ impl EventListener {
                     let event_level_value = event.level.value();
 
                     // send payload to all clients
-                    for (ip, (client_level, tx)) in &clients {
-                        if *client_level > event_level_value {
+                    for (client_id, client) in &clients {
+                        if client.level > event_level_value {
                             // skip the event if the client does not want to receive its level
                             continue;
                         }
 
-                        match time::timeout(Duration::from_secs(5), tx.send(sse_payload.clone()))
-                            .await
+                        match time::timeout(
+                            Duration::from_secs(5),
+                            client.tx.send(sse_payload.clone()),
+                        )
+                        .await
                         {
                             Ok(tx_res) => {
                                 if let Err(err) = tx_res {
                                     error!(
-                                        ?ip,
+                                        ?client_id,
+                                        ?client.ip,
+                                        ?client.user_id,
+                                        ?client.api_key_name,
                                         ?err,
                                         "sending event to client from event listener - removing \
                                         client",
                                     );
-                                    ips_to_remove.push(ip.clone());
+                                    ids_to_remove.push(client_id.clone());
                                 }
                             }
                             Err(_) => {
                                 error!(
-                                    ?ip,
+                                    ?client_id,
+                                    ?client.ip,
+                                    ?client.user_id,
+                                    ?client.api_key_name,
                                     "Timeout reached sending event to client - removing client",
                                 );
-                                ips_to_remove.push(ip.clone());
+                                ids_to_remove.push(client_id.clone());
                             }
                         }
                     }
@@ -174,18 +198,27 @@ impl EventListener {
                     events.push_back((event_level_value, event.id.clone(), sse_payload));
                     event_ids.insert(event.id);
 
-                    while let Some(ip) = ips_to_remove.pop() {
-                        clients.remove(&ip);
+                    while let Some(id) = ids_to_remove.pop() {
+                        clients.remove(&id);
                     }
                 }
 
                 EventRouterMsg::ClientReg {
+                    client_id,
                     ip,
+                    user_id,
+                    api_key_name,
                     tx,
                     latest,
                     level,
                 } => {
-                    info!(?ip, "New client registered for the event listener");
+                    info!(
+                        ?client_id,
+                        ?ip,
+                        ?user_id,
+                        ?api_key_name,
+                        "New client registered for the event listener",
+                    );
                     let client_level_val = level.value();
 
                     let mut is_err = false;
@@ -209,6 +242,8 @@ impl EventListener {
                                     if let Err(err) = tx_res {
                                         error!(
                                             ?ip,
+                                            ?user_id,
+                                            ?api_key_name,
                                             ?err,
                                             "sending latest event to client after ClientReg - \
                                             removing client",
@@ -220,8 +255,10 @@ impl EventListener {
                                 Err(_) => {
                                     error!(
                                         ?ip,
-                                        "Timeout reached sending latest events to client - removing \
-                                        client",
+                                        ?user_id,
+                                        ?api_key_name,
+                                        "Timeout reached sending latest events to client - \
+                                        removing client",
                                     );
                                     is_err = true;
                                     break;
@@ -231,7 +268,16 @@ impl EventListener {
                     }
 
                     if !is_err {
-                        clients.insert(ip, (client_level_val, tx));
+                        clients.insert(
+                            client_id,
+                            SseClient {
+                                ip,
+                                user_id,
+                                api_key_name,
+                                level: client_level_val,
+                                tx,
+                            },
+                        );
                     }
                 }
             }

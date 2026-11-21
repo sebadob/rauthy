@@ -37,6 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -93,10 +94,13 @@
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
+                sidebar_toggle.checked = false;
             }
-            sidebar_toggle.checked = sidebar === 'visible';
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
@@ -147,7 +151,12 @@
 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -259,6 +268,64 @@ I used the <code>rauthy</code> client in this example (which you should not mess
   }
 }
 </code></pre>
+<h2 id="client-credentials-custom-claims"><a class="header" href="#client-credentials-custom-claims">Client Credentials Custom Claims</a></h2>
+<p>The flow above is user-bound: scope-mapped attributes come from a user, so a token issued through the
+<code>client_credentials</code> flow (which has no user) can never carry them. Machine clients often need to describe
+themselves directly though, for example a workload identity, a tenant id, or a deployment profile, so that the
+resource server does not have to look anything up by <code>client_id</code>.</p>
+<p>For this, a client can carry its own custom claims. Open the configuration for any <code>Client</code>, scroll down to the
+<code>Custom Claims</code> section and enter a JSON object:</p>
+<pre><code class="language-json">{
+  "tenant": "acme",
+  "tier": "gold"
+}
+</code></pre>
+<p>These claims are emitted into the access token of the <code>client_credentials</code> flow, nested under the <code>custom</code> claim,
+exactly like the user values above:</p>
+<pre><code class="language-json">{
+  "iat": 1721722389,
+  "exp": 1721722399,
+  "nbf": 1721722389,
+  "iss": "http://localhost:8080/auth/v1",
+  "sub": "my_client",
+  "aud": "my_client",
+  "azp": "my_client",
+  "typ": "Bearer",
+  "scope": "openid",
+  "custom": {
+    "tenant": "acme",
+    "tier": "gold"
+  }
+}
+</code></pre>
+<p>By default these are nested under <code>custom</code>, exactly like user values. If you enable <code>Emit claims at the token root</code> on the client, they are written at the token root (flattened) instead, just like the per-scope
+<code>claims_at_root</code> option. As with that option, you own collision-correctness: if a claim name collides with a
+reserved JWT claim, token issuance fails rather than silently shadowing it.</p>
+<div id="admonition-info-2" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-2-title">
+<div class="admonition-title">
+<div id="admonition-info-2-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-2"></a>
+</div>
+<div>
+<p>The value must be a JSON object and is capped at 1024 serialized characters, since tokens are frequently kept
+small (and sometimes stored in cookies). The cap applies to the client's custom JSON only, not the full token.</p>
+</div>
+</div>
+<div id="admonition-caution" class="admonition admonish-warning" role="note" aria-labelledby="admonition-caution-title">
+<div class="admonition-title">
+<div id="admonition-caution-title">
+<p>Caution</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-caution"></a>
+</div>
+<div>
+<p>Custom claims can only be set by an admin (or via the management API). Dynamic clients (registered through the
+dynamic client registration endpoint) and ephemeral clients cannot set their own claims, which would otherwise be
+a privilege-escalation vector: a client must not be able to assert facts about itself that it was never granted.</p>
+</div>
+</div>
 
                     </main>
 
@@ -268,7 +335,7 @@ I used the <code>rauthy</code> client in this example (which you should not mess
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../work/ephemeral_clients.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../work/group_admins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -282,7 +349,7 @@ I used the <code>rauthy</code> client in this example (which you should not mess
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../work/ephemeral_clients.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../work/group_admins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -306,6 +373,7 @@ I used the <code>rauthy</code> client in this example (which you should not mess
         <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+
 
 
     </div>

@@ -6,7 +6,6 @@ use chrono::Utc;
 use hiqlite::macros::{FromRow, params};
 use rauthy_api_types::email_jobs::{EmailJobFilterType, EmailJobRequest, EmailJobResponse};
 use rauthy_common::{is_hiqlite, markdown};
-use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
@@ -14,7 +13,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tracing::{error, info, trace, warn};
 
-#[derive(Debug, FromRow, FromPgRow)]
+#[derive(Debug, FromRow)]
 pub struct EmailJob {
     pub id: i64,
     pub scheduled: Option<i64>,
@@ -28,6 +27,22 @@ pub struct EmailJob {
     pub content_type: EmailContentType,
     pub subject: String,
     pub body: String,
+}
+
+impl From<tokio_postgres::Row> for EmailJob {
+    fn from(row: tokio_postgres::Row) -> Self {
+        Self {
+            id: row.get("id"),
+            scheduled: row.get("scheduled"),
+            status: EmailJobStatus::from(row.get::<_, i16>("status") as i64),
+            updated: row.get("updated"),
+            last_user_ts: row.get("last_user_ts"),
+            filter: row.get::<_, String>("filter").parse().unwrap(),
+            content_type: row.get::<_, String>("content_type").parse().unwrap(),
+            subject: row.get("subject"),
+            body: row.get("body"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -252,7 +267,13 @@ SELECT * FROM email_jobs
 WHERE status = 0 AND updated < $2 AND (scheduled IS NULL OR scheduled <= $1)"#;
 
         let now = Utc::now().timestamp();
-        let threshold = now - RauthyConfig::get().vars.email.jobs.orphaned_seconds as i64;
+        let threshold = now
+            - RauthyConfig::get()
+                .vars
+                .email
+                .jobs
+                .orphaned_pickup
+                .as_secs() as i64;
 
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(now, threshold)).await?
@@ -336,10 +357,7 @@ impl EmailJob {
     async fn task_execute(mut self) -> Result<(), ErrorResponse> {
         let (batch_size, delay) = {
             let vars = &RauthyConfig::get().vars.email.jobs;
-            (
-                vars.batch_size,
-                Duration::from_millis(vars.batch_delay_ms as u64),
-            )
+            (vars.batch_size, vars.batch_delay)
         };
         let mut delay_inner_ms = 10;
 
@@ -424,7 +442,10 @@ impl EmailJob {
                     .await
                     {
                         Ok(_) => {
-                            trace!("E-Mail sent successfully to {}", user.email);
+                            trace!(
+                                "E-Mail to {} sent to Mailer-Task (internally) successfully",
+                                user.email
+                            );
                             self.set_last_user_ts(&user.email, user.created_at);
                             break;
                         }

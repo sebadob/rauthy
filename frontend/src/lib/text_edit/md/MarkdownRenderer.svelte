@@ -1,18 +1,16 @@
 <script lang="ts">
-    import { useMarkdownWorker } from '$lib/text_edit/useWorker.svelte';
+    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.js';
 
     let {
         markdown,
     }: {
-        markdown?: string;
+        markdown: string;
     } = $props();
 
     let worker = useMarkdownWorker();
 
     $effect(() => {
-        if (markdown) {
-            worker.renderMarkdown(markdown);
-        }
+        worker.renderMarkdown(markdown);
     });
 </script>
 
@@ -25,7 +23,7 @@
         /*max-width: 467pt;*/
         display: block;
         padding: 0.5rem;
-        word-break: break-all;
+        overflow-wrap: anywhere;
         overflow: auto;
     }
 </style>

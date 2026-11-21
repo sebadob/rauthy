@@ -1,3 +1,12 @@
+//! The `Session` entity and the MFA assurance of a session.
+//!
+//! `Session::is_mfa` means: a second factor has completed on this exact session, for this exact
+//! session's principal. It is only ever written together with an [`MfaAssurance`] —
+//! [`Session::set_authenticated`] at the end of a login, [`Session::set_mfa`] when a ceremony
+//! completes outside of it — and it is read via [`Session::is_mfa_completed`]. `NoFactor` resets
+//! it, `Ceremony` and `Provider` set it, `SamePrincipal` keeps what the session has earned.
+//! Lifetime and state rules live in [`Session::is_valid`] and [`Session::set_authenticated`].
+
 use crate::api_cookie::ApiCookie;
 use crate::database::{Cache, DB};
 use crate::entity::continuation_token::ContinuationToken;
@@ -23,6 +32,7 @@ use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::str::FromStr;
+use std::time::Duration;
 use tracing::{debug, trace, warn};
 
 #[derive(Clone, Serialize, Deserialize, FromRow, FromPgRow)]
@@ -32,6 +42,9 @@ pub struct Session {
     pub user_id: Option<String>,
     pub roles: Option<String>,
     pub groups: Option<String>,
+    /// A second factor has completed on this exact session, for this exact principal. Only
+    /// [`Session::set_mfa`] and the `MfaAssurance` of a [`Session::set_authenticated`] ever write it,
+    /// read it via [`Session::is_mfa_completed`].
     pub is_mfa: bool,
     #[column(parse)]
     pub state: SessionState,
@@ -115,6 +128,33 @@ impl SessionState {
     }
 }
 
+/// The provenance of the `is_mfa` flag that gets written when a session is authenticated.
+///
+/// `Session::is_mfa` means: a second factor has completed on this exact session, for this exact
+/// session's principal. Only `Ceremony` and `Provider` ever set it, and `SamePrincipal` carries
+/// over an assurance that the session has already earned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MfaAssurance {
+    /// No second factor was involved: the flag is reset to `false`, always.
+    NoFactor,
+    /// An OTP / Webauthn / passkey ceremony completed on this session.
+    Ceremony,
+    /// A trusted upstream IdP asserted MFA for this login (`ProviderMfaLogin::Yes`).
+    Provider,
+    /// Re-authentication of the session's own principal: keep the current value.
+    SamePrincipal,
+}
+
+impl MfaAssurance {
+    fn apply_to(self, current: bool) -> bool {
+        match self {
+            MfaAssurance::NoFactor => false,
+            MfaAssurance::Ceremony | MfaAssurance::Provider => true,
+            MfaAssurance::SamePrincipal => current,
+        }
+    }
+}
+
 // CRUD
 impl Session {
     pub async fn delete(self) -> Result<(), ErrorResponse> {
@@ -125,7 +165,7 @@ impl Session {
             DB::pg_execute(sql, &[&self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }
@@ -149,9 +189,7 @@ impl Session {
             ids
         };
 
-        for id in sids {
-            DB::hql().delete(Cache::Session, id).await?;
-        }
+        DB::cache_delete_delayed(sids.into_iter().map(|id| (Cache::Session, Some(id)))).await?;
 
         Ok(())
     }
@@ -328,7 +366,7 @@ OFFSET $3"#;
         // at least the session used to invalidate all will always exist
         debug_assert!(rows_affected > 0);
 
-        DB::hql().clear_cache(Cache::Session).await?;
+        DB::cache_delete_delayed([(Cache::Session, None::<String>)]).await?;
 
         Ok(())
     }
@@ -353,16 +391,29 @@ OFFSET $3"#;
             ids
         };
 
-        let client = DB::hql();
+        let mut cache_keys: Vec<String> = Vec::with_capacity(sids.len());
         for sid in &sids {
-            client.delete(Cache::Session, sid.clone()).await?;
+            cache_keys.push(sid.clone());
         }
+        DB::cache_delete_delayed(
+            cache_keys
+                .into_iter()
+                .map(|key| (Cache::Session, Some(key))),
+        )
+        .await?;
 
         Ok(sids)
     }
 
+    /// Inserts or updates a live session; expired sessions are rejected.
     pub async fn upsert(&self) -> Result<(), ErrorResponse> {
-        let state_str = self.state.as_str();
+        let now = Utc::now().timestamp();
+        if self.exp <= now {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
+        }
 
         let sql = r#"
 INSERT INTO
@@ -370,9 +421,10 @@ sessions (id, csrf_token, user_id, roles, groups, is_mfa, state, exp, last_seen,
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT(id) DO UPDATE
 SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, last_seen = $9,
-    remote_ip = $10"#;
+    remote_ip = $10
+WHERE sessions.exp > $11"#;
 
-        if is_hiqlite() {
+        let rows_affected = if is_hiqlite() {
             DB::hql()
                 .execute(
                     sql,
@@ -383,13 +435,14 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
                         &self.roles,
                         &self.groups,
                         self.is_mfa,
-                        state_str,
+                        self.state.as_str(),
                         self.exp,
                         self.last_seen,
-                        &self.remote_ip
+                        &self.remote_ip,
+                        now
                     ),
                 )
-                .await?;
+                .await?
         } else {
             DB::pg_execute(
                 sql,
@@ -400,18 +453,47 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
                     &self.roles,
                     &self.groups,
                     &self.is_mfa,
-                    &state_str,
+                    &self.state.as_str(),
                     &self.exp,
                     &self.last_seen,
                     &self.remote_ip,
+                    &now,
                 ],
             )
-            .await?;
+            .await?
+        };
+
+        if rows_affected == 0 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
         }
 
         DB::hql()
             .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
             .await?;
+
+        Ok(())
+    }
+
+    /// Refreshes `last_seen` without inserting or resurrecting a session.
+    pub async fn touch_last_seen(&mut self) -> Result<(), ErrorResponse> {
+        let now = Utc::now().timestamp();
+        let sql = "UPDATE sessions SET last_seen = $1 WHERE id = $2 AND exp > $1";
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql().execute(sql, params!(now, &self.id)).await?
+        } else {
+            DB::pg_execute(sql, &[&now, &self.id]).await?
+        };
+
+        if rows_affected == 1 {
+            self.last_seen = now;
+            DB::hql()
+                .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
+                .await?;
+        }
 
         Ok(())
     }
@@ -425,16 +507,20 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         let q = format!("%{q}%");
 
         let size_hint = max(limit as usize, 1);
+        // SQLite has no `ILIKE` and its `LIKE` is case-insensitive for ASCII already
+        let like = if is_hiqlite() { "LIKE" } else { "ILIKE" };
 
         let sql = match idx {
             SearchParamsIdx::UserId => {
-                "SELECT * FROM sessions WHERE user_id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE user_id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Id | SearchParamsIdx::SessionId => {
-                "SELECT * FROM sessions WHERE id LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!("SELECT * FROM sessions WHERE id {like} $1 ORDER BY exp DESC LIMIT $2")
             }
             SearchParamsIdx::Ip => {
-                "SELECT * FROM sessions WHERE remote_ip LIKE $1 ORDER BY exp DESC LIMIT $2"
+                format!(
+                    "SELECT * FROM sessions WHERE remote_ip {like} $1 ORDER BY exp DESC LIMIT $2"
+                )
             }
             _ => {
                 return Err(ErrorResponse::new(
@@ -447,28 +533,103 @@ SET user_id = $3, roles = $4, groups = $5, is_mfa = $6, state = $7, exp = $8, la
         let res = if is_hiqlite() {
             DB::hql().query_map(sql, params!(q, limit)).await?
         } else {
-            DB::pg_query(sql, &[&q, &limit], size_hint).await?
+            DB::pg_query(&sql, &[&q, &limit], size_hint).await?
         };
 
         Ok(res)
     }
 
     #[inline]
-    pub async fn set_authenticated(&mut self, user: &User) -> Result<(), ErrorResponse> {
-        self.last_seen = Utc::now().timestamp();
+    pub async fn set_authenticated(
+        &mut self,
+        user: &User,
+        assurance: MfaAssurance,
+    ) -> Result<(), ErrorResponse> {
+        let now = Utc::now().timestamp();
+        // An expired session must never be resurrected
+        if self.exp <= now {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired",
+            ));
+        }
+        // A logged-out session must never be resurrected
+        if self.state == SessionState::LoggedOut {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::SessionExpired,
+                "Session has been logged out",
+            ));
+        }
+        self.last_seen = now;
         self.state = SessionState::Auth;
         self.validate_user_expiry(user)?;
         self.user_id = Some(user.id.clone());
         self.roles = Some(user.roles.clone());
-        self.groups = user.groups.clone();
-        self.upsert().await?;
+        self.groups.clone_from(&user.groups);
+        self.is_mfa = assurance.apply_to(self.is_mfa);
+
+        // This function MUST NOT use `self.upsert()`, because it might insert
+        // a new session during a race-condition.
+        let sql = r#"
+UPDATE sessions
+SET last_seen = $1, state = $2, user_id = $3, roles = $4, groups = $5, is_mfa = $6
+WHERE id = $7 AND exp > $8 AND (state = $9 OR state = $10)"#;
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(
+                    sql,
+                    params!(
+                        self.last_seen,
+                        self.state.as_str(),
+                        &self.user_id,
+                        &self.roles,
+                        &self.groups,
+                        self.is_mfa,
+                        &self.id,
+                        self.last_seen,
+                        SessionState::Init.as_str(),
+                        SessionState::Auth.as_str()
+                    ),
+                )
+                .await?
+        } else {
+            DB::pg_execute(
+                sql,
+                &[
+                    &self.last_seen,
+                    &self.state.as_str(),
+                    &self.user_id,
+                    &self.roles,
+                    &self.groups,
+                    &self.is_mfa,
+                    &self.id,
+                    &self.last_seen,
+                    &SessionState::Init.as_str(),
+                    &SessionState::Auth.as_str(),
+                ],
+            )
+            .await?
+        };
+
+        if rows_affected == 0 {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Session has expired, was logged-out, or removed",
+            ));
+        }
+
+        DB::hql()
+            .put(Cache::Session, self.id.clone(), self, CACHE_TTL_SESSION)
+            .await?;
+
         Ok(())
     }
 }
 
 impl Session {
     /// exp_in will be the time in seconds when the session will expire
-    pub fn new(exp_in: u32, remote_ip: Option<IpAddr>) -> Self {
+    pub fn new(exp_in: Duration, remote_ip: Option<IpAddr>) -> Self {
         let id = get_rand(32);
         let csrf_token = get_rand(32);
         let now = Utc::now();
@@ -481,9 +642,7 @@ impl Session {
             groups: None,
             is_mfa: false, // cannot be known during creation
             state: SessionState::Init,
-            exp: now
-                .add(chrono::Duration::seconds(exp_in as i64))
-                .timestamp(),
+            exp: now.add(exp_in).timestamp(),
             last_seen: now.timestamp(),
             remote_ip: remote_ip.map(|ip| ip.to_string()),
         }
@@ -592,7 +751,7 @@ impl Session {
             DB::pg_execute(sql, &[&now, &state, &self.id]).await?;
         }
 
-        DB::hql().delete(Cache::Session, self.id).await?;
+        DB::cache_delete_delayed([(Cache::Session, Some(self.id))]).await?;
 
         Ok(())
     }
@@ -603,17 +762,10 @@ impl Session {
             .map_err(|_| ErrorResponse::new(ErrorResponseType::Internal, "invalid SessionState"))
     }
 
-    /// Checks if the current session is valid: has not expired and has not timed out (last_seen).
-    /// Also makes sure that a session in `SessionState::Init` is only allowed if the `req_path`
-    /// is included in the exceptions.
-    ///
-    /// If this returns `true` the session is valid AND authenticated, or it is in init state and
-    /// explicitly allowed for endpoints like `/auth/v1/oidc/authorize` and `/auth/v1/oidc/token`.
-    ///
-    /// Only validates `session.remote_ip` if `remote_ip` is `Some(_)`.
+    /// Checks expiry, timeout, state, and the optional remote IP.
     pub fn is_valid(
         &self,
-        session_timeout: u32,
+        session_timeout: i64,
         remote_ip: Option<IpAddr>,
         req_path: &str,
     ) -> bool {
@@ -621,7 +773,7 @@ impl Session {
         if self.exp < now {
             return false;
         }
-        if self.last_seen < now - session_timeout as i64 {
+        if self.last_seen < now - session_timeout {
             return false;
         }
 
@@ -633,25 +785,25 @@ impl Session {
             }
         };
 
-        if remote_ip.is_none() {
-            return true;
-        }
-
-        let session_ip = self
-            .remote_ip
-            .as_ref()
-            .and_then(|ip| IpAddr::from_str(ip).ok());
-        if remote_ip == session_ip {
-            if state == SessionState::Init {
+        // Init sessions are valid only on the explicit login endpoints.
+        // `/auth/v1/keep_alive` is the login page's idle ticker and belongs to that group.
+        let init_allowed = match state {
+            SessionState::Auth => true,
+            SessionState::Init => {
                 #[cfg(debug_assertions)]
                 let exceptions = [
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/dev/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
                     "/auth/v1/dev/providers_callback",
+                    "/auth/v1/users/otp_start",
+                    "/auth/v1/users/otp_finish",
+                    "/auth/v1/users/webauthn_start",
+                    "/auth/v1/users/webauthn_finish",
                     "/auth/v1/tos/accept",
                     "/auth/v1/tos/deny",
                 ];
@@ -661,35 +813,45 @@ impl Session {
                     "/auth/v1/oidc/authorize",
                     "/auth/v1/oidc/callback",
                     "/auth/v1/oidc/token",
+                    "/auth/v1/keep_alive",
                     "/auth/v1/providers/login",
                     "/auth/v1/providers/callback",
+                    "/auth/v1/users/otp_start",
+                    "/auth/v1/users/otp_finish",
+                    "/auth/v1/users/webauthn_start",
+                    "/auth/v1/users/webauthn_finish",
                     "/auth/v1/tos/accept",
                     "/auth/v1/tos/deny",
                 ];
-                if exceptions.contains(&req_path) || req_path.contains("/webauthn/auth/") {
-                    return true;
+                let allowed = exceptions.contains(&req_path);
+                if !allowed {
+                    trace!(
+                        "Session in Init state used on invalid path: {:?} -> {}",
+                        self, req_path
+                    );
                 }
+                allowed
+            }
+            _ => false,
+        };
 
-                trace!(
-                    "Session in Init state used on invalid path: {:?} -> {}",
-                    self, req_path
+        if let Some(remote_ip) = remote_ip {
+            let session_ip = self
+                .remote_ip
+                .as_ref()
+                .and_then(|ip| IpAddr::from_str(ip).ok());
+            if Some(remote_ip) != session_ip {
+                warn!(
+                    session_id = self.id,
+                    ?session_ip,
+                    ?remote_ip,
+                    "Invalid access for session",
                 );
+                return false;
             }
-
-            if state == SessionState::Auth {
-                return true;
-            }
-        } else {
-            warn!(
-                session_id = self.id,
-                ?session_ip,
-                ?remote_ip,
-                "Invalid access for session",
-            );
-            return false;
         }
 
-        false
+        init_allowed
     }
 
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
@@ -710,7 +872,7 @@ impl Session {
         if self.roles.is_none() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,
-                format!("User '{}' is not assigned to any roles", &self.id),
+                format!("User '{}' is not assigned to any roles", self.id),
             ));
         }
         Ok(self
@@ -723,9 +885,15 @@ impl Session {
     }
 
     #[inline]
-    pub async fn set_mfa(&mut self, value: bool) -> Result<(), ErrorResponse> {
-        self.is_mfa = value;
+    pub async fn set_mfa(&mut self, assurance: MfaAssurance) -> Result<(), ErrorResponse> {
+        self.is_mfa = assurance.apply_to(self.is_mfa);
         self.upsert().await
+    }
+
+    /// True when a second factor has completed on this session for its current principal.
+    #[inline]
+    pub fn is_mfa_completed(&self) -> bool {
+        self.is_mfa
     }
 
     #[inline(always)]
@@ -737,7 +905,7 @@ impl Session {
                 "CSRF Token not present in HTTP Header",
             ));
         }
-        if self.csrf_token.eq(csrf?) {
+        if constant_time_eq::constant_time_eq(self.csrf_token.as_bytes(), csrf?.as_bytes()) {
             return Ok(());
         }
 
@@ -779,15 +947,35 @@ pub fn get_header_value<'a>(
 #[cfg(test)]
 mod tests {
     use crate::entity::sessions::{Session, SessionState};
+    use actix_web::test::TestRequest;
+    use rauthy_common::constants::CSRF_HEADER;
     use rauthy_error::ErrorResponse;
     use std::net::IpAddr;
     use std::str::FromStr;
+    use std::time::Duration;
+
+    #[test]
+    fn test_validate_csrf() {
+        let s = Session::new(Duration::from_secs(3600), None);
+
+        let ok = TestRequest::default()
+            .insert_header((CSRF_HEADER, s.csrf_token.clone()))
+            .to_http_request();
+        assert!(s.validate_csrf(&ok).is_ok());
+
+        let wrong = TestRequest::default()
+            .insert_header((CSRF_HEADER, "wrong-token"))
+            .to_http_request();
+        assert!(s.validate_csrf(&wrong).is_err());
+
+        let missing = TestRequest::default().to_http_request();
+        assert!(s.validate_csrf(&missing).is_err());
+    }
 
     #[test]
     fn test_session_validation() -> Result<(), ErrorResponse> {
-        let mut s = Session::new(3600, None);
+        let mut s = Session::new(Duration::from_secs(3600), None);
 
-        // New sessions are always in init state. Make sure they are correctly validated.
         let path_exep_1 = "/auth/v1/oidc/authorize";
         let path_exep_2 = "/auth/v1/oidc/token";
 
@@ -799,13 +987,32 @@ mod tests {
         assert!(s.is_valid(600, Some(ip), path_exep_1));
         assert!(s.is_valid(600, Some(ip), path_exep_2));
 
-        // only exact path matches may be exceptions, so anything else will be invalid
         assert!(!s.is_valid(600, Some(ip), "/"));
 
-        // check authenticated sessions
         s.state = SessionState::Auth;
         assert!(s.is_valid(600, Some(ip), "/"));
 
         Ok(())
+    }
+
+    #[test]
+    fn test_init_session_needs_exception_path_without_ip_validation() {
+        let s = Session::new(Duration::from_secs(3600), None);
+        assert!(!s.is_valid(600, None, "/"));
+        assert!(!s.is_valid(600, None, "/auth/v1/users"));
+
+        assert!(s.is_valid(600, None, "/auth/v1/oidc/authorize"));
+        assert!(s.is_valid(600, None, "/auth/v1/oidc/token"));
+
+        let mut a = Session::new(Duration::from_secs(3600), None);
+        a.state = SessionState::Auth;
+        assert!(a.is_valid(600, None, "/"));
+
+        let mut l = Session::new(Duration::from_secs(3600), None);
+        l.state = SessionState::LoggedOut;
+        assert!(!l.is_valid(600, None, "/"));
+        let mut u = Session::new(Duration::from_secs(3600), None);
+        u.state = SessionState::Unknown;
+        assert!(!u.is_valid(600, None, "/"));
     }
 }

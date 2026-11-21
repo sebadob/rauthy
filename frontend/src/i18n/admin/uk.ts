@@ -39,18 +39,51 @@ export let I18nAdminUk: I18nAdmin = {
         size: 'Розмір',
     },
     clients: {
+        settings: { general: 'Загальні', tokens: 'Токени', integrations: 'Інтеграції' },
+        allowedResources: 'Дозволені ресурси',
+        defaultAud: 'Аудиторії за замовчуванням',
+        actorSameClient: 'Actor token from this client only',
+        descAllowedResources: `Необов'язкові індикатори ресурсів RFC 8707, які може запитувати цей клієнт. Порожній список відхиляє будь-який параметр 'resource' з помилкою 'invalid_target'.`,
+        descDefaultAud: `Аудиторії, які завжди додаються до токенів цього клієнта, незалежно від параметра 'resource'.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'Якщо цей клієнт підтримує {{ OIDC_BCL }}, ви можете вказати URI тут.',
         branding: {
+            title: 'Оформлення',
+            theme: 'Тема',
+            light: 'Світла тема',
+            dark: 'Темна тема',
+            preview: 'Перегляд',
+            assets: 'Логотип і значок сайту',
+            logo: 'Логотип',
+            advanced: 'Розширений CSS',
+            resetTheme: 'Скинути тему',
+            resetThemeConfirm: 'Відновити типові кольори й радіус заокруглення?',
+            assetsImmediate: 'Зміни файлів набувають чинності одразу.',
             descHsl: `Наступні значення мають бути вказані як HSL-значення. Ви вказуєте лише базові кольори.
             Альфа-канали та інші значення динамічно змінюються темою.`,
             descFullCss: `Наступні значення мають бути повністю валідними CSS-значеннями <code>color</code>.
                 Ви також можете використовувати складні обчислення або визначені вище CSS-змінні.`,
             descVariables: `Кожна наступна мітка є водночас назвою CSS-змінної. Це означає,
                 що ви можете посилатися на них у довільних полях, наприклад: <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Попередній перегляд фавікона клієнта',
+            faviconUpload: 'Завантажити фавікон',
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `This client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Max 1024 serialized characters.`,
         confidential: 'Конфіденційний',
         confidentialNoSecret: 'Цей клієнт не є конфіденційним, тому не має секрету.',
         config: 'Конфігурація клієнта',
+        consent: {
+            builtIn: 'Вбудований',
+            desc: `Звідки береться вміст екрана згоди, якщо задано 'consent.enable'. Вбудований показує запитані scopes. URL має віддавати вміст згоди у форматі JSON. Запис '[[consent.sources]]' для запитаного ресурсу має пріоритет. Поки не діє: значення лише зберігається, доки не з'явиться екран згоди.`,
+            source: 'Джерело згоди',
+        },
         delete1: 'Дійсно видалити цього клієнта?',
         descAuthCode: `Термін дії кодів авторизації можна налаштувати для підвищення безпеки. Коди авторизації
             можна використати лише один раз, і за замовчуванням вони дійсні 60 секунд. Чим коротший термін дії,
@@ -75,9 +108,13 @@ export let I18nAdminUk: I18nAdmin = {
         forceMfa: 'Вимагати MFA',
         groupLoginPrefix: 'Префікс групи для входу',
         name: 'Назва клієнта',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `Базовий URI для SCIM — це той, з якого можна коректно вивести під-маршрути,
-                наприклад <code>{base_uri}/Users/{id}</base_uri></code>.`,
+                наприклад <code>{base_uri}/Users/{id}</code>.`,
             desc: 'Якщо цей клієнт підтримує {{ SCIM_LINK }}, ви можете активувати його тут.',
             enable: 'Активувати SCIMv2',
             groupSync: 'Синхронізувати групи',
@@ -111,12 +148,26 @@ export let I18nAdminUk: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `Час життя токена застосовується до токенів доступу (Access) та ID-токенів і вказується в секундах.`,
-            p2: `Якщо клієнт підтримує алгоритми EdDSA / ed25519, їм завжди слід віддавати перевагу.
+            p2: `Якщо клієнт підтримує алгоритми EdDSA / Ed25519, їм завжди слід віддавати перевагу.
                 Алгоритми RSA існують лише для сумісності.`,
             p3: `Алгоритм для refresh-токенів не може бути змінений, оскільки вони використовуються лише Rauthy.`,
         },
     },
     common: {
+        about: 'Про Rauthy',
+        date: 'Дата',
+        time: 'Час',
+        preferences: 'Налаштування',
+        profile: 'Профіль',
+        contactDetails: 'Контактні дані',
+        access: 'Доступ',
+        activity: 'Активність',
+
+        compactNavigation: 'Компактна навігація',
+        administration: 'Адміністрування',
+        selectEntry: 'Виберіть запис',
+        selectEntryHint: 'Виберіть елемент зі списку, щоб переглянути та змінити його дані.',
+
         account: 'Акаунт',
         addNew: 'Додати',
         back: 'Назад',
@@ -214,7 +265,7 @@ export let I18nAdminUk: I18nAdmin = {
             time: 'Час',
             targetTime: 'Цільовий час',
             tune: 'Важливо: Ці значення потрібно налаштовувати на кінцевій архітектурі!',
-            pDetials: `Якщо ви хочете детально ознайомитися з Argon2ID, в інтернеті є багато джерел. Ця
+            pDetails: `Якщо ви хочете детально ознайомитися з Argon2ID, в інтернеті є багато джерел. Ця
             інструкція дає лише дуже короткий огляд параметрів. Три з них потребують налаштування:`,
             pTune: `Вони змінюються залежно від можливостей системи. Чим потужніша система, тим
             надійнішими можуть бути ці значення.`,
@@ -224,9 +275,10 @@ export let I18nAdminUk: I18nAdmin = {
         },
         openapi:
             'Якщо ви хочете інтегрувати зовнішній додаток і використовувати API Rauthy, перегляньте',
-        openapiNote: `Залежно від конфігурації бекенду, Swagger UI може не бути доступним публічно.
-            Однак, за замовчуванням він доступний через внутрішній HTTP-сервер метрик,
-            щоб не розкривати жодної інформації.`,
+        openapiNote:
+            'У стандартній конфігурації інтерфейс Swagger не активний через посилання вище.',
+        openapiEnable:
+            "Це можна активувати за допомогою конфігурації 'server.swagger_ui_enable' і, можливо, 'server.swagger_ui_public'.",
         source: 'Вихідний код можна знайти тут',
     },
     editor: {
@@ -266,12 +318,22 @@ export let I18nAdminUk: I18nAdmin = {
             Після цього вам потрібно вийти і увійти знову.`,
     },
     events: {
+        searchContent: 'Вміст',
+        timestamp: 'Дата й час',
+        level: 'Рівень',
+        type: 'Тип',
+        allLevels: 'Усі рівні',
+        sendTest: 'Надіслати тестову подію',
         eventLevel: 'Рівень події',
         eventType: 'Тип події',
     },
     groups: {
         delete1: 'Дійсно видалити цю групу?',
         name: 'Назва групи',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Алгоритм',
@@ -286,6 +348,7 @@ export let I18nAdminUk: I18nAdmin = {
         rotateKeys: 'Ротувати ключі',
     },
     kv: {
+        limit: 'Ліміт',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -323,6 +386,7 @@ export let I18nAdminUk: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'Сховище KV',
         apiKeys: 'API Ключі',
         attributes: 'Атрибути',
         blacklist: 'Чорний список',
@@ -443,10 +507,14 @@ export let I18nAdminUk: I18nAdmin = {
         adminNoMod: 'Роль <code>rauthy_admin</code> є незмінною.',
         delete1: 'Дійсно видалити цю роль?',
         name: 'Назва ролі',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
             attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
@@ -498,14 +566,33 @@ export let I18nAdminUk: I18nAdmin = {
         descAttr: `Встановіть власні атрибути користувача. Усі пари ключ-значення обробляються як String / JSON Value.`,
         forceLogout: `Дійсно завершити всі існуючі сесії та видалити всі
             refresh-токени для цього користувача?`,
+        groupAdmin: {
+            notManagedTitle: 'Користувач поза вашими групами',
+            notManagedDesc: `Цей користувач не входить до жодної з керованих вами груп, тому його дані приховано.
+                Додайте користувача до однієї або кількох ваших груп, щоб керувати ним.
+                Членство поза вашими групами зберігається.`,
+            addToGroups: 'Додати до моїх груп',
+        },
         lastLogin: 'Останній вхід',
         manualInitDesc: `Користувача також можна ініціалізувати тут, але в цьому випадку вам потрібно
             передати пароль особисто.`,
         manualInit: 'Ручна ініціалізація',
-        mfaDelete1: 'Ви можете видалити ключі доступу (Passkeys) для цього користувача.',
-        mfaDelete2: `Увага! Видалення ключа доступу <b>неможливо скасувати</b> без того, щоб
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'Ви можете видалити ключі доступу (Passkeys) для цього користувача.',
+                mfaDelete2: `Увага! Видалення ключа доступу <b>неможливо скасувати</b> без того, щоб
             користувач пройшов повну нову реєстрацію.`,
-        noMfaKeys: 'У цього користувача немає зареєстрованих ключів доступу (Passkeys).',
+                noMfaKeys: 'У цього користувача немає зареєстрованих ключів доступу (Passkeys).',
+            },
+        },
         pkOnly1: 'Це акаунт, що використовує лише ключ доступу.',
         pkOnly2:
             'Це означає, що цей користувач використовує безпарольний вхід і взагалі не має встановленого пароля.',
@@ -525,5 +612,15 @@ export let I18nAdminUk: I18nAdmin = {
         css: 'Некоректне значення CSS',
         origin: 'Некоректний Origin',
         uri: 'Некоректний URI',
+        redirectUri: {
+            comma: 'URI перенаправлення не повинен містити кому (,)',
+            controlChar:
+                'URI перенаправлення не повинен містити керівні символи в назві параметра запиту',
+            fragment: 'URI перенаправлення не повинен містити фрагмент (#)',
+            reservedKey:
+                'URI перенаправлення не повинен містити параметр запиту "{{ KEY }}", оскільки його встановлює відповідь авторизації',
+            reservedKeyLogout:
+                'URI перенаправлення після виходу не повинен містити параметр запиту "{{ KEY }}", оскільки він встановлюється під час виходу',
+        },
     },
 };

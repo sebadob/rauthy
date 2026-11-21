@@ -6,7 +6,7 @@ use actix_web::{
 use chrono::Utc;
 use futures::future::LocalBoxFuture;
 use rauthy_common::constants::{COOKIE_SESSION, TOKEN_API_KEY};
-use rauthy_common::utils::real_ip_from_svc_req;
+use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{ApiKey, ApiKeyEntity};
 use rauthy_data::entity::principal::Principal;
@@ -104,10 +104,10 @@ async fn get_api_key_from_headers(req: &ServiceRequest) -> Result<Option<ApiKey>
         Some(v)
     };
 
-    if let Some(api_key_value) = api_key_value {
-        ApiKeyEntity::api_key_from_token_validated(api_key_value)
-            .await
-            .map(Some)
+    if let Some(api_key_value) = api_key_value
+        && let Ok(key) = ApiKeyEntity::api_key_from_token_validated(api_key_value).await
+    {
+        Ok(Some(key))
     } else {
         Ok(None)
     }
@@ -125,21 +125,20 @@ async fn get_session_from_cookie(req: &ServiceRequest) -> Result<Option<Session>
     match Session::find(session_id).await {
         Ok(mut session) => {
             let remote_ip = if RauthyConfig::get().vars.access.session_validate_ip {
-                real_ip_from_svc_req(req).ok()
+                real_ip_from_req(req).ok()
             } else {
                 None
             };
 
             if session.is_valid(
-                RauthyConfig::get().vars.lifetimes.session_timeout,
+                RauthyConfig::get().vars.lifetimes.session_timeout.as_secs() as i64,
                 remote_ip,
                 req.path(),
             ) {
                 let now = Utc::now().timestamp();
                 // only update the last_seen, if it is older than 10 seconds
                 if session.last_seen < now - 10 {
-                    session.last_seen = now;
-                    session.upsert().await?;
+                    session.touch_last_seen().await?;
                 }
 
                 if req.method() == http::Method::GET

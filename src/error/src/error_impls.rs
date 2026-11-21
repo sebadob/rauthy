@@ -13,8 +13,9 @@ use css_color::ParseColorError;
 use deadpool::managed::{BuildError, PoolError};
 use image::ImageError;
 use openssl::error::ErrorStack;
+use oxrdf::IriParseError;
+use oxttl::TurtleSyntaxError;
 use ring::error::{KeyRejected, Unspecified};
-use rio_turtle::TurtleError;
 use rsa::pkcs1::Error;
 use s3_simple::S3Error;
 use serde_json_path::ParseError;
@@ -30,6 +31,9 @@ const APPLICATION_JSON: &str = "application/json";
 const HEADER_DPOP_NONCE: &str = "DPoP-Nonce";
 const HEADER_HTML: (&str, &str) = ("content-type", "text/html;charset=utf-8");
 const HEADER_RETRY_NOT_BEFORE: &str = "x-retry-not-before";
+/// Marks a 401 that was raised because the request had no session at all, which tells a login page
+/// to restart its flow instead of showing an error. Changing the name breaks every consumer of it.
+const HEADER_SESSION_EXPIRED: &str = "x-session-expired";
 
 impl ErrorResponse {
     pub fn new<C>(error: ErrorResponseType, message: C) -> Self
@@ -43,6 +47,11 @@ impl ErrorResponse {
         }
     }
 
+    /// Convenience constructor for an internal error.
+    pub fn internal(message: impl Into<Cow<'static, str>>) -> Self {
+        Self::new(ErrorResponseType::Internal, message)
+    }
+
     pub fn error_response_html(&self, body: String) -> HttpResponse {
         HttpResponseBuilder::new(self.status_code())
             .append_header(HEADER_HTML)
@@ -53,9 +62,15 @@ impl ErrorResponse {
 impl ResponseError for ErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self.error {
-            ErrorResponseType::BadRequest | ErrorResponseType::UseDpopNonce(_) => {
-                StatusCode::BAD_REQUEST
-            }
+            ErrorResponseType::BadRequest
+            | ErrorResponseType::ConsentRequired
+            | ErrorResponseType::InvalidCredentials
+            | ErrorResponseType::InvalidClientMetadata
+            | ErrorResponseType::InvalidGrant
+            | ErrorResponseType::InvalidRequest
+            | ErrorResponseType::InvalidTarget
+            | ErrorResponseType::PasswordRequired
+            | ErrorResponseType::UseDpopNonce(_) => StatusCode::BAD_REQUEST,
             ErrorResponseType::Blocked
             | ErrorResponseType::Forbidden
             | ErrorResponseType::PasswordRefresh => StatusCode::FORBIDDEN,
@@ -63,10 +78,12 @@ impl ResponseError for ErrorResponse {
                 StatusCode::NOT_ACCEPTABLE
             }
             ErrorResponseType::NotFound => StatusCode::NOT_FOUND,
+            ErrorResponseType::PreconditionRequired => StatusCode::PRECONDITION_REQUIRED,
             ErrorResponseType::Disabled
             | ErrorResponseType::CSRFTokenError
             | ErrorResponseType::DPoP(_)
             | ErrorResponseType::JwtToken
+            | ErrorResponseType::NoSession
             | ErrorResponseType::PasswordExpired
             | ErrorResponseType::SessionExpired
             | ErrorResponseType::SessionTimeout
@@ -129,6 +146,13 @@ impl ResponseError for ErrorResponse {
 
             ErrorResponseType::WWWAuthenticate(msg) => HttpResponseBuilder::new(status)
                 .insert_header((WWW_AUTHENTICATE, msg.as_str()))
+                .content_type(APPLICATION_JSON)
+                .body(serde_json::to_string(self).unwrap()),
+
+            // Only the header is the signal - the body stays the generic 401 of every other error.
+            ErrorResponseType::NoSession => HttpResponseBuilder::new(status)
+                .insert_header((HEADER_SESSION_EXPIRED, "true"))
+                .append_header((WWW_AUTHENTICATE, "OAuth"))
                 .content_type(APPLICATION_JSON)
                 .body(serde_json::to_string(self).unwrap()),
 
@@ -407,9 +431,9 @@ impl From<reqwest::Error> for ErrorResponse {
     }
 }
 
-impl From<TurtleError> for ErrorResponse {
-    fn from(value: TurtleError) -> Self {
-        debug!("TurtleError: {value:?}");
+impl From<TurtleSyntaxError> for ErrorResponse {
+    fn from(value: TurtleSyntaxError) -> Self {
+        debug!("TurtleSyntaxError: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Cannot format / parse turtle data: {value:?}"),
@@ -417,9 +441,9 @@ impl From<TurtleError> for ErrorResponse {
     }
 }
 
-impl From<oxiri::IriParseError> for ErrorResponse {
-    fn from(value: oxiri::IriParseError) -> Self {
-        debug!("oxiri::IriParseError: {value:?}");
+impl From<IriParseError> for ErrorResponse {
+    fn from(value: IriParseError) -> Self {
+        debug!("IriParseError: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
             format!("Invalid iri given: {value:?}"),
@@ -595,5 +619,41 @@ impl From<ring::error::Unspecified> for ErrorResponse {
             ErrorResponseType::BadRequest,
             format!("ring::error::Unspecified: {value:?}"),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// OIDC Core §3.1.2.6: `consent_required` is an authorization error response, a 400 like the
+    /// other OAuth error codes.
+    #[test]
+    fn test_consent_required_status() {
+        let err = ErrorResponse::new(ErrorResponseType::ConsentRequired, "consent required");
+        assert_eq!(err.status_code(), StatusCode::BAD_REQUEST);
+        assert_eq!(err.error_response().status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            serde_json::to_value(&err.error).unwrap(),
+            serde_json::json!("consent_required")
+        );
+    }
+
+    /// bincode encodes the variant index. A new variant goes at the end to keep the indices
+    /// stable, in case an error is ever cached with bincode: otherwise cached values would decode
+    /// as another error after an upgrade.
+    #[test]
+    fn test_error_type_bincode_index() {
+        let encode = |ty: ErrorResponseType| {
+            bincode_next::serde::encode_to_vec(&ty, bincode_next::config::legacy()).unwrap()
+        };
+        assert_eq!(encode(ErrorResponseType::CSRFTokenError), [3, 0, 0, 0]);
+        assert_eq!(encode(ErrorResponseType::NotFound), [19, 0, 0, 0]);
+        assert_eq!(
+            encode(ErrorResponseType::WWWAuthenticate(String::new())),
+            [30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(encode(ErrorResponseType::ConsentRequired), [31, 0, 0, 0]);
+        assert_eq!(encode(ErrorResponseType::InvalidRequest), [32, 0, 0, 0]);
     }
 }

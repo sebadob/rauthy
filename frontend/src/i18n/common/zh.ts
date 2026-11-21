@@ -98,6 +98,7 @@ export const I18nZh: I18n = {
         navEdit: '编辑',
         navMfa: '多因子认证',
         navLogout: '退出登录',
+        navBackToAdmin: '管理界面',
         other: '其他',
         pam: {
             addSshKey: '添加新密钥',
@@ -107,6 +108,18 @@ export const I18nZh: I18n = {
             keyType: '类型',
             username: '用户名',
             validFor: '密码有效期 {{ secs }} 秒',
+        },
+        passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `注意：Resident Key 可用于无需输入电子邮件地址的直接登录，但每个应用都需要占用一个额外的存储槽位。请确保剩余空间充足。如需将现有
+                Passkey 改为 Resident Key，请先将其删除，然后重新添加。`,
+            // [Default, Resident Key]
+            typesDesc: [
+                '使用此 Passkey 登录前，需要先输入电子邮件地址。',
+                '无需输入电子邮件地址，即可通过登录页面上的 Passkey 按钮使用。',
+            ],
         },
         passwordConfirm: '确认密码',
         passwordCurr: '当前密码',
@@ -126,6 +139,21 @@ export const I18nZh: I18n = {
             notAvailable: '此名称不可用。',
             preferredUsername: '首选用户名',
         },
+        privacy: {
+            clientId: '客户端 ID',
+            connectedApps: '已连接的应用',
+            connectedAppsDesc: '您已同意访问您账户的应用。',
+            granted: '授权时间',
+            noConnectedApps: '尚未有应用获得访问权限。',
+            privacy: '隐私',
+            resource: '资源',
+            revoke: '撤销访问',
+            revokeDesc:
+                '撤销将删除该同意，应用将无法再续期其访问权限。随已删除的刷新令牌签发的访问令牌会在 userinfo 和令牌内省中被撤销。自行验证令牌的应用在令牌过期前仍可能接受它们。应用需要重新请求您的同意。',
+            scopes: 'Scopes',
+            updated: '更新时间',
+            userAgent: '用户代理',
+        },
         providerLink: '联合账户',
         providerLinkDesc: `您可以将此账户连接到下列登陆提供者之一。\n
             激活此功能后，您将被重定向至所选提供者的登陆页面。在成功登陆后，如果电子邮件匹配，您的账户将被连接。`,
@@ -140,6 +168,9 @@ export const I18nZh: I18n = {
         userEnabled: '启用',
         userExpiry: '过期',
         userVerifiedTooltip: '指纹或PIN保护',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `您可以选择哪些字段能够通过WebID发布。\n
             WebID被一些网络用于去中心化登陆。如果您不知道这是什么，您通常不需要选择。`,
         webIdDescData: '您可以以FOAF词汇格式向您的 WebID 添加自定义数据字段',
@@ -155,15 +186,20 @@ export const I18nZh: I18n = {
         emailRequired: '电子邮件地址必填。',
         emailSentMsg: '如果您的电子邮件存在，我们已发送请求邮件。',
         expectingPasskey: '请使用MFA设备登陆',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: '过多无效输入，已锁定至：',
         invalidCredentials: '无效凭证',
         invalidKeyUsed: '无效密钥',
         login: '登录',
         mfaAck: '已确认',
+        mfaOpenApp: '打开应用以继续',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: '或使用其他方式登录：',
+        passkey: 'Passkey',
+        passkeyNotDiscovered:
+            '未作为 Resident Key 添加的 Passkey 无法通过此方式找到。请改为输入电子邮件地址。',
         password: '密码',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: '忘记密码？',
@@ -212,20 +248,39 @@ export const I18nZh: I18n = {
         cancel: '取消',
     },
     mfa: {
-        p1: `如果您计划在多个系统上使用您的MFA密钥，例如Windows和Android，您应该在Android上进行注册。`,
-        p2: `Android是支持无密码登录技术特性最少的平台。您在Android上注册的密钥在其他地方也能使用。
-            但是，反之则不行。`,
-        p3: '欲了解更多信息，请参见',
-        docLinkText: '关于通行密钥的文档',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `如果您计划在多个系统上使用您的MFA密钥，例如Windows和Android，您应该在Android上进行注册。`,
+            p2: `Android是支持无密码登录技术特性最少的平台。您在Android上注册的密钥在其他地方也能使用。
+                但是，反之则不行。`,
+            p3: '欲了解更多信息，请参见',
+            registerNew: '注册新密钥',
+            docLinkText: '关于通行密钥的文档',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One Time Password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: '开始注册过程时出现错误。',
         lastUsed: '最后使用',
         noKey: '此插槽没有已注册的安全密钥',
         reAuthenticatePasskey: '在您可以修改通行密钥之前，您需要使用已注册的通行密钥进行认证：',
         reAuthenticatePwd: '在您可以修改通行密钥之前，您需要使用密码重新认证。',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '注册',
-        registerNew: '注册新密钥',
-        registerd: '已注册',
-        registerdKeys: '已注册的密钥',
+        registered: '已注册',
+        registeredKeys: '已注册的密钥',
+        registeredOtps: 'Registered OTPs',
         passkeyName: '通行密钥名称',
         passkeyNameErr: '2-32个非特殊字符',
         passwordInvalid: '密码无效',
@@ -255,6 +310,7 @@ export const I18nZh: I18n = {
     passwordReset: {
         accountLogin: '账户登录',
         badFormat: '格式错误',
+        continueSignIn: '继续登录',
         fidoLink: 'https://fidoalliance.org/fido2/?lang=zh-hans',
         generate: '生成',
         newAccDesc1: '您可以在两种账户类型之间选择：无密码账户或传统密码账户',
@@ -271,7 +327,7 @@ export const I18nZh: I18n = {
         required: '必填',
         save: '保存',
         success1: '密码已成功更新。',
-        success2: '您将很快被重定向。',
+        success2: '您将在 {{ secs }} 秒后被重定向。',
         success3: '如果您未被重定向，请点击这里：',
         successPasskey1: '您的新通行密钥已成功注册。',
         successPasskey2: `请尽快登录您的账户并注册第二个备份密钥。

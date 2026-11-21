@@ -1,10 +1,11 @@
 use crate::rauthy_error::RauthyError;
 use crate::{b64_decode, b64_encode, generate_pkce_challenge, secure_random};
-use chacha20poly1305::aead::{Aead, OsRng};
-use chacha20poly1305::{AeadCore, ChaCha20Poly1305, Key, KeyInit, Nonce};
+use chacha20poly1305::aead::{Aead, Generate};
+use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::ops::Sub;
 use tracing::error;
 
 /// The name of the encrypted OIDC state cookie during the login flow
@@ -38,7 +39,14 @@ impl OidcCookieState {
     ) -> Result<Self, RauthyError> {
         let enc = b64_decode(state_cookie_value)?;
         let dec = Self::decrypt(&enc, enc_key)?;
-        let (slf, _) = bincode::serde::decode_from_slice(&dec, bincode::config::standard())?;
+        let (slf, _) = bincode_next::serde::decode_from_slice::<Self, _>(
+            &dec,
+            bincode_next::config::standard(),
+        )?;
+
+        if slf.timestamp < Utc::now().sub(chrono::Duration::minutes(5)) {
+            return Err(RauthyError::Request("OIDC state cookie has expired".into()));
+        }
         Ok(slf)
     }
 
@@ -74,33 +82,39 @@ impl OidcCookieState {
 
     #[inline]
     pub fn to_encrypted_cookie_value(&self, key: &[u8]) -> String {
-        let ser = bincode::serde::encode_to_vec(self, bincode::config::standard()).unwrap();
+        let ser =
+            bincode_next::serde::encode_to_vec(self, bincode_next::config::standard()).unwrap();
         let enc = Self::encrypt(&ser, key).unwrap();
         b64_encode(&enc)
     }
 
     fn decrypt(ciphertext: &[u8], key: &[u8]) -> Result<Vec<u8>, RauthyError> {
-        // TODO can this check be removed safely?
         if ciphertext.len() < 12 {
             error!("Invalid ciphertext for decryption: {:?}", ciphertext);
             return Err(RauthyError::Encryption(Cow::from(
                 "Invalid ciphertext for decryption",
             )));
         }
-        let k = Key::from_slice(key);
-        let cipher = ChaCha20Poly1305::new(k);
+        let k = Key::try_from(key).map_err(|err| {
+            RauthyError::Internal(format!("Cannot create Encryption key: {err:?}").into())
+        })?;
+        let cipher = ChaCha20Poly1305::new(&k);
         // 96 bits nonce is always the first bytes, if the `encrypt()` was used before
         let (n, text) = ciphertext.split_at(12);
-        let nonce = Nonce::from_slice(n);
-        let plaintext = cipher.decrypt(nonce, text)?;
+        let nonce = n.try_into().map_err(|err| {
+            RauthyError::Internal(format!("Cannot generate Nonce for decryption: {err:?}").into())
+        })?;
+        let plaintext = cipher.decrypt(&nonce, text)?;
 
         Ok(plaintext)
     }
 
     fn encrypt(plain: &[u8], key: &[u8]) -> Result<Vec<u8>, RauthyError> {
-        let k = Key::from_slice(key);
-        let cipher = ChaCha20Poly1305::new(k);
-        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+        let k = Key::try_from(key).map_err(|err| {
+            RauthyError::Internal(format!("Cannot create Encryption key: {err:?}").into())
+        })?;
+        let cipher = ChaCha20Poly1305::new(&k);
+        let nonce = Nonce::generate();
         let ciphertext = cipher.encrypt(&nonce, plain)?;
 
         let mut res = nonce.to_vec();

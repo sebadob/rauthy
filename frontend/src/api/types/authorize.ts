@@ -3,7 +3,7 @@ export type JwtTokenType = 'Bearer' | 'DPoP' | 'Id' | 'Refresh';
 
 export interface LoginRequest {
     /// Validation: `email`
-    email: string;
+    email?: string;
     /// Validation: max 256
     password?: string;
     pow: string;
@@ -21,6 +21,12 @@ export interface LoginRequest {
     code_challenge?: string;
     /// Validation: `plain|S256`
     code_challenge_method?: CodeChallengeMethod;
+    /// RFC 8707 resource indicator forwarded from the authorization request.
+    /// Validation: PATTERN_URI
+    resource?: string;
+    /// Validation: max 64
+    resident_key_token?: string;
+    fwda?: boolean;
 }
 
 export interface LoginRefreshRequest {
@@ -37,6 +43,10 @@ export interface LoginRefreshRequest {
     /// Validation: PATTERN_CODE_CHALLENGE
     code_challenge?: string;
     code_challenge_method?: CodeChallengeMethod;
+    /// RFC 8707 resource indicator forwarded from the authorization request.
+    /// Validation: PATTERN_RESOURCE
+    resource?: string;
+    fwda?: boolean;
 }
 
 export interface RequestResetRequest {
@@ -54,6 +64,17 @@ export interface RequestResetRequest {
 //     expires_in: number,
 //     refresh_token?: string,
 // }
+
+export interface ActiveOtp {
+    otp_id: string;
+    otp_kind: string;
+}
+
+export interface OtpLoginResponse {
+    code: string;
+    active_otps: ActiveOtp[];
+    user_id: string;
+}
 
 export interface WebauthnLoginResponse {
     code: string;

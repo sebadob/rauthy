@@ -12,6 +12,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{AddressClaim, JwtCommonClaims, JwtTokenType};
 use std::borrow::Cow;
+use std::time::Duration;
 
 pub async fn get_userinfo(
     req: HttpRequest,
@@ -22,8 +23,9 @@ pub async fn get_userinfo(
     rauthy_jwt::token::JwtToken::validate_claims_into(
         &bearer,
         Some(JwtTokenType::Bearer),
-        0,
+        Duration::from_secs(0),
         buf.as_mut(),
+        false,
     )
     .await?;
     let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;
@@ -104,7 +106,7 @@ pub async fn get_userinfo(
     let mut userinfo = Userinfo {
         id: user.id.clone(),
         sub: user.id.clone(),
-        name: user.email_recipient_name(),
+        name: user.full_name(),
         roles,
         mfa_enabled: user.has_webauthn_enabled(),
 
@@ -155,16 +157,7 @@ pub async fn get_userinfo(
             userinfo.birthdate = values.birthdate;
             userinfo.zoneinfo = values.tz;
 
-            if let Some(username) = values.preferred_username {
-                userinfo.preferred_username = Some(username);
-            } else if RauthyConfig::get()
-                .vars
-                .user_values
-                .preferred_username
-                .email_fallback
-            {
-                userinfo.preferred_username = userinfo.email.clone();
-            }
+            userinfo.preferred_username = values.preferred_username;
         }
 
         if has_phone {
@@ -172,6 +165,17 @@ pub async fn get_userinfo(
             // Note: Rauthy does not have a mechanism to send SMS and therefore verify a number.
             userinfo.phone_number_verified = Some(false);
         }
+    }
+
+    if has_profile
+        && userinfo.preferred_username.is_none()
+        && RauthyConfig::get()
+            .vars
+            .user_values
+            .preferred_username
+            .email_fallback
+    {
+        userinfo.preferred_username = Some(user.email.clone());
     }
 
     if has_email {

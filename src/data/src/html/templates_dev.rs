@@ -1,5 +1,6 @@
 use crate::api_cookie::ApiCookie;
 use crate::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
+use crate::entity::logos::{Logo, LogoRes, LogoType};
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
 use crate::entity::sessions::Session;
@@ -21,6 +22,7 @@ impl HtmlTemplate {
     pub async fn build_from_str(
         s: &str,
         session: Option<Session>,
+        client_id: Option<String>,
     ) -> Result<(Self, Option<Cookie<'_>>), ErrorResponse> {
         match s {
             "tpl_admin_btn_hide" => Ok((
@@ -46,6 +48,15 @@ impl HtmlTemplate {
                 Self::ClientLogoUpdated(Some(Utc::now().timestamp_millis())),
                 None,
             )),
+            "tpl_client_favicon_updated" => {
+                let updated = if let Some(client_id) = client_id {
+                    Logo::find_updated_with_res(&client_id, LogoRes::Favicon, &LogoType::Client)
+                        .await?
+                } else {
+                    None
+                };
+                Ok((Self::ClientFaviconUpdated(updated), None))
+            }
             "tpl_csrf_token" => {
                 if let Some(s) = session {
                     Ok((Self::CsrfToken(s.csrf_token), None))
@@ -65,6 +76,10 @@ impl HtmlTemplate {
             )),
             "tpl_email_old" => Ok((Self::EmailOld("OLD@EMAIL.LOCAL".to_string()), None)),
             "tpl_email_new" => Ok((Self::EmailOld("NEW@EMAIL.LOCAL".to_string()), None)),
+            "tpl_is_otp_enabled" => Ok((
+                Self::IsOtpEnabled(RauthyConfig::get().vars.otp.enable),
+                None,
+            )),
             "tpl_is_reg_open" => Ok((
                 Self::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
                 None,
@@ -74,6 +89,8 @@ impl HtmlTemplate {
             "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),
             // "tpl_client_name" => todo!("extract info from referrer?"),
             // "tpl_client_url" => todo!("extract info from referrer?"),
+            "tpl_otp_length" => Ok((Self::OtpLength(RauthyConfig::get().vars.otp.length), None)),
+            "tpl_passkey_reg_type" => Ok((Self::PasskeyRegType, None)),
             "tpl_restricted_email_domain" => Ok((
                 Self::RestrictedEmailDomain(
                     RauthyConfig::get()
@@ -127,7 +144,7 @@ impl HtmlTemplate {
                 };
                 let mut ml = MagicLink::create(
                     user.id.clone(),
-                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset as i64,
+                    RauthyConfig::get().vars.lifetimes.magic_link_pwd_reset,
                     usage,
                 )
                 .await?;
@@ -141,6 +158,10 @@ impl HtmlTemplate {
                     magic_link_id: ml.id.clone(),
                     needs_mfa: user.has_webauthn_enabled(),
                     password_policy: PasswordPolicyResponse::from(password_policy),
+                    redirect_timeout: RauthyConfig::get()
+                        .vars
+                        .user_values
+                        .password_reset_redirect_timeout,
                     user_id: user.id,
                 };
 
@@ -149,6 +170,12 @@ impl HtmlTemplate {
 
                 Ok((Self::PasswordReset(tpl), Some(cookie)))
             }
+            "tpl_password_reset_link_always" => Ok((
+                Self::PasswordResetLinkAlways(
+                    RauthyConfig::get().vars.access.password_reset_link_always,
+                ),
+                None,
+            )),
             "tpl_user_values_config" => Ok((Self::UserValues, None)),
             _ => Err(ErrorResponse::new(
                 ErrorResponseType::NotFound,

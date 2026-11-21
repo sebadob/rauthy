@@ -18,3 +18,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
+
+[dev-dependencies]
+ed25519-compact = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,483 @@
+import { test, expect } from './fixtures.mjs';
+import { chooseOption } from './helpers/ui.mjs';
+import { api } from './helpers/api.mjs';
+import {
+    ACCOUNT_EXPECTED_ERRORS,
+    DEVICE_GRANT,
+    NO_SESSION,
+    accountTab,
+    createTestClient,
+    createTestUser,
+    deleteTestUser,
+    loginToAccount,
+    nowSecs,
+    pollDeviceToken,
+    startDeviceAuthorization,
+} from './helpers/account.mjs';
+import { firstRauthyLink, waitForMail } from './helpers/mail.mjs';
+
+// Every admin section reachable from the main navigation, with the landing path it must open.
+// Some sections append their own query, e.g. the KV store selects its default namespace.
+const landing = (/** @type {string} */ path) => new RegExp(`/auth/v1/${path}(\\?.*)?$`);
+const SECTIONS = [
+    ['Users', 'admin/users'],
+    ['Clients', 'admin/clients'],
+    ['Roles', 'admin/roles'],
+    ['Groups', 'admin/groups'],
+    ['Attributes', 'admin/attributes'],
+    ['Scopes', 'admin/scopes'],
+    ['PAM', 'admin/pam'],
+    ['Sessions', 'admin/sessions'],
+    ['Events', 'admin/events'],
+    ['Blacklist', 'admin/blacklist'],
+    ['API Keys', 'admin/api_keys'],
+    ['Providers', 'admin/providers'],
+    ['KV Store', 'admin/kv'],
+    ['Config', 'admin/config/policy'],
+    ['About', 'admin/docs'],
+];
+
+test.describe('admin navigation', () => {
+    test('every main section is reachable from the sidebar', async ({ page }) => {
+        await page.goto('/auth/v1/admin/users');
+        const nav = page.getByRole('navigation').first();
+        for (const [name, url] of SECTIONS) {
+            await nav.getByRole('link', { name, exact: true }).click();
+            await expect(page).toHaveURL(landing(url));
+            await expect(page.getByRole('main')).toBeVisible();
+        }
+    });
+
+    test('shows each PAM group type to the right of its name @mobile @webkit', async ({ page }) => {
+        await page.goto('/auth/v1/admin/pam');
+        const sidebar = page.getByRole('main').getByRole('navigation');
+        await sidebar.getByRole('button', { name: 'Groups', exact: true }).click();
+
+        for (const [name, type] of [
+            ['default', 'host'],
+            ['wheel-rauthy', 'immutable'],
+        ]) {
+            const entry = sidebar.getByRole('button', { name: `${name} ${type}`, exact: true });
+            await expect(entry).toBeVisible();
+            const label = await entry.getByText(name, { exact: true }).boundingBox();
+            const badge = await entry.getByText(type, { exact: true }).boundingBox();
+            expect(label && badge && badge.x >= label.x + label.width).toBe(true);
+        }
+
+        await sidebar.getByRole('button', { name: 'default host', exact: true }).click();
+        await expect(page.getByRole('heading', { name: 'default', exact: true })).toBeVisible();
+    });
+
+    test('the mobile section menu opens lists including Config @mobile-only', async ({ page }) => {
+        await page.goto('/auth/v1/admin/clients?cid=rauthy');
+        const main = page.getByRole('main');
+        const back = main.getByRole('button', { name: 'Back', exact: true });
+        const sectionMenu = main.getByRole('button', { name: 'Administration', exact: true });
+        const sidebar = page.locator('#mainNav');
+        const list = main.getByRole('navigation');
+
+        await expect(main.getByRole('textbox', { name: 'Client Name' })).toHaveValue('Rauthy');
+        await sectionMenu.click();
+        await sidebar.getByRole('link', { name: 'Clients', exact: true }).click();
+        await expect(list.getByRole('heading', { name: 'Clients' })).toBeVisible();
+        await expect(back).toBeHidden();
+
+        await sectionMenu.click();
+        await sidebar.getByRole('link', { name: 'Config', exact: true }).click();
+        const policy = list.getByRole('link', { name: 'Password Policy', exact: true });
+        await expect(policy).toBeVisible();
+        const detail = main.getByRole('heading', { name: 'Password Policy', exact: true });
+        await expect(detail).toBeHidden();
+        await policy.click();
+        await expect(detail).toBeVisible();
+        await expect(back).toBeVisible();
+        await back.click();
+        await expect(policy).toBeVisible();
+        await expect(detail).toBeHidden();
+    });
+
+    test('entity titles fit with Events open at tablet width @webkit', async ({ page }) => {
+        await page.setViewportSize({ width: 1024, height: 768 });
+        await page.goto('/auth/v1/admin/docs');
+        await expect(page.getByRole('heading', { name: 'About', level: 1 })).toBeVisible();
+        const user = await createTestUser(page, {
+            givenName: 'Matru',
+            familyName: 'Admin',
+            password: null,
+        });
+        try {
+            for (const [route, title] of [
+                [`users?uid=${user.id}`, 'Matru Admin'],
+                ['clients?cid=init_client', 'Init Client'],
+            ]) {
+                await page.goto(`/auth/v1/admin/${route}`);
+                const header = page.locator('.admin-entity-header');
+                const heading = header.getByRole('heading', { name: title, exact: true });
+                await expect(heading).toBeVisible();
+                await page.locator('.admin-header').getByRole('button', { name: 'Events' }).click();
+                await expect(page.locator('#admin-events-panel')).toBeVisible();
+                await expect(
+                    header.getByRole('button', { name: 'Delete', exact: true }),
+                ).toBeVisible();
+                const lines = await heading.evaluate(
+                    element =>
+                        element.getBoundingClientRect().height /
+                        Number.parseFloat(getComputedStyle(element).lineHeight),
+                );
+                expect(lines).toBeCloseTo(1, 1);
+            }
+        } finally {
+            await deleteTestUser(page, user.id);
+        }
+    });
+
+    test('deep links load directly', async ({ page }) => {
+        for (const [, url] of SECTIONS) {
+            await page.goto(`/auth/v1/${url}`);
+            await expect(page).toHaveURL(landing(url));
+            await expect(page.getByRole('main')).toBeVisible();
+        }
+    });
+
+    test('clicking a sidebar link leaves Add New unfocused', async ({ page }) => {
+        await page.goto('/auth/v1/admin/users');
+        for (const section of ['Clients', 'Attributes', 'Users']) {
+            await page
+                .locator('#mainNav')
+                .getByRole('link', { name: section, exact: true })
+                .click();
+            await expect(page.getByRole('heading', { name: section, level: 1 })).toBeVisible();
+            // The old navigation handler moved focus after a 100 ms timeout.
+            await page.waitForTimeout(180);
+            await expect(
+                page.getByRole('button', { name: 'Add New', exact: true }),
+            ).not.toBeFocused();
+        }
+    });
+
+    test('theme switch toggles and persists', async ({ page }) => {
+        await page.goto('/auth/v1/admin/users');
+        const nav = page.locator('#mainNav');
+        const toggle = nav.getByRole('button', { name: /Change Theme/ });
+        const language = nav.getByRole('combobox', { name: 'Select Language' });
+        for (const [preference, accountAction] of [
+            [toggle, nav.getByRole('link', { name: 'User Account' })],
+            [language, nav.getByRole('button', { name: 'Logout', exact: true })],
+        ]) {
+            const [pref, action] = await Promise.all([
+                preference.boundingBox(),
+                accountAction.boundingBox(),
+            ]);
+            expect(pref?.width).toBeCloseTo(action?.width || 0);
+            expect(pref?.x).toBeCloseTo(action?.x || 0);
+        }
+        const before = await toggle.getAttribute('aria-label');
+        await toggle.click();
+        await expect(toggle).not.toHaveAttribute('aria-label', /** @type {string} */ (before));
+        const after = await toggle.getAttribute('aria-label');
+        await page.reload();
+        await expect(page.getByRole('button', { name: /Change Theme/ })).toHaveAttribute(
+            'aria-label',
+            /** @type {string} */ (after),
+        );
+        await page.getByRole('button', { name: /Change Theme/ }).click();
+    });
+
+    for (const [area, key, param] of [
+        ['groups', 'group', 'gid'],
+        ['roles', 'role', 'rid'],
+    ]) {
+        test(`shows the users assigned to a ${key} alongside its settings @mobile`, async ({
+            page,
+        }) => {
+            await page.goto(`/auth/v1/admin/${area}`);
+            const name = `membership-${Date.now()}`;
+            const entity = await api(page, 'POST', area, { [key]: name });
+            try {
+                const user = await api(page, 'POST', 'users', {
+                    email: `${name}@example.invalid`,
+                    given_name: 'Membership',
+                    language: 'en',
+                    roles: [],
+                    [area]: [name],
+                });
+                try {
+                    await page.goto(`/auth/v1/admin/${area}?${param}=${entity.id}`);
+                    const main = page.getByRole('main');
+                    await main.getByRole('button', { name: 'Users', exact: true }).click();
+                    await expect(main.getByText(user.email, { exact: true })).toBeVisible();
+                    await expect(
+                        main.getByRole('button', { name: `Remove from this ${key}` }),
+                    ).toBeVisible();
+                    const alignment = await main.locator('.members').evaluate(members => {
+                        const search = members.querySelector('search')?.getBoundingClientRect();
+                        const row = members.querySelector('li.member')?.getBoundingClientRect();
+                        if (!search || !row) throw new Error('Missing search or member row');
+                        return Math.max(
+                            Math.abs(row.left - search.left),
+                            Math.abs(row.right - search.right),
+                        );
+                    });
+                    expect(alignment).toBeLessThanOrEqual(1);
+                    await main.getByRole('button', { name: 'Config', exact: true }).click();
+                    const field = key === 'group' ? 'Group Name' : 'Role Name';
+                    await expect(main.getByRole('textbox', { name: field })).toHaveValue(name);
+                } finally {
+                    await deleteTestUser(page, user.id);
+                }
+            } finally {
+                await api(page, 'DELETE', `${area}/${entity.id}`);
+            }
+        });
+    }
+
+    test('opens and browses Account from the sidebar footer @webkit', async ({
+        page,
+        allowErrors,
+    }) => {
+        allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
+        await page.goto('/auth/v1/admin/users');
+        await page.locator('#mainNav').getByRole('link', { name: 'User Account' }).click();
+        await expect(page).toHaveURL(/\/auth\/v1\/account\?v=info$/);
+        const main = page.getByRole('main');
+        await expect(main.getByRole('heading', { name: 'User Account' })).toBeVisible();
+        await expect(main.getByRole('button', { name: 'Info', exact: true })).toHaveAttribute(
+            'aria-current',
+            'step',
+        );
+        await page.setViewportSize({ width: 390, height: 500 });
+        await main.locator('.tabs').getByRole('button', { name: 'Edit', exact: true }).click();
+        await expect(main.getByRole('textbox', { name: 'E-Mail', exact: true })).toHaveValue(/@/);
+        const coverage = await main.evaluate(el => {
+            const background = el.querySelector('.account-shell');
+            if (!background) throw new Error('Missing account background');
+            el.scrollTop = el.scrollHeight;
+            return {
+                scrollTop: el.scrollTop,
+                gap: el.getBoundingClientRect().bottom - background.getBoundingClientRect().bottom,
+            };
+        });
+        expect(coverage.scrollTop).toBeGreaterThan(0);
+        expect(coverage.gap).toBeLessThanOrEqual(1);
+        const password = main.getByRole('button', { name: 'Password', exact: true });
+        await password.click();
+        await expect(password).toHaveAttribute('aria-current', 'step');
+        await page.setViewportSize({ width: 390, height: 850 });
+        await expect(password).toHaveAttribute('aria-current', 'step');
+        await expect(main.getByRole('button', { name: 'Logout', exact: true })).toBeVisible();
+    });
+
+    test('fits the full account form and birthdate calendar on a narrow phone @mobile @webkit', async ({
+        page,
+        allowErrors,
+    }) => {
+        allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
+        await page.setViewportSize({ width: 320, height: 568 });
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.route(
+            url => url.pathname === '/auth/v1/account',
+            async route => {
+                const response = await route.fetch();
+                const html = await response.text();
+                const body = html.replace(
+                    /(<template id="tpl_user_values_config">)([\s\S]*?)(<\/template>)/,
+                    (_, start, json, end) => {
+                        const config = JSON.parse(json);
+                        for (const key of [
+                            'birthdate',
+                            'street',
+                            'zip',
+                            'city',
+                            'country',
+                            'phone',
+                            'tz',
+                        ]) {
+                            config[key] = 'optional';
+                        }
+                        config.preferred_username.preferred_username = 'optional';
+                        return start + JSON.stringify(config) + end;
+                    },
+                );
+                await route.fulfill({ response, body });
+            },
+        );
+        await page.route('**/auth/v1/users/*/self/delete', route =>
+            route.request().method() === 'GET' ? route.fulfill({ status: 202 }) : route.abort(),
+        );
+
+        await page.goto('/auth/v1/account?v=info');
+        const main = page.getByRole('main');
+        await main.locator('.tabs').getByRole('button', { name: 'Edit', exact: true }).click();
+        await expect(main.getByRole('textbox', { name: 'Phone' })).toBeVisible();
+        await expect(main.getByRole('button', { name: 'Delete Account' })).toBeVisible();
+        const spills = await main.locator('.formInner').evaluate(form => {
+            const section = form.closest('section');
+            if (!section) throw new Error('Missing account section');
+            const rect = section.getBoundingClientRect();
+            const style = getComputedStyle(section);
+            const right =
+                rect.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth);
+            return [...form.querySelectorAll('input:not([type=hidden]), button')].some(control => {
+                const box = control.getBoundingClientRect();
+                return box.width > 0 && box.right > right + 1;
+            });
+        });
+        expect(spills).toBe(false);
+        const birthdate = main.locator('input[type="date"][aria-label="Birthdate"]');
+        await expect(birthdate).toBeVisible();
+        await birthdate.fill('1990-06-15');
+        await expect(birthdate).toHaveValue('1990-06-15');
+        await main.getByRole('button', { name: 'Birthdate', exact: true }).click();
+        const calendar = main.locator('.date-control [popover]:popover-open').first();
+        await expect(calendar).toBeInViewport({ ratio: 1 });
+        await expect(calendar.locator('button:focus time')).toHaveAttribute(
+            'datetime',
+            '1990-06-15',
+        );
+    });
+
+    test('links, renames and revokes a device from Account', async ({
+        page,
+        browser,
+        baseURL,
+        request,
+    }) => {
+        await page.goto('/auth/v1/admin/users');
+        const client = await createTestClient(page, {
+            flows_enabled: [DEVICE_GRANT, 'refresh_token'],
+        });
+        const user = await createTestUser(page, { prefix: 'e2e-device' });
+        const context = await browser.newContext({ baseURL, storageState: NO_SESSION });
+        try {
+            const account = await context.newPage();
+            await loginToAccount(account, user);
+            await accountTab(account, 'Devices').click();
+            await expect(account.getByText('No devices linked yet.')).toBeVisible();
+
+            const grant = await startDeviceAuthorization(request, client);
+            await account.goto(grant.verification_uri_complete);
+            await account.getByRole('button', { name: 'Submit', exact: true }).click();
+            await account.getByRole('button', { name: 'Accept', exact: true }).click();
+            await expect(accountTab(account, 'Devices')).toHaveAttribute('aria-current', 'step');
+            await new Promise(resolve => setTimeout(resolve, grant.interval * 1000));
+            const tokens = await pollDeviceToken(request, client, grant.device_code);
+            expect(tokens.status).toBe(200);
+
+            await account.getByRole('button', { name: 'Refresh', exact: true }).click();
+            await account.getByRole('button', { name: 'Expand content', exact: true }).click();
+            await account.getByRole('textbox', { name: 'Name', exact: true }).fill('QA Terminal');
+            await account.getByRole('button', { name: 'Save', exact: true }).click();
+            await expect(account.getByText('QA Terminal', { exact: true })).toBeVisible();
+
+            await account.getByRole('button', { name: 'Delete the possibility to renew' }).click();
+            await account.getByRole('button', { name: 'Cancel', exact: true }).click();
+            await expect(
+                account.getByText('Access renewable until', { exact: true }),
+            ).toBeVisible();
+            await account.getByRole('button', { name: 'Delete the possibility to renew' }).click();
+            await account
+                .getByRole('dialog')
+                .getByRole('button', { name: 'Delete', exact: true })
+                .click();
+            await expect(account.getByText('Access renewable until', { exact: true })).toHaveCount(
+                0,
+            );
+
+            await account.reload();
+            await expect(account.getByText('QA Terminal', { exact: true })).toBeVisible();
+            await account.getByRole('button', { name: 'Expand content', exact: true }).click();
+            await expect(account.getByText('Access renewable until', { exact: true })).toHaveCount(
+                0,
+            );
+        } finally {
+            await context.close();
+            await deleteTestUser(page, user.id);
+            await api(page, 'DELETE', `clients/${client}`);
+        }
+    });
+
+    test('aligns the admin header with the sidebar and shows the version in About', async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 1440, height: 768 });
+        await page.goto('/auth/v1/admin/users');
+        await expect(page.getByRole('heading', { name: 'Users', level: 1 })).toBeVisible();
+        const positions = await page.evaluate(() => {
+            const rect = (/** @type {string} */ selector) =>
+                /** @type {Element} */ (document.querySelector(selector)).getBoundingClientRect();
+            return {
+                header: rect('.admin-header').bottom,
+                logo: rect('#mainNav .logo').bottom,
+                workspace: rect('.admin-workspace').top,
+                users: rect('#mainNav a[href*="/admin/users"]').top,
+            };
+        });
+        expect(positions.header).toBe(positions.logo);
+        expect(positions.users - positions.workspace).toBe(6);
+        const nav = page.locator('#mainNav');
+        await expect(nav.getByText(/^v\d+\./)).toHaveCount(0);
+        await nav.getByRole('link', { name: 'About', exact: true }).click();
+        await expect(page.getByRole('main').getByText(/^v\d+\./)).toBeVisible();
+        await page.setViewportSize({ width: 960, height: 768 });
+        await expect(nav).toHaveAttribute('data-compact', 'true');
+        await expect(nav.getByRole('link', { name: 'About', exact: true })).toBeInViewport({
+            ratio: 1,
+        });
+    });
+
+    test('switches to Italian in the admin and keeps it on Account', async ({
+        page,
+        allowErrors,
+    }) => {
+        allowErrors.push(...ACCOUNT_EXPECTED_ERRORS);
+        await page.goto('/auth/v1/admin/users');
+        const config = await page.request.get('/auth/v1/i18n_config');
+        const languages = await config.json();
+        expect(languages.common).toContain('it');
+        expect(languages.admin).toContain('it');
+        await chooseOption(page, page.getByRole('combobox', { name: 'Select Language' }), 'it');
+        await expect(page.locator('html')).toHaveAttribute('lang', 'it-IT');
+        await expect(page.getByRole('heading', { name: 'Utenti', level: 1 })).toBeVisible();
+        await page.locator('#mainNav').getByRole('link', { name: 'Account utente' }).click();
+        await expect(page.getByRole('heading', { name: 'Account utente' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Esci', exact: true })).toBeVisible();
+    });
+
+    test('language selector switches the UI language', async ({ page }) => {
+        await page.goto('/auth/v1/admin/users');
+        await chooseOption(page, page.getByRole('combobox', { name: 'Select Language' }), 'de');
+        await expect(page.getByRole('link', { name: 'Benutzer', exact: true })).toBeVisible();
+        await chooseOption(page, page.getByRole('combobox', { name: /Sprache/ }), 'en');
+        await expect(page.getByRole('link', { name: 'Users', exact: true })).toBeVisible();
+    });
+
+    test('stores Italian and sends localized setup and password reset emails', async ({ page }) => {
+        await page.goto('/auth/v1/admin/users');
+        const since = nowSecs();
+        const user = await createTestUser(page, { language: 'it' });
+        try {
+            expect(await api(page, 'GET', `users/${user.id}`)).toMatchObject({ language: 'it' });
+            const setup = await waitForMail(page.request, {
+                to: user.email,
+                subject: /Nuova password$/,
+                since,
+            });
+            expect(setup.html).toContain('<html lang="it">');
+            expect(setup.text).toContain('impostare la password');
+
+            await page.goto(`/auth/v1/admin/users?uid=${user.id}`);
+            await page.getByRole('button', { name: 'Password', exact: true }).click();
+            await page.getByRole('button', { name: 'Send Reset E-Mail' }).click();
+            const reset = await waitForMail(page.request, {
+                to: user.email,
+                subject: /Richiesta di reimpostazione della password$/,
+                since,
+            });
+            expect(reset.html).toContain('<html lang="it">');
+            expect(reset.text).toMatch(/Il link scade il:\s*\d{2}\/\d{2}\/\d{4}/);
+            expect(new URL(firstRauthyLink(reset)).pathname).toContain(`/users/${user.id}/reset/`);
+        } finally {
+            await deleteTestUser(page, user.id);
+        }
+    });
+});

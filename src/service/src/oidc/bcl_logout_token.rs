@@ -1,5 +1,6 @@
 use chrono::Utc;
 use cryptr::utils::secure_random_alnum;
+use rauthy_api_types::oidc::Audience;
 use rauthy_common::utils::{base64_url_no_pad_decode, base64_url_no_pad_decode_buf};
 use rauthy_data::entity::auth_providers::AuthProvider;
 use rauthy_data::entity::jwk::{JWKSPublicKey, JwkKeyPair, JwkKeyPairAlg};
@@ -7,6 +8,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_error::ErrorResponseType;
 use rauthy_jwt::claims::{JwtCommonClaims, JwtLogoutClaims, JwtTokenType};
+use rauthy_jwt::token::{JwtHeaderType, JwtToken};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -35,8 +37,8 @@ pub struct LogoutToken<'a> {
     pub sub: Option<&'a str>,
     pub sid: Option<&'a str>,
 
-    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for easy
-    // `.is_none()` validation.
+    // The `nonce` MUST NOT exist in this token. We try to deserialize into an `Option<_>` for
+    // easy `.is_none()` validation.
     nonce: Option<&'a str>,
 }
 
@@ -46,10 +48,10 @@ impl LogoutToken<'_> {
         aud: &'a str,
         sub: Option<&'a str>,
         sid: Option<&'a str>,
-        token_lifetime: u32,
+        token_lifetime_secs: i64,
     ) -> LogoutToken<'a> {
         let iat = Utc::now().timestamp();
-        let exp = iat + token_lifetime as i64;
+        let exp = iat + token_lifetime_secs;
 
         let events = serde_json::Value::Object(serde_json::Map::from_iter([(
             EVENT.to_string(),
@@ -85,7 +87,7 @@ impl LogoutToken<'_> {
                 exp: self.exp,
                 iss: self.iss,
                 jti: Some(self.jti.as_ref()),
-                aud: Cow::Borrowed(self.aud),
+                aud: Audience::single(self.aud),
                 sub: self.sub,
                 typ: self.typ.clone().unwrap_or(JwtTokenType::Logout),
                 azp: self.aud,
@@ -97,7 +99,7 @@ impl LogoutToken<'_> {
             sid: self.sid,
             nonce: None,
         };
-        rauthy_jwt::token::JwtToken::build(kp, &claims)
+        JwtToken::build(kp, &claims, JwtHeaderType::Jwt)
     }
 
     /// Parse and validate the token as specified in
@@ -142,7 +144,9 @@ impl LogoutToken<'_> {
         // validates signature
         let jwk =
             JWKSPublicKey::fetch_remote(provider.jwks_endpoint.as_ref().unwrap(), kid).await?;
-        if jwk.alg != Some(alg) {
+        // EdDSA (RFC 8812) and Ed25519 (RFC 9864) name the same OKP key family, so both
+        // spellings must validate against JWKs of that family.
+        if !jwk.alg.as_ref().is_some_and(|a| a.is_compatible_with(&alg)) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "`alg` mismatch between token header and fetched JWK",
@@ -198,8 +202,16 @@ impl LogoutToken<'_> {
         &self,
         header: serde_json::Value,
     ) -> Result<(String, JwkKeyPairAlg), ErrorResponse> {
-        let lifetime = RauthyConfig::get().vars.backchannel_logout.token_lifetime as i64;
-        let skew = RauthyConfig::get().vars.backchannel_logout.allow_clock_skew as i64;
+        let lifetime = RauthyConfig::get()
+            .vars
+            .backchannel_logout
+            .allowed_token_lifetime
+            .as_secs() as i64;
+        let skew = RauthyConfig::get()
+            .vars
+            .backchannel_logout
+            .allow_clock_skew
+            .as_secs() as i64;
         self.validate_claims_with(header, lifetime, skew)
     }
 
@@ -239,12 +251,18 @@ impl LogoutToken<'_> {
         let now = Utc::now().timestamp();
 
         let iat_limit = now - token_lifetime - allow_clock_skew;
-        let exp_limit = now + allow_clock_skew;
+        let exp_limit = now - allow_clock_skew;
 
         if self.iat < iat_limit {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "`iat` is too long ago",
+            ));
+        }
+        if self.iat > now + allow_clock_skew {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "`iat` is in the future",
             ));
         }
         if self.exp < exp_limit {
@@ -376,8 +394,7 @@ mod tests {
         let mut buf = Vec::with_capacity(256);
 
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
         assert_eq!(lt.typ.unwrap().as_str(), "logout+jwt");
         assert_eq!(lt.aud, aud);
         assert_eq!(lt.sub.unwrap(), sub);
@@ -390,8 +407,7 @@ mod tests {
 
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
         assert_eq!(lt.sid.unwrap(), sid);
         assert!(lt.sub.is_none());
 
@@ -401,16 +417,14 @@ mod tests {
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
 
         let token = LogoutToken::new(iss, aud, None, Some(sid), lifetime)
             .into_token_with_kp(&kp_512)
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
-            .unwrap();
+        lt.validate_claims_with(header, lifetime, skew).unwrap();
 
         // no sub + sid - expect failure
         let token = LogoutToken::new(iss, aud, None, None, lifetime)
@@ -418,7 +432,40 @@ mod tests {
             .unwrap();
         buf.clear();
         let (header, lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
-        lt.validate_claims_with(header, lifetime as i64, skew)
+        lt.validate_claims_with(header, lifetime, skew)
             .expect_err("empty sub and sid");
+
+        // clock skew must make `exp` more lenient, not stricter
+        let token = LogoutToken::new(iss, aud, Some(sub), None, lifetime)
+            .into_token_with_kp(&kp_25519)
+            .unwrap();
+        buf.clear();
+        let (header, mut lt) = LogoutToken::build_from_str(&token, &mut buf).unwrap();
+        let now = Utc::now().timestamp();
+        lt.iat = now - 10;
+        lt.exp = now + 1;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("exp within the skew must be accepted");
+        lt.exp = now - 2;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("exp expired within the skew must be accepted");
+        lt.exp = now - skew - 1;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect_err("exp beyond the skew must be rejected");
+
+        // `iat` must not lie in the future beyond the skew
+        lt.iat = now + skew;
+        lt.exp = lt.iat + lifetime;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("iat in the future within the skew must be accepted");
+        // providers like Authentik issue `exp = iat + 1h`, which must keep working
+        lt.iat = now;
+        lt.exp = now + 3600;
+        lt.validate_claims_with(header.clone(), lifetime, skew)
+            .expect("a long `exp` with a fresh `iat` must be accepted");
+        lt.iat = now + 3600;
+        lt.exp = now + 3660;
+        lt.validate_claims_with(header, lifetime, skew)
+            .expect_err("iat in the future beyond the skew must be rejected");
     }
 }

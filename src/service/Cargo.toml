@@ -19,9 +19,11 @@ atrium-common = { workspace = true }
 atrium-oauth = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
+constant_time_eq = { workspace = true }
 cryptr = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
+percent-encoding = { workspace = true }
 reqwest = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
@@ -30,3 +32,6 @@ tracing = { workspace = true }
 tokio = { workspace = true }
 utoipa = { workspace = true }
 zeroize = { workspace = true }
+
+[lints]
+workspace = true

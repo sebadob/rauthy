@@ -1,4 +1,4 @@
-import type { CodeChallengeMethod } from '$api/types/authorize.ts';
+import type { CodeChallengeMethod } from '#api/types/authorize.ts';
 
 export type AuthProviderType = 'auto' | 'custom' | 'github' | 'google' | 'oidc';
 
@@ -71,6 +71,8 @@ export interface ProviderLoginRequest {
     /// Validation: PATTERN_CODE_CHALLENGE
     code_challenge?: string;
     code_challenge_method?: CodeChallengeMethod;
+    /// Validation: PATTERN_RESOURCE — RFC 8707 resource indicator
+    resource?: string;
 
     // values for the callback from upstream
     /// Validation: PATTERN_URI
@@ -82,6 +84,7 @@ export interface ProviderLoginRequest {
 
     /// Validation: PATTERN_ATPROTO_ID
     handle?: string;
+    fwda?: boolean;
 }
 
 export interface ProviderLookupRequest {

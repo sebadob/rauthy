@@ -1,10 +1,12 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import type { GroupResponse } from '$api/types/groups.ts';
-    import GroupConfig from '$lib5/admin/groups/GroupConfig.svelte';
-    import GroupDelete from '$lib5/admin/groups/GroupDelete.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import GroupUsers from './GroupUsers.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import IconUserGroup from '#icons/IconUserGroup.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import GroupConfig from '#lib/admin/groups/GroupConfig.svelte';
 
     let {
         group,
@@ -16,29 +18,29 @@
         onSave: () => void;
     } = $props();
 
-    let t = useI18n();
     let ta = useI18nAdmin();
-
-    const tabs = [ta.nav.config, t.common.delete];
+    const tabs = [ta.nav.config, ta.nav.users];
     let selected = $state(tabs[0]);
-
-    let focusFirst: undefined | (() => void) = $state();
-
-    $effect(() => {
-        if (group.id) {
-            requestAnimationFrame(() => {
-                focusFirst?.();
-            });
-        }
-    });
 </script>
 
-<div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst />
-</div>
+<EntityHeader title={group.name} subtitle={ta.nav.groups}>
+    {#snippet actions()}
+        {#key group.id}
+            <EntityDelete
+                url={`/auth/v1/groups/${group.id}`}
+                name={group.name}
+                message={ta.groups.delete1}
+                onDelete={onSave}
+            />
+        {/key}
+    {/snippet}
+    <IconUserGroup width="28px" />
+</EntityHeader>
+
+<Tabs {tabs} bind:selected />
 
 {#if selected === ta.nav.config}
     <GroupConfig {group} {groups} {onSave} />
-{:else if selected === t.common.delete}
-    <GroupDelete {group} {onSave} />
+{:else}
+    <GroupUsers {group} />
 {/if}

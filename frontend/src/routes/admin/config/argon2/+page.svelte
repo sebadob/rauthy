@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Argon2Params from '$lib5/admin/config/argon2/Argon2Params.svelte';
+    import Argon2Params from '#lib/admin/config/argon2/Argon2Params.svelte';
 </script>
 
 <svelte:head>

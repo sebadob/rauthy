@@ -43,7 +43,20 @@ pub async fn load_tls() -> rustls::ServerConfig {
         }
     };
 
-    tls_hot_reload::load_server_config(key_path, cert_path).await
+    load_server_config(key_path, cert_path).await
+}
+
+/// Loads a hot-reloading TLS config, with the poll watcher if `tls.poll_watch_interval` is set.
+pub async fn load_server_config(key_path: String, cert_path: String) -> rustls::ServerConfig {
+    if let Some(interval) = RauthyConfig::get().vars.tls.poll_watch_interval {
+        tracing::warn!(
+            "Starting TLS hot-reload with the PollWatcher backend and interval {:?}",
+            interval
+        );
+        tls_hot_reload::load_server_config_polling(key_path, cert_path, interval).await
+    } else {
+        tls_hot_reload::load_server_config(key_path, cert_path).await
+    }
 }
 
 async fn check_generate_tls() {

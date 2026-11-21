@@ -108,6 +108,7 @@ export const I18nUk: I18n = {
         navEdit: 'Редагувати',
         navMfa: 'MFA',
         navLogout: 'Вийти',
+        navBackToAdmin: 'Панель адміністратора',
         other: 'Інше',
         pam: {
             addSshKey: 'Додати новий ключ',
@@ -117,6 +118,20 @@ export const I18nUk: I18n = {
             keyType: 'Тип',
             username: "Ім'я користувача",
             validFor: 'Пароль дійсний {{ secs }} секунд',
+        },
+        passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `УВАГА: Resident Key дозволяє входити напряму, без введення адреси E-Mail,
+                але для кожного застосунку потрібен додатковий слот пам'яті. Переконайтеся, що
+                вільного місця достатньо. Щоб зробити наявний Passkey ключем Resident Key, спершу
+                видаліть його, а потім додайте знову.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'Перед входом з цим Passkey потрібно ввести адресу E-Mail.',
+                'Працює з кнопкою Passkey на сторінці входу, без введення адреси E-Mail.',
+            ],
         },
         passwordConfirm: 'Підтвердіть пароль',
         passwordCurr: 'Поточний пароль',
@@ -137,6 +152,21 @@ export const I18nUk: I18n = {
             notAvailable: "Це ім'я недоступне.",
             preferredUsername: "Бажане ім'я користувача",
         },
+        privacy: {
+            clientId: 'ID клієнта',
+            connectedApps: 'Підключені застосунки',
+            connectedAppsDesc: 'Застосунки, яким ви надали доступ до свого акаунту.',
+            granted: 'Надано',
+            noConnectedApps: 'Поки що жоден застосунок не отримав доступу.',
+            privacy: 'Конфіденційність',
+            resource: 'Ресурс',
+            revoke: 'Відкликати доступ',
+            revokeDesc:
+                'Відкликання видаляє згоду, і застосунок більше не зможе поновлювати свій доступ. Токени доступу, видані разом із видаленими токенами оновлення, відкликаються для userinfo та інтроспекції. Застосунки, які самі перевіряють свої токени, можуть приймати їх до закінчення терміну. Застосунку доведеться знову запитати вашу згоду.',
+            scopes: 'Scopes',
+            updated: 'Оновлено',
+            userAgent: 'Агент користувача',
+        },
         providerLink: "Прив'язати акаунт",
         providerLinkDesc: `Ви можете прив'язати цей акаунт до одного з наступних провайдерів
             входу.\nПісля активації ви будете перенаправлені на сторінку входу обраного
@@ -154,6 +184,9 @@ export const I18nUk: I18n = {
         userEnabled: 'Активовано',
         userExpiry: 'Термін дії',
         userVerifiedTooltip: 'Захищено відбитком пальця або PIN-кодом',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `Ви можете налаштувати поля, які будуть доступні через ваш WebID.\nЦя функція
             використовується деякими мережами для децентралізованого входу. Якщо ви не знаєте, що
             це,\nвам це, швидше за все, не потрібно.`,
@@ -173,15 +206,20 @@ export const I18nUk: I18n = {
         emailRequired: "E-Mail обов'язковий",
         emailSentMsg: 'Якщо ваш E-Mail існує, запит було надіслано',
         expectingPasskey: 'Очікується автентифікація за ключем доступу',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: 'Забагато невдалих спроб. Заблоковано до:',
         invalidCredentials: 'Невірні облікові дані',
         invalidKeyUsed: 'Недійсний ключ',
         login: 'Увійти',
         mfaAck: 'Підтверджено',
+        mfaOpenApp: 'Відкрийте застосунок, щоб продовжити',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: 'або увійдіть за допомогою',
+        passkey: 'Passkey',
+        passkeyNotDiscovered: `Passkey, додані не як Resident Key, не можна знайти цим способом.
+            Натомість введіть адресу E-Mail.`,
         password: 'Пароль',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Забули пароль?',
@@ -231,12 +269,29 @@ export const I18nUk: I18n = {
         cancel: 'Скасувати',
     },
     mfa: {
-        p1: `Якщо ви плануєте використовувати свій MFA-ключ з різними системами, як-от Windows та
-            Android,\nрекомендується виконувати реєстрацію на Android.`,
-        p2: `Android — це платформа з найменшою кількістю підтримуваних функцій для технології
-            безпарольного доступу.\nКлючі, зареєстровані на Android, працюватимуть і в інших місцях. Однак, це не працює у зворотному напрямку.`,
-        p3: 'Для отримання додаткової інформації дивіться',
-        docLinkText: 'документацію про ключі доступу (passkeys)',
+        webauthn: {
+            title: 'Passkeys',
+            p1: `Якщо ви плануєте використовувати свій MFA-ключ з різними системами, як-от Windows та
+                Android,\nрекомендується виконувати реєстрацію на Android.`,
+            p2: `Android — це платформа з найменшою кількістю підтримуваних функцій для технології
+                безпарольного доступу.\nКлючі, зареєстровані на Android, працюватимуть і в інших місцях. Однак, це не працює у зворотному напрямку.`,
+            p3: 'Для отримання додаткової інформації дивіться',
+            registerNew: 'Зареєструвати новий ключ',
+            docLinkText: 'документацію про ключі доступу (passkeys)',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One Time Password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Помилка під час запуску процесу реєстрації',
         lastUsed: 'Востаннє використано',
         noKey: 'На цьому слоті не зареєстровано ключ безпеки',
@@ -244,10 +299,12 @@ export const I18nUk: I18n = {
             автентифікуватися\nза допомогою вже зареєстрованого ключа:`,
         reAuthenticatePwd:
             'Перш ніж ви зможете змінювати ключі доступу, вам потрібно повторно автентифікуватися за допомогою пароля.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Зареєструвати',
-        registerNew: 'Зареєструвати новий ключ',
-        registerd: 'Зареєстровано',
-        registerdKeys: 'Зареєстровані ключі',
+        registered: 'Зареєстровано',
+        registeredKeys: 'Зареєстровані ключі',
+        registeredOtps: 'Registered OTPs',
         passkeyName: 'Назва ключа доступу',
         passkeyNameErr: '2 - 32 символи, без спецсимволів',
         passwordInvalid: 'Неправильний пароль',
@@ -277,6 +334,7 @@ export const I18nUk: I18n = {
     passwordReset: {
         accountLogin: 'Вхід в акаунт',
         badFormat: 'Неправильний формат',
+        continueSignIn: 'Перейти до входу',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Згенерувати',
         newAccDesc1:
@@ -295,7 +353,7 @@ export const I18nUk: I18n = {
         required: "Обов'язково",
         save: 'Зберегти',
         success1: 'Пароль успішно оновлено.',
-        success2: 'Вас буде незабаром перенаправлено.',
+        success2: 'Вас буде перенаправлено через {{ secs }} с.',
         success3: 'Якщо вас не перенаправило, будь ласка, натисніть тут:',
         successPasskey1: 'Ваш новий ключ доступу успішно зареєстровано.',
         successPasskey2: `Будь ласка, увійдіть у свій акаунт і зареєструйте другий, резервний ключ

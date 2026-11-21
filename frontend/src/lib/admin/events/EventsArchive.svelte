@@ -1,64 +1,82 @@
 <script lang="ts">
-    import { EVENT_LEVELS, EVENT_TYPES } from '$utils/constants';
-    import Event from '$lib5/admin/events/Event.svelte';
-    import type { EventLevel, EventResponse, EventsRequest, EventType } from '$api/types/events.ts';
-    import { fetchPost } from '$api/fetch';
-    import Options from '$lib5/Options.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { EVENT_TYPES } from '#utils/constants.ts';
+    import Event from '#lib/admin/events/Event.svelte';
+    import {
+        EVENT_LEVELS,
+        type EventLevel,
+        type EventResponse,
+        type EventsRequest,
+        type EventType,
+    } from '#api/types/events.ts';
+    import { fetchPost } from '#api/fetch.ts';
+    import Options from '#lib/Options.svelte';
+    import EventLevelFilter from './EventLevelFilter.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import Section from '#lib/Section.svelte';
 
     let ta = useI18nAdmin();
 
-    let refOpts: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refOpts?.focus());
-
+    let err = $state('');
     let events: EventResponse[] = $state([]);
-    let eventsFiltered: EventResponse[] = $state([]);
 
-    let fromDate = $state(fmtDateInput());
+    let fromDate = $state(fmtDateInput(new Date(Date.now() - 86400000)));
     let fromTime = $state(fmtTimeInput());
     let untilDate: undefined | string = $state('');
     let untilTime = $state('--:--');
-    let level: EventLevel = $state('info');
+    let levels: EventLevel[] = $state([...EVENT_LEVELS]);
+    let minimumLevel = $derived(EVENT_LEVELS.find(level => levels.includes(level)));
     let typ: EventType = $state(EVENT_TYPES[0] as EventType);
 
-    let searchOptions = ['IP', 'Content'];
+    let searchOptions = ['IP', ta.events.searchContent];
     let searchOption = $state(searchOptions[0]);
     let searchValue = $state('');
-    let orderOptions = ['Timestamp', 'Level', 'Type'];
+    let orderOptions = [ta.events.timestamp, ta.events.level, ta.events.type];
 
     $effect(() => {
         fetchData();
     });
 
-    $effect(() => {
-        let search = searchValue.toLowerCase();
+    let eventsFiltered = $derived.by(() => {
+        const selected = events.filter(event => levels.includes(event.level));
+        const search = searchValue.toLowerCase();
         if (!search) {
-            eventsFiltered = events;
-        } else if (searchOption === searchOptions[0]) {
-            eventsFiltered = events.filter(e => e.ip?.includes(search));
-        } else if (searchOption === searchOptions[1]) {
-            eventsFiltered = events.filter(
-                e =>
-                    e.typ?.toLowerCase().includes(search) || e.text?.toLowerCase().includes(search),
-            );
+            return selected;
         }
+        if (searchOption === searchOptions[0]) {
+            return selected.filter(e => e.ip?.includes(search));
+        }
+        return selected.filter(
+            e =>
+                e.typ?.toLowerCase().includes(search) ||
+                e.typ
+                    ?.replace(/([a-z])([A-Z])/g, '$1 $2')
+                    .toLowerCase()
+                    .includes(search) ||
+                e.text?.toLowerCase().includes(search),
+        );
     });
 
+    let latestRequest = 0;
+
     async function fetchData() {
-        let from = unixTsFromLocalDateTime(fromDate, fromTime);
-        if (!from) {
-            console.error('from ts invalid', from);
+        const request = ++latestRequest;
+        const level = minimumLevel;
+        if (!level) {
+            events = [];
+            err = '';
             return;
         }
+        let from = unixTsFromLocalDateTime(fromDate, fromTime);
+        // A time field is temporarily incomplete while the user types.
+        if (!from) return;
         let until: undefined | number;
         if (untilDate && untilTime) {
             until = unixTsFromLocalDateTime(untilDate, untilTime);
+            if (!until) return;
         }
 
         let payload: EventsRequest = {
@@ -68,10 +86,12 @@
             typ: typ !== EVENT_TYPES[0] ? typ : undefined,
         };
         let res = await fetchPost<EventResponse[]>('/auth/v1/events', payload);
+        if (request !== latestRequest) return;
         if (res.body) {
+            err = '';
             events = res.body;
         } else {
-            console.error(res.error);
+            err = res.error?.message || 'Error';
         }
     }
 
@@ -89,53 +109,61 @@
     }
 </script>
 
-<ContentAdmin>
+<ContentAdmin wide>
     <div id="archive">
-        <OrderSearchBar
-            bind:ref={refOpts}
-            {searchOptions}
-            bind:searchOption
-            bind:value={searchValue}
-            {orderOptions}
-            {onChangeOrder}
-            firstDirReverse
-        />
-        <div class="row">
-            <InputDateTimeCombo
-                label={ta.common.from}
-                bind:value={fromDate}
-                bind:timeValue={fromTime}
-                withTime
-            />
-            <InputDateTimeCombo
-                label={ta.common.until}
-                bind:value={untilDate}
-                bind:timeValue={untilTime}
-                withTime
-                withDelete
-            />
-        </div>
-        <div class="filters">
-            <div class="level">
-                <Options
-                    ariaLabel={ta.events.eventLevel}
-                    options={EVENT_LEVELS}
-                    bind:value={level}
-                    borderless
+        <h2 class="admin-page-title">{ta.nav.events}</h2>
+        <div class="filters-panel">
+            <Section>
+                <OrderSearchBar
+                    {searchOptions}
+                    bind:searchOption
+                    bind:value={searchValue}
+                    {orderOptions}
+                    {onChangeOrder}
+                    firstDirReverse
+                    inline
+                    searchWidth="100%"
                 />
-            </div>
-            <div class="typ">
-                <Options
-                    ariaLabel={ta.events.eventType}
-                    options={EVENT_TYPES}
-                    bind:value={typ}
-                    borderless
-                />
-            </div>
+                <div class="row">
+                    <InputDateTimeCombo
+                        label={ta.common.from}
+                        labelTime={ta.common.time}
+                        timeName="from_time"
+                        bind:value={fromDate}
+                        bind:timeValue={fromTime}
+                        withTime
+                    />
+                    <InputDateTimeCombo
+                        label={ta.common.until}
+                        labelTime={ta.common.time}
+                        timeName="until_time"
+                        bind:value={untilDate}
+                        bind:timeValue={untilTime}
+                        withTime
+                        withDelete
+                    />
+                </div>
+                <div class="filters">
+                    <div class="level">
+                        <span class="admin-field-label">{ta.events.eventLevel}</span>
+                        <EventLevelFilter bind:levels field />
+                    </div>
+                    <div class="admin-field-select">
+                        <span class="admin-field-label">{ta.events.eventType}</span>
+                        <Options
+                            ariaLabel={ta.events.eventType}
+                            options={EVENT_TYPES}
+                            bind:value={typ}
+                            anchored
+                            placement="below"
+                        />
+                    </div>
+                </div>
+            </Section>
         </div>
-
+        {#if err}<div class="err">{err}</div>{/if}
         {#if eventsFiltered.length === 0}
-            <div class="row">No events found</div>
+            <div class="admin-list-empty">{ta.common.noEntries}</div>
         {:else}
             <div class="eventsList">
                 {#each eventsFiltered as event (event.id)}
@@ -147,40 +175,35 @@
 </ContentAdmin>
 
 <style>
-    .eventsList {
-        max-height: calc(100dvh - 11.5rem);
-        overflow-y: auto;
+    .filters-panel {
+        margin-bottom: var(--ui-space);
+        container-type: inline-size;
     }
 
-    @media (max-width: 39rem) {
-        .eventsList {
-            max-height: calc(100dvh - 13.5rem);
-        }
-    }
-
-    @media (max-width: 32rem) {
-        .eventsList {
-            max-height: calc(100dvh - 17.5rem);
-        }
+    .row,
+    .filters {
+        display: grid;
+        gap: var(--ui-space);
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
     }
 
     .filters {
-        display: flex;
-        align-items: center;
-        height: 3rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .level {
-        width: 5rem;
+    @container (width >= 40rem) {
+        .row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .filters {
+            grid-template-columns: repeat(2, minmax(0, 14rem));
+        }
     }
 
-    .row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0 1rem;
-    }
-
-    .typ {
-        width: 11rem;
+    .eventsList {
+        display: grid;
+        gap: 0.75rem;
+        container: archive / inline-size;
     }
 </style>

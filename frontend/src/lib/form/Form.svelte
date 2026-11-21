@@ -1,12 +1,13 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { fetchSolvePow } from '$utils/pow';
-    import { unixTsFromLocalDate } from '$utils/form';
-    import { errorFromResponse, fetchForm } from '$api/fetch';
+    import { fetchSolvePow } from '#utils/pow.ts';
+    import { unixTsFromLocalDate } from '#utils/form.ts';
+    import { errorFromResponse, fetchForm } from '#api/fetch.ts';
 
     type T = $$Generic;
 
     let {
+        id,
         action,
         method = 'POST',
         isError = $bindable(),
@@ -15,17 +16,20 @@
         resetOnSubmit,
         // if left empty, the form will handle the request itself
         onSubmit,
+        onInvalid,
         // called after a successful request, will be ignored if onSubmit() is given
         onResponse,
         children,
         // fetch, solve and append a PoW with the given key
         withPowAs,
     }: {
+        id?: string;
         action: string;
         method?: 'GET' | 'POST';
         isError?: boolean;
         convertDateToTs?: string[];
         resetOnSubmit?: boolean;
+        onInvalid?: (ev: Event) => void;
         onSubmit?: (form: HTMLFormElement, params: URLSearchParams) => void;
         onResponse?: (res: Response) => void;
         children: Snippet;
@@ -33,6 +37,7 @@
     } = $props();
 
     async function submit(ev: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement }) {
+        if (ev.target !== ev.currentTarget) return;
         ev.preventDefault();
         const form = ev.currentTarget;
 
@@ -83,6 +88,6 @@
     }
 </script>
 
-<form {action} {method} onsubmit={submit}>
+<form {id} {action} {method} onsubmit={submit} oninvalidcapture={onInvalid}>
     {@render children()}
 </form>

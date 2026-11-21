@@ -329,6 +329,7 @@ pub async fn post_kv_ns_values(
     ns: Path<String>,
     Json(payload): Json<KVValueRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
     principal.validate_admin_session()?;
 
     KVValue::insert(
@@ -509,6 +510,8 @@ pub async fn put_kv_value_ext(
     req: HttpRequest,
     Json(payload): Json<KVValueRequest>,
 ) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
     let bearer = get_bearer_token_from_header(req.headers())?;
     let access = KVAccess::find_validated(&bearer).await?;
 

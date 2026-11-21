@@ -68,6 +68,15 @@ body {
     --din-a4-height: 842pt;
 }
 
+/* SVG logos and native elements follow the theme switch instead of the OS preference */
+body.theme-light {
+    color-scheme: light;
+}
+
+body.theme-dark {
+    color-scheme: dark;
+}
+
 a,
 a:link,
 a:visited {
@@ -418,4 +427,158 @@ pre {
     to {
         transform: scale(1);
     }
+}
+
+.ui-shell .font-label:not(.branding-preview *) {
+    font-family: inherit;
+}
+.ui-shell pre {
+    padding: 16px;
+    border-radius: var(--border-radius);
+}
+.ui-shell {
+    --ui-primary: hsl(var(--action));
+    --ui-on-primary: var(--btn-text);
+    --ui-text: hsl(var(--text-high));
+    --ui-muted: hsl(var(--text));
+    --ui-outline: hsl(var(--text) / 0.2);
+    --ui-tonal: hsl(var(--action) / 0.12);
+    --ui-hover: hsl(var(--text) / 0.07);
+    --ui-space: 1rem;
+    --ui-control-font-size: 0.875rem;
+    --ui-control-line-height: 1.25rem;
+    --ui-field-height: 2.75rem;
+    --ui-label-height: 1.25rem;
+    --ui-label-gap: 0.375rem;
+    --ui-search-height: 2.75rem;
+    --ui-surface: hsl(var(--bg));
+    --ui-container: color-mix(in srgb, hsl(var(--bg)) 94%, hsl(var(--text)));
+}
+.ui-shell :is(a, [tabindex]):focus-visible {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: 2px;
+}
+.ui-shell .ui-text-input:not(.branding-preview *) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: var(--ui-field-height);
+    margin: 0;
+    padding: 11px 14px;
+    border: 1px solid var(--ui-outline);
+    border-radius: var(--border-radius);
+    background: var(--ui-surface);
+    color: var(--ui-text);
+    font: inherit;
+    font-size: var(--ui-control-font-size);
+    line-height: var(--ui-control-line-height);
+    box-shadow: none;
+}
+.ui-shell .ui-text-input:not(.branding-preview *)::placeholder {
+    color: hsl(var(--text) / 0.65);
+}
+.ui-shell .ui-text-input:focus:not(.branding-preview *) {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: -1px;
+}
+.ui-shell .admin-field-label:not(.branding-preview *) {
+    display: block;
+    margin: 0 0 var(--ui-label-gap);
+    padding: 0;
+    color: var(--ui-muted);
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: var(--ui-label-height);
+}
+.ui-shell .admin-field-label :is(label, span) {
+    font: inherit;
+}
+.ui-shell .admin-field-select {
+    --ui-option-height: var(--ui-field-height);
+    --ui-option-font-weight: 400;
+    --ui-option-padding: 0 14px;
+    --ui-option-button-border: 0;
+}
+.ui-shell .admin-field-select > div > .admin-control,
+.ui-shell .admin-field-select > div > .admin-control > .children,
+.ui-shell .admin-field-select .admin-select-trigger {
+    width: 100%;
+}
+.ui-shell .admin-field-select .admin-select-trigger .btnText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (prefers-reduced-motion: reduce) {
+    .ui-shell *:not(.branding-preview *),
+    .ui-shell *:not(.branding-preview *)::before,
+    .ui-shell *:not(.branding-preview *)::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+.admin-shell .admin-page-title {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    line-height: 2rem;
+    color: var(--ui-text);
+}
+
+.admin-shell .admin-page-toolbar {
+    margin-block-end: 1.25rem;
+}
+
+.ui-shell .ui-field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    align-items: start;
+    gap: var(--ui-space);
+    --ui-field-margin: 0;
+}
+
+.ui-shell .ui-field-hint,
+.ui-shell .ui-muted-copy {
+    max-width: 70ch;
+    color: var(--ui-muted);
+    font-size: var(--ui-control-font-size);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.ui-shell .ui-field-hint {
+    margin-top: 0.375rem;
+}
+
+.ui-shell .ui-format-badge {
+    position: absolute;
+    inset-inline-end: 0.5rem;
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    padding: 0 0.375rem;
+    border-radius: var(--border-radius);
+    background: var(--ui-hover);
+    color: var(--ui-muted);
+    font-size: 0.6875rem;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.ui-shell .ui-section-stack {
+    display: grid;
+    gap: var(--ui-space);
+    min-width: 0;
+}
+
+.ui-shell .ui-page-title {
+    margin-block: 0 var(--ui-space);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--ui-text);
+}
+
+.ui-shell .ui-field-grid .admin-labeled-value {
+    margin-block: 0;
 }

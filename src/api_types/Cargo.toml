@@ -21,3 +21,6 @@ tokio-postgres = { workspace = true }
 utoipa = { workspace = true }
 validator = { workspace = true }
 webauthn-rs = { workspace = true }
+
+[lints]
+workspace = true

@@ -37,18 +37,51 @@ export let I18nAdminZh: I18nAdmin = {
         size: '大小',
     },
     clients: {
+        settings: { general: '常规', tokens: '令牌', integrations: '集成' },
+        allowedResources: '允许的资源',
+        defaultAud: '默认受众 (aud)',
+        actorSameClient: 'Actor token from this client only',
+        descAllowedResources: `此客户端可以请求的可选 RFC 8707 资源指示符。空列表将以 'invalid_target' 拒绝任何 'resource' 请求参数。`,
+        descDefaultAud: `无论是否提供 'resource' 请求参数，始终添加到此客户端令牌中的受众 (aud)。`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: '如果此客户端支持{{ OIDC_BCL }}，您可以在此处提供URI。',
         branding: {
+            title: '外观',
+            theme: '主题',
+            light: '浅色主题',
+            dark: '深色主题',
+            preview: '预览',
+            assets: '徽标和网站图标',
+            logo: '徽标',
+            advanced: '高级 CSS',
+            resetTheme: '重置主题',
+            resetThemeConfirm: '恢复默认颜色和圆角半径？',
+            assetsImmediate: '文件更改会立即生效。',
             descHsl: `以下值必须以HSL值形式给出。您只需提供基本颜色。
             透明度通道和其他值由主题动态调整。`,
             descFullCss: `以下值必须是完全有效的CSS <code>color</code>值。
                 您也可以使用复杂计算或上面定义的CSS变量。`,
             descVariables: `每个标签同时也是CSS变量名。这意味着，
                 您可以在自由输入框中引用它们，例如<code>hsla(var(--action) / .7)</code>。`,
+            faviconPreviewAlt: '客户端网站图标预览',
+            faviconUpload: '上传网站图标',
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `This client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Max 1024 serialized characters.`,
         confidential: '机密',
         confidentialNoSecret: '这是一个非机密客户端，因此没有密钥。',
         config: '客户端配置',
+        consent: {
+            builtIn: '内置',
+            desc: `设置 'consent.enable' 时同意页面内容的来源。内置显示请求的 scopes。URL 必须以 JSON 形式提供同意内容。针对所请求资源的 '[[consent.sources]]' 条目优先。尚未生效：在同意页面上线之前，该值仅被保存。`,
+            source: '同意来源',
+        },
         delete1: '您确定要删除此客户端吗？',
         descAuthCode: `可以调整认证码的有效性以提高安全性。认证码
             只能使用一次，默认有效时间为60秒。只要客户端能够足够快地执行登录过程，
@@ -72,9 +105,13 @@ export let I18nAdminZh: I18nAdmin = {
         forceMfa: '强制MFA',
         groupLoginPrefix: '登录组前缀',
         name: '客户端名称',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `SCIM基础URI是从中可以正确派生子路由的URI，
-                如<code>{base_uri}/Users/{id}</base_uri></code>。`,
+                如<code>{base_uri}/Users/{id}</code>。`,
             desc: '如果此客户端支持{{ SCIM_LINK }}，您可以在此处激活它。',
             enable: '启用SCIMv2',
             groupSync: '同步组',
@@ -106,12 +143,26 @@ export let I18nAdminZh: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `令牌生命周期适用于访问令牌和ID令牌，以秒为单位。`,
-            p2: `如果客户端支持EdDSA / ed25519算法，这应该是首选。
+            p2: `如果客户端支持EdDSA / Ed25519算法，这应该是首选。
                 RSA算法仅出于兼容性考虑而存在。`,
             p3: `刷新令牌的算法无法更改，因为这些令牌仅供Rauthy使用。`,
         },
     },
     common: {
+        about: '关于',
+        date: '日期',
+        time: '时间',
+        preferences: '偏好设置',
+        profile: '个人资料',
+        contactDetails: '联系信息',
+        access: '访问权限',
+        activity: '活动',
+
+        compactNavigation: '紧凑导航',
+        administration: '管理',
+        selectEntry: '选择条目',
+        selectEntryHint: '从列表中选择一个条目以查看和管理其详细信息。',
+
         account: '账户',
         addNew: '新增',
         back: '返回',
@@ -198,7 +249,7 @@ export let I18nAdminZh: I18nAdmin = {
             time: '时间',
             targetTime: '目标时间',
             tune: '重要：这些值需要在最终架构上进行调整！',
-            pDetials: `如果您想要详细了解Argon2ID，在线有很多资源。本指南仅简要介绍这些值。
+            pDetails: `如果您想要详细了解Argon2ID，在线有很多资源。本指南仅简要介绍这些值。
             需要配置三个值：`,
             pTune: `它们根据系统能力而变化。系统越强大，这些值就越安全。`,
             pUtility: `此工具帮助您找到适合平台的最佳Argon2ID设置。
@@ -206,8 +257,9 @@ export let I18nAdminZh: I18nAdmin = {
             必须针对每个部署进行调整。`,
         },
         openapi: '如果您想集成外部应用程序并使用Rauthy的API，请查看',
-        openapiNote: `根据后端配置，Swagger UI可能在此时不公开暴露。
-            但它默认可通过内部指标HTTP服务器获得，以免暴露任何信息。`,
+        openapiNote: '在默认配置中，Swagger UI不会通过上面的链接激活。',
+        openapiEnable:
+            '它 可以通过配置"server.swagger_ui_enable"和可能的"server.swagger_ui_public"激活。',
         source: '源代码可以在这里找到',
     },
     editor: {
@@ -247,12 +299,22 @@ export let I18nAdminZh: I18nAdmin = {
             之后，您需要注销并重新登录。`,
     },
     events: {
+        searchContent: '内容',
+        timestamp: '时间戳',
+        level: '级别',
+        type: '类型',
+        allLevels: '所有级别',
+        sendTest: '发送测试事件',
         eventLevel: '事件级别',
         eventType: '事件类型',
     },
     groups: {
         delete1: '您确定要删除此组吗？',
         name: '组名',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: '算法',
@@ -266,6 +328,7 @@ export let I18nAdminZh: I18nAdmin = {
         rotateKeys: '轮换密钥',
     },
     kv: {
+        limit: '上限',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -303,6 +366,7 @@ export let I18nAdminZh: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV 存储',
         apiKeys: 'API密钥',
         attributes: '属性',
         blacklist: '黑名单',
@@ -417,10 +481,14 @@ export let I18nAdminZh: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code>角色是不可变的。',
         delete1: '您确定要删除此角色吗？',
         name: '角色名称',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
             attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
@@ -470,13 +538,32 @@ export let I18nAdminZh: I18nAdmin = {
         deleteUser: '您确定要删除此用户吗？',
         descAttr: `设置自定义用户属性。所有键/值对将作为字符串/JSON值处理。`,
         forceLogout: `您确定要使此用户的所有现有会话无效并删除所有刷新令牌吗？`,
+        groupAdmin: {
+            notManagedTitle: '不在您群组中的用户',
+            notManagedDesc: `该用户不属于任何您管理的群组，因此其详细信息处于隐藏状态。
+                将该用户添加到您的一个或多个群组即可进行管理。
+                您管理范围之外的成员关系将被保留。`,
+            addToGroups: '添加到我的群组',
+        },
         lastLogin: '最后登录',
         manualInitDesc: `也可以在此处初始化用户。在这种情况下，您需要直接传达密码。`,
         manualInit: '手动初始化',
-        mfaDelete1: '您可以删除此用户的通行密钥。',
-        mfaDelete2: `注意！通行密钥的删除<b>无法撤销</b>，除非用户
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: '您可以删除此用户的通行密钥。',
+                mfaDelete2: `注意！通行密钥的删除<b>无法撤销</b>，除非用户
             进行全新的注册。`,
-        noMfaKeys: '此用户没有注册的通行密钥。',
+                noMfaKeys: '此用户没有注册的通行密钥。',
+            },
+        },
         pkOnly1: '这是一个仅通行密钥账户。',
         pkOnly2: '这意味着该用户使用无密码登录，根本没有设置密码。',
         pkOnly3: `如果此用户丢失了所有通行密钥，可以完全重置账户并发送新的密码重置邮件。
@@ -492,5 +579,12 @@ export let I18nAdminZh: I18nAdmin = {
         css: '无效的CSS值',
         origin: '无效的来源',
         uri: '无效的URI',
+        redirectUri: {
+            comma: '重定向 URI 不能包含逗号 (,)',
+            controlChar: '重定向 URI 的查询参数名称中不能包含控制字符',
+            fragment: '重定向 URI 不能包含片段 (#)',
+            reservedKey: '重定向 URI 不能包含查询参数 "{{ KEY }}"，因为它由授权响应设置',
+            reservedKeyLogout: '登出后重定向 URI 不能包含查询参数 "{{ KEY }}"，因为它在登出时设置',
+        },
     },
 };

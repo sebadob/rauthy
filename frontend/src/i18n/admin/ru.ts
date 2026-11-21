@@ -40,19 +40,52 @@ export let I18nAdminRu: I18nAdmin = {
         size: 'Размер',
     },
     clients: {
+        settings: { general: 'Общие', tokens: 'Токены', integrations: 'Интеграции' },
+        allowedResources: 'Разрешённые ресурсы',
+        defaultAud: 'Аудитории по умолчанию',
+        actorSameClient: 'Actor token from this client only',
+        descAllowedResources: `Необязательные индикаторы ресурсов RFC 8707, которые может запрашивать этот клиент. Пустой список отклоняет любой параметр 'resource' с ошибкой 'invalid_target'.`,
+        descDefaultAud: `Аудитории, которые всегда добавляются в токены этого клиента, независимо от параметра 'resource'.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout:
             'Если этот клиент поддерживает {{ OIDC_BCL }}, вы можете указать URI здесь.',
         branding: {
+            title: 'Оформление',
+            theme: 'Тема',
+            light: 'Светлая тема',
+            dark: 'Тёмная тема',
+            preview: 'Предпросмотр',
+            assets: 'Логотип и значок сайта',
+            logo: 'Логотип',
+            advanced: 'Расширенный CSS',
+            resetTheme: 'Сбросить тему',
+            resetThemeConfirm: 'Восстановить цвета и скругление по умолчанию?',
+            assetsImmediate: 'Изменения файлов вступают в силу сразу.',
             descHsl: `Следующие значения должны быть указаны в формате HSL. Вы задаёте только базовые цвета.
             Альфа-каналы и другие значения динамически изменяются темой.`,
             descFullCss: `Следующие значения должны быть полностью допустимыми CSS-значениями <code>color</code>.
                 Вы также можете использовать сложные вычисления или определённые выше CSS-переменные.`,
             descVariables: `Каждая следующая метка одновременно является именем CSS-переменной. Это означает,
                 что вы можете ссылаться на них в свободных полях ввода, например, с помощью <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Предварительный просмотр фавикона клиента',
+            faviconUpload: 'Загрузить фавикон',
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `This client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Max 1024 serialized characters.`,
         confidential: 'Конфиденциальный',
         confidentialNoSecret: 'Это неконфиденциальный клиент, поэтому у него нет секрета.',
         config: 'Конфигурация клиента',
+        consent: {
+            builtIn: 'Встроенный',
+            desc: `Откуда берётся содержимое экрана согласия, если задан 'consent.enable'. Встроенный показывает запрошенные scopes. URL должен отдавать содержимое согласия в формате JSON. Запись '[[consent.sources]]' для запрошенного ресурса имеет приоритет. Пока не действует: значение только сохраняется, пока не появится экран согласия.`,
+            source: 'Источник согласия',
+        },
         delete1: 'Вы уверены, что хотите удалить этот клиент?',
         descAuthCode: `Срок действия кодов авторизации можно настроить для повышения безопасности. Коды авторизации
             могут быть использованы только один раз и по умолчанию действительны 60 секунд. Чем короче срок действия, тем
@@ -77,9 +110,13 @@ export let I18nAdminRu: I18nAdmin = {
         forceMfa: 'Принудительная MFA',
         groupLoginPrefix: 'Префикс группы для входа',
         name: 'Имя клиента',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `Базовый URI SCIM — это URI, от которого могут быть правильно получены подмаршруты, такие как
-                <code>{base_uri}/Users/{id}</base_uri></code>.`,
+                <code>{base_uri}/Users/{id}</code>.`,
             desc: 'Если этот клиент поддерживает {{ SCIM_LINK }}, вы можете активировать это здесь.',
             enable: 'Включить SCIMv2',
             groupSync: 'Синхронизация групп',
@@ -113,12 +150,26 @@ export let I18nAdminRu: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `Время жизни токена применяется к токенам доступа и ID-токенам и указывается в секундах.`,
-            p2: `Если клиент поддерживает алгоритмы EdDSA / ed25519, они всегда должны быть предпочтительным
+            p2: `Если клиент поддерживает алгоритмы EdDSA / Ed25519, они всегда должны быть предпочтительным
                 выбором. Алгоритмы RSA существуют только для совместимости.`,
             p3: `Алгоритм для токенов обновления нельзя изменить, так как они используются только Rauthy.`,
         },
     },
     common: {
+        about: 'О программе',
+        date: 'Дата',
+        time: 'Время',
+        preferences: 'Настройки',
+        profile: 'Профиль',
+        contactDetails: 'Контактные данные',
+        access: 'Доступ',
+        activity: 'Активность',
+
+        compactNavigation: 'Компактная навигация',
+        administration: 'Администрирование',
+        selectEntry: 'Выберите запись',
+        selectEntryHint: 'Выберите элемент в списке, чтобы просмотреть и изменить его данные.',
+
         account: 'Аккаунт',
         addNew: 'Добавить',
         back: 'Назад',
@@ -212,7 +263,7 @@ export let I18nAdminRu: I18nAdmin = {
             time: 'Время',
             targetTime: 'Целевое время',
             tune: 'Важно: Эти значения необходимо настраивать на конечной архитектуре!',
-            pDetials: `Если вам нужно подробное введение в Argon2ID, в интернете доступно множество источников. Это руководство даёт
+            pDetails: `Если вам нужно подробное введение в Argon2ID, в интернете доступно множество источников. Это руководство даёт
             лишь очень краткий обзор значений. Необходимо настроить три из них:`,
             pTune: `Они изменяются в зависимости от возможностей системы. Чем мощнее система, тем более безопасные
             значения можно установить.`,
@@ -222,9 +273,9 @@ export let I18nAdminRu: I18nAdmin = {
         },
         openapi:
             'Если вы хотите интегрировать внешнее приложение и использовать API Rauthy, ознакомьтесь с',
-        openapiNote: `В зависимости от конфигурации бэкенда, Swagger UI может быть недоступен публично в данный момент.
-            Однако по умолчанию он доступен через внутренний HTTP-сервер метрик, чтобы не раскрывать
-            информацию.`,
+        openapiNote: 'В стандартной конфигурации интерфейс Swagger не активен по ссылке выше.',
+        openapiEnable:
+            "Это можно активировать с помощью конфигурации 'server.swagger_ui_enable' и, возможно, 'server.swagger_ui_public'.",
         source: 'Исходный код можно найти здесь',
     },
     editor: {
@@ -264,12 +315,22 @@ export let I18nAdminRu: I18nAdmin = {
             После этого необходимо выйти и войти снова.`,
     },
     events: {
+        searchContent: 'Содержимое',
+        timestamp: 'Дата и время',
+        level: 'Уровень',
+        type: 'Тип',
+        allLevels: 'Все уровни',
+        sendTest: 'Отправить тестовое событие',
         eventLevel: 'Уровень события',
         eventType: 'Тип события',
     },
     groups: {
         delete1: 'Вы уверены, что хотите удалить эту группу?',
         name: 'Имя группы',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Алгоритм',
@@ -284,6 +345,7 @@ export let I18nAdminRu: I18nAdmin = {
         rotateKeys: 'Ротировать ключи',
     },
     kv: {
+        limit: 'Лимит',
         accessTestDesc: `Ключ доступа должен быть передан в заголовке <code>Authorization</code> как
             токен <code>Bearer</code>. Для тестирования можно использовать следующую команду
             <code>curl</code>.`,
@@ -322,6 +384,7 @@ export let I18nAdminRu: I18nAdmin = {
         value: 'JSON-значение',
     },
     nav: {
+        kvStore: 'Хранилище KV',
         apiKeys: 'API-ключи',
         attributes: 'Атрибуты',
         blacklist: 'Чёрный список',
@@ -441,10 +504,14 @@ export let I18nAdminRu: I18nAdmin = {
         adminNoMod: 'Роль <code>rauthy_admin</code> является неизменяемой.',
         delete1: 'Вы уверены, что хотите удалить эту роль?',
         name: 'Имя роли',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
             attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
@@ -497,14 +564,33 @@ export let I18nAdminRu: I18nAdmin = {
         descAttr: `Установите пользовательские атрибуты. Все пары ключ/значение обрабатываются как Строка / JSON-значение.`,
         forceLogout: `Вы уверены, что хотите аннулировать все существующие сессии и удалить все токены обновления
             для этого пользователя?`,
+        groupAdmin: {
+            notManagedTitle: 'Пользователь вне ваших групп',
+            notManagedDesc: `Этот пользователь не входит ни в одну из управляемых вами групп, поэтому его данные скрыты.
+                Добавьте пользователя в одну или несколько ваших групп, чтобы управлять им.
+                Членство вне ваших групп сохраняется.`,
+            addToGroups: 'Добавить в мои группы',
+        },
         lastLogin: 'Последний вход',
         manualInitDesc: `Пользователь также может быть инициализирован здесь. В этом случае, однако, вам нужно сообщить пароль
             напрямую.`,
         manualInit: 'Ручная инициализация',
-        mfaDelete1: 'Вы можете удалить ключи доступа для этого пользователя.',
-        mfaDelete2: `Внимание! Удаление ключа доступа <b>нельзя отменить</b> без полной повторной
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'Вы можете удалить ключи доступа для этого пользователя.',
+                mfaDelete2: `Внимание! Удаление ключа доступа <b>нельзя отменить</b> без полной повторной
             регистрации пользователем.`,
-        noMfaKeys: 'У этого пользователя нет зарегистрированных ключей доступа.',
+                noMfaKeys: 'У этого пользователя нет зарегистрированных ключей доступа.',
+            },
+        },
         pkOnly1: 'Это аккаунт только с ключом доступа.',
         pkOnly2:
             'Это означает, что этот пользователь использует вход без пароля и не имеет установленного пароля.',
@@ -523,5 +609,15 @@ export let I18nAdminRu: I18nAdmin = {
         css: 'Недопустимое CSS-значение',
         origin: 'Недопустимый источник',
         uri: 'Недопустимый URI',
+        redirectUri: {
+            comma: 'URI перенаправления не должен содержать запятую (,)',
+            controlChar:
+                'URI перенаправления не должен содержать управляющие символы в имени параметра запроса',
+            fragment: 'URI перенаправления не должен содержать фрагмент (#)',
+            reservedKey:
+                'URI перенаправления не должен содержать параметр запроса "{{ KEY }}", так как его устанавливает ответ авторизации',
+            reservedKeyLogout:
+                'URI перенаправления после выхода не должен содержать параметр запроса "{{ KEY }}", так как он устанавливается при выходе',
+        },
     },
 };

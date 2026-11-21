@@ -1,17 +1,17 @@
 <script lang="ts">
     import { slide } from 'svelte/transition';
-    import { dayToString, fmtDateInput, getWeeksInMonth, type Day } from '$utils/form';
-    import { onMount, untrack } from 'svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import { tick } from 'svelte';
     import { CalendarDate, getDayOfWeek, parseDate } from '@internationalized/date';
-    import Popover from '$lib5/Popover.svelte';
-    import Options from '$lib5/Options.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import IconCalendar from '$icons/IconCalendar.svelte';
-    import type { PropsInputDate } from '$lib5/form/props.ts';
+    import { dayToString, fmtDateInput, getWeeksInMonth } from '#utils/form.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Popover from '#lib/Popover.svelte';
+    import Options from '#lib/Options.svelte';
+    import IconCalendar from '#icons/IconCalendar.svelte';
+    import type { PropsInputDate } from '#lib/form/props.ts';
 
+    const fieldId = $props.id();
     let {
-        id,
+        id = fieldId,
         name,
         value = $bindable(fmtDateInput()),
         label = '',
@@ -29,155 +29,106 @@
         onDown,
     }: PropsInputDate = $props();
 
-    $inspect(value).with(() => {
-        if (value?.includes('T')) {
-            console.warn('invalid date format for InputDate, expected dateStr only', value);
-        }
-    });
-    $inspect(min).with(() => {
-        if (min.includes('T')) {
-            console.warn('invalid min format for InputDate, expected dateStr only', min);
-        }
-    });
-    $inspect(max).with(() => {
-        if (max.includes('T')) {
-            console.warn('invalid max format for InputDate, expected dateStr only', value);
-        }
-    });
-
+    const t = useI18n();
     const today = parseDate(fmtDateInput());
     const todayStr = today.toString();
 
-    let t = useI18n();
     let isErr = $state(false);
-    let close: undefined | (() => void) = $state();
+    let trigger: HTMLButtonElement | undefined = $state();
+    let close: (() => void) | undefined = $state();
+    let grid: HTMLDivElement | undefined = $state();
+    let cursor = $state(today);
 
-    let refInput: undefined | HTMLInputElement;
-    let refMonth: undefined | HTMLButtonElement = $state();
-    let refYear: undefined | HTMLButtonElement = $state();
-    let refMonthContainer: undefined | HTMLDivElement = $state();
+    const first = $derived(parseDate(min));
+    const last = $derived(parseDate(max));
+    const months = $derived(
+        t.common.months.slice(
+            cursor.year === first.year ? first.month - 1 : 0,
+            cursor.year === last.year ? last.month : 12,
+        ),
+    );
+    const years = $derived(
+        Array.from({ length: last.year - first.year + 1 }, (_, i) => first.year + i),
+    );
+    const displayedYear = $derived(cursor.year);
+    const displayedMonth = $derived(cursor.month);
+    const weeks = $derived(
+        getWeeksInMonth(new CalendarDate(displayedYear, displayedMonth, 1), t.lang),
+    );
+    const dateFormat = $derived(
+        new Intl.DateTimeFormat(t.lang, { dateStyle: 'full', timeZone: 'UTC' }),
+    );
+    const weekdayFormat = $derived(
+        new Intl.DateTimeFormat(t.lang, { weekday: 'short', timeZone: 'UTC' }),
+    );
 
-    let dayMin = $derived(parseDate(min));
-    let dayMax = $derived(parseDate(max));
-
-    let day = $state(today.day);
-    let month = $state(t.common.months[today.month - 1]);
-    let monthIdx = $derived(t.common.months.findIndex(m => m === month) + 1);
-    let year = $state(today.year);
-    let yearOptions = $state([untrack(() => year)]);
-    let weeks = $state(getWeeksInMonth(today, t.lang));
-
-    let isFirstRender = true;
-
-    onMount(() => {
-        requestAnimationFrame(() => {
-            isFirstRender = false;
-        });
-    });
-
-    $effect(() => {
-        let yearMin = Number.parseInt(min.slice(0, 4));
-        let yearMax = Number.parseInt(max.slice(0, 4));
-
-        let opts = [];
-        for (let i = yearMin; i <= yearMax; i++) {
-            opts.push(i);
-        }
-        yearOptions = opts;
-    });
-
-    $effect(() => {
-        if (value) {
-            let dt = parseDate(value);
-            day = dt.day;
-            month = t.common.months[dt.month - 1];
-            year = dt.year;
-            weeks = getWeeksInMonth(dt, t.lang);
-        }
-    });
-
-    $effect(() => {
-        let dt = new CalendarDate(year, monthIdx, day).toString();
-        if (!isFirstRender) {
-            value = dt;
-        }
-    });
-
-    $effect(() => {
-        if (refMonthContainer) {
-            let dt = value ? parseDate(value) : today;
-            month = t.common.months[dt.month - 1];
-            year = dt.year;
-
-            requestAnimationFrame(() => {
-                let selected = value ? value : todayStr;
-                let days = refMonthContainer?.getElementsByTagName('time') || [];
-                for (let day of days) {
-                    if (day.getAttribute('datetime') === selected) {
-                        let button = day.parentElement?.parentElement;
-                        button?.focus();
-                        break;
-                    }
-                }
-            });
-        }
-    });
-
-    function isDataActive(day: Day) {
-        let calDate = parseDate(dayToString(day));
-        if (calDate.compare(dayMin) < 0 || calDate.compare(dayMax) > 0) {
-            return false;
-        }
-        return monthIdx === day.month;
+    function withinBounds(date: CalendarDate) {
+        if (date.compare(first) < 0) return first;
+        if (date.compare(last) > 0) return last;
+        return date;
     }
 
-    function setToFirstOfMonth() {
-        let dt = new CalendarDate(year, monthIdx, 1);
-        value = dt.toString();
+    async function focusCursor() {
+        await tick();
+        grid?.querySelector<HTMLButtonElement>('button[tabindex="0"]')?.focus();
     }
 
-    function oninvalid(event: Event & { currentTarget: EventTarget & HTMLInputElement }) {
-        event.preventDefault();
-        isErr = true;
+    function onToggle(state: 'open' | 'closed') {
+        if (state === 'open') {
+            cursor = withinBounds(value ? parseDate(value) : today);
+            void focusCursor();
+        }
     }
 
-    function onClick(ev: Event, datetime: string) {
-        ev.preventDefault();
-        value = datetime;
+    function dismiss() {
         close?.();
+        trigger?.focus({ preventScroll: true });
     }
 
-    function onKeyDownCalendar(direction: 'left' | 'right' | 'up' | 'down', datetime: string) {
-        let before = parseDate(datetime);
-        let after = parseDate(datetime);
+    function select(date: string) {
+        value = date;
+        isErr = false;
+        dismiss();
+    }
 
-        switch (direction) {
-            case 'left':
-                after = before.subtract({ days: 1 });
+    function onDayKeydown(event: KeyboardEvent) {
+        let next: CalendarDate;
+        switch (event.key) {
+            case 'ArrowLeft':
+                next = cursor.subtract({ days: 1 });
                 break;
-            case 'right':
-                after = before.add({ days: 1 });
+            case 'ArrowRight':
+                next = cursor.add({ days: 1 });
                 break;
-            case 'up':
-                after = before.subtract({ weeks: 1 });
+            case 'ArrowUp':
+                next = cursor.subtract({ weeks: 1 });
                 break;
-            case 'down':
-                after = before.add({ weeks: 1 });
+            case 'ArrowDown':
+                next = cursor.add({ weeks: 1 });
                 break;
+            case 'Home':
+                next = cursor.subtract({ days: getDayOfWeek(cursor, t.lang) });
+                break;
+            case 'End':
+                next = cursor.add({ days: 6 - getDayOfWeek(cursor, t.lang) });
+                break;
+            case 'PageUp':
+                next = cursor.subtract(event.shiftKey ? { years: 1 } : { months: 1 });
+                break;
+            case 'PageDown':
+                next = cursor.add(event.shiftKey ? { years: 1 } : { months: 1 });
+                break;
+            case 'Escape':
+                event.preventDefault();
+                event.stopPropagation();
+                dismiss();
+                return;
+            default:
+                return;
         }
-
-        if (after.month !== before.month) {
-            // if we have a change in month, we want to focus month / year selectors instead,
-            // which is a way better UX than simply scrolling though each month
-            let weekday = getDayOfWeek(after, t.lang);
-            if (weekday < 4) {
-                refMonth?.focus();
-            } else {
-                refYear?.focus();
-            }
-        } else {
-            value = after.toString();
-        }
+        event.preventDefault();
+        cursor = withinBounds(next);
+        void focusCursor();
     }
 
     function onKeyDownInput(ev: KeyboardEvent) {
@@ -200,35 +151,24 @@
         }
     }
 
-    function onToggle(newState: string) {
-        switch (newState) {
-            case 'open':
-                if (!value) {
-                    value = todayStr;
-                    requestAnimationFrame(() => reportValidity());
-                }
-                break;
-            case 'closed':
-                refMonthContainer = undefined;
-                break;
+    function oninvalid(event: Event) {
+        if (errMsg) {
+            event.preventDefault();
         }
-    }
-
-    function reportValidity() {
-        isErr = !refInput?.reportValidity();
+        isErr = true;
     }
 </script>
 
-<div>
-    <div aria-live="assertive" class="label">
+<div class="admin-date-field">
+    <div class="label admin-field-label">
         <label for={id} class="font-label noselect" data-required={required}>
             {label}
         </label>
     </div>
 
-    <div class="flex">
+    <div class="date-control">
         <input
-            bind:this={refInput}
+            class="ui-text-input"
             type="date"
             {id}
             {name}
@@ -236,109 +176,111 @@
             aria-label={label}
             bind:value
             {disabled}
-            aria-disabled={disabled}
             {required}
-            aria-required={required || false}
             aria-invalid={isErr}
             {min}
             {max}
             step="any"
             {oninvalid}
             onkeydown={onKeyDownInput}
-            onblur={() => reportValidity()}
+            onblur={event => (isErr = !event.currentTarget.validity.valid)}
         />
+        <div class="indicator">
+            <Popover
+                bind:ref={trigger}
+                bind:close
+                ariaLabel={label || t.common.month}
+                fitViewport
+                placement={openTop ? 'above' : 'below'}
+                {onToggle}
+                btnInvisible
+                btnDisabled={disabled}
+                lazy
+            >
+                {#snippet button()}
+                    <IconCalendar color="currentColor" width="1.2rem" />
+                {/snippet}
 
-        <div class="relative">
-            <div class="absolute patch"></div>
-            <div class="absolute indicator">
-                <Popover
-                    ariaLabel="Show Popover Example"
-                    offsetLeft="-7.4rem"
-                    offsetTop={openTop ? '-16rem' : '.1rem'}
-                    bind:close
-                    {onToggle}
-                    btnInvisible
-                    lazy
-                >
-                    {#snippet button()}
-                        <div title={label} class="pointer">
-                            <IconCalendar color="hsl(var(--text)" width="1.2rem" />
-                        </div>
-                    {/snippet}
-                    <div class="popup">
-                        <div class="flex space-between">
-                            <div>
-                                <Options
-                                    bind:ref={refMonth}
-                                    ariaLabel={t.common.month}
-                                    options={t.common.months}
-                                    bind:value={month}
-                                    maxHeight="13rem"
-                                    borderless
-                                    onRight={() => refYear?.focus()}
-                                    onDown={setToFirstOfMonth}
-                                />
-                            </div>
-                            <div>
-                                <Options
-                                    bind:ref={refYear}
-                                    ariaLabel={t.common.year}
-                                    options={yearOptions}
-                                    bind:value={year}
-                                    maxHeight="13rem"
-                                    borderless
-                                    onLeft={() => refMonth?.focus()}
-                                    onDown={setToFirstOfMonth}
-                                />
-                            </div>
-                        </div>
-
-                        <div class="week">
-                            {#each t.common.weekDaysShort as label}
-                                <div class="day font-label weekLabel">
-                                    {label}
-                                </div>
-                            {/each}
-                        </div>
-
-                        <div bind:this={refMonthContainer} class="month">
-                            {#each weeks as week}
-                                <div class="week">
-                                    {#each week.days as day}
-                                        {@const datetime = dayToString(day)}
-                                        {@const dataActive = isDataActive(day)}
-                                        <div class="day">
-                                            <Button
-                                                onclick={ev => onClick(ev, datetime)}
-                                                isDisabled={!dataActive}
-                                                invisible
-                                                onLeft={() => onKeyDownCalendar('left', datetime)}
-                                                onRight={() => onKeyDownCalendar('right', datetime)}
-                                                onUp={() => onKeyDownCalendar('up', datetime)}
-                                                onDown={() => onKeyDownCalendar('down', datetime)}
-                                            >
-                                                <time
-                                                    data-today={datetime === todayStr}
-                                                    data-active={dataActive}
-                                                    data-selected={datetime === value}
-                                                    data-weekend={day.isWeekend}
-                                                    {datetime}
-                                                >
-                                                    {day.day}
-                                                </time>
-                                            </Button>
-                                        </div>
-                                    {/each}
-                                </div>
-                            {/each}
-                        </div>
+                <div class="calendar">
+                    <div class="selectors">
+                        <Options
+                            ariaLabel={t.common.month}
+                            options={months}
+                            bind:value={
+                                () => t.common.months[cursor.month - 1],
+                                month => {
+                                    cursor = withinBounds(
+                                        cursor.set({
+                                            month: t.common.months.indexOf(String(month)) + 1,
+                                        }),
+                                    );
+                                }
+                            }
+                            maxHeight="13rem"
+                            hideScrollbar
+                            borderless
+                        />
+                        <Options
+                            ariaLabel={t.common.year}
+                            options={years}
+                            bind:value={
+                                () => cursor.year,
+                                year => {
+                                    cursor = withinBounds(cursor.set({ year: Number(year) }));
+                                }
+                            }
+                            maxHeight="13rem"
+                            hideScrollbar
+                            borderless
+                        />
                     </div>
-                </Popover>
-            </div>
+                    <div class="visually-hidden" aria-live="polite">
+                        {t.common.months[cursor.month - 1]}
+                        {cursor.year}
+                    </div>
+                    <div bind:this={grid} role="grid" aria-label={label || t.common.month}>
+                        <div class="week" role="row">
+                            {#each weeks[0].days as day (dayToString(day))}
+                                <span role="columnheader">
+                                    {weekdayFormat.format(
+                                        parseDate(dayToString(day)).toDate('UTC'),
+                                    )}
+                                </span>
+                            {/each}
+                        </div>
+                        {#each weeks as week (dayToString(week.days[0]))}
+                            <div class="week" role="row">
+                                {#each week.days as day (dayToString(day))}
+                                    {@const date = dayToString(day)}
+                                    {@const current = parseDate(date)}
+                                    {@const available =
+                                        day.month === cursor.month &&
+                                        current.compare(first) >= 0 &&
+                                        current.compare(last) <= 0}
+                                    <div role="gridcell" aria-selected={date === value}>
+                                        <button
+                                            type="button"
+                                            class="day"
+                                            disabled={!available}
+                                            tabindex={date === cursor.toString() ? 0 : -1}
+                                            aria-label={dateFormat.format(current.toDate('UTC'))}
+                                            aria-current={date === todayStr ? 'date' : undefined}
+                                            onclick={() => select(date)}
+                                            onkeydown={onDayKeydown}
+                                        >
+                                            <time datetime={date}>{day.day}</time>
+                                        </button>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            </Popover>
         </div>
     </div>
 
-    {#if isErr}
+    {#if isErr && errMsg}
         <div class="error" transition:slide={{ duration: 150 }}>
             {errMsg}
         </div>
@@ -351,44 +293,6 @@
         width: 9rem;
     }
 
-    .day {
-        width: 2rem;
-        border-radius: var(--border-radius);
-        text-align: center;
-        transition: all 150ms ease-in-out;
-    }
-
-    .day time {
-        padding: 0.2rem 0.33rem;
-        color: hsl(var(--text));
-        font-weight: normal;
-    }
-
-    time[data-today='true'] {
-        color: hsl(var(--accent));
-    }
-
-    /*.day:has(time[data-active="true"]:hover) {*/
-    /*    background: hsl(var(--bg-high));*/
-    /*}*/
-
-    time[data-active='true']:hover {
-        color: hsl(var(--action));
-        transform: scale(1.05);
-    }
-
-    time[data-weekend='true'] {
-        color: hsl(var(--error));
-    }
-
-    time[data-selected='true'] {
-        color: hsl(var(--action));
-    }
-
-    time[data-active='false'] {
-        color: hsl(var(--bg-high));
-    }
-
     .error {
         color: hsl(var(--error));
         margin-top: -0.4rem;
@@ -396,15 +300,8 @@
         font-size: 0.8rem;
     }
 
-    .indicator {
-        top: -0.8rem;
-        right: 0;
-        padding: 2px 5px 0 5px;
-    }
-
     label {
         font-size: 0.9em;
-        flex-wrap: wrap;
     }
 
     .label {
@@ -413,33 +310,123 @@
         padding: 0.1rem;
     }
 
-    .month {
-        display: flex;
-        flex-direction: column;
+    :global(.ui-shell) .admin-date-field {
+        margin-bottom: 16px;
+        width: var(--ui-date-width, 11.25rem);
+        min-width: 0;
     }
 
-    /* Just to hide the native browser picker indicator */
-    .patch {
-        width: 2rem;
-        height: 1.7rem;
-        top: calc(-0.9rem - 1px);
-        right: 2px;
-        background: hsl(var(--bg));
+    :global(.ui-shell) .admin-date-field input[type='date'] {
+        width: 100%;
+        height: var(--ui-field-height);
     }
 
-    .popup {
+    .date-control {
+        position: relative;
+    }
+
+    .indicator {
+        display: none;
+    }
+
+    @supports selector(:popover-open) {
+        .date-control input[type='date'] {
+            padding-inline-end: 0;
+        }
+
+        .indicator {
+            display: grid;
+            place-items: center;
+            position: absolute;
+            inset-block: 1px;
+            inset-inline-end: 1px;
+            width: 2.75rem;
+            border-radius: var(--border-radius);
+            background: var(--ui-surface, hsl(var(--bg)));
+            --ui-button-height: calc(var(--ui-field-height, 2.75rem) - 4px);
+            --ui-button-min-height: var(--ui-button-height);
+            --ui-button-padding: 0;
+        }
+
+        .indicator > :global(div) > :global(button[popovertarget]) {
+            width: 2.5rem;
+            padding: 0;
+        }
+
+        /* Firefox keeps its native affordance beneath the opaque overlay. */
+        input[type='date']::-webkit-calendar-picker-indicator {
+            opacity: 0;
+        }
+
+        @media (forced-colors: active) {
+            .indicator {
+                background: Canvas;
+            }
+        }
+    }
+
+    .calendar {
+        box-sizing: border-box;
+        width: min(17rem, calc(100dvw - 18px));
         padding: 0.5rem;
-        border-radius: var(--border-radius);
-        cursor: default;
+    }
+
+    .selectors {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
     }
 
     .week {
-        display: inline-flex;
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        text-align: center;
+        font-size: 0.8125rem;
     }
 
-    .weekLabel {
-        height: 1.2rem;
-        font-size: 0.7rem;
-        color: hsla(var(--text) / 0.66);
+    .day {
+        width: 100%;
+        aspect-ratio: 1;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: var(--border-radius);
+        background: transparent;
+        color: var(--ui-text, hsl(var(--text)));
+        font: inherit;
+    }
+
+    .day:not(:disabled) {
+        cursor: pointer;
+    }
+
+    .day:disabled {
+        opacity: 0.45;
+    }
+
+    .day:not(:disabled):hover {
+        background: var(--ui-hover);
+    }
+
+    [aria-selected='true'] .day {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
+        font-weight: 700;
+    }
+
+    .day[aria-current='date'] {
+        border-color: var(--ui-outline);
+    }
+
+    .day:focus-visible {
+        outline: 2px solid var(--ui-primary);
+        outline-offset: -2px;
+    }
+
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        clip-path: inset(50%);
+        overflow: hidden;
     }
 </style>

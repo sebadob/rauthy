@@ -2,9 +2,11 @@ use crate::ReqPrincipal;
 use actix_web::web::Json;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use rauthy_api_types::groups::{GroupRequest, GroupResponse};
+use rauthy_api_types::users::UserResponseSimple;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::groups::Group;
+use rauthy_data::entity::users::User;
 use rauthy_error::ErrorResponse;
 use validator::Validate;
 
@@ -24,7 +26,8 @@ use validator::Validate;
 )]
 #[get("/groups")]
 pub async fn get_groups(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Groups, AccessRights::Read)?;
+    // group admins need to read the group list so the user management UI works
+    principal.validate_api_key_or_group_admin(AccessGroup::Groups, AccessRights::Read)?;
 
     let groups = Group::find_all()
         .await?
@@ -136,4 +139,37 @@ pub async fn delete_group(
     Group::delete(gid).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Returns all users that are assigned to this group
+///
+/// **Permissions**
+/// - rauthy_admin
+#[utoipa::path(
+    get,
+    path = "/groups/{id}/users",
+    tag = "groups",
+    responses(
+        (status = 200, description = "Ok", body = [UserResponseSimple]),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[get("/groups/{id}/users")]
+pub async fn get_group_users(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_group_admin(AccessGroup::Users, AccessRights::Read)?;
+
+    let group = Group::find(id.into_inner()).await?;
+
+    let users = User::find_with_group(&group.name)
+        .await?
+        .into_iter()
+        .map(UserResponseSimple::from)
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(users))
 }

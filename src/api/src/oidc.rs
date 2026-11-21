@@ -1,8 +1,9 @@
 use crate::{ReqPrincipal, map_auth_step};
+use actix_web::body::BoxBody;
 use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
-    CONTENT_TYPE, HeaderName, HeaderValue,
+    CONTENT_TYPE, HeaderName, HeaderValue, VARY,
 };
 use actix_web::http::{StatusCode, header};
 use actix_web::web::{Form, Json, Query};
@@ -10,20 +11,20 @@ use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, ResponseError, g
 use chrono::Utc;
 use rauthy_api_types::oidc::{
     AuthRequest, CertsParams, DeviceAcceptedRequest, DeviceCodeResponse, DeviceGrantRequest,
-    DeviceVerifyRequest, DeviceVerifyResponse, JWKSCerts, JWKSPublicKeyCerts, LoginRefreshRequest,
-    LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse, SessionInfoResponse,
-    TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
+    DeviceVerifyRequest, DeviceVerifyResponse, GrantType, JWKSCerts, JWKSPublicKeyCerts,
+    LoginRefreshRequest, LoginRequest, LogoutRequest, OAuth2ErrorResponse, OAuth2ErrorTypeResponse,
+    SessionInfoResponse, TokenInfo, TokenRequest, TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_api_types::sessions::SessionState;
-use rauthy_api_types::users::{Userinfo, WebauthnLoginResponse};
-use rauthy_common::compression::{compress_br_dyn, compress_gzip};
+use rauthy_api_types::users::{OtpLoginResponse, Userinfo, WebauthnLoginResponse};
+use rauthy_common::compression::{compress_br_dyn, compress_gzip_dyn};
 use rauthy_common::constants::{
-    APPLICATION_JSON, COOKIE_MFA, GRANT_TYPE_DEVICE_CODE, HEADER_HTML, HEADER_RETRY_NOT_BEFORE,
-    PROVIDER_ATPROTO,
+    APPLICATION_JSON, COOKIE_MFA, HEADER_HTML, HEADER_RETRY_NOT_BEFORE, PROVIDER_ATPROTO,
 };
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
+use rauthy_data::entity::auth_codes::authorization_redirect;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderTemplate, NewFederatedUserCreated,
 };
@@ -33,12 +34,13 @@ use rauthy_data::entity::devices::DeviceAuthCode;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
 use rauthy_data::entity::jwk::{JWKS, JWKSPublicKey, JwkKeyPair, JwkKeyPairType};
+use rauthy_data::entity::logos::LogoRes;
 use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
-use rauthy_data::entity::webauthn::WebauthnCookie;
 use rauthy_data::entity::well_known::WellKnown;
 use rauthy_data::html::templates::{
     AuthorizeHtml, CallbackHtml, Error1Html, ErrorHtml, FrontendAction, HtmlTemplate,
@@ -46,13 +48,14 @@ use rauthy_data::html::templates::{
 use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use rauthy_service::forward_auth::auth_header;
 use rauthy_service::oidc::{authorize, logout, token_info, token_revocation, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{error, info, warn};
 use validator::Validate;
 
@@ -83,7 +86,7 @@ pub async fn get_authorize(
     let principal = principal.into_inner();
     let lang = Language::try_from(&req).unwrap_or_default();
 
-    let (client, origin_header) = match validation::validate_auth_req_param(
+    let (client, origin_header) = match validation::validate_auth_code_req_params(
         &req,
         &params.client_id,
         &params.redirect_uri,
@@ -105,10 +108,16 @@ pub async fn get_authorize(
             return Ok(ErrorHtml::response(body, status));
         }
     };
-    let theme_ts = ThemeCssFull::find_theme_ts(client.id.clone()).await?;
+    // ephemeral clients cannot have a custom theme
+    let client_id_theme = if client.is_ephemeral() {
+        "rauthy"
+    } else {
+        &client.id
+    };
+    let theme_ts = ThemeCssFull::find_theme_ts(client_id_theme.to_string()).await?;
 
     // check prompt and max_age to possibly force a new session
-    let mut force_new_session = if params
+    let force_new_session = if params
         .prompt
         .as_ref()
         .map(|p| p.contains("login"))
@@ -117,29 +126,36 @@ pub async fn get_authorize(
         true
     } else if let Some(max_age) = params.max_age {
         if let Some(session) = &principal.session {
-            let session_created =
-                session.exp - RauthyConfig::get().vars.lifetimes.session_lifetime as i64;
+            let session_created = session.exp
+                - RauthyConfig::get()
+                    .vars
+                    .lifetimes
+                    .session_lifetime
+                    .as_secs() as i64;
             Utc::now().timestamp() > session_created + max_age
         } else {
             true
         }
     } else {
+        // TODO we should add a new DB table that tracks to which clients a user has logged-in
+        //  in the past. When we have that information and we find a `consent` prompt, we would
+        //  never trigger the automatic refresh frontend action. This would mean the user has to
+        //  click the login button which works as a consent.
+        //  We can keep ignoring `select_account|create` options as they have no meaning with
+        //  Rauthy.
         false
     };
 
-    // check if the user needs to do the Webauthn login each time
+    // check if the user needs to do a MFA login each time
     let mut action = FrontendAction::None;
-    if let Ok(mfa_cookie) = WebauthnCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
-        && let Ok(user) = User::find_by_email(mfa_cookie.email.clone()).await
-    {
-        // we need to check this, because a user could deactivate MFA in another browser or
+    if !force_new_session {
+        // we need to check this because a user could deactivate MFA in another browser or
         // be deleted while still having existing mfa cookies somewhere else
-        if user.has_webauthn_enabled() {
-            action = FrontendAction::MfaLogin(mfa_cookie.email);
-
-            // if the user must do another MFA login anyway, we do never force a new session creation,
-            // because the authentication happens each time anyway
-            force_new_session = false;
+        if let Ok(mfa_cooke) = MfaCookie::parse_validate(&ApiCookie::from_req(&req, COOKIE_MFA))
+            && let Ok(user) = User::find_by_email(mfa_cooke.email.clone()).await
+            && (user.has_webauthn_enabled() || user.has_otp_enabled().await)
+        {
+            action = FrontendAction::MfaLogin(mfa_cooke.email);
         }
     }
 
@@ -152,22 +168,13 @@ pub async fn get_authorize(
             .unwrap_or(false)
         && principal.validate_session_auth().is_err()
     {
-        let mut loc = params.redirect_uri;
-        let state_len = params.state.as_ref().map(|s| 7 + s.len()).unwrap_or(0);
-        loc.reserve(1 + 20 + state_len);
-
-        // make sure URIs that already contain params work fine
-        if loc.contains('?') {
-            loc.push('&');
-        } else {
-            loc.push('?');
-        }
-        loc.push_str("error=login_required");
-
-        if let Some(state) = params.state {
-            loc.push_str("&state=");
-            loc.push_str(&state);
-        }
+        // RFC 9207 - error responses carry `iss` as well
+        let loc = authorization_redirect(
+            &params.redirect_uri,
+            &[("error", "login_required")],
+            params.state.as_deref(),
+            &RauthyConfig::get().issuer,
+        );
 
         return Ok(HttpResponse::Found()
             .insert_header(("location", loc))
@@ -176,17 +183,24 @@ pub async fn get_authorize(
 
     let auth_providers_json = AuthProviderTemplate::get_all_json_template().await?;
     let logo_updated = Logo::find_updated(&client.id, &LogoType::Client).await?;
+    let favicon_updated =
+        Logo::find_updated_with_res(&client.id, LogoRes::Favicon, &LogoType::Client).await?;
 
-    let mut templates = Vec::with_capacity(8);
+    let mut templates = Vec::with_capacity(10);
     templates.push(HtmlTemplate::AuthProviders(auth_providers_json));
     templates.push(HtmlTemplate::ClientName(client.name.unwrap_or_default()));
     templates.push(HtmlTemplate::ClientUrl(
         client.client_uri.unwrap_or_default(),
     ));
+    templates.push(HtmlTemplate::ClientFaviconUpdated(favicon_updated));
     templates.push(HtmlTemplate::ClientLogoUpdated(logo_updated));
     templates.push(HtmlTemplate::IsRegOpen(
         RauthyConfig::get().vars.user_registration.enable,
     ));
+    templates.push(HtmlTemplate::PasswordResetLinkAlways(
+        RauthyConfig::get().vars.access.password_reset_link_always,
+    ));
+    templates.push(HtmlTemplate::PasskeyRegType);
     if RauthyConfig::get().vars.atproto.enable {
         let provider_atproto = AuthProvider::find_by_iss(PROVIDER_ATPROTO.to_string()).await?;
         templates.push(HtmlTemplate::AtprotoId(provider_atproto.id));
@@ -204,7 +218,7 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
         templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
 
-        let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
+        let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
     } else {
         // check if we can re-use a still valid session or need to create a new one
@@ -234,7 +248,7 @@ pub async fn get_authorize(
         templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
         templates.push(HtmlTemplate::LoginAction(action));
 
-        let body = AuthorizeHtml::build(&lang, &client.id, theme_ts, &templates);
+        let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(
             accept_encoding,
             body,
@@ -252,18 +266,20 @@ fn build_authorize_resp(
     origin_header: Option<(HeaderName, HeaderValue)>,
     browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
-    let (body_bytes, encoding) = if accept_encoding.contains(&"br".parse().unwrap()) {
-        (compress_br_dyn(body.as_bytes())?, "br")
-    } else if accept_encoding.contains(&"gzip".parse().unwrap()) {
-        (compress_gzip(body.as_bytes())?, "gzip")
+    let (body, encoding) = if accept_encoding.contains(&"gzip".parse().unwrap()) {
+        // for dynamic, fast compression, gzip wins over brotli
+        (compress_gzip_dyn(body), "gzip")
+    } else if accept_encoding.contains(&"br".parse().unwrap()) {
+        (compress_br_dyn(body), "br")
     } else {
-        (body.as_bytes().to_vec(), "none")
+        (BoxBody::new(body), "none")
     };
 
     let mut builder = HttpResponse::Ok();
     builder
         .insert_header(HEADER_HTML)
-        .insert_header(("content-encoding", encoding));
+        .insert_header(("content-encoding", encoding))
+        .insert_header((VARY, "content-encoding"));
 
     if browser_id.needs_set_new() == BrowserIdSetNew::Yes {
         builder.cookie(BrowserId::new_cookie());
@@ -287,7 +303,7 @@ fn build_authorize_resp(
             ));
     }
 
-    Ok(builder.body(body_bytes))
+    Ok(builder.body(body))
 }
 
 /// POST login credentials to proceed with the authorization_code flow
@@ -308,10 +324,13 @@ fn build_authorize_resp(
     tag = "oidc",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Correct credentials, but needs to continue with Webauthn MFA Login", body = WebauthnLoginResponse),
+        (status = 200, description = "Correct credentials, but needs to continue with MFA Login (Webauthn or OTP)", content(
+            (WebauthnLoginResponse = "application/webauthn+json"),
+            (OtpLoginResponse = "application/otp+json"),
+        )),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
-        (status = 400, description = "Missing / bad input data", body = ErrorResponse),
-        (status = 401, description = "Bad input or CSRF Token error", body = ErrorResponse),
+        (status = 400, description = "Password required, invalid form credentials, or missing / bad input data", body = ErrorResponse),
+        (status = 401, description = "Invalid authentication, expired session, or CSRF token error", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/authorize")]
@@ -342,9 +361,13 @@ pub async fn post_authorize_handle(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
+    let uses_password_form = payload.email.is_some() && payload.resident_key_token.is_none();
+    let has_password = payload.password.is_some();
+
     let mut has_password_been_hashed = false;
     let mut add_login_delay = true;
     let mut user_needs_mfa = false;
+    let mut user_failed_logins = None;
 
     let res = match authorize::post_authorize(
         &req,
@@ -353,6 +376,7 @@ pub async fn post_authorize_handle(
         &mut has_password_been_hashed,
         &mut add_login_delay,
         &mut user_needs_mfa,
+        &mut user_failed_logins,
         browser_id,
     )
     .await
@@ -381,10 +405,17 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
-            let err = Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid user credentials",
-            ));
+            // Normalize by the submitted form step, even when the account does not exist.
+            // Safari can retry a challenged POST and reuse its already consumed proof of work.
+            let (kind, message) = match (uses_password_form, has_password) {
+                (true, false) => (ErrorResponseType::PasswordRequired, "Password required"),
+                (true, true) => (
+                    ErrorResponseType::InvalidCredentials,
+                    "Invalid user credentials",
+                ),
+                _ => (ErrorResponseType::Unauthorized, "Invalid user credentials"),
+            };
+            let err = Err(ErrorResponse::new(kind, message));
             if !add_login_delay {
                 return err;
             }
@@ -393,7 +424,15 @@ pub async fn post_authorize_handle(
     };
 
     let ip = real_ip_from_req(&req)?;
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(
+        ip,
+        start,
+        res,
+        has_password_been_hashed,
+        user_failed_logins,
+        true,
+    )
+    .await
 }
 
 /// Immediate login refresh with valid session
@@ -423,7 +462,7 @@ pub async fn post_authorize_refresh(
 
     let session = principal.into_inner().session.unwrap();
 
-    let (client, header_origin) = validation::validate_auth_req_param(
+    let (client, header_origin) = validation::validate_auth_code_req_params(
         &req,
         &payload.client_id,
         &payload.redirect_uri,
@@ -462,17 +501,17 @@ pub async fn get_callback_html(
 pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, ErrorResponse> {
     let mut jwks = JWKS::find_pk().await?;
 
-    if params.skip_okp == Some(true) {
+    if params.skip_okp.unwrap_or(false) {
         jwks.keys.retain(|k| k.kty != JwkKeyPairType::OKP);
     }
 
-    let res = JWKSCerts::from(jwks);
+    let certs = jwks.into_certs(params.rfc_9864.unwrap_or(false));
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(res))
+        .json(certs))
 }
 
 /// Single JWK by kid
@@ -485,15 +524,19 @@ pub async fn get_certs(params: Query<CertsParams>) -> Result<HttpResponse, Error
     responses((status = 200, description = "Ok", body = JWKSPublicKeyCerts)),
 )]
 #[get("/oidc/certs/{kid}")]
-pub async fn get_cert_by_kid(kid: web::Path<String>) -> Result<HttpResponse, ErrorResponse> {
+pub async fn get_cert_by_kid(
+    kid: web::Path<String>,
+    params: Query<CertsParams>,
+) -> Result<HttpResponse, ErrorResponse> {
     let kp = JwkKeyPair::find(kid.into_inner()).await?;
     let pub_key = JWKSPublicKey::from_key_pair(&kp)?;
+
     Ok(HttpResponse::Ok()
         .insert_header((
             header::ACCESS_CONTROL_ALLOW_ORIGIN,
             HeaderValue::from_static("*"),
         ))
-        .json(JWKSPublicKeyCerts::from(pub_key)))
+        .json(pub_key.into_pub_cert(params.rfc_9864.unwrap_or(false))))
 }
 
 /// POST for starting an OAuth 2 Device Authorization Grant flow
@@ -575,7 +618,7 @@ pub async fn post_device_auth(
         });
     }
 
-    if let Err(err) = client.validate_flow(GRANT_TYPE_DEVICE_CODE) {
+    if let Err(err) = client.validate_flow(GrantType::DeviceCode) {
         return HttpResponse::Forbidden().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(err.message),
@@ -615,17 +658,35 @@ pub async fn post_device_auth(
         }
     }
 
+    // RFC 8707: validated like on `/oidc/authorize` and bound to the device code
+    if let Some(resource) = payload.resource.as_deref()
+        && let Err(err) = client.validate_resource_request(resource)
+    {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidTarget,
+            error_description: Some(err.message),
+        });
+    }
+
     // we are good - create the code
-    let code =
-        match DeviceAuthCode::new(scopes, client.id, payload.client_secret, payload.nonce).await {
-            Ok(code) => code,
-            Err(err) => {
-                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
-                    error: OAuth2ErrorTypeResponse::InvalidRequest,
-                    error_description: Some(err.message),
-                });
-            }
-        };
+    let code = match DeviceAuthCode::new(
+        scopes,
+        client.id,
+        client.created_micros,
+        payload.client_secret,
+        payload.nonce,
+        payload.resource,
+    )
+    .await
+    {
+        Ok(code) => code,
+        Err(err) => {
+            return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::InvalidRequest,
+                error_description: Some(err.message),
+            });
+        }
+    };
 
     let user_code = code.user_code();
     let verification_uri = code.verification_uri();
@@ -635,8 +696,18 @@ pub async fn post_device_auth(
         user_code,
         verification_uri,
         verification_uri_complete,
-        expires_in: RauthyConfig::get().vars.device_grant.code_lifetime,
-        interval: Some(RauthyConfig::get().vars.device_grant.poll_interval),
+        expires_in: RauthyConfig::get()
+            .vars
+            .device_grant
+            .code_lifetime
+            .as_secs(),
+        interval: Some(
+            RauthyConfig::get()
+                .vars
+                .device_grant
+                .poll_interval
+                .as_secs(),
+        ),
     };
 
     HttpResponse::Ok().json(resp)
@@ -665,7 +736,7 @@ pub async fn post_device_verify(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    let mut device_code = DeviceAuthCode::find(payload.user_code)
+    let mut device_code = DeviceAuthCode::find_pending(payload.user_code.clone())
         .await?
         .ok_or_else(|| {
             ErrorResponse::new(
@@ -676,8 +747,36 @@ pub async fn post_device_verify(
 
     match payload.device_accepted {
         DeviceAcceptedRequest::Accept => {
+            // The session tells whether this login actually used MFA, the device poll cannot.
+            let client = Client::find(device_code.client_id.clone()).await?;
+            if client.force_mfa && !principal.has_mfa_active() {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::MfaRequired,
+                    "MFA is required for this client",
+                ));
+            }
+
             device_code.verified_by = Some(principal.user_id()?.to_string());
             device_code.save().await?;
+
+            // If very unlucky, we might get a race-condition here because of no distributed
+            // lock and the consistent, concurrent polling from the device waiting for approval.
+            // The polling device will update the cached code with the last poll timestamp. When
+            // this happens, there is a tiny window between fetching and validation, where a client
+            // might update a just approved code with a stale device code that reverts the approval.
+            // To counter this, we have this very short wait and refetch here to make sure our
+            // approval got through.
+            // 50ms is very conservative. The full poll check request will usually take less than
+            // 1ms, and we also only need to do it once, since devices will usually wait at least
+            // 5s between polls and are rate-limited.
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if let Some(mut device_code) = DeviceAuthCode::find_pending(payload.user_code).await?
+                && device_code.verified_by.is_none()
+            {
+                device_code.verified_by = Some(principal.user_id()?.to_string());
+                device_code.save().await?;
+            }
+
             Ok(HttpResponse::Accepted().finish())
         }
         DeviceAcceptedRequest::Decline => {
@@ -827,9 +926,7 @@ pub async fn post_session(
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(
-            RauthyConfig::get().vars.lifetimes.session_lifetime as i64,
-        ));
+        .add(RauthyConfig::get().vars.lifetimes.session_lifetime);
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -887,9 +984,7 @@ pub async fn get_session_info(principal: ReqPrincipal) -> HttpResponse {
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(
-            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
-        ));
+        .add(RauthyConfig::get().vars.lifetimes.session_timeout);
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: None,
@@ -938,9 +1033,7 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
 
     let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
         .unwrap()
-        .add(::time::Duration::seconds(
-            RauthyConfig::get().vars.lifetimes.session_timeout as i64,
-        ));
+        .add(RauthyConfig::get().vars.lifetimes.session_timeout);
     let info = SessionInfoResponse {
         id: session.id.as_str().into(),
         csrf_token: Some(session.csrf_token.as_str().into()),
@@ -973,7 +1066,7 @@ pub async fn get_session_xsrf(principal: ReqPrincipal) -> Result<HttpResponse, E
     ),
 )]
 #[post("/oidc/token")]
-#[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type))]
+#[tracing::instrument(level = "debug", skip_all, fields(grant_type = payload.grant_type.as_str()))]
 pub async fn post_token(
     req: HttpRequest,
     browser_id: BrowserId,
@@ -983,7 +1076,7 @@ pub async fn post_token(
 
     let ip = real_ip_from_req(&req)?;
 
-    if payload.grant_type == GRANT_TYPE_DEVICE_CODE {
+    if payload.grant_type == GrantType::DeviceCode {
         // the `urn:ietf:params:oauth:grant-type:device_code` needs
         // a fully customized handling here with customized error response
         // to meet the oauth rfc
@@ -991,9 +1084,10 @@ pub async fn post_token(
     }
 
     let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let has_password_been_hashed = payload.grant_type == "password";
+    let has_password_been_hashed = payload.grant_type == GrantType::Password;
+    let mut user_failed_logins = None;
 
-    let res = match oidc::get_token_set(payload, browser_id, req).await {
+    let res = match oidc::get_token_set(payload, browser_id, req, &mut user_failed_logins).await {
         Ok((token_set, headers)) => {
             let mut builder = HttpResponseBuilder::new(StatusCode::OK);
             for h in headers {
@@ -1007,12 +1101,28 @@ pub async fn post_token(
             if !has_password_been_hashed {
                 return Err(err);
             }
-            // TODO return always the same error here as well, just like during authorize?
-            Err(err)
+            match &err.error {
+                ErrorResponseType::Disabled
+                | ErrorResponseType::NotFound
+                | ErrorResponseType::PasswordExpired
+                | ErrorResponseType::Unauthorized => Err(ErrorResponse::new(
+                    ErrorResponseType::Unauthorized,
+                    "Invalid user credentials",
+                )),
+                _ => Err(err),
+            }
         }
     };
 
-    login_delay::handle_login_delay(ip, start, res, has_password_been_hashed).await
+    login_delay::handle_login_delay(
+        ip,
+        start,
+        res,
+        has_password_been_hashed,
+        user_failed_logins,
+        true,
+    )
+    .await
 }
 
 #[utoipa::path(
@@ -1200,32 +1310,29 @@ pub async fn get_forward_auth(req: HttpRequest) -> Result<HttpResponse, ErrorRes
     let headers = &RauthyConfig::get().vars.auth_headers;
     if headers.enable {
         let mut builder = HttpResponse::Ok();
-        builder
-            .insert_header((headers.user.as_ref(), info.id))
-            .insert_header((headers.roles.as_ref(), info.roles.join(",")))
-            .insert_header((
-                headers.groups.as_ref(),
-                info.groups.map(|g| g.join(",")).unwrap_or_default(),
-            ))
-            .insert_header((headers.email.as_ref(), info.email.unwrap_or_default()))
-            .insert_header((
-                headers.email_verified.as_ref(),
-                info.email_verified.unwrap_or(false).to_string(),
-            ))
-            .insert_header((
-                headers.family_name.as_ref(),
-                info.family_name.unwrap_or_default(),
-            ))
-            .insert_header((
-                headers.given_name.as_ref(),
-                info.given_name.unwrap_or_default(),
-            ))
-            .insert_header((headers.mfa.as_ref(), info.mfa_enabled.to_string()));
+        for (name, value) in [
+            auth_header(&headers.user, &info.id)?,
+            auth_header(&headers.roles, &info.roles.join(","))?,
+            auth_header(
+                &headers.groups,
+                &info.groups.map(|g| g.join(",")).unwrap_or_default(),
+            )?,
+            auth_header(&headers.email, &info.email.unwrap_or_default())?,
+            auth_header(
+                &headers.email_verified,
+                &info.email_verified.unwrap_or(false).to_string(),
+            )?,
+            auth_header(&headers.family_name, &info.family_name.unwrap_or_default())?,
+            auth_header(&headers.given_name, &info.given_name.unwrap_or_default())?,
+            auth_header(&headers.mfa, &info.mfa_enabled.to_string())?,
+        ] {
+            builder.insert_header((name, value));
+        }
 
         if headers.enable_pref_username
             && let Some(username) = info.preferred_username
         {
-            builder.insert_header((headers.preferred_username.as_ref(), username));
+            builder.insert_header(auth_header(&headers.preferred_username, &username)?);
         }
 
         Ok(builder.finish())
@@ -1268,5 +1375,31 @@ pub async fn get_well_known() -> Result<HttpResponse, ErrorResponse> {
 // OIDC-only doc. Body is identical; we just expose it under the second path.
 #[get("/.well-known/oauth-authorization-server")]
 pub async fn get_well_known_oauth() -> Result<HttpResponse, ErrorResponse> {
+    well_known_response().await
+}
+
+// RFC 8414 §3.1 path-insertion alias for the AS-metadata document. Because
+// rauthy's issuer carries a path component (`https://<host>/auth/v1/`), an
+// RFC-compliant client forms the metadata URL by INSERTING
+// `/.well-known/oauth-authorization-server` between host and issuer path, i.e.
+// `https://<host>/.well-known/oauth-authorization-server/auth/v1`. claude.ai
+// probes exactly this path-insertion form; without it the request falls through
+// to the SPA catch-all (301 -> HTML), so the client never reads
+// `client_id_metadata_document_supported` and falls back to Dynamic Client
+// Registration. The `/auth/v1` segment is rauthy's fixed API mount prefix (see
+// the hardcoded issuer in `rauthy_config.rs`), so the route can be a constant.
+// Body is identical to `get_well_known_oauth`. See issue #1643.
+//
+// Both the trailing-slash and no-slash forms are served: the issuer path is
+// `/auth/v1/` (with a trailing slash), so a strict client may preserve it, while
+// claude.ai probes the no-slash form. rauthy runs no `NormalizePath` middleware,
+// so each exact path needs its own route.
+#[get("/.well-known/oauth-authorization-server/auth/v1")]
+pub async fn get_well_known_oauth_rfc8414() -> Result<HttpResponse, ErrorResponse> {
+    well_known_response().await
+}
+
+#[get("/.well-known/oauth-authorization-server/auth/v1/")]
+pub async fn get_well_known_oauth_rfc8414_trailing() -> Result<HttpResponse, ErrorResponse> {
     well_known_response().await
 }

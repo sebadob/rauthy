@@ -36,18 +36,51 @@ export let I18nAdminKo: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        settings: { general: '일반', tokens: '토큰', integrations: '통합' },
+        allowedResources: '허용된 리소스',
+        defaultAud: '기본 대상(Audience)',
+        actorSameClient: 'Actor token from this client only',
+        descAllowedResources: `이 클라이언트가 요청할 수 있는 선택적 RFC 8707 리소스 인디케이터입니다. 목록이 비어 있으면 모든 'resource' 요청 파라미터를 'invalid_target'으로 거부합니다.`,
+        descDefaultAud: `'resource' 요청 파라미터와 무관하게 이 클라이언트의 토큰에 항상 추가되는 대상(audience)입니다.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            title: '디자인',
+            theme: '테마',
+            light: '라이트 테마',
+            dark: '다크 테마',
+            preview: '미리 보기',
+            assets: '로고 및 파비콘',
+            logo: '로고',
+            advanced: '고급 CSS',
+            resetTheme: '테마 재설정',
+            resetThemeConfirm: '기본 색상과 모서리 반경을 복원할까요?',
+            assetsImmediate: '파일 변경은 즉시 적용됩니다.',
             descHsl: `HSL 값으로 입력해야 합니다. 기본 색상만 제공하면 알파 채널 및 기타 값은
                 테마에 의해 동적으로 설정됩니다.`,
             descFullCss: `다음 값은 완전히 유효한 <code>CSS 색상</code> 값이어야 합니다. 복잡한 계산이나 위에
                 정의된 <code>CSS 변수</code> 를 사용할 수도 있습니다.`,
             descVariables: `색상의 각 레이블들은 동시에 CSS 변수의 이름입니다. 즉, 입력 칸에서 이를 참조할 수
                 있습니다. (예: <code>hsla(var(--action) / .7)</code>)`,
+            faviconPreviewAlt: '클라이언트 파비콘 미리보기',
+            faviconUpload: '파비콘 업로드',
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `This client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Max 1024 serialized characters.`,
         confidential: '기밀',
         confidentialNoSecret: '이 클라이언트는 기밀이 아닌 클라이언트이므로 Secret이 없습니다.',
         config: '클라이언트 설정',
+        consent: {
+            builtIn: '내장',
+            desc: `'consent.enable'이 설정된 경우 동의 화면의 내용을 가져오는 위치입니다. 내장은 요청된 스코프를 표시합니다. URL은 동의 내용을 JSON으로 제공해야 합니다. 요청된 리소스에 대한 '[[consent.sources]]' 항목이 우선합니다. 아직 활성화되지 않았습니다. 동의 화면이 도입될 때까지 값은 저장만 됩니다.`,
+            source: '동의 소스',
+        },
         delete1: '이 클라이언트를 삭제하시겠습니까?',
         descAuthCode: `보안을 강화하기 위해 인증 코드의 유효 기간을 조정할 수 있습니다. 인증 코드는
             한 번만 사용할 수 있으며 기본적으로 60초 동안 유효합니다. 클라이언트가 로그인 절차를
@@ -70,9 +103,13 @@ export let I18nAdminKo: I18nAdmin = {
         forceMfa: '강제 MFA',
         groupLoginPrefix: 'Login Group Prefix',
         name: '클라이언트 이름',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 
-                <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,
+                <code>{base_uri}/Users/{id}</code> can be derived correctly.`,
             desc: 'If this client supports {{ SCIM_LINK }}, you can activate it here.',
             enable: 'Enable SCIMv2',
             groupSync: 'Synchronize Groups',
@@ -111,6 +148,20 @@ export let I18nAdminKo: I18nAdmin = {
         },
     },
     common: {
+        about: '정보',
+        date: '날짜',
+        time: '시간',
+        preferences: '환경 설정',
+        profile: '프로필',
+        contactDetails: '연락처 정보',
+        access: '접근 권한',
+        activity: '활동',
+
+        compactNavigation: '간결한 탐색',
+        administration: '관리',
+        selectEntry: '항목 선택',
+        selectEntryHint: '목록에서 항목을 선택하여 세부 정보를 확인하고 관리하세요.',
+
         account: '계정',
         addNew: '생성',
         back: '뒤로',
@@ -199,7 +250,7 @@ export let I18nAdminKo: I18nAdmin = {
             time: '시간',
             targetTime: '목표 시간',
             tune: '중요: 이러한 값은 최종 아키텍처에서 설정되어야 합니다!',
-            pDetials: `Argon2ID에 대한 자세한 소개를 원하신다면 온라인에 많은 자료가 있습니다. 이 가이드에서는 값에
+            pDetails: `Argon2ID에 대한 자세한 소개를 원하신다면 온라인에 많은 자료가 있습니다. 이 가이드에서는 값에
                 대한 아주 간략한 개요만 제공합니다. 다음 세 가지를 구성해야 합니다.`,
             pTune: `시스템의 성능에 따라 다릅니다. 성능이 좋을수록 더 안전한 값을 설정할 수 있습니다.`,
             pUtility: `이 유틸리티는 플랫폼에 가장 적합한 Argon2ID 설정을 찾을 수 있도록 도와줍니다. Argon2ID는 현재
@@ -207,8 +258,9 @@ export let I18nAdminKo: I18nAdmin = {
                 맞게 조정해야 합니다.`,
         },
         openapi: '외부 애플리케이션을 통합하기 위한 Rauthy의 API 사용 방법:',
-        openapiNote: `백엔드 설정에 따라 Swagger UI가 외부에 노출되지 않을 수도 있습니다.
-            하지만 기본적으로 내부에서는 Swagger UI를 통해 정보를 확인할 수 있습니다.`,
+        openapiNote: '기본 구성에서는 위 링크를 통해 Swagger UI가 활성화되지 않습니다.',
+        openapiEnable:
+            "그건 'server.swagger_ui_enable' 및 가능하다면 'server.swagger_ui_public' 설정을 통해 활성화할 수 있습니다.",
         source: 'Rauthy의 소스코드',
     },
     editor: {
@@ -248,12 +300,22 @@ export let I18nAdminKo: I18nAdmin = {
             활성화 후에는 로그아웃한 뒤 다시 로그인해야 합니다.`,
     },
     events: {
+        searchContent: '내용',
+        timestamp: '시각',
+        level: '수준',
+        type: '유형',
+        allLevels: '모든 수준',
+        sendTest: '테스트 이벤트 보내기',
         eventLevel: '이벤트 레벨',
         eventType: '이벤트 타입',
     },
     groups: {
         delete1: '이 그룹을 삭제하시겠습니까?',
         name: '그룹 이름',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: '알고리즘',
@@ -267,6 +329,7 @@ export let I18nAdminKo: I18nAdmin = {
         rotateKeys: '키 회전',
     },
     kv: {
+        limit: '한도',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -304,6 +367,7 @@ export let I18nAdminKo: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV 저장소',
         apiKeys: 'API 키',
         attributes: '속성',
         blacklist: '블랙리스트',
@@ -423,10 +487,14 @@ export let I18nAdminKo: I18nAdmin = {
         adminNoMod: '<code>rauthy_admin</code> 역할은 변경할 수 없습니다.',
         delete1: '이 역할을 삭제하시겠습니까?',
         name: '역할 이름',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
         claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
             attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
@@ -478,13 +546,32 @@ export let I18nAdminKo: I18nAdmin = {
         deleteUser: '이 사용자를 삭제하시겠습니까?',
         descAttr: `사용자 지정 속성을 설정합니다. 모든 키/값 쌍은 문자열/JSON 값으로 처리됩니다.`,
         forceLogout: `기존 세션을 모두 삭제하고, 이 사용자의 모든 Refresh 토큰을 삭제하시겠습니까?`,
+        groupAdmin: {
+            notManagedTitle: '내 그룹 밖의 사용자',
+            notManagedDesc: `이 사용자는 회원님이 관리하는 그룹에 속해 있지 않아 세부 정보가 표시되지 않습니다.
+                사용자를 관리하려면 내 그룹 중 하나 이상에 추가하세요.
+                내 그룹 밖의 멤버십은 그대로 유지됩니다.`,
+            addToGroups: '내 그룹에 추가',
+        },
         lastLogin: '마지막 로그인',
         manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
             password directly.`,
         manualInit: 'Manual Initialization',
-        mfaDelete1: '이 사용자의 패스키를 삭제할 수 있습니다.',
-        mfaDelete2: `이 작업은 되돌릴 수 없습니다!`,
-        noMfaKeys: '등록된 패스키 없음',
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: '이 사용자의 패스키를 삭제할 수 있습니다.',
+                mfaDelete2: `이 작업은 되돌릴 수 없습니다!`,
+                noMfaKeys: '등록된 패스키 없음',
+            },
+        },
         pkOnly1: '이 사용자는 패스키 전용 계정입니다.',
         pkOnly2: '이 사용자는 비밀번호 없는 로그인을 사용하며, 설정된 비밀번호가 없습니다.',
         pkOnly3: `이 사용자가 모든 비밀번호를 분실한 경우, 계정을 완전히 재설정하고 새로운 비밀번호
@@ -501,5 +588,14 @@ export let I18nAdminKo: I18nAdmin = {
         css: '비정상적인 CSS',
         origin: '비정상적인 오리진',
         uri: '비정상적인 URI',
+        redirectUri: {
+            comma: '리디렉션 URI에는 쉼표(,)를 포함할 수 없습니다',
+            controlChar: '리디렉션 URI의 쿼리 매개변수 이름에는 제어 문자를 포함할 수 없습니다',
+            fragment: '리디렉션 URI에는 프래그먼트(#)를 포함할 수 없습니다',
+            reservedKey:
+                '리디렉션 URI에는 쿼리 매개변수 "{{ KEY }}"를 포함할 수 없습니다. 이 매개변수는 인가 응답에서 설정됩니다',
+            reservedKeyLogout:
+                '로그아웃 후 리디렉션 URI에는 쿼리 매개변수 "{{ KEY }}"를 포함할 수 없습니다. 이 매개변수는 로그아웃 시 설정됩니다',
+        },
     },
 };

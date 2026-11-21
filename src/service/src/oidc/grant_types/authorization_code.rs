@@ -1,20 +1,21 @@
+use crate::oidc::consent_grant::{consent_as_invalid_grant, exists_consent_grant};
 use crate::token_set::{
-    AuthCodeFlow, AuthTime, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce, TokenScopes,
-    TokenSet,
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce,
+    TokenScopes, TokenSet,
 };
 use actix_web::HttpRequest;
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, HeaderName, HeaderValue,
 };
 use chrono::Utc;
-use rauthy_api_types::oidc::TokenRequest;
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_common::utils::{base64_url_encode, real_ip_from_req};
 use rauthy_data::entity::auth_codes::AuthCode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::dpop_proof::DPoPProof;
-use rauthy_data::entity::sessions::Session;
+use rauthy_data::entity::sessions::{MfaAssurance, Session};
 use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
@@ -51,11 +52,11 @@ pub async fn grant_type_authorization_code(
     let (client_id, client_secret) = req_data.try_get_client_id_secret(&req)?;
     let client = Client::find_maybe_ephemeral(client_id.clone())
         .await
-        .map_err(|_| {
-            ErrorResponse::new(
-                ErrorResponseType::NotFound,
-                format!("Client '{client_id}' not found"),
-            )
+        .map_err(|mut err| {
+            if err.error == ErrorResponseType::NotFound {
+                err.message = format!("Client '{client_id}' not found").into();
+            }
+            err
         })?;
     client.validate_enabled()?;
     let header_origin = client.get_validated_origin_header(&req)?;
@@ -66,8 +67,7 @@ pub async fn grant_type_authorization_code(
         })?;
         client.validate_secret(secret, &req).await?;
     }
-    client.validate_flow("authorization_code")?;
-    client.validate_redirect_uri(req_data.redirect_uri.as_deref().unwrap_or_default())?;
+    client.validate_flow(GrantType::AuthorizationCode)?;
 
     // check for DPoP header
     let mut headers = Vec::new();
@@ -95,9 +95,8 @@ pub async fn grant_type_authorization_code(
         ));
     }
 
-    // get the oidc code from the cache
     let idx = req_data.code.as_ref().unwrap().to_owned();
-    let code = match AuthCode::find(idx).await? {
+    let code = match AuthCode::find_remove(idx).await? {
         None => {
             warn!(
                 "'auth_code' could not be found inside the cache - Host: {}",
@@ -111,10 +110,22 @@ pub async fn grant_type_authorization_code(
         Some(code) => code,
     };
     // validate the oidc code
+    code.validate_redirect_uri_exact(
+        &client,
+        req_data.redirect_uri.as_deref().unwrap_or_default(),
+        RauthyConfig::get().vars.access.rfc_8252_enable,
+    )?;
     if code.client_id != client_id {
         let err = format!("Wrong 'code' for client_id '{client_id}'");
         warn!(err);
         return Err(ErrorResponse::new(ErrorResponseType::Unauthorized, err));
+    }
+    if !code.is_for_client(&client) {
+        warn!("The Authorization Code was issued for a deleted client");
+        return Err(ErrorResponse::new(
+            ErrorResponseType::Unauthorized,
+            "'auth_code' could not be found inside the cache",
+        ));
     }
     if code.exp < Utc::now().timestamp() {
         warn!("The Authorization Code has expired");
@@ -154,26 +165,52 @@ pub async fn grant_type_authorization_code(
         }
     }
 
+    // RFC 8707: a `resource` on the token request may only narrow (here: match) the
+    // resource granted at the authorization request, never widen or introduce a new one.
+    let resource = match (req_data.resource.as_deref(), code.resource.as_deref()) {
+        (Some(requested), Some(granted)) if requested == granted => Some(granted.to_string()),
+        (Some(_), _) => {
+            warn!("token request `resource` was not granted at the authorization request");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "the requested `resource` was not granted at the authorization request",
+            ));
+        }
+        (None, granted) => granted.map(String::from),
+    };
+
+    exists_consent_grant(&code.user_id, &client.id, code.resource.as_deref())
+        .await
+        .map_err(consent_as_invalid_grant)?;
+
     let user = User::find(code.user_id.clone()).await?;
+    user.check_enabled()?;
+    user.check_expired()?;
+
     let token_set = TokenSet::from_user(
         &user,
         &client,
         AuthTime::given(user.last_login.unwrap_or_else(|| Utc::now().timestamp())),
         dpop_fingerprint,
         code.nonce.clone().map(TokenNonce),
-        Some(TokenScopes(code.scopes.join(" "))),
+        Some(TokenScopes::new(code.scopes.join(" "))),
         code.session_id.clone().map(SessionId),
+        resource,
         AuthCodeFlow::Yes,
         DeviceCodeFlow::No,
+        // a revoke after the check above: the refresh token is only inserted with the grant
+        ConsentCheck::Required,
     )
-    .await?;
-
-    code.delete().await?;
+    .await
+    .map_err(consent_as_invalid_grant)?;
 
     // update session metadata
     if let Some(sid) = code.session_id.clone() {
         let mut session = Session::find(sid).await?;
-        session.set_authenticated(&user).await?;
+        // The auth code was issued for this exact user, so this is a re-auth of the same principal.
+        session
+            .set_authenticated(&user, MfaAssurance::SamePrincipal)
+            .await?;
     }
 
     if client.is_dynamic() {
@@ -188,7 +225,7 @@ pub async fn grant_type_authorization_code(
 
     // backchannel logout and login state tracking is not supported for ephemeral clients
     if !client.is_ephemeral() {
-        UserLoginState::insert(user.id.clone(), client.id, code.session_id).await?;
+        UserLoginState::insert(&user.id, &client.id, code.session_id.as_deref()).await?;
     }
 
     // No location check here, this is done in `POST /authorize` already

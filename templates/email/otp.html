@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}E-Mail OTP{% endblock %}
+
+{% block content %}
+<h1>{{ header }} {{ email_sub_prefix }}</h1>
+<p>{{ text }}</p>
+<p class="font-mono otp"><b>{{ code }}</b></p>
+{% endblock %}

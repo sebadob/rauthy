@@ -19,7 +19,7 @@ impl PamRemotePassword {
         let config = &RauthyConfig::get().vars.pam;
         let password_plain = secure_random_alnum(config.remote_password_len as usize);
         let now = Utc::now().timestamp();
-        let ttl_secs = config.remote_password_ttl as i64;
+        let ttl_secs = config.remote_password_ttl.as_secs() as i64;
         let exp = now + ttl_secs;
 
         let hash = sha256!(password_plain.as_bytes()).to_vec();
@@ -58,7 +58,7 @@ impl PamRemotePassword {
     }
 
     pub fn compare_password(&self, password: &[u8]) -> Result<(), ErrorResponse> {
-        if self.password.as_slice() == sha256!(password) {
+        if constant_time_eq::constant_time_eq(self.password.as_slice(), sha256!(password)) {
             Ok(())
         } else {
             Err(ErrorResponse::new(

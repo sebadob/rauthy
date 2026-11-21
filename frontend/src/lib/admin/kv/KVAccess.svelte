@@ -1,17 +1,17 @@
 <script lang="ts">
-    import type { IParam } from '$state/param.svelte';
-    import { fetchGet, fetchPost } from '$api/fetch';
-    import type { KVAccessRequest, KVAccessResponse } from '$api/types/kv';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Expandable from '$lib/Expandable.svelte';
-    import KVAccessDetails from '$lib/admin/kv/KVAccessDetails.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
+    import type { IParam } from '#state/param.svelte.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
+    import type { KVAccessRequest, KVAccessResponse } from '#api/types/kv.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import Expandable from '#lib/Expandable.svelte';
+    import KVAccessDetails from '#lib/admin/kv/KVAccessDetails.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { PATTERN_GROUP } from '#utils/patterns.ts';
     import KVAccessHelp from './KVAccessHelp.svelte';
 
     let {

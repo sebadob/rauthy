@@ -15,7 +15,13 @@ use tracing::{debug, error, info};
 
 /// Cleans up unused dynamically registered clients
 pub async fn dyn_client_cleanup() {
-    if !RauthyConfig::get().vars.dynamic_clients.enable {
+    if !RauthyConfig::get().vars.dynamic_clients.enable
+        || RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .cleanup_interval
+            .is_zero()
+    {
         info!(
             "Dynamic client registration is not enabled - exiting dynamic_client_cleanup scheduler"
         );
@@ -26,9 +32,13 @@ pub async fn dyn_client_cleanup() {
         return;
     }
 
-    let mut interval = tokio::time::interval(Duration::from_secs(
-        (RauthyConfig::get().vars.dynamic_clients.cleanup_interval as u64).saturating_mul(60),
-    ));
+    let cleanup_inactive_threshold = RauthyConfig::get()
+        .vars
+        .dynamic_clients
+        .cleanup_inactive_threshold;
+
+    let mut interval =
+        tokio::time::interval(RauthyConfig::get().vars.dynamic_clients.cleanup_interval);
 
     loop {
         interval.tick().await;
@@ -41,15 +51,10 @@ pub async fn dyn_client_cleanup() {
         }
         debug!("Running dynamic_client_cleanup scheduler");
 
-        let cleanup_inactive_days = RauthyConfig::get()
-            .vars
-            .dynamic_clients
-            .cleanup_inactive_days;
-
-        let threshold_inactive = if cleanup_inactive_days > 0 {
-            Utc::now()
-                .sub(chrono::Duration::days(cleanup_inactive_days as i64))
-                .timestamp()
+        let threshold_inactive = if let Some(thres) = cleanup_inactive_threshold
+            && !thres.is_zero()
+        {
+            Utc::now().sub(thres).timestamp()
         } else {
             0
         };
@@ -74,12 +79,13 @@ pub async fn dyn_client_cleanup() {
             }
         };
 
-        let threshold = Utc::now().timestamp()
-            - RauthyConfig::get().vars.dynamic_clients.cleanup_minutes as i64;
+        let threshold = Utc::now()
+            .sub(RauthyConfig::get().vars.dynamic_clients.cleanup_threshold)
+            .timestamp();
         let mut cleaned_up = 0;
         for client in clients {
             let should_delete = if client.last_used.is_some() {
-                cleanup_inactive_days > 0
+                threshold_inactive > 0
             } else {
                 client.created < threshold
             };

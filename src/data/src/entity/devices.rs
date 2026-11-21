@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use crate::entity::refresh_tokens_devices::RefreshTokenDevice;
+use crate::entity::clients::Client;
 use chrono::{DateTime, Utc};
 use hiqlite::macros::params;
 use rauthy_api_types::users::DeviceResponse;
@@ -24,14 +24,22 @@ pub struct DeviceEntity {
     pub refresh_exp: Option<i64>,
     pub peer_ip: String,
     pub name: String,
+    /// `Client::created_micros` of `client_id` when the device was authorized.
+    pub client_created_micros: Option<i64>,
 }
 
 impl DeviceEntity {
+    /// `false` if `client` was deleted and recreated since the device was authorized.
+    pub fn is_for_client(&self, client: &Client) -> bool {
+        self.client_id == client.id && self.client_created_micros == client.created_micros
+    }
+
     pub async fn insert(self) -> Result<(), ErrorResponse> {
         let sql = r#"
 INSERT INTO devices
-(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
+(id, client_id, user_id, created, access_exp, refresh_exp, peer_ip, name,
+client_created_micros)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -45,7 +53,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                         self.access_exp,
                         self.refresh_exp,
                         self.peer_ip,
-                        self.name
+                        self.name,
+                        self.client_created_micros
                     ),
                 )
                 .await?;
@@ -61,6 +70,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#;
                     &self.refresh_exp,
                     &self.peer_ip,
                     &self.name,
+                    &self.client_created_micros,
                 ],
             )
             .await?;
@@ -121,14 +131,25 @@ WHERE access_exp < $1 AND (refresh_exp < $1 OR refresh_exp is null)"#;
         Ok(())
     }
 
-    pub async fn revoke_refresh_tokens(device_id: &str) -> Result<(), ErrorResponse> {
-        RefreshTokenDevice::invalidate_all_for_device(device_id).await?;
+    pub async fn delete_refresh_tokens(device_id: &str) -> Result<(), ErrorResponse> {
+        let sql_tokens = "DELETE FROM refresh_tokens_devices WHERE device_id = $1";
+        let sql_upd = "UPDATE devices SET refresh_exp = null WHERE id = $1";
 
-        let sql = "UPDATE devices SET refresh_exp = null WHERE id = $1";
         if is_hiqlite() {
-            DB::hql().execute(sql, params!(device_id)).await?;
+            let mut txn = Vec::with_capacity(2);
+            txn.push((sql_tokens, params!(device_id)));
+            txn.push((sql_upd, params!(device_id)));
+
+            for res in DB::hql().txn(txn).await? {
+                res?;
+            }
         } else {
-            DB::pg_execute(sql, &[&device_id]).await?;
+            let mut cl = DB::pg().await?;
+            let txn = cl.transaction().await?;
+
+            DB::pg_txn_append(&txn, sql_tokens, &[&device_id]).await?;
+            DB::pg_txn_append(&txn, sql_upd, &[&device_id]).await?;
+            txn.commit().await?;
         }
 
         Ok(())
@@ -181,13 +202,22 @@ pub struct DeviceAuthCode {
     pub last_poll: DateTime<Utc>,
     pub scopes: Option<String>,
     pub nonce: Option<String>,
-    // TODO we should probably save it hashed, even though it is only very shortly lived
-    // saved additionally here to have fewer cache requests during client polling
+    // TODO we should probably save it hashed, even though it is only very short-lived
+    //  saved additionally here to have fewer cache requests during client polling
+    // TODO 2 we should not store the secret at all, and instead favor the additional cache lookups.
+    //  The reason is simply client secret rotation. We should only save the information if the
+    //  linked client is confidential. If so, we lookup its secret and on mismatch, even try the
+    //  fallback secret which is saved after a rotation. Only this way we can make graceful secret
+    //  rotation possible even with lots of devices.
     pub client_secret: Option<String>,
-    // The warnings counter will increase, if a client does not stick to
+    // The warning counter will increase if a client does not stick to
     // the given interval and gets 'slow_down' from us. If this happens
     // too many times, the IP will be blacklisted.1
     pub warnings: u8,
+    pub client_created_micros: Option<i64>,
+    /// RFC 8707 resource indicator validated at the device authorization request. It becomes
+    /// part of the access token `aud`. After `client_created_micros` for the same reason.
+    pub resource: Option<String>,
 }
 
 impl DeviceAuthCode {
@@ -195,14 +225,17 @@ impl DeviceAuthCode {
     pub async fn new(
         scopes: Option<String>,
         client_id: String,
+        client_created_micros: Option<i64>,
         client_secret: Option<String>,
         nonce: Option<String>,
+        resource: Option<String>,
     ) -> Result<Self, ErrorResponse> {
         let now = Utc::now();
-        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime as i64;
-        let exp = now.add(chrono::Duration::seconds(ttl));
+        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime;
+        let exp = now.add(ttl);
         let slf = Self {
             client_id,
+            client_created_micros,
             device_code: get_rand(DEVICE_KEY_LENGTH as usize),
             verified_by: None,
             exp,
@@ -211,6 +244,7 @@ impl DeviceAuthCode {
             nonce,
             client_secret,
             warnings: 0,
+            resource,
         };
 
         DB::hql()
@@ -218,7 +252,7 @@ impl DeviceAuthCode {
                 Cache::DeviceCode,
                 slf.user_code().to_string(),
                 &slf,
-                Some(ttl),
+                Some(ttl.as_secs() as i64),
             )
             .await?;
 
@@ -227,14 +261,24 @@ impl DeviceAuthCode {
 
     pub async fn find_by_device_code(device_code: &str) -> Result<Option<Self>, ErrorResponse> {
         let len = RauthyConfig::get().vars.device_grant.user_code_length as usize;
-        let key = &device_code[..len];
-        Self::find(key.to_string()).await
+        match device_code.get(..len) {
+            Some(key) => Self::find_pending(key.to_string()).await,
+            None => Ok(None),
+        }
     }
 
     pub async fn find(user_code: String) -> Result<Option<Self>, ErrorResponse> {
-        let slf: Option<Self> = DB::hql().get(Cache::DeviceCode, user_code).await?;
+        let slf = DB::hql().get_remove(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
+    }
+
+    pub async fn find_pending(user_code: String) -> Result<Option<Self>, ErrorResponse> {
+        let slf = DB::hql().get(Cache::DeviceCode, user_code).await?;
+        Self::validate_expiry(slf).await
+    }
+
+    async fn validate_expiry(slf: Option<Self>) -> Result<Option<Self>, ErrorResponse> {
         match slf {
-            None => Ok(None),
             Some(slf) => {
                 if slf.exp < Utc::now() {
                     slf.delete().await?;
@@ -243,6 +287,7 @@ impl DeviceAuthCode {
                     Ok(Some(slf))
                 }
             }
+            None => Ok(None),
         }
     }
 
@@ -254,7 +299,11 @@ impl DeviceAuthCode {
     }
 
     pub async fn save(&self) -> Result<(), ErrorResponse> {
-        let ttl = RauthyConfig::get().vars.device_grant.code_lifetime as i64;
+        let ttl = RauthyConfig::get()
+            .vars
+            .device_grant
+            .code_lifetime
+            .as_secs() as i64;
         DB::hql()
             .put(
                 Cache::DeviceCode,
@@ -268,6 +317,12 @@ impl DeviceAuthCode {
 }
 
 impl DeviceAuthCode {
+    /// `false` if `client` was deleted and recreated since the code was issued.
+    #[inline]
+    pub fn is_for_client(&self, client: &Client) -> bool {
+        self.client_id == client.id && self.client_created_micros == client.created_micros
+    }
+
     /// Validates the given `user_code`
     #[inline]
     pub fn user_code(&self) -> &str {
@@ -285,5 +340,65 @@ impl DeviceAuthCode {
             RauthyConfig::get().pub_url_with_scheme,
             self.user_code()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn client(id: &str, created_micros: Option<i64>) -> Client {
+        Client {
+            id: id.to_string(),
+            created_micros,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_device_code_is_for_client() {
+        let now = Utc::now();
+        let code = DeviceAuthCode {
+            client_id: "client_1".to_string(),
+            client_created_micros: Some(1),
+            device_code: "code".to_string(),
+            verified_by: Some("user_1".to_string()),
+            exp: now,
+            last_poll: now,
+            scopes: None,
+            nonce: None,
+            client_secret: None,
+            warnings: 0,
+            resource: None,
+        };
+
+        assert!(code.is_for_client(&client("client_1", Some(1))));
+        assert!(!code.is_for_client(&client("client_1", Some(2))));
+        assert!(!code.is_for_client(&client("client_1", None)));
+        assert!(!code.is_for_client(&client("client_2", Some(1))));
+    }
+
+    #[test]
+    fn test_device_is_for_client() {
+        let mut device: DeviceEntity = serde_json::from_value(serde_json::json!({
+            "id": "dev_1",
+            "client_id": "client_1",
+            "user_id": "user_1",
+            "created": 1,
+            "access_exp": 2,
+            "refresh_exp": 3,
+            "peer_ip": "127.0.0.1",
+            "name": "dev_1",
+        }))
+        .unwrap();
+        assert_eq!(device.client_created_micros, None);
+        assert!(device.is_for_client(&client("client_1", None)));
+        assert!(!device.is_for_client(&client("client_1", Some(1))));
+
+        device.client_created_micros = Some(1);
+        assert!(device.is_for_client(&client("client_1", Some(1))));
+        assert!(!device.is_for_client(&client("client_1", Some(2))));
+        assert!(!device.is_for_client(&client("client_1", None)));
+        assert!(!device.is_for_client(&client("client_2", Some(1))));
     }
 }

@@ -1,3 +1,4 @@
+use actix_web::http::header::LOCATION;
 use actix_web::{HttpRequest, HttpResponse, cookie};
 use chrono::Utc;
 use rauthy_api_types::generic::PasswordPolicyResponse;
@@ -9,11 +10,12 @@ use rauthy_common::utils::{get_rand, real_ip_from_req};
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::magic_links::{MagicLink, MagicLinkUsage};
 use rauthy_data::entity::password::PasswordPolicy;
+use rauthy_data::entity::pwd_exp_mails::PasswordExpMail;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::webauthn;
-use rauthy_data::entity::webauthn::WebauthnServiceReq;
+use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::events::event::Event;
 use rauthy_data::html::templates::{PwdResetHtml, TplPasswordReset};
 use rauthy_data::language::Language;
@@ -43,6 +45,10 @@ pub async fn handle_get_pwd_reset<'a>(
             magic_link_id: ml.id.clone(),
             needs_mfa: user.has_webauthn_enabled(),
             password_policy: PasswordPolicyResponse::from(password_policy),
+            redirect_timeout: RauthyConfig::get()
+                .vars
+                .user_values
+                .password_reset_redirect_timeout,
             user_id,
         };
         PwdResetHtml::build(&lang, ThemeCssFull::find_theme_ts_rauthy().await?, tpl)
@@ -86,7 +92,7 @@ pub async fn handle_put_user_passkey_start(
         }
     }
 
-    webauthn::reg_start(user.id, req_data)
+    webauthn::register::reg_start(user.id, req_data)
         .await
         .map(|ccr| HttpResponse::Ok().json(ccr))
 }
@@ -104,7 +110,11 @@ pub async fn handle_put_user_passkey_finish(
 
     // finish webauthn request -> always force UV for passkey only accounts
     debug!("ml is valid - finishing webauthn request");
-    webauthn::reg_finish(user_id.clone(), req_data).await?;
+    let is_new_user = matches!(
+        MagicLinkUsage::try_from(&ml.usage),
+        Ok(MagicLinkUsage::NewUser(_))
+    );
+    webauthn::register::reg_finish(user_id.clone(), req_data, is_new_user).await?;
 
     // validate csrf token
     match req.headers().get(PWD_CSRF_HEADER) {
@@ -115,7 +125,10 @@ pub async fn handle_put_user_passkey_finish(
             ));
         }
         Some(token) => {
-            if ml.csrf_token != token.to_str().unwrap_or("") {
+            if !constant_time_eq::constant_time_eq(
+                ml.csrf_token.as_bytes(),
+                token.to_str().unwrap_or("").as_bytes(),
+            ) {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Unauthorized,
                     "Invalid CSRF Token",
@@ -131,7 +144,23 @@ pub async fn handle_put_user_passkey_finish(
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);
-    Ok(HttpResponse::Created().cookie(cookie).finish())
+    let mut res = HttpResponse::Created();
+    res.cookie(cookie);
+    let ml_redirect_uri = match MagicLinkUsage::try_from(&ml.usage) {
+        Ok(MagicLinkUsage::NewUser(redirect_uri)) => redirect_uri,
+        _ => None,
+    };
+    let redirect_uri = ml_redirect_uri.or_else(|| {
+        RauthyConfig::get()
+            .vars
+            .user_registration
+            .post_reset_redirect_uri
+            .clone()
+    });
+    if let Some(loc) = redirect_uri {
+        res.insert_header((LOCATION, loc));
+    }
+    Ok(res.finish())
 }
 
 /// Returns (magic link deletion cookie, optional custom redirect uri)
@@ -174,8 +203,7 @@ pub async fn handle_put_user_password_reset<'a>(
 
     // all good
     ml.invalidate().await?;
-    user.email_verified = true;
-    user.save(None).await?;
+    user.save_password_reset().await?;
 
     let ip = match real_ip_from_req(&req).ok() {
         None => {
@@ -196,12 +224,22 @@ pub async fn handle_put_user_password_reset<'a>(
     // delete all existing user sessions to have a clean flow
     Session::invalidate_for_user(&user.id).await?;
 
-    // check if we got a custom `redirect_uri` during registration
-    let redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
+    // reset password exp reminder emails
+    PasswordExpMail::delete(user.id).await?;
+
+    // a `redirect_uri` from the magic link always has priority over the config fallback
+    let ml_redirect_uri = match MagicLinkUsage::try_from(&ml.usage)? {
         MagicLinkUsage::NewUser(redirect_uri) => redirect_uri,
         MagicLinkUsage::PasswordReset(redirect_uri) => redirect_uri,
         _ => None,
     };
+    let redirect_uri = ml_redirect_uri.or_else(|| {
+        RauthyConfig::get()
+            .vars
+            .user_registration
+            .post_reset_redirect_uri
+            .clone()
+    });
 
     // delete the cookie
     let cookie = ApiCookie::build(PWD_RESET_COOKIE, "", 0);

@@ -61,10 +61,10 @@ impl AuthProviderType {
     }
 }
 
-impl TryFrom<&str> for AuthProviderType {
-    type Error = ErrorResponse;
+impl FromStr for AuthProviderType {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let slf = match value {
             "custom" => Self::Custom,
             "github" => Self::GitHub,
@@ -84,7 +84,7 @@ impl TryFrom<&str> for AuthProviderType {
 impl From<String> for AuthProviderType {
     /// Defaults to Self::OIDC in case of an error
     fn from(value: String) -> Self {
-        Self::try_from(value.as_str()).unwrap_or(Self::Custom)
+        Self::from_str(value.as_str()).unwrap_or(Self::Custom)
     }
 }
 
@@ -132,10 +132,10 @@ pub struct AuthProviderLinkCookie {
     pub user_email: String,
 }
 
-impl TryFrom<&str> for AuthProviderLinkCookie {
-    type Error = ErrorResponse;
+impl FromStr for AuthProviderLinkCookie {
+    type Err = ErrorResponse;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let bytes = base64_decode(value)?;
         let slf = deserialize::<AuthProviderLinkCookie>(bytes.as_slice())?;
         Ok(slf)
@@ -313,7 +313,7 @@ VALUES
             .await?;
         };
 
-        Self::invalidate_cache_all().await?;
+        Self::invalidate_cache_all(None).await?;
 
         DB::hql()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
@@ -399,11 +399,10 @@ VALUES
         if is_hiqlite() {
             DB::hql().execute(sql, params!(id)).await?;
         } else {
-            DB::pg_execute(sql, &[]).await?;
+            DB::pg_execute(sql, &[&id]).await?;
         }
 
-        Self::invalidate_cache_all().await?;
-        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
+        Self::invalidate_cache_all(Some(id)).await?;
 
         Ok(())
     }
@@ -483,7 +482,7 @@ WHERE id = $21"#;
             .await?;
         }
 
-        Self::invalidate_cache_all().await?;
+        Self::invalidate_cache_all(None).await?;
         DB::hql()
             .put(Cache::App, Self::cache_idx(&self.id), self, CACHE_TTL_APP)
             .await?;
@@ -546,8 +545,20 @@ impl AuthProvider {
         })
     }
 
-    async fn invalidate_cache_all() -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, Self::cache_idx("all")).await?;
+    /// Invalidates every auth providers cache, plus the config of `affected_id`, and rebuilds
+    /// the template. The template rebuild must stay after the delay, it is what makes the
+    /// fresh template win over a fill that raced with this write.
+    async fn invalidate_cache_all(affected_id: Option<&str>) -> Result<(), ErrorResponse> {
+        let affected = affected_id
+            .map(|id| (Cache::App, Some(Cow::from(Self::cache_idx(id)))))
+            .into_iter();
+        let cache_entries = [
+            (Cache::App, Some(Cow::from(Self::cache_idx("all")))),
+            (Cache::App, Some(Cow::from(IDX_AUTH_PROVIDER_TEMPLATE))),
+        ]
+        .into_iter()
+        .chain(affected);
+        DB::cache_delete_delayed(cache_entries).await?;
 
         // We don't really need to clean all HTML caches, but rebuilding all of them
         // is a lot easier to maintain and auth providers are not updated often anyway.
@@ -555,7 +566,7 @@ impl AuthProvider {
 
         // Directly update the template cache preemptively.
         // This is needed all the time anyway.
-        AuthProviderTemplate::update_cache().await?;
+        AuthProviderTemplate::get_all_json_template().await?;
 
         Ok(())
     }
@@ -714,26 +725,25 @@ pub struct AuthProviderCallback {
     pub req_nonce: Option<String>,
     pub req_code_challenge: Option<String>,
     pub req_code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator from the authorization request (#1702).
+    /// `default` so a callback cached by the previous version still decodes
+    /// during a rolling upgrade.
+    #[serde(default)]
+    pub req_resource: Option<String>,
 
     pub provider_id: String,
 
-    // TODO add a nonce upstream as well? -> improvement?
     pub pkce_challenge: String,
+    pub is_forward_auth: Option<bool>,
 }
 
 // CRUD
 impl AuthProviderCallback {
-    pub async fn delete(callback_id: String) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::AuthProviderCallback, callback_id)
-            .await?;
-
-        Ok(())
-    }
-
-    pub async fn find(callback_id: String) -> Result<Self, ErrorResponse> {
+    /// Atomically takes the callback out of the cache, so that it can only ever be used once,
+    /// even with concurrent requests.
+    pub async fn find_remove(callback_id: String) -> Result<Self, ErrorResponse> {
         let opt: Option<Self> = DB::hql()
-            .get(Cache::AuthProviderCallback, callback_id)
+            .get_remove(Cache::AuthProviderCallback, callback_id)
             .await?;
 
         match opt {
@@ -877,8 +887,7 @@ impl AuthProviderCallback {
 
         if let Some(access_token) = ts.access_token {
             // the id_token only exists, if we actually have an OIDC provider.
-            // If we only get an access token, we need to do another request to the
-            // userinfo endpoint
+            // If we only get an access token, we need to do another request to the userinfo endpoint
             let res = http_client()
                 .get(&provider.userinfo_endpoint)
                 .header(AUTHORIZATION, format!("Bearer {access_token}"))
@@ -935,7 +944,7 @@ impl AuthProviderCallback {
             ));
         };
 
-        if app_state != self.callback_id {
+        if !constant_time_eq::constant_time_eq(app_state.as_bytes(), self.callback_id.as_bytes()) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::Forbidden,
                 "callback state mismatch for ATProto",
@@ -945,7 +954,11 @@ impl AuthProviderCallback {
         let agent = atrium_api::agent::Agent::new(session_manager);
 
         let Some(did) = agent.did().await else {
-            panic!("missing DID for ATProto session");
+            error!("missing DID for ATProto session");
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Internal,
+                "missing DID for ATProto session",
+            ));
         };
 
         let Some(session) = DB.get(&did).await.map_err(|error| {
@@ -1030,10 +1043,8 @@ impl AuthProviderTemplate {
     }
 
     async fn invalidate_cache() -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, IDX_AUTH_PROVIDER_TEMPLATE)
+        DB::cache_delete_delayed([(Cache::App, Some(Cow::from(IDX_AUTH_PROVIDER_TEMPLATE)))])
             .await?;
-
         Ok(())
     }
 
@@ -1134,6 +1145,21 @@ impl AuthProviderIdClaims<'_> {
         }
     }
 
+    fn apply_provider_email(&self, user: &mut User, email: String) -> Option<String> {
+        if user.email == email {
+            if self.email_verified == Some(true) {
+                user.email_verified = true;
+            }
+
+            None
+        } else {
+            let old_email = std::mem::replace(&mut user.email, email);
+            user.email_verified = self.email_verified.unwrap_or(false);
+
+            Some(old_email)
+        }
+    }
+
     pub fn self_as_bytes_from_token(token: &str) -> Result<Vec<u8>, ErrorResponse> {
         let mut parts = token.split('.');
         let _header = parts.next().ok_or_else(|| {
@@ -1160,6 +1186,11 @@ impl AuthProviderIdClaims<'_> {
             error!("{err}");
             return Err(ErrorResponse::new(ErrorResponseType::BadRequest, err));
         }
+
+        // All local lookups and storage are lowercase-based (`User::find_by_email`,
+        // local registration), so normalize the upstream claim once here.
+        // Otherwise, mixed-case addresses could break email lookups or create duplicate accounts.
+        let email = self.email.as_ref().unwrap().to_lowercase();
 
         let claims_user_id_json = if let Some(sub) = &self.sub {
             sub
@@ -1201,9 +1232,7 @@ impl AuthProviderIdClaims<'_> {
             }
             Err(_) => {
                 debug!("did not find already existing user by federation lookup");
-                if let Ok(mut user) =
-                    User::find_by_email(self.email.as_ref().unwrap().to_string()).await
-                {
+                if let Ok(mut user) = User::find_by_email(email.clone()).await {
                     if let Some(link) = link_cookie {
                         if link.provider_id != provider.id {
                             return Err(ErrorResponse::new(
@@ -1335,28 +1364,24 @@ impl AuthProviderIdClaims<'_> {
 
         let now = Utc::now().timestamp();
         let user = if let Some(mut user) = user_opt {
-            let mut old_email = None;
             let mut forbidden_error = None;
 
             // validate federation_uid
             // we must reject any upstream login, if a non-federated local user with the same email
             // exists, as it could lead to an account takeover
             if user.federation_uid.is_none()
-                || user.federation_uid.as_deref() != Some(&claims_user_id)
+                || user.federation_uid.as_deref() != Some(claims_user_id.as_str())
             {
                 forbidden_error = Some("non-federated user or ID mismatch");
             }
 
             // validate auth_provider_id
-            if user.auth_provider_id.as_deref() != Some(&provider.id) {
+            if user.auth_provider_id.as_deref() != Some(provider.id.as_str()) {
                 forbidden_error = Some("invalid login from wrong auth provider");
             }
 
             if let Some(err) = forbidden_error {
-                user.last_failed_login = Some(now);
-                user.failed_login_attempts =
-                    Some(user.failed_login_attempts.unwrap_or_default() + 1);
-                user.save(old_email).await?;
+                user.save_login_failure().await?;
 
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1364,11 +1389,7 @@ impl AuthProviderIdClaims<'_> {
                 ));
             }
 
-            // check / update email
-            if Some(user.email.as_str()) != self.email.as_deref() {
-                old_email = Some(user.email);
-                user.email = self.email.as_ref().unwrap().to_string();
-            }
+            let old_email = self.apply_provider_email(&mut user, email);
 
             // check other existing values and possibly update them
             let given_name = self.given_name();
@@ -1420,7 +1441,7 @@ impl AuthProviderIdClaims<'_> {
         } else {
             // Create a new federated user
             let new_user = User {
-                email: self.email.as_ref().unwrap().to_string(),
+                email: email.clone(),
                 given_name: self.given_name().to_string(),
                 family_name: self.family_name().map(String::from),
                 roles: roles_add.join(","),
@@ -1521,6 +1542,108 @@ impl AuthProviderIdClaims<'_> {
 mod tests {
     use super::*;
 
+    fn user_with_email(email: &str, email_verified: bool) -> User {
+        User {
+            email: email.to_string(),
+            email_verified,
+            ..Default::default()
+        }
+    }
+
+    fn claims_with_email_verified(email_verified: Option<bool>) -> AuthProviderIdClaims<'static> {
+        AuthProviderIdClaims {
+            email_verified,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn provider_verifies_matching_email() {
+        let claims = claims_with_email_verified(Some(true));
+        let mut user = user_with_email("user@example.com", false);
+
+        let old_email = claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(user.email_verified);
+        assert_eq!(old_email, None);
+    }
+
+    #[test]
+    fn unverified_provider_claim_does_not_verify_matching_email() {
+        let claims = claims_with_email_verified(Some(false));
+        let mut user = user_with_email("user@example.com", false);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(!user.email_verified);
+    }
+
+    #[test]
+    fn missing_provider_claim_does_not_verify_matching_email() {
+        let claims = claims_with_email_verified(None);
+        let mut user = user_with_email("user@example.com", false);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(!user.email_verified);
+    }
+
+    #[test]
+    fn unverified_provider_claim_does_not_revoke_matching_email() {
+        let claims = claims_with_email_verified(Some(false));
+        let mut user = user_with_email("user@example.com", true);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(user.email_verified);
+    }
+
+    #[test]
+    fn missing_provider_claim_does_not_revoke_matching_email() {
+        let claims = claims_with_email_verified(None);
+        let mut user = user_with_email("user@example.com", true);
+
+        claims.apply_provider_email(&mut user, "user@example.com".to_string());
+
+        assert!(user.email_verified);
+    }
+
+    #[test]
+    fn verified_provider_claim_verifies_changed_email() {
+        let claims = claims_with_email_verified(Some(true));
+        let mut user = user_with_email("old@example.com", false);
+
+        let old_email = claims.apply_provider_email(&mut user, "new@example.com".to_string());
+
+        assert_eq!(user.email, "new@example.com");
+        assert!(user.email_verified);
+        assert_eq!(old_email.as_deref(), Some("old@example.com"));
+    }
+
+    #[test]
+    fn unverified_provider_claim_does_not_carry_verification_to_changed_email() {
+        let claims = claims_with_email_verified(Some(false));
+        let mut user = user_with_email("old@example.com", true);
+
+        let old_email = claims.apply_provider_email(&mut user, "new@example.com".to_string());
+
+        assert_eq!(user.email, "new@example.com");
+        assert!(!user.email_verified);
+        assert_eq!(old_email.as_deref(), Some("old@example.com"));
+    }
+
+    #[test]
+    fn missing_provider_claim_does_not_carry_verification_to_changed_email() {
+        let claims = claims_with_email_verified(None);
+        let mut user = user_with_email("old@example.com", true);
+
+        let old_email = claims.apply_provider_email(&mut user, "new@example.com".to_string());
+
+        assert_eq!(user.email, "new@example.com");
+        assert!(!user.email_verified);
+        assert_eq!(old_email.as_deref(), Some("old@example.com"));
+    }
+
     // exists only to understand the query syntax and experiment with it
     #[test]
     #[ignore]
@@ -1535,7 +1658,7 @@ mod tests {
 
         let path = JsonPath::parse("$.foo.bar[*]").unwrap();
         let nodes = path.query(&value).all();
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("baz"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("baz"));
         assert_eq!(nodes.get(1).unwrap().as_str(), Some("bop"));
         assert_eq!(
             nodes.get(2).unwrap().as_number(),
@@ -1555,7 +1678,7 @@ mod tests {
         let path = JsonPath::parse("$.foo.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
 
         // we cannot query for single values with the wildcard in the end
         // -> add 2 possible cases in the checking code for best UX
@@ -1567,7 +1690,7 @@ mod tests {
         let path = JsonPath::parse("$.*.bor").unwrap();
         let nodes = path.query(&value).all();
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes.get(0).unwrap().as_str(), Some("yes"));
+        assert_eq!(nodes.first().unwrap().as_str(), Some("yes"));
     }
 
     #[test]

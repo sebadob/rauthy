@@ -93,7 +93,7 @@ impl Client {
         } else {
             format!(
                 "{}/auth/v1/atproto/client_metadata",
-                &config.pub_url_with_scheme
+                config.pub_url_with_scheme
             )
         };
 

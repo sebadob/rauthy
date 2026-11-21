@@ -1,12 +1,10 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Main from '$lib5/Main.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import NavSide from '$lib5/nav/NavSide.svelte';
-    import { useSession } from '$state/session.svelte';
-    import { fetchGet } from '$api/fetch';
-    import Events from '$lib5/admin/events/Events.svelte';
-    import { initI18nAdmin, useI18nAdmin } from '$state/i18n_admin.svelte';
+    import AdminShell from '#lib/admin/AdminShell.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useSession } from '#state/session.svelte.ts';
+    import { fetchGet } from '#api/fetch.ts';
+    import { initI18nAdmin, useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         children,
@@ -18,9 +16,6 @@
 
     let ta = useI18nAdmin();
     let session = useSession('admin');
-
-    let innerWidth: undefined | number = $state();
-
     let isAdmin = $state(false);
     let needsAdminRole = $state(false);
     let mfaReqErr = $state(false);
@@ -28,8 +23,10 @@
     $effect(() => {
         let s = session.get();
         if (s) {
-            let isAdm = !!s?.roles?.includes('rauthy_admin');
-            if (isAdm) {
+            // full Rauthy admins and delegated group admins both reach the admin UI;
+            // the backend still scopes every action, and the nav below hides what group
+            // admins cannot do
+            if (session.isAnyAdmin()) {
                 isAdmin = true;
                 // async check for admin access speeds up FCP and is still fast enough for a good UX
                 checkAdminAccess();
@@ -46,8 +43,6 @@
         }
     }
 </script>
-
-<svelte:window bind:innerWidth />
 
 <svelte:head>
     <title>Rauthy Admin</title>
@@ -74,17 +69,7 @@
         </div>
     </div>
 {:else if isAdmin}
-    <NavSide />
-    <Main>
-        <div class="content">
-            {@render children()}
-        </div>
-        {#if innerWidth && innerWidth > 1024}
-            <div class="events">
-                <Events />
-            </div>
-        {/if}
-    </Main>
+    <AdminShell {children} />
 {/if}
 
 <style>
@@ -94,11 +79,6 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-    }
-
-    .content {
-        flex: 1;
-        display: flex;
     }
 
     .text {

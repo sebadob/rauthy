@@ -12,34 +12,45 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::net::IpAddr;
+use std::str::FromStr;
 use tracing::{debug, warn};
+
+/// Prefix for the session id inside the forward-auth cookie. The upstream app sees that cookie, so
+/// its value must never decrypt to a plain session id, which would be a valid
+/// `__Host-RauthySession`. Session ids are alphanumeric, so a tagged value never matches one.
+const FWD_AUTH_TAG: &str = "fwda:";
 
 #[derive(Debug)]
 pub struct ForwardAuthSession {
+    pub client_id: String,
     pub inner: Session,
 }
 
 impl ForwardAuthSession {
     #[inline]
-    pub fn build_cookies(&self, danger_insecure: bool) -> (Cookie<'_>, Cookie<'_>) {
+    pub fn build_cookies(
+        &self,
+        danger_insecure: bool,
+    ) -> Result<(Cookie<'_>, Cookie<'_>), ErrorResponse> {
         let max_age = self.inner.exp - Utc::now().timestamp();
 
+        let tagged_sid = tag_sid(&self.client_id, &self.inner.id);
         let cookie_session = build_cookie(
             Self::cookie_name(danger_insecure),
-            self.inner.id.as_bytes(),
+            tagged_sid.as_bytes(),
             max_age,
             SameSite::Lax,
             danger_insecure,
-        );
+        )?;
         let cookie_csrf = build_cookie(
             Self::cookie_name_csrf(danger_insecure),
             self.inner.csrf_token.as_bytes(),
             max_age,
             SameSite::Strict,
             danger_insecure,
-        );
+        )?;
 
-        (cookie_session, cookie_csrf)
+        Ok((cookie_session, cookie_csrf))
     }
 
     #[inline]
@@ -65,22 +76,34 @@ impl ForwardAuthSession {
         let cookie = req.cookie(Self::cookie_name(danger_insecure))?;
         let decoded = base64_decode(cookie.value()).ok()?;
         let decrypted = EncValue::try_from_bytes(decoded).ok()?.decrypt().ok()?;
-        let sid = String::from_utf8_lossy(decrypted.as_ref());
+        let plain = String::from_utf8_lossy(decrypted.as_ref());
+        // an untagged value is a main session cookie, which is never accepted here
+        let (client_id, sid) = untag_sid(&plain)?;
 
         let session = Session::find(sid.to_string()).await.ok()?;
 
-        Some(Self { inner: session })
+        Some(Self {
+            client_id: client_id.to_string(),
+            inner: session,
+        })
     }
 
     #[inline]
-    pub fn validate(&self, req: &HttpRequest) -> Result<(), ErrorResponse> {
+    pub fn validate(&self, req: &HttpRequest, client_id: &str) -> Result<(), ErrorResponse> {
         let remote_ip = if RauthyConfig::get().vars.access.session_validate_ip {
             real_ip_from_req(req).ok()
         } else {
             None
         };
-        let session_timeout = RauthyConfig::get().vars.lifetimes.session_timeout;
 
+        if self.client_id != client_id {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "client.id mismatch",
+            ));
+        }
+
+        let session_timeout = RauthyConfig::get().vars.lifetimes.session_timeout.as_secs() as i64;
         if !self
             .inner
             .is_valid(session_timeout, remote_ip, "NO_EXCEPTION")
@@ -111,7 +134,7 @@ impl ForwardAuthSession {
         let decrypted = EncValue::try_from_bytes(decoded)?.decrypt()?;
         let token = String::from_utf8_lossy(decrypted.as_ref());
 
-        if token != self.inner.csrf_token {
+        if !constant_time_eq::constant_time_eq(token.as_bytes(), self.inner.csrf_token.as_bytes()) {
             warn!("CSRF Token mismatch");
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -138,6 +161,20 @@ impl ForwardAuthSession {
     }
 }
 
+#[inline]
+fn tag_sid(client_id: &str, sid: &str) -> String {
+    // dynamic clients will have a single `$` in their generated id
+    format!("{FWD_AUTH_TAG}{client_id}$${sid}")
+}
+
+/// Returns `Some(client_id, session_id)`
+#[inline]
+fn untag_sid(plain: &str) -> Option<(&str, &str)> {
+    let stripped = plain.strip_prefix(FWD_AUTH_TAG)?;
+    let (cid, sid) = stripped.split_once("$$")?;
+    Some((cid, sid))
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ForwardAuthCallbackState {
     pub client_id: String,
@@ -147,11 +184,11 @@ pub struct ForwardAuthCallbackState {
     pub danger_cookie_insecure: bool,
 }
 
-impl TryFrom<&str> for ForwardAuthCallbackState {
-    type Error = ErrorResponse;
+impl FromStr for ForwardAuthCallbackState {
+    type Err = ErrorResponse;
 
     #[inline]
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let decoded = base64_url_no_pad_decode(s)?;
         let decrypted = EncValue::try_from_bytes(decoded)?.decrypt()?;
         deserialize(decrypted.as_ref())
@@ -170,26 +207,69 @@ impl ForwardAuthCallbackState {
 
 #[inline]
 fn build_cookie<'a>(
-    name: &'static str,
-    value: &'a [u8],
+    name: &'a str,
+    value: &[u8],
     max_age: i64,
     same_site: SameSite,
     danger_insecure: bool,
-) -> Cookie<'a> {
+) -> Result<Cookie<'a>, ErrorResponse> {
     let max_age = if max_age < 1 {
         cookie::time::Duration::ZERO
     } else {
         cookie::time::Duration::seconds(max_age)
     };
 
-    let enc = EncValue::encrypt(value).unwrap();
+    let enc = EncValue::encrypt(value)?;
     let value_b64 = base64_encode(enc.into_bytes().as_ref());
 
-    Cookie::build(name, value_b64)
+    Ok(Cookie::build(name, value_b64)
         .secure(!danger_insecure)
         .http_only(true)
         .same_site(same_site)
         .max_age(max_age)
         .path("/")
-        .finish()
+        .finish())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api_cookie::ApiCookie;
+    use rauthy_common::utils::get_rand;
+
+    #[test]
+    fn test_fwd_auth_sid_is_domain_separated() {
+        let cid = "my_client";
+        let sid = get_rand(32);
+        let tagged = tag_sid(cid, &sid);
+
+        // the ext cookie value never equals a session id, so it can't be replayed as one
+        assert_ne!(tagged, sid);
+        assert!(tagged.contains(':'));
+        assert!(sid.chars().all(|c| c.is_ascii_alphanumeric()));
+
+        assert_eq!(untag_sid(&tagged), Some((cid, sid.as_str())));
+        // and a main session cookie value is rejected as an ext cookie
+        assert_eq!(untag_sid(&sid), None);
+    }
+
+    #[test]
+    fn test_fwd_auth_cookie_is_not_a_session_cookie() {
+        let _ = cryptr::EncKeys::generate_with_id("test".to_string())
+            .unwrap()
+            .init();
+
+        let fwd = ForwardAuthSession {
+            client_id: "my_client".to_string(),
+            inner: Session::new(std::time::Duration::from_secs(60), None),
+        };
+        let (cookie, _) = fwd.build_cookies(true).unwrap();
+        let value = ApiCookie::cookie_into_value(Some(cookie)).unwrap();
+
+        assert_ne!(value, fwd.inner.id);
+        assert_eq!(
+            untag_sid(&value),
+            Some((fwd.client_id.as_str(), fwd.inner.id.as_str()))
+        );
+    }
 }

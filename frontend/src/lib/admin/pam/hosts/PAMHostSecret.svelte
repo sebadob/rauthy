@@ -1,11 +1,11 @@
 <script lang="ts">
-    import Modal from '$lib/Modal.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { fetchPost, fetchPut } from '$api/fetch';
-    import type { PamHostSecretResponse } from '$api/types/pam';
-    import HiddenValueArea from '$lib/HiddenValueArea.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { fetchPost, fetchPut } from '#api/fetch.ts';
+    import type { PamHostSecretResponse } from '#api/types/pam.ts';
+    import HiddenValueArea from '#lib/HiddenValueArea.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
         hostId,
@@ -33,7 +33,9 @@
     }
 
     function onclick() {
-        fetchSecret();
+        err = '';
+        secret = '';
+        void fetchSecret();
         showModal = true;
     }
 
@@ -47,43 +49,43 @@
     }
 </script>
 
-<div class="container">
-    <Button level={2} {onclick}>
-        {ta.pam.secretShow}
-    </Button>
-    <Modal bind:showModal bind:closeModal>
-        <h1>Secret</h1>
-
+<Button level={2} {onclick}>
+    {ta.pam.secretShow}
+</Button>
+<Modal bind:showModal bind:closeModal ariaLabel="Secret">
+    <div class="host-secret">
+        <h2>Secret</h2>
         {#key secret}
-            <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} />
+            <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} width="100%" />
         {/key}
 
-        <div class="btn">
-            <Button onclick={rotate}>
-                {ta.pam.secretRotate}
-            </Button>
-            <Button level={2} onclick={() => closeModal?.()}>
-                {t.common.close}
-            </Button>
-        </div>
-
         {#if err}
-            <div class="err">
-                {err}
-            </div>
+            <p class="err" role="alert">{err}</p>
         {/if}
-    </Modal>
-</div>
+        <div class="actions">
+            <Button level={2} onclick={() => closeModal?.()}>{t.common.close}</Button>
+            <Button onclick={rotate}>{ta.pam.secretRotate}</Button>
+        </div>
+    </div>
+</Modal>
 
 <style>
-    .btn {
-        margin-top: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    .host-secret {
+        width: min(39rem, calc(100dvw - 6rem - 2px));
+        display: grid;
+        gap: var(--ui-space);
     }
 
-    .container {
-        margin: 1rem 0;
+    h2,
+    .err {
+        margin: 0;
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: end;
+        align-items: center;
+        gap: 0.5rem;
     }
 </style>

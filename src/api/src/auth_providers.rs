@@ -22,7 +22,7 @@ use rauthy_data::entity::users::User;
 use rauthy_data::html::HtmlCached;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use spow::pow::Pow;
-use tracing::debug;
+use tracing::{debug, error};
 use validator::Validate;
 
 /// GET all upstream auth providers
@@ -212,13 +212,20 @@ pub async fn post_provider_callback_handle(
     payload.validate()?;
 
     let (auth_step, cookie, new_user_created) =
-        rauthy_service::oidc::auth_providers::login_finish::login_finish(
+        match rauthy_service::oidc::auth_providers::login_finish::login_finish(
             &req,
             &payload,
             // unwrap: we already checked for session auth or init above
             principal.into_inner().session.unwrap(),
         )
-        .await?;
+        .await
+        {
+            Ok(r) => r,
+            Err(err) => {
+                error!("Error during Auth Provider Callback: {}", err.message);
+                return Err(err);
+            }
+        };
 
     let mut resp = map_auth_step(auth_step, &req, new_user_created).await?;
     resp.add_cookie(&cookie).map_err(|err| {
@@ -296,6 +303,13 @@ pub async fn put_provider(
     principal
         .validate_api_key_or_admin_session(AccessGroup::AuthProviders, AccessRights::Update)?;
     payload.validate()?;
+
+    if payload.issuer == PROVIDER_ATPROTO {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Must not contain a reserved name",
+        ));
+    }
 
     if !payload.use_pkce && payload.client_secret.is_none() {
         return Err(ErrorResponse::new(
@@ -438,26 +452,34 @@ pub async fn put_provider_img(
 
     // we only accept a single field from the Multipart upload -> no looping here
     let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
-    let mut content_type = None;
-    if let Some(part) = payload.next().await {
-        let mut field = part?;
+    let content_type: Option<mime_guess::Mime>;
+    match payload.next().await {
+        Some(part) => {
+            let mut field = part?;
 
-        match field.content_type() {
-            Some(mime) => {
-                debug!("content_type: {:?}", mime);
-                content_type = Some(mime.clone());
+            match field.content_type() {
+                Some(mime) => {
+                    debug!("content_type: {:?}", mime);
+                    content_type = Some(mime.clone());
+                }
+                None => {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "content_type is missing",
+                    ));
+                }
             }
-            None => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "content_type is missing",
-                ));
+
+            while let Some(chunk) = field.next().await {
+                let bytes = chunk?;
+                buf.extend(bytes);
             }
         }
-
-        while let Some(chunk) = field.next().await {
-            let bytes = chunk?;
-            buf.extend(bytes);
+        None => {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "missing upload part",
+            ));
         }
     }
 

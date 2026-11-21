@@ -1,22 +1,23 @@
 <script lang="ts">
-    import type { KVNamespaceResponse, KVValueRequest, KVValueResponse } from '$api/types/kv';
-    import Button from '$lib/button/Button.svelte';
-    import Input from '$lib/form/Input.svelte';
-    import SearchBar from '$lib/search_bar/SearchBar.svelte';
-    import { fetchDelete, fetchGet, fetchPost, fetchPut } from '$api/fetch';
-    import Modal from '$lib/Modal.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import { PATTERN_GROUP } from '$utils/patterns';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+    import type { KVNamespaceResponse, KVValueRequest, KVValueResponse } from '#api/types/kv.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import { fetchGet, fetchPost, fetchPut } from '#api/fetch.ts';
+    import Modal from '#lib/Modal.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Form from '#lib/form/Form.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import { PATTERN_KV_KEY } from '#utils/patterns.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import { slide } from 'svelte/transition';
-    import { parseJsonValue, stringifyJsonValue } from '$utils/jsonValue';
-    import IconKey from '$icons/IconKey.svelte';
-    import IconEdit from '$icons/IconEdit.svelte';
-    import IconTrash from '$icons/IconTrash.svelte';
-    import IconLink from '$icons/editor/IconLink.svelte';
+    import { tick } from 'svelte';
+    import { parseJsonValue, stringifyJsonValue } from '#utils/jsonValue.ts';
+    import IconKey from '#icons/IconKey.svelte';
+    import IconEdit from '#icons/IconEdit.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import IconLink from '#icons/editor/IconLink.svelte';
 
     let {
         ns,
@@ -34,8 +35,6 @@
     let closeModalAdd: undefined | (() => void) = $state();
     let showModalEdit = $state(false);
     let closeModalEdit: undefined | (() => void) = $state();
-    let showModalDelete = $state(false);
-    let closeModalDelete: undefined | (() => void) = $state();
 
     let values: KVValueResponse[] = $state([]);
     let valuesSearch: KVValueResponse[] = $state([]);
@@ -65,7 +64,7 @@
 
     $effect(() => {
         if (refInput) {
-            requestAnimationFrame(() => {
+            tick().then(() => {
                 refInput?.focus();
             });
         }
@@ -73,7 +72,7 @@
 
     $effect(() => {
         if (refArea) {
-            requestAnimationFrame(() => {
+            tick().then(() => {
                 refArea?.focus();
             });
         }
@@ -87,11 +86,6 @@
     function editEntry(entry: KVValueResponse) {
         entrySelected = entry;
         showModalEdit = true;
-    }
-
-    function deleteEntry(entry: KVValueResponse) {
-        entrySelected = entry;
-        showModalDelete = true;
     }
 
     async function fetchAll() {
@@ -191,26 +185,6 @@
             }
         }
     }
-
-    async function onSubmitDelete() {
-        if (!entrySelected) {
-            return;
-        }
-
-        let res = await fetchDelete(`${urlValues}/${entrySelected?.key}`);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            closeModalDelete?.();
-
-            if (valuesSearch.length > 0) {
-                valuesSearch = valuesSearch.filter(v => v.key !== entrySelected?.key);
-            }
-            if (values.length > 0) {
-                values = values.filter(v => v.key !== entrySelected?.key);
-            }
-        }
-    }
 </script>
 
 {#snippet error()}
@@ -222,7 +196,14 @@
 {/snippet}
 
 <div class="btnsLim">
-    <Input typ="number" bind:value={limit} label="Limit" min="1" max="4294967295" width="7rem" />
+    <Input
+        typ="number"
+        bind:value={limit}
+        label={ta.kv.limit}
+        min="1"
+        max="4294967295"
+        width="7rem"
+    />
     <div class="btns">
         <Button level={2} onclick={fetchAll}>{ta.kv.loadAllValues}</Button>
         <Button onclick={() => (showModalAdd = true)}>{ta.kv.addNewValue}</Button>
@@ -234,12 +215,13 @@
                         name="key"
                         label={ta.kv.key}
                         placeholder={ta.kv.key}
-                        pattern={PATTERN_GROUP}
+                        pattern={PATTERN_KV_KEY}
                         required
                     />
                     <InputArea
                         name="value"
                         label={ta.kv.value}
+                        formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                         placeholder={ta.kv.value}
                         rows={15}
                         required
@@ -276,7 +258,7 @@
 {@render error()}
 
 {#snippet renderEntry(entry: KVValueResponse)}
-    <div class="row">
+    <div class="row admin-kv-record">
         <div class="key">
             <div>
                 {entry.key}
@@ -297,9 +279,15 @@
                 <Button ariaLabel={ta.common.edit} invisible onclick={() => editEntry(entry)}>
                     <IconEdit width="1.25rem" />
                 </Button>
-                <Button ariaLabel={t.common.delete} invisible onclick={() => deleteEntry(entry)}>
-                    <IconTrash width="1.25rem" />
-                </Button>
+                <EntityDelete
+                    url={`${urlValues}/${encodeURIComponent(entry.key)}`}
+                    name={entry.key}
+                    iconOnly
+                    onDelete={() => {
+                        values = values.filter(value => value.key !== entry.key);
+                        valuesSearch = valuesSearch.filter(value => value.key !== entry.key);
+                    }}
+                />
             </div>
         </div>
         <div class="value">
@@ -308,7 +296,7 @@
     </div>
 {/snippet}
 
-<div class="values">
+<div class="values admin-kv-values">
     {#if valuesSearch.length > 0}
         {#each valuesSearch as entry (entry.key)}
             {@render renderEntry(entry)}
@@ -338,6 +326,7 @@
                         bind:ref={refArea}
                         name="value"
                         label={ta.kv.value}
+                        formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                         placeholder={ta.kv.value}
                         rows={15}
                         value={stringifyJsonValue(entrySelected.value)}
@@ -366,28 +355,6 @@
             {/if}
         </div>
     </Modal>
-    <Modal
-        bind:showModal={showModalDelete}
-        bind:closeModal={closeModalDelete}
-        onClose={() => (entrySelected = undefined)}
-    >
-        <div class="modal">
-            {#if entrySelected}
-                <h3>
-                    {t.common.delete}
-                </h3>
-                <p>
-                    {ta.kv.deleteConfirmMsg.replace('{{ key }}', entrySelected.key)}
-                </p>
-                <div class="btnModal">
-                    <Button level={-1} onclick={onSubmitDelete}>{t.common.delete}</Button>
-                    <Button level={3} onclick={() => closeModalDelete?.()}>
-                        {t.common.cancel}
-                    </Button>
-                </div>
-            {/if}
-        </div>
-    </Modal>
 </div>
 
 <style>
@@ -398,16 +365,22 @@
         gap: 0.5rem;
     }
 
-    .btns {
-        margin-top: 1.35rem;
+    .btns,
+    .btnsLim {
         display: flex;
-        align-items: center;
+        flex-wrap: wrap;
+        align-items: flex-end;
         gap: 0.5rem;
     }
 
     .btnsLim {
-        display: flex;
-        gap: 0.5rem;
+        margin-bottom: var(--ui-space);
+        --ui-button-height: var(--ui-field-height);
+        --ui-button-min-height: var(--ui-field-height);
+    }
+
+    .btnsLim > :global(.admin-input-field) {
+        --ui-field-margin: 0;
     }
 
     .modal {
@@ -445,6 +418,34 @@
         margin: 0.5rem 0;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
-        overflow: scroll;
+        overflow: auto;
+    }
+
+    .admin-kv-values {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: none;
+        border: 0;
+        margin: 24px 0;
+        overflow: visible;
+    }
+    .admin-kv-record {
+        padding: 16px;
+        background: var(--ui-surface);
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+    }
+    .admin-kv-record :global(.key) {
+        gap: 16px;
+        font-size: 14px;
+    }
+    .admin-kv-record :global(.value) {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+        font-size: 12px;
+        overflow-wrap: anywhere;
     }
 </style>

@@ -18,7 +18,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let scopes = res.json::<Vec<ScopeResponse>>().await?;
     let len_orig = scopes.len();
@@ -36,7 +36,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .json(&new_scope)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let scope = res.json::<ScopeResponse>().await?;
     assert_eq!(scope.name, new_scope.scope);
@@ -48,8 +48,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let init_client = res.json::<ClientResponse>().await?;
+    let init_client = expect_status_json!(res, 200, ClientResponse);
     assert!(!init_client.scopes.contains(&new_scope.scope));
     assert!(!init_client.default_scopes.contains(&new_scope.scope));
 
@@ -59,7 +58,6 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
     default_scopes.push(new_scope.scope.clone());
 
     let update_client = UpdateClientRequest {
-        id: init_client.id,
         name: init_client.name,
         confidential: init_client.confidential,
         redirect_uris: init_client.redirect_uris,
@@ -79,6 +77,12 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         contacts: init_client.contacts,
         backchannel_logout_uri: Some(init_client_bcl_uri()),
         restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
+        allowed_resources: None,
+        default_aud: None,
+        consent: None,
+        actor_same_client: false,
         scim: None,
     };
     let res = client
@@ -87,8 +91,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .json(&update_client)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let init_client = res.json::<ClientResponse>().await?;
+    let init_client = expect_status_json!(res, 200, ClientResponse);
     assert!(init_client.scopes.contains(&new_scope.scope));
     assert!(init_client.default_scopes.contains(&new_scope.scope));
 
@@ -106,7 +109,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .json(&upd_scope)
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let upd_scp = res.json::<ScopeResponse>().await?;
     assert_eq!(upd_scope.scope, upd_scp.name);
@@ -117,8 +120,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let init_client = res.json::<ClientResponse>().await?;
+    let init_client = expect_status_json!(res, 200, ClientResponse);
     assert!(init_client.scopes.contains(&upd_scp.name));
     assert!(init_client.default_scopes.contains(&upd_scp.name));
 
@@ -129,7 +131,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    expect_status!(res, 200);
 
     // verify it is gone
     let res = client
@@ -137,7 +139,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
+    let res = expect_status!(res, 200);
 
     let scopes = res.json::<Vec<ScopeResponse>>().await?;
     assert_eq!(scopes.len(), len_orig);
@@ -148,8 +150,7 @@ async fn test_scopes() -> Result<(), Box<dyn Error>> {
         .headers(auth_headers.clone())
         .send()
         .await?;
-    assert_eq!(res.status(), 200);
-    let init_client = res.json::<ClientResponse>().await?;
+    let init_client = expect_status_json!(res, 200, ClientResponse);
     assert!(!init_client.scopes.contains(&upd_scp.name));
     assert!(!init_client.default_scopes.contains(&upd_scp.name));
 

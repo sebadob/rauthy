@@ -33,6 +33,9 @@ enable = true
 enable_web_id = true
 enable_solid_aud = true
 allowed_flows = ['authorization_code', 'refresh_token']
+# the integration test suite serves its ephemeral client document from 127.0.0.1;
+# the deny path is covered by unit tests in src/data/src/http_client.rs
+danger_allow_private_addresses = true
 
 [http_client]
 danger_unencrypted = true

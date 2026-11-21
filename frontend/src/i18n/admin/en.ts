@@ -2,6 +2,10 @@ import type { I18nAdmin } from './interface.ts';
 
 export let I18nAdminEn: I18nAdmin = {
     api_key: {
+        validity: 'Validity',
+        permissions: 'Permissions',
+        secret: 'Secret',
+        examples: 'Usage examples',
         delete1: 'Are you sure, that you want to delete this API Key?',
         expires: 'Expiry',
         generate1: 'Here you can generate a new secret for this API Key.',
@@ -29,6 +33,7 @@ export let I18nAdminEn: I18nAdmin = {
         userEditable: 'User Editable',
     },
     backup: {
+        title: 'Backups',
         createBackup: 'Create Backup',
         disabledDesc: 'This functionality only exists, if Hiqlite is configured as the database.',
         lastModified: 'Last Modified',
@@ -37,18 +42,51 @@ export let I18nAdminEn: I18nAdmin = {
         size: 'Size',
     },
     clients: {
+        settings: { general: 'General', tokens: 'Tokens', integrations: 'Integrations' },
+        allowedResources: 'Allowed Resources',
+        defaultAud: 'Default Audiences',
+        actorSameClient: 'Actor token from this client only',
+        descAllowedResources: `Optional RFC 8707 resource indicators this client may request. An empty list rejects any 'resource' request parameter with 'invalid_target'.`,
+        descDefaultAud: `Audiences that are always added to this client's tokens, independent of any 'resource' request parameter.`,
+        descActorSameClient: `When enabled, an 'actor_token' in a token exchange must have been issued to this client; any other is rejected.`,
         backchannelLogout: 'If this client supports {{ OIDC_BCL }}, you can provide the URI here.',
         branding: {
+            title: 'Branding',
+            theme: 'Theme',
+            light: 'Light Theme',
+            dark: 'Dark Theme',
+            preview: 'Preview',
+            assets: 'Logo and favicon',
+            logo: 'Logo',
+            advanced: 'Advanced CSS',
+            resetTheme: 'Reset theme',
+            resetThemeConfirm: 'Restore the default colors and corner radius?',
+            assetsImmediate: 'File changes take effect immediately.',
             descHsl: `The following values must be given as HSL values. You only provide the base colors.
             Alpha channels and other values are manipulated dynamically by the theme.`,
             descFullCss: `The following values must be fully valid CSS <code>color</code> values.
                 You can also use complex calculations or the above defined CSS variables.`,
             descVariables: `Each following label is at the same time the name of the CSS variable. This means,
                 that you can reference these in the free inputs, e.g. with <code>hsla(var(--action) / .7)</code>.`,
+            faviconPreviewAlt: 'Client favicon preview',
+            faviconUpload: 'Favicon Upload',
         },
+        claimsAtRoot: 'Emit claims at the token root',
+        claimsAtRootWarning: `This client's claims are written at the token root
+            instead of being nested under 'custom'. You own collision-correctness: if a claim
+            name collides with a reserved JWT claim, token issuance fails. Root-level custom
+            claims may also break with future protocol or feature changes. Reference:`,
+        claims: 'Custom claims (client_credentials)',
+        claimsDesc: `A JSON object emitted into client_credentials tokens, nested under the
+            custom claim. Max 1024 serialized characters.`,
         confidential: 'Confidential',
         confidentialNoSecret: 'This is a non-confidential client and therefore has not secret.',
         config: 'Client Configuration',
+        consent: {
+            builtIn: 'Built-in',
+            desc: `Where the content of the consent screen comes from, when 'consent.enable' is set. Built-in shows the requested scopes. A URL must serve the consent content as JSON. A '[[consent.sources]]' entry for the requested resource takes precedence. Not active yet: it is only stored until the consent screen lands.`,
+            source: 'Consent Source',
+        },
         delete1: 'Are you sure you want to delete this client?',
         descAuthCode: `The validity for auth codes can be adjusted for increased security. Auth codes
             can be used only once and are valid for 60 seconds by default. The shorter the validity, the
@@ -73,9 +111,13 @@ export let I18nAdminEn: I18nAdmin = {
         forceMfa: 'Force MFA',
         groupLoginPrefix: 'Login Group Prefix',
         name: 'Client Name',
+        passwordFlowMfaWarn: `CAUTION: 'Force MFA' and the 'password' flow are enabled at the same 
+            time. Rauthy can NOT enforce MFA via this authentication flow because it would violate 
+            the OIDC RFC. This means if you strictly require MFA, you need to validate it on the 
+            client side. You can use the 'amr' claim to do this.`,
         scim: {
             baseUri: `The SCIM base URI is the one from which the sub routes like 
-                <code>{base_uri}/Users/{id}</base_uri></code> can be derived correctly.`,
+                <code>{base_uri}/Users/{id}</code> can be derived correctly.`,
             desc: 'If this client supports {{ SCIM_LINK }}, you can activate it here.',
             enable: 'Enable SCIMv2',
             groupSync: 'Synchronize Groups',
@@ -109,12 +151,26 @@ export let I18nAdminEn: I18nAdmin = {
         },
         tokenLifetime: {
             p1: `The token lifetime applies to Access and ID tokens and is given in seconds.`,
-            p2: `If the client supports EdDSA / ed25519 algorithms, it should always be the preferred
+            p2: `If the client supports EdDSA / Ed25519 algorithms, it should always be the preferred
                 choice. RSA algorithms exist for compatibility only.`,
             p3: `The algorithm for refresh tokens cannot be changed, since these are used by Rauthy only.`,
         },
     },
     common: {
+        about: 'About',
+        date: 'Date',
+        time: 'Time',
+        preferences: 'Preferences',
+        profile: 'Profile',
+        contactDetails: 'Contact details',
+        access: 'Access',
+        activity: 'Activity',
+
+        compactNavigation: 'Compact navigation',
+        administration: 'Administration',
+        selectEntry: 'Select an entry',
+        selectEntryHint: 'Choose an item from the list to view and manage its details.',
+
         account: 'Account',
         addNew: 'Add New',
         back: 'Back',
@@ -207,7 +263,7 @@ export let I18nAdminEn: I18nAdmin = {
             time: 'Time',
             targetTime: 'Target Time',
             tune: 'Important: These values need to be tuned on the final architecture!',
-            pDetials: `If you want a detailed introduction to Argon2ID, many sources exist online. This guide just 
+            pDetails: `If you want a detailed introduction to Argon2ID, many sources exist online. This guide just 
             gives very short overview about the values. Three of them need to be configured:`,
             pTune: `They change depending on the capabilities of the system. The more powerful the system, the more safe 
             these values can be.`,
@@ -217,12 +273,15 @@ export let I18nAdminEn: I18nAdmin = {
         },
         openapi:
             "If you want to integrate an external application and use Rauthy's API, take a look at the",
-        openapiNote: `Depending on the backend configuration, the Swagger UI may not be exposed publicly at this point.
-            It is however by default available via the internal metrics HTTP server to not expose any 
-            information.`,
+        openapiNote:
+            'In the default configuration, the Swagger UI is not active via the link above.',
+        openapiEnable:
+            "It can be activated via configuration 'server.swagger_ui_enable' and possibly 'server.swagger_ui_public'.",
         source: 'The source code can be found here',
     },
     editor: {
+        format: 'Format',
+        plainText: 'Plain text',
         bold: 'Bold',
         code: 'Code',
         heading1: 'Heading 1',
@@ -240,11 +299,14 @@ export let I18nAdminEn: I18nAdmin = {
         textArea: 'Edit Text',
     },
     email: {
+        delivery: 'Delivery',
         cancelJob: 'Cancel Job',
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
         immediate: 'Immediate',
         jobs: 'E-Mail Jobs',
+        recipients: 'Recipients',
         scheduled: 'Scheduled Dispatch',
+        scheduledDelivery: 'Scheduled',
         sendAllUsers: 'This E-Mail will be sent to all users.',
         sendAllUsersFiltered: 'This E-Mail will be sent to all users filtered by:',
         sendMail: 'Send E-Mail',
@@ -259,12 +321,22 @@ export let I18nAdminEn: I18nAdmin = {
             Afterward, you need to do a logout and log back in.`,
     },
     events: {
+        searchContent: 'Content',
+        timestamp: 'Timestamp',
+        level: 'Level',
+        type: 'Type',
+        allLevels: 'All levels',
+        sendTest: 'Send test event',
         eventLevel: 'Event Level',
         eventType: 'Event Type',
     },
     groups: {
         delete1: 'Are you sure you want to delete this group?',
         name: 'Group Name',
+        users: {
+            empty: 'This group has no assigned users.',
+            remove: 'Remove from this group',
+        },
     },
     jwks: {
         alg: 'Algorithm',
@@ -279,6 +351,7 @@ export let I18nAdminEn: I18nAdmin = {
         rotateKeys: 'Rotate Keys',
     },
     kv: {
+        limit: 'Limit',
         accessTestDesc: `The access key must be provided in the <code>Authorization</code> header as 
             <code>Bearer</code> token. The following <code>curl</code> command can be used for
             testing.`,
@@ -316,6 +389,7 @@ export let I18nAdminEn: I18nAdmin = {
         value: 'JSON Value',
     },
     nav: {
+        kvStore: 'KV Store',
         apiKeys: 'API Keys',
         attributes: 'Attributes',
         blacklist: 'Blacklist',
@@ -373,6 +447,9 @@ export let I18nAdminEn: I18nAdmin = {
             for security reasons.`,
     },
     passwordPolicy: {
+        lengthRules: 'Password length',
+        characterRules: 'Character requirements',
+        expiryRules: 'Expiry and reuse',
         configDesc: 'Policy for new passwords.',
         resetSet0: 'The value 0 deactivates the requirement.',
         validForDays: 'Valid For Days',
@@ -380,6 +457,16 @@ export let I18nAdminEn: I18nAdmin = {
     },
     providers: {
         config: {
+            sections: {
+                tokenAuth: 'Token authentication',
+                adminMapping: 'Admin access',
+                mfaMapping: 'Multi-factor authentication',
+                claimHelp: 'JSONPath syntax and examples',
+                access: 'Access and linking',
+                endpoints: 'Endpoints',
+                client: 'Client credentials',
+                claims: 'Claim mapping',
+            },
             allowInsecureTls: 'Allow insecure TLS',
             autoLink: 'Auto-Link User',
             autoLinkDesc1: `If Auto-Link User is activated, the login via this provider will automatically link a
@@ -433,10 +520,15 @@ export let I18nAdminEn: I18nAdmin = {
         adminNoMod: 'The <code>rauthy_admin</code> role is immutable.',
         delete1: 'Are you sure you want to delete this role?',
         name: 'Role Name',
+        users: {
+            empty: 'This role has no assigned users.',
+            remove: 'Remove from this role',
+        },
     },
     scopes: {
+        defaultBadge: 'default',
         claimsAtRoot: 'Emit claims at token root',
-        claimsAtRootWarning: `When enabled, this scope's mapped attributes are written at the token root
+        claimsAtRootWarning: `This scope's mapped attributes are written at the token root
             instead of being nested under 'custom'. You own collision-correctness: if a mapped
             attribute name collides with a reserved JWT claim, token issuance fails. Root-level custom
             claims may also break with future protocol or feature changes. Reference:`,
@@ -489,14 +581,33 @@ export let I18nAdminEn: I18nAdmin = {
         descAttr: `Set custom user attributes. All key / value pairs will be handles as String / JSON Value.`,
         forceLogout: `Are you sure you want to invalidate all existing sessions and delete all refresh tokens
             for this user?`,
+        groupAdmin: {
+            notManagedTitle: 'User outside your groups',
+            notManagedDesc: `This user is not a member of any group you manage, so the details stay hidden.
+                Add the user to one or more of your groups to manage it.
+                Memberships outside your groups are kept.`,
+            addToGroups: 'Add to my groups',
+        },
         lastLogin: 'Last Login',
         manualInitDesc: `The user can also be initialized here, In this case though, you need to communicate the 
             password directly.`,
         manualInit: 'Manual Initialization',
-        mfaDelete1: 'You can delete Passkeys for this users.',
-        mfaDelete2: `Caution! The deletion of a Passkey <b>cannot be reverted</b> without the user
-            doing a fully new registration.`,
-        noMfaKeys: 'This user has no registered Passkeys.',
+        mfa: {
+            otp: {
+                title: 'One Time Password',
+                mfaDelete1: 'You can delete OTPs for this users.',
+                mfaDelete2: `Caution! The deletion of an OTP <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaOtps: 'This user has no registered OTPs.',
+            },
+            webauthn: {
+                title: 'Passkeys',
+                mfaDelete1: 'You can delete Passkeys for this users.',
+                mfaDelete2: `Caution! The deletion of a Passkey <b>cannot be reverted</b> without the user
+                    doing a fully new registration.`,
+                noMfaKeys: 'This user has no registered Passkeys.',
+            },
+        },
         pkOnly1: 'This is a passkey-only account.',
         pkOnly2:
             'This means that this user uses the passwordless login and has no password set at all.',
@@ -513,5 +624,15 @@ export let I18nAdminEn: I18nAdmin = {
         css: 'Invalid CSS Value',
         origin: 'Invalid Origin',
         uri: 'Invalid URI',
+        redirectUri: {
+            comma: 'A redirect URI must not contain a comma (,)',
+            controlChar:
+                'A redirect URI must not contain control characters in a query parameter name',
+            fragment: 'A redirect URI must not contain a fragment (#)',
+            reservedKey:
+                'A redirect URI must not contain the query parameter "{{ KEY }}", because it is set by the authorization response',
+            reservedKeyLogout:
+                'A post logout redirect URI must not contain the query parameter "{{ KEY }}", because it is set on logout',
+        },
     },
 };

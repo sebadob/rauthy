@@ -42,6 +42,9 @@ export interface I18n {
         year: string;
     };
     account: {
+        noEditableAttributes?: string;
+        attributes?: string;
+        stringOrJson?: string;
         account: string;
         accType: string;
         accTypePasskeyText1: string;
@@ -65,6 +68,7 @@ export interface I18n {
         deviceName: string;
         devices: string;
         devicesDesc: string;
+        devicesEmpty?: string;
         emailUpdateConfirm: string;
         emailVerified: string;
         familyName: string;
@@ -81,6 +85,7 @@ export interface I18n {
         navEdit: string;
         navMfa: string;
         navLogout: string;
+        navBackToAdmin: string;
         other: string;
         pam: {
             addSshKey: string;
@@ -90,6 +95,15 @@ export interface I18n {
             keyType: string;
             username: string;
             validFor: string;
+        };
+        passkeys: {
+            missingAttestation: string;
+            type: string;
+            // [Default, Resident Key]
+            types: string[];
+            rkWarning: string;
+            // [Default, Resident Key]
+            typesDesc: string[];
         };
         passwordConfirm: string;
         passwordCurr: string;
@@ -109,6 +123,20 @@ export interface I18n {
             notAvailable: string;
             preferredUsername: string;
         };
+        privacy: {
+            clientId: string;
+            connectedApps: string;
+            connectedAppsDesc: string;
+            granted: string;
+            noConnectedApps: string;
+            privacy: string;
+            resource: string;
+            revoke: string;
+            revokeDesc: string;
+            scopes: string;
+            updated: string;
+            userAgent: string;
+        };
         providerLink: string;
         providerLinkDesc: string;
         providerUnlink: string;
@@ -122,6 +150,8 @@ export interface I18n {
         userEnabled: string;
         userExpiry: string;
         userVerifiedTooltip: string;
+        residentKeyTooltip: string;
+        aaguidTooltip: string;
         webIdDesc: string;
         webIdDescData: string;
         webIdExpertMode: string;
@@ -139,9 +169,12 @@ export interface I18n {
         invalidKeyUsed: string;
         login: string;
         mfaAck: string;
+        mfaOpenApp: string;
         navigateToAccount: string;
         needsUserUpdate: string;
         orLoginWith: string;
+        passkey: string;
+        passkeyNotDiscovered: string;
         password: string;
         passwordExpired: string;
         passwordForgotten: string;
@@ -150,6 +183,7 @@ export interface I18n {
         passwordResetDesc: string;
         passwordResetSuccess: string;
         expectingPasskey: string;
+        expectingOtp: string;
         requestExpires: string;
         requestExpired: string;
         signUp: string;
@@ -189,23 +223,46 @@ export interface I18n {
         cancel: string;
     };
     mfa: {
-        p1: string;
-        p2: string;
-        p3: string;
-        docLinkText: string;
+        webauthn: {
+            empty?: string;
+            title: string;
+            p1: string;
+            p2: string;
+            p3: string;
+            registerNew: string;
+            docLinkText: string;
+            unsupportedText: string;
+        };
 
+        otp: {
+            empty?: string;
+            active?: string;
+            inactive?: string;
+            title: string;
+            titleEmail: string;
+            activationCode: string;
+            code: string;
+            registerNew: string;
+            resendOtp: string;
+            sessionExpiresIn: string;
+            sessionExpired: string;
+        };
+
+        requestCanceled: string;
         errorReg: string;
         lastUsed: string;
         noKey: string;
         reAuthenticatePasskey: string;
         reAuthenticatePwd: string;
+        reAuthenticateOtp: string;
         register: string;
-        registerNew: string;
-        registerd: string;
-        registerdKeys: string;
+        registered: string;
+        registeredKeys: string;
+        registeredOtps: string;
         passkeyName: string;
         passkeyNameErr: string;
         passwordInvalid: string;
+        testPasskey?: string;
         test: string;
         testError: string;
         testSuccess: string;
@@ -232,6 +289,7 @@ export interface I18n {
     passwordReset: {
         accountLogin: string;
         badFormat: string;
+        continueSignIn: string;
         fidoLink: string;
         generate: string;
         newAccDesc1: string;

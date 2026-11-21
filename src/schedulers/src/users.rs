@@ -7,20 +7,19 @@ use rauthy_data::entity::refresh_tokens::RefreshToken;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::oidc::logout;
 use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};
 
 pub async fn user_expiry_checker() {
-    let secs = RauthyConfig::get().vars.database.sched_user_exp_mins as u64;
-    let mut interval = tokio::time::interval(Duration::from_secs(secs * 60));
+    let mut interval = tokio::time::interval(RauthyConfig::get().vars.database.sched_user_exp);
     let cleanup_after_secs = RauthyConfig::get()
         .vars
         .database
-        .sched_user_exp_delete_mins
-        .map(|s| s as u64 * 60);
+        .sched_user_exp_delete
+        .map(|s| s.as_secs());
     if cleanup_after_secs.is_none() {
         info!("Auto cleanup for expired users disabled");
     }
@@ -85,8 +84,13 @@ async fn execute(cleanup_after_secs: Option<u64>) -> Result<(), ErrorResponse> {
                     "Auto cleanup for user after being expired for {} minutes",
                     expired_since_secs / 60,
                 );
-                if let Err(err) = user.delete().await {
-                    error!(user.id, ?err, "auto cleanup - deleting user",);
+                match user.delete().await {
+                    Ok(()) => {}
+                    // another delete of the same user got there first
+                    Err(err) if err.error == ErrorResponseType::NotFound => {
+                        debug!(user.id, "auto cleanup - user already deleted");
+                    }
+                    Err(err) => error!(user.id, ?err, "auto cleanup - deleting user"),
                 }
             }
         }

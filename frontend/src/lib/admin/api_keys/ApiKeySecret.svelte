@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Section from '#lib/Section.svelte';
     import { slide } from 'svelte/transition';
-    import HiddenValueArea from '$lib5/HiddenValueArea.svelte';
-    import type { ApiKeyResponse } from '$api/types/api_keys.ts';
-    import { fetchPut } from '$api/fetch';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputPassword from '$lib5/form/InputPassword.svelte';
+    import HiddenValueArea from '#lib/HiddenValueArea.svelte';
+    import type { ApiKeyResponse } from '#api/types/api_keys.ts';
+    import { fetchPut } from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         key,
@@ -21,81 +21,123 @@
     let secret = $state('');
     let curl = $state('');
     let curlPretty = $state('');
+    let generating = $state(false);
 
     $effect(() => {
         if (key.name) {
             secret = '';
+            err = '';
         }
     });
 
     async function generateSecret() {
+        err = '';
+        generating = true;
         let res = await fetchPut<string>(`/auth/v1/api_keys/${key.name}/secret`);
 
         if (res.text) {
             secret = res.text;
-            curl = `curl -s -H 'Authorization: API-Key ${res.text}' ${window.location.origin}/auth/v1/api_keys/${key.name}/test`;
+            curl = [
+                'curl -s \\',
+                `  -H 'Authorization: API-Key ${res.text}' \\`,
+                `  '${window.location.origin}/auth/v1/api_keys/${key.name}/test'`,
+            ].join('\n');
             curlPretty = `${curl} | jq`;
         } else {
             err = res.error?.message || 'Error';
         }
+        generating = false;
     }
 </script>
 
-<p>{ta.api_key.generate1}</p>
-<p>{ta.api_key.generate2}</p>
+<div class="sections">
+    <Section title={ta.api_key.secret ?? 'Secret'}>
+        {#snippet actions()}
+            <Button level={!secret ? 1 : 2} onclick={generateSecret} isLoading={generating}>
+                {t.passwordReset.generate}
+            </Button>
+        {/snippet}
+        <p class="ui-muted-copy">{ta.api_key.generate1}</p>
+        <p class="warning">{ta.api_key.generate2}</p>
+        {#if secret}
+            <div class="secret" transition:slide={{ duration: 150 }}>
+                {#key secret}
+                    <HiddenValueArea ariaLabel="API Key" rows={2} value={secret} width="100%" />
+                {/key}
+            </div>
+        {/if}
+        {#if err}<p class="err" role="alert">{err}</p>{/if}
+    </Section>
 
-<div class="btn">
-    <Button level={!secret ? 1 : 3} onclick={generateSecret}>
-        {t.passwordReset.generate}
-    </Button>
-</div>
-
-{#if secret}
-    <div transition:slide={{ duration: 150 }} class="secret font-mono">
-        <InputPassword
-            autocomplete="off"
-            value={secret}
-            label="API Key"
-            placeholder="API Key"
-            disabled
-            showCopy
-            width="min(25rem, calc(100dvw - .5rem))"
-        />
-    </div>
-
-    <div transition:slide={{ duration: 150 }}>
-        <p>{@html ta.api_key.generate3}</p>
-        <p>
-            <span class="headerCode"><b><code>{'API-Key <api_key>'}</code></b></span>
-        </p>
-    </div>
-
-    <div transition:slide={{ duration: 150 }}>
-        <p>{@html ta.api_key.generate4}</p>
-        {#key curlPretty}
-            <HiddenValueArea ariaLabel="curl text command with jq" rows={5} value={curlPretty} />
-        {/key}
-    </div>
-
-    <div transition:slide={{ duration: 150 }}>
-        <p>{@html ta.api_key.generate5}</p>
-        {#key curlPretty}
-            <HiddenValueArea ariaLabel="curl text command simple" rows={5} value={curl} />
-        {/key}
-    </div>
-{/if}
-
-<div class="err">
-    {err}
+    {#if secret}
+        <Section title={ta.api_key.examples ?? 'Usage examples'}>
+            <p class="ui-muted-copy">{@html ta.api_key.generate3}</p>
+            <pre class="auth-example"><code>{'API-Key <api_key>'}</code></pre>
+            <div class="example">
+                <p class="ui-muted-copy">{@html ta.api_key.generate4}</p>
+                {#key curlPretty}
+                    <HiddenValueArea
+                        ariaLabel="curl text command with jq"
+                        language="bash"
+                        rows={4}
+                        value={curlPretty}
+                        width="100%"
+                    />
+                {/key}
+            </div>
+            <div class="example">
+                <p class="ui-muted-copy">{@html ta.api_key.generate5}</p>
+                {#key curl}
+                    <HiddenValueArea
+                        ariaLabel="curl text command simple"
+                        language="bash"
+                        rows={4}
+                        value={curl}
+                        width="100%"
+                    />
+                {/key}
+            </div>
+        </Section>
+    {/if}
 </div>
 
 <style>
-    .btn {
-        margin: 1rem 0;
+    .sections,
+    .example {
+        display: grid;
+        gap: var(--ui-space);
+    }
+
+    .example {
+        gap: 0.5rem;
+    }
+
+    .example p {
+        margin: 0;
+    }
+
+    pre.auth-example {
+        margin: 0;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--ui-outline);
+        background: var(--ui-container);
+        overflow: auto;
+    }
+
+    .auth-example code {
+        padding: 0;
+        background: none;
     }
 
     .secret {
-        margin-top: 1rem;
-        max-width: 40rem;
+        max-width: 54rem;
+    }
+
+    .warning {
+        max-width: 70ch;
+        padding: 0.625rem 0.75rem;
+        border-inline-start: 2px solid hsl(var(--error) / 0.55);
+        background: var(--ui-hover);
+        font-size: var(--ui-control-font-size);
     }
 </style>

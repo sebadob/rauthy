@@ -1,23 +1,19 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
-    import { fetchGet } from '$api/fetch';
-    import type { ApiKeyResponse, ApiKeysResponse } from '$api/types/api_keys.ts';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import { useParam } from '$state/param.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import ApiKeyDetails from '$lib5/admin/api_keys/ApiKeyDetails.svelte';
-    import ApiKeyAddNew from '$lib5/admin/api_keys/ApiKeyAddNew.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import type { ApiKeyResponse, ApiKeysResponse } from '#api/types/api_keys.ts';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import ApiKeyDetails from '#lib/admin/api_keys/ApiKeyDetails.svelte';
+    import ApiKeyAddNew from '#lib/admin/api_keys/ApiKeyAddNew.svelte';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -46,7 +42,7 @@
         if (!search) {
             keysFiltered = keys;
         } else if (searchOption === searchOptions[0]) {
-            keysFiltered = keys.filter(k => k.name?.includes(search));
+            keysFiltered = keys.filter(k => k.name.toLowerCase().includes(search));
         }
     });
 
@@ -74,18 +70,9 @@
 
 {err}
 
-<NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="keys"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
->
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={keys.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+<NavSub detail={!!key} onBack={() => kid.set(undefined)} error={err} buttonTilesAriaControls="keys">
+    <AdminListHeading title={ta.nav.apiKeys} count={keysFiltered.length} />
+    <ButtonAddModal level={keys.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ApiKeyAddNew {keys} onSave={onNewKey} />
     </ButtonAddModal>
     <OrderSearchBar

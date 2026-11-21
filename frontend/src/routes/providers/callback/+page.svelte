@@ -1,27 +1,33 @@
 <script lang="ts">
-    import { getProviderToken, getVerifierUpstreamFromStorage } from '$utils/helpers';
+    import PublicPage from '#lib/PublicPage.svelte';
+    import { getProviderToken, getVerifierUpstreamFromStorage } from '#utils/helpers.ts';
     import { onMount } from 'svelte';
-    import WebauthnRequest from '$lib5/WebauthnRequest.svelte';
-    import LangSelector from '$lib5/LangSelector.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
-    import { fetchGet, fetchPost, type IResponse } from '$api/fetch';
-    import type { WebauthnLoginResponse } from '$api/types/authorize.ts';
-    import type { ProviderCallbackRequest } from '$api/types/auth_provider.ts';
-    import { IS_DEV } from '$utils/constants';
-    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '$api/types/tos';
-    import TosAccept from '$lib/TosAccept.svelte';
-    import ContentCenter from '$lib/ContentCenter.svelte';
+    import WebauthnRequest from '#lib/WebauthnRequest.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useParam } from '#state/param.svelte.ts';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
+    import { fetchGet, fetchPost, type IResponse } from '#api/fetch.ts';
+    import type {
+        ActiveOtp,
+        OtpLoginResponse,
+        WebauthnLoginResponse,
+    } from '#api/types/authorize.ts';
+    import type { ProviderCallbackRequest } from '#api/types/auth_provider.ts';
+    import { IS_DEV } from '#utils/constants.ts';
+    import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
+    import TosAccept from '#lib/TosAccept.svelte';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
+    import OtpRequest from '#lib/OtpRequest.svelte';
+    import type { OtpAdditionalData } from '#mfa/otp/types.ts';
 
     let t = useI18n();
     let clientMfaForce = $state(false);
     let error = $state('');
 
-    let userId: undefined | string = $state();
     let mfaPurpose: undefined | MfaPurpose = $state();
+    let mfaKind: undefined | 'webauthn' | 'otp' = $state();
+    let activeOtps: undefined | ActiveOtp[] = $state();
 
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
@@ -61,16 +67,17 @@
         if (IS_DEV) {
             url = '/auth/v1/dev/providers_callback';
         }
-        let res = await fetchPost<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>(
-            url,
-            payload,
-        );
+        let res = await fetchPost<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >(url, payload);
 
         await handleAuthRes(res);
     });
 
     async function handleAuthRes(
-        res?: IResponse<undefined | WebauthnLoginResponse | ToSAwaitLoginResponse>,
+        res?: IResponse<
+            undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
+        >,
     ) {
         if (!res) {
             return;
@@ -83,11 +90,18 @@
             // -> all good, but needs additional passkey validation
             error = '';
             let body = res.body;
-            if (body && 'user_id' in body && 'code' in body) {
-                userId = body.user_id as string;
+            if (body && 'code' in body) {
                 mfaPurpose = { Login: body.code as string };
+                if ('active_otps' in body) {
+                    activeOtps = body.active_otps;
+                    mfaKind = 'otp';
+                } else {
+                    mfaKind = 'webauthn';
+                }
             } else {
-                console.error('did not receive a proper WebauthnLoginResponse after HTTP200');
+                console.error(
+                    'did not receive a proper OtpLoginResponse or WebauthnLoginResponse after HTTP200',
+                );
             }
         } else if (res.status === 204) {
             // in case of a 204, we have done a user federation on an existing account -> just redirect
@@ -98,7 +112,6 @@
         } else if (res.status === 206) {
             // login successful, but the user needs to accept updated ToS
             let body = res.body as ToSAwaitLoginResponse;
-            userId = body.user_id;
             tosAcceptCode = body.tos_await_code;
             tosForceAccept = body.force_accept || false;
             await fetchTos();
@@ -109,7 +122,7 @@
         } else if (res.status === 404) {
             error = 'User not found';
             setTimeout(() => {
-                window.location.replace('/auth/v1');
+                window.location.replace('/auth/v1/');
             }, 5000);
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
@@ -133,19 +146,21 @@
 
     function onToSCancel() {
         setTimeout(() => {
-            window.location.replace('/auth/v1');
+            window.location.replace('/auth/v1/');
         }, 1000);
     }
 
-    function onWebauthnError(err: string) {
+    function onMfaError(err: string) {
         error = err;
         mfaPurpose = undefined;
+        mfaKind = undefined;
     }
 
-    function onWebauthnSuccess(data?: WebauthnAdditionalData) {
+    function onMfaSuccess(data?: WebauthnAdditionalData | OtpAdditionalData) {
         if (!data) {
             // will be empty if the user needs to update values
             mfaPurpose = undefined;
+            mfaKind = undefined;
             needsValuesUpdate = true;
             return;
         }
@@ -160,20 +175,24 @@
     <title>Callback</title>
 </svelte:head>
 
-<ContentCenter>
-    {#if mfaPurpose && userId}
-        <WebauthnRequest
-            {userId}
-            purpose={mfaPurpose}
-            onSuccess={onWebauthnSuccess}
-            onError={onWebauthnError}
-        />
+<PublicPage>
+    {#if mfaPurpose}
+        {#if mfaKind == 'webauthn'}
+            <WebauthnRequest purpose={mfaPurpose} onSuccess={onMfaSuccess} onError={onMfaError} />
+        {:else if mfaKind == 'otp' && activeOtps}
+            <OtpRequest
+                {activeOtps}
+                purpose={mfaPurpose}
+                onSuccess={onMfaSuccess}
+                onError={onMfaError}
+            />
+        {/if}
     {:else if clientMfaForce}
-        <div class="btn flex-col">
+        <div class="public-card">
             <Button onclick={() => (window.location.href = '/auth/v1/account')}>Account</Button>
         </div>
     {:else if needsValuesUpdate}
-        <div>
+        <div class="public-card ui-section-stack">
             <p>{t.authorize.needsUserUpdate}</p>
             <Button onclick={() => window.location.replace('/auth/v1/account')}>
                 {t.authorize.navigateToAccount}
@@ -188,23 +207,8 @@
             {onToSCancel}
         />
     {:else if error}
-        <div class="err">
+        <div class="public-card err">
             {error}
         </div>
     {/if}
-</ContentCenter>
-
-<ThemeSwitch absolute />
-<LangSelector absolute />
-
-<style>
-    .btn {
-        margin: 5px 0;
-        display: flex;
-    }
-
-    .flex-col {
-        display: flex;
-        flex-direction: column;
-    }
-</style>
+</PublicPage>

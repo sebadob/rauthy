@@ -1,5 +1,4 @@
 use actix_web::web;
-use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use std::sync::OnceLock;
@@ -13,7 +12,7 @@ pub static HASH_CHANNELS: OnceLock<(
     flume::Sender<PasswordHashMessage>,
     flume::Receiver<PasswordHashMessage>,
 )> = OnceLock::new();
-pub static HASH_AWAIT_WARN_TIME: OnceLock<u32> = OnceLock::new();
+pub static HASH_AWAIT_WARN_SECS: OnceLock<u64> = OnceLock::new();
 
 pub struct HashPassword {
     plain_text: String,
@@ -103,9 +102,7 @@ pub async fn run() {
 
 #[inline]
 fn check_await_threshold(instant: &Instant) {
-    // This cast from u128 -> u64 is "unsafe", but in reality, this threshold can never be reached
-    // in this context. Having the HASH_AWAIT_WARN_TIME as u64 is a small bonus though.
-    if instant.elapsed().as_millis() as u64 > *HASH_AWAIT_WARN_TIME.get().unwrap() as u64 {
+    if instant.elapsed().as_millis() as u64 >= *HASH_AWAIT_WARN_SECS.get().unwrap() * 1000 {
         warn!(
             "Password hash request await warn time of {} ms exceeded",
             instant.elapsed().as_millis()
@@ -121,10 +118,8 @@ fn hash_password(mut msg: HashPassword) {
         Version::V0x13,
         (*ARGON2_PARAMS.get().unwrap()).clone(),
     );
-    let salt = SaltString::generate(&mut OsRng);
-
     let hash = argon2
-        .hash_password(msg.plain_text.as_bytes(), &salt)
+        .hash_password(msg.plain_text.as_bytes())
         .expect("Error hashing the Password")
         .to_string();
 
@@ -178,7 +173,7 @@ mod tests {
         let argon2_params = argon2::Params::new(32768, 3, 2, None).unwrap();
         let _ = ARGON2_PARAMS.set(argon2_params);
         let _ = HASH_CHANNELS.set(flume::bounded(1));
-        let _ = HASH_AWAIT_WARN_TIME.set(100);
+        let _ = HASH_AWAIT_WARN_SECS.set(100);
 
         let handle = tokio::spawn(run());
         time::sleep(Duration::from_secs(1)).await;

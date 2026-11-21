@@ -1,30 +1,29 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import { useTrigger } from '$state/callback.svelte';
-    import NavSub from '$lib/nav/NavSub.svelte';
-    import SearchBar from '$lib/search_bar/SearchBar.svelte';
-    import Tabs from '$lib/tabs/Tabs.svelte';
-    import { fetchGet } from '$api/fetch';
-    import type { PamGroupResponse, PamHostSimpleResponse, PamUserResponse } from '$api/types/pam';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import type {
+        PamGroupResponse,
+        PamHostSimpleResponse,
+        PamUserResponse,
+    } from '#api/types/pam.ts';
     import { onMount } from 'svelte';
-    import NavButtonTile from '$lib/nav/NavButtonTile.svelte';
-    import PAMGroupDetails from '$lib/admin/pam/groups/PAMGroupDetails.svelte';
-    import PamHostAdd from '$lib/admin/pam/hosts/PAMHostAdd.svelte';
-    import PAMHostDetails from '$lib/admin/pam/hosts/PAMHostDetails.svelte';
-    import PAMGroupAdd from '$lib/admin/pam/groups/PAMGroupAdd.svelte';
-    import PAMUserAdd from '$lib/admin/pam/users/PAMUserAdd.svelte';
-    import UserPicture from '$lib/UserPicture.svelte';
-    import PAMUserDetails from '$lib/admin/pam/users/PAMUserDetails.svelte';
-    import type { PamGroupsSorted } from '$lib/admin/pam/types';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import PAMGroupDetails from '#lib/admin/pam/groups/PAMGroupDetails.svelte';
+    import PamHostAdd from '#lib/admin/pam/hosts/PAMHostAdd.svelte';
+    import PAMHostDetails from '#lib/admin/pam/hosts/PAMHostDetails.svelte';
+    import PAMGroupAdd from '#lib/admin/pam/groups/PAMGroupAdd.svelte';
+    import PAMUserAdd from '#lib/admin/pam/users/PAMUserAdd.svelte';
+    import UserPicture from '#lib/UserPicture.svelte';
+    import PAMUserDetails from '#lib/admin/pam/users/PAMUserDetails.svelte';
+    import type { PamGroupsSorted } from '#lib/admin/pam/types.js';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
     let searchValue = $state('');
@@ -100,6 +99,16 @@
         }
     });
 
+    function clearSelection() {
+        if (isUser) {
+            selectedUser = undefined;
+        } else if (isGroup) {
+            selectedGroup = undefined;
+        } else {
+            selectedHost = undefined;
+        }
+    }
+
     async function fetchGroups() {
         let res = await fetchGet<PamGroupResponse[]>('/auth/v1/pam/groups');
         if (res.body) {
@@ -148,12 +157,12 @@
 </script>
 
 <NavSub
-    paddingTop="2.35rem"
-    buttonTilesAriaControls="scopes"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
+    detail={!!((isUser && selectedUser) || (isGroup && selectedGroup) || (isHost && selectedHost))}
+    onBack={clearSelection}
+    buttonTilesAriaControls="pam"
 >
-    <ButtonAddModal bind:ref={refAddNew} level={2} bind:closeModal alignRight>
+    <AdminListHeading title="PAM" />
+    <ButtonAddModal level={2} bind:closeModal alignRight>
         {#if isUser}
             <PAMUserAdd onCreate={onCreateUser} />
         {:else if isGroup}
@@ -211,12 +220,10 @@
                 {:else}
                     {#each groupsFiltered as group (group.id)}
                         <NavButtonTile
+                            badge={group.typ}
                             onclick={() => (selectedGroup = group)}
                             selected={group.id === selectedGroup?.id}
                         >
-                            <span class="typ font-mono">
-                                {group.typ[0].toUpperCase()}
-                            </span>
                             {group.name}
                         </NavButtonTile>
                     {/each}
@@ -278,12 +285,6 @@
         font-size: 0.8rem;
     }
 
-    .navBtn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
     .navList {
         max-height: calc(100dvh - 10.25rem);
         margin-top: 0.5rem;
@@ -302,7 +303,9 @@
         overflow-x: clip;
     }
 
-    .typ {
-        color: hsl(var(--accent));
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 </style>

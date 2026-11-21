@@ -1,32 +1,39 @@
 use crate::cust_validation::*;
-use crate::oidc::JwkKeyPairAlg;
+use crate::oidc::{GrantType, JwkKeyPairAlg};
 use rauthy_common::regex::{
-    RE_CLIENT_ID, RE_CLIENT_NAME, RE_GROUPS, RE_SCOPE_SPACE, RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
+    RE_CLIENT_ID, RE_CLIENT_ID_STRICT, RE_CLIENT_NAME, RE_CLIENT_URI, RE_GROUPS, RE_SCOPE_SPACE,
+    RE_TOKEN_ENDPOINT_AUTH_METHOD, RE_URI,
 };
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 // https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata
 #[derive(Validate, Deserialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct DynamicClientRequest {
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
-    #[validate(custom(function = "validate_vec_grant_types"))]
-    pub grant_types: Vec<String>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: cannot be empty
+    #[validate(length(min = 1))]
+    pub grant_types: Vec<GrantType>,
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub client_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
+    /// or `,` (RE_CLIENT_URI)
+    #[validate(regex(
+        path = "*RE_CLIENT_URI",
+        code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
+    ))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/-]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
     /// Validation: `^(client_secret_post|client_secret_basic|none)$`
     #[validate(regex(
@@ -34,7 +41,6 @@ pub struct DynamicClientRequest {
         code = "client_secret_post|client_secret_basic|none"
     ))]
     pub token_endpoint_auth_method: Option<String>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub token_endpoint_auth_signing_alg: Option<JwkKeyPairAlg>,
     // Rauthy will only accept the following defaults
     // `response_type=code`
@@ -66,8 +72,12 @@ pub struct DynamicClientRequest {
     // - default_acr_values
     // - initiate_login_uri
     // - request_uris (may come in the future with `request_uri` during login)
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
+    /// or `,` (RE_CLIENT_URI)
+    #[validate(regex(
+        path = "*RE_CLIENT_URI",
+        code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
+    ))]
     pub post_logout_redirect_uri: Option<String>,
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub backchannel_logout_uri: Option<String>,
@@ -82,22 +92,35 @@ pub struct EphemeralClientRequest {
         code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
     ))]
     pub client_id: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub client_name: Option<String>,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
+    /// or `,` (RE_CLIENT_URI)
+    #[validate(regex(
+        path = "*RE_CLIENT_URI",
+        code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
+    ))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/-]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
+    /// Deliberately a `Vec<String>` and not a `Vec<GrantType>`, unlike every other grant-type
+    /// field: this document is fetched from a remote source and
+    /// `ephemeral_clients.ignore_unknown_auth_flows` (#1644) strips unsupported grant types
+    /// *after* deserialization. Typing this as the enum would make `serde` reject the whole
+    /// document before the strip could run, which would defeat the opt-in entirely.
+    ///
+    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|urn:ietf:params:oauth:grant-type:token-exchange|password|refresh_token)$>`
     #[validate(custom(function = "validate_vec_grant_type"))]
     pub grant_types: Option<Vec<String>>,
     /// Validation: `60 <= access_token_lifetime <= 86400`
@@ -108,66 +131,77 @@ pub struct EphemeralClientRequest {
     pub scope: Option<String>,
     pub require_auth_time: Option<bool>,
 
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub access_token_signed_response_alg: Option<JwkKeyPairAlg>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_signed_response_alg: Option<JwkKeyPairAlg>,
+    /// RFC 8707 resource indicators this ephemeral client may request. When present, a
+    /// requested `resource` is validated against this list; when absent, `resource` is
+    /// only honored if `ephemeral_clients.danger_allow_unvalidated_resource` is enabled.
+    ///
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
+    pub allowed_resources: Option<Vec<String>>,
 }
 
 #[derive(Validate, Deserialize, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct NewClientRequest {
-    /// Validation: `^[a-z0-9-_/]{2,128}$`
-    #[validate(regex(
-        path = "*RE_CLIENT_ID",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
-    ))]
+    /// Validation: `^[a-zA-Z0-9._\-]{2,256}$`
+    #[validate(regex(path = "*RE_CLIENT_ID_STRICT", code = "^[a-zA-Z0-9._\\-]{2,256}$"))]
     pub id: String,
     /// Validation: None - will not be deserialized
     #[serde(skip_deserializing)]
     pub secret: Option<Vec<u8>>,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
+    #[validate(regex(
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
+    ))]
     pub name: Option<String>,
     /// Validation: bool
     pub confidential: bool,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
+    /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
+    /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
+    /// precedence over this value, which in turn takes precedence over `local`. `None` falls back
+    /// to `local`. Stored but not used yet, the consent screen will.
+    ///
+    /// Validation: `^(local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
+    /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch.
+    /// Checked when the client is saved, not by `validate()`, so that an error never echoes the
+    /// value.
+    #[serde(default)]
+    pub consent: Option<String>,
 }
 
 #[derive(Deserialize, Validate, ToSchema)]
 #[cfg_attr(debug_assertions, derive(Serialize))]
 pub struct UpdateClientRequest {
-    /// Validation: `^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$`
+    /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}`
     #[validate(regex(
-        path = "*RE_CLIENT_ID",
-        code = "^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]{2,256}$"
+        path = "*RE_CLIENT_NAME",
+        code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}()._-]{2,128}"
     ))]
-    pub id: String,
-    /// Validation: `[a-zA-Z0-9À-ÿ-\\s]{2,128}`
-    #[validate(regex(path = "*RE_CLIENT_NAME", code = "[a-zA-Z0-9À-ɏ-\\s]{2,128}"))]
     pub name: Option<String>,
     pub confidential: bool,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub redirect_uris: Vec<String>,
-    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+$>`
+    /// Validation: `Vec<Valid URI with a non-empty host part, without '#' or ','>`
     #[validate(custom(function = "validate_vec_uri"))]
     pub post_logout_redirect_uris: Option<Vec<String>>,
     /// Validation: `Vec<^(http|https)://[a-z0-9.:-]+$>`
     #[validate(custom(function = "validate_vec_origin"))]
     pub allowed_origins: Option<Vec<String>>,
     pub enabled: bool,
-    /// Validation: `Vec<^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$>`
-    #[validate(custom(function = "validate_vec_grant_types"))]
-    pub flows_enabled: Vec<String>,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
+    /// Validation: cannot be empty
+    #[validate(length(min = 1))]
+    pub flows_enabled: Vec<GrantType>,
     pub access_token_alg: JwkKeyPairAlg,
-    /// Validation: `^(RS256|RS384|RS512|EdDSA)$`
     pub id_token_alg: JwkKeyPairAlg,
     /// Validation: `10 <= auth_code_lifetime <= 300`
     #[validate(range(min = 10, max = 300))]
@@ -185,17 +219,58 @@ pub struct UpdateClientRequest {
     #[validate(custom(function = "validate_vec_challenge"))]
     pub challenges: Option<Vec<String>>,
     pub force_mfa: bool,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
+    /// or `,` (RE_CLIENT_URI)
+    #[validate(regex(
+        path = "*RE_CLIENT_URI",
+        code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
+    ))]
     pub client_uri: Option<String>,
     /// Validation: `Vec<^[a-zA-Z0-9\+.@/-]{0,48}$>`
     #[validate(custom(function = "validate_vec_contact"))]
     pub contacts: Option<Vec<String>>,
+    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub backchannel_logout_uri: Option<String>,
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
     #[validate(regex(path = "*RE_GROUPS", code = "^[a-zA-Z0-9-_/,:*\\s]{2,64}$"))]
     pub restrict_group_prefix: Option<String>,
+    /// Admin-defined custom claims emitted into `client_credentials` tokens.
+    /// Validation: JSON object, max 1024 serialized characters
+    #[serde(default)]
+    #[validate(custom(function = "validate_claims"))]
+    pub claims: Option<serde_json::Value>,
+    /// When `true`, `claims` are emitted at the token root instead of nested
+    /// under `custom`. Collisions with reserved claims fail token issuance.
+    #[serde(default)]
+    pub claims_at_root: bool,
+    /// RFC 8707 allow-list of resource indicators this client may request. An empty /
+    /// missing list rejects any `resource` request parameter with `invalid_target`.
+    ///
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
+    pub allowed_resources: Option<Vec<String>>,
+    /// Audiences that are always added to this client's tokens, independent of any
+    /// `resource` request parameter. Useful for clients that cannot send a `resource`.
+    ///
+    /// Validation: `Vec<^[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+$>`
+    #[validate(custom(function = "validate_vec_resource"))]
+    pub default_aud: Option<Vec<String>>,
+    /// Consent source: `local` or an `https://` URL serving the consent content. Only used with
+    /// `consent.enable`. A `[[consent.sources]]` entry for the requested `resource` takes
+    /// precedence over this value, which in turn takes precedence over `local`. `None` falls back
+    /// to `local`. Stored but not used yet, the consent screen will.
+    ///
+    /// Validation: `^(local|https://[a-zA-Z0-9,.:/_\\-&?=~!$'()*+%@]+)$`, at most 1024 bytes,
+    /// no userinfo, no fragment and no `lang` query key, which Rauthy appends on each fetch.
+    /// Checked when the client is saved, not by `validate()`, so that an error never echoes the
+    /// value.
+    #[serde(default)]
+    pub consent: Option<String>,
+    /// RFC 8693: when `true`, an `actor_token` in a token exchange must have been issued to
+    /// this client; any other is rejected.
+    #[serde(default)]
+    pub actor_same_client: bool,
     #[validate(nested)]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -206,6 +281,26 @@ pub struct ClientSecretRequest {
     /// Validation: Value between 1 and 24
     #[validate(range(min = 1, max = 24))]
     pub cache_current_hours: Option<u8>,
+    /// Optional externally-provisioned client secret. When given, it is written to the client
+    /// (encrypted with the active ENC_KEY) instead of generating a new random one. This makes
+    /// continuous declarative provisioning against a live instance possible (the bootstrap
+    /// `Plain` secret only applies to an empty database), the same way e.g. auth providers are
+    /// provisioned with their `client_secret` via the API.
+    ///
+    /// Validation: length of exactly `SECRET_LEN_CLIENTS` (64) characters
+    #[validate(length(min = 64, max = 64))]
+    pub secret: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+pub struct ClientValidateRedirectUriRequest {
+    /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
+    /// or `,` (RE_CLIENT_URI)
+    #[validate(regex(
+        path = "*RE_CLIENT_URI",
+        code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
+    ))]
+    pub redirect_uri: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
@@ -213,8 +308,12 @@ pub struct ScimClientRequestResponse {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
     pub bearer_token: String,
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
-    #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$"))]
+    /// Validation: URI with a non-empty host part, e.g. `https://app.example.com`, without `#`
+    /// or `,` (RE_CLIENT_URI)
+    #[validate(regex(
+        path = "*RE_CLIENT_URI",
+        code = "^(?:[a-zA-Z][a-zA-Z0-9+.\\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\\-&?=~!$'()*+%@]*)?$"
+    ))]
     pub base_uri: String,
     pub sync_groups: bool,
     /// Validation: `^[a-zA-Z0-9-_/,:*\\s]{2,64}$`
@@ -235,7 +334,7 @@ pub struct ClientResponse {
     pub post_logout_redirect_uris: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_origins: Option<Vec<String>>,
-    pub flows_enabled: Vec<String>,
+    pub flows_enabled: Vec<GrantType>,
     pub access_token_alg: JwkKeyPairAlg,
     pub id_token_alg: JwkKeyPairAlg,
     pub auth_code_lifetime: i32,
@@ -253,6 +352,16 @@ pub struct ClientResponse {
     pub backchannel_logout_uri: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub restrict_group_prefix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub claims: Option<serde_json::Value>,
+    pub claims_at_root: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_resources: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_aud: Option<Vec<String>>,
+    pub actor_same_client: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub consent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimClientRequestResponse>,
 }
@@ -297,8 +406,51 @@ pub struct DynamicClientResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_client_uri: Option<String>,
 
-    pub grant_types: Vec<String>,
+    pub grant_types: Vec<GrantType>,
     pub id_token_signed_response_alg: String,
     pub token_endpoint_auth_method: String,
     pub token_endpoint_auth_signing_alg: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    /// `validate()` must not check `consent`: its error would echo the URL, which may carry
+    /// userinfo credentials, into the 400 body and the debug log. `consent` is validated in
+    /// `Client::validate_consent` instead.
+    const CONSENT_WITH_SECRET: &str = "https://user:secret@consent.example.com/x";
+
+    #[test]
+    fn new_client_validation_skips_the_consent() {
+        let req = serde_json::from_value::<NewClientRequest>(json!({
+            "id": "client",
+            "confidential": false,
+            "redirect_uris": ["https://client.example.com/cb"],
+            "consent": CONSENT_WITH_SECRET,
+        }))
+        .unwrap();
+        req.validate().unwrap();
+    }
+
+    #[test]
+    fn update_client_validation_skips_the_consent() {
+        let req = serde_json::from_value::<UpdateClientRequest>(json!({
+            "confidential": false,
+            "redirect_uris": ["https://client.example.com/cb"],
+            "enabled": true,
+            "flows_enabled": ["authorization_code"],
+            "access_token_alg": "EdDSA",
+            "id_token_alg": "EdDSA",
+            "auth_code_lifetime": 60,
+            "access_token_lifetime": 1800,
+            "scopes": ["openid"],
+            "default_scopes": ["openid"],
+            "force_mfa": false,
+            "consent": CONSENT_WITH_SECRET,
+        }))
+        .unwrap();
+        req.validate().unwrap();
+    }
 }

@@ -1,0 +1,43 @@
+use crate::language::Language;
+use crate::rauthy_config::{RauthyConfig, VarsTemplate};
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+pub struct I18nEmailOtp<'a> {
+    pub subject: &'a str,
+    pub header: &'a str,
+    pub text: Option<&'a str>,
+}
+
+impl From<&'static VarsTemplate> for I18nEmailOtp<'_> {
+    fn from(tpl: &'static VarsTemplate) -> Self {
+        Self {
+            subject: tpl.subject.as_ref(),
+            header: tpl.header.as_ref(),
+            text: tpl.text.as_deref(),
+        }
+    }
+}
+
+impl I18nEmailOtp<'_> {
+    pub fn build(lang: &Language) -> Self {
+        let tpls = &RauthyConfig::get().vars.templates.email_otp;
+        match lang {
+            Language::Cs => (&tpls.cs).into(),
+            Language::De => (&tpls.de).into(),
+            Language::En => (&tpls.en).into(),
+            Language::Es => (&tpls.es).into(),
+            Language::Fr => (&tpls.fr).into(),
+            Language::It => (&tpls.it).into(),
+            Language::Ja => (&tpls.ja).into(),
+            Language::Ko => (&tpls.ko).into(),
+            Language::Nb => (&tpls.nb).into(),
+            Language::Nl => (&tpls.nl).into(),
+            Language::Pl => (&tpls.pl).into(),
+            Language::Pt => (&tpls.pt).into(),
+            Language::Ru => (&tpls.ru).into(),
+            Language::Uk => (&tpls.uk).into(),
+            Language::ZhHans => (&tpls.zhhans).into(),
+        }
+    }
+}

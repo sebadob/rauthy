@@ -11,6 +11,8 @@ use rauthy_common::{is_hiqlite, password_hasher};
 use rauthy_data::ListenScheme;
 use rauthy_data::database::{Cache, DB};
 use rauthy_data::email::mailer;
+use rauthy_data::email::mailer::EMail;
+use rauthy_data::email::mailer_callback::EMailCallback;
 use rauthy_data::entity;
 use rauthy_data::entity::pictures::UserPicture;
 use rauthy_data::events::health_watch::watch_health;
@@ -32,28 +34,33 @@ use std::cmp::max;
 use std::error::Error;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tokio::sync::mpsc;
-
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
-pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Error>> {
-    let (tx_email, rx_email) = mpsc::channel::<mailer::EMail>(16);
+pub async fn run(
+    config_file: String,
+    secrets_file: String,
+    test_mode: bool,
+) -> Result<(), Box<dyn Error>> {
+    let (tx_email, rx_email) = mpsc::channel::<(EMail, EMailCallback)>(16);
     let (tx_events, rx_events) = flume::unbounded();
     let (tx_events_router, rx_events_router) = flume::unbounded();
 
     info!("Initializing Config");
     let (rauthy_config, node_config) = RauthyConfig::build(
         config_file,
+        secrets_file,
         tx_email.clone(),
         tx_events.clone(),
         tx_events_router.clone(),
     )
     .await?;
     rauthy_config.init_static();
-    init_static_vars::trigger();
+    init_static_vars::trigger().await;
 
     if !logging::is_log_fmt_json() {
         println!(
@@ -83,6 +90,9 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
     }
 
     RauthyConfig::debug_logs();
+    if let Err(err) = rauthy_data::migration::bootstrap::purge_expired_generated_secrets().await {
+        warn!("Could not purge bootstrap generated-secret container: {err}");
+    }
 
     // init BEFORE Hiqlite to avoid issues in case of misconfiguration
     rauthy_data::ipgeo::init_geo().await;
@@ -98,8 +108,17 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
     debug!("Starting Password Hasher");
     tokio::spawn(password_hasher::run());
 
+    debug!("Waiting for Raft-Node to be in sync with the cluster");
+    if let Err(err) = DB::hql()
+        .wait_for_cluster_sync_timeout(Duration::from_secs(30))
+        .await
+    {
+        // This should never happen in reality. Syncs should even be done in ms rather than seconds.
+        error!("Waiting for Raft-cluster sync timed out: {err}");
+    }
+
     debug!("Applying database migrations");
-    DB::migrate().await.expect("Database migration error");
+    let previous_db_version = DB::migrate().await.expect("Database migration error");
 
     debug!("Starting Events handler");
     EventNotifier::init_notifiers(tx_email).await.unwrap();
@@ -113,7 +132,9 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
     tokio::spawn(watch_health());
 
     // Loop, because you could get into a race condition when recovery a HA Leader after lost volume
-    while let Err(err) = version_migration::manual_version_migrations().await {
+    while let Err(err) =
+        version_migration::manual_version_migrations(previous_db_version.clone()).await
+    {
         error!("Error during version migration: {err:?}");
         time::sleep(Duration::from_secs(1)).await;
     }
@@ -124,6 +145,9 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
     DB::hql().clear_cache(Cache::Html).await?;
     // whole App cache to make sure config changes are always updated
     DB::hql().clear_cache(Cache::App).await?;
+    // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
+    // anymore. They are rebuilt from their document on the next request.
+    DB::hql().clear_cache(Cache::ClientEphemeral).await?;
 
     #[cfg(debug_assertions)]
     {
@@ -131,7 +155,6 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
         DB::hql().clear_cache(Cache::DeviceCode).await?;
         DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
         DB::hql().clear_cache(Cache::ClientDynamic).await?;
-        DB::hql().clear_cache(Cache::ClientEphemeral).await?;
         DB::hql().clear_cache(Cache::ClientSecret).await?;
         DB::hql().clear_cache(Cache::DPoPNonce).await?;
         DB::hql().clear_cache(Cache::JwksRemote).await?;
@@ -144,6 +167,7 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
         DB::hql().clear_cache(Cache::User).await?;
         DB::hql().clear_cache(Cache::Webauthn).await?;
         DB::hql().clear_cache(Cache::PAM).await?;
+        DB::hql().clear_cache(Cache::ConsentContent).await?;
     }
 
     {
@@ -164,6 +188,18 @@ pub async fn run(config_file: String, test_mode: bool) -> Result<(), Box<dyn Err
     }
 
     rauthy_schedulers::spawn();
+
+    if RauthyConfig::get().vars.ldap.enable {
+        let ldap = &RauthyConfig::get().vars.ldap;
+        let tls = match (&ldap.key_path, &ldap.cert_path) {
+            _ if ldap.plain_text => None,
+            (Some(key), Some(cert)) => {
+                Some(tls::load_server_config(key.clone(), cert.clone()).await)
+            }
+            _ => Some(tls::load_tls().await),
+        };
+        tokio::spawn(rauthy_ldap::run(tls.map(Arc::new)));
+    }
 
     if RauthyConfig::get().vars.server.metrics_enable {
         server_with_metrics().await?;
@@ -225,6 +261,9 @@ async fn server_with_metrics() -> std::io::Result<()> {
         // no endpoint means it will not expose one, only collect data
         .exclude("/favicon.ico")
         .exclude("/metrics")
+        // Requests that match no route (scans) as one label value, not
+        // one series per path.
+        .mask_unmatched_patterns("UNKNOWN")
         .build()
         .unwrap();
 
@@ -245,12 +284,27 @@ async fn server_with_metrics() -> std::io::Result<()> {
             .wrap(metrics_collector.clone())
             .service(oidc::get_well_known)
             .service(oidc::get_well_known_oauth)
+            .service(oidc::get_well_known_oauth_rfc8414)
+            .service(oidc::get_well_known_oauth_rfc8414_trailing)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services())
-            .service(generic::catch_all);
+            // Register the catch-all for every standard HTTP method, so that non-GET scan
+            // requests (POST/PUT/...) are also caught by the pre-blacklisting in `catch_all`
+            // instead of just receiving a 405 Method Not Allowed.
+            .service(
+                web::resource("/{_:.*}")
+                    .route(web::get().to(generic::catch_all))
+                    .route(web::post().to(generic::catch_all))
+                    .route(web::put().to(generic::catch_all))
+                    .route(web::delete().to(generic::catch_all))
+                    .route(web::head().to(generic::catch_all))
+                    // no `web::options()` helper exists in actix-web, use the generic method route
+                    .route(web::method(actix_web::http::Method::OPTIONS).to(generic::catch_all))
+                    .route(web::patch().to(generic::catch_all)),
+            );
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
@@ -330,12 +384,27 @@ async fn server_without_metrics() -> std::io::Result<()> {
             .wrap(default_headers())
             .service(oidc::get_well_known)
             .service(oidc::get_well_known_oauth)
+            .service(oidc::get_well_known_oauth_rfc8414)
+            .service(oidc::get_well_known_oauth_rfc8414_trailing)
             .service(fed_cm::get_fed_cm_well_known)
             // Important: Do not move this middleware do need the least amount of computing
             // for blacklisted IPs -> middlewares are executed in reverse order -> this one first
             .wrap(RauthyIpBlacklistMiddleware)
             .service(api_services())
-            .service(generic::catch_all);
+            // Register the catch-all for every standard HTTP method, so that non-GET scan
+            // requests (POST/PUT/...) are also caught by the pre-blacklisting in `catch_all`
+            // instead of just receiving a 405 Method Not Allowed.
+            .service(
+                web::resource("/{_:.*}")
+                    .route(web::get().to(generic::catch_all))
+                    .route(web::post().to(generic::catch_all))
+                    .route(web::put().to(generic::catch_all))
+                    .route(web::delete().to(generic::catch_all))
+                    .route(web::head().to(generic::catch_all))
+                    // no `web::options()` helper exists in actix-web, use the generic method route
+                    .route(web::method(actix_web::http::Method::OPTIONS).to(generic::catch_all))
+                    .route(web::patch().to(generic::catch_all)),
+            );
 
         #[cfg(not(target_os = "windows"))]
         if matches!(
@@ -488,6 +557,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_admin_config_encryption_html)
                 .service(html::get_admin_config_jwks_html)
                 .service(html::get_admin_config_policy_html)
+                .service(html::get_admin_config_tos_html)
                 .service(html::get_admin_docs_html)
                 .service(html::get_admin_events_html)
                 .service(html::get_admin_groups_html)
@@ -502,6 +572,7 @@ fn api_services() -> actix_web::Scope {
                 .service(html::get_fed_cm_html)
                 .service(generic::get_auth_check)
                 .service(generic::get_auth_check_admin)
+                .service(generic::get_keep_alive)
                 .service(generic::get_timezones)
                 .service(generic::post_update_language)
                 .service(generic::get_version)
@@ -542,8 +613,11 @@ fn api_services() -> actix_web::Scope {
                 .service(oidc::get_session_xsrf)
                 .service(clients::get_clients)
                 .service(clients::get_client_by_id)
+                .service(clients::get_client_favicon)
                 .service(clients::get_client_logo)
+                .service(clients::put_client_favicon)
                 .service(clients::put_client_logo)
+                .service(clients::delete_client_favicon)
                 .service(clients::delete_client_logo)
                 .service(clients::get_client_secret)
                 .service(clients::post_clients)
@@ -555,6 +629,7 @@ fn api_services() -> actix_web::Scope {
                 .service(clients::put_clients_dyn)
                 .service(clients::get_forward_auth_oidc)
                 .service(clients::get_forward_auth_callback)
+                .service(clients::post_client_validate_uri)
                 .service(generic::get_login_time)
                 .service(fed_cm::get_fed_cm_accounts)
                 .service(fed_cm::get_fed_cm_config)
@@ -615,6 +690,8 @@ fn api_services() -> actix_web::Scope {
                 .service(users::get_user_devices)
                 .service(users::put_user_device_name)
                 .service(users::delete_user_device)
+                .service(users::get_user_consents)
+                .service(users::delete_user_consent)
                 .service(users::get_user_webid_data)
                 .service(users::put_user_webid_data)
                 .service(users::get_user_email_confirm)
@@ -647,17 +724,21 @@ fn api_services() -> actix_web::Scope {
                 .service(users::post_webauthn_reg_start)
                 .service(users::post_webauthn_reg_finish)
                 .service(users::post_webauthn_auth_start)
+                .service(users::post_webauthn_auth_start_login)
                 .service(users::post_webauthn_auth_finish)
+                .service(users::post_webauthn_auth_finish_login)
                 .service(users::delete_webauthn)
                 .service(generic::get_password_policy)
                 .service(generic::put_password_policy)
                 .service(generic::post_pow)
                 .service(generic::get_search)
                 .service(groups::get_groups)
+                .service(groups::get_group_users)
                 .service(groups::post_group)
                 .service(groups::put_group)
                 .service(groups::delete_group)
                 .service(roles::get_roles)
+                .service(roles::get_role_users)
                 .service(roles::post_role)
                 .service(roles::put_role)
                 .service(roles::delete_role)
@@ -685,7 +766,14 @@ fn api_services() -> actix_web::Scope {
                 .service(generic::get_ready)
                 .service(swagger_ui::get_openapi_doc)
                 .service(swagger_ui::get_swagger_ui)
-                .service(html::get_static_assets),
+                .service(users::get_user_otps)
+                .service(users::post_user_otp)
+                .service(users::put_user_otp)
+                .service(users::delete_user_otp)
+                .service(users::post_otp_auth_start_login)
+                .service(users::post_otp_auth_resend)
+                .service(users::post_otp_auth_finish_login)
+                .service(html::get_static_assets), // catch-all GET routes
         )
 }
 

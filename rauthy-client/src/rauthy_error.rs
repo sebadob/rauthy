@@ -45,8 +45,8 @@ impl From<chacha20poly1305::Error> for RauthyError {
     }
 }
 
-impl From<bincode::error::DecodeError> for RauthyError {
-    fn from(value: bincode::error::DecodeError) -> Self {
+impl From<bincode_next::error::DecodeError> for RauthyError {
+    fn from(value: bincode_next::error::DecodeError) -> Self {
         Self::Internal(Cow::from(value.to_string()))
     }
 }

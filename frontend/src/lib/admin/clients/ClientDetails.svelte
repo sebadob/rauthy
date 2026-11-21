@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Tabs from '$lib5/tabs/Tabs.svelte';
-    import type { ClientResponse } from '$api/types/clients.ts';
-    import ClientConfig from '$lib5/admin/clients/ClientConfig.svelte';
-    import ClientSecret from '$lib5/admin/clients/ClientSecret.svelte';
-    import ClientDelete from '$lib5/admin/clients/ClientDelete.svelte';
-    import ClientBranding from '$lib5/admin/clients/branding/ClientBranding.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import IconOffice from '#icons/IconOffice.svelte';
+    import Tabs from '#lib/tabs/Tabs.svelte';
+    import type { ClientResponse } from '#api/types/clients.ts';
+    import ClientConfig from '#lib/admin/clients/ClientConfig.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import ClientBranding from '#lib/admin/clients/branding/ClientBranding.svelte';
 
     let {
         client,
@@ -24,32 +24,46 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const tabs = [ta.nav.config, 'Secret', 'Branding', t.common.delete];
+    const tabs = [
+        ta.clients.settings.general,
+        t.authorize.login,
+        ta.clients.settings.tokens,
+        ta.clients.settings.integrations,
+        ta.clients.branding.title,
+    ];
     let selected = $state(tabs[0]);
-
-    let focusFirst: undefined | (() => void) = $state();
-
-    $effect(() => {
-        if (client.id) {
-            requestAnimationFrame(() => {
-                focusFirst?.();
-            });
-        }
-    });
+    let section = $derived(tabs.indexOf(selected));
 </script>
 
+<EntityHeader title={client.name || client.id} subtitle={client.id}>
+    {#snippet actions()}
+        {#key client.id}
+            <EntityDelete
+                url={`/auth/v1/clients/${client.id}`}
+                name={client.id}
+                message={ta.clients.delete1}
+                onDelete={onSave}
+            />
+        {/key}
+    {/snippet}
+    <IconOffice width="1.75rem" />
+</EntityHeader>
+
 <div class="flex">
-    <Tabs {tabs} bind:selected bind:focusFirst />
+    <Tabs {tabs} bind:selected />
 </div>
 
 <div class="details">
-    {#if selected === ta.nav.config}
-        <ClientConfig {client} {clients} {scopesAll} {onSave} />
-    {:else if selected === 'Secret'}
-        <ClientSecret {client} />
-    {:else if selected === 'Branding'}
+    <div hidden={section >= 4}>
+        <ClientConfig
+            {client}
+            {clients}
+            {scopesAll}
+            {onSave}
+            bind:section={() => section, value => (selected = tabs[value])}
+        />
+    </div>
+    {#if selected === ta.clients.branding.title}
         <ClientBranding {client} />
-    {:else if selected === t.common.delete}
-        <ClientDelete {client} {onSave} />
     {/if}
 </div>

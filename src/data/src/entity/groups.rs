@@ -58,7 +58,7 @@ impl Group {
             DB::pg_execute(sql, &[&new_group.id, &new_group.name, &new_group.meta]).await?;
         }
 
-        DB::hql().delete(Cache::App, IDX_GROUPS).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS))]).await?;
 
         Ok(new_group)
     }
@@ -97,9 +97,7 @@ impl Group {
             txn.commit().await?;
         }
 
-        let client = DB::hql();
-        client.clear_cache(Cache::User).await?;
-        client.delete(Cache::App, IDX_GROUPS).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS)), (Cache::User, None)]).await?;
 
         Ok(())
     }
@@ -165,7 +163,7 @@ impl Group {
                 DB::pg_execute(sql, &[&new_group.meta, &new_group.id]).await?;
             }
 
-            client.delete(Cache::App, IDX_GROUPS).await?;
+            DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS))]).await?;
             return Ok(new_group);
         }
 
@@ -174,12 +172,7 @@ impl Group {
             let mut txn: Vec<(&str, Params)> = Vec::with_capacity(users.len() + 1);
 
             for mut user in users {
-                user.groups = Some(
-                    user.groups
-                        .as_ref()
-                        .unwrap()
-                        .replace(&group.name, &new_group.name),
-                );
+                user.rename_group(&group.name, &new_group.name);
                 user.save_txn_append(&mut txn);
             }
 
@@ -201,7 +194,7 @@ impl Group {
             let txn = cl.transaction().await?;
 
             for mut user in users {
-                user.delete_group(&group.name);
+                user.rename_group(&group.name, &new_group.name);
                 user.save_txn(&txn).await?;
             }
             DB::pg_txn_append(
@@ -214,8 +207,7 @@ impl Group {
             txn.commit().await?;
         }
 
-        client.clear_cache(Cache::User).await?;
-        client.delete(Cache::App, IDX_GROUPS).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(IDX_GROUPS)), (Cache::User, None)]).await?;
 
         Ok(new_group)
     }

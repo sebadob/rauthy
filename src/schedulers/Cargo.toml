@@ -9,6 +9,7 @@ license.workspace = true
 rauthy-common = { path = "../common" }
 rauthy-error = { path = "../error" }
 rauthy-data = { path = "../data" }
+rauthy-notify = { path = "../notify" }
 rauthy-service = { path = "../service" }
 
 actix-web = { workspace = true }
@@ -17,6 +18,10 @@ cron = { workspace = true }
 hiqlite = { workspace = true }
 openssl = { workspace = true }
 openssl-sys = { workspace = true }
+reqwest = { workspace = true }
 semver = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
+
+[lints]
+workspace = true

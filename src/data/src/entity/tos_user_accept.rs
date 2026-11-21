@@ -28,7 +28,8 @@ impl ToSUserAccept {
 
         let sql = r#"
 INSERT INTO tos_user_accept (user_id, tos_ts, accept_ts, location)
-VALUES ($1, $2, $3, $4)"#;
+VALUES ($1, $2, $3, $4)
+ON CONFLICT DO NOTHING"#;
         if is_hiqlite() {
             DB::hql()
                 .execute(sql, params!(&user_id, tos_ts, accept_ts, &location))

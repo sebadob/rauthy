@@ -1,8 +1,6 @@
 use crate::cli_args::ArgsGenConfig;
 use crate::utils::StdError;
 use crate::utils::stdin::{PromptPassword, read_line_stdin, read_line_stdin_yes};
-use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
 use argon2::{Algorithm, Argon2, PasswordHasher, Version};
 use chrono::Utc;
 use cidr::IpCidr;
@@ -105,12 +103,12 @@ admin_email = '{}'"#,
                 r#"
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-pasword_argon2id = '{}'"#,
+password_argon2id = '{}'"#,
                 hash
             )?;
         }
@@ -397,10 +395,9 @@ pub_url = '{}'"#,
 proxy_mode = {}
 
 # A list of trusted proxy CIDRs. When `proxy_mode = true`
-# or `peer_ip_header_name` is set, these are mandatory to
-# be able to extract the real client IP properly and safely
-# to prevent IP header spoofing. All requests witha
-# different source will be blocked.
+# these are mandatory to be able to extract the real client
+# IP properly and safely to prevent IP header spoofing. All
+# requests with a different source will be blocked.
 #
 # default: []
 # overwritten by: TRUSTED_PROXIES - single String, \n separated values
@@ -723,8 +720,7 @@ password policy you must match. At least:
                 .p_cost(8)
                 .build()?;
             let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-            let salt = SaltString::generate(&mut OsRng);
-            let hashed = argon2.hash_password(plain.as_bytes(), &salt)?;
+            let hashed = argon2.hash_password(plain.as_bytes())?;
 
             plain.zeroize();
 
@@ -811,10 +807,9 @@ The default path's where Rauthy will look for TLS certificates are
             println!(
                 r#"
 Provide a list of trusted proxy CIDRs. When `proxy_mode = true`
-or `peer_ip_header_name` is set, these are mandatory to
-be able to extract the real client IP properly and safely
-to prevent IP header spoofing. All requests with a
-different source will be blocked."#
+these are mandatory to be able to extract the real client IP
+properly and safely to prevent IP header spoofing. All requests
+with a different source will be blocked."#
             );
 
             'outer: loop {

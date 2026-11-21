@@ -1,28 +1,24 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
     import { onMount } from 'svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import { fetchGet } from '$api/fetch';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import { fetchGet } from '#api/fetch.ts';
     import type {
         UserAttrConfigResponse,
         UserAttrConfigValueResponse,
-    } from '$api/types/user_attrs.ts';
-    import type { ScopeResponse } from '$api/types/scopes.ts';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import { useParam } from '$state/param.svelte';
-    import ScopeDetails from '$lib5/admin/scopes/ScopeDetails.svelte';
+    } from '#api/types/user_attrs.ts';
+    import type { ScopeResponse } from '#api/types/scopes.ts';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import { useParam } from '#state/param.svelte.ts';
+    import ScopeDetails from '#lib/admin/scopes/ScopeDetails.svelte';
     import ScopeAddNew from './ScopeAddNew.svelte';
-    import { isDefaultScope } from '$utils/helpers';
-    import { useTrigger } from '$state/callback.svelte';
+    import { isDefaultScope } from '#utils/helpers.ts';
 
     let ta = useI18nAdmin();
-
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -100,17 +96,13 @@
 </script>
 
 <NavSub
-    paddingTop="2.35rem"
+    detail={!!scope}
+    onBack={() => sid.set(undefined)}
+    error={err}
     buttonTilesAriaControls="scopes"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
 >
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={scopes.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <AdminListHeading title={ta.nav.scopes} count={scopesFiltered.length} />
+    <ButtonAddModal level={scopes.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ScopeAddNew onSave={onAddNew} {scopes} />
     </ButtonAddModal>
     <OrderSearchBar
@@ -125,13 +117,14 @@
     {#snippet buttonTiles()}
         <div class="scopesList">
             {#each scopesFiltered as scope (scope.id)}
-                <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
-                    {scope.name}
-                    {#if isDefaultScope(scope.name)}
-                        <span class="default">
-                            <i>default</i>
-                        </span>
-                    {/if}
+                <NavButtonTile
+                    badge={isDefaultScope(scope.name)
+                        ? (ta.scopes.defaultBadge ?? 'default')
+                        : undefined}
+                    onclick={() => sid.set(scope.id)}
+                    selected={sid.get() === scope.id}
+                >
+                    <span class="scope-name">{scope.name}</span>
                 </NavButtonTile>
             {/each}
         </div>
@@ -153,9 +146,9 @@
 </ContentAdmin>
 
 <style>
-    .default {
-        font-size: 0.8rem;
-        color: hsla(var(--text) / 0.5);
+    .scope-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .scopesList {

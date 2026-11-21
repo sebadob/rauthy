@@ -8,6 +8,7 @@ use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::continuation_token::ContinuationToken;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
@@ -15,6 +16,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::ErrorResponse;
 use rauthy_service::oidc::logout;
 use std::cmp::max;
+use std::str::FromStr;
 use tokio::task;
 use tracing::error;
 use validator::Validate;
@@ -39,7 +41,8 @@ pub async fn get_sessions(
     principal: ReqPrincipal,
     Query(params): Query<PaginationParams>,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Read)?;
+    // group admins get a read-only view of all sessions for user debugging
+    principal.validate_api_key_or_group_admin(AccessGroup::Sessions, AccessRights::Read)?;
     params.validate()?;
 
     let state = entity::sessions::SessionState::from(
@@ -56,7 +59,7 @@ pub async fn get_sessions(
         let offset = params.offset.unwrap_or(0) as i64;
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
-            Some(ContinuationToken::try_from(token.as_str())?)
+            Some(ContinuationToken::from_str(token.as_str())?)
         } else {
             None
         };
@@ -88,7 +91,7 @@ pub async fn get_sessions(
             resp.push(SessionResponse {
                 id: &s.id,
                 user_id: s.user_id.as_deref(),
-                is_mfa: s.is_mfa,
+                is_mfa: s.is_mfa_completed(),
                 state: rauthy_api_types::sessions::SessionState::from(
                     s.state()
                         .unwrap_or(rauthy_data::entity::sessions::SessionState::Unknown),
@@ -124,6 +127,10 @@ pub async fn delete_sessions(principal: ReqPrincipal) -> Result<HttpResponse, Er
     principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
 
     Session::invalidate_all().await?;
+    // device tokens first, see `RefreshTokenDevice::invalidate_with_refresh_tokens_for_user`
+    if RauthyConfig::get().vars.access.token_revoke_device_tokens {
+        RefreshTokenDevice::invalidate_all().await?;
+    }
     RefreshToken::invalidate_all().await?;
     IssuedToken::revoke_all().await?;
 
@@ -163,14 +170,18 @@ pub async fn delete_sessions_for_user(
     path: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Sessions, AccessRights::Delete)?;
+    principal.validate_api_key_or_group_admin(AccessGroup::Sessions, AccessRights::Delete)?;
 
     let uid = path.into_inner();
     let user = User::find(uid).await?;
+    // a group admin may force-logout a user it manages
+    principal.validate_group_admin_can_manage(user.roles_iter(), user.groups_iter())?;
 
     Session::invalidate_for_user(&user.id).await?;
-    RefreshToken::invalidate_for_user(&user.id).await?;
-    IssuedToken::revoke_for_user(&user.id, true).await?;
+    let revoke_device_tokens = RauthyConfig::get().vars.access.token_revoke_device_tokens;
+    RefreshTokenDevice::invalidate_with_refresh_tokens_for_user(&user.id, revoke_device_tokens)
+        .await?;
+    IssuedToken::revoke_for_user(&user.id, revoke_device_tokens).await?;
     logout::execute_backchannel_logout(None, Some(user.id)).await?;
 
     Event::force_logout(user.email).send().await?;

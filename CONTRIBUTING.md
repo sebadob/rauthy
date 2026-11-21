@@ -383,6 +383,20 @@ In such a case, you can `just test-backend`, which will start the test backend w
 you then `just test your_unit_test`, it will only run the single integration test without starting
 the backend automatically.
 
+### Password Reset UI Checks
+
+From `frontend/`, run `npm run test:webauthn` for the endpoint-routing checks
+(CI runs this too). After generating the WASM modules with `just build-wasm`
+from the repository root, run `npm run test:password-reset` for the built reset
+page in Chromium. Install Playwright's Chromium or set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an existing binary.
+
+These checks intercept all browser requests and use an in-memory virtual authenticator;
+they do not contact Rauthy or create accounts. Keep browser/protocol debug logging off.
+Reset context and credentials are generated in memory, without traces or fixtures.
+Backend authorization, token expiry/replay, and subsequent real-account login require
+separate isolated integration tests; the UI checks do not prove those properties.
+
 ## Building a Container Image
 
 If you want to build a container image for testing, you cannot `just build`, because you won't have

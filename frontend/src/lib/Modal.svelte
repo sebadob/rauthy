@@ -1,22 +1,26 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import IconStop from '$icons/IconStop.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import Button from '#lib/button/Button.svelte';
+    import IconStop from '#icons/IconStop.svelte';
 
     let {
         showModal = $bindable(),
         closeModal = $bindable(),
         onClose,
         strict = false,
+        expanded = $bindable(),
         prerender = false,
+        ariaLabel,
         children,
     }: {
         showModal?: boolean;
         closeModal?: () => void;
         onClose?: () => void;
         strict?: boolean;
+        expanded?: boolean;
         prerender?: boolean;
+        ariaLabel?: string;
         children: Snippet;
     } = $props();
 
@@ -120,7 +124,10 @@ We need the onclick listener here to make easy click-outside work.
 <dialog
     bind:this={refDialog}
     aria-modal="true"
+    aria-label={ariaLabel}
     data-strict={strict}
+    class:expandable={expanded !== undefined}
+    class:expanded
     onclose={() => {
         showModal = false;
         onClose?.();
@@ -129,8 +136,8 @@ We need the onclick listener here to make easy click-outside work.
 >
     <div bind:this={refContent} role="none" onclick={stopPropagation}>
         {#if !strict}
-            <div class="relative">
-                <div class="absolute close">
+            <div class="relative close-anchor">
+                <div class="absolute close corner-control">
                     <Button ariaLabel={t.common.close} invisible onclick={close}>
                         <span class="closeIcon">
                             <IconStop color="currentColor" width="1.2rem" />
@@ -147,6 +154,32 @@ We need the onclick listener here to make easy click-outside work.
         -->
         {#if prerender || showModal}
             {@render children()}
+            {#if expanded !== undefined}
+                <div class="expand corner-control" title={t.common.expandContent}>
+                    <Button
+                        ariaLabel={t.common.expandContent}
+                        ariaPressed={expanded}
+                        invisible
+                        onclick={() => (expanded = !expanded)}
+                    >
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            {#if expanded}
+                                <path d="M6 10h4V6m8 4h-4V6M6 14h4v4m8-4h-4v4" />
+                            {:else}
+                                <path d="M10 6H6v4m8-4h4v4M6 14v4h4m8-4v4h-4" />
+                            {/if}
+                        </svg>
+                    </Button>
+                </div>
+            {/if}
         {/if}
     </div>
 </dialog>
@@ -211,5 +244,110 @@ We need the onclick listener here to make easy click-outside work.
             right: -0.4rem;
             cursor: pointer;
         }
+    }
+
+    @media (max-width: 800px) {
+        :global(.admin-shell) dialog > :global(div) {
+            padding: 24px;
+        }
+    }
+    :global(.admin-shell) dialog :global(.modal) {
+        max-width: 100%;
+        width: min(640px, calc(100dvw - 96px));
+    }
+    :global(.admin-shell) dialog:not(:global(.branding-preview *)) {
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        padding: 0;
+        background: var(--ui-surface);
+        max-width: calc(100dvw - 32px);
+        box-shadow: 0 18px 60px #0003;
+    }
+    :global(.admin-shell) dialog:not(:global(.branding-preview *)) > :global(div) {
+        padding: var(--dialog-padding, 32px);
+        box-shadow: none;
+    }
+    :global(.admin-shell) dialog:not(:global(.branding-preview *))::backdrop {
+        background: #0006;
+    }
+    :global(.admin-shell) dialog:not(.expandable, :global(.branding-preview *)) .close {
+        top: max(-20px, calc(4px - var(--dialog-padding, 32px)));
+        right: max(-20px, calc(4px - var(--dialog-padding, 32px)));
+    }
+
+    :global(.admin-shell) dialog {
+        max-height: calc(100dvh - 32px);
+        overflow: hidden;
+    }
+    :global(.admin-shell) dialog > :global(div) {
+        max-height: calc(100dvh - 34px);
+        overflow: auto;
+    }
+
+    :global(.admin-shell) dialog.expanded {
+        max-width: 100dvw;
+        max-height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    :global(.admin-shell) dialog.expanded > div {
+        max-height: 100dvh;
+    }
+
+    dialog.expandable {
+        --modal-corner-size: 40px;
+        --modal-corner-inset: clamp(6px, 1vw, 10px);
+    }
+
+    .expandable .close-anchor {
+        position: static;
+    }
+
+    .expandable .corner-control {
+        position: absolute;
+        inset: auto;
+        inset-inline-end: var(--modal-corner-inset);
+        z-index: 1;
+    }
+
+    .expandable .close {
+        inset-block-start: var(--modal-corner-inset);
+    }
+
+    .expandable .expand {
+        inset-block-end: var(--modal-corner-inset);
+    }
+
+    .expandable .corner-control :global(button) {
+        --ui-button-height: var(--modal-corner-size);
+        --ui-button-min-height: var(--modal-corner-size);
+        width: var(--modal-corner-size);
+    }
+
+    .expandable .corner-control :global(svg) {
+        width: 22px;
+        height: 22px;
+    }
+
+    .expandable .closeIcon {
+        color: inherit;
+    }
+
+    .expandable .close:hover .closeIcon {
+        color: hsl(var(--error));
+    }
+
+    .expand :global(button[aria-pressed='true']) {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
+    }
+
+    :global(.admin-shell) dialog :global(.meta) {
+        max-width: 100%;
+    }
+    :global(.admin-shell) dialog :global(form) {
+        max-width: 100%;
+        min-width: 0;
     }
 </style>

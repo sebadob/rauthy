@@ -18,5 +18,6 @@ export interface UserValuesPreferredUsername {
     immutable: boolean;
     blacklist: string[];
     pattern_html: string;
+    pattern_hint?: string;
     email_fallback: boolean;
 }

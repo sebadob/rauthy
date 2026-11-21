@@ -2,10 +2,14 @@ use crate::database::{Cache, DB};
 use crate::entity::auth_providers::ProviderMfaLogin;
 use crate::entity::clients_dyn::ClientDyn;
 use crate::entity::clients_scim::ClientScim;
+use crate::entity::consent_sources::ConsentSource;
 use crate::entity::jwk::JwkKeyPairAlg;
+use crate::entity::refresh_tokens::PgDeletedJtis;
 use crate::entity::scopes::Scope;
+use crate::entity::user_consents::SQL_CONSENT_DELETE_BY_CLIENT;
 use crate::entity::users::User;
-use crate::rauthy_config::RauthyConfig;
+use crate::http_client::fetch_bounded;
+use crate::rauthy_config::{RauthyConfig, VarsConsent, VarsEphemeralClients};
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
@@ -18,23 +22,37 @@ use rauthy_api_types::clients::{
     ClientResponse, DynamicClientRequest, DynamicClientResponse, EphemeralClientRequest,
     NewClientRequest, ScimClientRequestResponse,
 };
-use rauthy_common::constants::{APPLICATION_JSON, CACHE_TTL_APP, SECRET_LEN_CLIENTS};
-use rauthy_common::utils::{get_rand, real_ip_from_req};
-use rauthy_common::{http_client, is_hiqlite};
+use rauthy_api_types::oidc::GrantType;
+#[cfg(debug_assertions)]
+use rauthy_common::constants::RAUTHY_VERSION;
+use rauthy_common::constants::{CACHE_TTL_APP, SECRET_LEN_CLIENTS};
+use rauthy_common::is_hiqlite;
+use rauthy_common::utils::{csv_remove, get_rand, real_ip_from_req};
+use rauthy_common::validation::validate_redirect_uri;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::Url;
-use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
+use std::net::IpAddr;
 use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
 use zeroize::Zeroize;
+
+pub const SQL_INSERT: &str = r#"
+INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
+post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
+auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
+client_uri, contacts, backchannel_logout_uri, restrict_group_prefix, allowed_resources,
+default_aud, created_micros, consent)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+$18, $19, $20, $21, $22, $23, $24, $25, $26)"#;
 
 static SQL_SAVE: &str = r#"
 UPDATE clients
@@ -42,8 +60,10 @@ SET name = $1, enabled = $2, confidential = $3, secret = $4, secret_kid = $5, re
     post_logout_redirect_uris = $7, allowed_origins = $8, flows_enabled = $9, access_token_alg = $10,
     id_token_alg = $11, auth_code_lifetime = $12, access_token_lifetime = $13, scopes = $14,
     default_scopes = $15, challenge = $16, force_mfa= $17, client_uri = $18, contacts = $19,
-    backchannel_logout_uri = $20, restrict_group_prefix = $21
-WHERE id = $22"#;
+    backchannel_logout_uri = $20, restrict_group_prefix = $21, claims = $22,
+    claims_at_root = $23, allowed_resources = $24, default_aud = $25, consent = $26,
+    actor_same_client = $27
+WHERE id = $28"#;
 
 /**
 # OIDC Client
@@ -81,6 +101,31 @@ pub struct Client {
     pub contacts: Option<String>,
     pub backchannel_logout_uri: Option<String>,
     pub restrict_group_prefix: Option<String>,
+    // Admin-defined custom claims, serialized JSON object. We don't store
+    // `serde_json::Value` directly, because it might produce a
+    // `Bincode: Serde(AnyNotSupported)`. Emitted into `client_credentials`
+    // tokens; see `TokenSet::build_access_token`.
+    pub claims: Option<Vec<u8>>,
+    // When `true`, `claims` are emitted at the token root (flattened) instead of
+    // nested under `custom`, guarded by `validate_no_reserved_collision()`.
+    pub claims_at_root: bool,
+    /// RFC 8707 allow-list of resource indicators this client may request (CSV).
+    pub allowed_resources: Option<String>,
+    /// Audiences always added to this client's tokens, independent of any request (CSV).
+    pub default_aud: Option<String>,
+    /// Creation time of this client, never changed afterward. Tells a client apart from a
+    /// deleted one with the same `id`, everything issued to a client carries a copy of it.
+    /// Micros, because a client may be deleted and recreated within the same second.
+    /// `None` for clients created before this field existed.
+    pub created_micros: Option<i64>,
+    /// Consent source: `local` or an `https://` URL, at most 1024 bytes. A
+    /// `[[consent.sources]]` entry for the requested `resource` takes precedence over this
+    /// value. `None` or an invalid value falls back to `local`, see [`Client::consent_source`].
+    #[serde(default)]
+    pub consent: Option<String>,
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    #[serde(default)]
+    pub actor_same_client: bool,
 }
 
 impl Debug for Client {
@@ -91,8 +136,9 @@ impl Debug for Client {
         redirect_uris: {}, post_logout_redirect_uris: {:?}, allowed_origins: {:?}, \
         flows_enabled: {}, access_token_alg: {}, id_token_alg: {}, auth_code_lifetime: {}, \
         access_token_lifetime: {}, scopes: {}, default_scopes: {}, challenge: {:?}, force_mfa: {}, \
-        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?} \
-        }}",
+        client_uri: {:?}, contacts: {:?}, backchannel_logout_uri: {:?}, restrict_group_prefix: {:?}, \
+        claims: {:?}, claims_at_root: {}, allowed_resources: {:?}, default_aud: {:?}, \
+        created_micros: {:?}, consent: {:?}, actor_same_client: {} }}",
             self.id,
             self.name,
             self.enabled,
@@ -113,6 +159,13 @@ impl Debug for Client {
             self.contacts,
             self.backchannel_logout_uri,
             self.restrict_group_prefix,
+            self.claims.as_deref().map(String::from_utf8_lossy),
+            self.claims_at_root,
+            self.allowed_resources,
+            self.default_aud,
+            self.created_micros,
+            self.consent,
+            self.actor_same_client,
         )
     }
 }
@@ -135,19 +188,12 @@ impl Client {
         };
         let mut client = Client::try_from(client_req)?;
         client.secret_kid = kid;
-
-        let sql = r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-$18, $19, $20, $21, $22)"#;
+        client.created_micros = Some(Utc::now().timestamp_micros());
 
         if is_hiqlite() {
             DB::hql()
                 .execute(
-                    sql,
+                    SQL_INSERT,
                     params!(
                         &client.id,
                         &client.name,
@@ -170,13 +216,17 @@ $18, $19, $20, $21, $22)"#;
                         &client.client_uri,
                         &client.contacts,
                         &client.backchannel_logout_uri,
-                        &client.restrict_group_prefix
+                        &client.restrict_group_prefix,
+                        &client.allowed_resources,
+                        &client.default_aud,
+                        client.created_micros,
+                        &client.consent
                     ),
                 )
                 .await?;
         } else {
             DB::pg_execute(
-                sql,
+                SQL_INSERT,
                 &[
                     &client.id,
                     &client.name,
@@ -200,10 +250,15 @@ $18, $19, $20, $21, $22)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &client.allowed_resources,
+                    &client.default_aud,
+                    &client.created_micros,
+                    &client.consent,
                 ],
             )
             .await?;
         }
+        Self::delete_cache_for(&client.id).await?;
 
         Ok(client)
     }
@@ -217,18 +272,12 @@ $18, $19, $20, $21, $22)"#;
             .clone()
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
-        let client = Self::try_from_dyn_reg(client_req, origin_header)?;
+        let mut client = Self::try_from_dyn_reg(client_req, origin_header)?;
+        client.created_micros = Some(Utc::now().timestamp_micros());
 
         let created = Utc::now().timestamp();
         let (_secret_plain, registration_token) = Self::generate_new_secret()?;
 
-        let sql_1 = r#"
-INSERT INTO clients (id, name, enabled, confidential, secret, secret_kid, redirect_uris,
-post_logout_redirect_uris, allowed_origins, flows_enabled, access_token_alg, id_token_alg,
-auth_code_lifetime, access_token_lifetime, scopes, default_scopes, challenge, force_mfa,
-client_uri, contacts, backchannel_logout_uri, restrict_group_prefix)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-$21, $22)"#;
         let sql_2 = r#"
 INSERT INTO
 clients_dyn (id, created, registration_token, token_endpoint_auth_method)
@@ -238,7 +287,7 @@ VALUES ($1, $2, $3, $4)"#;
             DB::hql()
                 .txn([
                     (
-                        sql_1,
+                        SQL_INSERT,
                         params!(
                             &client.id,
                             &client.name,
@@ -261,7 +310,11 @@ VALUES ($1, $2, $3, $4)"#;
                             &client.client_uri,
                             &client.contacts,
                             &client.backchannel_logout_uri,
-                            &client.restrict_group_prefix
+                            &client.restrict_group_prefix,
+                            &client.allowed_resources,
+                            &client.default_aud,
+                            client.created_micros,
+                            &client.consent
                         ),
                     ),
                     (
@@ -281,7 +334,7 @@ VALUES ($1, $2, $3, $4)"#;
 
             DB::pg_txn_append(
                 &txn,
-                sql_1,
+                SQL_INSERT,
                 &[
                     &client.id,
                     &client.name,
@@ -305,6 +358,10 @@ VALUES ($1, $2, $3, $4)"#;
                     &client.contacts,
                     &client.backchannel_logout_uri,
                     &client.restrict_group_prefix,
+                    &client.allowed_resources,
+                    &client.default_aud,
+                    &client.created_micros,
+                    &client.consent,
                 ],
             )
             .await?;
@@ -322,6 +379,7 @@ VALUES ($1, $2, $3, $4)"#;
 
             txn.commit().await?;
         };
+        Self::delete_cache_for(&client.id).await?;
 
         let client_dyn = ClientDyn {
             id: client.id.clone(),
@@ -334,53 +392,97 @@ VALUES ($1, $2, $3, $4)"#;
         client.into_dynamic_client_response(client_dyn, true)
     }
 
-    // Deletes a client
+    /// Deletes the client with its refresh tokens and user consents, with `consent.enable` also
+    /// all legacy refresh tokens (`client_id` NULL) of all users, and revokes the access tokens
+    /// of the deleted refresh tokens.
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
-        let sql = "DELETE FROM clients WHERE id = $1";
-        if is_hiqlite() {
-            DB::hql().execute(sql, params!(&self.id)).await?;
-        } else {
-            DB::pg_execute(sql, &[&self.id]).await?;
+        #[cfg(debug_assertions)]
+        if !RAUTHY_VERSION.starts_with("0.37.") && !RAUTHY_VERSION.starts_with("0.38.") {
+            todo!(
+                "Remove legacy refresh tokens (`client_id` NULL) as a whole: delete them with a \
+                migration, then drop the cleanup in Client::delete() and their acceptance in \
+                validate_and_refresh_token() and RefreshToken::is_for_client()"
+            );
         }
 
         self.delete_cache().await?;
 
-        // We only clean up the cache. The database uses foreign key a cascade.
-        if self.is_dynamic() {
-            ClientDyn::delete_from_cache(&self.id).await?;
+        let drop_legacy = RauthyConfig::get().vars.consent.enable;
+        if is_hiqlite() {
+            let stmts = hql_delete_statements(drop_legacy)
+                .into_iter()
+                .map(|(sql, binds_id)| {
+                    if binds_id {
+                        (sql, params!(self.id.as_str()))
+                    } else {
+                        (sql, params!())
+                    }
+                })
+                .collect::<Vec<_>>();
+            for res in DB::hql().txn(stmts).await? {
+                res?;
+            }
+        } else {
+            let mut cl = DB::pg().await?;
+            // read committed, like `UserConsent::revoke`, whose lock order this follows
+            let txn = cl
+                .build_transaction()
+                .isolation_level(tokio_postgres::IsolationLevel::ReadCommitted)
+                .start()
+                .await?;
+            let mut jtis = PgDeletedJtis::default();
+            for (sql, binds_id) in pg_delete_statements(drop_legacy) {
+                if binds_id {
+                    jtis.delete(&txn, sql, &[&self.id]).await?;
+                } else {
+                    jtis.delete(&txn, sql, &[]).await?;
+                }
+            }
+            jtis.revoke(&txn).await?;
+            txn.commit().await?;
         }
+
+        self.delete_cached_secrets().await?;
+        // `clients_dyn` cascades in the database
+        let dyn_client = if self.is_dynamic() {
+            Some((Cache::App, Some(ClientDyn::get_cache_entry(&self.id))))
+        } else {
+            None
+        };
+        DB::cache_delete_delayed(
+            [(Cache::App, Some(Self::cache_idx(&self.id)))]
+                .into_iter()
+                .chain(dyn_client),
+        )
+        .await?;
 
         Ok(())
     }
 
     pub async fn delete_cache(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .delete(Cache::App, Self::cache_idx(&self.id))
-            .await?;
-
+        DB::cache_delete_delayed([(Cache::App, Some(Self::cache_idx(&self.id)))]).await?;
         Ok(())
     }
 
     pub async fn delete_cache_for(id: &str) -> Result<(), ErrorResponse> {
-        DB::hql().delete(Cache::App, Self::cache_idx(id)).await?;
+        DB::cache_delete_delayed([(Cache::App, Some(Self::cache_idx(id)))]).await?;
         Ok(())
     }
 
     // Returns a client by id without its secret.
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
-        let client = DB::hql();
-        if let Some(slf) = client.get(Cache::App, Self::cache_idx(&id)).await? {
+        if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
         };
 
         let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
-            client.query_as_one(sql, params!(id)).await?
+            DB::hql().query_as_one(sql, params!(id)).await?
         } else {
             DB::pg_query_one(sql, &[&id]).await?
         };
 
-        client
+        DB::hql()
             .put(Cache::App, Self::cache_idx(&slf.id), &slf, CACHE_TTL_APP)
             .await?;
 
@@ -451,7 +553,7 @@ VALUES ($1, $2, $3, $4)"#;
             return Self::find(id).await;
         }
 
-        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, &id).await? {
+        if let Some(slf) = DB::hql().get(Cache::ClientEphemeral, id.clone()).await? {
             return Ok(slf);
         }
 
@@ -462,7 +564,13 @@ VALUES ($1, $2, $3, $4)"#;
                 Cache::ClientEphemeral,
                 id,
                 &slf,
-                Some(RauthyConfig::get().vars.ephemeral_clients.cache_lifetime as i64),
+                Some(
+                    RauthyConfig::get()
+                        .vars
+                        .ephemeral_clients
+                        .cache_lifetime
+                        .as_secs() as i64,
+                ),
             )
             .await?;
 
@@ -474,11 +582,18 @@ VALUES ($1, $2, $3, $4)"#;
         let like = format!("%{scope_name}%");
         let sql = "SELECT * FROM clients WHERE scopes LIKE $1 OR default_scopes LIKE $1";
 
-        let clients = if is_hiqlite() {
+        let mut clients: Vec<Self> = if is_hiqlite() {
             DB::hql().query_as(sql, params!(like)).await?
         } else {
             DB::pg_query(sql, &[&like], 0).await?
         };
+        // LIKE matches substrings - keep only real members
+        clients.retain(|c| {
+            c.scopes
+                .split(',')
+                .chain(c.default_scopes.split(','))
+                .any(|s| s == scope_name)
+        });
 
         Ok(clients)
     }
@@ -494,6 +609,8 @@ VALUES ($1, $2, $3, $4)"#;
             .backchannel_logout_uri
             .clone()
             .filter(|uri| !uri.is_empty());
+        let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
+        let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
 
         txn.push((
             SQL_SAVE,
@@ -519,6 +636,12 @@ VALUES ($1, $2, $3, $4)"#;
                 contacts,
                 backchannel_logout_uri,
                 &self.restrict_group_prefix,
+                &self.claims,
+                self.claims_at_root,
+                allowed_resources,
+                default_aud,
+                &self.consent,
+                self.actor_same_client,
                 &self.id
             ),
         ));
@@ -538,6 +661,8 @@ VALUES ($1, $2, $3, $4)"#;
             .backchannel_logout_uri
             .clone()
             .filter(|uri| !uri.is_empty());
+        let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
+        let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
 
         DB::pg_txn_append(
             txn,
@@ -564,18 +689,17 @@ VALUES ($1, $2, $3, $4)"#;
                 &contacts,
                 &backchannel_logout_uri,
                 &self.restrict_group_prefix,
+                &self.claims,
+                &self.claims_at_root,
+                &allowed_resources,
+                &default_aud,
+                &self.consent,
+                &self.actor_same_client,
                 &self.id,
             ],
         )
         .await?;
 
-        Ok(())
-    }
-
-    pub async fn save_cache(&self) -> Result<(), ErrorResponse> {
-        DB::hql()
-            .put(Cache::App, Client::cache_idx(&self.id), self, CACHE_TTL_APP)
-            .await?;
         Ok(())
     }
 
@@ -590,6 +714,8 @@ VALUES ($1, $2, $3, $4)"#;
             .backchannel_logout_uri
             .clone()
             .filter(|uri| !uri.is_empty());
+        let allowed_resources = self.allowed_resources.clone().filter(|r| !r.is_empty());
+        let default_aud = self.default_aud.clone().filter(|a| !a.is_empty());
 
         if is_hiqlite() {
             DB::hql()
@@ -617,6 +743,12 @@ VALUES ($1, $2, $3, $4)"#;
                         contacts,
                         backchannel_logout_uri,
                         &self.restrict_group_prefix,
+                        &self.claims,
+                        self.claims_at_root,
+                        allowed_resources,
+                        default_aud,
+                        &self.consent,
+                        self.actor_same_client,
                         self.id.clone()
                     ),
                 )
@@ -646,17 +778,47 @@ VALUES ($1, $2, $3, $4)"#;
                     &contacts,
                     &backchannel_logout_uri,
                     &self.restrict_group_prefix,
+                    &self.claims,
+                    &self.claims_at_root,
+                    &allowed_resources,
+                    &default_aud,
+                    &self.consent,
+                    &self.actor_same_client,
                     &self.id,
                 ],
             )
             .await?;
         }
-
-        DB::hql()
-            .put(Cache::App, Client::cache_idx(&self.id), self, CACHE_TTL_APP)
-            .await?;
+        // `self` may be stale, e.g. from before a delete and recreate of the same id
+        self.delete_cache().await?;
 
         Ok(())
+    }
+
+    /// Atomically migrates the encrypted secret to a new key, but only while the row still
+    /// uses `old_kid`. Returns `true` when the update applied, `false` when the secret was
+    /// changed concurrently (then the migration must not clobber it). Used by the encryption
+    /// key migration (`service::encryption::migrate_encryption_alg`).
+    pub async fn update_secret_migrated(
+        &self,
+        secret: Vec<u8>,
+        new_kid: String,
+        old_kid: &str,
+    ) -> Result<bool, ErrorResponse> {
+        let sql = r#"
+UPDATE clients
+SET secret = $1, secret_kid = $2
+WHERE id = $3 AND (secret_kid = $4 OR secret_kid IS NULL)"#;
+
+        let rows_affected = if is_hiqlite() {
+            DB::hql()
+                .execute(sql, params!(secret, new_kid, self.id.clone(), old_kid))
+                .await?
+        } else {
+            DB::pg_execute(sql, &[&secret, &new_kid, &self.id, &old_kid]).await?
+        };
+
+        Ok(rows_affected == 1)
     }
 
     pub async fn update_dynamic(
@@ -668,7 +830,6 @@ VALUES ($1, $2, $3, $4)"#;
             .clone()
             .unwrap_or_else(|| "client_secret_basic".to_string());
 
-        let mut new_client = Self::try_from_dyn_reg(client_req, None)?;
         let current = Self::find(client_dyn.id.clone()).await?;
         if !current.is_dynamic() {
             return Err(ErrorResponse::new(
@@ -677,12 +838,19 @@ VALUES ($1, $2, $3, $4)"#;
             ));
         }
 
-        // we need to keep some old and possibly user-modified values
-        new_client.id = current.id;
-        new_client.force_mfa = current.force_mfa;
-        new_client.scopes = current.scopes;
-        new_client.default_scopes = current.default_scopes;
-        new_client.allowed_origins = current.allowed_origins;
+        // RFC 7592 §2.2: a client without permission to update its record gets a 403.
+        // An admin disabled this client, so its registration must not be modified anymore.
+        if !current.enabled {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::Forbidden,
+                "Client is disabled",
+            ));
+        }
+
+        current.ensure_dyn_grant_types_allowed(&client_req.grant_types)?;
+
+        let mut new_client = Self::try_from_dyn_reg(client_req, None)?;
+        new_client.keep_admin_set_values(current);
 
         client_dyn.token_endpoint_auth_method = token_endpoint_auth_method;
         client_dyn.last_used = Some(Utc::now().timestamp());
@@ -732,8 +900,12 @@ WHERE id = $4"#;
             txn.commit().await?;
         }
 
-        new_client.save_cache().await?;
-        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
+        new_client.delete_cache().await?;
+        let ttl = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .rate_limit_reg
+            .as_secs() as i64;
         DB::hql()
             .put(
                 Cache::ClientDynamic,
@@ -756,6 +928,21 @@ WHERE id = $4"#;
         if let Some(hours) = cache_current_hours
             && let Some(plain) = self.get_secret_cleartext()?
         {
+            let ttl = hours as i64;
+            // Remember the secret under the client id as well, so that `delete()` can remove it.
+            // Otherwise, it would authenticate a client recreated with the same id.
+            let idx = Self::cached_secrets_idx(&self.id);
+            let now = Utc::now().timestamp();
+            let (exp, mut secrets) = DB::hql()
+                .get::<_, _, (i64, Vec<String>)>(Cache::ClientSecret, idx.clone())
+                .await?
+                .unwrap_or_default();
+            let exp = exp.max(now + ttl);
+            secrets.push(plain.clone());
+            DB::hql()
+                .put(Cache::ClientSecret, idx, &(exp, secrets), Some(exp - now))
+                .await?;
+
             // The original idea was to save secrets hashed. However, since the secrets are used as
             // a key, the HashMap inside the `hiqlite` cache handler will take care of this for us,
             // to they could not be read from memory at runtime.
@@ -764,11 +951,32 @@ WHERE id = $4"#;
                     Cache::ClientSecret,
                     plain,
                     self.id.as_bytes().to_vec(),
-                    Some(hours as i64),
+                    Some(ttl),
                 )
                 .await?;
         }
         Ok(())
+    }
+
+    /// Deletes all secrets cached for this client by `cache_current_secret()`.
+    async fn delete_cached_secrets(&self) -> Result<(), ErrorResponse> {
+        let idx = Self::cached_secrets_idx(&self.id);
+        if let Some((_, secrets)) = DB::hql()
+            .get::<_, _, (i64, Vec<String>)>(Cache::ClientSecret, idx.clone())
+            .await?
+        {
+            for secret in secrets {
+                DB::hql().delete(Cache::ClientSecret, secret).await?;
+            }
+            DB::hql().delete(Cache::ClientSecret, idx).await?;
+        }
+        Ok(())
+    }
+
+    /// Generated secrets are alphanumeric, so this key never collides with a cached secret.
+    #[inline]
+    fn cached_secrets_idx(id: &str) -> String {
+        format!("client:{id}")
     }
 
     pub async fn validate_cached_secret(
@@ -801,48 +1009,12 @@ WHERE id = $4"#;
 
 impl Client {
     pub fn allow_refresh_token(&self) -> bool {
-        self.flows_enabled.contains("refresh_token")
+        self.is_flow_enabled(GrantType::RefreshToken)
     }
 
-    // TODO make a generic 'delete_from_csv' function out of this and re-use it in some other places
     pub fn delete_scope(&mut self, scope: &str) {
-        // find the scope via index in the string
-        // first entry: delete scope + ',' if it exists
-        // last entry: delete scope + ',' in front if it exists
-        // middle: delete scope + ',' in front if it exists
-        // --> 2 cases: first entry or else
-        if let Some(i) = self.scopes.find(scope) {
-            if i == 0 {
-                // the scope is the first entry
-                if self.scopes.len() > scope.len() {
-                    let s = format!("{scope},");
-                    self.scopes = self.scopes.replace(&s, "");
-                } else {
-                    self.scopes = String::default();
-                }
-            } else {
-                // the scope is at the end or in the middle
-                let s = format!(",{scope}");
-                self.scopes = self.scopes.replace(&s, "");
-            }
-        }
-
-        // check if the to-be-deleted scope is in the default scopes
-        if let Some(i) = self.default_scopes.find(scope) {
-            if i == 0 {
-                // the scope is the first entry
-                if self.default_scopes.len() > scope.len() {
-                    let s = format!("{scope},");
-                    self.default_scopes = self.default_scopes.replace(&s, "");
-                } else {
-                    self.default_scopes = String::default();
-                }
-            } else {
-                // the scope is at the end or in the middle
-                let s = format!(",{scope}");
-                self.default_scopes = self.default_scopes.replace(&s, "");
-            }
-        }
+        self.scopes = csv_remove(&self.scopes, scope);
+        self.default_scopes = csv_remove(&self.default_scopes, scope);
     }
 
     /// Generates a new random 64 character long client secret and returns the cleartext and
@@ -877,6 +1049,159 @@ impl Client {
             Some(res)
         } else {
             None
+        }
+    }
+
+    /// Borrowed, allocation-free view of the `allowed_resources` CSV (empties skipped).
+    #[inline]
+    pub fn allowed_resources_iter(&self) -> impl Iterator<Item = &str> {
+        self.allowed_resources
+            .as_deref()
+            .unwrap_or_default()
+            .split(',')
+            .filter(|s| !s.is_empty())
+    }
+
+    /// Borrowed, allocation-free view of the `default_aud` CSV (empties skipped).
+    #[inline]
+    pub fn default_aud_iter(&self) -> impl Iterator<Item = &str> {
+        self.default_aud
+            .as_deref()
+            .unwrap_or_default()
+            .split(',')
+            .filter(|s| !s.is_empty())
+    }
+
+    #[inline]
+    pub fn get_allowed_resources(&self) -> Option<Vec<String>> {
+        self.allowed_resources.as_ref()?;
+        Some(self.allowed_resources_iter().map(String::from).collect())
+    }
+
+    #[inline]
+    pub fn get_default_aud(&self) -> Option<Vec<String>> {
+        self.default_aud.as_ref()?;
+        Some(self.default_aud_iter().map(String::from).collect())
+    }
+
+    /// Validates an RFC 8707 `resource` request value against this client's policy: it
+    /// must match one of the client's configured `allowed_resources`. The entries are
+    /// matched verbatim, so an operator decides what a valid value looks like. Dynamic
+    /// clients, and ephemeral clients whose document declares no allow-list of its own,
+    /// are matched against `dynamic_clients.allowed_resources` /
+    /// `ephemeral_clients.allowed_resources` instead, resolved from the live config and
+    /// never stored with the client; ephemeral clients are otherwise only permitted when
+    /// `ephemeral_clients.danger_allow_unvalidated_resource` is enabled. On any failure
+    /// an `invalid_target` error (RFC 8707 §2) is returned.
+    pub fn validate_resource_request(&self, resource: &str) -> Result<(), ErrorResponse> {
+        if resource.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "`resource` must not be empty",
+            ));
+        }
+
+        // A dynamic client is never allowed to set `allowed_resources` in the first place, so
+        // it can never have a match below. The operator may allow-list specific resources for
+        // dynamic clients via `dynamic_clients.allowed_resources`, which is resolved from the
+        // live config on every request and never stored with the client. The list is empty by
+        // default, which keeps rejecting these requests like before.
+        if self.is_dynamic() {
+            let allowed = &RauthyConfig::get().vars.dynamic_clients.allowed_resources;
+            return if allowed.is_empty() {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "dynamic clients must not request a `resource`",
+                ))
+            } else if allowed.iter().any(|r| r == resource) {
+                Ok(())
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "the requested `resource` is not allowed for this client",
+                ))
+            };
+        }
+
+        let mut allowed = self.allowed_resources_iter().peekable();
+        if allowed.peek().is_some() {
+            if allowed.any(|r| r == resource) {
+                Ok(())
+            } else {
+                Err(ErrorResponse::new(
+                    ErrorResponseType::InvalidTarget,
+                    "the requested `resource` is not allowed for this client",
+                ))
+            }
+        } else if self.is_ephemeral()
+            // An ephemeral client document that declares its own `allowed_resources` has
+            // matched above; for one that declares none the operator's
+            // `ephemeral_clients.allowed_resources` is resolved from the live config the
+            // same way, without the blunt `danger_allow_unvalidated_resource`.
+            && (RauthyConfig::get()
+                .vars
+                .ephemeral_clients
+                .allowed_resources
+                .iter()
+                .any(|r| r == resource)
+                || RauthyConfig::get()
+                    .vars
+                    .ephemeral_clients
+                    .danger_allow_unvalidated_resource)
+        {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::InvalidTarget,
+                "this client has no `allowed_resources` configured for the requested `resource`",
+            ))
+        }
+    }
+
+    /// Validates a client `consent` value from the API. `None` means unset.
+    pub fn validate_consent(consent: Option<String>) -> Result<Option<String>, ErrorResponse> {
+        let Some(consent) = consent else {
+            return Ok(None);
+        };
+        ConsentSource::parse(&consent).map_err(|err| {
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                format!("invalid `consent`: {err}"),
+            )
+        })?;
+        Ok(Some(consent))
+    }
+
+    /// The consent source for a login to this client with the optional RFC 8707 `resource`.
+    /// `None` only without `consent.enable`. Precedence: `[[consent.sources]]` entry for the
+    /// `resource`, the client's own `consent`, `Local`. Not called yet, the consent screen will.
+    pub fn consent_source(&self, resource: Option<&str>) -> Option<ConsentSource> {
+        self.consent_source_with(resource, &RauthyConfig::get().vars.consent)
+    }
+
+    pub(crate) fn consent_source_with(
+        &self,
+        resource: Option<&str>,
+        vars: &VarsConsent,
+    ) -> Option<ConsentSource> {
+        if !vars.enable {
+            return None;
+        }
+
+        if let Some(entry) = resource.and_then(|r| vars.source_for(r)) {
+            return Some(entry.source.clone());
+        }
+
+        match self.consent.as_deref().map(ConsentSource::parse) {
+            Some(Ok(source)) => Some(source),
+            Some(Err(err)) => {
+                warn!(
+                    "Invalid `consent` for client {}, using `local`: {err}",
+                    self.id
+                );
+                Some(ConsentSource::Local)
+            }
+            None => Some(ConsentSource::Local),
         }
     }
 
@@ -933,14 +1258,24 @@ impl Client {
         JwkKeyPairAlg::from_str(self.id_token_alg.as_str())
     }
 
+    /// The enabled flows for this client. Values are validated as [GrantType] on the way in, so
+    /// anything unparsable here is corrupted data and gets skipped rather than failing the read.
     #[inline]
-    pub fn get_flows(&self) -> Vec<String> {
-        let mut res = Vec::new();
+    pub fn get_flows(&self) -> Vec<GrantType> {
         self.flows_enabled
             .split(',')
-            .map(|f| f.trim().to_owned())
-            .for_each(|f| res.push(f));
-        res
+            .filter_map(|f| match GrantType::from_str(f.trim()) {
+                Ok(flow) => Some(flow),
+                Err(_) => {
+                    warn!(
+                        client_id = self.id,
+                        flow = f,
+                        "Skipping unknown `flows_enabled` entry"
+                    );
+                    None
+                }
+            })
+            .collect()
     }
 
     #[inline]
@@ -1025,39 +1360,45 @@ impl Client {
         &self,
         scopes: &Option<Vec<String>>,
     ) -> Result<Vec<String>, ErrorResponse> {
-        if scopes.is_none() {
-            return Ok(self
-                .default_scopes
-                .split(',')
-                .map(|s| s.to_string())
-                .collect());
-        }
-
-        let scopes = scopes.as_ref().unwrap();
-        let mut res = Vec::with_capacity(scopes.len());
-
-        // Always add the configured default scopes
-        for s in self.default_scopes.split(',') {
-            res.push(s.to_string());
-        }
-
         let matrix_enabled = RauthyConfig::get().vars.matrix.msc3861_enable;
+        Ok(self.sanitize_login_scopes_with(scopes.as_deref(), matrix_enabled))
+    }
 
+    /// Config-free core of [`Self::sanitize_login_scopes`]: default scopes first, then the
+    /// requested scopes that are allowed for this client, deduplicated.
+    fn sanitize_login_scopes_with(
+        &self,
+        scopes: Option<&[String]>,
+        matrix_enabled: bool,
+    ) -> Vec<String> {
+        // Always add the configured default scopes
+        let mut res = self
+            .default_scopes
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
+
+        let Some(scopes) = scopes else {
+            return res;
+        };
+        res.reserve(scopes.len());
+
+        let allowed = self.scopes.split(',').collect::<Vec<_>>();
         for s in scopes {
-            if self.default_scopes.split(',').any(|d| d == s) {
+            if res.iter().any(|existing| existing == s) {
                 continue;
             }
 
-            if self
-                .scopes
-                .split(',')
+            if allowed
+                .iter()
                 .any(|allowed| Scope::matches(allowed, s, matrix_enabled))
             {
                 res.push(s.clone());
             }
         }
 
-        Ok(res)
+        res
     }
 
     /// Returns an error if the client is not enabled.
@@ -1080,14 +1421,15 @@ impl Client {
     /// possible without MFA. The force MFA for the Rauthy admin UI is done in
     /// Principal::validate_admin_session() depending on the `ADMIN_FORCE_MFA` config variable.
     #[inline]
-    pub fn validate_mfa(
+    pub async fn validate_mfa(
         &self,
         user: &User,
         provider_mfa_login: Option<ProviderMfaLogin>,
     ) -> Result<(), ErrorResponse> {
         let force_mfa = self.id != "rauthy" && self.force_mfa;
-        let has_mfa =
-            user.has_webauthn_enabled() || provider_mfa_login == Some(ProviderMfaLogin::Yes);
+        let has_mfa = user.has_webauthn_enabled()
+            || provider_mfa_login == Some(ProviderMfaLogin::Yes)
+            || user.has_otp_enabled().await;
 
         if force_mfa && !has_mfa {
             trace!("MFA required for this client but the user has none");
@@ -1174,23 +1516,88 @@ impl Client {
 
     #[inline]
     pub fn validate_redirect_uri(&self, redirect_uri: &str) -> Result<(), ErrorResponse> {
-        let has_any = self.get_redirect_uris().iter().any(|uri| {
-            (uri.ends_with('*') && redirect_uri.starts_with(uri.split_once('*').unwrap().0))
-                || uri.as_str().eq(redirect_uri)
-        });
+        self.validate_redirect_uri_with(
+            redirect_uri,
+            RauthyConfig::get().vars.access.rfc_8252_enable,
+        )
+    }
 
-        if has_any {
-            Ok(())
-        } else {
-            debug!(
-                "Invalid `redirect_uri`: {} / expected one of: {}",
-                redirect_uri, self.redirect_uris
-            );
-            Err(ErrorResponse::new(
+    /// `rfc_8252_enable` is only evaluated after the shape check has passed.
+    #[inline]
+    pub(crate) fn validate_redirect_uri_with(
+        &self,
+        redirect_uri: &str,
+        rfc_8252_enable: bool,
+    ) -> Result<(), ErrorResponse> {
+        let req_url = validate_redirect_uri(redirect_uri, true, true)?;
+        let Some(req_host) = req_url.host_str() else {
+            return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid redirect uri",
-            ))
+                "invalid redirect_uri - must contain an origin",
+            ));
+        };
+        let req_path_query = if let Some(q) = req_url.query() {
+            format!("{}?{}", req_url.path(), q)
+        } else {
+            req_url.path().to_string()
+        };
+
+        let is_loopback = rfc_8252_enable
+            && (req_host == "localhost"
+                || req_host == "127.0.0.1"
+                || req_host == "[::1]"
+                || req_host == "::1");
+
+        let mut path_query = String::with_capacity(32);
+
+        for uri in self.get_redirect_uris() {
+            // TODO in a future version, we should have a temp migration that actually deletes
+            //  any stored, bad URLs. This check each time is only done to prevent stored URI
+            //  issues. The check each time is a waste of resources.
+            if uri.contains('#') {
+                warn!(
+                    "Found an insecure, stored redirect_uri for client {}: {} - you need to fix this",
+                    self.id, uri
+                );
+                continue;
+            }
+            let Ok(url) = Url::parse(&uri) else {
+                // this should never happen - validated during API updates
+                continue;
+            };
+            if url.scheme() != req_url.scheme() {
+                continue;
+            }
+            let host = url.host_str().unwrap_or_default();
+            if host != req_host {
+                continue;
+            }
+            if !is_loopback && url.port() != req_url.port() {
+                continue;
+            }
+
+            path_query.clear();
+            if let Some(q) = url.query() {
+                write!(path_query, "{}?{}", url.path(), q)?;
+            } else {
+                write!(path_query, "{}", url.path())?;
+            };
+
+            if is_wildcard_prefix_match(&path_query, &req_path_query)
+                || path_query == req_path_query
+            {
+                return Ok(());
+            }
         }
+
+        debug!(
+            "Invalid `redirect_uri`: {} / expected one of: {}",
+            redirect_uri, self.redirect_uris
+        );
+        Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid redirect uri",
+        ))
     }
 
     #[inline]
@@ -1198,25 +1605,52 @@ impl Client {
         &self,
         post_logout_redirect_uri: &str,
     ) -> Result<(), ErrorResponse> {
-        let has_any = self
-            .get_post_logout_uris()
-            .unwrap_or_default()
-            .iter()
-            .any(|uri| {
-                (uri.ends_with('*')
-                    && post_logout_redirect_uri.starts_with(uri.split_once('*').unwrap().0))
-                    || uri.as_str().eq(post_logout_redirect_uri)
-            });
+        let req_url = validate_redirect_uri(post_logout_redirect_uri, true, true)?;
 
-        if has_any {
-            Ok(())
-        } else {
-            trace!("Invalid `post_logout_redirect_uri`");
-            Err(ErrorResponse::new(
+        let Some(req_host) = req_url.host_str() else {
+            return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
-                "Invalid post_logout_redirect_uri",
-            ))
+                "invalid post_logout_redirect_uri - must contain an origin",
+            ));
+        };
+
+        for uri in self.get_post_logout_uris().iter().flatten() {
+            // TODO in a future version, we should have a temp migration that actually deletes
+            //  any stored, bad URLs. This check each time is only done to prevent stored URI
+            //  issues. The check each time is a waste of resources.
+            if uri.contains('#') {
+                warn!(
+                    "Found an insecure, stored post_logout_redirect_uri for client {}: {} - you need to fix this",
+                    self.id, uri
+                );
+                continue;
+            }
+            let Ok(url) = Url::parse(uri) else {
+                // this should never happen - validated during API updates
+                continue;
+            };
+            if url.scheme() != req_url.scheme() || url.port() != req_url.port() {
+                continue;
+            }
+            if url.host_str().unwrap_or_default() != req_host {
+                continue;
+            }
+
+            if is_wildcard_prefix_match(uri, post_logout_redirect_uri)
+                || uri == post_logout_redirect_uri
+            {
+                return Ok(());
+            }
         }
+
+        debug!(
+            "Invalid `post_logout_redirect_uri`: {} / expected one of: {:?}",
+            post_logout_redirect_uri, self.post_logout_redirect_uris
+        );
+        Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Invalid post_logout_redirect_uri",
+        ))
     }
 
     #[inline]
@@ -1252,6 +1686,20 @@ impl Client {
                 ))
             }
         } else if code_challenge.is_some() || code_challenge_method.is_some() {
+            // A dynamic client cannot say at registration time whether it is going to use
+            // PKCE, which is why confidential dynamic clients have no `challenge` configured.
+            // When such a client decides to send one anyway, it is accepted as an optional
+            // addon instead of being rejected: the challenge is saved with the auth code and
+            // the `code_verifier` is validated during the token exchange as usual. It is
+            // still not required - a confidential dynamic client without a challenge keeps
+            // working like before.
+            if self.is_dynamic()
+                && code_challenge.is_some()
+                && code_challenge_method.as_deref() == Some("S256")
+            {
+                return Ok(());
+            }
+
             trace!("'code_challenge' not enabled for this client");
             Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -1288,9 +1736,18 @@ impl Client {
         Ok(())
     }
 
+    /// `true` if the given flow is listed in `flows_enabled`. Matches on whole CSV entries, so a
+    /// flow name can never be satisfied by being a substring of a different one.
     #[inline]
-    pub fn validate_flow(&self, flow: &str) -> Result<(), ErrorResponse> {
-        if flow.is_empty() || !self.flows_enabled.contains(flow) {
+    pub fn is_flow_enabled(&self, flow: GrantType) -> bool {
+        self.flows_enabled
+            .split(',')
+            .any(|f| f.trim() == flow.as_str())
+    }
+
+    #[inline]
+    pub fn validate_flow(&self, flow: GrantType) -> Result<(), ErrorResponse> {
+        if !self.is_flow_enabled(flow) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 format!("'{flow}' flow is not allowed for this client"),
@@ -1302,13 +1759,26 @@ impl Client {
     #[inline]
     pub async fn validate_secret(
         &self,
-        mut secret: String,
+        secret: String,
         req: &HttpRequest,
     ) -> Result<(), ErrorResponse> {
+        let res = self.check_secret(secret).await;
+        if res.is_err() {
+            warn!(
+                "Invalid login for client '{}' from '{}'",
+                self.id,
+                real_ip_from_req(req)?
+            );
+        }
+        res
+    }
+
+    /// Validates the `client_secret` without logging, for callers without an `HttpRequest`.
+    pub async fn check_secret(&self, mut secret: String) -> Result<(), ErrorResponse> {
         if !self.confidential {
             error!("Cannot validate 'client_secret' for public client");
             return Err(ErrorResponse::new(
-                ErrorResponseType::Internal,
+                ErrorResponseType::Unauthorized,
                 "Cannot validate 'client_secret' for public client",
             ));
         }
@@ -1323,13 +1793,13 @@ impl Client {
         let secret_enc = self.secret.as_ref().ok_or_else(|| {
             ErrorResponse::new(
                 ErrorResponseType::Internal,
-                format!("'{}' has no secret while being confidential", &self.id),
+                format!("'{}' has no secret while being confidential", self.id),
             )
         })?;
         let cleartext = EncValue::try_from(secret_enc.clone())?.decrypt()?;
 
         // make sure this function is updated if the secret length ever changes
-        debug_assert_eq!(cleartext.len(), SECRET_LEN_CLIENTS);
+        debug_assert!(cleartext.len() >= SECRET_LEN_CLIENTS);
 
         let a = <&[u8; 64]>::try_from(cleartext.as_ref()).unwrap();
         let b = <&[u8; 64]>::try_from(secret.as_bytes()).unwrap();
@@ -1341,12 +1811,6 @@ impl Client {
             secret.zeroize();
             return Ok(());
         }
-
-        warn!(
-            "Invalid login for client '{}' from '{}'",
-            self.id,
-            real_ip_from_req(req)?
-        );
 
         Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
@@ -1371,38 +1835,200 @@ impl Client {
     }
 }
 
+const SQL_CLIENT_DELETE: &str = "DELETE FROM clients WHERE id = $1";
+
+/// The statements of [`Client::delete`] on Postgres in order, each with `true` if it binds the
+/// client id as `$1`. `refresh_tokens.client_id` and `user_consents.client_id` have no FK. Legacy
+/// refresh tokens (`client_id` NULL) cannot be attributed and would be accepted by a recreated
+/// client with the same id, so with `drop_legacy` (`consent.enable`) all of them go.
+///
+/// The tables come in the order a consent revoke (`UserConsent::revoke`) takes their row locks:
+/// user consents, device refresh tokens, legacy refresh tokens, refresh tokens of the client.
+/// With the opposite order, a revoke and a delete of the same client running at the same time
+/// could each wait for a row the other one holds, and Postgres would abort one of them as a
+/// deadlock. The device refresh tokens are deleted explicitly for the same reason, instead of
+/// with the cascade of the client delete at the end.
+///
+/// The refresh token deletes return the `access_token_jti` of their rows, which
+/// [`PgDeletedJtis::revoke`] revokes after these statements, in the same transaction, like the
+/// consent revoke does last. A discard of one of these refresh tokens that runs at the same time
+/// and finds its row deleted leaves the access token to this transaction.
+pub(crate) fn pg_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
+    let mut stmts = vec![
+        (SQL_CONSENT_DELETE_BY_CLIENT, true),
+        (
+            r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+RETURNING access_token_jti"#,
+            true,
+        ),
+    ];
+    if drop_legacy {
+        stmts.push((
+            "DELETE FROM refresh_tokens WHERE client_id IS NULL RETURNING access_token_jti",
+            false,
+        ));
+    }
+    stmts.push((
+        "DELETE FROM refresh_tokens WHERE client_id = $1 RETURNING access_token_jti",
+        true,
+    ));
+    stmts.push((SQL_CLIENT_DELETE, true));
+    stmts
+}
+
+/// The statements of [`Client::delete`] on hiqlite: those of [`pg_delete_statements`], with the
+/// access tokens of each refresh token table revoked right before it is deleted. hiqlite applies
+/// the transaction as one raft log entry, so no other write sees a part of it.
+pub(crate) fn hql_delete_statements(drop_legacy: bool) -> Vec<(&'static str, bool)> {
+    // Each revoke runs before its delete, while the rows still name the access tokens.
+    let mut stmts = vec![
+        (SQL_CONSENT_DELETE_BY_CLIENT, true),
+        (
+            r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (
+    SELECT access_token_jti FROM refresh_tokens_devices
+    WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)
+)"#,
+            true,
+        ),
+        (
+            r#"
+DELETE FROM refresh_tokens_devices
+WHERE device_id IN (SELECT id FROM devices WHERE client_id = $1)"#,
+            true,
+        ),
+    ];
+    if drop_legacy {
+        stmts.push((
+            r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id IS NULL)"#,
+            false,
+        ));
+        stmts.push(("DELETE FROM refresh_tokens WHERE client_id IS NULL", false));
+    }
+    stmts.push((
+        r#"
+UPDATE issued_tokens SET revoked = true
+WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"#,
+        true,
+    ));
+    stmts.push(("DELETE FROM refresh_tokens WHERE client_id = $1", true));
+    stmts.push((SQL_CLIENT_DELETE, true));
+    stmts
+}
+
+/// Validates a dynamic-client redirect URI.
+/// Rejects backchannel callbacks for dynamic clients.
+fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
+    if opt.is_some() {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`backchannel_logout_uri` is not supported for dynamic clients",
+        ));
+    }
+    Ok(())
+}
+
+pub fn validate_dyn_client_redirect_uri(url: &str) -> Result<(), ErrorResponse> {
+    let uri = validate_redirect_uri(url, false, true)?;
+    let loopback = uri
+        .host_str()
+        .map(|h| {
+            h.eq_ignore_ascii_case("localhost")
+                || h.parse::<IpAddr>()
+                    .map(|ip| ip.is_loopback())
+                    .unwrap_or(false)
+        })
+        .unwrap_or(false);
+    if uri.scheme() != "https" && !(uri.scheme() == "http" && loopback) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`redirect_uris` must be https (http loopback allowed)",
+        ));
+    }
+    Ok(())
+}
+
+/// Matches wildcard redirect URIs without crossing a host/path boundary.
+///
+/// A `#` is not a boundary: redirect URIs and post-logout redirect URIs with a fragment are
+/// rejected by their shape check before they are matched.
+#[inline]
+pub fn is_wildcard_prefix_match(registered: &str, requested: &str) -> bool {
+    let Some(prefix) = registered.strip_suffix('*') else {
+        return false;
+    };
+    match requested.strip_prefix(prefix) {
+        None => false,
+        Some(rest) => {
+            rest.is_empty()
+                || rest.starts_with('/')
+                || rest.starts_with('?')
+                || prefix.ends_with('/')
+                || prefix.ends_with('?')
+        }
+    }
+}
+
 impl Client {
     async fn ephemeral_from_url(value: &str) -> Result<Self, ErrorResponse> {
-        let res = http_client()
-            .get(value)
-            .header(CONTENT_TYPE, APPLICATION_JSON)
-            .send()
-            .await
-            .map_err(|err| {
-                ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    format!("Cannot fetch ephemeral client data from {value}: {err:?}"),
-                )
-            })?;
+        let url = Url::parse(value).map_err(|err| {
+            warn!("Invalid ephemeral client URL {value}: {err}");
+            ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "invalid ephemeral client URL",
+            )
+        })?;
+        let max_size = RauthyConfig::get()
+            .vars
+            .ephemeral_clients
+            .max_document_bytes as usize;
 
-        if !res.status().is_success() {
-            let msg = format!("Cannot fetch ephemeral client information from {value}");
-            error!("{msg}");
-            return Err(ErrorResponse::new(ErrorResponseType::Connection, msg));
-        }
+        // SSRF-guarded fetch: no redirects, no proxies, non-public addresses rejected,
+        // body size capped. The address policy lives in the global fetcher.
+        let bytes = fetch_bounded(url, max_size).await?;
 
-        let body = match res.json::<EphemeralClientRequest>().await {
+        let mut body = match serde_json::from_slice::<EphemeralClientRequest>(&bytes) {
             Ok(b) => b,
             Err(err) => {
-                let msg =
-                    format!("Cannot deserialize into EphemeralClientRequest from {value}: {err:?}");
-                error!("{}", msg);
-                return Err(ErrorResponse::new(ErrorResponseType::BadRequest, msg));
+                warn!("Cannot deserialize into EphemeralClientRequest from {value}: {err:?}");
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "invalid ephemeral client document",
+                ));
             }
         };
+
+        // A spec-valid CIMD document may advertise a grant type Rauthy does not support
+        // (e.g. claude.ai lists `urn:ietf:params:oauth:grant-type:jwt-bearer` but never uses
+        // it). Rejecting the whole document over an advertised-but-unused grant would block
+        // an otherwise-valid client. When the operator opts in, sanitize the list - strip the
+        // unsupported grant types - so validation passes; the flow set is derived from
+        // `ephemeral_clients.allowed_flows` regardless. Off by default: unknown grant types
+        // are rejected by `validate()` below, keeping the upfront error.
+        if RauthyConfig::get()
+            .vars
+            .ephemeral_clients
+            .ignore_unknown_auth_flows
+            && let Some(grant_types) = body.grant_types.as_mut()
+        {
+            retain_supported_grant_types(grant_types);
+        }
+
         body.validate()?;
 
-        let slf = Self::from(body);
+        let slf = Self::try_from(body).map_err(|err| {
+            let msg = format!(
+                "Invalid ephemeral client document from {value}: {}",
+                err.message
+            );
+            error!("{msg}");
+            ErrorResponse::new(err.error, msg)
+        })?;
         if slf.id != value {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -1427,6 +2053,12 @@ impl Client {
         let default_scopes = self.get_default_scopes();
         let challenges = self.get_challenges();
         let contacts = self.get_contacts();
+        let claims = self
+            .claims
+            .as_deref()
+            .and_then(|bytes| serde_json::from_slice(bytes).ok());
+        let allowed_resources = self.get_allowed_resources();
+        let default_aud = self.get_default_aud();
 
         let access_token_alg = JwkKeyPairAlg::from_str(&self.access_token_alg)
             .expect("internal JwkKeyPairAlg conversion to always succeed")
@@ -1456,6 +2088,12 @@ impl Client {
             contacts,
             backchannel_logout_uri: self.backchannel_logout_uri,
             restrict_group_prefix: self.restrict_group_prefix,
+            claims,
+            claims_at_root: self.claims_at_root,
+            allowed_resources,
+            default_aud,
+            consent: self.consent,
+            actor_same_client: self.actor_same_client,
             scim: scim.map(|scim| ScimClientRequestResponse {
                 bearer_token: scim.bearer_token,
                 base_uri: scim.base_uri,
@@ -1466,15 +2104,53 @@ impl Client {
     }
 }
 
-impl From<EphemeralClientRequest> for Client {
-    fn from(value: EphemeralClientRequest) -> Self {
-        let scopes = RauthyConfig::get()
-            .vars
-            .ephemeral_clients
-            .allowed_scopes
-            .join(",");
+impl TryFrom<EphemeralClientRequest> for Client {
+    type Error = ErrorResponse;
 
-        Self {
+    fn try_from(value: EphemeralClientRequest) -> Result<Self, Self::Error> {
+        Self::try_from_ephemeral(value, &RauthyConfig::get().vars.ephemeral_clients)
+    }
+}
+
+impl Client {
+    /// Config-free core of `TryFrom<EphemeralClientRequest>`. `allowed_scopes` becomes the
+    /// client's `scopes`, `default_scopes` its `default_scopes`.
+    pub(crate) fn try_from_ephemeral(
+        value: EphemeralClientRequest,
+        vars: &VarsEphemeralClients,
+    ) -> Result<Self, ErrorResponse> {
+        for uri in &value.redirect_uris {
+            validate_redirect_uri(uri, false, true).map_err(|err| {
+                ErrorResponse::new(
+                    err.error,
+                    format!("Invalid redirect_uri '{uri}': {}", err.message),
+                )
+            })?;
+        }
+        for uri in value.post_logout_redirect_uris.iter().flatten() {
+            validate_redirect_uri(uri, false, true).map_err(|err| {
+                ErrorResponse::new(
+                    err.error,
+                    format!("Invalid post_logout_redirect_uri '{uri}': {}", err.message),
+                )
+            })?;
+        }
+
+        let join = |v: &[Cow<'static, str>]| {
+            v.iter()
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+        let scopes = join(&vars.allowed_scopes);
+        let default_scopes = join(
+            vars.default_scopes
+                .as_deref()
+                .unwrap_or(&vars.allowed_scopes),
+        );
+
+        Ok(Self {
             id: value.client_id,
             name: value.client_name,
             enabled: true,
@@ -1484,11 +2160,7 @@ impl From<EphemeralClientRequest> for Client {
             redirect_uris: value.redirect_uris.join(","),
             post_logout_redirect_uris: value.post_logout_redirect_uris.map(|uris| uris.join(",")),
             allowed_origins: None,
-            flows_enabled: RauthyConfig::get()
-                .vars
-                .ephemeral_clients
-                .allowed_flows
-                .join(","),
+            flows_enabled: vars.allowed_flows.join(","),
             access_token_alg: value
                 .access_token_signed_response_alg
                 .unwrap_or_default()
@@ -1499,15 +2171,23 @@ impl From<EphemeralClientRequest> for Client {
                 .to_string(),
             auth_code_lifetime: 60,
             access_token_lifetime: value.default_max_age.unwrap_or(1800),
-            scopes: scopes.clone(),
-            default_scopes: scopes,
+            scopes,
+            default_scopes,
             challenge: Some("S256".to_string()),
-            force_mfa: RauthyConfig::get().vars.ephemeral_clients.force_mfa,
+            force_mfa: vars.force_mfa,
             client_uri: value.client_uri,
             contacts: value.contacts.map(|c| c.join(",")),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
-        }
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: value.allowed_resources.map(|r| r.join(",")),
+            default_aud: None,
+            // never stored, so there is no row that could be deleted and recreated
+            created_micros: None,
+            consent: None,
+            actor_same_client: false,
+        })
     }
 }
 
@@ -1533,7 +2213,7 @@ impl Default for Client {
             redirect_uris: String::default(),
             post_logout_redirect_uris: None,
             allowed_origins: None,
-            flows_enabled: "authorization_code".to_string(),
+            flows_enabled: GrantType::AuthorizationCode.to_string(),
             access_token_alg: "EdDSA".to_string(),
             id_token_alg: "EdDSA".to_string(),
             auth_code_lifetime: 60,
@@ -1546,6 +2226,13 @@ impl Default for Client {
             contacts: None,
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
+            created_micros: None,
+            consent: None,
+            actor_same_client: false,
         }
     }
 }
@@ -1558,6 +2245,7 @@ impl TryFrom<NewClientRequest> for Client {
         for uri in client.redirect_uris {
             let trimmed = uri.trim();
             if !trimmed.is_empty() {
+                validate_redirect_uri(trimmed, true, true)?;
                 write!(redirect_uris, "{trimmed},")?;
             }
         }
@@ -1569,6 +2257,7 @@ impl TryFrom<NewClientRequest> for Client {
                 for uri in post_logout_redirect_uris {
                     let trimmed = uri.trim();
                     if !trimmed.is_empty() {
+                        validate_redirect_uri(trimmed, true, true)?;
                         write!(uris, "{trimmed},")?;
                     }
                 }
@@ -1578,6 +2267,8 @@ impl TryFrom<NewClientRequest> for Client {
                 None
             };
 
+        let consent = Self::validate_consent(client.consent)?;
+
         Ok(Self {
             id: client.id,
             secret: client.secret,
@@ -1585,12 +2276,66 @@ impl TryFrom<NewClientRequest> for Client {
             confidential: client.confidential,
             redirect_uris,
             post_logout_redirect_uris,
+            consent,
             ..Default::default()
         })
     }
 }
 
 impl Client {
+    /// Called on `self` freshly built by `try_from_dyn_reg` for an RFC 7592 self-update: copies
+    /// every value from `current` that the client must not change with its registration token.
+    fn keep_admin_set_values(&mut self, current: Client) {
+        // `challenge` is derived from `token_endpoint_auth_method`, but an admin may have
+        // changed it. Keep the admin value unless the client switches between public and
+        // confidential, where the derived value (`S256` for public, none for confidential)
+        // applies.
+        if self.confidential == current.confidential {
+            self.challenge = current.challenge;
+        }
+
+        self.id = current.id;
+        self.enabled = current.enabled;
+        self.allowed_origins = current.allowed_origins;
+        self.auth_code_lifetime = current.auth_code_lifetime;
+        self.access_token_lifetime = current.access_token_lifetime;
+        self.scopes = current.scopes;
+        self.default_scopes = current.default_scopes;
+        self.force_mfa = current.force_mfa;
+        self.restrict_group_prefix = current.restrict_group_prefix;
+        self.claims = current.claims;
+        self.claims_at_root = current.claims_at_root;
+        self.allowed_resources = current.allowed_resources;
+        self.default_aud = current.default_aud;
+        self.created_micros = current.created_micros;
+        self.consent = current.consent;
+        self.actor_same_client = current.actor_same_client;
+    }
+
+    /// RFC 7592 self-update: the client may keep or narrow its grant types, but not add one
+    /// it does not have yet. The admin-set values (`default_aud`, `allowed_resources`, `claims`,
+    /// ...) are kept on a self-update, so adding e.g. `client_credentials` would let the client
+    /// mint tokens carrying them with a grant the admin never enabled for it.
+    fn ensure_dyn_grant_types_allowed(&self, requested: &[GrantType]) -> Result<(), ErrorResponse> {
+        let current = self.get_flows();
+        let added = requested
+            .iter()
+            .filter(|g| !current.contains(g))
+            .map(|g| g.as_str())
+            .collect::<Vec<_>>();
+        if added.is_empty() {
+            Ok(())
+        } else {
+            Err(ErrorResponse::new(
+                ErrorResponseType::InvalidClientMetadata,
+                format!(
+                    "`grant_types` must not add a grant type the client does not have: {}",
+                    added.join(", ")
+                ),
+            ))
+        }
+    }
+
     fn try_from_dyn_reg(
         req: DynamicClientRequest,
         origin_header: Option<String>,
@@ -1649,6 +2394,26 @@ impl Client {
             .default_scopes
             .join(",");
 
+        // Dynamic registration accepts only validated redirect URIs and no backchannel callback.
+        validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
+
+        let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
+        for uri in req.redirect_uris {
+            validate_dyn_client_redirect_uri(&uri)?;
+            redirect_uris.push(uri);
+        }
+        if redirect_uris.is_empty() {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "'redirect_uris' must not be empty",
+            ));
+        }
+
+        let post_logout_redirect_uri = req.post_logout_redirect_uri.filter(|uri| !uri.is_empty());
+        if let Some(uri) = &post_logout_redirect_uri {
+            validate_dyn_client_redirect_uri(uri)?;
+        }
+
         Ok(Self {
             id,
             name: req.client_name,
@@ -1656,18 +2421,19 @@ impl Client {
             confidential,
             secret,
             secret_kid,
-            redirect_uris: req.redirect_uris.join(","),
-            post_logout_redirect_uris: req.post_logout_redirect_uri.filter(|uri| !uri.is_empty()),
+            redirect_uris: redirect_uris.join(","),
+            post_logout_redirect_uris: post_logout_redirect_uri,
             allowed_origins,
-            flows_enabled: req.grant_types.join(","),
+            flows_enabled: GrantType::csv(&req.grant_types),
             access_token_alg,
             id_token_alg,
             access_token_lifetime: min(
                 RauthyConfig::get()
                     .vars
                     .dynamic_clients
-                    .default_token_lifetime,
-                i32::MAX as u32,
+                    .default_token_lifetime
+                    .as_secs(),
+                i32::MAX as u64,
             ) as i32,
             scopes,
             default_scopes,
@@ -1675,7 +2441,6 @@ impl Client {
             force_mfa: false,
             client_uri: req.client_uri,
             contacts: req.contacts.map(|c| c.join(",")).filter(|c| !c.is_empty()),
-            backchannel_logout_uri: req.backchannel_logout_uri,
             ..Default::default()
         })
     }
@@ -1689,7 +2454,7 @@ impl Client {
 
         let redirect_uris = self.get_redirect_uris();
         let grant_types = self.get_flows();
-        let post_logout_redirect_uri = self.get_redirect_uris().first().cloned();
+        let post_logout_redirect_uri = self.get_post_logout_uris().map(|mut u| u.swap_remove(0));
 
         let client_secret = self.get_secret_cleartext()?;
         let (registration_access_token, registration_client_uri) = if map_registration_client_uri {
@@ -1757,12 +2522,450 @@ fn extract_external_origin<'a>(
     Ok(Some(origin))
 }
 
+/// Strips grant types Rauthy does not support from an ephemeral (CIMD) client document. Used
+/// when `ephemeral_clients.ignore_unknown_auth_flows` is enabled so an operator can accept a
+/// document that advertises an unsupported grant (e.g. claude.ai's
+/// `urn:ietf:params:oauth:grant-type:jwt-bearer`) without enabling anything unsupported - the
+/// effective flows still come from `ephemeral_clients.allowed_flows` (#1644).
+pub(crate) fn retain_supported_grant_types(grant_types: &mut Vec<String>) {
+    grant_types.retain(|g| GrantType::from_str(g).is_ok());
+}
+
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+    use crate::rauthy_config::VarsConsentSource;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
+
+    #[test]
+    fn test_validate_no_backchannel_logout_uri() {
+        // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)
+        assert!(validate_no_backchannel_logout_uri(&None).is_ok());
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("https://app.example.com/logout".to_string()))
+                .is_err()
+        );
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("https://169.254.169.254/".to_string()))
+                .is_err()
+        );
+        assert!(
+            validate_no_backchannel_logout_uri(&Some("http://127.0.0.1:8080/".to_string()))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_validate_dyn_redirect_uri() {
+        // https allowed
+        assert!(validate_dyn_client_redirect_uri("https://app.example.com/cb").is_ok());
+        // http loopback allowed (RFC 8252 native apps)
+        assert!(validate_dyn_client_redirect_uri("http://127.0.0.1:52345/cb").is_ok());
+        assert!(validate_dyn_client_redirect_uri("http://localhost:8080/cb").is_ok());
+        // wildcards rejected
+        assert!(validate_dyn_client_redirect_uri("https://*").is_err());
+        assert!(validate_dyn_client_redirect_uri("https://app.example.com/*").is_err());
+        // non-https and non-loopback http rejected
+        assert!(validate_dyn_client_redirect_uri("http://app.example.com/cb").is_err());
+        assert!(validate_dyn_client_redirect_uri("ftp://app.example.com/cb").is_err());
+        // not a URI at all
+        assert!(validate_dyn_client_redirect_uri("not a uri").is_err());
+        assert!(validate_dyn_client_redirect_uri("").is_err());
+    }
     use pretty_assertions::assert_eq;
+
+    /// All hiqlite migrations, in order.
+    fn sqlite_full_schema() -> rusqlite::Connection {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations/hiqlite");
+        let mut files = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .map(|p| {
+                let name = p.file_name().unwrap().to_str().unwrap();
+                let nr: u32 = name.split('_').next().unwrap().parse().unwrap();
+                (nr, p)
+            })
+            .collect::<Vec<_>>();
+        files.sort();
+
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        for (_, path) in files {
+            conn.execute_batch(&std::fs::read_to_string(path).unwrap())
+                .unwrap();
+        }
+        conn
+    }
+
+    /// The hiqlite transaction of `Client::delete` against the full schema: a client recreated
+    /// with the same id inherits neither the user consents nor the refresh tokens of the old one,
+    /// and the access tokens of the deleted refresh tokens are revoked.
+    #[test]
+    fn delete_and_recreate_leaves_no_consent() {
+        for drop_legacy in [false, true] {
+            let mut conn = sqlite_full_schema();
+            conn.execute_batch(
+                r#"
+CREATE TEMP TABLE tu AS SELECT * FROM users LIMIT 1;
+UPDATE tu SET id = 'u1', email = 'u1@example.com';
+INSERT INTO users SELECT * FROM tu;
+CREATE TEMP TABLE tc AS SELECT * FROM clients LIMIT 1;
+UPDATE tc SET id = 'c1';
+INSERT INTO clients SELECT * FROM tc;
+UPDATE tc SET id = 'c2';
+INSERT INTO clients SELECT * FROM tc;
+INSERT INTO user_consents
+    (user_id, client_id, resource, scopes, content_hash, created, updated, ip)
+VALUES ('u1', 'c1', '', 'openid', 'h', 1, 1, '127.0.0.1'),
+       ('u1', 'c1', 'https://api.example.com', 'openid', 'h', 1, 1, '127.0.0.1'),
+       ('u1', 'c2', '', 'openid', 'h', 1, 1, '127.0.0.1');
+INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti, client_id)
+VALUES ('rt_c1', 'u1', 1, 2, 'j_c1', 'c1'),
+       ('rt_legacy', 'u1', 1, 2, 'j_legacy', NULL),
+       ('rt_c2', 'u1', 1, 2, 'j_c2', 'c2');
+INSERT INTO devices (id, client_id, user_id, created, access_exp, peer_ip, name)
+VALUES ('d1', 'c1', 'u1', 1, 2, '127.0.0.1', 'd1'),
+       ('d2', 'c2', 'u1', 1, 2, '127.0.0.1', 'd2');
+INSERT INTO refresh_tokens_devices (id, device_id, user_id, nbf, exp, access_token_jti)
+VALUES ('rtd_c1', 'd1', 'u1', 1, 2, 'j_d1'),
+       ('rtd_c2', 'd2', 'u1', 1, 2, 'j_d2');
+INSERT INTO issued_tokens (jti, user_id, exp)
+VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
+       ('j_d1', 'u1', 2), ('j_d2', 'u1', 2);
+"#,
+            )
+            .unwrap();
+
+            let txn = conn.transaction().unwrap();
+            for (sql, binds_id) in hql_delete_statements(drop_legacy) {
+                if binds_id {
+                    txn.execute(sql, ["c1"]).unwrap();
+                } else {
+                    txn.execute(sql, []).unwrap();
+                }
+            }
+            txn.commit().unwrap();
+            conn.execute_batch("UPDATE tc SET id = 'c1'; INSERT INTO clients SELECT * FROM tc;")
+                .unwrap();
+
+            let ids = |sql: &str| -> Vec<String> {
+                let mut stmt = conn.prepare(sql).unwrap();
+                stmt.query_map([], |r| r.get::<_, String>(0))
+                    .unwrap()
+                    .map(|r| r.unwrap())
+                    .collect()
+            };
+            assert_eq!(
+                ids("SELECT client_id FROM user_consents ORDER BY client_id"),
+                vec!["c2".to_string()]
+            );
+            let mut expected_rt = vec!["rt_c2".to_string()];
+            if !drop_legacy {
+                expected_rt.push("rt_legacy".to_string());
+            }
+            assert_eq!(
+                ids("SELECT id FROM refresh_tokens ORDER BY id"),
+                expected_rt,
+                "drop_legacy: {drop_legacy}"
+            );
+            assert_eq!(
+                ids("SELECT id FROM clients WHERE id IN ('c1', 'c2') ORDER BY id"),
+                vec!["c1".to_string(), "c2".to_string()]
+            );
+            assert_eq!(
+                ids("SELECT id FROM refresh_tokens_devices ORDER BY id"),
+                vec!["rtd_c2".to_string()]
+            );
+            // the access tokens of the deleted refresh tokens are revoked, the others are not
+            let mut revoked = vec!["j_c1".to_string(), "j_d1".to_string()];
+            if drop_legacy {
+                revoked.push("j_legacy".to_string());
+            }
+            assert_eq!(
+                ids("SELECT jti FROM issued_tokens WHERE revoked ORDER BY jti"),
+                revoked,
+                "drop_legacy: {drop_legacy}"
+            );
+        }
+    }
+
+    fn consent_vars(enable: bool) -> VarsConsent {
+        VarsConsent {
+            enable,
+            content_cache_ttl: 3600,
+            danger_allow_private_addresses: false,
+            sources: [
+                VarsConsentSource::new(
+                    "https://api.example.com".to_string(),
+                    "https://consent.example.com/api",
+                    "API".to_string(),
+                )
+                .unwrap(),
+                VarsConsentSource::new(
+                    "https://local.example.com".to_string(),
+                    "local",
+                    "Local".to_string(),
+                )
+                .unwrap(),
+            ]
+            .into_iter()
+            .map(|s| (s.resource.clone(), s))
+            .collect(),
+        }
+    }
+
+    #[test]
+    fn consent_source_precedence() {
+        let remote = |url: &str| ConsentSource::Remote(reqwest::Url::parse(url).unwrap());
+        let client = Client {
+            id: "client".to_string(),
+            consent: Some("https://consent.example.com/client".to_string()),
+            ..Default::default()
+        };
+        let vars = consent_vars(true);
+
+        // registry for the resource
+        assert_eq!(
+            client.consent_source_with(Some("https://api.example.com"), &vars),
+            Some(remote("https://consent.example.com/api"))
+        );
+        assert_eq!(
+            client.consent_source_with(Some("https://local.example.com"), &vars),
+            Some(ConsentSource::Local)
+        );
+        // client column
+        assert_eq!(
+            client.consent_source_with(Some("https://other.example.com"), &vars),
+            Some(remote("https://consent.example.com/client"))
+        );
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(remote("https://consent.example.com/client"))
+        );
+        // default
+        let client = Client::default();
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(ConsentSource::Local)
+        );
+        let client = Client {
+            consent: Some("local".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            client.consent_source_with(Some("https://other.example.com"), &vars),
+            Some(ConsentSource::Local)
+        );
+        // an invalid stored value falls back to `local`
+        let client = Client {
+            consent: Some("http://consent.example.com".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            client.consent_source_with(None, &vars),
+            Some(ConsentSource::Local)
+        );
+
+        // disabled
+        let vars = consent_vars(false);
+        assert_eq!(
+            client.consent_source_with(Some("https://api.example.com"), &vars),
+            None
+        );
+        assert_eq!(Client::default().consent_source_with(None, &vars), None);
+    }
+
+    #[test]
+    fn validate_client_consent() {
+        assert_eq!(Client::validate_consent(None).unwrap(), None);
+        Client::validate_consent(Some(String::new())).unwrap_err();
+        assert_eq!(
+            Client::validate_consent(Some("local".to_string())).unwrap(),
+            Some("local".to_string())
+        );
+        assert_eq!(
+            Client::validate_consent(Some("https://consent.example.com".to_string())).unwrap(),
+            Some("https://consent.example.com".to_string())
+        );
+        let err =
+            Client::validate_consent(Some("http://consent.example.com".to_string())).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+        let err = Client::validate_consent(Some("https://consent.example.com?lang=en".to_string()))
+            .unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+        Client::validate_consent(Some("Local".to_string())).unwrap_err();
+
+        // POST and PUT /clients validate `consent` only here: the error must not echo the URL
+        for v in [
+            "https://user:secret@consent.example.com/x",
+            "https://secret@consent.example.com/x",
+            "https://consent.example.com/x?token=secret&lang=en",
+        ] {
+            let err = Client::validate_consent(Some(v.to_string())).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest);
+            assert!(!format!("{err:?}").contains("secret"), "{v}: {err:?}");
+        }
+    }
+
+    #[test]
+    fn retain_supported_grant_types_strips_unknown() {
+        // #1644: an ephemeral/CIMD document advertising an unsupported grant (claude.ai's
+        // jwt-bearer) is sanitized down to the grants Rauthy supports; would fail if the strip
+        // were dropped or matched the wrong set.
+        let mut advertised = vec![
+            "authorization_code".to_string(),
+            "refresh_token".to_string(),
+            "urn:ietf:params:oauth:grant-type:jwt-bearer".to_string(),
+        ];
+        retain_supported_grant_types(&mut advertised);
+        assert_eq!(
+            advertised,
+            vec![
+                "authorization_code".to_string(),
+                "refresh_token".to_string()
+            ],
+        );
+
+        // an all-supported list is unchanged; an only-unknown list collapses to empty
+        let mut supported = vec!["authorization_code".to_string()];
+        retain_supported_grant_types(&mut supported);
+        assert_eq!(supported, vec!["authorization_code".to_string()]);
+
+        let mut only_unknown = vec!["urn:ietf:params:oauth:grant-type:jwt-bearer".to_string()];
+        retain_supported_grant_types(&mut only_unknown);
+        assert!(only_unknown.is_empty());
+    }
+
+    #[test]
+    fn validate_code_challenge_optional_for_dynamic_clients() {
+        // A confidential dynamic client registers without a `challenge`, but one it sends
+        // on its own is accepted as an optional addon (S256 only) instead of being
+        // rejected with "'code_challenge' not enabled for this client".
+        let client = Client {
+            id: "dyn$WdCH3aeUpM5NDF8fDBHTLTqLLLZ8gwWl".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+
+        let challenge = Some("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM".to_string());
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_ok()
+        );
+        // still not required
+        assert!(client.validate_code_challenge(&None, &None).is_ok());
+        // `plain` adds nothing for a confidential client and stays rejected, as does
+        // a challenge without a method (which implies `plain`)
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("plain".to_string()))
+                .is_err()
+        );
+        assert!(client.validate_code_challenge(&challenge, &None).is_err());
+
+        // any other client without a configured challenge keeps the strict behaviour
+        let client = Client {
+            id: "not_dynamic".to_string(),
+            confidential: true,
+            challenge: None,
+            ..Default::default()
+        };
+        assert!(
+            client
+                .validate_code_challenge(&challenge, &Some("S256".to_string()))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_wildcard_prefix_match() {
+        // path-suffixed wildcards keep working
+        assert!(is_wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback"
+        ));
+        assert!(is_wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback?state=x"
+        ));
+        assert!(is_wildcard_prefix_match(
+            "https://app.example.com/callback*",
+            "https://app.example.com/callback/deep"
+        ));
+        // bare-host wildcard must not match a different host
+        assert!(!is_wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com.evil.com"
+        ));
+        assert!(!is_wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com.evil.com/cb"
+        ));
+        // but path continuation on the same host is fine
+        assert!(is_wildcard_prefix_match(
+            "https://app.example.com*",
+            "https://app.example.com/cb"
+        ));
+        // a wildcard must only ever appear at the very end
+        assert!(!is_wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com/a/cb"
+        ));
+        assert!(!is_wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com/cb"
+        ));
+        assert!(!is_wildcard_prefix_match(
+            "https://example.com/*/cb",
+            "https://example.com//cb"
+        ));
+        // a prefix that already ends at a boundary matches any continuation
+        assert!(is_wildcard_prefix_match(
+            "https://example.com/*",
+            "https://example.com/app"
+        ));
+        assert!(is_wildcard_prefix_match(
+            "https://example.com/*",
+            "https://example.com/"
+        ));
+        // a registered base with a trailing slash matches continuations after it
+        assert!(is_wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app/foo"
+        ));
+        assert!(is_wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app/"
+        ));
+        // but the bare base without the trailing slash is still not under `base/`
+        assert!(!is_wildcard_prefix_match(
+            "https://app.example.com/app/*",
+            "https://app.example.com/app"
+        ));
+        // non-boundary continuation is still rejected
+        assert!(!is_wildcard_prefix_match(
+            "https://example.com/cb*",
+            "https://example.com/cbX"
+        ));
+        // non-wildcard registered URIs never match via the helper
+        assert!(!is_wildcard_prefix_match(
+            "https://app.example.com/cb",
+            "https://app.example.com/cb"
+        ));
+        assert!(!is_wildcard_prefix_match("no-star", "no-star"));
+        // a `#` is no boundary, a URI with a fragment never gets here
+        assert!(!is_wildcard_prefix_match(
+            "https://app.example.com/cb*",
+            "https://app.example.com/cb#x"
+        ));
+        assert!(!is_wildcard_prefix_match(
+            "https://app.example.com/#*",
+            "https://app.example.com/#x"
+        ));
+    }
 
     #[test]
     fn test_client_impl() {
@@ -1791,6 +2994,13 @@ mod tests {
             contacts: Some("batman@localhost.de,@alfred:matrix.org".to_string()),
             backchannel_logout_uri: None,
             restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
+            created_micros: None,
+            consent: None,
+            actor_same_client: false,
         };
 
         assert_eq!(client.get_access_token_alg().unwrap(), JwkKeyPairAlg::EdDSA);
@@ -1868,10 +3078,10 @@ mod tests {
         assert!(client.validate_challenge_method("blabla").is_err());
         assert!(client.validate_challenge_method("").is_err());
 
-        assert_eq!(client.validate_flow("authorization_code"), Ok(()));
-        assert_eq!(client.validate_flow("password"), Ok(()));
-        assert!(client.validate_flow("blabla").is_err());
-        assert!(client.validate_flow("").is_err());
+        assert_eq!(client.validate_flow(GrantType::AuthorizationCode), Ok(()));
+        assert_eq!(client.validate_flow(GrantType::Password), Ok(()));
+        assert!(client.validate_flow(GrantType::ClientCredentials).is_err());
+        assert!(client.validate_flow(GrantType::DeviceCode).is_err());
 
         // contacts
         assert_eq!(
@@ -2016,11 +3226,355 @@ mod tests {
     //     })
     // }
 
+    fn ephemeral_request(client_id: &str) -> EphemeralClientRequest {
+        EphemeralClientRequest {
+            client_id: client_id.to_string(),
+            client_name: Some("Ephemeral Test".to_string()),
+            client_uri: None,
+            contacts: None,
+            redirect_uris: vec!["https://example.com/cb".to_string()],
+            post_logout_redirect_uris: None,
+            grant_types: None,
+            default_max_age: None,
+            scope: None,
+            require_auth_time: None,
+            access_token_signed_response_alg: None,
+            id_token_signed_response_alg: None,
+            allowed_resources: None,
+        }
+    }
+
+    fn ephemeral_vars(allowed: &[&str], default: &[&str]) -> VarsEphemeralClients {
+        VarsEphemeralClients {
+            enable: true,
+            enable_web_id: false,
+            enable_solid_aud: false,
+            force_mfa: false,
+            allowed_flows: vec!["authorization_code".into()],
+            allowed_scopes: allowed.iter().map(|s| Cow::from(s.to_string())).collect(),
+            default_scopes: Some(default.iter().map(|s| Cow::from(s.to_string())).collect()),
+            cache_lifetime: std::time::Duration::from_secs(3600),
+            danger_allow_unvalidated_resource: false,
+            ignore_unknown_auth_flows: false,
+            allowed_resources: Vec::default(),
+            max_document_bytes: 65536,
+            danger_allow_private_addresses: false,
+        }
+    }
+
+    fn strs(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn test_ephemeral_client_scope_mapping() {
+        let vars = ephemeral_vars(&["openid", "profile", "email"], &["openid"]);
+        let client =
+            Client::try_from_ephemeral(ephemeral_request("https://cimd.example/client"), &vars)
+                .unwrap();
+
+        assert_eq!(client.id, "https://cimd.example/client");
+        assert_eq!(client.scopes, "openid,profile,email");
+        assert_eq!(client.default_scopes, "openid");
+        assert_eq!(client.flows_enabled, "authorization_code");
+
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["email"])), false);
+        assert_eq!(res, strs(&["openid", "email"]));
+
+        let res = client.sanitize_login_scopes_with(None, false);
+        assert_eq!(res, strs(&["openid"]));
+
+        // a scope outside `allowed_scopes` is silently dropped
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["groups", "profile"])), false);
+        assert_eq!(res, strs(&["openid", "profile"]));
+    }
+
+    #[test]
+    fn test_ephemeral_client_default_scopes_fallback_grants_all() {
+        // unset `default_scopes` fall back to `allowed_scopes`
+        let vars = VarsEphemeralClients {
+            default_scopes: None,
+            ..ephemeral_vars(&["openid", "profile", "email"], &[])
+        };
+        let client =
+            Client::try_from_ephemeral(ephemeral_request("https://cimd.example/client"), &vars)
+                .unwrap();
+        assert_eq!(client.default_scopes, "openid,profile,email");
+
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["email"])), false);
+        assert_eq!(res, strs(&["openid", "profile", "email"]));
+    }
+
+    #[test]
+    fn test_ephemeral_client_skips_blank_scope_entries() {
+        let vars = ephemeral_vars(&["openid", "", " ", "email"], &["openid", ""]);
+        let client =
+            Client::try_from_ephemeral(ephemeral_request("https://cimd.example/client"), &vars)
+                .unwrap();
+        assert_eq!(client.scopes, "openid,email");
+        assert_eq!(client.default_scopes, "openid");
+    }
+
+    #[test]
+    fn test_sanitize_login_scopes_dedupes_request() {
+        let client = Client {
+            scopes: "openid,profile,email".to_string(),
+            default_scopes: "openid".to_string(),
+            ..Default::default()
+        };
+        let res = client.sanitize_login_scopes_with(Some(&strs(&["email", "email"])), false);
+        assert_eq!(res, strs(&["openid", "email"]));
+    }
+
+    #[test]
+    fn test_ephemeral_client_redirect_uri_shape() {
+        for uri in [
+            "https://app.example.com/#/callback",
+            "https://app.example.com/cb?iss=https://attacker.example",
+        ] {
+            let req = EphemeralClientRequest {
+                client_id: "https://app.example.com/client".to_string(),
+                client_name: None,
+                client_uri: None,
+                contacts: None,
+                redirect_uris: vec![uri.to_string()],
+                post_logout_redirect_uris: None,
+                grant_types: None,
+                default_max_age: None,
+                scope: None,
+                require_auth_time: None,
+                access_token_signed_response_alg: None,
+                id_token_signed_response_alg: None,
+                allowed_resources: None,
+            };
+            let err = Client::try_from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"]))
+                .unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert!(err.message.contains(uri), "{uri}: {}", err.message);
+        }
+    }
+
+    #[test]
+    fn test_ephemeral_client_post_logout_redirect_uri_shape() {
+        for uri in [
+            "https://app.example.com/#/logout",
+            "https://app.example.com/bye?state=x",
+        ] {
+            let req = EphemeralClientRequest {
+                client_id: "https://app.example.com/client".to_string(),
+                client_name: None,
+                client_uri: None,
+                contacts: None,
+                redirect_uris: vec!["https://app.example.com/cb".to_string()],
+                post_logout_redirect_uris: Some(vec![uri.to_string()]),
+                grant_types: None,
+                default_max_age: None,
+                scope: None,
+                require_auth_time: None,
+                access_token_signed_response_alg: None,
+                id_token_signed_response_alg: None,
+                allowed_resources: None,
+            };
+            let err = Client::try_from_ephemeral(req, &ephemeral_vars(&["openid"], &["openid"]))
+                .unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert!(
+                err.message.contains("post_logout_redirect_uri"),
+                "{uri}: {}",
+                err.message
+            );
+            assert!(err.message.contains(uri), "{uri}: {}", err.message);
+        }
+    }
+
+    #[test]
+    fn test_validate_post_logout_redirect_uri() {
+        let mut client = redirect_test_client("logout", "https://app.example.com/cb");
+        assert!(
+            client
+                .validate_post_logout_redirect_uri("https://app.example.com/")
+                .is_err()
+        );
+
+        client.post_logout_redirect_uris = Some(
+            "https://app.example.com/bye,https://app.example.com/wild/*,https://app.example.com/#/legacy"
+                .to_string(),
+        );
+
+        for uri in [
+            "https://app.example.com/bye",
+            "https://app.example.com/wild/",
+            "https://app.example.com/wild/x?foo=bar",
+            "https://app.example.com/wild/x?some=x",
+        ] {
+            assert!(
+                client.validate_post_logout_redirect_uri(uri).is_ok(),
+                "{uri}"
+            );
+        }
+
+        // these pass the wildcard prefix match or match a URI stored before fragments were
+        // rejected, and must be rejected by the shape check
+        for uri in [
+            "https://app.example.com/wild/x?state=x",
+            "https://app.example.com/wild/x#/route",
+            "https://app.example.com/wild/x?foo=bar#?state=x",
+            "https://app.example.com/#/legacy",
+        ] {
+            let err = client.validate_post_logout_redirect_uri(uri).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_ne!(err.message, "Invalid post_logout_redirect_uri", "{uri}");
+        }
+
+        for uri in [
+            "https://app.example.com/other",
+            "https://app.example.com/wildx",
+            "https://app.example.com.evil.example/wild/",
+        ] {
+            let err = client.validate_post_logout_redirect_uri(uri).unwrap_err();
+            assert_eq!(err.message, "Invalid post_logout_redirect_uri", "{uri}");
+        }
+    }
+
+    pub(crate) fn redirect_test_client(id: &str, redirect_uris: &str) -> Client {
+        Client {
+            id: id.to_string(),
+            name: None,
+            enabled: true,
+            confidential: false,
+            secret: None,
+            secret_kid: None,
+            redirect_uris: redirect_uris.to_string(),
+            post_logout_redirect_uris: None,
+            allowed_origins: None,
+            flows_enabled: "authorization_code".to_string(),
+            access_token_alg: "EdDSA".to_string(),
+            id_token_alg: "EdDSA".to_string(),
+            auth_code_lifetime: 60,
+            access_token_lifetime: 300,
+            scopes: "openid".to_string(),
+            default_scopes: "openid".to_string(),
+            challenge: Some("S256".to_string()),
+            force_mfa: false,
+            client_uri: None,
+            contacts: None,
+            backchannel_logout_uri: None,
+            restrict_group_prefix: None,
+            claims: None,
+            claims_at_root: false,
+            allowed_resources: None,
+            default_aud: None,
+            created_micros: None,
+            consent: None,
+            actor_same_client: false,
+        }
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_wildcard() {
+        let client = redirect_test_client("wildcard", "https://app.example.com/*");
+
+        for uri in [
+            "https://app.example.com/cb",
+            "https://app.example.com/cb?foo=bar",
+            "https://app.example.com/cb?issuer=x",
+        ] {
+            assert!(
+                client.validate_redirect_uri_with(uri, false).is_ok(),
+                "{uri}"
+            );
+        }
+
+        // these all pass the wildcard prefix match and must be rejected by the shape check
+        for uri in [
+            "https://app.example.com/cb?iss=https://attacker.example",
+            "https://app.example.com/cb?code=x",
+            "https://app.example.com/cb?state=x",
+            "https://app.example.com/cb?code%5B%5D=x",
+            "https://app.example.com/cb#/route",
+            "https://app.example.com/cb#?iss=https://attacker.example",
+        ] {
+            let err = client.validate_redirect_uri_with(uri, false).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_ne!(err.message, "Invalid redirect uri", "{uri}");
+        }
+
+        let err = client
+            .validate_redirect_uri_with("https://other.example.com/cb", false)
+            .unwrap_err();
+        assert_eq!(err.message, "Invalid redirect uri");
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_loopback() {
+        let client = redirect_test_client("dyn$loopback", "http://127.0.0.1/cb");
+
+        assert!(
+            client
+                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", true)
+                .is_ok()
+        );
+        // any-port matching is opt-in
+        assert!(
+            client
+                .validate_redirect_uri_with("http://127.0.0.1:52345/cb", false)
+                .is_err()
+        );
+
+        // the loopback match ignores the query, so only the shape check stops these
+        for uri in [
+            "http://127.0.0.1:52345/cb?iss=x",
+            "http://127.0.0.1:52345/cb?code=x",
+            "http://127.0.0.1:52345/cb#x",
+            "http://127.0.0.1/cb#x",
+        ] {
+            let err = client.validate_redirect_uri_with(uri, true).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{uri}");
+            assert_ne!(err.message, "Invalid redirect uri", "{uri}");
+        }
+    }
+
+    #[test]
+    fn test_validate_redirect_uri_loopback_wildcard() {
+        let client = redirect_test_client("loopback_wc", "http://127.0.0.1/*");
+
+        for uri in [
+            "http://127.0.0.1:1337/cb",
+            "http://127.0.0.1:52345/cb",
+            "http://127.0.0.1:52345/deep/cb",
+            "http://127.0.0.1",
+            "http://127.0.0.1/",
+        ] {
+            client.validate_redirect_uri_with(uri, true).unwrap();
+        }
+
+        let client = redirect_test_client("loopback_wc", "http://127.0.0.1/sub/*");
+        for uri in [
+            "http://127.0.0.1:1337/cb",
+            "http://127.0.0.1:52345/cb",
+            "http://127.0.0.1:52345/deep/cb",
+            "http://127.0.0.1",
+            "http://127.0.0.1/",
+        ] {
+            assert!(client.validate_redirect_uri_with(uri, true).is_err());
+        }
+
+        let client = redirect_test_client("loopback_wc", "http://127.0.0.1/sub/*");
+        for uri in [
+            "http://127.0.0.1:1337/sub/cb",
+            "http://127.0.0.1:52345/sub/subsub/cb",
+        ] {
+            client.validate_redirect_uri_with(uri, true).unwrap();
+        }
+    }
+
     #[test]
     fn test_delete_client_custom_scope() {
-        let mut client = Client::default();
-        client.scopes = "email,openid,profile,groups".to_string();
-        client.default_scopes = "email,openid,cust_scope".to_string();
+        let mut client = Client {
+            scopes: "email,openid,profile,groups".to_string(),
+            default_scopes: "email,openid,cust_scope".to_string(),
+            ..Default::default()
+        };
 
         client.delete_scope("profile");
         assert_eq!(&client.scopes, "email,openid,groups");
@@ -2037,5 +3591,202 @@ mod tests {
         client.delete_scope("groups");
         assert_eq!(&client.scopes, "openid");
         assert_eq!(&client.default_scopes, "openid");
+    }
+
+    #[test]
+    fn test_delete_client_scope_substring() {
+        let mut client = Client {
+            scopes: "openid,profile,email,pro".to_string(),
+            default_scopes: "openid,pro,profile".to_string(),
+            ..Default::default()
+        };
+
+        client.delete_scope("pro");
+        assert_eq!(&client.scopes, "openid,profile,email");
+        assert_eq!(&client.default_scopes, "openid,profile");
+
+        // not a member -> unchanged
+        client.delete_scope("mail");
+        assert_eq!(&client.scopes, "openid,profile,email");
+    }
+
+    /// The stored client as an admin left it: every admin-set / internal field differs from
+    /// what `try_from_dyn_reg` would produce.
+    fn dyn_client_admin_modified() -> Client {
+        Client {
+            id: "dyn$abc".to_string(),
+            name: Some("old name".to_string()),
+            enabled: false,
+            confidential: false,
+            secret: None,
+            secret_kid: None,
+            redirect_uris: "https://old.example.com/cb".to_string(),
+            post_logout_redirect_uris: None,
+            allowed_origins: Some("https://old.example.com".to_string()),
+            flows_enabled: "authorization_code".to_string(),
+            access_token_alg: "RS256".to_string(),
+            id_token_alg: "RS256".to_string(),
+            auth_code_lifetime: 17,
+            access_token_lifetime: 42,
+            scopes: "openid,custom".to_string(),
+            default_scopes: "openid,custom".to_string(),
+            challenge: Some("plain,S256".to_string()),
+            force_mfa: true,
+            client_uri: None,
+            contacts: None,
+            backchannel_logout_uri: None,
+            restrict_group_prefix: Some("team:".to_string()),
+            claims: Some(br#"{"tenant":"t1"}"#.to_vec()),
+            claims_at_root: true,
+            allowed_resources: Some("https://api.example.com".to_string()),
+            default_aud: Some("https://aud.example.com".to_string()),
+            created_micros: Some(1),
+            consent: Some("https://consent.example.com/api".to_string()),
+            actor_same_client: true,
+        }
+    }
+
+    /// What `try_from_dyn_reg` produces for a self-update request: request metadata plus
+    /// defaults for everything else.
+    fn dyn_client_from_request(confidential: bool) -> Client {
+        Client {
+            id: "dyn$new".to_string(),
+            name: Some("new name".to_string()),
+            enabled: true,
+            confidential,
+            secret: confidential.then(|| b"new secret".to_vec()),
+            secret_kid: confidential.then(|| "kid".to_string()),
+            redirect_uris: "https://new.example.com/cb".to_string(),
+            post_logout_redirect_uris: Some("https://new.example.com/logout".to_string()),
+            allowed_origins: None,
+            flows_enabled: "authorization_code,refresh_token".to_string(),
+            access_token_alg: "EdDSA".to_string(),
+            id_token_alg: "EdDSA".to_string(),
+            client_uri: Some("https://new.example.com".to_string()),
+            contacts: Some("admin@new.example.com".to_string()),
+            backchannel_logout_uri: Some("https://new.example.com/bcl".to_string()),
+            challenge: (!confidential).then(|| "S256".to_string()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn keep_admin_set_values_on_dyn_update() {
+        let current = dyn_client_admin_modified();
+        let mut new_client = dyn_client_from_request(false);
+        new_client.keep_admin_set_values(current.clone());
+
+        // admin-set / internal values are kept
+        assert_eq!(new_client.id, current.id);
+        assert_eq!(new_client.enabled, current.enabled);
+        assert_eq!(new_client.allowed_origins, current.allowed_origins);
+        assert_eq!(new_client.auth_code_lifetime, current.auth_code_lifetime);
+        assert_eq!(
+            new_client.access_token_lifetime,
+            current.access_token_lifetime
+        );
+        assert_eq!(new_client.scopes, current.scopes);
+        assert_eq!(new_client.default_scopes, current.default_scopes);
+        assert_eq!(new_client.force_mfa, current.force_mfa);
+        assert_eq!(
+            new_client.restrict_group_prefix,
+            current.restrict_group_prefix
+        );
+        assert_eq!(new_client.claims, current.claims);
+        assert_eq!(new_client.claims_at_root, current.claims_at_root);
+        assert_eq!(new_client.allowed_resources, current.allowed_resources);
+        assert_eq!(new_client.default_aud, current.default_aud);
+        assert_eq!(new_client.created_micros, current.created_micros);
+        assert_eq!(new_client.consent, current.consent);
+        assert_eq!(new_client.actor_same_client, current.actor_same_client);
+        // still public -> the admin's PKCE setting is kept
+        assert_eq!(new_client.challenge, current.challenge);
+
+        // the request metadata is applied
+        let req = dyn_client_from_request(false);
+        assert_eq!(new_client.name, req.name);
+        assert_eq!(new_client.confidential, req.confidential);
+        assert_eq!(new_client.secret, req.secret);
+        assert_eq!(new_client.secret_kid, req.secret_kid);
+        assert_eq!(new_client.redirect_uris, req.redirect_uris);
+        assert_eq!(
+            new_client.post_logout_redirect_uris,
+            req.post_logout_redirect_uris
+        );
+        assert_eq!(new_client.flows_enabled, req.flows_enabled);
+        assert_eq!(new_client.access_token_alg, req.access_token_alg);
+        assert_eq!(new_client.id_token_alg, req.id_token_alg);
+        assert_eq!(new_client.client_uri, req.client_uri);
+        assert_eq!(new_client.contacts, req.contacts);
+        assert_eq!(
+            new_client.backchannel_logout_uri,
+            req.backchannel_logout_uri
+        );
+    }
+
+    #[test]
+    fn dyn_update_cannot_add_grant_types() {
+        use actix_web::ResponseError;
+
+        let current = Client {
+            flows_enabled: "authorization_code,refresh_token".to_string(),
+            ..dyn_client_admin_modified()
+        };
+
+        // unchanged and narrowed grant types are allowed
+        assert!(
+            current
+                .ensure_dyn_grant_types_allowed(&[
+                    GrantType::AuthorizationCode,
+                    GrantType::RefreshToken
+                ])
+                .is_ok()
+        );
+        assert!(
+            current
+                .ensure_dyn_grant_types_allowed(&[GrantType::AuthorizationCode])
+                .is_ok()
+        );
+
+        // adding a grant type is rejected, also next to the existing ones
+        for requested in [
+            vec![GrantType::ClientCredentials],
+            vec![GrantType::AuthorizationCode, GrantType::ClientCredentials],
+            vec![GrantType::TokenExchange],
+            vec![GrantType::DeviceCode],
+            vec![GrantType::Password],
+        ] {
+            let err = current
+                .ensure_dyn_grant_types_allowed(&requested)
+                .unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::InvalidClientMetadata);
+            assert_eq!(err.status_code(), actix_web::http::StatusCode::BAD_REQUEST);
+        }
+    }
+
+    #[test]
+    fn keep_admin_set_values_on_dyn_update_auth_method_switch() {
+        // public -> confidential: the derived challenge (none) applies, the rest is kept
+        let current = dyn_client_admin_modified();
+        let mut new_client = dyn_client_from_request(true);
+        new_client.keep_admin_set_values(current.clone());
+        assert!(new_client.confidential);
+        assert_eq!(new_client.challenge, None);
+        assert!(!new_client.enabled);
+        assert_eq!(
+            new_client.access_token_lifetime,
+            current.access_token_lifetime
+        );
+
+        // confidential -> public: the derived challenge (S256) applies
+        let current = Client {
+            confidential: true,
+            challenge: None,
+            ..dyn_client_admin_modified()
+        };
+        let mut new_client = dyn_client_from_request(false);
+        new_client.keep_admin_set_values(current);
+        assert!(!new_client.confidential);
+        assert_eq!(new_client.challenge.as_deref(), Some("S256"));
     }
 }

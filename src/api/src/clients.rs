@@ -1,3 +1,4 @@
+use crate::users::validate_reg_redirect_uri;
 use crate::{ReqPrincipal, content_len_limit};
 use actix_web::http::header::{
     ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE, ORIGIN,
@@ -7,18 +8,18 @@ use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, delete, get, post, put, web};
 use actix_web_lab::__reexports::futures_util::StreamExt;
 use rauthy_api_types::clients::{
-    ClientResponse, ClientSecretRequest, ClientSecretResponse, DynamicClientRequest,
-    DynamicClientResponse, NewClientRequest, UpdateClientRequest,
+    ClientResponse, ClientSecretRequest, ClientSecretResponse, ClientValidateRedirectUriRequest,
+    DynamicClientRequest, DynamicClientResponse, NewClientRequest, UpdateClientRequest,
 };
 use rauthy_api_types::forward_auth::{ForwardAuthCallbackParams, ForwardAuthParams};
 use rauthy_api_types::generic::LogoParams;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
-use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients::{Client, validate_dyn_client_redirect_uri};
 use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
-use rauthy_data::entity::logos::{Logo, LogoType};
+use rauthy_data::entity::logos::{Logo, LogoRes, LogoType};
 use rauthy_data::entity::user_login_states::UserLoginState;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -54,9 +55,9 @@ pub async fn get_clients(principal: ReqPrincipal) -> Result<HttpResponse, ErrorR
     let clients = Client::find_all().await?;
 
     let mut res = Vec::new();
-    clients
-        .into_iter()
-        .for_each(|c| res.push(c.into_response(None)));
+    for c in clients {
+        res.push(c.into_response(None));
+    }
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -175,10 +176,17 @@ pub async fn post_clients_dyn(
         return Ok(HttpResponse::NotFound().finish());
     }
     payload.validate()?;
+    // Like `validate()`, reject an invalid request before it consumes the per-IP rate limit.
+    for uri in &payload.redirect_uris {
+        validate_dyn_client_redirect_uri(uri)?;
+    }
+    if let Some(uri) = &payload.post_logout_redirect_uri {
+        validate_dyn_client_redirect_uri(uri)?;
+    }
 
     if let Some(token) = &RauthyConfig::get().vars.dynamic_clients.reg_token {
         let bearer = helpers::get_bearer_token_from_header(req.headers())?;
-        if token != &bearer {
+        if !constant_time_eq::constant_time_eq(token.as_bytes(), bearer.as_bytes()) {
             return Ok(HttpResponse::Unauthorized()
                 .insert_header((
                     WWW_AUTHENTICATE,
@@ -249,6 +257,7 @@ pub async fn get_clients_dyn(
         (status = 200, description = "Ok", body = DynamicClientResponse),
         (status = 400, description = "BadRequest"),
         (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
         (status = 404, description = "NotFound"),
     ),
 )]
@@ -336,35 +345,64 @@ pub async fn get_client_logo(
 ) -> Result<HttpResponse, ErrorResponse> {
     let id = id.into_inner();
 
-    let (content_type, data) = if let Ok(logo) = Logo::find_cached(&id, &LogoType::Client).await {
-        (logo.content_type, logo.data)
+    let logo = if let Ok(logo) = Logo::find_cached(&id, &LogoType::Client).await {
+        logo
     } else if id != "rauthy"
         && let Ok(logo) = Logo::find_cached("rauthy", &LogoType::Client).await
     {
         // use the rauthy logo as fallback
-        (logo.content_type, logo.data)
+        logo
     } else {
         return Ok(HttpResponse::NotFound().finish());
     };
 
+    Ok(client_image_response(logo, params.updated))
+}
+
+fn client_image_response(logo: Logo, updated: Option<i64>) -> HttpResponse {
     // we only cache the response if the client properly used the updated param
     // to never run into issues otherwise
     let csp = "connect-src 'none'; script-src 'none'; frame-ancestors 'none'; object-src 'none';";
-    if params.updated.is_some() {
-        Ok(HttpResponse::Ok()
-            .insert_header((CONTENT_TYPE, content_type))
+    if updated.is_some() {
+        HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, logo.content_type))
             .insert_header((CONTENT_SECURITY_POLICY, csp))
             .insert_header((
                 CACHE_CONTROL,
                 "max-age=31104000, stale-while-revalidate=2592000, public",
             ))
-            .body(data))
+            .body(logo.data)
     } else {
-        Ok(HttpResponse::Ok()
-            .insert_header((CONTENT_TYPE, content_type))
+        HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, logo.content_type))
             .insert_header((CONTENT_SECURITY_POLICY, csp))
-            .body(data))
+            .body(logo.data)
     }
+}
+
+async fn extract_multipart_data(
+    mut payload: actix_multipart::Multipart,
+) -> Result<(Vec<u8>, actix_web::mime::Mime), ErrorResponse> {
+    // we only accept a single field from the Multipart upload -> no looping here
+    let Some(part) = payload.next().await else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "multipart payload is empty",
+        ));
+    };
+    let mut field = part?;
+    let content_type = field.content_type().cloned().ok_or_else(|| {
+        ErrorResponse::new(ErrorResponseType::BadRequest, "content_type is missing")
+    })?;
+    debug!("content_type: {:?}", content_type);
+
+    let mut data = Vec::with_capacity(128 * 1024);
+    while let Some(chunk) = field.next().await {
+        let bytes = chunk?;
+        data.extend(bytes);
+    }
+
+    Ok((data, content_type))
 }
 
 /// Upload a custom logo for the login page for this client
@@ -387,44 +425,13 @@ pub async fn put_client_logo(
     id: web::Path<String>,
     req: HttpRequest,
     principal: ReqPrincipal,
-    mut payload: actix_multipart::Multipart,
+    payload: actix_multipart::Multipart,
 ) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
     content_len_limit(&req, 10)?;
 
-    // we only accept a single field from the Multipart upload -> no looping here
-    let mut buf: Vec<u8> = Vec::with_capacity(128 * 1024);
-    let mut content_type = None;
-    if let Some(part) = payload.next().await {
-        let mut field = part?;
-
-        match field.content_type() {
-            Some(mime) => {
-                debug!("content_type: {:?}", mime);
-                content_type = Some(mime.clone());
-            }
-            None => {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "content_type is missing",
-                ));
-            }
-        }
-
-        while let Some(chunk) = field.next().await {
-            let bytes = chunk?;
-            buf.extend(bytes);
-        }
-    }
-
-    // content_type unwrap cannot panic -> checked above
-    Logo::upsert(
-        id.into_inner(),
-        buf,
-        content_type.unwrap(),
-        LogoType::Client,
-    )
-    .await?;
+    let (data, content_type) = extract_multipart_data(payload).await?;
+    Logo::upsert(id.into_inner(), data, content_type, LogoType::Client).await?;
 
     Ok(HttpResponse::Ok()
         .insert_header(("Clear-Site-Data", "cache"))
@@ -450,17 +457,107 @@ pub async fn delete_client_logo(
     id: web::Path<String>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Delete)?;
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
 
-    Logo::delete(id.as_str(), &LogoType::Client).await?;
+    Logo::delete_client_logo(id.as_str()).await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+/// Retrieve the custom favicon for this client.
+#[utoipa::path(
+    get,
+    path = "/clients/{id}/favicon",
+    tag = "clients",
+    params(LogoParams),
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 404, description = "NotFound"),
+    ),
+)]
+#[get("/clients/{id}/favicon")]
+pub async fn get_client_favicon(
+    id: web::Path<String>,
+    params: Query<LogoParams>,
+) -> Result<HttpResponse, ErrorResponse> {
+    match Logo::find(id.as_str(), LogoRes::Favicon, &LogoType::Client).await {
+        Ok(favicon) => Ok(client_image_response(favicon, params.updated)),
+        Err(err) if err.error == ErrorResponseType::NotFound => {
+            Ok(HttpResponse::NotFound().finish())
+        }
+        Err(err) => Err(err),
+    }
+}
+
+/// Upload a custom favicon for this client.
+///
+/// **Permissions**
+/// - `Clients.Update`
+#[utoipa::path(
+    put,
+    path = "/clients/{id}/favicon",
+    tag = "clients",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[put("/clients/{id}/favicon")]
+pub async fn put_client_favicon(
+    id: web::Path<String>,
+    req: HttpRequest,
+    principal: ReqPrincipal,
+    payload: actix_multipart::Multipart,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
+    content_len_limit(&req, 10)?;
+
+    let (data, content_type) = extract_multipart_data(payload).await?;
+    Logo::upsert_with_res(
+        id.into_inner(),
+        data,
+        content_type,
+        LogoType::Client,
+        LogoRes::Favicon,
+    )
+    .await?;
+
+    Ok(HttpResponse::Ok()
+        .insert_header(("Clear-Site-Data", "cache"))
+        .finish())
+}
+
+/// Delete the custom favicon for this client.
+///
+/// **Permissions**
+/// - `Clients.Update`
+#[utoipa::path(
+    delete,
+    path = "/clients/{id}/favicon",
+    tag = "clients",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 403, description = "Forbidden", body = ErrorResponse),
+    ),
+)]
+#[delete("/clients/{id}/favicon")]
+pub async fn delete_client_favicon(
+    id: web::Path<String>,
+    principal: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_api_key_or_admin_session(AccessGroup::Clients, AccessRights::Update)?;
+    Logo::delete_res(id.as_str(), &LogoType::Client, LogoRes::Favicon).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
 
 /// Generates a new client secret
 ///
-/// Generates a new secret for the given client id and sets the client to `confidential` too, if it was
-/// not the case yet.
+/// Generates a new secret for the given client id and sets the client to `confidential` too, if it
+/// was not the case yet.
 ///
 /// **Permissions**
 /// - rauthy_admin
@@ -490,7 +587,7 @@ pub async fn put_generate_client_secret(
     };
     payload.validate()?;
 
-    client::generate_new_secret(id.into_inner(), payload.cache_current_hours)
+    client::generate_new_secret(id.into_inner(), payload.cache_current_hours, payload.secret)
         .await
         .map(|r| HttpResponse::Ok().json(r))
 }
@@ -614,4 +711,35 @@ pub async fn get_forward_auth_callback(
             Err(err)
         }
     }
+}
+
+/// Validates a given `redirect_uri` if it matches any DB record for a clients' home URL.
+#[utoipa::path(
+    get,
+    path = "/clients/validate_uri",
+    tag = "clients",
+    responses(
+        (status = 200, description = "Ok"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 404, description = "NotFound", body = ErrorResponse),
+    ),
+)]
+#[post("/clients/validate_uri")]
+pub async fn post_client_validate_uri(
+    payload: Json<ClientValidateRedirectUriRequest>,
+    _: ReqPrincipal,
+) -> Result<HttpResponse, ErrorResponse> {
+    payload.validate()?;
+
+    // Keep consistent with the register and password-reset flows, which only validate against
+    // the client allow-list when open redirects are disabled.
+    if !RauthyConfig::get()
+        .vars
+        .user_registration
+        .allow_open_redirect
+    {
+        validate_reg_redirect_uri(&payload.redirect_uri).await?;
+    }
+    Ok(HttpResponse::Ok().finish())
 }

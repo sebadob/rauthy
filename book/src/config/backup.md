@@ -22,16 +22,16 @@ backup_cron = "0 30 2 * * * *"
 # Backups older than the configured days will be cleaned up on S3
 # after the backup cron job `backup_cron`.
 #
-# default: 30
-# overwritten by: HQL_BACKUP_KEEP_DAYS
-backup_keep_days = 30
+# default: "30d'
+# overwritten by: HQL_BACKUP_KEEP_FOR
+backup_keep_for = "30d"
 
 # Backups older than the configured days will be cleaned up locally
 # after each `Client::backup()` and the cron job `HQL_BACKUP_CRON`.
 #
-# default: 3
-# overwritten by: HQL_BACKUP_KEEP_DAYS_LOCAL
-backup_keep_days_local = 3
+# default: "3d"
+# overwritten by: HQL_BACKUP_KEEP_FOR_LOCAL
+backup_keep_days_local = "3d"
 ```
 
 All these backups are written inside the pod / container into `data/state_machine/backups`.

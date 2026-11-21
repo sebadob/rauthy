@@ -53,6 +53,9 @@ export const I18nEn: I18n = {
         year: 'Year',
     },
     account: {
+        noEditableAttributes: 'No editable attributes.',
+        attributes: 'Attributes',
+        stringOrJson: 'String / JSON',
         account: 'User Account',
         accType: 'Account Type',
         accTypePasskeyText1: `This account is currently a passkey only account.\nThis means, that 
@@ -66,7 +69,7 @@ export const I18nEn: I18n = {
         accessRenew: 'Access renewable until',
         accessRenewDelete: 'Delete the possibility to renew',
         birthdate: 'Birthdate',
-        canModifyFor: 'Passkeys can be modified for:',
+        canModifyFor: 'MFA can be modified for:',
         city: 'City',
         changePassword: 'Change Password',
         convertAccount: 'Convert Account',
@@ -85,6 +88,7 @@ export const I18nEn: I18n = {
         deviceName: 'Name',
         devices: 'Devices',
         devicesDesc: 'Devices linked to this account',
+        devicesEmpty: 'No devices linked yet.',
         emailUpdateConfirm: `The E-Mail address has not been updated yet. A message has been\nsent 
             out to your new address. You need to click the confirmation link inside it. Once it 
             has been\nconfirmed, your new address will be updated.`,
@@ -106,6 +110,7 @@ export const I18nEn: I18n = {
         navEdit: 'Edit',
         navMfa: 'MFA',
         navLogout: 'Logout',
+        navBackToAdmin: 'Admin UI',
         other: 'Other',
         pam: {
             addSshKey: 'Add New Key',
@@ -115,6 +120,20 @@ export const I18nEn: I18n = {
             keyType: 'Type',
             username: 'Username',
             validFor: 'Password valid for {{ secs }} seconds',
+        },
+        passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `CAUTION: Even though a Resident Key can be used for a direct login without
+                the need to provide the E-Mail address, an additional storage slot is necessary
+                for each application. You need to make sure there is enough space left.
+                To make an existing Passkey a Resident Key, delete it first, then add it again.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                'You need to enter your E-Mail before you can log in with this Passkey.',
+                'Works with the Passkey button on the login page, without entering your E-Mail.',
+            ],
         },
         passwordConfirm: 'Confirm Password',
         passwordCurr: 'Current Password',
@@ -135,6 +154,21 @@ export const I18nEn: I18n = {
             notAvailable: 'This name is not available.',
             preferredUsername: 'Preferred Username',
         },
+        privacy: {
+            clientId: 'Client ID',
+            connectedApps: 'Connected Apps',
+            connectedAppsDesc: 'Applications you have given consent to access your account.',
+            granted: 'Granted',
+            noConnectedApps: 'No application has been granted access yet.',
+            privacy: 'Privacy',
+            resource: 'Resource',
+            revoke: 'Revoke Access',
+            revokeDesc:
+                'Revoking removes the consent and the application can no longer renew its access. Access tokens issued with the deleted refresh tokens are revoked at userinfo and introspection. Applications that validate their tokens themselves can still accept them until they expire. The application has to ask for your consent again.',
+            scopes: 'Scopes',
+            updated: 'Updated',
+            userAgent: 'User Agent',
+        },
         providerLink: 'Federate Account',
         providerLinkDesc: `You can link this account to one of the following login providers.\nAfter 
             activating this function, you will be redirected to the login page of the chosen one.\n
@@ -151,6 +185,9 @@ export const I18nEn: I18n = {
         userEnabled: 'User Enabled',
         userExpiry: 'User Expires',
         userVerifiedTooltip: 'Secured with fingerprint or PIN',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `You can configure the fields that should be exposed with your WebID.\nThis is a 
             feature used by some networks for decentralized logins. If you do not know what it is,
             \nyou most probably do not need it.`,
@@ -167,22 +204,27 @@ export const I18nEn: I18n = {
         emailRequired: 'E-Mail is required',
         emailSentMsg: 'If your E-Mail exists, a request has been sent',
         expectingPasskey: 'Expecting Passkey Authentication',
+        expectingOtp: 'Expecting OTP Authentication',
         http429: 'Too many invalid inputs. Locked until:',
         invalidCredentials: 'Invalid credentials',
         invalidKeyUsed: 'Invalid Key',
         login: 'Login',
         mfaAck: 'Acknowledged',
+        mfaOpenApp: 'Open the App to continue',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: 'or login with',
+        passkey: 'Passkey',
+        passkeyNotDiscovered: `Passkeys not added as a Resident Key can't be found this way. Enter
+            your E-Mail instead.`,
         password: 'Password',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: 'Password forgotten?',
         passwordRequest: 'Request',
         passwordRequired: 'Password is required',
-        passwordResetDesc: `Please provide your E-Mail to request a password reset link. If your 
-            address exists in out database, you will receive a link via E-Mail.`,
+        passwordResetDesc: `Enter your email address to request a password reset link. If an account
+            exists for that address, you will receive a link by email.`,
         passwordResetSuccess: 'Request received. You can close this window now.',
         requestExpires: 'Request expires',
         requestExpired: 'Request has expired',
@@ -225,27 +267,51 @@ export const I18nEn: I18n = {
         cancel: 'Cancel',
     },
     mfa: {
-        p1: `If you plan on using your MFA key with multiple systems like Windows and Android, 
-            you should do the registration with Android.`,
-        p2: `Android is the platform with the least supported features for the passwordless 
-            technology. Keys you register with Android work elsewhere too. However, this does not 
-            apply the other way around.`,
-        p3: 'For more information, see',
-        docLinkText: 'the documentation about passkeys',
+        webauthn: {
+            empty: 'No passkeys registered.',
+            title: 'Passkeys',
+            p1: `If you plan on using your MFA key with multiple systems like Windows and Android, 
+                you should do the registration with Android.`,
+            p2: `Android is the platform with the least supported features for the passwordless 
+                technology. Keys you register with Android work elsewhere too. However, this does not 
+                apply the other way around.`,
+            p3: 'For more information, see',
+            registerNew: 'Register New Passkey',
+            docLinkText: 'the documentation about passkeys',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            empty: 'No one-time password methods registered.',
+            active: 'Active',
+            inactive: 'Inactive',
+            title: 'One Time Password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: 'Error starting the Registration process',
         lastUsed: 'Last used',
         noKey: 'No Security key registered on this slot',
-        reAuthenticatePasskey: `Before you can modify Passkeys, you need to authenticate with an 
-            already registered one:`,
+        reAuthenticatePasskey:
+            'Before you can modify your MFA, you need to authenticate with a passkey:',
         reAuthenticatePwd:
-            'Before you can modify Passkeys, you need to re-authenticate with your password.',
+            'Before you can modify your MFA, you need to re-authenticate with your password.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: 'Register',
-        registerNew: 'Register New Key',
-        registerd: 'Registered',
-        registerdKeys: 'Registered Keys',
+        registered: 'Registered',
+        registeredKeys: 'Registered Keys',
+        registeredOtps: 'Registered OTPs',
         passkeyName: 'Passkey Name',
         passkeyNameErr: '2 - 32 non-special characters',
         passwordInvalid: 'Password Invalid',
+        testPasskey: 'Test passkey',
         test: 'Test',
         testError: 'Error starting the Test',
         testSuccess: 'Test successful',
@@ -272,6 +338,7 @@ export const I18nEn: I18n = {
     passwordReset: {
         accountLogin: 'Account Login',
         badFormat: 'Bad Format',
+        continueSignIn: 'Continue to sign in',
         fidoLink: 'https://fidoalliance.org/fido2',
         generate: 'Generate',
         newAccDesc1:
@@ -289,7 +356,7 @@ export const I18nEn: I18n = {
         required: 'Required',
         save: 'Save',
         success1: 'The password has been updated successfully.',
-        success2: 'You will be redirected shortly.',
+        success2: 'You will be redirected in {{ secs }} seconds.',
         success3: 'If you are not being redirected, please click here:',
         successPasskey1: 'Your new passkey has been registered successfully.',
         successPasskey2: `Please log into your account and register a second backup key as\nsoon as 

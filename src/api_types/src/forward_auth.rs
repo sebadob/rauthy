@@ -12,7 +12,10 @@ use validator::Validate;
 pub struct ForwardAuthParams {
     #[serde(default)]
     pub danger_cookie_insecure: bool,
+    /// The status code of the redirect response. Must be in the range 300..=599, because a
+    /// successful (2xx) status would authorize the request without an established session.
     #[serde(default = "redirect_state")]
+    #[validate(range(min = 300, max = 599))]
     pub redirect_state: u16,
 }
 

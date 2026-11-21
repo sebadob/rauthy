@@ -36,7 +36,7 @@ pub fn validate_scim_token(headers: &HeaderMap) -> Result<(), ScimError> {
             Some("Authorization header missing".into()),
         ));
     };
-    let Some(token) = auth_val
+    let Some(token_client) = auth_val
         .to_str()
         .unwrap_or_default()
         .strip_prefix("Bearer ")
@@ -48,7 +48,8 @@ pub fn validate_scim_token(headers: &HeaderMap) -> Result<(), ScimError> {
         ));
     };
 
-    if token == SCIM_TOKEN.get().expect("OIDC Config not set up") {
+    let token = SCIM_TOKEN.get().expect("OIDC Config not set up");
+    if constant_time_eq::constant_time_eq(token.as_bytes(), token_client.as_bytes()) {
         Ok(())
     } else {
         error!("SCIM request with invalid token");

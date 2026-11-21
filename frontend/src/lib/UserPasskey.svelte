@@ -1,10 +1,12 @@
 <script lang="ts">
-    import type { PasskeyResponse } from '$api/types/webauthn.ts';
-    import { formatDateFromTs } from '$utils/helpers';
-    import IconFingerprint from '$icons/IconFingerprint.svelte';
-    import Tooltip from '$lib5/Tooltip.svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
+    import type { PasskeyResponse } from '#api/types/webauthn.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import IconFingerprint from '#icons/IconFingerprint.svelte';
+    import Tooltip from '#lib/Tooltip.svelte';
+    import MfaCredential from '#lib/MfaCredential.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import IconKey from '#icons/IconKey.svelte';
+    import IconCheckBadge from '#icons/IconCheckBadge.svelte';
 
     let {
         passkey,
@@ -19,73 +21,39 @@
     let t = useI18n();
 </script>
 
-<div class="keyContainer">
-    <div class="row">
-        <span class="label">
-            {t.mfa.passkeyName}
-        </span>
-
-        <div class="nameUv">
-            <b>{passkey.name}</b>
-            {#if passkey.user_verified}
-                <Tooltip text={t.account.userVerifiedTooltip}>
-                    <div style:margin-bottom="-.25rem">
-                        <IconFingerprint width="1rem" color="hsl(var(--accent))" />
-                    </div>
-                </Tooltip>
-            {/if}
-        </div>
-    </div>
-    <div class="row">
-        <span class="label">
-            {t.mfa.registerd}
-        </span>
-        <span class="font-mono">{formatDateFromTs(passkey.registered)}</span>
-    </div>
-    <div class="row">
-        <span class="label">
-            {t.mfa.lastUsed}
-        </span>
-        <span class="font-mono">{formatDateFromTs(passkey.last_used)}</span>
-    </div>
-
-    {#if showDelete}
-        <div class="row">
-            <div></div>
-            <div class="deleteBtn">
-                <Button level={-3} onclick={() => onDelete(passkey.name)}>
-                    {t.common.delete}
-                </Button>
-            </div>
-        </div>
-    {/if}
-</div>
+<MfaCredential
+    name={passkey.name}
+    metadata={[
+        { label: t.mfa.registered, value: formatDateFromTs(passkey.registered) },
+        {
+            label: t.mfa.lastUsed,
+            value: passkey.last_used ? formatDateFromTs(passkey.last_used) : t.common.never,
+        },
+    ]}
+    onDelete={showDelete ? () => onDelete(passkey.name) : undefined}
+>
+    {#snippet badges()}
+        {#if passkey.user_verified}
+            <Tooltip text={t.account.userVerifiedTooltip}>
+                <span class="badge"><IconFingerprint width="1rem" /></span>
+            </Tooltip>
+        {/if}
+        {#if passkey.resident_key}
+            <Tooltip text={t.account.residentKeyTooltip}>
+                <span class="badge"><IconKey width="1rem" /></span>
+            </Tooltip>
+        {/if}
+        {#if passkey.aaguid}
+            <Tooltip text={`${t.account.aaguidTooltip}: ${passkey.description}`}>
+                <span class="badge"><IconCheckBadge width="1rem" /></span>
+            </Tooltip>
+        {/if}
+    {/snippet}
+</MfaCredential>
 
 <style>
-    .deleteBtn {
-        margin-right: -0.35rem;
-    }
-
-    .keyContainer {
-        margin: 0.33rem 0;
-        overflow: clip;
-    }
-
-    .label {
-        color: hsla(var(--text) / 0.7);
-    }
-
-    .nameUv {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-
-    .row {
-        width: min(95dvw, 21rem);
+    .badge {
         display: flex;
-        gap: 0.5rem;
-        justify-content: space-between;
-        align-items: center;
+        color: var(--ui-muted);
     }
 </style>

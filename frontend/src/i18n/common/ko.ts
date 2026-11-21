@@ -65,7 +65,7 @@ export const I18nKo: I18n = {
         accessRenew: '접근 갱신 기한',
         accessRenewDelete: '갱신 비활성화',
         birthdate: '생년월일',
-        canModifyFor: 'Passkeys can be modified for:',
+        canModifyFor: 'MFA can be modified for:',
         city: '도시',
         changePassword: '비밀번호 변경',
         convertAccount: '계정 전환',
@@ -102,6 +102,7 @@ export const I18nKo: I18n = {
         navEdit: '수정',
         navMfa: 'MFA',
         navLogout: '로그아웃',
+        navBackToAdmin: '관리자 UI',
         other: 'Other',
         pam: {
             addSshKey: 'Add New Key',
@@ -111,6 +112,18 @@ export const I18nKo: I18n = {
             keyType: 'Type',
             username: 'Username',
             validFor: 'Password valid for {{ secs }} seconds',
+        },
+        passkeys: {
+            missingAttestation: 'The Passkey does not match the required security standards.',
+            type: 'Passkey Type',
+            types: ['Default', 'Resident Key'],
+            rkWarning: `주의: Resident Key는 이메일 주소를 입력하지 않고 바로 로그인할 수 있지만, 애플리케이션마다 추가 저장 공간이 필요합니다.
+                남은 공간이 충분한지 확인하세요. 기존 Passkey를 Resident Key로 바꾸려면 먼저 삭제한 후 다시 추가하세요.`,
+            // [Default, Resident Key]
+            typesDesc: [
+                '이 Passkey로 로그인하려면 먼저 이메일을 입력해야 합니다.',
+                '이메일을 입력하지 않고 로그인 페이지의 Passkey 버튼으로 사용할 수 있습니다.',
+            ],
         },
         passwordConfirm: '비밀번호 확인',
         passwordCurr: '현재 비밀번호',
@@ -131,6 +144,21 @@ export const I18nKo: I18n = {
             notAvailable: 'This name is not available.',
             preferredUsername: 'Preferred Username',
         },
+        privacy: {
+            clientId: '클라이언트 ID',
+            connectedApps: '연결된 앱',
+            connectedAppsDesc: '계정 접근에 동의한 애플리케이션입니다.',
+            granted: '허용일',
+            noConnectedApps: '아직 접근 권한을 받은 애플리케이션이 없습니다.',
+            privacy: '개인정보',
+            resource: '리소스',
+            revoke: '접근 권한 취소',
+            revokeDesc:
+                '취소하면 동의가 삭제되고 애플리케이션은 더 이상 접근 권한을 갱신할 수 없습니다. 삭제된 리프레시 토큰과 함께 발급된 액세스 토큰은 userinfo와 인트로스펙션에서 취소됩니다. 토큰을 직접 검증하는 애플리케이션은 만료될 때까지 이를 계속 받아들일 수 있습니다. 애플리케이션은 다시 동의를 요청해야 합니다.',
+            scopes: '스코프',
+            updated: '업데이트',
+            userAgent: '사용자 에이전트',
+        },
         providerLink: '계정 연결',
         providerLinkDesc: `이 계정은 다음 로그인 공급자 중 하나에 연결할 수 있습니다.\n 프로세스를 활성화하면 
             선택한 공급자의 로그인 페이지로 리디렉션이 트리거됩니다. 로그인에 성공하고 이메일 주소가 일치하면 이 
@@ -147,6 +175,9 @@ export const I18nKo: I18n = {
         userEnabled: '사용자 활성화',
         userExpiry: '사용자 만료',
         userVerifiedTooltip: '지문 또는 PIN을 통해 보호',
+        residentKeyTooltip: `This is a Resident Key. You can use it for a direct login without
+            providing an E-Mail.`,
+        aaguidTooltip: 'Certified Passkey',
         webIdDesc: `WebID를 통해 게시되는 필드를 정의할 수 있습니다.\n이는 일부 네트워크에서 분산 로그인을 위해 
             사용하는 기능입니다. WebID가 무엇인지 모른다면 필요하지 않을 것입니다.`,
         webIdDescData: '유효한 FOAF 어휘로 자신의 데이터를 WebID에 추가할 수 있습니다:',
@@ -162,15 +193,20 @@ export const I18nKo: I18n = {
         emailRequired: '이메일이 필요합니다.',
         emailSentMsg: '이메일로 메세지가 발송되었습니다.',
         expectingPasskey: 'MFA 기기를 통해 로그인해 주세요.',
+        expectingOtp: 'Expecting OTP Authentication.',
         http429: '유효하지 않은 입력이 너무 많습니다. 다음 시간 전까지 비활성화합니다:',
         invalidCredentials: '유효하지 않은 인증 정보입니다.',
         invalidKeyUsed: '유효하지 않은 키입니다.',
         login: '로그인',
         mfaAck: '확인되었습니다.',
+        mfaOpenApp: '앱을 열어 계속 진행하세요',
         navigateToAccount: 'Account Dashboard',
         needsUserUpdate: `Some information for this account is missing. You need to update these 
             values before you can proceed with the login.`,
         orLoginWith: '또는 다음으로 로그인',
+        passkey: 'Passkey',
+        passkeyNotDiscovered:
+            'Resident Key로 추가되지 않은 Passkey는 이 방법으로 찾을 수 없습니다. 대신 이메일을 입력하세요.',
         password: '비밀번호',
         passwordExpired: 'Password has expired. An E-Mail with a reset link was sent.',
         passwordForgotten: '비밀번호를 잊으셨나요?',
@@ -220,10 +256,28 @@ export const I18nKo: I18n = {
         cancel: '취소',
     },
     mfa: {
-        p1: '윈도우와 안드로이드 등 다양한 시스템에서 MFA를 사용하려면, 안드로이드에서 키를 등록하여야 합니다.',
-        p2: `안드로이드는 비밀번호 없이 인증하는 기술을 가장 적게 지원하는 플랫폼입니다. 안드로이드에서 등록한 키는 
-            다른 곳에서도 작동하지만, 그 반대로는 작동되지 않습니다.`,
-        p3: 'For more information, see',
+        webauthn: {
+            title: 'Passkeys',
+            p1: '윈도우와 안드로이드 등 다양한 시스템에서 MFA를 사용하려면, 안드로이드에서 키를 등록하여야 합니다.',
+            p2: `안드로이드는 비밀번호 없이 인증하는 기술을 가장 적게 지원하는 플랫폼입니다. 안드로이드에서 등록한 키는 
+                다른 곳에서도 작동하지만, 그 반대로는 작동되지 않습니다.`,
+            p3: 'For more information, see',
+            registerNew: '새 키 등록',
+            docLinkText: 'the documentation about passkeys',
+            unsupportedText:
+                'Your browser does not support Webauthn credentials and must be updated.',
+        },
+        otp: {
+            title: 'One Time Password',
+            titleEmail: 'Email-based OTP',
+            activationCode: 'Please enter the OTP code that was sent to your email address.',
+            code: 'One Time Password',
+            registerNew: 'Register New OTP',
+            resendOtp: 'Resend Code',
+            sessionExpiresIn: 'OTP session will expire in:',
+            sessionExpired: 'OTP session has expired.',
+        },
+        requestCanceled: 'Request was canceled',
         errorReg: '가입 절차 시작 중 오류 발생',
         lastUsed: '마지막 사용일',
         noKey: '이 슬롯에 등록된 보안 키가 없습니다.',
@@ -231,17 +285,18 @@ export const I18nKo: I18n = {
             already registered one:'`,
         reAuthenticatePwd:
             'Before you can modify Passkeys, you need to re-authenticate with your password.',
+        reAuthenticateOtp:
+            'Before you can modify your MFA, you need to re-authenticate with an OTP:',
         register: '등록',
-        registerNew: '새 키 등록',
-        registerd: '등록일',
-        registerdKeys: '등록된 키',
+        registered: '등록일',
+        registeredKeys: '등록된 키',
+        registeredOtps: 'Registered OTPs',
         passkeyName: '패스키 이름',
         passkeyNameErr: '특수문자를 제외한 2자에서 32자이어야 합니다.',
         passwordInvalid: 'Password Invalid',
         test: '테스트',
         testError: '테스트 시작 중 오류 발생',
         testSuccess: '테스트 성공',
-        docLinkText: 'the documentation about Passkeys',
     },
     pagination: {
         entries: '표시 개수',
@@ -265,6 +320,7 @@ export const I18nKo: I18n = {
     passwordReset: {
         accountLogin: '계정 로그인',
         badFormat: '잘못된 형식',
+        continueSignIn: '로그인으로 계속',
         fidoLink: 'https://fidoalliance.org/fido2/?lang=ko',
         generate: '생성',
         newAccDesc1: `계정 종류는 비밀번호가 없는 계정 또는 기존의 비밀번호가 있는 계정 중 하나를 선택할 수 
@@ -281,7 +337,7 @@ export const I18nKo: I18n = {
         required: '필수',
         save: '저장',
         success1: '비밀번호가 성공적으로 변경되었습니다.',
-        success2: '곧 리다이렉트됩니다.',
+        success2: '{{ secs }}초 후에 리다이렉트됩니다.',
         success3: '만약 리다이렉트가 되지 않으면, 여기를 클릭해 주세요:',
         successPasskey1: '새로운 패스키가 성공적으로 등록되었습니다.',
         successPasskey2: `계정에 로그인하여 가능한 한 빨리 두 번째 백업 키를 등록해 주세요.\n패스키 전용 계정은 

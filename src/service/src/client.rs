@@ -1,4 +1,7 @@
+use cryptr::EncValue;
 use rauthy_api_types::clients::{ClientSecretResponse, UpdateClientRequest};
+use rauthy_api_types::oidc::GrantType;
+use rauthy_common::validation::validate_redirect_uri;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_scim::ClientScim;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -10,12 +13,6 @@ pub async fn update_client(
     client_req: UpdateClientRequest,
 ) -> Result<(Client, Option<(ClientScim, bool)>), ErrorResponse> {
     let mut client = Client::find(id).await?;
-    if client.id != client_req.id {
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "The 'id' cannot be changed",
-        ));
-    }
 
     client.name = client_req.name;
     if client_req.confidential {
@@ -29,12 +26,18 @@ pub async fn update_client(
     }
     client.confidential = client_req.confidential;
 
+    for uri in &client_req.redirect_uris {
+        validate_redirect_uri(uri, true, true)?;
+    }
+    for uri in client_req.post_logout_redirect_uris.iter().flatten() {
+        validate_redirect_uri(uri, true, true)?;
+    }
     client.redirect_uris = client_req.redirect_uris.join(",");
     client.post_logout_redirect_uris = client_req.post_logout_redirect_uris.map(|u| u.join(","));
     client.allowed_origins = client_req.allowed_origins.map(|o| o.join(","));
 
     client.enabled = client_req.enabled;
-    client.flows_enabled = client_req.flows_enabled.join(",");
+    client.flows_enabled = GrantType::csv(&client_req.flows_enabled);
 
     client.access_token_alg = client_req.access_token_alg.to_string();
     client.id_token_alg = client_req.id_token_alg.to_string();
@@ -56,6 +59,23 @@ pub async fn update_client(
     client.client_uri = client_req.client_uri;
     client.backchannel_logout_uri = client_req.backchannel_logout_uri;
     client.restrict_group_prefix = client_req.restrict_group_prefix;
+    // serialized as bytes, see `Client.claims`; validated on the request as a
+    // size-capped JSON object via `validate_claims`
+    client.claims = match client_req.claims {
+        Some(claims) => Some(serde_json::to_vec(&claims)?),
+        None => None,
+    };
+    client.claims_at_root = client_req.claims_at_root;
+    client.actor_same_client = client_req.actor_same_client;
+    client.allowed_resources = client_req
+        .allowed_resources
+        .map(|r| r.join(","))
+        .filter(|r| !r.is_empty());
+    client.default_aud = client_req
+        .default_aud
+        .map(|a| a.join(","))
+        .filter(|a| !a.is_empty());
+    client.consent = Client::validate_consent(client_req.consent)?;
 
     client.save().await?;
 
@@ -123,7 +143,7 @@ pub async fn get_client_secret(id: String) -> Result<ClientSecretResponse, Error
     if !client.confidential {
         return Err(ErrorResponse::new(
             ErrorResponseType::NotFound,
-            format!("'{}' is a public client", &client.id),
+            format!("'{}' is a public client", client.id),
         ));
     }
     let secret = client.get_secret_cleartext()?;
@@ -138,12 +158,19 @@ pub async fn get_client_secret(id: String) -> Result<ClientSecretResponse, Error
 pub async fn generate_new_secret(
     id: String,
     cache_current_hours: Option<u8>,
+    plain_secret: Option<String>,
 ) -> Result<ClientSecretResponse, ErrorResponse> {
     let mut client = Client::find(id).await?;
 
     client.cache_current_secret(cache_current_hours).await?;
 
-    let (clear, enc) = Client::generate_new_secret()?;
+    let (clear, enc) = if let Some(plain) = plain_secret {
+        // an externally provisioned secret is applied the same way as a bootstrap `Plain` secret
+        let enc = EncValue::encrypt(plain.as_bytes())?.into_bytes().to_vec();
+        (plain, enc)
+    } else {
+        Client::generate_new_secret()?
+    };
     client.confidential = true;
     client.secret = Some(enc);
     client.save().await?;

@@ -6,14 +6,34 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::time::Duration;
 use tracing::warn;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct JwtHeader<'a> {
     pub alg: JwkKeyPairAlg,
     pub kid: &'a str,
-    // should always be JWT -> DPoP tokens have their own validation
+    // either `JWT` or `at+jwt` -> DPoP tokens have their own validation
     pub typ: &'a str,
+}
+
+/// The JWT header `typ`. Not to be confused with the `typ` claim inside the payload, which is
+/// Rauthy's own token type and has different values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JwtHeaderType {
+    /// The generic `JWT` for ID, Refresh and Logout Tokens.
+    Jwt,
+    /// `at+jwt` for Access Tokens as specified in RFC 9068.
+    AtJwt,
+}
+
+impl JwtHeaderType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Jwt => "JWT",
+            Self::AtJwt => "at+jwt",
+        }
+    }
 }
 
 pub struct JwtToken;
@@ -22,13 +42,15 @@ impl JwtToken {
     pub fn build<C: Debug + Serialize>(
         jwk: &JwkKeyPair,
         claims: &C,
+        typ: JwtHeaderType,
     ) -> Result<String, ErrorResponse> {
         let mut token = String::with_capacity(1024);
 
         let header = format!(
-            "{{\"alg\":\"{}\",\"kid\":\"{}\",\"typ\":\"JWT\"}}",
+            "{{\"alg\":\"{}\",\"kid\":\"{}\",\"typ\":\"{}\"}}",
             jwk.typ.as_str(),
-            jwk.kid
+            jwk.kid,
+            typ.as_str()
         );
         base64_url_no_pad_encode_buf(header.as_bytes(), &mut token);
         token.push('.');
@@ -48,8 +70,9 @@ impl JwtToken {
     pub async fn validate_claims_into(
         token: &str,
         expected_type: Option<JwtTokenType>,
-        allowed_clock_skew_seconds: u16,
+        allowed_clock_skew_seconds: Duration,
         buf: &mut Vec<u8>,
+        ignore_nbf: bool,
     ) -> Result<(), ErrorResponse> {
         debug_assert!(buf.is_empty());
 
@@ -94,14 +117,20 @@ impl JwtToken {
 
         base64_url_no_pad_decode_buf(header, buf)?;
         let header = serde_json::from_slice::<JwtHeader>(buf)?;
-        if header.typ != "JWT" {
+        // Access Tokens use `at+jwt` (RFC 9068), everything else `JWT`. Both must be accepted
+        // independently of the token type, because Access Tokens issued before that change are
+        // still valid until they expire.
+        if header.typ != JwtHeaderType::Jwt.as_str() && header.typ != JwtHeaderType::AtJwt.as_str()
+        {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Header `typ`",
             ));
         }
         let jwk = JwkKeyPair::find(header.kid.to_string()).await?;
-        if jwk.typ != header.alg {
+        // EdDSA (RFC 8812) and Ed25519 (RFC 9864) name the same OKP key family, so both
+        // spellings must validate against keys of that family.
+        if !jwk.typ.is_compatible_with(&header.alg) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
                 "Invalid JWT Header `alg` does not match `kid`",
@@ -116,6 +145,7 @@ impl JwtToken {
             &RauthyConfig::get().issuer,
             expected_type,
             allowed_clock_skew_seconds,
+            ignore_nbf,
         )?;
 
         Ok(())
@@ -140,10 +170,11 @@ impl ValidationClaims<'_> {
         &self,
         issuer: &str,
         expected_type: Option<JwtTokenType>,
-        allowed_clock_skew_seconds: u16,
+        allowed_clock_skew: Duration,
+        ignore_nbf: bool,
     ) -> Result<(), ErrorResponse> {
         let now = Utc::now().timestamp();
-        let skew = allowed_clock_skew_seconds as i64;
+        let skew = allowed_clock_skew.as_secs() as i64;
 
         if self.iat - skew > now {
             return Err(ErrorResponse::new(
@@ -157,7 +188,14 @@ impl ValidationClaims<'_> {
                 "Token has expired",
             ));
         }
-        if self.nbf - skew > now {
+        // Important for refresh tokens during revocation which will have their `nbf` set to
+        // `exp - 60` from the linked access token. There is no security issue when we are revoking
+        // anyway.
+        #[cfg(debug_assertions)]
+        if expected_type != Some(JwtTokenType::Refresh) {
+            debug_assert!(!ignore_nbf);
+        }
+        if !ignore_nbf && self.nbf - skew > now {
             return Err(ErrorResponse::new(
                 ErrorResponseType::JwtToken,
                 "Token is not valid yet",
@@ -185,9 +223,74 @@ impl ValidationClaims<'_> {
 #[cfg(test)]
 mod tests {
     use crate::claims::JwtTokenType;
-    use crate::token::ValidationClaims;
+    use crate::token::{JwtHeaderType, JwtToken, ValidationClaims};
     use chrono::Utc;
+    use rauthy_common::utils::base64_url_no_pad_decode_buf;
+    use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
     use rauthy_error::{ErrorResponse, ErrorResponseType};
+    use std::time::Duration;
+
+    #[test]
+    fn test_jwt_header_typ() {
+        // RFC 9068 specifies exactly this value for Access Tokens
+        assert_eq!(JwtHeaderType::AtJwt.as_str(), "at+jwt");
+        assert_eq!(JwtHeaderType::Jwt.as_str(), "JWT");
+    }
+
+    #[test]
+    fn test_ed25519_header_validates_against_stored_edsa_key() -> Result<(), ErrorResponse> {
+        // Regression test for the EdDSA/Ed25519 alg mismatch: OKP keys are always stored in
+        // the DB as `EdDSA`, while clients configured with `Ed25519` get tokens carrying
+        // `"alg":"Ed25519"` (RFC 9864). Validation must accept both spellings for the same
+        // key family — without confusion or shifts.
+        let kp = ed25519_compact::KeyPair::generate();
+
+        // Issuance side: an Ed25519-configured client signs with `typ = Ed25519`
+        let issuing_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::Ed25519,
+            bytes: kp.sk.to_der().to_vec(),
+        };
+        let claims = serde_json::json!({
+            "iss": "http://localhost:8080/auth/v1",
+            "exp": Utc::now().timestamp() + 60,
+            "iat": Utc::now().timestamp(),
+            "nbf": Utc::now().timestamp(),
+            "typ": "Bearer",
+        });
+        let token = JwtToken::build(&issuing_kp, &claims, JwtHeaderType::AtJwt)?;
+
+        // The header must carry the specific RFC 9864 spelling for Ed25519 clients
+        let mut buf = Vec::new();
+        base64_url_no_pad_decode_buf(token.split('.').next().unwrap(), &mut buf)?;
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&buf)?["alg"],
+            "Ed25519"
+        );
+
+        // Verification side: `JwkKeyPair::find(kid)` decrypts with the stored DB column, which
+        // is always `EdDSA` for OKP keys. Both spellings must validate against it.
+        let stored_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::EdDSA,
+            bytes: kp.sk.to_der().to_vec(),
+        };
+        assert!(stored_kp.typ.is_compatible_with(&JwkKeyPairAlg::Ed25519));
+        buf.clear();
+        stored_kp.verify_token(&token, &mut buf)?;
+
+        // And the reverse direction: an `EdDSA`-configured client's token must still validate
+        let eddsa_issuing_kp = JwkKeyPair {
+            kid: "test-kid".to_string(),
+            typ: JwkKeyPairAlg::EdDSA,
+            bytes: kp.sk.to_der().to_vec(),
+        };
+        let token = JwtToken::build(&eddsa_issuing_kp, &claims, JwtHeaderType::AtJwt)?;
+        buf.clear();
+        stored_kp.verify_token(&token, &mut buf)?;
+
+        Ok(())
+    }
 
     #[test]
     fn test_validation_claims() -> Result<(), ErrorResponse> {
@@ -201,7 +304,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0)?;
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        )?;
 
         ValidationClaims {
             iat: now + 2,
@@ -210,7 +318,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 2)?;
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(2),
+            false,
+        )?;
 
         let res = ValidationClaims {
             iat: now,
@@ -219,7 +332,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -235,7 +353,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -251,7 +374,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -267,7 +395,12 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 5);
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(5),
+            false,
+        );
         assert_eq!(res, Ok(()));
 
         let res = ValidationClaims {
@@ -277,7 +410,7 @@ mod tests {
             iss,
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Id), 0);
+        .validate(iss, Some(JwtTokenType::Id), Duration::from_secs(0), false);
         assert_eq!(
             res,
             Err(ErrorResponse::new(
@@ -293,7 +426,12 @@ mod tests {
             iss: "http://localhost:9090/something/else",
             typ: JwtTokenType::Bearer,
         }
-        .validate(iss, Some(JwtTokenType::Bearer), 0);
+        .validate(
+            iss,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            false,
+        );
         assert_eq!(
             res,
             Err(ErrorResponse::new(

@@ -1,18 +1,19 @@
 <script lang="ts">
-    import Loading from '$lib5/Loading.svelte';
-    import { webauthnAuth, type WebauthnAuthResult } from '$webauthn/authentication';
-    import { useI18n } from '$state/i18n.svelte.js';
-    import type { MfaPurpose, WebauthnAdditionalData } from '$webauthn/types.ts';
+    import Loading from '#lib/Loading.svelte';
+    import { webauthnAuth, type WebauthnAuthResult } from '#mfa/webauthn/authentication.ts';
+    import { useI18n } from '#state/i18n.svelte.js';
+    import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
     import { onMount } from 'svelte';
+    import type { MfaPurpose } from '#api/types/mfa.ts';
 
     let {
-        userId,
         purpose,
+        resetUserId,
         onError,
         onSuccess,
     }: {
-        userId: string;
         purpose: MfaPurpose;
+        resetUserId?: string;
         onError: (error: string) => void;
         onSuccess: (res?: WebauthnAdditionalData) => void;
     } = $props();
@@ -23,10 +24,10 @@
 
     onMount(async () => {
         webauthnRes = await webauthnAuth(
-            userId,
             purpose,
             t.authorize.invalidKeyUsed,
             t.authorize.requestExpired,
+            resetUserId,
         );
     });
 
@@ -82,6 +83,22 @@
                             <div class="good">
                                 {t.authorize.mfaAck}
                             </div>
+                            <!--
+                                A native App `redirect_uri` with a custom scheme (RFC 8252), like
+                                `myapp://callback`, is applied by the parent via
+                                `window.location.replace(loc)`. Right after the Passkey ceremony,
+                                the browser has no user activation left, and it silently blocks
+                                navigation to external protocols without one. The redirect is not
+                                detectable from JS, so render a fallback link only for non-http
+                                locations: a click provides a fresh user activation and the App
+                                receives the authorization code.
+                            -->
+                            {#if webauthnRes.data && 'loc' in webauthnRes.data}
+                                {@const loc = String(webauthnRes.data.loc)}
+                                {#if !loc.startsWith('http://') && !loc.startsWith('https://')}
+                                    <a class="openApp" href={loc}>{t.authorize.mfaOpenApp}</a>
+                                {/if}
+                            {/if}
                         {/if}
                     {/if}
                 </div>
@@ -125,6 +142,11 @@
 
     .good {
         color: hsl(var(--action));
+    }
+
+    .openApp {
+        margin-top: 0.75em;
+        font-weight: bold;
     }
 
     /*.muted {*/

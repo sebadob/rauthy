@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { genKey } from '$utils/helpers';
-    import Loading from '$lib5/Loading.svelte';
-    import IconUpload from '$icons/IconUpload.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { uploadFile } from '$api/fetch';
+    import { genKey } from '#utils/helpers.ts';
+    import Loading from '#lib/Loading.svelte';
+    import IconUpload from '#icons/IconUpload.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { uploadFile } from '#api/fetch.ts';
 
     let {
         // typ,
@@ -14,6 +14,7 @@
         buttonOnly = false,
         buttonSize = '1.5rem',
         fileName,
+        ariaLabel = 'Upload',
         multiple = false,
         onSuccess,
         width = '17rem',
@@ -27,6 +28,7 @@
         buttonOnly?: boolean;
         buttonSize?: string;
         fileName?: string;
+        ariaLabel?: string;
         multiple?: boolean;
         onSuccess?: () => void;
         width?: string;
@@ -81,7 +83,7 @@
 
 <form
     aria-dropeffect="move"
-    aria-label="Upload"
+    aria-label={ariaLabel}
     class="flex"
     data-nopad={buttonOnly}
     style:width
@@ -107,6 +109,7 @@
         <input
             type="file"
             {id}
+            aria-label={ariaLabel}
             aria-hidden={buttonOnly}
             accept={accept && accept.join(', ')}
             bind:files

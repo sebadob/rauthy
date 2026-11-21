@@ -17,11 +17,13 @@ export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 export const EVENT_LEVELS = ['info', 'notice', 'warning', 'critical'];
 export const EVENT_TYPES = [
     '-',
+    'ConsentRevoked',
     'ForcedLogout',
     'InvalidLogins',
     'IpBlacklisted',
     'IpBlacklistRemoved',
     'JwksRotated',
+    'LdapLogin',
     'LoginNewLocation',
     'NewUserRegistered',
     'NewRauthyAdmin',
@@ -46,6 +48,7 @@ export const TPL_ATPROTO_ID = 'tpl_atproto_id';
 export const TPL_AUTH_PROVIDERS = 'tpl_auth_providers';
 export const TPL_CLIENT_NAME = 'tpl_client_name';
 export const TPL_CLIENT_URL = 'tpl_client_url';
+export const TPL_CLIENT_FAVICON_UPDATED = 'tpl_client_favicon_updated';
 export const TPL_CLIENT_LOGO_UPDATED = 'tpl_client_logo_updated';
 export const TPL_CSRF_TOKEN = 'tpl_csrf_token';
 export const TPL_EMAIL_OLD = 'tpl_email_old';
@@ -53,9 +56,13 @@ export const TPL_EMAIL_NEW = 'tpl_email_new';
 // export const TPL_ERROR_DETAILS = 'tpl_error_details';
 export const TPL_ERROR_TEXT = 'tpl_error_text';
 export const TPL_DEVICE_USER_CODE_LENGTH = 'tpl_device_user_code_length';
+export const TPL_IS_OTP_ENABLED = 'tpl_is_otp_enabled';
 export const TPL_IS_REG_OPEN = 'tpl_is_reg_open';
 export const TPL_LOGIN_ACTION = 'tpl_login_action';
+export const TPL_OTP_LENGTH = 'tpl_otp_length';
+export const TPL_PASSKEY_REG_TYPE = 'tpl_passkey_reg_type';
 export const TPL_PASSWORD_RESET = 'tpl_password_reset';
+export const TPL_PASSWORD_RESET_LINK_ALWAYS = 'tpl_password_reset_link_always';
 export const TPL_STATUS_CODE = 'tpl_status_code';
 export const TPL_RESTRICTED_EMAIL_DOMAIN = 'tpl_restricted_email_domain';
 export const TPL_USER_VALUES_CONFIG = 'tpl_user_values_config';

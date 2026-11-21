@@ -42,12 +42,12 @@ password_plain = '123SuperSafe'
 
 # If set, this will take the Argon2ID hashed password during the
 # initialization of an empty production database. If both
-# `password_plain` and `pasword_argon2id` are set, the hashed
+# `password_plain` and `password_argon2id` are set, the hashed
 # version will always be prioritized.
 #
 # default: random -> see logs on first start
 # overwritten by: BOOTSTRAP_ADMIN_PASSWORD_ARGON2ID
-pasword_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
+password_argon2id = '$argon2id$v=19$m=32768,t=3,p=2$mK+3taI5mnA+Gx8OjjKn5Q$XsOmyvt9fr0V7Dghhv3D0aTe/FjF36BfNS5QlxOPep0'
 ```
 
 You can use any tool for hashing as long as the output format is a proper argon2id string.
@@ -109,10 +109,40 @@ rights could look like this:
 ]
 ```
 
-The `secret` can be either `{"Plain": "..."}` or `{"Encrypted": "..."}`. Plain secrets must be at
+The `secret` can be `{"Plain": "..."}`, `{"Encrypted": "..."}`, or `"generate"`. Plain secrets must
+be at
 least 64 characters long. Encrypted secrets are encrypted with
 [`cryptr`](https://github.com/sebadob/cryptr) and base64-encoded, just like encrypted client
-secrets.
+secrets. Generated API-key secrets store the full usable `name$secret` token in the generated
+bootstrap secret container under `api-key/<name>/token`.
+
+```json
+[
+  {
+    "name": "provision",
+    "exp": 1735599600,
+    "secret": "generate",
+    "access": [
+      {
+        "group": "Clients",
+        "access_rights": [
+          "read",
+          "create",
+          "update",
+          "delete"
+        ]
+      },
+      {
+        "group": "Secrets",
+        "access_rights": [
+          "read",
+          "update"
+        ]
+      }
+    ]
+  }
+]
+```
 
 ```admonish caution
 Only bootstrap short-lived API keys for production automation. Set `exp` to a timestamp
@@ -212,6 +242,139 @@ JSON is only read while initializing an empty production database; changing `api
 later does not reconcile live API keys.
 ```
 
+## Generated Bootstrap Secrets
+
+Generated bootstrap credentials are stored in an encrypted local container before their matching
+database rows are inserted. This keeps later phases from creating live client, user, or API-key
+rows whose generated plaintext cannot be recovered.
+
+The container is a single AEAD-encrypted JSON payload. The expiry deadline lives inside that
+encrypted payload, so startup and runtime expiry checks decrypt the container first. A positive TTL
+also schedules a runtime purge after each write. Set the TTL to `0` only if you intentionally want
+to keep the encrypted container for manual extraction and purge it yourself.
+
+Generated values are a first-boot mechanism only. The JSON bootstrap files are read while Rauthy
+initializes an empty production database. If you add `"generate"` to `clients.json`, `users.json`,
+or `api_keys.json` after the database has already been initialized, that day-2 change is ignored by
+the first-boot bootstrap gate and no new generated secret is written.
+
+```toml
+[bootstrap]
+# Generated bootstrap secrets are written to this encrypted
+# local container before their matching database rows are
+# inserted. Later bootstrap phases use it for generated
+# client secrets, user passwords, and API-key secrets that
+# cannot be reconstructed from the database after insertion.
+#
+# The file is a single AEAD-encrypted JSON payload. The expiry
+# deadline lives inside that encrypted payload, so expiry
+# checks decrypt the container first.
+#
+# If unset, the default is `${cluster.data_dir}/bootstrap.secrets.enc`.
+#
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_FILE
+#generated_secrets_file = 'data/bootstrap.secrets.enc'
+
+# Duration before generated bootstrap secrets are purged.
+# The default keeps first-start credentials available briefly
+# for local extraction. Set to `0` to disable expiry and runtime
+# auto-purge.
+#
+# type: duration
+# default: '10m'
+# overwritten by: BOOTSTRAP_GENERATED_SECRETS_TTL
+#generated_secrets_ttl = '10m'
+```
+
+Use the local CLI to retrieve or purge the encrypted container after first start. The command does
+not talk to the Rauthy server.
+
+```bash
+rauthy bootstrap get \
+  -c config.toml \
+  --kind client \
+  --id my-service \
+  --field secret \
+  --format raw
+
+rauthy bootstrap get -c config.toml --format env
+rauthy bootstrap purge -c config.toml
+```
+
+`get --format env` emits names that include the entity kind, sanitized id, and field, for example
+`RAUTHY_BOOTSTRAP_CLIENT_MY_SERVICE_SECRET=...` and
+`RAUTHY_BOOTSTRAP_USER_ADMIN_EXAMPLE_COM_PASSWORD=...`.
+
+The CLI loads the existing Rauthy config and initializes the configured encryption keys before it
+decrypts the container. It does not accept encryption keys or the container path as command-line
+arguments.
+
+API keys can request a generated token with `"secret": "generate"`. `get --format env` emits it as
+`RAUTHY_BOOTSTRAP_API_KEY_<SANITIZED_NAME>_TOKEN=...`.
+
+Clients can request a generated confidential-client secret with `"secret": "generate"`:
+
+```json
+[
+  {
+    "id": "my-service",
+    "name": "My Service",
+    "secret": "generate",
+    "redirect_uris": [
+      "https://my-service.example.com/callback"
+    ],
+    "enabled": true,
+    "flows_enabled": [
+      "authorization_code",
+      "refresh_token"
+    ],
+    "access_token_alg": "EdDSA",
+    "id_token_alg": "EdDSA",
+    "auth_code_lifetime": 60,
+    "access_token_lifetime": 3600,
+    "scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
+    "default_scopes": [
+      "openid",
+      "profile",
+      "email"
+    ],
+    "force_mfa": false
+  }
+]
+```
+
+If the `secret` field is absent or `null`, the client remains public and Rauthy forces `S256` PKCE.
+Use `"secret": "generate"` only when you want a confidential client and plan to extract the
+generated secret from the encrypted container.
+
+Users can request a generated password with `"password": "generate"`:
+
+```json
+[
+  {
+    "email": "admin@example.com",
+    "password": "generate",
+    "roles": [
+      "admin"
+    ],
+    "enabled": true,
+    "email_verified": true
+  }
+]
+```
+
+Rauthy writes the plaintext password to the encrypted container before hashing it and inserting the
+user row. The database stores only the password hash.
+
+API keys in `api_keys.json` can request a generated token with `"secret": "generate"`. The full
+usable `name$secret` token is written to the encrypted container.
+Extract it with `--kind api-key --id <key-name> --field token` and use it directly as the
+`Authorization` header value: `Authorization: API-Key <token>`.
+
 ## Advanced / Custom Configuration
 
 If you want to bootstrap other things like users or clients, you need to do it a bit differently.
@@ -247,3 +410,37 @@ of from the config, is that you can then rely on your IDEs auto-completion and s
 features, which do not work in a TOML string. You can check example
 files [here](https://github.com/sebadob/rauthy/tree/main/bootstrap), or take a look at the
 [Rust definitions](https://github.com/sebadob/rauthy/blob/main/src/data/src/migration/bootstrap/types.rs).
+
+### Reconcile on every start
+
+You can re-apply the bootstrap `groups.json`, `roles.json`, `scopes.json` and `clients.json` on
+every start, and not only against an empty database:
+
+```toml
+[bootstrap]
+# If set to `true`, the `clients.json`, `groups.json`,
+# `roles.json` and `scopes.json` inside `bootstrap_dir` are
+# re-applied on every start, and not only against an empty
+# database. Missing entries are created, changed entries are
+# updated, and nothing is ever deleted. Only the primary node
+# does this. Changes to the files need a restart to be applied.
+# Check the book for the details.
+#
+# default: false
+# overwritten by: BOOTSTRAP_RECONCILE
+reconcile = false
+```
+
+- Missing entries are created, changed entries are updated, nothing is deleted.
+- Clients match by `id`. Groups, roles and scopes match by `id` if given, otherwise by `name`, so
+  only entries with an `id` can be renamed. Renames propagate to users and clients.
+- Client values not covered by the bootstrap format (custom claims, `allowed_resources`,
+  `default_aud`) are kept.
+- Client secrets: `Plain` / `Encrypted` are applied on every start, and the old secret stops
+  working immediately. `"generate"` only creates a secret for a new client and never rotates one.
+  No secret makes the client public.
+- Not reconciled: the default OIDC scopes (`openid`, `profile`, `email`, ...), API keys, users,
+  user attributes and auth providers.
+- Files are parsed and validated first. A client or scope that refers to a scope or user attribute
+  that doesn't exist stops the startup partway through. Fix the file and restart to finish.
+- Only the primary node (`node_id = 1`) reconciles. Changes need a restart.

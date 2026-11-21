@@ -1,22 +1,21 @@
 <script lang="ts">
+    import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
+    import IconOffice from '#icons/IconOffice.svelte';
     import { onMount } from 'svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ButtonAddModal from '$lib5/button/ButtonAddModal.svelte';
-    import ContentAdmin from '$lib5/ContentAdmin.svelte';
-    import NavButtonTile from '$lib5/nav/NavButtonTile.svelte';
-    import NavSub from '$lib5/nav/NavSub.svelte';
-    import OrderSearchBar from '$lib5/search_bar/OrderSearchBar.svelte';
-    import { fetchGet } from '$api/fetch';
-    import { useParam } from '$state/param.svelte';
-    import type { ScopeResponse } from '$api/types/scopes.ts';
-    import type { ClientResponse } from '$api/types/clients.ts';
-    import ClientAddNew from '$lib5/admin/clients/ClientAddNew.svelte';
-    import ClientDetails from '$lib5/admin/clients/ClientDetails.svelte';
-    import { useTrigger } from '$state/callback.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import ButtonAddModal from '#lib/button/ButtonAddModal.svelte';
+    import ContentAdmin from '#lib/ContentAdmin.svelte';
+    import NavButtonTile from '#lib/nav/NavButtonTile.svelte';
+    import NavSub from '#lib/nav/NavSub.svelte';
+    import OrderSearchBar from '#lib/search_bar/OrderSearchBar.svelte';
+    import { fetchGet } from '#api/fetch.ts';
+    import { useParam } from '#state/param.svelte.ts';
+    import type { ScopeResponse } from '#api/types/scopes.ts';
+    import type { ClientResponse } from '#api/types/clients.ts';
+    import ClientAddNew from '#lib/admin/clients/ClientAddNew.svelte';
+    import ClientDetails from '#lib/admin/clients/ClientDetails.svelte';
 
-    let refAddNew: undefined | HTMLButtonElement = $state();
-    let tr = useTrigger();
-    tr.set('navMain', () => refAddNew?.focus());
+    let ta = useI18nAdmin();
 
     let closeModal: undefined | (() => void) = $state();
 
@@ -87,17 +86,13 @@
 </script>
 
 <NavSub
-    paddingTop="2.35rem"
+    detail={!!client}
+    onBack={() => cid.set(undefined)}
+    error={err}
     buttonTilesAriaControls="groups"
-    width="min(20rem, 100dvw)"
-    thresholdNavSub={700}
 >
-    <ButtonAddModal
-        bind:ref={refAddNew}
-        level={clients.length === 0 ? 1 : 2}
-        bind:closeModal
-        alignRight
-    >
+    <AdminListHeading title={ta.nav.clients} count={clientsFiltered.length} />
+    <ButtonAddModal level={clients.length === 0 ? 1 : 2} bind:closeModal alignRight>
         <ClientAddNew onSave={onAddNew} {clients} />
     </ButtonAddModal>
     <OrderSearchBar
@@ -113,16 +108,14 @@
         <div class="clientsList">
             {#each clientsFiltered as client (client.id)}
                 <NavButtonTile
-                    onclick={() => {
-                        cid.set(client.id);
-                        tr.trigger('navSubSub');
-                    }}
+                    onclick={() => cid.set(client.id)}
                     selected={cid.get() === client.id}
                 >
-                    <div class="tile">
-                        {client.id}
-                        <div class="muted">
-                            {client.name}
+                    <div class="navBtn">
+                        <div class="admin-row-symbol"><IconOffice width="1.125rem" /></div>
+                        <div class="tile">
+                            <div class="admin-row-title">{client.name || client.id}</div>
+                            <div class="muted">{client.id}</div>
                         </div>
                     </div>
                 </NavButtonTile>
@@ -162,5 +155,22 @@
         line-height: 1rem;
         text-align: left;
         transform: translateY(0.2rem);
+    }
+
+    .navBtn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .admin-row-symbol {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        background: var(--ui-container) !important;
+        border-radius: var(--border-radius);
+        border: 0;
+        color: var(--ui-primary);
     }
 </style>

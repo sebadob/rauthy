@@ -1,17 +1,25 @@
 use crate::database::{Cache, DB};
 use crate::rauthy_config::RauthyConfig;
 use hiqlite::macros::params;
+use oxrdf::vocab::rdf;
+use oxrdf::{LiteralRef, NamedNodeRef, TripleRef};
+use oxttl::{NTriplesParser, NTriplesSerializer, TurtleParser, TurtleSerializer};
 use rauthy_api_types::users::WebIdResponse;
 use rauthy_common::constants::CACHE_TTL_USER;
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
 use rauthy_error::ErrorResponse;
-use rio_api::formatter::TriplesFormatter;
-use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
-use rio_api::parser::TriplesParser;
-use rio_turtle::{NTriplesFormatter, NTriplesParser, TurtleFormatter, TurtleParser};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+
+// The vocabulary a WebID card is built from. `rdf:type` comes from `oxrdf::vocab::rdf`.
+const FOAF_PERSONAL_PROFILE_DOCUMENT: &str = "http://xmlns.com/foaf/0.1/PersonalProfileDocument";
+const FOAF_PRIMARY_TOPIC: &str = "http://xmlns.com/foaf/0.1/primaryTopic";
+const FOAF_PERSON: &str = "http://xmlns.com/foaf/0.1/Person";
+const FOAF_GIVEN_NAME: &str = "http://xmlns.com/foaf/0.1/givenname";
+const FOAF_FAMILY_NAME: &str = "http://xmlns.com/foaf/0.1/family_name";
+const FOAF_MBOX: &str = "http://xmlns.com/foaf/0.1/mbox";
+const SOLID_OIDC_ISSUER: &str = "http://www.w3.org/ns/solid/terms#oidcIssuer";
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromPgRow, utoipa::ToSchema)]
 pub struct WebId {
@@ -119,15 +127,16 @@ impl WebId {
         pub_url: &str,
     ) -> Result<Self, ErrorResponse> {
         let custom_triples = if let Some(data) = custom_data_turtle {
-            let mut ttl_parser = TurtleParser::new(
-                data.as_bytes(),
-                Some(Self::resolve_webid_card_uri(&user_id, pub_url).parse()?),
-            );
-            let mut ntriples_fmt = NTriplesFormatter::new(Vec::<u8>::new());
-            ttl_parser.parse_all(&mut |t| ntriples_fmt.format(&t))?;
+            // Relative IRIs inside the user's input are resolved against this WebID card.
+            let parser = TurtleParser::new()
+                .with_base_iri(Self::resolve_webid_card_uri(&user_id, pub_url))?;
+            let mut ntriples_fmt = NTriplesSerializer::new().for_writer(Vec::<u8>::new());
+            for triple in parser.for_slice(data.as_bytes()) {
+                ntriples_fmt.serialize_triple(triple?.as_ref())?;
+            }
 
             // as long as the formatter itself is not buggy, this String conversion should never panic
-            Some(String::from_utf8(ntriples_fmt.finish()?).expect("Must be valid string."))
+            Some(String::from_utf8(ntriples_fmt.finish()).expect("Must be valid string."))
         } else {
             None
         };
@@ -139,115 +148,77 @@ impl WebId {
         })
     }
 
-    pub fn fmt_custom_triples_to_ttl(
-        &self,
-        formatter: &mut TurtleFormatter<Vec<u8>>,
-    ) -> Result<(), ErrorResponse> {
-        if let Some(custom_triples) = self.custom_triples.as_ref() {
-            NTriplesParser::new(custom_triples.as_bytes()).parse_all(&mut |t| {
-                formatter.format(&t)?;
-                Ok(())
-            })
-        } else {
-            Ok(())
-        }
-    }
-
-    fn triple<'a>(s: impl Into<Subject<'a>>, p: &'a str, o: impl Into<Term<'a>>) -> Triple<'a> {
-        Triple {
-            subject: s.into(),
-            predicate: NamedNode { iri: p },
-            object: o.into(),
-        }
-    }
-
     /// Serialize the webid response to a graph serializable syntax.
-    fn serialize_turtle(
-        resp: WebIdResponse,
-        formatter: &mut TurtleFormatter<Vec<u8>>,
-    ) -> Result<(), ErrorResponse> {
+    pub fn try_into_turtle(resp: WebIdResponse) -> Result<String, ErrorResponse> {
         let webid: WebId = resp.webid.into();
-        let t_user = NamedNode {
-            iri: &WebId::resolve_webid_uri(&webid.user_id),
-        };
-        let t_card = NamedNode {
-            iri: &WebId::resolve_webid_card_uri(
-                &webid.user_id,
-                RauthyConfig::get().pub_url_with_scheme.as_str(),
-            ),
-        };
-        let t_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+        let profile_uri = WebId::resolve_webid_uri(&webid.user_id);
+        let card_uri = WebId::resolve_webid_card_uri(
+            &webid.user_id,
+            RauthyConfig::get().pub_url_with_scheme.as_str(),
+        );
+        let t_user = NamedNodeRef::new(&profile_uri)?;
+        let t_card = NamedNodeRef::new(&card_uri)?;
 
-        formatter.format(&Self::triple(
+        let mut formatter = TurtleSerializer::new().for_writer(Vec::<u8>::new());
+        formatter.serialize_triple(TripleRef::new(
             t_card,
-            t_type,
-            NamedNode {
-                iri: "http://xmlns.com/foaf/0.1/PersonalProfileDocument",
-            },
+            rdf::TYPE,
+            Self::node(FOAF_PERSONAL_PROFILE_DOCUMENT),
         ))?;
-
-        formatter.format(&Self::triple(
+        formatter.serialize_triple(TripleRef::new(
             t_card,
-            "http://xmlns.com/foaf/0.1/primaryTopic",
+            Self::node(FOAF_PRIMARY_TOPIC),
             t_user,
         ))?;
 
-        formatter.format(&Self::triple(
+        formatter.serialize_triple(TripleRef::new(
             t_user,
-            "http://www.w3.org/ns/solid/terms#oidcIssuer",
-            NamedNode { iri: &resp.issuer },
+            Self::node(SOLID_OIDC_ISSUER),
+            NamedNodeRef::new(&resp.issuer)?,
         ))?;
-
-        // rdf:type
-        formatter.format(&Self::triple(
-            t_user,
-            t_type,
-            NamedNode {
-                iri: "http://xmlns.com/foaf/0.1/Person",
-            },
-        ))?;
+        formatter.serialize_triple(TripleRef::new(t_user, rdf::TYPE, Self::node(FOAF_PERSON)))?;
 
         // foaf:name
-        if let Some(value) = &resp.given_name {
-            formatter.format(&Self::triple(
+        if let Some(given_name) = &resp.given_name {
+            formatter.serialize_triple(TripleRef::new(
                 t_user,
-                "http://xmlns.com/foaf/0.1/givenname",
-                Literal::Simple { value },
+                Self::node(FOAF_GIVEN_NAME),
+                LiteralRef::new_simple_literal(given_name),
             ))?;
         }
-        if let Some(value) = &resp.family_name {
-            formatter.format(&Self::triple(
+        if let Some(family_name) = &resp.family_name {
+            formatter.serialize_triple(TripleRef::new(
                 t_user,
-                "http://xmlns.com/foaf/0.1/family_name",
-                Literal::Simple { value },
+                Self::node(FOAF_FAMILY_NAME),
+                LiteralRef::new_simple_literal(family_name),
             ))?;
         }
 
         // foaf:mbox
         if webid.expose_email {
-            formatter.format(&Self::triple(
+            let mbox = format!("mailto:{}", resp.email);
+            formatter.serialize_triple(TripleRef::new(
                 t_user,
-                "http://xmlns.com/foaf/0.1/mbox",
-                NamedNode {
-                    iri: &format!("mailto:{}", &resp.email),
-                },
+                Self::node(FOAF_MBOX),
+                NamedNodeRef::new(&mbox)?,
             ))?;
         }
 
-        // Format custom data.
-        webid
-            .fmt_custom_triples_to_ttl(formatter)
-            .expect("Must be valid");
-
-        Ok(())
-    }
-
-    pub fn try_into_turtle(resp: WebIdResponse) -> Result<String, ErrorResponse> {
-        let mut formatter = TurtleFormatter::new(Vec::<u8>::new());
-        WebId::serialize_turtle(resp, &mut formatter)?;
+        // Custom triples are stored as N-Triples and appended to the open Turtle document.
+        if let Some(custom_triples) = webid.custom_triples.as_deref() {
+            for triple in NTriplesParser::new().for_slice(custom_triples.as_bytes()) {
+                formatter.serialize_triple(triple?.as_ref())?;
+            }
+        }
 
         let finished = formatter.finish()?;
         Ok(String::from_utf8(finished).expect("Must be a valid turtle string."))
+    }
+
+    /// An IRI from this module's vocabulary constants; `oxrdf` validates every `NamedNode`,
+    /// and these are static strings that cannot be invalid.
+    fn node(iri: &str) -> NamedNodeRef<'_> {
+        NamedNodeRef::new(iri).expect("Static WebID vocabulary IRI")
     }
 }
 
@@ -315,7 +286,8 @@ mod tests {
 <http://localhost:8080/auth/v1> .
 "#
         ),
-        "<http://localhost:8081/auth/SomeId123/profile> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\t<http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
+        // `oxttl` writes `rdf:type` with the Turtle keyword `a`.
+        "<http://localhost:8081/auth/SomeId123/profile> a <http://xmlns.com/foaf/0.1/PersonalProfileDocument> ;\n\t<http://xmlns.com/foaf/0.1/primaryTopic> <http://localhost:8081/auth/SomeId123/profile#me> .\n<http://localhost:8081/auth/SomeId123/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> ;\n\ta <http://xmlns.com/foaf/0.1/Person> ;\n\t<http://xmlns.com/foaf/0.1/givenname> \"Given\" ;\n\t<http://xmlns.com/foaf/0.1/family_name> \"Family\" ;\n\t<http://xmlns.com/foaf/0.1/mbox> <mailto:mail@example.com> .\n<http://localhost:8080/auth/webid/za9UxpH7XVxqrtpEbThoqvn2/profile#me> <http://www.w3.org/ns/solid/terms#oidcIssuer> <http://localhost:8080/auth/v1> .\n"
     )]
     #[ignore] // this is currently ignored, because setting the PUB_URL here interferes with other tests in CI
     fn test_web_id_response(#[case] custom_triples: Option<&str>, #[case] expected_resp: &str) {

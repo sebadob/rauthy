@@ -4,7 +4,7 @@ use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::oidc::logout;
 use std::str::FromStr;
 use std::time::Duration;
@@ -96,7 +96,7 @@ async fn execute_logout_retries(
         }
         debug_assert!(kp.is_some());
 
-        match logout::send_backchannel_logout(
+        if let Err(err) = logout::send_backchannel_logout(
             client.id.clone(),
             client.backchannel_logout_uri.unwrap_or_default(),
             sub,
@@ -106,16 +106,17 @@ async fn execute_logout_retries(
         )
         .await
         {
-            Ok(_) => {
-                info!(
-                    "Success retrying backchannel logout for {}",
-                    failure.client_id
-                );
-                failure.delete().await?;
-            }
-            Err(err) => {
-                error!(?err, "executing Backchannel Logout");
-            }
+            error!(?err, "executing Backchannel Logout");
+        }
+    }
+
+    // Join every attempt before returning: successful deliveries delete their failure record
+    // inside the task, failed ones re-upsert themselves with an incremented retry count.
+    while let Some(res) = tasks.join_next().await {
+        if let Err(err) =
+            res.map_err(|err| ErrorResponse::new(ErrorResponseType::Internal, err.to_string()))?
+        {
+            error!("{err}");
         }
     }
 

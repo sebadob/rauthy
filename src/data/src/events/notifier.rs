@@ -1,3 +1,4 @@
+use crate::email::mailer_callback::EMailCallback;
 use crate::email::{mailer, notification};
 use crate::events::event::{Event, EventLevel, EventType};
 use crate::rauthy_config::RauthyConfig;
@@ -10,9 +11,9 @@ use std::sync::OnceLock;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-static NOTIFIER_EMAIL: OnceLock<(i16, NotifierEmail)> = OnceLock::new();
-static NOTIFIER_MATRIX: OnceLock<(i16, NotifierMatrix)> = OnceLock::new();
-static NOTIFIER_SLACK: OnceLock<(i16, NotifierSlack)> = OnceLock::new();
+pub static NOTIFIER_EMAIL: OnceLock<(i16, NotifierEmail)> = OnceLock::new();
+pub static NOTIFIER_MATRIX: OnceLock<(i16, NotifierMatrix)> = OnceLock::new();
+pub static NOTIFIER_SLACK: OnceLock<(i16, NotifierSlack)> = OnceLock::new();
 
 pub struct EventNotifier;
 
@@ -58,7 +59,7 @@ impl EventNotifier {
     }
 
     pub async fn init_notifiers(
-        tx_email: mpsc::Sender<mailer::EMail>,
+        tx_email: mpsc::Sender<(mailer::EMail, EMailCallback)>,
     ) -> Result<(), ErrorResponse> {
         let vars = &RauthyConfig::get().vars.events;
 
@@ -139,10 +140,10 @@ impl EventNotifier {
 }
 
 #[derive(Debug)]
-struct NotifierEmail {
+pub struct NotifierEmail {
     notification_recipient_name: String,
     notification_email: String,
-    tx_email: mpsc::Sender<mailer::EMail>,
+    tx_email: mpsc::Sender<(mailer::EMail, EMailCallback)>,
 }
 
 #[async_trait]

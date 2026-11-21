@@ -1,23 +1,23 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte.js';
-    import { fetchGet, fetchPost } from '$api/fetch.js';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.js';
     import { onMount } from 'svelte';
-    import Button from '$lib/button/Button.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import type { ToSRequest, ToSResponse, ToSUserAcceptResponse } from '$api/types/tos';
-    import SearchBar from '$lib/search_bar/SearchBar.svelte';
-    import { fetchSearchServer } from '$utils/search';
-    import type { UserResponseSimple } from '$api/types/user';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import type { ToSRequest, ToSResponse, ToSUserAcceptResponse } from '#api/types/tos.ts';
+    import SearchBar from '#lib/search_bar/SearchBar.svelte';
+    import { fetchSearchServer } from '#utils/search.ts';
+    import type { UserResponseSimple } from '#api/types/user.ts';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import { slide } from 'svelte/transition';
-    import InputDateTimeCombo from '$lib/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput } from '$utils/form';
-    import { formatDateFromTs, formatUtcTsFromDateInput } from '$utils/helpers';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import Options from '$lib/Options.svelte';
-    import EditorInteractive from '$lib/text_edit/EditorInteractive.svelte';
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import Options from '#lib/Options.svelte';
+    import EditorInteractive from '#lib/text_edit/EditorInteractive.svelte';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
 
     let t = useI18n();
     let ta = useI18nAdmin();
@@ -25,6 +25,7 @@
     let refSearch: undefined | HTMLInputElement = $state();
 
     let showModalAddNew = $state(false);
+    let expanded = $state(false);
     let closeModalAddNew: undefined | (() => void) = $state();
     let showModalStatus = $state(false);
     let closeModalStatus: undefined | (() => void) = $state();
@@ -33,7 +34,7 @@
     let error = $state('');
     let noneExist = $state(false);
     let tos: ToSResponse[] = $state([]);
-    let editorMode: 'HTML' | 'Text' | 'Markdown' = $state('Markdown');
+    let editorMode: 'Text' | 'Markdown' = $state('Markdown');
     let newToSContentRaw = $state('');
     let optUntil = $state(false);
     let optUntilDate = $state(fmtDateInput());
@@ -134,10 +135,22 @@
             // Always have the latest ToS at the top. The backend sends them ASC.
             res.body.reverse();
             tos = res.body;
+            noneExist = tos.length === 0;
         } else if (res.status === 204) {
             noneExist = true;
             selectedIdx = -1;
         }
+    }
+
+    function openNewVersion(current?: ToSResponse) {
+        const transitionEnd = new Date(Date.now() + 5 * 60_000);
+        optUntil = false;
+        optUntilDate = fmtDateInput(transitionEnd);
+        optUntilTime = fmtTimeInput(transitionEnd);
+        newToSContentRaw = current?.content ?? '';
+        editorMode = current?.is_html === false ? 'Text' : 'Markdown';
+        error = '';
+        showModalAddNew = true;
     }
 
     async function saveToS() {
@@ -153,7 +166,12 @@
             content,
         };
         if (optUntil) {
-            payload.opt_until = formatUtcTsFromDateInput(optUntilDate, optUntilTime);
+            const end = unixTsFromLocalDateTime(optUntilDate, optUntilTime);
+            if (!end || end <= Date.now() / 1000) {
+                error = t.common.invalidInput;
+                return;
+            }
+            payload.opt_until = end;
         }
 
         let res = await fetchPost('/auth/v1/tos', payload);
@@ -174,13 +192,13 @@
     }
 </script>
 
-<h2>{t.tos.tos}</h2>
+<h2 class="ui-page-title">{t.tos.tos}</h2>
 
 <div class="flex gap-05 flex-wrap mh-10">
     <Button
         ariaLabel={ta.tos.addNewToS}
         level={isModalOpen ? 2 : 1}
-        onclick={() => (showModalAddNew = true)}
+        onclick={() => openNewVersion()}
     >
         {ta.tos.addNewToS}
     </Button>
@@ -188,10 +206,7 @@
         <Button
             ariaLabel={ta.tos.addNewToSFromCurrent}
             level={isModalOpen ? 2 : 1}
-            onclick={() => {
-                newToSContentRaw = tos[selectedIdx].content;
-                showModalAddNew = true;
-            }}
+            onclick={() => openNewVersion(tos[selectedIdx])}
         >
             {ta.tos.addNewToSFromCurrent}
         </Button>
@@ -209,7 +224,7 @@
 
 <div>
     {#if noneExist}
-        <p>{ta.tos.noneExist}</p>
+        <p class="ui-muted-copy">{ta.tos.noneExist}</p>
     {:else if tos.length > 0 && selectedIdx > -1}
         {@const active = tos[selectedIdx]}
 
@@ -239,61 +254,58 @@
     {/if}
 </div>
 
-<Modal bind:showModal={showModalAddNew} bind:closeModal={closeModalAddNew}>
-    <div class="modal">
-        <h3>{ta.tos.addNewToS}</h3>
+<Modal
+    bind:showModal={showModalAddNew}
+    bind:closeModal={closeModalAddNew}
+    ariaLabel={ta.tos.addNewToS}
+    bind:expanded
+    onClose={() => (expanded = false)}
+    --dialog-padding="clamp(14px, 3vw, 24px)"
+>
+    <EditorInteractive
+        bind:mode={editorMode}
+        {expanded}
+        bind:contentRaw={newToSContentRaw}
+        title={ta.tos.addNewToS}
+    >
+        {#snippet fields()}
+            <div class="optUntil">
+                <InputCheckbox ariaLabel={ta.tos.optUntil.enable} bind:checked={optUntil}>
+                    {ta.tos.optUntil.enable}
+                </InputCheckbox>
 
-        <div class="optUntil">
-            <InputCheckbox ariaLabel={ta.tos.optUntil.enable} bind:checked={optUntil}>
-                {ta.tos.optUntil.enable}
-            </InputCheckbox>
+                {#if optUntil}
+                    <div class="transition-fields" transition:slide={{ duration: 150 }}>
+                        <p>{ta.tos.optUntil.desc}</p>
+                        <InputDateTimeCombo
+                            min={fmtDateInput()}
+                            label={ta.common.date}
+                            labelTime={ta.common.time}
+                            required
+                            withTime
+                            bind:value={optUntilDate}
+                            bind:timeValue={optUntilTime}
+                        />
+                    </div>
+                {/if}
+            </div>
+        {/snippet}
+        {#snippet footer()}
+            <p class="immutable">{ta.tos.immutable}</p>
+            <div class="actions">
+                <Button level={2} onclick={() => closeModalAddNew?.()}>{t.common.cancel}</Button>
+                <Button onclick={saveToS} isDisabled={newToSContentRaw.trim().length === 0}>
+                    {t.common.save}
+                </Button>
+            </div>
 
-            {#if optUntil}
-                <div transition:slide={{ duration: 150 }}>
-                    <InputDateTimeCombo
-                        min={fmtDateInput()}
-                        timeMin={fmtTimeInput()}
-                        withTime
-                        bind:value={optUntilDate}
-                        bind:timeValue={optUntilTime}
-                    />
-
-                    <p>
-                        {ta.tos.optUntil.desc}
-                    </p>
+            {#if error}
+                <div class="err">
+                    {error}
                 </div>
             {/if}
-        </div>
-
-        <div class="editor">
-            <EditorInteractive
-                bind:mode={editorMode}
-                bind:contentRaw={newToSContentRaw}
-                height="max(calc(100dvh - 20rem), 30rem)"
-            />
-        </div>
-
-        <div class="action" style:margin-bottom="1rem">
-            <p><b>{ta.tos.immutable}</b></p>
-        </div>
-
-        <Button
-            ariaLabel={t.common.save}
-            onclick={saveToS}
-            isDisabled={newToSContentRaw.trim().length === 0}
-        >
-            {t.common.save}
-        </Button>
-        <Button level={-3} ariaLabel={t.common.cancel} onclick={() => closeModalAddNew?.()}>
-            {t.common.cancel}
-        </Button>
-
-        {#if error}
-            <div class="err">
-                {error}
-            </div>
-        {/if}
-    </div>
+        {/snippet}
+    </EditorInteractive>
 </Modal>
 
 {#if tos.length > 0}
@@ -351,16 +363,37 @@
 {/if}
 
 <style>
-    .editor {
-        margin: 1rem 0;
+    .transition-fields {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 0.375rem 1rem;
+        margin-top: 0.25rem;
     }
 
-    .modal {
-        width: min(90dvw, 2 * 467pt);
+    .transition-fields p,
+    .immutable {
+        font-size: 0.8125rem;
+        color: var(--ui-muted);
     }
 
-    .optUntil {
-        margin: 0.75rem 0;
+    .transition-fields p {
+        flex: 1 1 16rem;
+        margin: 0;
+    }
+
+    .immutable {
+        margin: 0 0 0.375rem;
+    }
+
+    .transition-fields :global(.container.withTime) {
+        width: min(100%, 25rem);
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .searchOpts {

@@ -1,13 +1,17 @@
-use crate::token_set::{AuthCodeFlow, AuthTime, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet};
+use crate::token_set::{
+    AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, TokenNonce, TokenScopes, TokenSet,
+};
 use actix_web::HttpResponse;
 use chrono::Utc;
 use rauthy_api_types::oidc::{OAuth2ErrorResponse, OAuth2ErrorTypeResponse, TokenRequest};
 use rauthy_common::utils::new_store_id;
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::clients_dyn::ClientDyn;
 use rauthy_data::entity::devices::{DeviceAuthCode, DeviceEntity};
 use rauthy_data::entity::users::User;
 use rauthy_data::events::event::Event;
 use rauthy_data::rauthy_config::RauthyConfig;
+use rauthy_error::ErrorResponse;
 use std::borrow::Cow;
 use std::net::IpAddr;
 use std::ops::{Add, Sub};
@@ -25,6 +29,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         }
         Some(dc) => dc,
     };
+
     let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
         Ok(Some(code)) => code,
         Ok(None) | Err(_) => {
@@ -42,20 +47,45 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         });
     }
 
-    // We need to check the device_code again, because the `find_by_device_code` uses
-    // the `user_code` as cache index under the hood for smaller footprints and the
-    // ability to find it in both ways without duplicated data.
-    if &code.device_code != device_code {
+    // We need to check the device_code again, because the `find_by_device_code` uses the
+    // `user_code` as cache index under the hood for smaller footprints and the ability to find it
+    // in both ways without duplicated data.
+    if !constant_time_eq::constant_time_eq(code.device_code.as_bytes(), device_code.as_bytes()) {
         return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(Cow::from("Invalid `device_code`")),
         });
     }
 
-    if code.client_secret != payload.client_secret {
+    if !constant_time_eq::constant_time_eq(
+        // TODO compare to live-secret because of graceful secret migration
+        code.client_secret
+            .as_ref()
+            .map(|s| s.as_bytes())
+            .unwrap_or_default(),
+        payload
+            .client_secret
+            .as_ref()
+            .map(|s| s.as_bytes())
+            .unwrap_or_default(),
+    ) {
         return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
             error: OAuth2ErrorTypeResponse::UnauthorizedClient,
             error_description: Some(Cow::from("Invalid `client_secret`")),
+        });
+    }
+
+    // RFC 8707: a `resource` on the token request may only narrow (here: match) the
+    // resource bound at the device authorization request, never widen or introduce a new one.
+    if let Some(requested) = payload.resource.as_deref()
+        && code.resource.as_deref() != Some(requested)
+    {
+        warn!("token request `resource` was not granted at the device authorization request");
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidTarget,
+            error_description: Some(Cow::from(
+                "the requested `resource` was not granted at the device authorization request",
+            )),
         });
     }
 
@@ -67,21 +97,26 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
     // We allow it to be 500ms shorter than specified to not get into
     // possible problems with slightly inaccurate client implementations.
     let now = Utc::now();
-    let interval = RauthyConfig::get().vars.device_grant.poll_interval as i64;
-    let poll_thres = now
-        .sub(chrono::Duration::seconds(interval))
-        .add(chrono::Duration::milliseconds(500));
+    let interval = RauthyConfig::get().vars.device_grant.poll_interval;
+    let poll_thres = now.sub(interval).add(chrono::Duration::milliseconds(100));
     if poll_thres < code.last_poll {
         warn!("device does not respect the poll interval");
         code.warnings += 1;
         if code.warnings >= 3 {
-            warn!("deleting device oidc code request early because of not respected poll interval");
+            warn!("deleting device OIDC code request early because of not respected poll interval");
+
             error = OAuth2ErrorTypeResponse::AccessDenied;
             error_description = Cow::from("poll interval has not been respected");
             if let Err(err) = code.delete().await {
                 // this should never happen
                 error!(?err, "deleting DeviceAuthCode from the cache");
             }
+
+            // Return early to not revive the just deleted code with an update below.
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error,
+                error_description: Some(error_description),
+            });
         } else {
             error = OAuth2ErrorTypeResponse::SlowDown;
             error_description = Cow::from("must respect the poll interval");
@@ -114,23 +149,64 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             }
         };
 
+        // the code was issued for a deleted client with the same id
+        if !code.is_for_client(&client) {
+            if let Err(err) = code.delete().await {
+                error!(?err, "deleting DeviceAuthCode");
+            }
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::ExpiredToken,
+                error_description: Some(Cow::from("invalid `device_code` or request has expired")),
+            });
+        }
+
+        // `force_mfa` is checked in `post_device_verify`, where the approving session is known.
+        let access: Result<(), ErrorResponse> = user
+            .check_enabled()
+            .and_then(|_| user.check_expired())
+            .and_then(|_| client.validate_user_groups(&user));
+        if let Err(err) = access {
+            if let Err(err) = code.delete().await {
+                error!(?err, "deleting DeviceAuthCode");
+            }
+            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                error: OAuth2ErrorTypeResponse::AccessDenied,
+                error_description: Some(err.message),
+            });
+        }
+
         let access_exp = now.add(chrono::Duration::seconds(
             client.access_token_lifetime as i64,
         ));
         let refresh_exp = if client.allow_refresh_token() {
             Some(
                 access_exp
-                    .add(chrono::Duration::seconds(48 * 3600))
+                    .add(RauthyConfig::get().vars.device_grant.refresh_token_lifetime)
                     .timestamp(),
             )
         } else {
             None
         };
 
-        if let Err(err) = code.delete().await {
-            // should really never happen - in cache only
-            error!(?err, "deleting DeviceAuthCode");
-        }
+        // Claim immediately before issuing tokens.
+        let code: DeviceAuthCode = match DeviceAuthCode::find(code.user_code().to_string()).await {
+            Ok(Some(code)) => code,
+            Ok(None) => {
+                return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::ExpiredToken,
+                    error_description: Some(Cow::from(
+                        "invalid `device_code` or request has expired",
+                    )),
+                });
+            }
+            Err(err) => {
+                error!(?err, "claiming DeviceAuthCode");
+                return HttpResponse::InternalServerError().json(OAuth2ErrorResponse {
+                    error: OAuth2ErrorTypeResponse::InvalidRequest,
+                    error_description: Some(Cow::from("internal error")),
+                });
+            }
+        };
 
         let id = new_store_id();
         let device = DeviceEntity {
@@ -145,6 +221,7 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             // This is a better UX than asking for a custom name each time.
             // TODO add an optional `name` param to the initial device request?
             name: id.clone(),
+            client_created_micros: code.client_created_micros,
         };
         if let Err(err) = device.insert().await {
             error!("{:?}", err);
@@ -155,16 +232,29 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
         }
         debug!("New Device with ID {id} has been created");
 
+        // update timestamp if it is a dynamic client
+        if client.is_dynamic()
+            && let Err(err) = ClientDyn::update_used(&client.id).await
+        {
+            error!(
+                "Error updating last_used timestamp for dyn client: {}",
+                err.message
+            );
+        }
+
         let ts = match TokenSet::from_user(
             &user,
             &client,
             AuthTime::now(),
             None,
             code.nonce.map(TokenNonce),
-            code.scopes.map(TokenScopes),
+            code.scopes.map(TokenScopes::new),
             None,
+            code.resource,
             AuthCodeFlow::No,
             DeviceCodeFlow::Yes(id),
+            // no consent step
+            ConsentCheck::Exempt,
         )
         .await
         {

@@ -17,7 +17,7 @@ const SESSION_COOKIE_KEY: &str = "ExampleSession";
 
 /// Index HTML
 pub async fn get_index(config: ConfigExt) -> Response<Body> {
-    let logout_uri = format!("{}/oidc/logout", config.iss);
+    let logout_uri = format!("{}/oidc/logout", config.iss.trim_end_matches("/"));
     let body = templates::HTML_INDEX.replace("{{ LOGOUT_URI }}", &logout_uri);
 
     Response::builder()

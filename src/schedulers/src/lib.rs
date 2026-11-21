@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 use tokio::time;
-use tracing::info;
+use tracing::{error, info};
 mod app_version;
 mod authorized_keys;
 mod backchannel_logout;
@@ -10,6 +10,7 @@ mod devices;
 mod dyn_clients;
 mod email_jobs;
 mod events;
+mod fido_mds;
 mod ip_geo_db;
 mod issued_tokens;
 mod jwks;
@@ -17,6 +18,7 @@ mod magic_links;
 mod passwords;
 mod scim_tasks;
 mod sessions;
+mod sponsor;
 mod tokens;
 mod user_login_states;
 mod users;
@@ -43,6 +45,8 @@ pub fn spawn() {
     tokio::spawn(issued_tokens::cleanup_issued_tokens());
     tokio::spawn(users::user_expiry_checker());
     tokio::spawn(app_version::app_version_check());
+    tokio::spawn(fido_mds::fido_mds_updater());
+    tokio::spawn(sponsor::run_sponsor_reminder());
 }
 
 /// sleeps until the next scheduled event
@@ -50,7 +54,13 @@ async fn sleep_schedule_next(schedule: &cron::Schedule) {
     // this 10 sec sleep is done to prevent an overlap with the calculation in some cases
     time::sleep(Duration::from_secs(10)).await;
 
-    let next = schedule.upcoming(chrono::Local).next().unwrap();
+    let Some(next) = schedule.upcoming(chrono::Local).next() else {
+        error!(
+            ?schedule,
+            "cron schedule has no future occurrence - scheduler stops"
+        );
+        return std::future::pending().await;
+    };
     let until = next.signed_duration_since(chrono::Local::now());
 
     // we are adding a future date here --> safe to cast from i64 to u64

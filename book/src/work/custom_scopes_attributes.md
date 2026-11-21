@@ -104,3 +104,57 @@ I used the `rauthy` client in this example (which you should not mess with when 
   }
 }
 ```
+
+## Client Credentials Custom Claims
+
+The flow above is user-bound: scope-mapped attributes come from a user, so a token issued through the
+`client_credentials` flow (which has no user) can never carry them. Machine clients often need to describe
+themselves directly though, for example a workload identity, a tenant id, or a deployment profile, so that the
+resource server does not have to look anything up by `client_id`.
+
+For this, a client can carry its own custom claims. Open the configuration for any `Client`, scroll down to the
+`Custom Claims` section and enter a JSON object:
+
+```json
+{
+  "tenant": "acme",
+  "tier": "gold"
+}
+```
+
+These claims are emitted into the access token of the `client_credentials` flow, nested under the `custom` claim,
+exactly like the user values above:
+
+```json
+{
+  "iat": 1721722389,
+  "exp": 1721722399,
+  "nbf": 1721722389,
+  "iss": "http://localhost:8080/auth/v1",
+  "sub": "my_client",
+  "aud": "my_client",
+  "azp": "my_client",
+  "typ": "Bearer",
+  "scope": "openid",
+  "custom": {
+    "tenant": "acme",
+    "tier": "gold"
+  }
+}
+```
+
+By default these are nested under `custom`, exactly like user values. If you enable `Emit claims at the token
+root` on the client, they are written at the token root (flattened) instead, just like the per-scope
+`claims_at_root` option. As with that option, you own collision-correctness: if a claim name collides with a
+reserved JWT claim, token issuance fails rather than silently shadowing it.
+
+```admonish info
+The value must be a JSON object and is capped at 1024 serialized characters, since tokens are frequently kept
+small (and sometimes stored in cookies). The cap applies to the client's custom JSON only, not the full token.
+```
+
+```admonish caution
+Custom claims can only be set by an admin (or via the management API). Dynamic clients (registered through the
+dynamic client registration endpoint) and ephemeral clients cannot set their own claims, which would otherwise be
+a privilege-escalation vector: a client must not be able to assert facts about itself that it was never granted.
+```

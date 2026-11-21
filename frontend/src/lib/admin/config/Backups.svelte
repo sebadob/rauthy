@@ -1,15 +1,18 @@
 <script lang="ts">
-    import type { BackupListing, BackupListings } from '$api/types/backup';
-    import { fetchGet, fetchPost } from '$api/fetch';
+    import type { BackupListing, BackupListings } from '#api/types/backup.ts';
+    import { fetchGet, fetchPost } from '#api/fetch.ts';
     import { onMount } from 'svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import { formatDateFromTs, prettyFileSize } from '$utils/helpers';
-    import Button from '$lib/button/Button.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import IconArrowPathSquare from '$icons/IconArrowPathSquare.svelte';
-    import A from '$lib/A.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { formatDateFromTs, prettyFileSize } from '#utils/helpers.ts';
+    import Button from '#lib/button/Button.svelte';
+    import Section from '#lib/Section.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import IconArrowPathSquare from '#icons/IconArrowPathSquare.svelte';
+    import A from '#lib/A.svelte';
 
     let ta = useI18nAdmin();
+    const t = useI18n();
 
     let local: BackupListing[] = $state([]);
     let s3: BackupListing[] = $state([]);
@@ -72,10 +75,12 @@
                 {backup.name}
             </span>
         </A>
-        <div class="font-mono muted right">
+        <div class="font-mono muted right modified">
+            <span class="meta-label">{ta.backup.lastModified}</span>
             {formatDateFromTs(backup.last_modified)}
         </div>
         <div class="font-mono muted right">
+            <span class="meta-label">{ta.backup.size}</span>
             {#if backup.size}
                 {prettyFileSize(backup.size)}
             {:else}
@@ -85,45 +90,59 @@
     </div>
 {/snippet}
 
-{#if isDisabled}
-    <p>{ta.backup.disabledDesc}</p>
-{:else}
-    <div class="flex gap-05">
-        <Button onclick={postCreateBackup}>
-            {ta.backup.createBackup}
-        </Button>
-
-        <div class="refresh">
-            <Button invisible onclick={fetchListings}>
-                <IconArrowPathSquare />
+<div class="page-header">
+    <h2 class="ui-page-title">{ta.backup.title ?? 'Backups'}</h2>
+    {#if !isDisabled}
+        <div class="actions">
+            {#if success}<IconCheck />{/if}
+            <Button level={2} ariaLabel={t.common.refresh} onclick={fetchListings}>
+                <IconArrowPathSquare width="1rem" />
+                {t.common.refresh}
             </Button>
+            <Button onclick={postCreateBackup}>{ta.backup.createBackup}</Button>
         </div>
-
-        {#if success}
-            <IconCheck />
-        {/if}
-    </div>
-
-    {#if local.length === 0 && s3.length === 0}
-        {ta.common.noEntries}
-    {:else}
-        <h2>{ta.backup.local}</h2>
-        {@render header()}
-        {#each local as b (b.name)}
-            {@render backup(b, '/auth/v1/backup/local')}
-        {/each}
-
-        <h2>S3</h2>
-        {@render header()}
-        {#each s3 as b (b.name)}
-            {@render backup(b, '/auth/v1/backup/s3')}
-        {/each}
     {/if}
+</div>
+
+{#if isDisabled}
+    <p class="ui-muted-copy">{ta.backup.disabledDesc}</p>
+{:else if local.length === 0 && s3.length === 0}
+    <Section><p class="ui-muted-copy">{ta.common.noEntries}</p></Section>
+{:else}
+    <div class="ui-section-stack">
+        {#each [{ title: ta.backup.local, entries: local, prefix: '/auth/v1/backup/local' }, { title: 'S3', entries: s3, prefix: '/auth/v1/backup/s3' }] as { title, entries, prefix } (prefix)}
+            <Section {title}>
+                {#if entries.length > 0}
+                    <div class="backup-list">
+                        {@render header()}
+                        {#each entries as b (b.name)}
+                            {@render backup(b, prefix)}
+                        {/each}
+                    </div>
+                {:else}
+                    <p class="ui-muted-copy">{ta.common.noEntries}</p>
+                {/if}
+            </Section>
+        {/each}
+    </div>
 {/if}
 
 <style>
-    h2 {
-        margin-top: 1.5rem;
+    .page-header,
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .page-header {
+        justify-content: space-between;
+        margin-bottom: var(--ui-space);
+    }
+
+    .page-header h2 {
+        margin: 0;
     }
 
     .header {
@@ -134,16 +153,57 @@
         color: hsla(var(--text) / 0.7);
     }
 
-    .refresh {
-        margin-bottom: -0.4rem;
-    }
-
     .right {
         text-align: right;
     }
 
+    .backup-list {
+        container-type: inline-size;
+    }
+
     .row {
         display: grid;
-        grid-template-columns: 20rem 12rem 8rem;
+        grid-template-columns: minmax(0, 2fr) minmax(10rem, 1fr) minmax(4.5rem, 0.6fr);
+        gap: 0.75rem;
+        align-items: baseline;
+        padding-block: 0.5rem;
+    }
+
+    .row:not(.header) {
+        border-top: 1px solid var(--ui-outline);
+    }
+
+    .row > :global(a) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .meta-label {
+        display: none;
+    }
+
+    @container (width < 35rem) {
+        .row {
+            grid-template-columns: minmax(0, 1fr) auto;
+            row-gap: 0.25rem;
+        }
+
+        .row > :global(a) {
+            grid-column: 1 / -1;
+        }
+
+        .header {
+            display: none;
+        }
+
+        .modified {
+            text-align: start;
+        }
+
+        .meta-label {
+            display: block;
+            font-family: system-ui, sans-serif;
+            font-size: 0.75rem;
+        }
     }
 </style>

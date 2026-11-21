@@ -7,6 +7,7 @@ use tracing::{debug, info};
 
 mod api_key;
 mod clients;
+pub mod generated_secrets;
 mod groups;
 mod jwks;
 mod rauthy_admin;
@@ -30,16 +31,16 @@ macro_rules! bootstrap_data {
         );
         let Ok(content) = tokio::fs::read(&path).await else {
             tracing::debug!("No file for bootstrapping '{}'", path);
-            return Ok(());
+            return Ok(Default::default());
         };
         if content.is_empty() {
             tracing::debug!("Empty file for bootstrapping '{}'", path);
-            return Ok(());
+            return Ok(Default::default());
         }
         let data = serde_json::from_slice::<Vec<$type>>(&content)?;
         if data.is_empty() {
             tracing::debug!("Empty data for bootstrapping '{}'", path);
-            return Ok(());
+            return Ok(Default::default());
         }
 
         for d in &data {
@@ -57,6 +58,15 @@ macro_rules! bootstrap_data {
 
 pub(crate) use bootstrap_data;
 
+pub async fn purge_expired_generated_secrets() -> Result<(), ErrorResponse> {
+    let path = &crate::rauthy_config::RauthyConfig::get()
+        .vars
+        .bootstrap
+        .generated_secrets_file;
+    generated_secrets::purge_if_expired(path.as_ref()).await?;
+    Ok(())
+}
+
 /// Initializes an empty production database for a new deployment
 pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
     // check if the database is un-initialized by looking at the jwks table, which should be empty
@@ -68,10 +78,23 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
     };
 
     if !jwks.is_empty() {
+        if crate::rauthy_config::RauthyConfig::get()
+            .vars
+            .bootstrap
+            .reconcile
+        {
+            reconcile().await?;
+        }
         return Ok(());
     }
 
     info!("Initializing empty production database");
+
+    // Validate the bootstrap clients' redirect URIs before the first write, so that an invalid
+    // one fails before anything is changed. This does not make the whole init atomic: once JWKs
+    // exist, it never runs again, and any other failure later on can still leave a partially
+    // initialized database behind.
+    validate_additional_data().await?;
 
     // For initializing a prod database, we need to:
     // - delete init_admin and client
@@ -93,16 +116,63 @@ pub async fn migrate_init_prod() -> Result<(), ErrorResponse> {
 
     rauthy_admin::bootstrap().await?;
     jwks::bootstrap().await?;
-    bootstrap_additional_data().await?;
+    bootstrap_additional_data_validated().await?;
 
     info!("Production database initialized successfully");
 
     Ok(())
 }
 
+/// Re-applies the bootstrap groups, roles, scopes and clients against an already initialized
+/// database. Missing entries are created, changed ones updated, nothing is deleted.
+async fn reconcile() -> Result<(), ErrorResponse> {
+    info!("Reconciling bootstrap data");
+
+    // Parse and validate all files before the first write. References between them (client ->
+    // scope, scope -> user attribute) are still checked while applying, like during bootstrap.
+    let groups = groups::load().await?;
+    let roles = roles::load().await?;
+    let scopes = scopes::load().await?;
+    let clients = clients::load().await?;
+
+    groups::reconcile(groups).await?;
+    roles::reconcile(roles).await?;
+    scopes::reconcile(scopes).await?;
+    clients::reconcile(clients).await?;
+
+    Ok(())
+}
+
+/// Finds the existing entry for a bootstrap entry: by `id` if one is given, otherwise by `name`.
+fn find_existing_entry<'a, T>(
+    existing: &'a [T],
+    id: Option<&str>,
+    name: &str,
+    key: impl Fn(&T) -> (&str, &str),
+) -> Option<&'a T> {
+    existing.iter().find(|e| {
+        let (e_id, e_name) = key(e);
+        match id {
+            Some(id) => e_id == id,
+            None => e_name == name,
+        }
+    })
+}
+
 // We want to be able to call this during DEV as well to always be sure that it works.
 #[cold]
 pub async fn bootstrap_additional_data() -> Result<(), ErrorResponse> {
+    validate_additional_data().await?;
+    bootstrap_additional_data_validated().await
+}
+
+/// Checks the bootstrap data that cannot be validated by `bootstrap_data!` alone, before
+/// anything is written.
+async fn validate_additional_data() -> Result<(), ErrorResponse> {
+    clients::validate().await
+}
+
+async fn bootstrap_additional_data_validated() -> Result<(), ErrorResponse> {
     debug!("Bootstrapping additional data");
 
     api_key::bootstrap().await?;
@@ -114,4 +184,34 @@ pub async fn bootstrap_additional_data() -> Result<(), ErrorResponse> {
     users::bootstrap().await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_existing_entry;
+
+    #[test]
+    fn test_find_existing_entry() {
+        let existing = [("id1", "admin"), ("id2", "user")];
+        fn key<'a>(e: &'a (&str, &str)) -> (&'a str, &'a str) {
+            (e.0, e.1)
+        }
+
+        // by id, also when the name changed -> a rename
+        assert_eq!(
+            find_existing_entry(&existing, Some("id1"), "renamed", key),
+            Some(&("id1", "admin"))
+        );
+        // by name when no id is given
+        assert_eq!(
+            find_existing_entry(&existing, None, "user", key),
+            Some(&("id2", "user"))
+        );
+        // a given id never falls back to the name
+        assert_eq!(
+            find_existing_entry(&existing, Some("id3"), "user", key),
+            None
+        );
+        assert_eq!(find_existing_entry(&existing, None, "missing", key), None);
+    }
 }

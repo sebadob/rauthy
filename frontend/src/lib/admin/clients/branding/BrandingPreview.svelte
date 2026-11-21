@@ -1,9 +1,7 @@
 <script lang="ts">
-    import type { ThemeCss } from '$api/types/themes.ts';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import ThemeSwitch from '$lib5/ThemeSwitch.svelte';
-    import RauthyLogo from '$lib/RauthyLogo.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import type { ThemeCss } from '#api/types/themes.ts';
+    import RauthyLogo from '#lib/RauthyLogo.svelte';
 
     let {
         logoUrl,
@@ -17,132 +15,120 @@
         typ: 'light' | 'dark';
     } = $props();
 
-    let isLoading = $state(false);
+    const hslVar = (v: number[]) => `${v[0]} ${v[1]}% ${v[2]}%`;
+
+    const t = useI18n();
     let showDefault = $state(false);
 
     $effect(() => {
-        if (logoUrl) {
-            showDefault = false;
-        }
-    });
-
-    $effect(() => {
-        if (isLoading) {
-            setTimeout(() => {
-                isLoading = false;
-            }, 2000);
-        }
+        if (logoUrl) showDefault = false;
     });
 </script>
 
 <div
+    class="branding-preview"
     aria-label="Preview: All components inside are only for theme and colors preview and have no effect or interaction"
     style:--border-radius={borderRadius}
-    style:--text={theme.text.join(' ')}
-    style:--text-high={theme.text_high.join(' ')}
-    style:--bg={theme.bg.join(' ')}
-    style:--bg-high={theme.bg_high.join(' ')}
-    style:--action={theme.action.join(' ')}
-    style:--accent={theme.accent.join(' ')}
-    style:--error={theme.error.join(' ')}
+    style:--text={hslVar(theme.text)}
+    style:--text-high={hslVar(theme.text_high)}
+    style:--bg={hslVar(theme.bg)}
+    style:--bg-high={hslVar(theme.bg_high)}
+    style:--action={hslVar(theme.action)}
+    style:--accent={hslVar(theme.accent)}
+    style:--error={hslVar(theme.error)}
     style:--btn-text={theme.btn_text}
     style:--theme-sun={theme.theme_sun}
     style:--theme-moon={theme.theme_moon}
 >
-    <div class="inner">
-        <div class="container">
-            <div class="logo">
-                {#if showDefault}
-                    <RauthyLogo width="100%" show={typ} />
-                {:else}
-                    <img
-                        src={logoUrl}
-                        alt="Client Logo"
-                        width="100%"
-                        height="100%"
-                        onerror={() => (showDefault = true)}
-                    />
-                {/if}
-            </div>
+    <div class="logo">
+        {#if showDefault}
+            <RauthyLogo width="3.5rem" show={typ} />
+        {:else}
+            <img src={logoUrl} alt="Client Logo" onerror={() => (showDefault = true)} />
+        {/if}
+    </div>
 
-            <h3>Header</h3>
-            <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam</p>
-            <p><span>--accent-color</span></p>
-
-            <Input label="Preview" placeholder="Preview" width="12.5rem" />
-
-            <div class="btn">
-                <div>
-                    <Button level={1} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br />
-                    <Button level={2} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br />
-                    <Button level={3} {isLoading} onclick={() => (isLoading = true)}>Button</Button>
-                    <br />
-                </div>
-
-                <div>
-                    <Button level={-1} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
-                    <br />
-                    <Button level={-2} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
-                    <br />
-                    <Button level={-3} {isLoading} onclick={() => (isLoading = true)}>Button</Button
-                    >
-                </div>
-            </div>
-
-            <a href={window.location.href} onclick={ev => ev.preventDefault()}>Link</a>
-
-            <br />
-            <ThemeSwitch />
+    <div aria-hidden="true" class="sample">
+        <h4>{t.authorize.login}</h4>
+        <div>
+            <span>{t.common.email}</span>
+            <div class="input">name@example.com</div>
+        </div>
+        <div>
+            <span>{t.common.password}</span>
+            <div class="input">••••••••••</div>
+        </div>
+        <div class="primary">{t.authorize.login}</div>
+        <div class="swatches">
+            <span style:background="hsl(var(--accent))"></span>
+            <span style:background="hsl(var(--error))"></span>
+            <span style:background="var(--theme-sun)"></span>
+            <span style:background="var(--theme-moon)"></span>
         </div>
     </div>
 </div>
 
 <style>
-    h3 {
-        color: hsl(var(--text-high));
-    }
-
-    span {
-        color: hsl(var(--accent));
-    }
-
-    .btn {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .btn > div {
-        width: 5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .container {
+    .branding-preview {
         padding: 1rem;
-        border: 1px solid hsl(var(--bg-high));
-        border-radius: var(--border-radius);
-    }
-
-    .inner {
-        padding: 1rem;
-        width: 17rem;
         border: 1px solid hsl(var(--bg-high));
         border-radius: var(--border-radius);
         background: hsl(var(--bg));
         color: hsl(var(--text));
     }
 
-    .logo {
-        margin: 0 0.25rem;
-        width: 84px;
-        height: 84px;
+    h4 {
+        margin: 0;
+        color: hsl(var(--text-high));
+    }
+
+    .sample {
+        display: grid;
+        gap: 0.75rem;
+        font-size: 0.8125rem;
+        line-height: 1.25rem;
+    }
+
+    .sample .input,
+    .primary {
+        margin: 0.25rem 0 0;
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--border-radius);
+    }
+
+    .sample .input {
+        border-color: hsl(var(--text) / 0.25);
+        font-size: inherit;
+    }
+
+    .primary {
+        background: hsl(var(--action));
+        color: var(--btn-text);
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .swatches {
         display: flex;
-        justify-content: center;
-        align-items: center;
+        gap: 6px;
+    }
+
+    .swatches span {
+        height: 10px;
+        width: 10px;
+        border-radius: var(--border-radius);
+    }
+
+    .logo {
+        height: 3.5rem;
+        margin-bottom: 0.75rem;
+        display: grid;
+        place-items: center;
+    }
+
+    .logo img {
+        height: 100%;
+        max-width: 100%;
+        object-fit: contain;
     }
 </style>

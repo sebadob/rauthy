@@ -1,32 +1,32 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import CheckIcon from '$lib5/CheckIcon.svelte';
-    import { fetchPost } from '$api/fetch';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import Options from '$lib5/Options.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import CheckIcon from '#lib/CheckIcon.svelte';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import Options from '#lib/Options.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import IconCheck from '#icons/IconCheck.svelte';
     import type {
         AuthProviderType,
         ProviderLookupRequest,
         ProviderLookupResponse,
         ProviderRequest,
-    } from '$api/types/auth_provider.ts';
-    import { useI18n } from '$state/i18n.svelte';
-    import { PATTERN_URI } from '$utils/patterns';
-    import Form from '$lib5/form/Form.svelte';
-    import ProviderConfigURLs from '$lib/admin/providers/blocks/ProviderConfigURLs.svelte';
-    import ProviderConfigClientInfo from '$lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
+    } from '#api/types/auth_provider.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { PATTERN_URI } from '#utils/patterns.ts';
+    import Form from '#lib/form/Form.svelte';
+    import ProviderConfigURLs from '#lib/admin/providers/blocks/ProviderConfigURLs.svelte';
+    import ProviderConfigClientInfo from '#lib/admin/providers/blocks/ProviderConfigClientInfo.svelte';
 
     let { onSave }: { onSave: () => void } = $props();
 
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const inputWidth = 'min(calc(100dvw - 1.75rem), 30rem)';
+    const inputWidth = '100%';
 
     let isLoading = $state(false);
     let err = $state('');
@@ -288,6 +288,7 @@
             use_pkce: true,
             name: '',
             client_id: '',
+            client_secret: '',
             client_secret_basic: true,
             client_secret_post: false,
             auto_onboarding: false,
@@ -396,9 +397,11 @@
     }
 
     .container {
-        height: 90dvh;
-        max-height: 90dvh;
-        width: min(40rem, calc(100dvw - 1.75rem));
-        overflow-y: auto;
+        width: min(36rem, calc(100dvw - 96px));
+        max-width: 100%;
+    }
+
+    .container :global(form > section) {
+        margin-block: var(--ui-space);
     }
 </style>

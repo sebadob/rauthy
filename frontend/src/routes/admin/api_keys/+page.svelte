@@ -1,5 +1,5 @@
 <script>
-    import ApiKeys from '$lib5/admin/api_keys/ApiKeys.svelte';
+    import ApiKeys from '#lib/admin/api_keys/ApiKeys.svelte';
 </script>
 
 <svelte:head>

@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Button from '$lib/button/Button.svelte';
-    import Modal from '$lib/Modal.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import IconClipboard from '$icons/IconClipboard.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import Modal from '#lib/Modal.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import IconClipboard from '#icons/IconClipboard.svelte';
 
     let ta = useI18nAdmin();
 
@@ -94,7 +94,7 @@
 {/snippet}
 
 <Modal bind:showModal bind:closeModal>
-    <h1>{ta.kv.help.help}</h1>
+    <h2>{ta.kv.help.help}</h2>
 
     <p>{ta.kv.help.p1}</p>
     <ul>

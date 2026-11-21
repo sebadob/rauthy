@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { elementsInRangeNoBrHr } from '$lib/text_edit/html/utils';
-    import Button from '$lib/button/Button.svelte';
+    import { elementsInRangeNoBrHr } from '#lib/text_edit/html/utils.js';
+    import Button from '#lib/button/Button.svelte';
 
     let {
         // ref of the contenteditable div
@@ -408,7 +408,8 @@
     }
 </script>
 
-<Button invisible {onclick}>
+<!-- keep the editor selection: a mousedown on the button would clear it -->
+<Button ariaLabel={title} invisible {onclick} onmousedown={(ev: MouseEvent) => ev.preventDefault()}>
     <div {title}>
         {@render children()}
     </div>

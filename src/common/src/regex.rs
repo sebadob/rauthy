@@ -15,15 +15,21 @@ pub static RE_ATTR_DESC: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/\s]{0,128}$").unwrap());
 pub static RE_BASE64: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+/=]{4}$").unwrap());
+pub static RE_BASE64_NO_PAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9+/=]+$").unwrap());
 pub static RE_CODE_CHALLENGE_METHOD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(plain|S256)$").unwrap());
 pub static RE_CITY: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-\s]{0,48}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-\p{Zs}]{0,48}$").unwrap());
 pub static RE_CLIENT_ID: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]{2,256}$").unwrap());
-pub static RE_CLIENT_NAME: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[a-zA-Z0-9À-ɏ-\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{2,128}$").unwrap()
-});
+// Stricter pattern for manually managed (non-ephemeral) clients. Mirrors the admin UI's
+// `PATTERN_CLIENT_ID_NEW`: alphanumeric plus `.`, `_`, `-`, so a client id can never be a URI.
+// Ephemeral clients keep using `RE_CLIENT_ID`, which still allows full URI ids.
+pub static RE_CLIENT_ID_STRICT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9._\-]{2,256}$").unwrap());
+pub static RE_CLIENT_NAME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[\p{L}\p{M}\p{N}\p{Zs}()._-]{2,128}$").unwrap());
 pub static RE_CODE_CHALLENGE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~]{43,128}$").unwrap());
 pub static RE_CODE_VERIFIER: LazyLock<Regex> =
@@ -34,12 +40,6 @@ pub static RE_CSS_VALUE_LOOSE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-,.#()%/\s]+$").unwrap());
 pub static RE_DATE_STR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap());
-pub static RE_GRANT_TYPES: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(authorization_code|client_credentials|urn:ietf:params:oauth:grant-type:device_code|password|refresh_token)$").unwrap()
-});
-pub static RE_GRANT_TYPES_EPHEMERAL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(authorization_code|client_credentials|password|refresh_token)$").unwrap()
-});
 pub static RE_LINUX_HOSTNAME: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$").unwrap());
 // slightly modified from the original: at least 2 characters and max 62 (we will apply a prefix)
@@ -49,31 +49,164 @@ pub static RE_ROLES_SCOPES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*.]{2,64}$").unwrap());
 pub static RE_GROUPS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/,:*\s]{2,64}$").unwrap());
+pub static RE_KV_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~]{2,64}$").unwrap());
 pub static RE_LOWERCASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9-_/]{2,128}$").unwrap());
 pub static RE_LOWERCASE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/\s]{2,128}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-z0-9-_/\p{Zs}]{2,128}$").unwrap());
 pub static RE_MFA_CODE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9]{48}$").unwrap());
 pub static RE_ORIGIN: OnceLock<Regex> = OnceLock::new();
 pub static RE_PHONE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+[0-9]{0,32}$").unwrap());
 pub static RE_PREFERRED_USERNAME: OnceLock<Regex> = OnceLock::new();
 pub static RE_SCOPE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/:\s*.]{0,512}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-_/:\p{Zs}*.]{0,512}$").unwrap());
+// `RE_USER_NAME`'s characters plus everything that can appear in an email, an id, a username, a
+// session id, or an IP
 pub static RE_SEARCH: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
+    LazyLock::new(|| Regex::new(&format!("^[{USER_NAME_CHARS},:/_&?=~#!$()*+@]+$")).unwrap());
 pub static RE_STREET: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-.\s]{0,48}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9À-ÿ-.\p{Zs}]{0,48}$").unwrap());
 pub static RE_URI: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%@]+$").unwrap());
-pub static RE_USER_NAME: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[a-zA-Z0-9À-ɏ-'\s\x{3041}-\x{3096}\x{30A0}-\x{30FF}\x{3400}-\x{4DB5}\x{4E00}-\x{9FCB}\x{F900}-\x{FA6A}\x{2E80}-\x{2FD5}\x{FF66}-\x{FF9F}\x{FFA1}-\x{FFDC}\x{31F0}-\x{31FF}]{1,32}$").unwrap()
+// A URI with a non-empty host part: optional scheme, then a host (optionally with a port), and
+// only after that any `/` or `?` separator. Used for the client home URL (`client_uri`), redirect
+// URIs and post-logout redirect URIs: unlike `RE_URI`, degenerate values such as `https://`, `/`
+// or `javascript:alert(1)` cannot be stored, which would otherwise let arbitrary hosts pass the
+// `redirect_uri` prefix validation (open redirect).
+//
+// `#` and `,` are rejected as well: a redirect URI must not contain a fragment (RFC 6749 §3.1.2),
+// and (post-logout) redirect URIs are stored comma-joined, so a `,` would split one URI into
+// several. `validate_redirect_uri_shape()` checks both again for redirect URIs.
+pub static RE_CLIENT_URI: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:[a-zA-Z][a-zA-Z0-9+.\-]*://)?[a-zA-Z0-9](?:[a-zA-Z0-9._\-]{0,253}[a-zA-Z0-9])?(?::[0-9]{1,5})?(?:[/?][a-zA-Z0-9.:/_\-&?=~!$'()*+%@]*)?$",
+    )
+    .unwrap()
 });
+// Like `RE_URI` but WITHOUT `#`, so a value cannot contain a fragment. Used for RFC 8707
+// `resource` indicators, which MUST be an absolute URI without a fragment (RFC 8707 §2).
+const RESOURCE_CHARS: &str = r"a-zA-Z0-9,.:/_\-&?=~!$'()*+%@";
+pub static RE_RESOURCE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(&format!("^[{RESOURCE_CHARS}]+$")).unwrap());
+// `RE_RESOURCE`, but also empty and at most 1024 characters (ASCII only, so 1024 bytes), for a
+// filter where an empty value selects the entries without a resource.
+pub static RE_RESOURCE_OR_EMPTY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(&format!("^[{RESOURCE_CHARS}]{{0,1024}}$")).unwrap());
+// the characters a `given_name` / `family_name` may contain - the `-` is escaped so this can be
+// embedded into any character class without creating a range
+const USER_NAME_CHARS: &str = r"\p{L}\p{M}\p{N}\p{Zs}'.\-";
+pub static RE_USER_NAME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(&format!("^[{USER_NAME_CHARS}]{{1,32}}$")).unwrap());
 pub static RE_TOKEN_68: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-._~+/]+=*$").unwrap());
 pub static RE_TOKEN_ENDPOINT_AUTH_METHOD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(client_secret_post|client_secret_basic|none)$").unwrap());
 
+// The leading `@` of the handle form is optional. It is accepted for convenience (users often
+// type handles like `@alice.bsky.social`) and stripped again before being passed to the atrium
+// crates, whose `Handle` parser only accepts the bare domain form.
 pub static RE_ATPROTO_HANDLE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
+    Regex::new(r"^(?:did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]|@?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$").unwrap()
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_re_client_name() {
+        assert!(RE_CLIENT_NAME.is_match("My Client 123"));
+        assert!(RE_CLIENT_NAME.is_match("()_-"));
+        assert!(RE_CLIENT_NAME.is_match("クライアント"));
+
+        assert!(!RE_CLIENT_NAME.is_match("\r"));
+        assert!(!RE_CLIENT_NAME.is_match("\n"));
+        assert!(!RE_CLIENT_NAME.is_match("<script>"));
+        assert!(!RE_CLIENT_NAME.is_match("😉"));
+    }
+
+    #[test]
+    fn test_re_user_name() {
+        assert!(RE_USER_NAME.is_match("My Name 123"));
+        assert!(RE_USER_NAME.is_match("äöü"));
+        assert!(RE_USER_NAME.is_match("user-name"));
+        assert!(RE_USER_NAME.is_match("クライアント"));
+        assert!(RE_USER_NAME.is_match("Виктория Ефанова Дарья Перминова"));
+
+        assert!(!RE_USER_NAME.is_match("\r"));
+        assert!(!RE_USER_NAME.is_match("\n"));
+        assert!(!RE_USER_NAME.is_match("<script>"));
+        assert!(!RE_USER_NAME.is_match("😉"));
+    }
+
+    #[test]
+    fn test_re_search() {
+        assert!(RE_SEARCH.is_match("admin@localhost"));
+        assert!(RE_SEARCH.is_match("user+tag@gmail.com"));
+        // everything a `given_name` / `family_name` can be made of
+        assert!(RE_SEARCH.is_match("André Gödel"));
+        assert!(RE_SEARCH.is_match("My Name 123"));
+        assert!(RE_SEARCH.is_match("クライアント"));
+        assert!(RE_SEARCH.is_match("Виктория Ефанова"));
+
+        assert!(RE_SEARCH.is_match("127.0.0.1"));
+        assert!(RE_SEARCH.is_match("localhost:8081/callback"));
+
+        // no LIKE wildcards, no markup, no multi-line
+        assert!(!RE_SEARCH.is_match(""));
+        assert!(!RE_SEARCH.is_match("%"));
+        assert!(!RE_SEARCH.is_match("a%b"));
+        assert!(!RE_SEARCH.is_match("<script>"));
+        assert!(!RE_SEARCH.is_match("😉"));
+        assert!(!RE_SEARCH.is_match("a\nb"));
+    }
+
+    #[test]
+    fn test_re_client_uri() {
+        assert!(RE_CLIENT_URI.is_match("https://app.example.com"));
+        assert!(RE_CLIENT_URI.is_match("https://app.example.com/"));
+        assert!(RE_CLIENT_URI.is_match("https://app.example.com/cb?x=1&y=2"));
+        assert!(RE_CLIENT_URI.is_match("HTTPS://APP.EXAMPLE.COM/x"));
+        assert!(RE_CLIENT_URI.is_match("app.example.com"));
+        assert!(RE_CLIENT_URI.is_match("localhost:8081/callback"));
+        assert!(RE_CLIENT_URI.is_match("127.0.0.1:8081"));
+        // Deep-link / custom-scheme URIs (e.g. Tauri desktop apps) must be accepted as client_uri.
+        assert!(RE_CLIENT_URI.is_match("tauri://my.app"));
+
+        // Degenerate values that would let arbitrary hosts pass the `redirect_uri` prefix
+        // validation (open redirect), or that could be executed as a URL scheme (XSS).
+        assert!(!RE_CLIENT_URI.is_match("https://"));
+        assert!(!RE_CLIENT_URI.is_match("http://"));
+        assert!(!RE_CLIENT_URI.is_match("/"));
+        assert!(!RE_CLIENT_URI.is_match("//"));
+        assert!(!RE_CLIENT_URI.is_match("?x=1"));
+        assert!(!RE_CLIENT_URI.is_match("#f"));
+        assert!(!RE_CLIENT_URI.is_match("javascript:alert(1)"));
+        assert!(!RE_CLIENT_URI.is_match("javascript:alert(1)/"));
+        assert!(!RE_CLIENT_URI.is_match("mailto:x@y"));
+
+        // A fragment is not allowed (RFC 6749 §3.1.2), and a comma would split a URI in two,
+        // since (post-logout) redirect URIs are stored comma-joined.
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/cb?x=1#f"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com#f"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/#/cb"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/cb?x=,https://evil.example"));
+        assert!(!RE_CLIENT_URI.is_match("https://app.example.com/a,b"));
+    }
+
+    #[test]
+    fn test_re_atproto_handle() {
+        assert!(RE_ATPROTO_HANDLE.is_match("example.com"));
+        assert!(RE_ATPROTO_HANDLE.is_match("@example.com"));
+        assert!(RE_ATPROTO_HANDLE.is_match("did:plc:abc123"));
+        assert!(RE_ATPROTO_HANDLE.is_match("did:web:example.com"));
+
+        assert!(!RE_ATPROTO_HANDLE.is_match("alice@example.com"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("@@example.com"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("@did:plc:abc123"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("example..com"));
+        assert!(!RE_ATPROTO_HANDLE.is_match("@example."));
+    }
+}

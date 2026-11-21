@@ -45,7 +45,11 @@ impl ClientDyn {
             DB::pg_query_one(sql, &[&id]).await?
         };
 
-        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
+        let ttl = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .rate_limit_reg
+            .as_secs() as i64;
         client
             .put(
                 Cache::ClientDynamic,
@@ -64,7 +68,7 @@ impl ClientDyn {
         if is_hiqlite() {
             DB::hql().execute(sql, params!(now, id)).await?;
         } else {
-            DB::pg_execute(sql, &[&id]).await?;
+            DB::pg_execute(sql, &[&now, &id]).await?;
         }
 
         Ok(())
@@ -82,8 +86,13 @@ impl ClientDyn {
     pub async fn rate_limit_ip(ip: IpAddr) -> Result<(), ErrorResponse> {
         let client = DB::hql();
 
-        let ttl = RauthyConfig::get().vars.dynamic_clients.rate_limit_sec as i64;
+        let ttl = RauthyConfig::get()
+            .vars
+            .dynamic_clients
+            .rate_limit_reg
+            .as_secs() as i64;
         let ts: Option<i64> = client.get(Cache::IpRateLimit, ip.to_string()).await?;
+
         match ts {
             Some(ts) => {
                 let retry_at = ts + ttl;
@@ -113,7 +122,10 @@ impl ClientDyn {
     }
 
     pub fn validate_token(&self, bearer: &str) -> Result<(), ErrorResponse> {
-        if self.registration_token_plain()? != bearer {
+        if !constant_time_eq::constant_time_eq(
+            self.registration_token_plain()?.as_bytes(),
+            bearer.as_bytes(),
+        ) {
             Err(ErrorResponse::new(
                 ErrorResponseType::WWWAuthenticate("invalid_token".to_string()),
                 "Invalid registration_token",

@@ -10,14 +10,15 @@ use rauthy_data::AuthStep;
 use rauthy_data::api_cookie::ApiCookie;
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderCallback, AuthProviderLinkCookie, NewFederatedUserCreated,
-    ProviderMfaLogin,
 };
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::sessions::Session;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use std::str::FromStr;
 use tracing::error;
 
-/// In case of any error, the callback code will be fully deleted for security reasons.
+/// The callback is single-use: it is atomically taken out of the cache before anything is
+/// validated, so every request after the first one fails, whatever its outcome.
 pub async fn login_finish<'a>(
     req: &'a HttpRequest,
     payload: &'a ProviderCallbackRequest,
@@ -31,22 +32,18 @@ pub async fn login_finish<'a>(
         )
     })?;
 
-    // validate state
-    if payload.iss_atproto.is_none() && callback_id != payload.state {
-        AuthProviderCallback::delete(callback_id).await?;
+    let slf = AuthProviderCallback::find_remove(callback_id).await?;
+    let provider = AuthProvider::find(&slf.provider_id).await?;
 
-        error!("`state` does not match");
-        return Err(ErrorResponse::new(
-            ErrorResponseType::BadRequest,
-            "`state` does not match",
-        ));
+    // validate state
+    if let Err(err) = validate_callback_state(&provider.issuer, &slf.callback_id, payload) {
+        error!("{}", err.message);
+        return Err(err);
     }
 
     // validate csrf token
-    let slf = AuthProviderCallback::find(callback_id).await?;
-    if slf.xsrf_token != payload.xsrf_token {
-        AuthProviderCallback::delete(slf.callback_id).await?;
-
+    if !constant_time_eq::constant_time_eq(slf.xsrf_token.as_bytes(), payload.xsrf_token.as_bytes())
+    {
         error!("invalid CSRF token");
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
@@ -56,9 +53,7 @@ pub async fn login_finish<'a>(
 
     // validate PKCE verifier
     let hash_base64 = base64_url_encode(sha256!(payload.pkce_verifier.as_bytes()));
-    if slf.pkce_challenge != hash_base64 {
-        AuthProviderCallback::delete(slf.callback_id).await?;
-
+    if !constant_time_eq::constant_time_eq(slf.pkce_challenge.as_bytes(), hash_base64.as_bytes()) {
         error!("invalid PKCE verifier");
         return Err(ErrorResponse::new(
             ErrorResponseType::Unauthorized,
@@ -67,12 +62,11 @@ pub async fn login_finish<'a>(
     }
 
     // request is valid -> fetch token for the user
-    let provider = AuthProvider::find(&slf.provider_id).await?;
 
     // extract a possibly existing provider link cookie for
     // linking an existing account to a provider
     let link_cookie = ApiCookie::from_req(req, PROVIDER_LINK_COOKIE)
-        .and_then(|value| AuthProviderLinkCookie::try_from(value.as_str()).ok());
+        .and_then(|value| AuthProviderLinkCookie::from_str(value.as_str()).ok());
 
     // deserialize payload and validate the information
     let (user, provider_mfa_login, is_new_user) = if provider.issuer == PROVIDER_ATPROTO {
@@ -99,9 +93,7 @@ pub async fn login_finish<'a>(
     // From here on, we deal with a normal login instead of just an account federation.
 
     let require_webauthn = user.has_webauthn_enabled();
-    session
-        .set_mfa(provider_mfa_login == ProviderMfaLogin::Yes || require_webauthn)
-        .await?;
+    let require_otp = user.has_otp_enabled().await;
 
     let client = Client::find_maybe_ephemeral(slf.req_client_id).await?;
     let header_origin = client.get_validated_origin_header(req)?;
@@ -117,8 +109,11 @@ pub async fn login_finish<'a>(
             nonce: slf.req_nonce,
             code_challenge: slf.req_code_challenge,
             code_challenge_method: slf.req_code_challenge_method,
+            resource: slf.req_resource,
             header_origin,
             require_webauthn,
+            require_otp,
+            is_forward_auth: slf.is_forward_auth,
         },
         None,
         Some(provider_mfa_login),
@@ -129,4 +124,80 @@ pub async fn login_finish<'a>(
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);
 
     Ok((auth_step, cookie, is_new_user))
+}
+
+/// Validates the `state` of an upstream authorization response.
+///
+/// ATProto is skipped here: its `state` is generated and validated by the ATProto client
+/// itself, which also checks `iss` and binds its app state to `callback_id`.
+/// For all other providers, `state` must always match, no matter which other values the
+/// client sent along. In particular, `iss_atproto` is only ever used for ATProto.
+fn validate_callback_state(
+    provider_issuer: &str,
+    callback_id: &str,
+    payload: &ProviderCallbackRequest,
+) -> Result<(), ErrorResponse> {
+    if provider_issuer == PROVIDER_ATPROTO {
+        return Ok(());
+    }
+
+    if !constant_time_eq::constant_time_eq(callback_id.as_bytes(), payload.state.as_bytes()) {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "`state` does not match",
+        ));
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ISSUER: &str = "https://upstream.example.com/auth/v1/";
+
+    fn payload(state: &str, iss_atproto: Option<&str>) -> ProviderCallbackRequest {
+        ProviderCallbackRequest {
+            state: state.to_string(),
+            code: "code".to_string(),
+            xsrf_token: "xsrf".to_string(),
+            pkce_verifier: "verifier".to_string(),
+            iss_atproto: iss_atproto.map(String::from),
+        }
+    }
+
+    #[test]
+    fn test_validate_callback_state() {
+        assert!(validate_callback_state(ISSUER, "cb1", &payload("cb1", None)).is_ok());
+
+        let err = validate_callback_state(ISSUER, "cb1", &payload("cb2", None)).unwrap_err();
+        assert_eq!(err.error, ErrorResponseType::BadRequest);
+    }
+
+    #[test]
+    fn test_validate_callback_state_ignores_iss_for_non_atproto() {
+        // an `iss_atproto` must never disable the `state` check for a non-ATProto provider
+        for iss in [ISSUER, "https://bsky.social", "atproto"] {
+            assert!(validate_callback_state(ISSUER, "cb1", &payload("cb1", Some(iss))).is_ok());
+
+            let err =
+                validate_callback_state(ISSUER, "cb1", &payload("cb2", Some(iss))).unwrap_err();
+            assert_eq!(err.error, ErrorResponseType::BadRequest, "{iss}");
+        }
+    }
+
+    #[test]
+    fn test_validate_callback_state_atproto() {
+        // state and iss are validated by the ATProto client itself
+        assert!(validate_callback_state(PROVIDER_ATPROTO, "cb1", &payload("other", None)).is_ok());
+        assert!(
+            validate_callback_state(
+                PROVIDER_ATPROTO,
+                "cb1",
+                &payload("other", Some("https://bsky.social"))
+            )
+            .is_ok()
+        );
+    }
 }

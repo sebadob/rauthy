@@ -19,7 +19,7 @@ pub enum BrowserIdSetNew {
     No,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct BrowserId(Option<String>);
 
 impl Display for BrowserId {

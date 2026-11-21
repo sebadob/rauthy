@@ -1,25 +1,29 @@
 <script lang="ts">
+    import EntityHeader from '#lib/admin/EntityHeader.svelte';
+    import EntityDelete from '#lib/admin/EntityDelete.svelte';
+    import IconCommandLine from '#icons/IconCommandLine.svelte';
     import type {
         PamGroupResponse,
         PamHostDetailsResponse,
         PamHostSimpleResponse,
         PamHostUpdateRequest,
-    } from '$api/types/pam';
-    import { fetchDelete, fetchGet, fetchPut } from '$api/fetch';
-    import LabeledValue from '$lib/LabeledValue.svelte';
-    import { PATTERN_LINUX_HOSTNAME } from '$utils/patterns';
-    import Input from '$lib/form/Input.svelte';
-    import Options from '$lib/Options.svelte';
-    import InputCheckbox from '$lib/form/InputCheckbox.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import InputArea from '$lib/form/InputArea.svelte';
-    import InputTags from '$lib/form/InputTags.svelte';
-    import Form from '$lib/form/Form.svelte';
-    import Button from '$lib/button/Button.svelte';
+    } from '#api/types/pam.ts';
+    import { fetchGet, fetchPut } from '#api/fetch.ts';
+    import LabeledValue from '#lib/LabeledValue.svelte';
+    import { PATTERN_LINUX_HOSTNAME } from '#utils/patterns.ts';
+    import Input from '#lib/form/Input.svelte';
+    import Options from '#lib/Options.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import InputArea from '#lib/form/InputArea.svelte';
+    import InputTags from '#lib/form/InputTags.svelte';
+    import Form from '#lib/form/Form.svelte';
+    import Section from '#lib/Section.svelte';
+    import Button from '#lib/button/Button.svelte';
     import { slide } from 'svelte/transition';
-    import { useI18n } from '$state/i18n.svelte';
-    import IconCheck from '$icons/IconCheck.svelte';
-    import PAMHostSecret from '$lib/admin/pam/hosts/PAMHostSecret.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import IconCheck from '#icons/IconCheck.svelte';
+    import PAMHostSecret from '#lib/admin/pam/hosts/PAMHostSecret.svelte';
     import { untrack } from 'svelte';
 
     let {
@@ -35,12 +39,10 @@
     let t = useI18n();
     let ta = useI18nAdmin();
 
-    const widthAreas = 'min(min(100%, 40rem), calc(100dvw - .5rem))';
     const groupNames = untrack(() => groups.filter(g => g.typ === 'host').map(g => g.name));
 
     let success = $state(false);
     let err = $state('');
-    let showDeleteConfirm = $state(false);
     let url = $derived(`/auth/v1/pam/hosts/${hostSimple.id}`);
 
     let host: undefined | PamHostDetailsResponse = $state();
@@ -49,15 +51,6 @@
     $effect(() => {
         fetchDetails();
     });
-
-    async function deleteHost() {
-        let res = await fetchDelete(url);
-        if (res.error) {
-            err = res.error.message;
-        } else {
-            onDelete();
-        }
-    }
 
     async function fetchDetails() {
         let res = await fetchGet<PamHostDetailsResponse>(url);
@@ -115,93 +108,78 @@
     }
 </script>
 
-<h1>{hostSimple.name}</h1>
+<EntityHeader title={hostSimple.name} subtitle="PAM">
+    {#snippet actions()}
+        {#key hostSimple.id}
+            <EntityDelete {url} name={hostSimple.name} message={ta.pam.deleteHost} {onDelete} />
+        {/key}
+    {/snippet}
+    <IconCommandLine width="28px" />
+</EntityHeader>
 
 {#if host}
-    <LabeledValue label="Host ID" copyToClip={host.id} mono>
-        {host.id}
-    </LabeledValue>
-
-    <PAMHostSecret hostId={host.id} />
-
     <Form action={url} {onSubmit}>
-        <Input
-            label="Hostname"
-            placeholder="Hostname"
-            bind:value={host.hostname}
-            required
-            pattern={PATTERN_LINUX_HOSTNAME}
-            maxLength={61}
-            width="min(23rem, calc(100dvw - .5rem))"
-        />
-
-        <div class="row">
-            <div class="label">
-                {ta.pam.groupName}
-            </div>
-            <Options ariaLabel={ta.pam.groupName} options={groupNames} bind:value={groupName} />
+        <div class="sections">
+            <Section title={t.account.navInfo}>
+                {#snippet actions()}<PAMHostSecret hostId={hostSimple.id} />{/snippet}
+                <LabeledValue label="Host ID" copyToClip={host.id} mono>{host.id}</LabeledValue>
+                <div class="ui-field-grid">
+                    <Input
+                        label="Hostname"
+                        placeholder="Hostname"
+                        bind:value={host.hostname}
+                        required
+                        pattern={PATTERN_LINUX_HOSTNAME}
+                        maxLength={61}
+                    />
+                    <div class="admin-field-select">
+                        <span class="admin-field-label">{ta.pam.groupName}</span>
+                        <Options
+                            ariaLabel={ta.pam.groupName}
+                            options={groupNames}
+                            bind:value={groupName}
+                        />
+                    </div>
+                </div>
+                <div class="checks">
+                    <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa}>
+                        {ta.clients.forceMfa}
+                    </InputCheckbox>
+                    <InputCheckbox
+                        ariaLabel={ta.pam.hostLocalPwdOnly}
+                        bind:checked={host.local_password_only}
+                    >
+                        {ta.pam.hostLocalPwdOnly}
+                    </InputCheckbox>
+                </div>
+                {#if host.local_password_only}
+                    <p class="err" transition:slide={{ duration: 150 }}>
+                        {ta.pam.hostLocalPwdOnlyInfo}
+                    </p>
+                {/if}
+            </Section>
+            <Section title={ta.pam.ipAddresses}>
+                <div class="ui-field-grid">
+                    <InputTags label={ta.pam.ipAddresses} bind:values={host.ips} />
+                    <InputTags
+                        label={ta.pam.hostAliases}
+                        bind:values={host.aliases}
+                        pattern={PATTERN_LINUX_HOSTNAME}
+                    />
+                </div>
+                <InputArea label={ta.pam.notes} bind:value={host.notes} />
+            </Section>
         </div>
 
-        <div class="row">
-            <div class="label">
-                {ta.clients.forceMfa}
-            </div>
-            <InputCheckbox ariaLabel={ta.clients.forceMfa} bind:checked={host.force_mfa} />
-        </div>
-
-        <div class="row">
-            <div class="label">
-                {ta.pam.hostLocalPwdOnly}
-            </div>
-            <InputCheckbox
-                ariaLabel={ta.pam.hostLocalPwdOnly}
-                bind:checked={host.local_password_only}
-            />
-        </div>
-        {#if host.local_password_only}
-            <div class="err" transition:slide={{ duration: 150 }}>
-                <p>
-                    {ta.pam.hostLocalPwdOnlyInfo}
-                </p>
-            </div>
-        {/if}
-
-        <InputTags label={ta.pam.ipAddresses} bind:values={host.ips} width={widthAreas} />
-        <InputTags
-            label={ta.pam.hostAliases}
-            bind:values={host.aliases}
-            pattern={PATTERN_LINUX_HOSTNAME}
-            width={widthAreas}
-        />
-        <InputArea label={ta.pam.notes} bind:value={host.notes} width={widthAreas} />
-
-        <div class="flex gap-05">
+        <div class="submit flex gap-05">
             <Button type="submit">
                 {t.common.save}
-            </Button>
-            <Button level={-3} onclick={() => (showDeleteConfirm = !showDeleteConfirm)}>
-                {t.common.delete}
             </Button>
 
             {#if success}
                 <IconCheck />
             {/if}
         </div>
-
-        {#if showDeleteConfirm}
-            <div transition:slide={{ duration: 150 }}>
-                <p>{ta.pam.deleteHost}</p>
-
-                <div class="flex gap-05">
-                    <Button level={-1} onclick={deleteHost}>
-                        {t.common.delete}
-                    </Button>
-                    <Button level={2} onclick={() => (showDeleteConfirm = false)}>
-                        {t.common.cancel}
-                    </Button>
-                </div>
-            </div>
-        {/if}
     </Form>
 {/if}
 
@@ -212,19 +190,19 @@
 {/if}
 
 <style>
-    h1 {
-        margin-top: 0;
-    }
-
-    .label {
-        margin-bottom: -0.2rem;
-        color: hsla(var(--text) / 0.8);
-    }
-
-    .row {
-        margin: 0.5rem 0;
+    .sections {
         display: grid;
-        grid-template-columns: 12rem 5.5rem;
+        gap: var(--ui-space);
+    }
+
+    .checks {
+        display: flex;
+        flex-wrap: wrap;
         align-items: center;
+        gap: 0.5rem 1rem;
+    }
+
+    .submit {
+        margin-block: var(--ui-space);
     }
 </style>

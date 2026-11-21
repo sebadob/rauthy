@@ -1,19 +1,19 @@
 <script lang="ts">
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import ToolbarIconHtml from '$lib/text_edit/html/tools/ToolbarIconHtml.svelte';
-    import IconH1 from '$icons/editor/IconH1.svelte';
-    import IconH2 from '$icons/editor/IconH2.svelte';
-    import IconH3 from '$icons/editor/IconH3.svelte';
-    import IconBold from '$icons/editor/IconBold.svelte';
-    import IconItalic from '$icons/editor/IconItalic.svelte';
-    import IconStrikeThrough from '$icons/editor/IconStrikeThrough.svelte';
-    import IconListBullet from '$icons/editor/IconListBullet.svelte';
-    import IconListNumbered from '$icons/editor/IconListNumbered.svelte';
-    import ToolIconParagraph from '$lib/text_edit/html/tools/ToolIconParagraph.svelte';
-    import IconCode from '$icons/editor/IconCode.svelte';
-    import IconQuote from '$icons/editor/IconQuote.svelte';
-    import ToolIconLink from '$lib/text_edit/html/tools/ToolIconLink.svelte';
-    import ToolIconRemoveFmt from '$lib/text_edit/html/tools/ToolIconRemoveFmt.svelte';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import ToolbarIconHtml from '#lib/text_edit/html/tools/ToolbarIconHtml.svelte';
+    import IconH1 from '#icons/editor/IconH1.svelte';
+    import IconH2 from '#icons/editor/IconH2.svelte';
+    import IconH3 from '#icons/editor/IconH3.svelte';
+    import IconBold from '#icons/editor/IconBold.svelte';
+    import IconItalic from '#icons/editor/IconItalic.svelte';
+    import IconStrikeThrough from '#icons/editor/IconStrikeThrough.svelte';
+    import IconListBullet from '#icons/editor/IconListBullet.svelte';
+    import IconListNumbered from '#icons/editor/IconListNumbered.svelte';
+    import ToolIconParagraph from '#lib/text_edit/html/tools/ToolIconParagraph.svelte';
+    import IconCode from '#icons/editor/IconCode.svelte';
+    import IconQuote from '#icons/editor/IconQuote.svelte';
+    import ToolIconLink from '#lib/text_edit/html/tools/ToolIconLink.svelte';
+    import ToolIconRemoveFmt from '#lib/text_edit/html/tools/ToolIconRemoveFmt.svelte';
 
     let {
         content = $bindable(),

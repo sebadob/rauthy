@@ -1,27 +1,27 @@
 <script lang="ts">
-    import Button from '$lib5/button/Button.svelte';
-    import Input from '$lib5/form/Input.svelte';
-    import { PATTERN_USER_NAME } from '$utils/patterns';
-    import Form from '$lib5/form/Form.svelte';
-    import { fetchPost } from '$api/fetch';
-    import { useI18n } from '$state/i18n.svelte';
-    import { useI18nAdmin } from '$state/i18n_admin.svelte';
-    import type { Language } from '$api/types/i18n.ts';
-    import type { NewUserRequest, UserResponse } from '$api/types/user.ts';
-    import Options from '$lib5/Options.svelte';
-    import InputCheckbox from '$lib5/form/InputCheckbox.svelte';
-    import InputDateTimeCombo from '$lib5/form/InputDateTimeCombo.svelte';
-    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '$utils/form';
+    import Button from '#lib/button/Button.svelte';
+    import Input from '#lib/form/Input.svelte';
+    import { PATTERN_USER_NAME } from '#utils/patterns.ts';
+    import Form from '#lib/form/Form.svelte';
+    import { fetchPost } from '#api/fetch.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import type { Language } from '#api/types/i18n.ts';
+    import type { NewUserRequest, UserResponse } from '#api/types/user.ts';
+    import Options from '#lib/Options.svelte';
+    import InputCheckbox from '#lib/form/InputCheckbox.svelte';
+    import InputDateTimeCombo from '#lib/form/InputDateTimeCombo.svelte';
+    import { fmtDateInput, fmtTimeInput, unixTsFromLocalDateTime } from '#utils/form.ts';
     import { slide } from 'svelte/transition';
-    import type { RoleResponse } from '$api/types/roles.ts';
-    import type { GroupResponse } from '$api/types/groups.ts';
-    import SelectList from '$lib5/select_list/SelectList.svelte';
-    import type { SelectItem } from '$lib5/select_list/props.ts';
+    import type { RoleResponse } from '#api/types/roles.ts';
+    import type { GroupResponse } from '#api/types/groups.ts';
+    import SelectList from '#lib/select_list/SelectList.svelte';
+    import type { SelectItem } from '#lib/select_list/props.ts';
     import { untrack } from 'svelte';
-    import LabeledValue from '$lib5/LabeledValue.svelte';
-    import { useI18nConfig } from '$state/i18n_config.svelte';
-    import type { UserValuesConfig } from '$api/templates/UserValuesConfig';
-    import TZSelect from '$lib/TZSelect.svelte';
+    import { useI18nConfig } from '#state/i18n_config.svelte.ts';
+    import type { UserValuesConfig } from '#api/templates/UserValuesConfig.ts';
+    import TZSelect from '#lib/TZSelect.svelte';
+    import { useSession } from '#state/session.svelte.ts';
 
     let {
         config,
@@ -37,8 +37,14 @@
 
     let t = useI18n();
     let ta = useI18nAdmin();
+    let session = useSession('admin');
 
-    let ref: undefined | HTMLInputElement = $state();
+    // A group admin creates users without roles and only into groups it manages; the backend
+    // rejects anything else. The principal acts as a delegated group admin when it reached the
+    // admin UI without the full `rauthy_admin` role. On this create form we hide what it cannot
+    // use entirely: no role editor, and `groupsItems` below is filtered to the groups it manages.
+    // Editing an existing user still shows everything (see UserInfo).
+    let isGroupAdmin = $derived(!session.isAdmin());
 
     let err = $state('');
     let email = $state('');
@@ -65,25 +71,21 @@
     );
     let groupsItems: SelectItem[] = $state(
         untrack(() =>
-            groups.map(g => {
-                let i: SelectItem = {
-                    name: g.name,
-                    selected: false,
-                };
-                return i;
-            }),
+            groups
+                .filter(g => session.isAdmin() || session.managesGroup(g.name))
+                .map(g => {
+                    let i: SelectItem = {
+                        name: g.name,
+                        selected: false,
+                    };
+                    return i;
+                }),
         ),
     );
 
     let expires = $state(false);
     let expDate = $state(fmtDateInput());
     let expTime = $state(fmtTimeInput());
-
-    $effect(() => {
-        requestAnimationFrame(() => {
-            ref?.focus();
-        });
-    });
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
         err = '';
@@ -114,9 +116,9 @@
     <Form action="/auth/v1/users" {onSubmit}>
         <Input
             typ="email"
-            bind:ref
             bind:value={email}
             autocomplete="off"
+            data-bwignore
             label="E-Mail"
             placeholder="E-Mail"
             required
@@ -138,23 +140,29 @@
             pattern={PATTERN_USER_NAME}
         />
 
-        <TZSelect bind:value={tz} />
-        {#if languages}
-            <div style:margin-left="0.25rem">
-                <LabeledValue label={ta.common.language}>
+        <div class="locale-fields">
+            <TZSelect bind:value={tz} />
+            {#if languages}
+                <div class="admin-field-select">
+                    <div class="admin-field-label">{ta.common.language}</div>
                     <Options
                         ariaLabel={t.common.selectI18n}
                         options={languages}
                         bind:value={language}
-                        borderless
+                        uppercase
+                        hideScrollbar
+                        fitViewport
+                        placement="above"
                     />
-                </LabeledValue>
-            </div>
-        {/if}
+                </div>
+            {/if}
+        </div>
 
-        <SelectList bind:items={rolesItems}>
-            {t.account.roles}
-        </SelectList>
+        {#if !isGroupAdmin}
+            <SelectList bind:items={rolesItems}>
+                {t.account.roles}
+            </SelectList>
+        {/if}
         <SelectList bind:items={groupsItems}>
             {t.account.groups}
         </SelectList>
@@ -189,8 +197,14 @@
 </div>
 
 <style>
+    .locale-fields {
+        display: grid;
+        gap: var(--ui-space);
+        margin-bottom: var(--ui-space);
+    }
+
     .container {
-        width: min(calc(100dvw - 1.75rem), 22rem);
+        width: min(22rem, calc(100dvw - 34px - 2 * var(--dialog-padding, 32px)));
         min-height: 33.5rem;
         text-align: left;
     }

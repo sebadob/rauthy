@@ -1,12 +1,15 @@
 import type { JwkKeyPairAlg } from './oidc';
+import type { JsonValue } from '#utils/jsonValue.ts';
 
 export const AuthFlowDeviceCode = 'urn:ietf:params:oauth:grant-type:device_code';
+export const AuthFlowTokenExchange = 'urn:ietf:params:oauth:grant-type:token-exchange';
 export type AuthFlow =
     | 'authorization_code'
     | 'client_credentials'
     | 'password'
     | 'refresh_token'
-    | 'urn:ietf:params:oauth:grant-type:device_code';
+    | 'urn:ietf:params:oauth:grant-type:device_code'
+    | 'urn:ietf:params:oauth:grant-type:token-exchange';
 export type CodeChallengeMethod = 'plain' | 'S256';
 
 export interface NewClientRequest {
@@ -15,16 +18,21 @@ export interface NewClientRequest {
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;
     confidential: boolean;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     redirect_uris: string[];
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     post_logout_redirect_uris?: string[];
+    /// `local` or an https URL. A `[[consent.sources]]` entry for the requested resource takes
+    /// precedence, unset falls back to `local`.
+    /// Validation: `local` or PATTERN_CONSENT_URL, at most 1024 bytes; the backend applies the
+    /// `validate_consent_source_url` rules (https, no userinfo, no fragment, no `lang` query key)
+    consent?: string;
 }
 
 export interface ScimClientRequestResponse {
     /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
     bearer_token: string;
-    /// Validation: `[a-zA-Z0-9,.:/_-&?=~#!$'()*+%@]+$`
+    /// Validation: Valid URI with a non-empty host part
     base_uri: string;
     sync_groups: boolean;
     /// Validation: `^[a-z0-9-_/,:*]{2,64}$`
@@ -32,14 +40,12 @@ export interface ScimClientRequestResponse {
 }
 
 export interface UpdateClientRequest {
-    /// Validation: PATTERN_CLIENT_ID
-    id: string;
     /// Validation: PATTERN_CLIENT_NAME
     name?: string;
     confidential: boolean;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     redirect_uris: string[];
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     post_logout_redirect_uris?: string[];
     /// Validation: PATTERN_ORIGIN
     allowed_origins?: string[];
@@ -58,7 +64,7 @@ export interface UpdateClientRequest {
     /// Validation: `Vec<^(plain|S256)$>`
     challenges?: CodeChallengeMethod[];
     force_mfa: boolean;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLIENT_URI
     client_uri?: string;
     /// Validation: PATTERN_CONTACT
     contacts?: string[];
@@ -66,6 +72,22 @@ export interface UpdateClientRequest {
     backchannel_logout_uri?: string;
     /// Validation: PATTERN_GROUP
     restrict_group_prefix?: string;
+    /// Validation: JSON object, max 1024 serialized characters
+    claims?: JsonValue;
+    claims_at_root?: boolean;
+    /// RFC 8707 allow-list of resource indicators this client may request.
+    /// Validation: PATTERN_URI
+    allowed_resources?: string[];
+    /// Audiences always added to this client's tokens, independent of any request.
+    /// Validation: PATTERN_URI
+    default_aud?: string[];
+    /// `local` or an https URL. A `[[consent.sources]]` entry for the requested resource takes
+    /// precedence, unset falls back to `local`.
+    /// Validation: `local` or PATTERN_CONSENT_URL, at most 1024 bytes; the backend applies the
+    /// `validate_consent_source_url` rules (https, no userinfo, no fragment, no `lang` query key)
+    consent?: string;
+    /// RFC 8693: an `actor_token` in a token exchange must have been issued to this client.
+    actor_same_client?: boolean;
     scim?: ScimClientRequestResponse;
 }
 
@@ -95,6 +117,12 @@ export interface ClientResponse {
     contacts?: string[];
     backchannel_logout_uri?: string;
     restrict_group_prefix?: string;
+    claims?: JsonValue;
+    claims_at_root: boolean;
+    allowed_resources?: string[];
+    default_aud?: string[];
+    consent?: string;
+    actor_same_client: boolean;
     scim?: ScimClientRequestResponse;
 }
 

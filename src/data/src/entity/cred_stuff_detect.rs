@@ -37,7 +37,7 @@ impl CredStuffDetect {
         hashes.insert(hash);
         if hashes.len() >= vars.blacklist_threshold as usize {
             Event::cred_stuff(ip.clone()).send().await?;
-            IpBlacklist::put(ip.clone(), vars.blacklist_duration as i64).await?;
+            IpBlacklist::put(ip.clone(), vars.blacklist_duration).await?;
         }
 
         DB::hql()
@@ -45,7 +45,7 @@ impl CredStuffDetect {
                 Cache::CredStuffDetect,
                 ip,
                 &hashes,
-                Some(vars.scan_window as i64),
+                Some(vars.scan_window.as_secs() as i64),
             )
             .await?;
 

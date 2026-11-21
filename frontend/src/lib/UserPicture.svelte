@@ -1,12 +1,12 @@
 <script lang="ts">
-    import IconUpload from '$icons/IconUpload.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { genKey, getCsrfToken } from '$utils/helpers';
-    import type { ErrorResponse } from '$api/types/error.ts';
-    import IconStop from '$icons/IconStop.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { fetchDelete } from '$api/fetch';
-    import { usePictureConfig } from '$state/picture_config.svelte';
+    import ImageEdit from '#lib/ImageEdit.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { getCsrfToken } from '#utils/helpers.ts';
+    import type { ErrorResponse } from '#api/types/error.ts';
+    import IconStop from '#icons/IconStop.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { fetchDelete } from '#api/fetch.ts';
+    import { usePictureConfig } from '#state/picture_config.svelte.ts';
 
     let {
         userId,
@@ -24,7 +24,6 @@
         disableUpload?: boolean;
     } = $props();
 
-    const id = genKey();
     const accept = 'image/png, image/jpeg, image/webp, image/svg+xml';
 
     let t = useI18n();
@@ -37,9 +36,8 @@
     let errFileSize = $state('');
     let timer: undefined | number;
 
-    let showUpload = $state(false);
     let isUploading = $state(false);
-    let files: undefined | FileList = $state();
+    let files: File[] | undefined = $state();
 
     let color = $derived(calculateColor());
     let width = $derived.by(() => {
@@ -86,21 +84,13 @@
     }
 
     function ondrop(ev: DragEvent) {
-        files = ev.dataTransfer?.files;
+        files = Array.from(ev.dataTransfer?.files ?? []);
     }
 
     function onerror(ev: Event & { currentTarget: EventTarget & Element }) {
         if (ev.type === 'error') {
             err = 'Input Error';
         }
-    }
-
-    function onmouseenter() {
-        showUpload = true;
-    }
-
-    function onmouseleave() {
-        showUpload = false;
     }
 
     /// Converts the given string to a random hue.
@@ -137,7 +127,7 @@
         }
     }
 
-    async function upload(list: FileList) {
+    async function upload(list: File[]) {
         err = '';
         errFileSize = '';
 
@@ -209,36 +199,8 @@
 
 <div class="container">
     {#if config?.upload_allowed && !disableUpload}
-        <form
-            class="avatar"
-            aria-dropeffect="move"
-            aria-label="Upload"
-            style:background-color={color}
-            style:width
-            {onmouseenter}
-            {onmouseleave}
-        >
-            <label
-                for={id}
-                aria-controls={id}
-                aria-disabled={isUploading}
-                style:width
-                data-show={!isUploading && showUpload}
-            >
-                <IconUpload {width} />
-            </label>
-            <input
-                tabindex="0"
-                {id}
-                type="file"
-                disabled={isUploading}
-                aria-label="Upload Picture"
-                aria-disabled={isUploading}
-                onfocusin={() => (showUpload = true)}
-                onfocusout={() => (showUpload = false)}
-                {accept}
-                bind:files
-            />
+        <div class="avatar" style:--avatar-color={color} style:width>
+            <ImageEdit bind:files {accept} ariaLabel={t.common.edit} disabled={isUploading} />
 
             {#if errFileSize}
                 <div class="errLimit" style:width>
@@ -247,7 +209,7 @@
             {/if}
 
             {@render avatar()}
-        </form>
+        </div>
 
         {#if size === 'large' && pictureId}
             <div class="relative">
@@ -261,7 +223,7 @@
             </div>
         {/if}
     {:else}
-        <span class="avatar" style:background-color={color} style:width style:height={width}>
+        <span class="avatar" style:--avatar-color={color} style:width style:height={width}>
             {@render avatar()}
         </span>
     {/if}
@@ -272,41 +234,8 @@
         background: hsl(var(--bg));
     }
 
-    input {
-        margin: 0;
-        padding: 0;
-        width: 0;
-        height: 0;
-        overflow: hidden;
-    }
-
-    input[type='file']::file-selector-button {
-        display: none;
-    }
-
-    label {
-        position: absolute;
-        opacity: 0;
-        aspect-ratio: 1;
-        background: hsla(var(--bg) / 0.8);
-        cursor: pointer;
-        z-index: 2;
-        transition: all 150ms;
-    }
-
-    label[aria-disabled='true'] {
-        cursor: default;
-    }
-
-    label[data-show='true'] {
-        opacity: 1;
-    }
-
-    label:hover {
-        color: hsl(var(--action));
-    }
-
     .avatar {
+        background-color: var(--avatar-background, var(--avatar-color));
         position: relative;
         display: flex;
         justify-content: center;

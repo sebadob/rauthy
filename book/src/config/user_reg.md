@@ -21,9 +21,9 @@ enable = true
 This will open the registration endpoint and make it accessible without upfront authentication.  
 You will now see a new button at the page root which directs you to the registration form.
 
-After successful registration, the user will receive an E-Mail with an activation link.
-Clicking on this link will direct the user on a page, where a new password or passkey can be set.
-At the same time, the account will be activated and the E-Mail will be validated as well of course.
+After successful registration, the user will receive an E-Mail with an activation link. Clicking on
+this link will direct the user on a page, where a new password or passkey can be set. At the same
+time, the account will be activated and the E-Mail will be validated as well of course.
 
 ```admonish caution
 You must have configured your E-Mail sending beforehand. Otherwise the registration process will not work.
@@ -187,6 +187,40 @@ do so:
 allow_open_redirect = false
 ```
 
+### Post Reset Redirect
+
+The redirect hint above belongs to a single registration and to the magic link that was created for
+it. For every other magic link, like a plain _Password forgotten?_ request, there is a global
+default for where the browser ends up after a user has reset their password, or completed the
+initial setup of a new account:
+
+```toml
+[user_registration]
+# The default redirect target for a browser after a user has successfully reset
+# their password via a magic link, or completed the initial setup of a new
+# account. It can be a relative path, like '/auth/v1/account', or a full URL to
+# your own application.
+#
+# Only used when the magic link itself did not carry a 'redirect_uri', which can
+# be set during a user registration, or with a password reset request from a
+# client. Such a 'redirect_uri' always has priority.
+#
+# If this is not set, no 'Location' header will be returned, and the frontend
+# redirects to the account dashboard, which keeps the current behavior.
+#
+# overwritten by: USER_REG_POST_RESET_REDIRECT_URI
+#post_reset_redirect_uri = 'https://example.com'
+```
+
+The `redirect_uri` of a magic link always wins over this value, and if neither is set, nothing
+changes compared to the current behavior.
+
+```admonish note
+The `redirect_uri` of a client is validated against the registered `client_uri`s, unless
+`allow_open_redirect` is `true`. This config value is set by an admin, and therefore trusted, so
+it is not validated.
+```
+
 ### Custom Frontend
 
 Depending on your application, you may want to create your own frontend for the registration. For
@@ -208,11 +242,11 @@ calculation.
 struct NewUserRegistrationRequest {
   #[validate(email)]
   email: String,
-  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
   family_name: String,
-  /// Validation: `[a-zA-Z0-9À-ÿ-'\\s]{1,32}`
-  #[validate(regex(path = "*RE_USER_NAME", code = "[a-zA-Z0-9À-ɏ-'\\s]{1,32}"))]
+  /// Validation: `[\p{L}\p{M}\p{N}\p{Zs}'.-]{1,32}`
+  #[validate(regex(path = "*RE_USER_NAME", code = "[\\p{L}\\p{M}\\p{N}\\p{Zs}'.-]{1,32}"))]
   given_name: String,
   /// Validation: `[a-zA-Z0-9,.:/_\-&?=~#!$'()*+%]+`
   #[validate(regex(path = "*RE_URI", code = "[a-zA-Z0-9,.:/_\\-&?=~#!$'()*+%]+"))]

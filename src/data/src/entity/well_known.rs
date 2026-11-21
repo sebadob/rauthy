@@ -2,10 +2,10 @@ use crate::database::{Cache, DB};
 use crate::entity::scopes::Scope;
 use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
-use rauthy_common::constants::{CACHE_TTL_APP, GRANT_TYPE_DEVICE_CODE};
+use rauthy_api_types::oidc::GrantType;
+use rauthy_common::constants::CACHE_TTL_APP;
 use rauthy_error::ErrorResponse;
 use serde::Serialize;
-use strum::IntoEnumIterator;
 use utoipa::ToSchema;
 
 /// The struct for the `.well-known` endpoint for automatic OIDC discovery.
@@ -26,20 +26,22 @@ pub struct WellKnown {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_endpoint: Option<String>,
     pub jwks_uri: String,
-    pub grant_types_supported: [&'static str; 5],
+    pub grant_types_supported: [&'static str; 6],
     pub response_types_supported: [&'static str; 1],
     pub subject_types_supported: [&'static str; 1],
-    pub id_token_signing_alg_values_supported: [&'static str; 4],
-    pub token_endpoint_auth_methods_supported: [&'static str; 2],
-    pub token_endpoint_auth_signing_alg_values_supported: [&'static str; 4],
+    pub id_token_signing_alg_values_supported: [&'static str; 5],
+    pub token_endpoint_auth_methods_supported: [&'static str; 3],
+    pub token_endpoint_auth_signing_alg_values_supported: [&'static str; 5],
     pub claims_supported: [&'static str; 12],
     pub claim_types_supported: [&'static str; 3],
     pub scopes_supported: Vec<String>,
     pub code_challenge_methods_supported: [&'static str; 2],
-    pub dpop_signing_alg_values_supported: [&'static str; 4],
+    pub dpop_signing_alg_values_supported: [&'static str; 5],
     pub service_documentation: &'static str,
     pub ui_locales_supported: Vec<&'static str>,
     pub claims_parameter_supported: bool,
+    /// RFC 9207
+    pub authorization_response_iss_parameter_supported: bool,
     /// SEP-991 / draft-jonesmichael-oauth-cimd. Signals that this AS accepts
     /// clients identified by a Client ID Metadata Document URL (Rauthy already
     /// implements this via `ephemeral_from_url`). ChatGPT's custom-connector UI
@@ -47,7 +49,12 @@ pub struct WellKnown {
     pub client_id_metadata_document_supported: bool,
 }
 
-static IDX: &str = ".well-known";
+// Versioned, because the cached document is shared across the cluster and its contents change
+// with releases: after an upgrade, the new version builds its own document instead of serving
+// the one cached by the previous version. This does not cover a rollback to a version whose
+// entry is still cached, or `rebuild()`, which only refreshes the current version's entry, so
+// other versions may serve a stale document until it expires after `CACHE_TTL_APP`.
+static IDX: &str = concat!(".well-known-", env!("CARGO_PKG_VERSION"));
 
 impl WellKnown {
     pub async fn json() -> Result<String, ErrorResponse> {
@@ -104,6 +111,13 @@ impl WellKnown {
         let end_session_endpoint = format!("{issuer}oidc/logout");
         let jwks_uri = format!("{issuer}oidc/certs");
 
+        // Filter all available languages
+        let langs = &RauthyConfig::get().vars.i18n.filter_lang_common;
+        let ui_locales_supported = Language::all_available()
+            .into_iter()
+            .filter(|l| langs.iter().any(|f| l.starts_with(&f.as_ref()[..2])))
+            .collect::<Vec<&str>>();
+
         WellKnown {
             issuer: String::from(issuer),
             authorization_endpoint,
@@ -118,17 +132,26 @@ impl WellKnown {
             registration_endpoint,
             jwks_uri,
             grant_types_supported: [
-                "authorization_code",
-                "client_credentials",
-                "password",
-                "refresh_token",
-                GRANT_TYPE_DEVICE_CODE,
+                GrantType::AuthorizationCode.as_str(),
+                GrantType::ClientCredentials.as_str(),
+                GrantType::Password.as_str(),
+                GrantType::RefreshToken.as_str(),
+                GrantType::DeviceCode.as_str(),
+                GrantType::TokenExchange.as_str(),
             ],
             response_types_supported: ["code"],
             subject_types_supported: ["public"],
-            id_token_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA"],
-            token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
-            token_endpoint_auth_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA"],
+            id_token_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA", "Ed25519"],
+            // `none`: public clients, including ephemeral (CIMD) clients, authenticate at the
+            // token endpoint with PKCE only.
+            token_endpoint_auth_methods_supported: [
+                "client_secret_post",
+                "client_secret_basic",
+                "none",
+            ],
+            token_endpoint_auth_signing_alg_values_supported: [
+                "RS256", "RS384", "RS512", "EdDSA", "Ed25519",
+            ],
             claims_supported: [
                 "iss",
                 "azp",
@@ -146,10 +169,11 @@ impl WellKnown {
             claim_types_supported: ["normal", "aggregated", "distributed"],
             scopes_supported,
             code_challenge_methods_supported: ["plain", "S256"],
-            dpop_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA"],
+            dpop_signing_alg_values_supported: ["RS256", "RS384", "RS512", "EdDSA", "Ed25519"],
             service_documentation: "https://sebadob.github.io/rauthy/",
-            ui_locales_supported: Language::iter().map(|l| l.as_str()).collect(),
+            ui_locales_supported,
             claims_parameter_supported: true,
+            authorization_response_iss_parameter_supported: true,
             client_id_metadata_document_supported: true,
         }
     }

@@ -1,6 +1,7 @@
 use actix_web::HttpRequest;
 use actix_web::http::header;
 use rauthy_api_types::oidc::TokenRevocationRequest;
+use rauthy_common::constants::REFRESH_TOKEN_VALIDATION_LEN;
 use rauthy_common::utils::base64_decode;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
@@ -9,6 +10,7 @@ use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use std::time::Duration;
 
 #[inline(always)]
 pub async fn handle_token_revocation(
@@ -54,14 +56,21 @@ pub async fn handle_token_revocation(
 
     let mut buf: Vec<u8> = Vec::with_capacity(256);
     if is_refresh_token {
-        JwtToken::validate_claims_into(&payload.token, Some(JwtTokenType::Refresh), 10, &mut buf)
-            .await?;
+        JwtToken::validate_claims_into(
+            &payload.token,
+            Some(JwtTokenType::Refresh),
+            Duration::from_secs(10),
+            &mut buf,
+            true,
+        )
+        .await?;
     } else {
         JwtToken::validate_claims_into(
             &payload.token,
             Some(JwtTokenType::Bearer),
-            10,
+            Duration::from_secs(10),
             buf.as_mut(),
+            false,
         )
         .await?;
     }
@@ -74,9 +83,20 @@ pub async fn handle_token_revocation(
         ));
     }
 
-    // let mut revoked_token: Option<RevokedToken> = None;
     if is_refresh_token {
-        let (_, validation_str) = payload.token.split_at(payload.token.len() - 49);
+        // It's actually impossible that the token is too short at this step because of the
+        // `JwtToken::validate_claims_into()` above, which will fail for invalid tokens.
+        // However, doing this additional check here is a bit safer.
+        // TODO use `std::hint::unlikely` as soon as it's part of stable rust
+        if payload.token.len() < REFRESH_TOKEN_VALIDATION_LEN {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Invalid refresh token",
+            ));
+        }
+        let (_, validation_str) = payload
+            .token
+            .split_at(payload.token.len() - REFRESH_TOKEN_VALIDATION_LEN);
 
         if claims.did.is_some() {
             if let Some(rt) = RefreshTokenDevice::find_opt(validation_str).await? {

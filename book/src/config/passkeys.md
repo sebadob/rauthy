@@ -88,7 +88,7 @@ In this example, assuming Rauthy will be available at port 443, correct would be
 
 ```toml
 [webauthn]
-rp_origin = https://auth.example.com:443
+rp_origin = "https://auth.example.com:443"
 ```
 
 ### `RP_NAME`

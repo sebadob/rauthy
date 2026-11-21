@@ -1,7 +1,7 @@
 use crate::token_set::{DpopFingerprint, TokenSet};
 use actix_web::HttpRequest;
 use actix_web::http::header::{HeaderName, HeaderValue};
-use rauthy_api_types::oidc::TokenRequest;
+use rauthy_api_types::oidc::{GrantType, TokenRequest};
 use rauthy_common::constants::HEADER_DPOP_NONCE;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::clients_dyn::ClientDyn;
@@ -36,7 +36,7 @@ pub async fn grant_type_credentials(
         ErrorResponse::new(ErrorResponseType::BadRequest, "'client_secret' is missing")
     })?;
     client.validate_secret(secret, &req).await?;
-    client.validate_flow("client_credentials")?;
+    client.validate_flow(GrantType::ClientCredentials)?;
     let header_origin = client.get_validated_origin_header(&req)?;
 
     let mut headers = Vec::new();
@@ -60,7 +60,13 @@ pub async fn grant_type_credentials(
         ClientDyn::update_used(&client.id).await?;
     }
 
-    let ts = TokenSet::for_client_credentials(&client, dpop_fingerprint).await?;
+    if let Some(resource) = req_data.resource.as_deref() {
+        client.validate_resource_request(resource)?;
+    }
+
+    let ts =
+        TokenSet::for_client_credentials(&client, dpop_fingerprint, req_data.resource.as_deref())
+            .await?;
 
     if RauthyConfig::get().vars.events.generate_token_issued {
         Event::token_issued("client_credentials", &client.id, None)

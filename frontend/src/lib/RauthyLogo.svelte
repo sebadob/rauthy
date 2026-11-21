@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useTheme } from '$state/theme.svelte';
+    import { useTheme } from '#state/theme.svelte.ts';
 
     let {
         width = '7rem',

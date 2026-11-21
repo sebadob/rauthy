@@ -1,6 +1,6 @@
 use actix_web::HttpRequest;
 use actix_web::http::header::{AUTHORIZATION, HeaderName, HeaderValue};
-use rauthy_api_types::oidc::TokenInfo;
+use rauthy_api_types::oidc::{ActClaim, TokenInfo};
 use rauthy_common::utils::base64_decode_buf;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::issued_tokens::IssuedToken;
@@ -8,6 +8,7 @@ use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_jwt::claims::{JwtAccessClaims, JwtCommonClaims, JwtTokenType};
 use rauthy_jwt::token::JwtToken;
+use std::time::Duration;
 use tracing::error;
 use zeroize::Zeroize;
 
@@ -16,9 +17,15 @@ pub async fn get_token_info(
     token: &str,
 ) -> Result<(String, Option<(HeaderName, HeaderValue)>), ErrorResponse> {
     let mut buf = Vec::with_capacity(512);
-    if JwtToken::validate_claims_into(token, Some(JwtTokenType::Bearer), 0, &mut buf)
-        .await
-        .is_err()
+    if JwtToken::validate_claims_into(
+        token,
+        Some(JwtTokenType::Bearer),
+        Duration::from_secs(0),
+        &mut buf,
+        false,
+    )
+    .await
+    .is_err()
     {
         return Ok((
             serde_json::to_string(&TokenInfo {
@@ -28,7 +35,10 @@ pub async fn get_token_info(
             None,
         ));
     }
-    let claims = serde_json::from_slice::<JwtCommonClaims>(&buf)?;
+    let IntrospectClaims {
+        common: claims,
+        act,
+    } = serde_json::from_slice(&buf)?;
 
     if let Some(jti) = claims.jti {
         IssuedToken::validate_not_revoked(jti).await?;
@@ -52,18 +62,41 @@ pub async fn get_token_info(
         sub: claims.sub,
         scope: claims.scope,
         client_id: Some(claims.azp),
-        aud: Some(claims.aud.as_ref()),
+        aud: Some(claims.aud),
         iat: Some(claims.iat),
         nbf: Some(claims.nbf),
         exp: Some(claims.exp),
         cnf: claims.cnf,
+        act,
     })?;
 
     buf.clear();
-    let client = check_client_auth(req, client_id, &mut buf).await?;
-    let cors_header = client.get_validated_origin_header(req)?;
+    let cors_header = if RauthyConfig::get()
+        .vars
+        .access
+        .danger_disable_introspect_auth
+    {
+        // With introspection authz disabled, don't look up the token's
+        // client at all. check_client_auth resolves the token's `azp` via
+        // find_enabled_client first and only checks the flag afterwards, so
+        // an ephemeral client (never persisted) makes it 401 before the flag
+        // applies. Skipping the lookup lets a resource server introspect
+        // tokens of any client. No client means no client-scoped CORS header.
+        None
+    } else {
+        let client = check_client_auth(req, client_id, &mut buf).await?;
+        client.get_validated_origin_header(req)?
+    };
 
     Ok((info, cors_header))
+}
+
+#[derive(serde::Deserialize)]
+struct IntrospectClaims<'a> {
+    #[serde(borrow, flatten)]
+    common: JwtCommonClaims<'a>,
+    #[serde(borrow)]
+    act: Option<ActClaim<'a>>,
 }
 
 #[inline]
@@ -93,7 +126,14 @@ async fn check_client_auth(
     let header = header_value.to_str().unwrap_or_default();
 
     if let Some(token) = header.strip_prefix("Bearer ") {
-        JwtToken::validate_claims_into(token, Some(JwtTokenType::Bearer), 0, buf).await?;
+        JwtToken::validate_claims_into(
+            token,
+            Some(JwtTokenType::Bearer),
+            Duration::from_secs(0),
+            buf,
+            false,
+        )
+        .await?;
         let claims = serde_json::from_slice::<JwtAccessClaims>(buf)?;
 
         // If a different client was used for authentication, make sure it exists and is enabled.

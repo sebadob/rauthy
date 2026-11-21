@@ -1,16 +1,17 @@
 use crate::ReqPrincipal;
+use actix_web::cookie::time::OffsetDateTime;
 use actix_web::http::header;
-use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE, HeaderValue};
+use actix_web::http::header::{AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, HeaderValue, VARY};
 use actix_web::web::{Json, Query};
 use actix_web::{HttpRequest, HttpResponse, Responder, get, post, put, web};
 use chrono::Utc;
 use cryptr::EncKeys;
 use rauthy_api_types::generic::{
     AppVersionResponse, Argon2ParamsResponse, EncKeyMigrateRequest, EncKeysResponse,
-    HealthResponse, I18nConfigResponse, LoginTimeResponse, PasswordHashTimesRequest,
-    PasswordPolicyRequest, PasswordPolicyResponse, SearchParams, SearchParamsType,
+    HealthResponse, I18nConfigResponse, KeepAliveResponse, LoginTimeResponse,
+    PasswordHashTimesRequest, PasswordPolicyRequest, PasswordPolicyResponse, SearchParams,
+    SearchParamsType,
 };
-use rauthy_common::compression::compress_br;
 use rauthy_common::constants::{
     APP_START, APPLICATION_JSON, CSRF_HEADER, HEADER_ALLOW_ALL_ORIGINS, IDX_LOGIN_TIME,
     PWD_CSRF_HEADER, RAUTHY_VERSION,
@@ -33,9 +34,9 @@ use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::{encryption, suspicious_request_block};
 use semver::Version;
 use std::fmt::Write;
-use std::ops::Sub;
+use std::ops::{Add, Sub};
 use std::str::FromStr;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
 use tracing::{error, info, warn};
 use validator::Validate;
 
@@ -43,8 +44,8 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     let common = RauthyConfig::get().vars.i18n.filter_lang_common
         .iter()
         .map(|v| {
-                if !["de", "en", "fr", "ko", "nb", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
-                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en de fr ko nb ru uk zhhans\nfound: {v}");
+                if !["cs", "de", "en", "es", "fr", "it", "ja", "ko", "nb", "nl", "pl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
+                    panic!("Invalid config for `i18n.filter_lang_common`.\nAllowed values: en cs de es fr it ja ko nb nl pl pt ru uk zhhans\nfound: {v}");
                 }
                 Language::from(v.as_ref()).into()
         })
@@ -56,9 +57,9 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
         .filter_lang_admin
         .iter()
         .map(|v| {
-            if !["de", "en", "fr", "ko", "nb", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
+            if !["cs", "de", "en", "es", "fr", "it", "ja", "ko", "nb", "nl", "pt", "ru", "uk", "zhhans"].contains(&v.as_ref()) {
                 panic!(
-                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en de fr ko nb ru uk zhhans\nfound: {v}",
+                    "Invalid config for `i18n.filter_lang_admin`\nAllowed values: en cs de es fr it ja ko nb nl pt ru uk zhhans\nfound: {v}",
                 );
             }
             Language::from(v.as_ref()).into()
@@ -68,15 +69,7 @@ pub static I18N_CONFIG: LazyLock<String> = LazyLock::new(|| {
     serde_json::to_string(&I18nConfigResponse { common, admin }).unwrap()
 });
 
-pub static TIMEZONES_BR: LazyLock<Vec<u8>> = LazyLock::new(|| {
-    let zones = chrono_tz::TZ_VARIANTS
-        .iter()
-        .map(|tz| tz.name())
-        .collect::<Vec<_>>();
-
-    let json = serde_json::to_string(&zones).unwrap();
-    compress_br(json.as_bytes()).unwrap()
-});
+pub static TIMEZONES_BR: OnceLock<Vec<u8>> = OnceLock::new();
 
 /// Check if the current session is valid
 #[utoipa::path(
@@ -108,8 +101,42 @@ pub async fn get_auth_check(principal: ReqPrincipal) -> Result<HttpResponse, Err
 )]
 #[get("/auth_check_admin")]
 pub async fn get_auth_check_admin(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
+    if principal.is_admin() {
+        // full admin: validate the session and enforce admin-MFA (-> 406)
+        principal.validate_admin_session()?;
+    } else {
+        // delegated group admin: a valid session and the same admin-MFA
+        // enforcement, but without requiring the full `rauthy_admin` role
+        principal.validate_group_admin_session()?;
+    }
     Ok(HttpResponse::Ok().finish())
+}
+
+/// Keep the session of the current browser alive
+///
+/// Answers the session's next idle timeout deadline, which the caller schedules its next request
+/// from.
+///
+/// **Permissions**
+/// - session-auth (`Init` or `Auth`)
+#[utoipa::path(
+    get,
+    path = "/keep_alive",
+    tag = "generic",
+    responses(
+        (status = 200, description = "Ok", body = KeepAliveResponse),
+        (status = 401, description = "Session expired", body = ErrorResponse),
+    ),
+)]
+#[get("/keep_alive")]
+pub async fn get_keep_alive(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
+    principal.validate_session_auth_or_init()?;
+    let session = principal.get_session()?;
+    let timeout = OffsetDateTime::from_unix_timestamp(session.last_seen)
+        .expect("session.last_seen is a unix timestamp from our own DB")
+        .add(RauthyConfig::get().vars.lifetimes.session_timeout);
+
+    Ok(HttpResponse::Ok().json(KeepAliveResponse { timeout }))
 }
 
 /// Returns the existing encryption key ID's
@@ -217,7 +244,7 @@ pub async fn get_i18n_config() -> Result<HttpResponse, ErrorResponse> {
 pub async fn get_login_time(principal: ReqPrincipal) -> Result<HttpResponse, ErrorResponse> {
     principal.validate_api_key_or_admin_session(AccessGroup::Generic, AccessRights::Read)?;
 
-    let login_time: u32 = DB::hql()
+    let login_time: i64 = DB::hql()
         .get(Cache::App, IDX_LOGIN_TIME)
         .await?
         .unwrap_or(2000);
@@ -344,6 +371,9 @@ pub async fn ping() -> impl Responder {
 pub async fn post_pow() -> Result<HttpResponse, ErrorResponse> {
     // TODO can we limit the creation of new pows in a way that makes sense?
     //  By IP could be problematic if lots of users have the same public IP.
+    //  If it were just Rauthy, we could key by browser ID, but this endpoint is used by external
+    //  aps as well, which is another reason to vote against an IP. If an external backend creates
+    //  lots of them and forwards to the UI, we will see the same IP all the time.
     let pow = PowEntity::create().await?;
     Ok(HttpResponse::Ok()
         .insert_header(HEADER_ALLOW_ALL_ORIGINS)
@@ -366,13 +396,20 @@ pub async fn get_search(
     Query(params): Query<SearchParams>,
     principal: ReqPrincipal,
 ) -> Result<HttpResponse, ErrorResponse> {
-    principal.validate_admin_session()?;
     params.validate()?;
+    if principal.validate_admin_session().is_err() {
+        principal.validate_group_admin_session()?;
+    }
 
     let limit = params.limit.unwrap_or(100) as i64;
     match params.ty {
         SearchParamsType::Session => {
-            let res = Session::search(&params.idx, &params.q, limit).await?;
+            let res = Session::search(&params.idx, &params.q, limit)
+                .await?
+                .into_iter()
+                // make sure to never leak CSRF tokens
+                .map(|mut s| s.csrf_token = String::default())
+                .collect::<Vec<_>>();
             Ok(HttpResponse::Ok().json(res))
         }
         SearchParamsType::User => {
@@ -402,8 +439,9 @@ pub async fn get_timezones(accept_encoding: web::Header<header::AcceptEncoding>)
             // caches for 30 days - Timezones are almost never updated
             .insert_header(("cache-control", "max-age=2592000; public"))
             .insert_header(("content-encoding", "br"))
+            .insert_header((VARY, "content-encoding"))
             .content_type(APPLICATION_JSON)
-            .body(TIMEZONES_BR.as_slice())
+            .body(TIMEZONES_BR.get().unwrap().as_slice())
     } else {
         let zones = chrono_tz::TZ_VARIANTS
             .iter()
@@ -456,9 +494,13 @@ pub async fn post_update_language(
 #[get("/health")]
 pub async fn get_health() -> impl Responder {
     if Utc::now().sub(*APP_START).num_seconds()
-        < RauthyConfig::get().vars.database.health_check_delay_secs as i64
+        < RauthyConfig::get()
+            .vars
+            .database
+            .health_check_delay
+            .as_secs() as i64
     {
-        info!("Early health check within the HEALTH_CHECK_DELAY_SECS timeframe - returning true");
+        info!("Early health check within the HEALTH_CHECK_DELAY timeframe - returning true");
         HttpResponse::Ok().json(HealthResponse {
             db_healthy: true,
             cache_healthy: true,
@@ -497,7 +539,10 @@ pub async fn get_ready() -> impl Responder {
 /// Catch all - redirects from root to the "real root" /auth/v1/
 /// If `BLACKLIST_SUSPICIOUS_REQUESTS` is set, it will also compare the
 /// request path against common bot / hacker scan targets and blacklist preemptively.
-#[get("/{_:.*}")]
+///
+/// This handler is registered for every standard HTTP method (see server.rs), so that
+/// non-GET scan requests (POST/PUT/...) are also caught by the pre-blacklisting instead of
+/// just receiving a 405 Method Not Allowed.
 pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> {
     let path = req.path();
     let ip = real_ip_from_req(&req)?;
@@ -508,7 +553,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
         warn!("Suspicious request path '{}' from {}", path, ip)
     }
 
-    if vars.blacklist > 0
+    if !vars.blacklist.is_zero()
         // `/` will be the path of length 1
         && path.len() > 1
         && suspicious_request_block::is_scan_target(path)
@@ -518,7 +563,7 @@ pub async fn catch_all(req: HttpRequest) -> Result<HttpResponse, ErrorResponse> 
             path, ip,
         );
 
-        if let Err(err) = IpBlacklist::put(ip.to_string(), vars.blacklist as i64).await {
+        if let Err(err) = IpBlacklist::put(ip.to_string(), vars.blacklist).await {
             error!(
                 "Error blacklisting suspicious request - please repot this bug: {:?}",
                 err
@@ -613,7 +658,14 @@ pub async fn get_whoami(req: HttpRequest) -> String {
 
         for (k, v) in req.headers() {
             let key = k.as_str();
-            let value = if key == "cookie" || key == CSRF_HEADER || key == PWD_CSRF_HEADER {
+            let value = if [
+                AUTHORIZATION.as_str(),
+                "cookie",
+                CSRF_HEADER,
+                PWD_CSRF_HEADER,
+            ]
+            .contains(&key)
+            {
                 "<hidden>"
             } else {
                 v.to_str().unwrap_or_default()

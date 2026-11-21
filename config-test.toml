@@ -3,6 +3,8 @@ dev_mode = true
 dpop_http = true
 
 [access]
+token_revoke_on_logout = true
+disable_refresh_token_nbf = true
 password_reset_cookie_binding = true
 whoami_headers = true
 
@@ -39,6 +41,9 @@ enable = true
 enable_web_id = true
 enable_solid_aud = true
 allowed_flows = ['authorization_code', 'refresh_token']
+# the integration test suite serves its ephemeral client document from 127.0.0.1;
+# the deny path is covered by unit tests in src/data/src/http_client.rs
+danger_allow_private_addresses = true
 
 [hashing]
 argon2_m_cost = 32768

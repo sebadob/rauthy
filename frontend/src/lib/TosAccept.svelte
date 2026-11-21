@@ -3,15 +3,15 @@
         ToSAwaitLoginResponse,
         ToSLatestResponse,
         ToSUserAcceptRequest,
-    } from '$api/types/tos';
-    import Modal from '$lib/Modal.svelte';
-    import Button from '$lib/button/Button.svelte';
-    import { useI18n } from '$state/i18n.svelte';
-    import { fetchPost, type IResponse } from '$api/fetch';
+    } from '#api/types/tos.ts';
+    import Modal from '#lib/Modal.svelte';
+    import Button from '#lib/button/Button.svelte';
+    import { useI18n } from '#state/i18n.svelte.ts';
+    import { fetchPost, type IResponse } from '#api/fetch.ts';
     import { onMount } from 'svelte';
-    import { formatDateFromTs } from '$utils/helpers';
-    import type { WebauthnLoginResponse } from '$api/types/authorize';
-    import MarkdownRenderer from '$lib/text_edit/md/MarkdownRenderer.svelte';
+    import { formatDateFromTs } from '#utils/helpers.ts';
+    import type { WebauthnLoginResponse } from '#api/types/authorize.ts';
+    import MarkdownRenderer from '#lib/text_edit/md/MarkdownRenderer.svelte';
 
     let {
         tos,
@@ -81,7 +81,10 @@
                 tos_ts: tos.ts,
             };
             let res = await fetchPost<undefined>('/auth/v1/tos/accept', payload);
-            // TODO handle accept code expiration
+            if (res.error) {
+                onCancel();
+                return;
+            }
             await onToSAccept(res);
         } else {
             await onToSAccept();
@@ -105,11 +108,11 @@
             tos_ts: tos.ts,
         };
         let res = await fetchPost<undefined>('/auth/v1/tos/deny', payload);
-        // TODO handle accept code expiration
 
         if (res.error) {
             // this should never happen because of our pre-checks
             tos.opt_until = undefined;
+            onCancel();
         } else {
             closeModal?.();
             await onToSAccept(res);

@@ -7,11 +7,13 @@ use rauthy_api_types::oidc::{BackchannelLogoutRequest, LogoutRequest};
 use rauthy_common::constants::{COOKIE_SESSION, COOKIE_SESSION_FED_CM};
 use rauthy_common::http_client;
 use rauthy_data::api_cookie::ApiCookie;
+use rauthy_data::entity::auth_codes::post_logout_redirect;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::failed_backchannel_logout::FailedBackchannelLogout;
 use rauthy_data::entity::issued_tokens::IssuedToken;
 use rauthy_data::entity::jwk::{JwkKeyPair, JwkKeyPairAlg};
 use rauthy_data::entity::refresh_tokens::RefreshToken;
+use rauthy_data::entity::refresh_tokens_devices::RefreshTokenDevice;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
 use rauthy_data::entity::user_login_states::UserLoginState;
@@ -24,13 +26,12 @@ use rauthy_jwt::token::JwtToken;
 use std::borrow::Cow;
 use std::str::FromStr;
 use std::string::ToString;
+use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::{debug, error, info};
 
-// We will allow more clock skew here for the token expiration validation to not be too
-// strict, as long as the signature of the token and all other things are valid.
-// This value could be made configurable, but it is probably not really worth it.
-static LOGOUT_TOKEN_CLOCK_SKEW: u16 = 600;
+// Allow a small clock-skew margin for logout token validation.
+const LOGOUT_TOKEN_CLOCK_SKEW: Duration = Duration::from_secs(600);
 
 /// Returns the Logout HTML Page for [GET /oidc/logout](crate::handlers::get_logout)
 pub async fn get_logout_html(
@@ -53,38 +54,15 @@ pub async fn get_logout_html(
         Some(JwtTokenType::Id),
         LOGOUT_TOKEN_CLOCK_SKEW,
         &mut buf,
+        false,
     )
     .await?;
     let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
 
     // from here on, the token_hint contains a valid ID token -> skip the logout confirmation
     if let Some(target) = logout_request.post_logout_redirect_uri {
-        // unwrap is safe since the token is valid already
         let client = Client::find(claims.common.azp.to_string()).await?;
-        if client.post_logout_redirect_uris.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Given 'post_logout_redirect_uri' is not allowed",
-            ));
-        }
-
-        let uri_vec = client.get_post_logout_uris();
-
-        let valid_redirect = uri_vec.as_ref().unwrap().iter().any(|uri| {
-            if uri.ends_with('*') && target.starts_with(uri.split_once('*').unwrap().0) {
-                return true;
-            }
-            if target.eq(uri) {
-                return true;
-            }
-            false
-        });
-        if valid_redirect {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Given 'post_logout_redirect_uri' is not allowed",
-            ));
-        }
+        client.validate_post_logout_redirect_uri(&target)?;
     }
 
     HtmlCached::Logout(session.csrf_token)
@@ -110,6 +88,7 @@ pub async fn post_logout_handle(
                 Some(JwtTokenType::Id),
                 LOGOUT_TOKEN_CLOCK_SKEW,
                 &mut buf,
+                false,
             )
             .await?;
             let claims = serde_json::from_slice::<JwtIdClaims>(&buf)?;
@@ -146,17 +125,17 @@ pub async fn post_logout_handle(
         };
 
     let token_revoke = RauthyConfig::get().vars.access.token_revoke_on_logout;
+    let token_revoke_device_tokens = RauthyConfig::get().vars.access.token_revoke_device_tokens;
 
     let sid = session.as_ref().map(|s| s.id.clone());
     if let Some(session) = session {
         let uid = session.user_id.clone();
         if token_revoke {
             RefreshToken::delete_by_sid(session.id.clone()).await?;
-            IssuedToken::revoke_for_session(
-                &session.id,
-                RauthyConfig::get().vars.access.token_revoke_device_tokens,
-            )
-            .await?;
+            if token_revoke_device_tokens && let Some(user_id) = uid.as_deref() {
+                RefreshTokenDevice::invalidate_all_for_user(user_id).await?;
+            }
+            IssuedToken::revoke_for_session(&session.id, token_revoke_device_tokens).await?;
         }
         session.delete().await?;
         execute_backchannel_logout(sid.clone(), uid).await?;
@@ -164,12 +143,12 @@ pub async fn post_logout_handle(
 
     if let Some(user) = user {
         if token_revoke {
-            RefreshToken::invalidate_for_user(&user.id).await?;
-            IssuedToken::revoke_for_user(
+            RefreshTokenDevice::invalidate_with_refresh_tokens_for_user(
                 &user.id,
-                RauthyConfig::get().vars.access.token_revoke_device_tokens,
+                token_revoke_device_tokens,
             )
             .await?;
+            IssuedToken::revoke_for_user(&user.id, token_revoke_device_tokens).await?;
         }
         Session::invalidate_for_user(&user.id).await?;
         execute_backchannel_logout(None, Some(user.id)).await?;
@@ -178,14 +157,12 @@ pub async fn post_logout_handle(
     if is_backchannel {
         Ok(HttpResponse::build(StatusCode::OK).finish())
     } else {
-        let uri = post_logout_redirect_uri
-            .as_ref()
-            .unwrap_or(&RauthyConfig::get().issuer);
-        let state = params
-            .state
-            .map(|st| format!("?state={st}"))
-            .unwrap_or_default();
-        let loc = format!("{uri}{state}");
+        let loc = post_logout_redirect(
+            post_logout_redirect_uri
+                .as_deref()
+                .unwrap_or(&RauthyConfig::get().issuer),
+            params.state.as_deref(),
+        );
 
         let mut resp = HttpResponse::build(StatusCode::from_u16(302).unwrap())
             .append_header((header::LOCATION, loc))
@@ -422,6 +399,9 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
     Ok(())
 }
 
+/// Sends a backchannel logout to the given client. Successful deliveries delete any pending
+/// failure record for this (client_id, sub, sid); failed ones upsert / increment it. Callers
+/// must join their `JoinSet` before assuming all attempts have finished.
 pub async fn send_backchannel_logout(
     client_id: String,
     backchannel_logout_uri: String,
@@ -437,7 +417,11 @@ pub async fn send_backchannel_logout(
         &client_id,
         sub.as_deref(),
         sid.as_deref(),
-        RauthyConfig::get().vars.backchannel_logout.token_lifetime,
+        RauthyConfig::get()
+            .vars
+            .backchannel_logout
+            .token_lifetime
+            .as_secs() as i64,
     )
     .into_token_with_kp(kp)?;
 
@@ -449,26 +433,30 @@ pub async fn send_backchannel_logout(
             .send()
             .await;
 
-        let err = match res {
+        match res {
             Ok(resp) => {
                 let status = resp.status();
                 if status.is_success() {
+                    // Delivered: drop the pending failure record, if any. This is a no-op for
+                    // first-time logouts and clears stale retries otherwise.
+                    FailedBackchannelLogout::delete_by(client_id, sub, sid).await?;
                     return Ok(());
                 }
                 let text = resp.text().await.unwrap_or_default();
-                format!(
+                let err = format!(
                     "Error during Backchannel Logout for client '{client_id}': HTTP {} - {text}",
                     status.as_u16()
-                )
+                );
+                FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
+                Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
             }
             Err(err) => {
-                format!("Error during Backchannel Logout for client '{client_id}': {err}")
+                let err =
+                    format!("Error during Backchannel Logout for client '{client_id}': {err}");
+                FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
+                Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
             }
-        };
-
-        FailedBackchannelLogout::upsert(client_id, sub, sid).await?;
-
-        Err(ErrorResponse::new(ErrorResponseType::BadRequest, err))
+        }
     });
 
     Ok(())
