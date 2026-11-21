@@ -895,10 +895,10 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
             let revoked = ids(&txn, SELECT_REVOKED).await.iter().any(|i| i == "j_2");
             match step {
                 PgDiscardStep::Delete => {
-                    assert!(!row && !revoked, "after statement {i}: {row} {revoked}")
+                    assert!(!row && !revoked, "after statement {i}: {row} {revoked}");
                 }
                 PgDiscardStep::RevokeAccessToken => {
-                    assert!(!row && revoked, "after statement {i}: {row} {revoked}")
+                    assert!(!row && revoked, "after statement {i}: {row} {revoked}");
                 }
             }
         }

@@ -1641,7 +1641,7 @@ LIMIT $2"#
             match put.key.as_str() {
                 "email" => upd_req.email = put.value.as_str().unwrap_or_default().to_string(),
                 "password" => {
-                    upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string())
+                    upd_req.password = Some(put.value.as_str().unwrap_or_default().to_string());
                 }
                 "given_name" => upd_req.given_name = put.value.as_str().map(String::from),
                 "family_name" => upd_req.family_name = put.value.as_str().map(String::from),
@@ -1649,7 +1649,7 @@ LIMIT $2"#
                     let lang = rauthy_api_types::generic::Language::from(Language::from(
                         put.value.as_str().unwrap_or_default(),
                     ));
-                    upd_req.language = Some(lang)
+                    upd_req.language = Some(lang);
                 }
                 "roles" => {
                     upd_req.roles = put
@@ -1660,7 +1660,7 @@ LIMIT $2"#
                                 .map(|v| v.as_str().unwrap_or_default().to_string())
                                 .collect()
                         })
-                        .unwrap_or_default()
+                        .unwrap_or_default();
                 }
                 "groups" => {
                     upd_req.groups = Some(
@@ -1672,7 +1672,7 @@ LIMIT $2"#
                                     .collect()
                             })
                             .unwrap_or_default(),
-                    )
+                    );
                 }
                 "enabled" => upd_req.enabled = put.value.as_bool().unwrap_or(true),
                 "email_verified" => upd_req.email_verified = put.value.as_bool().unwrap_or(true),

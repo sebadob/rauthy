@@ -1380,7 +1380,7 @@ fn serve_ephemeral_client() -> JoinHandle<()> {
                 .expect("port 10080 to be free for testing")
                 .run()
                 .await
-                .expect("ephemeral client test http server to start") })
+                .expect("ephemeral client test http server to start"); });
     })
 }
 

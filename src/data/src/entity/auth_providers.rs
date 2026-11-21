@@ -751,7 +751,7 @@ impl AuthProviderCallback {
                 builder = builder.basic_auth(
                     &provider.client_id,
                     AuthProvider::secret_cleartext(&provider.secret)?,
-                )
+                );
             }
 
             builder
