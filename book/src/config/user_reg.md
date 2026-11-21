@@ -37,13 +37,13 @@ You need to configure the following values to be able to send out E-Mails:
 ```admonish hint
 When you have another client application that redirects to the registration form, you can provide
 a `redirect_uri=https%3A%2F%2Fmy.client.app`. If the value you append is registered for any clients as
-contact URI (not allowed redirect URIs), the registration form will redirect back to your 
+contact URI (not allowed redirect URIs), the registration form will redirect back to your
 application after success.
 ```
 
 ## Captcha / Proof of Work
 
-The registration form uses a *Proof of Work (PoW)* behind the scenes. This is basically an invisible
+The registration form uses a _Proof of Work (PoW)_ behind the scenes. This is basically an invisible
 captcha without the user solving weird image puzzles that sometimes even humans cannot solve. It is
 done with the help of a tiny crate I wrote myself as well.
 
@@ -52,7 +52,7 @@ had issues with any bots, so it does what it should while providing a way better
 traditional captcha challenge.
 
 ```admonish hint
-If you are interested in how it works, take a look at [spow](https://github.com/sebadob/spow).  
+If you are interested in how it works, take a look at [spow](https://github.com/sebadob/spow).
 ```
 
 ## Restricted Registration
@@ -71,6 +71,20 @@ you may only want users to register with their work E-Mail:
 # overwritten by: USER_REG_DOMAIN_RESTRICTION
 domain_restriction = 'my-domain.com'
 ```
+
+The restriction is not limited to the registration form itself. It applies to every address a user
+can get into its own account, which means it is checked for the open registration and for a
+self-service E-Mail change on the account dashboard as well, including the confirmation of the
+resulting Magic Link. Administrators are not restricted by these rules: creating a user or editing
+the address of one in the admin dashboard is an admin decision, and an admin can assign any address.
+The same applies to the `domain_blacklist`, the `reserved_names` and the subaddressing rules below.
+
+Both domain rules are compared against the exact domain part of the address, everything after the
+last `@`, and they are case-insensitive. With `domain_restriction = 'my-domain.com'`, the address
+`me@my-domain.com` is allowed, while `me@MY-DOMAIN.com` is allowed as well, and
+`me@sub.my-domain.com`, `me@evil-my-domain.com` and `me@my-domain.com.evil.tld` are not. A
+restriction covers exactly one mail server, the way a `reserved_names` entry covers exactly one
+mailbox.
 
 ## Domain Blacklisting
 
@@ -121,9 +135,119 @@ domain_blacklist = [
 
 ```admonish note
 If you get targeted by something like fake accounts for testing your security and so on, don't panic.
-These attacks usually stop after 1-2 weeks most often. When attackers did not find a way in, they 
-loose interest. 
+These attacks usually stop after 1-2 weeks most often. When attackers did not find a way in, they
+loose interest.
 ```
+
+## Reserved Names
+
+An E-Mail address is not only an identifier for Rauthy, it is a mailbox on your mail server, whenever
+Rauthy is the login provider for a self-hosted mail setup. The person who registers
+`ceo@mail.example` in Rauthy receives the Magic Link for that mailbox, which means they own it.
+
+`reserved_names` blocks the local part of an address, exactly like the `domain_blacklist` blocks a
+domain. It is checked for the open registration and for a self-service E-Mail change, including the
+confirmation of the resulting Magic Link. The match is exact and case-insensitive: `postmaster`
+matches `postmaster@mail.example`, `postmaster.news` does not. Administrators are not restricted.
+
+```toml
+[user_registration]
+# The local parts of an E-Mail address that are blocked for the open
+# registration and for a self-service E-Mail change. The match is exact
+# and case-insensitive.
+#
+# default: [ 'abuse', 'admin', 'administrator', 'daemon', 'ftp',
+#   'hostmaster', 'mailnull', 'mailer-daemon', 'noc', 'no-reply',
+#   'noreply', 'null', 'operator', 'postmaster', 'proxy', 'root',
+#   'security', 'support', 'uucp', 'usenet', 'webmaster', 'www'
+# ]
+# overwritten by: USER_REG_RESERVED_NAMES - single String, \n separated values
+reserved_names = ['ceo', 'root']
+```
+
+The default is the RFC 2142 team addresses (`postmaster`, `abuse`, `webmaster`, …) plus the usual
+system and daemon accounts. A custom list replaces the default, it does not extend it.
+
+```admonish warning
+This list only protects mailboxes when Rauthy is the source of truth for the accounts on that mail
+server, and no local account is ever created separately. Every mailbox which exists on the mail
+server must be in this list, because Rauthy cannot block what it does not know about, and an
+address which is missing here can be claimed by the first person who registers it. A mail server
+with a catch-all domain cannot be protected by this list at all.
+```
+
+## Subaddressing
+
+```toml
+[user_registration]
+# Reject any E-Mail address which contains a `+` in its local part,
+# for the open registration and for a self-service E-Mail change.
+#
+# default: false
+# overwritten by: USER_REG_REJECT_PLUS_SUBADDRESSING
+reject_plus_subaddressing = false
+```
+
+The default of `false` only means Rauthy does not restrict the validator for the local part, which
+accepts `+`. Set this to `true` when Rauthy is the login provider for a mail server: a mail server
+which canonicalizes `ceo+news` into the mailbox `ceo` would make the `reserved_names` entry for
+`ceo` bypassable, and the point of that list is that it cannot be bypassed.
+
+## Immediate Account Init
+
+```toml
+[user_registration]
+# Ask for the password in the open registration form and init the account
+# right away, instead of sending out the password reset Magic Link.
+#
+# default: false
+# overwritten by: USER_REG_DANGER_REG_ACC_INIT_IMEDIATE
+danger_reg_acc_init_immediate = false
+```
+
+```admonish danger title="Rauthy must own the account table"
+The Magic Link is the mechanism that proves control over an E-Mail address. With this flag, Rauthy
+does not send it out at registration, so anyone who can reach the form takes over the mailbox of
+the address they type in, and Rauthy cannot detect it.
+
+This is only defensible when Rauthy is the source of truth for the accounts on that mail server and
+no mailbox is ever created locally on the mail server. A mailbox that exists there without a Rauthy
+account is taken by the first person who registers it, and a mail server with a catch-all domain
+cannot be protected by any list at all, so it cannot use this flag.
+```
+
+Rauthy refuses to start with this flag set unless all of these are configured, and it prints the
+missing values:
+
+```
+user_registration.enable = true
+user_registration.domain_restriction = '<your domain>'
+user_registration.reject_plus_subaddressing = true
+user_registration.reserved_names # -> must not be empty
+user_values.self_service_email_change_deny = true
+user_registration.allow_open_redirect = false
+```
+
+The `domain_restriction` is what keeps the form from being usable for the whole world, and
+`reserved_names` is a hard dependency: every mailbox name on that mail server must be in that list,
+because Rauthy only blocks what it knows about. The list has no effect if the mail server accepts
+addresses Rauthy never sees.
+
+What changes on registration with the flag:
+
+- The form shows the password and its confirmation, and it renders the `[passwords]` policy exactly
+  like the password reset form does, including the generate button. The account is created with that
+  password. There is no Magic Link and no E-Mail.
+- The user gets `email_verified = true` from the form, without any delivery to that address, and the
+  account can log in immediately.
+- There is no separate PoW difficulty for the registration. `pow.difficulty` is global, the login
+  uses the same `/pow` endpoint, so raising the difficulty of that endpoint is what makes a
+  registration run expensive. The endpoint has no rate limit and no creation bound, by IP or by
+  anything else, because it is the gate to the login page.
+
+Self-service E-Mail change must stay denied with this flag, which is why
+`self_service_email_change_deny = true` is part of the startup requirement: a user that got an
+address through the form must not be able to move the account to another address afterwards.
 
 ## Downstream Application Integration
 
@@ -258,12 +382,12 @@ struct NewUserRegistrationRequest {
 ```
 
 ```admonish caution
-Do not fetch and solve a PoW when the user has not submitted the form yet!  
+Do not fetch and solve a PoW when the user has not submitted the form yet!
 
-The PoWs have a very short lifetime by default to prevent them from being used multiple times. 
-Rauthy has additional re-use prevention, but a POST to get a PoW will modify the backend state. This 
+The PoWs have a very short lifetime by default to prevent them from being used multiple times.
+Rauthy has additional re-use prevention, but a POST to get a PoW will modify the backend state. This
 is unnecessary if the user decides to not submit the form at all.
 
-You can configure PoWs with `pow.difficulty` and `pow.exp`.  
+You can configure PoWs with `pow.difficulty` and `pow.exp`.
 Keep in mind, that the `pow.exp` should be a high as necessary but always as low as possible.
 ```

@@ -5,13 +5,16 @@
         PKCE_VERIFIER,
         REDIRECT_URI,
         TPL_AUTH_PROVIDERS,
+        TPL_REG_ACC_INIT_IMMEDIATE,
         TPL_RESTRICTED_EMAIL_DOMAIN,
         TPL_USER_VALUES_CONFIG,
     } from '#utils/constants.ts';
     import Input from '#lib/form/Input.svelte';
+    import InputPassword from '#lib/form/InputPassword.svelte';
     import LangSelector from '#lib/LangSelector.svelte';
     import Main from '#lib/Main.svelte';
     import ContentCenter from '#lib/ContentCenter.svelte';
+    import PasswordPolicy from '#lib/PasswordPolicy.svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
     import Template from '#lib/Template.svelte';
     import { useParam } from '#state/param.svelte.ts';
@@ -38,17 +41,26 @@
     import { generateNonce, generatePKCE } from '#utils/pkce.ts';
     import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
     import { execProviderLogin } from '#utils/login.ts';
-    import { genKey, saveCsrfToken } from '#utils/helpers.ts';
+    import { genKey, saveCsrfToken, generatePassword } from '#utils/helpers.ts';
     import type { SessionInfoResponse } from '#api/types/session.ts';
+    import type { RegAccInitImmediate } from '#api/templates/RegAccInitImmediate.ts';
 
     let t = useI18n();
 
     let refEmail: undefined | HTMLInputElement = $state();
 
     let restrictedDomain = $state('');
+    let accInit: undefined | RegAccInitImmediate = $state();
+    let passwordConfirm = $state('');
+    let policyAccepted = $state(false);
+    let reportValidityNew: undefined | (() => void) = $state();
+    let reportValidityConfirm: undefined | (() => void) = $state();
     let config: undefined | UserValuesConfig = $state();
     let redirectUri = useParam('redirect_uri');
     let providers: AuthProviderTemplate[] = $state([]);
+
+    let accInitImmediate = $derived(accInit?.enabled === true);
+    let passwordPolicy = $derived(accInit?.password_policy);
 
     let isLoading = $state(false);
     let err = $state('');
@@ -81,6 +93,11 @@
             if (config.given_name === 'required') {
                 values.given_name = '';
                 active += 1;
+            }
+            if (accInitImmediate) {
+                values.password = '';
+                // the password and its confirmation are two inputs in the form
+                active += 2;
             }
             if (config.family_name === 'required') {
                 values.family_name = '';
@@ -196,6 +213,16 @@
             return;
         }
 
+        if (accInitImmediate) {
+            if (!policyAccepted) {
+                return;
+            }
+            if (values.password !== passwordConfirm) {
+                err = t.passwordReset.passwordNoMatch;
+                return;
+            }
+        }
+
         if (restrictedDomain && !values.email.endsWith(restrictedDomain)) {
             err = t.register.domainErr;
             return;
@@ -210,6 +237,21 @@
         } else {
             console.error('logic error in ToS fetch / accept');
         }
+    }
+
+    function generate() {
+        if (!passwordPolicy) {
+            return;
+        }
+
+        const pwd = generatePassword(passwordPolicy);
+        values.password = pwd;
+        passwordConfirm = pwd;
+
+        requestAnimationFrame(() => {
+            reportValidityNew?.();
+            reportValidityConfirm?.();
+        });
     }
 
     async function submitRegistration() {
@@ -249,6 +291,7 @@
 </svelte:head>
 
 <Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain} />
+<Template id={TPL_REG_ACC_INIT_IMMEDIATE} bind:value={accInit} />
 <Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
 
@@ -264,6 +307,16 @@
             </div>
 
             <Form {action} {onSubmit}>
+                {#if accInitImmediate && passwordPolicy}
+                    <div class="policy">
+                        <PasswordPolicy
+                            bind:accepted={policyAccepted}
+                            policy={passwordPolicy}
+                            password={values.password ?? ''}
+                        />
+                    </div>
+                {/if}
+
                 <div class={valuesActive > 5 ? 'valuesMany' : ''}>
                     <Input
                         bind:ref={refEmail}
@@ -275,6 +328,33 @@
                         bind:value={values.email}
                         required
                     />
+                    {#if accInitImmediate && passwordPolicy}
+                        <InputPassword
+                            name="password"
+                            autocomplete="new-password"
+                            label={t.account.passwordNew}
+                            placeholder={t.account.passwordNew}
+                            bind:value={values.password}
+                            maxLength={passwordPolicy.length_max}
+                            bind:reportValidity={reportValidityNew}
+                            showCopy={(values.password ?? '').length >= passwordPolicy.length_min}
+                            required
+                        />
+                        <InputPassword
+                            autocomplete="new-password"
+                            label={t.account.passwordConfirm}
+                            placeholder={t.account.passwordConfirm}
+                            bind:value={passwordConfirm}
+                            maxLength={passwordPolicy.length_max}
+                            bind:reportValidity={reportValidityConfirm}
+                            required
+                        />
+                        <div class="generate">
+                            <Button level={2} onclick={generate}>
+                                {t.passwordReset.generate}
+                            </Button>
+                        </div>
+                    {/if}
                     {#if values.preferred_username !== undefined}
                         <Input
                             name="preferred_username"
@@ -461,6 +541,16 @@
 
     .domainTxt {
         margin: 0.5rem 0;
+    }
+
+    .generate {
+        margin-bottom: 0.66rem;
+    }
+
+    .policy {
+        max-width: 100dvw;
+        overflow: clip;
+        margin-bottom: 0.5rem;
     }
 
     .providers {

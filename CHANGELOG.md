@@ -62,7 +62,59 @@ not rotate the session, so only invalidating it closes the window. Rauthy does n
 automatically, because it would log out every user on every instance, including the ones that
 never used Forward Auth.
 
+#### Self-Service E-Mail Changes Respect the Registration Domain Restrictions
+
+The `domain_restriction` and `domain_blacklist` of `[user_registration]` were only applied to the
+open registration form. An account could move itself to any address, including a restricted or
+blacklisted one, via the E-Mail change on the account dashboard, and the confirmation of that
+address applied it without any domain check. Both the request that creates the confirmation link and
+the confirmation of that link are validated now. Admins are not affected: creating a user, or
+editing the address of an existing one, is an admin decision and can still set any address.
+
+#### Registration Can Be Blocked For Reserved Mailbox Names
+
+`user_registration.reserved_names` blocks the local part of an E-Mail address, the way
+`domain_blacklist` blocks a domain, for the open registration and for a self-service E-Mail change.
+The default is the RFC 2142 team addresses plus the usual system accounts (`postmaster`, `abuse`,
+`root`, `mailer-daemon`, …). The match is exact and case-insensitive. A self-hosted mail server
+behind Rauthy can list every mailbox it does not want to be claimed by whoever registers first.
+
+`user_registration.reject_plus_subaddressing = true` rejects any address with a `+` in its local
+part for the same two paths, which is what makes such a list non-bypassable on a mail server that
+canonicalizes `ceo+news` into the mailbox `ceo`.
+
 ### Changes
+
+#### Self-Service E-Mail Change Can Be Denied
+
+```toml
+
+```
+
+#### Immediate Account Init From The Registration Form
+
+New `[user_registration].danger_reg_acc_init_immediate` (default `false`). When enabled, the
+registration form asks for the password and its confirmation, renders the `[passwords]` policy like
+the password reset form does, and the account is created with that password. No password reset Magic
+Link is created and the user gets `email_verified = true` from the form itself. Rauthy refuses to
+start with this flag unless the hardened set is configured: domain restricted registration,
+`reject_plus_subaddressing`, a non empty `reserved_names`, `self_service_email_change_deny`, no open
+redirect, password reset cookie binding, and `cookie_mode = 'secure'`. See the docs for why this
+needs Rauthy to be the source of truth for the mail server's accounts.
+
+Only the config decides which kind of account the registration creates. With the flag off, a
+`password` in the request is dropped and the account goes through the Magic Link like every other
+one: no request can initialize an account by itself. The `[passwords]` policy is applied to that
+password, `valid_days` included, so the password of such an account expires like any other.
+
+The password is validated before the address is looked up, so the endpoint does not reveal whether
+an E-Mail address is already registered: a policy violation is a `400` for a free and for a taken
+address alike, and both a successful registration and an already registered address are a `204`.
+
+#### PoW Difficulty Is Validated At Startup
+
+`pow.difficulty` outside of the range `spow` accepts (`10..=99`) made every challenge request fail
+with a `500` at runtime. Rauthy exits at startup with such a config now.
 
 #### Token Exchange keeps the delegation chain of the `subject_token`
 
