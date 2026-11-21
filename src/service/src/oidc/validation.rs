@@ -102,14 +102,24 @@ pub async fn validate_and_refresh_token(
     if client.id != claims.common.azp {
         // If this is a non-matching client.id, this is most probably a malicious request.
         // -> invalidate the refresh token immediately
-        let deleted = if claims.common.did.is_some()
-            && let Ok(Some(rt)) = RefreshTokenDevice::find_opt(validation_str).await
-        {
-            rt.delete().await
-        } else if let Ok(Some(rt)) = RefreshToken::find_opt(validation_str).await {
+        let device = if claims.common.did.is_some() {
+            RefreshTokenDevice::find_opt(validation_str)
+                .await
+                .unwrap_or_else(|err| {
+                    error!(?err, "looking up the refresh token of a client.id mismatch");
+                    None
+                })
+        } else {
+            None
+        };
+        let deleted = if let Some(rt) = device {
             rt.delete().await
         } else {
-            Ok(())
+            match RefreshToken::find_opt(validation_str).await {
+                Ok(Some(rt)) => rt.delete().await,
+                Ok(None) => Ok(()),
+                Err(err) => Err(err),
+            }
         };
         if let Err(err) = deleted {
             error!(?err, "deleting the refresh token of a failed refresh");
