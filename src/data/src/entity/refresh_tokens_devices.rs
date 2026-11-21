@@ -28,21 +28,6 @@ fn sql_invalidate_for_user(devices: bool) -> &'static [&'static str] {
     }
 }
 
-/// The discard statements of a device refresh token, like
-/// [`SQL_RT_DISCARD`](crate::entity::refresh_tokens::SQL_RT_DISCARD). A device refresh token is
-/// never discarded (it is exempt from the consent check), this only feeds the discard race tests.
-#[cfg(test)]
-pub(crate) const SQL_RTD_DISCARD: crate::entity::refresh_tokens::DiscardSql =
-    crate::entity::refresh_tokens::DiscardSql {
-        hql: [
-            r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti = (SELECT access_token_jti FROM refresh_tokens_devices WHERE id = $1)"#,
-            "DELETE FROM refresh_tokens_devices WHERE id = $1",
-        ],
-        pg_delete: "DELETE FROM refresh_tokens_devices WHERE id = $1 RETURNING access_token_jti",
-    };
-
 #[derive(Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct RefreshTokenDevice {
     pub id: String,
@@ -406,11 +391,7 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#,
             }
         };
         let res = finish_rotation_with(delete_checked, || {
-            crate::entity::refresh_tokens::pg_discard_txn(
-                &mut refresher,
-                &crate::entity::refresh_tokens::SQL_RT_DISCARD,
-                "rt_new",
-            )
+            crate::entity::refresh_tokens::pg_discard_txn(&mut refresher, "rt_new")
         })
         .await;
 

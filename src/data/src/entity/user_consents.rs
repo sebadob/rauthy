@@ -1086,12 +1086,7 @@ VALUES ('u1', 'c1', '', 'openid', 'hash', 1, 1, '127.0.0.1');
     /// `RefreshToken::discard` on `cl`: the row deleted and its access token revoked in one
     /// transaction
     async fn pg_discard(cl: &mut deadpool_postgres::Object, id: &str) -> Result<(), ErrorResponse> {
-        crate::entity::refresh_tokens::pg_discard_txn(
-            cl,
-            &crate::entity::refresh_tokens::SQL_RT_DISCARD,
-            id,
-        )
-        .await
+        crate::entity::refresh_tokens::pg_discard_txn(cl, id).await
     }
 
     /// Runs the revoke of u1 for c1 in `txn` up to and including the `refresh_tokens` delete of
@@ -1781,59 +1776,41 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             .unwrap();
     }
 
-    /// The refresh tokens the discard statements of both tables drop in
-    /// [`test_discard_revoke_race_postgres`]: the replacement `rt_new` for c1, and the device
-    /// refresh token `rtd_src` of c1.
-    const DISCARD_RACE_TOKENS: [(bool, &str); 2] = [(false, "rt_new"), (true, "rtd_src")];
-
-    /// Runs the statements `range` of the discard of `id`, a device refresh token if `device`.
+    /// Runs the statements `range` of the discard of `id`.
     async fn pg_discard_run(
         txn: &deadpool_postgres::Transaction<'_>,
-        device: bool,
         id: &str,
         range: std::ops::Range<usize>,
         discard: &mut crate::entity::refresh_tokens::PgDiscard,
     ) -> Result<(), ErrorResponse> {
-        let sql = if device {
-            &crate::entity::refresh_tokens_devices::SQL_RTD_DISCARD
-        } else {
-            &crate::entity::refresh_tokens::SQL_RT_DISCARD
-        };
         for step in &crate::entity::refresh_tokens::PG_DISCARD_STEPS[range] {
-            discard.step(txn, sql, *step, id).await?;
+            discard.step(txn, *step, id).await?;
         }
         Ok(())
     }
 
     const PG_DISCARD_LEN: usize = crate::entity::refresh_tokens::PG_DISCARD_STEPS.len();
 
-    /// A discard of a refresh token of u1 for c1 (the replacement of a failed rotation, or a
-    /// device refresh token) runs at the same time as a consent revoke of u1 for c1 (with
-    /// `consent.enable`): one of them runs its first statements, the other one all of its
-    /// statements, then the first one the rest. Both take `refresh_tokens` (or
-    /// `refresh_tokens_devices`) before `issued_tokens`, so they are serialized and Postgres
-    /// aborts neither as a deadlock, at every split.
+    /// A discard of the replacement `rt_new` of a failed rotation of u1 for c1 runs at the same
+    /// time as a consent revoke of u1 for c1 (with `consent.enable`): one of them runs its first
+    /// statements, the other one all of its statements, then the first one the rest. Both take
+    /// `refresh_tokens` before `issued_tokens`, so they are serialized and Postgres aborts
+    /// neither as a deadlock, at every split.
     /// Run with `RAUTHY_TEST_PG_URL=postgres://.. cargo test -p rauthy-data -- --ignored`.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_discard_revoke_race_postgres() {
-        for (device, id) in DISCARD_RACE_TOKENS {
-            for split in 1..=PG_DISCARD_LEN {
-                pg_discard_revoke_race(device, id, true, split).await;
-            }
-            for split in 1..=PgTxnSide::Revoke.len() {
-                pg_discard_revoke_race(device, id, false, split).await;
-            }
+        for split in 1..=PG_DISCARD_LEN {
+            pg_discard_revoke_race(true, split).await;
+        }
+        for split in 1..=PgTxnSide::Revoke.len() {
+            pg_discard_revoke_race(false, split).await;
         }
     }
 
-    async fn pg_discard_revoke_race(
-        device: bool,
-        id: &'static str,
-        discard_first: bool,
-        split: usize,
-    ) {
-        let case = format!("id: {id}, discard_first: {discard_first}, split: {split}");
+    async fn pg_discard_revoke_race(discard_first: bool, split: usize) {
+        let id = "rt_new";
+        let case = format!("discard_first: {discard_first}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
         let mut first = pg_test_conn(&pool, &schema).await;
         let mut second = pg_test_conn(&pool, &schema).await;
@@ -1854,7 +1831,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         let mut revoke = PgSideState::default();
         let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
         let (first_len, second_side) = if discard_first {
-            pg_discard_run(&txn, device, id, 0..split, &mut discard)
+            pg_discard_run(&txn, id, 0..split, &mut discard)
                 .await
                 .unwrap();
             (PG_DISCARD_LEN, false)
@@ -1873,7 +1850,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
                 .await?;
             if second_side {
                 let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
-                pg_discard_run(&txn, device, id, 0..PG_DISCARD_LEN, &mut discard).await?;
+                pg_discard_run(&txn, id, 0..PG_DISCARD_LEN, &mut discard).await?;
             } else {
                 let mut revoke = PgSideState::default();
                 PgTxnSide::Revoke
@@ -1884,7 +1861,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         });
         pg_wait_blocked_or_done(&monitor, pid, &task).await;
         let res = if discard_first {
-            pg_discard_run(&txn, device, id, split..first_len, &mut discard).await
+            pg_discard_run(&txn, id, split..first_len, &mut discard).await
         } else {
             PgTxnSide::Revoke
                 .run(&txn, split..first_len, &mut revoke)
@@ -1928,8 +1905,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
             .unwrap();
     }
 
-    /// A discard of a refresh token of u1 for c1 (`rt_c1`, or the device refresh token
-    /// `rtd_src`) runs at the same time as a `Client::delete` of c1 or a `User::delete` of u1:
+    /// A discard of the refresh token `rt_c1` of u1 for c1 runs at the same time as a `Client::delete` of c1 or a `User::delete` of u1:
     /// one of them runs its first statements, the other one all of its statements, then the
     /// first one the rest. Whichever of them deletes a refresh token revokes its access token, so
     /// no access token of the deleted refresh tokens stays live, at every split, and Postgres
@@ -1939,26 +1915,18 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_discard_delete_race_postgres() {
         for side in [PgTxnSide::ClientDelete, PgTxnSide::UserDelete] {
-            for (device, id) in [(false, "rt_c1"), (true, "rtd_src")] {
-                for split in 1..=PG_DISCARD_LEN {
-                    pg_discard_delete_race(side, device, id, true, split).await;
-                }
-                for split in 1..=side.len() {
-                    pg_discard_delete_race(side, device, id, false, split).await;
-                }
+            for split in 1..=PG_DISCARD_LEN {
+                pg_discard_delete_race(side, true, split).await;
+            }
+            for split in 1..=side.len() {
+                pg_discard_delete_race(side, false, split).await;
             }
         }
     }
 
-    async fn pg_discard_delete_race(
-        side: PgTxnSide,
-        device: bool,
-        id: &'static str,
-        discard_first: bool,
-        split: usize,
-    ) {
-        let case =
-            format!("side: {side:?}, id: {id}, discard_first: {discard_first}, split: {split}");
+    async fn pg_discard_delete_race(side: PgTxnSide, discard_first: bool, split: usize) {
+        let id = "rt_c1";
+        let case = format!("side: {side:?}, discard_first: {discard_first}, split: {split}");
         let (pool, schema) = pg_race_setup().await;
         let mut first = pg_test_conn(&pool, &schema).await;
         let mut second = pg_test_conn(&pool, &schema).await;
@@ -1988,7 +1956,7 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
         let mut state = PgSideState::default();
         let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
         if discard_first {
-            pg_discard_run(&txn, device, id, 0..split, &mut discard)
+            pg_discard_run(&txn, id, 0..split, &mut discard)
                 .await
                 .unwrap();
         } else {
@@ -2005,13 +1973,13 @@ INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_c1', 'u1', 2);
                 side.run(&txn, 0..side.len(), &mut state).await?;
             } else {
                 let mut discard = crate::entity::refresh_tokens::PgDiscard::default();
-                pg_discard_run(&txn, device, id, 0..PG_DISCARD_LEN, &mut discard).await?;
+                pg_discard_run(&txn, id, 0..PG_DISCARD_LEN, &mut discard).await?;
             }
             txn.commit().await.map_err(ErrorResponse::from)
         });
         pg_wait_blocked_or_done(&monitor, pid, &task).await;
         let res = if discard_first {
-            pg_discard_run(&txn, device, id, split..PG_DISCARD_LEN, &mut discard).await
+            pg_discard_run(&txn, id, split..PG_DISCARD_LEN, &mut discard).await
         } else {
             side.run(&txn, split..side.len(), &mut state).await
         };

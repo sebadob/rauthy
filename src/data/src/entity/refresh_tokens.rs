@@ -31,8 +31,7 @@ WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)"#,
     pg_delete: "DELETE FROM refresh_tokens WHERE id = $1 RETURNING access_token_jti",
 };
 
-/// The statements that discard a refresh token of one table, like [`SQL_RT_DISCARD`]. All of
-/// them are idempotent.
+/// The statements of [`SQL_RT_DISCARD`]. All of them are idempotent.
 pub(crate) struct DiscardSql {
     /// hiqlite, in order: revokes the access token while the row still names it, then deletes
     /// the row. hiqlite's `txn` returns only the number of affected rows of each statement, not
@@ -280,7 +279,7 @@ WHERE EXISTS (
     /// transaction, see [`discard_txn`]: either both happen or neither, so a failure leaves the
     /// row with its access token for a retry. An `id` that is already gone is fine.
     pub async fn discard(id: &str) -> Result<(), ErrorResponse> {
-        discard_txn(&SQL_RT_DISCARD, id).await
+        discard_txn(id).await
     }
 
     pub async fn delete_by_sid(session_id: String) -> Result<(), ErrorResponse> {
@@ -421,16 +420,19 @@ WHERE EXISTS (
     }
 }
 
-/// Discards the refresh token `id` with `sql` in one transaction: deletes the row and revokes
-/// the access token issued with it. If any statement fails, nothing is committed.
-pub(crate) async fn discard_txn(sql: &DiscardSql, id: &str) -> Result<(), ErrorResponse> {
+/// Discards the refresh token `id` in one transaction: deletes the row and revokes the access
+/// token issued with it. If any statement fails, nothing is committed.
+pub(crate) async fn discard_txn(id: &str) -> Result<(), ErrorResponse> {
     if is_hiqlite() {
-        for res in DB::hql().txn(sql.hql.map(|sql| (sql, params!(id)))).await? {
+        for res in DB::hql()
+            .txn(SQL_RT_DISCARD.hql.map(|sql| (sql, params!(id))))
+            .await?
+        {
             res?;
         }
     } else {
         let mut cl = DB::pg().await?;
-        pg_discard_txn(&mut cl, sql, id).await?;
+        pg_discard_txn(&mut cl, id).await?;
     }
     Ok(())
 }
@@ -438,7 +440,6 @@ pub(crate) async fn discard_txn(sql: &DiscardSql, id: &str) -> Result<(), ErrorR
 /// The Postgres part of [`discard_txn`] on `cl`: [`PG_DISCARD_STEPS`] in one transaction.
 pub(crate) async fn pg_discard_txn(
     cl: &mut deadpool_postgres::Object,
-    sql: &DiscardSql,
     id: &str,
 ) -> Result<(), ErrorResponse> {
     let txn = cl
@@ -448,7 +449,7 @@ pub(crate) async fn pg_discard_txn(
         .await?;
     let mut discard = PgDiscard::default();
     for step in PG_DISCARD_STEPS {
-        discard.step(&txn, sql, step, id).await?;
+        discard.step(&txn, step, id).await?;
     }
     txn.commit().await?;
     Ok(())
@@ -496,14 +497,13 @@ impl PgDiscard {
     pub(crate) async fn step(
         &mut self,
         txn: &deadpool_postgres::Transaction<'_>,
-        sql: &DiscardSql,
         step: PgDiscardStep,
         id: &str,
     ) -> Result<(), ErrorResponse> {
         match step {
             PgDiscardStep::Delete => {
                 self.jti = txn
-                    .query_opt(sql.pg_delete, &[&id])
+                    .query_opt(SQL_RT_DISCARD.pg_delete, &[&id])
                     .await?
                     .and_then(|row| row.get::<_, Option<String>>(0));
             }
@@ -591,7 +591,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity::refresh_tokens_devices::SQL_RTD_DISCARD;
     use pretty_assertions::assert_eq;
     use std::cell::RefCell;
     use std::collections::HashMap;
@@ -759,27 +758,18 @@ INSERT INTO issued_tokens (jti, user_id, exp)
 VALUES ('j_1', 'u1', 2), ('j_2', 'u1', 2), ('j_other', 'u1', 2);
 "#;
     const SELECT_RT_IDS: &str = "SELECT id FROM refresh_tokens ORDER BY id";
-    const SELECT_RTD_IDS: &str = "SELECT id FROM refresh_tokens_devices ORDER BY id";
     const SELECT_REVOKED: &str = "SELECT jti FROM issued_tokens WHERE revoked ORDER BY jti";
 
     /// Rows for the fault injection of [`DISCARD_FAIL_SQLITE`] / [`DISCARD_FAIL_PG`]: a refresh
-    /// token and a device refresh token whose discard fails in its second statement (`*_fail`),
-    /// and a device refresh token that can be discarded. Run after [`DISCARD_ROWS`].
+    /// token whose discard fails in its second statement (`*_fail`). Run after [`DISCARD_ROWS`].
     const DISCARD_FAIL_ROWS: &str = r#"
-INSERT INTO devices (id, client_id, user_id, created, access_exp, peer_ip, name)
-VALUES ('d1', (SELECT id FROM clients ORDER BY id LIMIT 1), 'u1', 1, 2, '127.0.0.1', 'd1');
 INSERT INTO refresh_tokens (id, user_id, nbf, exp, access_token_jti)
 VALUES ('rt_fail', 'u1', 1, 2, 'j_fail');
-INSERT INTO refresh_tokens_devices (id, device_id, user_id, nbf, exp, access_token_jti)
-VALUES ('rtd_1', 'd1', 'u1', 1, 2, 'jd_1'), ('rtd_fail', 'd1', 'u1', 1, 2, 'jd_fail');
-INSERT INTO issued_tokens (jti, user_id, exp)
-VALUES ('j_fail', 'u1', 2), ('jd_1', 'u1', 2), ('jd_fail', 'u1', 2);
+INSERT INTO issued_tokens (jti, user_id, exp) VALUES ('j_fail', 'u1', 2);
 "#;
     /// The delete of a `*_fail` row aborts: the second statement of the hiqlite discard.
     const DISCARD_FAIL_SQLITE: &str = r#"
 CREATE TRIGGER rt_fail BEFORE DELETE ON refresh_tokens
-WHEN OLD.id LIKE '%_fail' BEGIN SELECT RAISE(ABORT, 'injected'); END;
-CREATE TRIGGER rtd_fail BEFORE DELETE ON refresh_tokens_devices
 WHEN OLD.id LIKE '%_fail' BEGIN SELECT RAISE(ABORT, 'injected'); END;
 "#;
     /// The revoke of the access token of a `*_fail` row aborts: the second statement of the
@@ -861,33 +851,28 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         assert_eq!(ids(SELECT_REVOKED), vec!["j_1", "j_2"]);
     }
 
-    /// The discard statements of both tables in one transaction, as `DB::hql().txn` runs them
-    /// (hiqlite rolls the whole transaction back on the first failing statement): a delete that
-    /// fails after the revoke leaves neither behind.
+    /// The discard statements in one transaction, as `DB::hql().txn` runs them (hiqlite rolls
+    /// the whole transaction back on the first failing statement): a delete that fails after the
+    /// revoke leaves neither behind.
     #[test]
     fn test_discard_atomic_sqlite() {
         let mut conn = sqlite_db();
         conn.execute_batch(DISCARD_FAIL_ROWS).unwrap();
         conn.execute_batch(DISCARD_FAIL_SQLITE).unwrap();
 
-        let mut discard = |sql: &DiscardSql, id: &str| -> rusqlite::Result<()> {
-            let txn = conn.transaction()?;
-            for sql in sql.hql {
-                txn.execute(sql, [id])?;
-            }
-            txn.commit()
-        };
-        for (sql, id) in [(&SQL_RT_DISCARD, "rt_fail"), (&SQL_RTD_DISCARD, "rtd_fail")] {
-            assert!(discard(sql, id).is_err(), "{id}: the delete must fail");
-        }
-        discard(&SQL_RTD_DISCARD, "rtd_1").unwrap();
+        let txn = conn.transaction().unwrap();
+        let res = SQL_RT_DISCARD
+            .hql
+            .iter()
+            .try_for_each(|sql| txn.execute(sql, ["rt_fail"]).map(|_| ()));
+        assert!(res.is_err(), "the delete must fail");
+        drop(txn);
 
         assert_eq!(
             sqlite_ids(&conn, SELECT_RT_IDS),
             vec!["rt_1", "rt_2", "rt_fail", "rt_no_jti"]
         );
-        assert_eq!(sqlite_ids(&conn, SELECT_RTD_IDS), vec!["rtd_fail"]);
-        assert_eq!(sqlite_ids(&conn, SELECT_REVOKED), vec!["jd_1"]);
+        assert!(sqlite_ids(&conn, SELECT_REVOKED).is_empty());
     }
 
     /// A fresh schema `<prefix>_..` with all Postgres migrations and [`DISCARD_ROWS`], set as the
@@ -919,10 +904,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
             rows.iter().map(|r| r.get(0)).collect()
         };
         for (i, step) in PG_DISCARD_STEPS.into_iter().enumerate() {
-            discard
-                .step(&txn, &SQL_RT_DISCARD, step, "rt_2")
-                .await
-                .unwrap();
+            discard.step(&txn, step, "rt_2").await.unwrap();
             let row = ids(&txn, SELECT_RT_IDS).await.contains(&"rt_2".to_string());
             let revoked = ids(&txn, SELECT_REVOKED).await.contains(&"j_2".to_string());
             match step {
@@ -936,15 +918,13 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         }
         txn.commit().await.unwrap();
 
-        pg_discard_txn(&mut cl, &SQL_RT_DISCARD, "rt_1")
-            .await
-            .unwrap();
+        pg_discard_txn(&mut cl, "rt_1").await.unwrap();
         assert_eq!(pg_ids(&cl, SELECT_RT_IDS).await, vec!["rt_no_jti"]);
         assert_eq!(pg_ids(&cl, SELECT_REVOKED).await, vec!["j_1", "j_2"]);
 
         // gone already, or without an access token
         for id in ["rt_1", "rt_no_jti", "rt_unknown"] {
-            pg_discard_txn(&mut cl, &SQL_RT_DISCARD, id).await.unwrap();
+            pg_discard_txn(&mut cl, id).await.unwrap();
         }
         assert!(pg_ids(&cl, SELECT_RT_IDS).await.is_empty());
         assert_eq!(pg_ids(&cl, SELECT_REVOKED).await, vec!["j_1", "j_2"]);
@@ -954,8 +934,8 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
             .unwrap();
     }
 
-    /// `pg_discard_txn`, the Postgres path of `RefreshToken::discard`, for both tables, with a
-    /// revoke that fails after the delete: both roll back together.
+    /// `pg_discard_txn`, the Postgres path of `RefreshToken::discard`, with a revoke that fails
+    /// after the delete: both roll back together.
     #[tokio::test]
     #[ignore = "needs Postgres via RAUTHY_TEST_PG_URL"]
     async fn test_discard_atomic_postgres() {
@@ -963,20 +943,14 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         cl.batch_execute(DISCARD_FAIL_ROWS).await.unwrap();
         cl.batch_execute(DISCARD_FAIL_PG).await.unwrap();
 
-        for (sql, id) in [(&SQL_RT_DISCARD, "rt_fail"), (&SQL_RTD_DISCARD, "rtd_fail")] {
-            let res = pg_discard_txn(&mut cl, sql, id).await;
-            assert!(res.is_err(), "{id}: the revoke must fail");
-        }
-        pg_discard_txn(&mut cl, &SQL_RTD_DISCARD, "rtd_1")
-            .await
-            .unwrap();
+        let res = pg_discard_txn(&mut cl, "rt_fail").await;
+        assert!(res.is_err(), "the revoke must fail");
 
         assert_eq!(
             pg_ids(&cl, SELECT_RT_IDS).await,
             vec!["rt_1", "rt_2", "rt_fail", "rt_no_jti"]
         );
-        assert_eq!(pg_ids(&cl, SELECT_RTD_IDS).await, vec!["rtd_fail"]);
-        assert_eq!(pg_ids(&cl, SELECT_REVOKED).await, vec!["jd_1"]);
+        assert!(pg_ids(&cl, SELECT_REVOKED).await.is_empty());
 
         cl.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
             .await
