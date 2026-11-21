@@ -2256,7 +2256,7 @@ impl User {
         if let Some(n) = &self.family_name {
             format!("{} {n}", self.given_name)
         } else {
-            self.given_name.to_string()
+            self.given_name.clone()
         }
     }
 

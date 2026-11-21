@@ -54,7 +54,7 @@ impl NotifierMatrix {
         let http_client = Notification::build_client(disable_tls_validation, root_ca_path).await;
 
         let client = ruma_client::Client::builder()
-            .homeserver_url(server_url.to_string())
+            .homeserver_url(server_url.clone())
             .access_token(access_token.clone())
             .http_client(http_client)
             .await

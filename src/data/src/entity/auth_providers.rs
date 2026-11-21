@@ -1145,7 +1145,7 @@ impl AuthProviderIdClaims<'_> {
         // Any json number would become a String too, which is what we need for compatibility.
         let claims_user_id = match claims_user_id_json {
             Value::Number(num) => num.to_string(),
-            Value::String(s) => s.to_string(),
+            Value::String(s) => s.clone(),
             _ => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::Forbidden,
@@ -1407,7 +1407,7 @@ impl AuthProviderIdClaims<'_> {
                     .map(|l| Language::from(l.as_ref()))
                     .unwrap_or_default(),
                 auth_provider_id: Some(provider.id.clone()),
-                federation_uid: Some(claims_user_id.to_string()),
+                federation_uid: Some(claims_user_id.clone()),
                 ..Default::default()
             };
             User::create_federated(new_user).await?
