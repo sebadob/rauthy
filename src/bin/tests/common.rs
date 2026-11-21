@@ -350,7 +350,7 @@ pub async fn prepare_login(email: &str, password: &str) -> PreparedLogin {
         password: Some(password.to_string()),
         pow: get_solved_pow().await,
         client_id: "rauthy".to_string(),
-        redirect_uri: redirect_uri.to_string(),
+        redirect_uri: redirect_uri.clone(),
         scopes: None,
         state: None,
         nonce: Some("MySuperNonce".to_string()),

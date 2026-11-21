@@ -374,7 +374,7 @@ pub async fn execute_backchannel_logout_by_client(client: &Client) -> Result<(),
     for state in states {
         if let Err(err) = send_backchannel_logout(
             client.id.clone(),
-            uri.to_string(),
+            uri.clone(),
             Some(state.user_id),
             None,
             &kp,

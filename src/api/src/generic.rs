@@ -617,7 +617,7 @@ pub async fn get_version() -> Result<HttpResponse, ErrorResponse> {
                 current: RAUTHY_VERSION.to_string(),
                 last_check: Some(latest.timestamp),
                 latest: Some(latest.latest_version.to_string()),
-                latest_url: Some(latest.release_url.to_string()),
+                latest_url: Some(latest.release_url.clone()),
                 update_available,
             }
         }

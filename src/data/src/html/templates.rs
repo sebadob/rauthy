@@ -109,15 +109,15 @@ impl HtmlTemplate {
     pub fn inner(&self) -> String {
         match self {
             Self::AdminButtonHide(i) => i.to_string(),
-            Self::AtprotoId(i) => i.to_string(),
-            Self::AuthProviders(i) => i.to_string(),
-            Self::ClientName(i) => i.to_string(),
-            Self::ClientUrl(i) => i.to_string(),
+            Self::AtprotoId(i) => i.clone(),
+            Self::AuthProviders(i) => i.clone(),
+            Self::ClientName(i) => i.clone(),
+            Self::ClientUrl(i) => i.clone(),
             Self::ClientFaviconUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
             Self::ClientLogoUpdated(i) => i.map(|i| i.to_string()).unwrap_or_default(),
-            Self::CsrfToken(i) => i.to_string(),
-            Self::EmailOld(i) => i.to_string(),
-            Self::EmailNew(i) => i.to_string(),
+            Self::CsrfToken(i) => i.clone(),
+            Self::EmailOld(i) => i.clone(),
+            Self::EmailNew(i) => i.clone(),
             Self::ErrorDetails(i) => i.to_string(),
             Self::ErrorText(i) => i.to_string(),
             Self::DeviceUserCodeLength(i) => i.to_string(),
@@ -129,7 +129,7 @@ impl HtmlTemplate {
             Self::PasswordReset(i) => serde_json::to_string(i).unwrap(),
             Self::PasswordResetLinkAlways(i) => i.to_string(),
             Self::StatusCode(i) => i.to_string(),
-            Self::RestrictedEmailDomain(i) => i.to_string(),
+            Self::RestrictedEmailDomain(i) => i.clone(),
             Self::UserValues => {
                 serde_json::to_string(&RauthyConfig::get().vars.user_values).unwrap()
             }
