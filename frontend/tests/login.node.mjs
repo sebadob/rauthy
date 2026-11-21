@@ -1,7 +1,7 @@
 // Built-UI contract tests for the password prompt, credential errors and session recovery.
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { launchChromium, readBuiltHtml, serveUi } from './helpers/browser.mjs';
+import { injectTemplates, launchChromium, readBuiltHtml, serveUi } from './helpers/browser.mjs';
 
 /** @type {any} */
 let browser;
@@ -215,4 +215,85 @@ test('login: the idle ticker restarts a dead page session before the form is use
     assert.equal(beats.length, 2, `beats: ${beats.length}`);
     assert.equal(navigations.length, 2, 'the guard must stop the reload loop');
     assert.equal(await page.getByText('Invalid credentials').count(), 0);
+});
+
+const consentContent = {
+    source: 'local',
+    content_hash: 'a'.repeat(64),
+    name: null,
+    scopes: [
+        { name: 'email', title: null, description: null, warning: false },
+        { name: 'groups', title: null, description: null, warning: false },
+        { name: 'openid', title: null, description: null, warning: false },
+    ],
+    intro: null,
+    terms_url: null,
+    default_scopes: ['openid', 'email'],
+    granted_scopes: [],
+};
+
+test('login: the consent block locks the defaults and blocks the login until confirmed', async t => {
+    const context = await browser.newContext({ serviceWorkers: 'block', locale: 'en-US' });
+    t.after(() => context.close());
+    const page = await context.newPage();
+    /** @type {string[]} */
+    const requests = [];
+    /** @type {any[]} */
+    const logins = [];
+    const changed = { ...consentContent, content_hash: 'b'.repeat(64) };
+    await serveUi({
+        context,
+        documentPath,
+        html: injectTemplates(html, { tpl_consent_content: JSON.stringify(consentContent) }),
+        requests,
+        handle: (/** @type {any} */ _route, /** @type {any} */ request, /** @type {any} */ url) => {
+            if (url.pathname === documentPath && request.method() === 'POST') {
+                logins.push(request.postDataJSON());
+                // the first login finds the content changed meanwhile
+                return logins.length === 1
+                    ? {
+                          status: 400,
+                          json: { error: 'consent_required', message: JSON.stringify(changed) },
+                      }
+                    : {
+                          status: 400,
+                          error: 'InvalidCredentials',
+                          json: { error: 'x', message: 'done' },
+                      };
+            }
+        },
+    });
+    await page.goto(
+        `http://localhost${documentPath}?client_id=test&redirect_uri=http%3A%2F%2Flocalhost%2Fcb` +
+            '&scope=openid%20groups',
+    );
+    await page.getByText('Consent', { exact: true }).waitFor();
+    await page.locator('input[name=email]').fill('user@localhost');
+    const submit = page.locator('form button[type=submit]');
+    assert.ok(await submit.isDisabled(), 'the login waits for the confirmation');
+
+    assert.ok(await page.getByLabel('openid', { exact: true }).isDisabled());
+    assert.ok(await page.getByLabel('openid', { exact: true }).isChecked());
+    assert.ok(!(await page.getByLabel('groups', { exact: true }).isChecked()));
+    await page.getByText('Details').first().click();
+    await page.getByText('Your E-Mail address').waitFor();
+
+    await page.getByLabel('groups', { exact: true }).click();
+    await page.getByLabel('I agree').click();
+    await submit.click();
+    await page.getByText('The consent content has changed, please check it again.').waitFor();
+    assert.deepEqual(logins[0].consent, {
+        content_hash: 'a'.repeat(64),
+        accepted_scopes: ['email', 'groups', 'openid'],
+    });
+
+    // the changed content needs a new confirmation and is sent with its own hash
+    assert.ok(await submit.isDisabled());
+    await page.getByLabel('I agree').click();
+    await submit.click();
+    await page.getByText('done').waitFor();
+    assert.deepEqual(logins[1].consent, {
+        content_hash: 'b'.repeat(64),
+        accepted_scopes: ['email', 'openid'],
+    });
 });

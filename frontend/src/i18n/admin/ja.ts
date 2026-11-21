@@ -80,7 +80,7 @@ export let I18nAdminJa: I18nAdmin = {
         config: 'Client の設定',
         consent: {
             builtIn: '組み込み',
-            desc: `'consent.enable' が設定されているときに、同意画面の内容をどこから取得するか。組み込みは要求された Scope を表示します。URL の場合、同意の内容を JSON で返す必要があります。要求されたリソースに対する '[[consent.sources]]' のエントリーが優先されます。まだ有効ではありません。同意画面が実装されるまで、値は保存されるだけです。`,
+            desc: `'consent.enable' が設定されているときに、同意画面の内容をどこから取得するか。組み込みは要求された Scope を表示します。URL の場合、同意の内容を JSON で返す必要があります。要求されたリソースに対する '[[consent.sources]]' のエントリーが優先されます。`,
             source: '同意の取得元',
         },
         delete1: 'この Client を削除してもよろしいですか？',

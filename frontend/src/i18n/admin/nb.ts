@@ -82,7 +82,7 @@ export let I18nAdminNb: I18nAdmin = {
         config: 'Klient konfigurasjon',
         consent: {
             builtIn: 'Innebygd',
-            desc: `Hvor innholdet i samtykkesiden kommer fra, når 'consent.enable' er satt. Innebygd viser de forespurte scopes. En URL må levere samtykkeinnholdet som JSON. En '[[consent.sources]]'-oppføring for den forespurte ressursen har forrang. Ikke aktiv ennå: verdien lagres bare til samtykkesiden er på plass.`,
+            desc: `Hvor innholdet i samtykkesiden kommer fra, når 'consent.enable' er satt. Innebygd viser de forespurte scopes. En URL må levere samtykkeinnholdet som JSON. En '[[consent.sources]]'-oppføring for den forespurte ressursen har forrang.`,
             source: 'Samtykkekilde',
         },
         delete1: 'Skal denne klienten slettes?',

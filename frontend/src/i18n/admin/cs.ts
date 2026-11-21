@@ -79,7 +79,7 @@ export let I18nAdminCs: I18nAdmin = {
         config: 'Nastavení klienta',
         consent: {
             builtIn: 'Vestavěný',
-            desc: `Odkud pochází obsah obrazovky souhlasu, pokud je nastaven 'consent.enable'. Vestavěný zobrazuje požadované rozsahy. URL musí obsah souhlasu poskytovat jako JSON. Položka '[[consent.sources]]' pro požadovaný zdroj má přednost. Zatím není aktivní: hodnota se jen ukládá, dokud obrazovka souhlasu nevznikne.`,
+            desc: `Odkud pochází obsah obrazovky souhlasu, pokud je nastaven 'consent.enable'. Vestavěný zobrazuje požadované rozsahy. URL musí obsah souhlasu poskytovat jako JSON. Položka '[[consent.sources]]' pro požadovaný zdroj má přednost.`,
             source: 'Zdroj souhlasu',
         },
         delete1: 'Opravdu chcete tohoto klienta smazat?',

@@ -78,7 +78,7 @@ export let I18nAdminKo: I18nAdmin = {
         config: '클라이언트 설정',
         consent: {
             builtIn: '내장',
-            desc: `'consent.enable'이 설정된 경우 동의 화면의 내용을 가져오는 위치입니다. 내장은 요청된 스코프를 표시합니다. URL은 동의 내용을 JSON으로 제공해야 합니다. 요청된 리소스에 대한 '[[consent.sources]]' 항목이 우선합니다. 아직 활성화되지 않았습니다. 동의 화면이 도입될 때까지 값은 저장만 됩니다.`,
+            desc: `'consent.enable'이 설정된 경우 동의 화면의 내용을 가져오는 위치입니다. 내장은 요청된 스코프를 표시합니다. URL은 동의 내용을 JSON으로 제공해야 합니다. 요청된 리소스에 대한 '[[consent.sources]]' 항목이 우선합니다.`,
             source: '동의 소스',
         },
         delete1: '이 클라이언트를 삭제하시겠습니까?',

@@ -17,6 +17,7 @@ export const POST_LOGOUT_REDIRECT_URI = '/auth/v1/';
 export const EVENT_LEVELS = ['info', 'notice', 'warning', 'critical'];
 export const EVENT_TYPES = [
     '-',
+    'ConsentGranted',
     'ConsentRevoked',
     'ForcedLogout',
     'InvalidLogins',
@@ -48,6 +49,7 @@ export const TPL_ATPROTO_ID = 'tpl_atproto_id';
 export const TPL_AUTH_PROVIDERS = 'tpl_auth_providers';
 export const TPL_CLIENT_NAME = 'tpl_client_name';
 export const TPL_CLIENT_URL = 'tpl_client_url';
+export const TPL_CONSENT_CONTENT = 'tpl_consent_content';
 export const TPL_CLIENT_FAVICON_UPDATED = 'tpl_client_favicon_updated';
 export const TPL_CLIENT_LOGO_UPDATED = 'tpl_client_logo_updated';
 export const TPL_CSRF_TOKEN = 'tpl_csrf_token';

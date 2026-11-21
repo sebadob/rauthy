@@ -160,6 +160,26 @@ export interface I18n {
     authorize: {
         clientForceMfa: string;
         clientGroupPrefixForbidden: string;
+        consent: {
+            changed: string;
+            confirm: string;
+            continue: string;
+            details: string;
+            intro: string;
+            required: string;
+            scopes: {
+                address: string;
+                email: string;
+                groups: string;
+                openid: string;
+                phone: string;
+                profile: string;
+                webid: string;
+            };
+            terms: string;
+            title: string;
+            warning: string;
+        };
         email: string;
         emailBadFormat: string;
         emailRequired: string;

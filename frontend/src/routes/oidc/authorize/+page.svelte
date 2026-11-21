@@ -10,6 +10,7 @@
         TPL_CLIENT_LOGO_UPDATED,
         TPL_CLIENT_NAME,
         TPL_CLIENT_URL,
+        TPL_CONSENT_CONTENT,
         TPL_CSRF_TOKEN,
         TPL_IS_REG_OPEN,
         TPL_LOGIN_ACTION,
@@ -30,6 +31,7 @@
     import type {
         ActiveOtp,
         CodeChallengeMethod,
+        LoginConsent as LoginConsentData,
         LoginRefreshRequest,
         LoginRequest,
         OtpLoginResponse,
@@ -53,6 +55,8 @@
     import type { MfaPurpose } from '#api/types/mfa.ts';
     import type { OtpAdditionalData } from '#mfa/otp/types.ts';
     import IconKey from '#icons/IconKey.svelte';
+    import LoginConsent from '#lib/LoginConsent.svelte';
+    import type { ConsentContentTemplate } from '#api/templates/ConsentContent.ts';
 
     const inputWidth = '100%';
 
@@ -136,6 +140,12 @@
             !(resetLinkAlways ? showReset : showResetRequest),
     );
 
+    // the consent to ask for before the login, if any
+    let consent: undefined | ConsentContentTemplate = $state();
+    let consentAccepted: string[] = $state([]);
+    let consentConfirmed = $state(false);
+    let isConsentPending = $derived(!!consent && !consentConfirmed);
+
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
 
@@ -195,7 +205,14 @@
     });
 
     $effect(() => {
-        if (idpHint && providers.length > 0 && !isLoading && !err && !hasAutoLoggedIn) {
+        if (
+            idpHint &&
+            providers.length > 0 &&
+            !isLoading &&
+            !err &&
+            !hasAutoLoggedIn &&
+            !isConsentPending
+        ) {
             const provider = providers.find(p => p.id === idpHint);
             if (provider) {
                 hasAutoLoggedIn = true;
@@ -245,6 +262,13 @@
         }
     }
 
+    function loginConsent(): undefined | LoginConsentData {
+        if (!consent || !consentConfirmed) {
+            return undefined;
+        }
+        return { content_hash: consent.content_hash, accepted_scopes: consentAccepted };
+    }
+
     function handleShowReset() {
         err = '';
         showReset = true;
@@ -271,6 +295,7 @@
             nonce: nonce,
             scopes,
             fwda,
+            consent: loginConsent(),
         };
         if (
             challenge &&
@@ -333,6 +358,7 @@
             scopes,
             resident_key_token: residentKeyToken,
             fwda,
+            consent: loginConsent(),
         };
         if (
             challenge &&
@@ -418,7 +444,15 @@
             tosAcceptCode = body.tos_await_code;
             await fetchTos();
         } else if (res.status === 400) {
-            if (res.error?.error === 'PasswordRequired') {
+            if (res.error?.error === 'consent_required') {
+                // the consent is missing or the content changed, with the content to ask for
+                try {
+                    consent = JSON.parse(res.error.message) as ConsentContentTemplate;
+                    err = t.authorize.consent.changed;
+                } catch {
+                    err = res.error.message;
+                }
+            } else if (res.error?.error === 'PasswordRequired') {
                 needsPassword = true;
                 emailAfterSubmit = email;
             } else if (res.error?.error === 'InvalidCredentials') {
@@ -542,6 +576,7 @@
             pkce_challenge: '',
             pow: '',
             fwda,
+            consent: loginConsent(),
             ...(isAtproto && { handle: atprotoHandle }),
         };
         execProviderLogin(payload).then(errMsg => {
@@ -649,6 +684,7 @@
 <Template id={TPL_ATPROTO_ID} bind:value={atprotoId} />
 <Template id={TPL_CLIENT_NAME} bind:value={clientName} />
 <Template id={TPL_CLIENT_URL} bind:value={clientUri} />
+<Template id={TPL_CONSENT_CONTENT} bind:value={consent} />
 <Template id={TPL_CLIENT_FAVICON_UPDATED} {clientId} bind:value={clientFaviconUpdated} />
 <Template id={TPL_CLIENT_LOGO_UPDATED} bind:value={clientLogoUpdated} />
 <Template id={TPL_CSRF_TOKEN} bind:value={csrfToken} />
@@ -705,7 +741,26 @@
             {/if}
         {/if}
 
-        {#if !clientMfaForce}
+        {#if loginAction === 'RefreshConsent' && consent}
+            <!-- the session is still valid, only the consent is missing -->
+            <LoginConsent
+                {consent}
+                clientName={clientName || clientId || ''}
+                bind:accepted={consentAccepted}
+                bind:confirmed={consentConfirmed}
+                disabled={isLoading}
+            />
+            <div class="btn flex-col">
+                <Button
+                    ariaLabel={t.authorize.consent.continue}
+                    onclick={onRefresh}
+                    isDisabled={isConsentPending}
+                    {isLoading}
+                >
+                    {t.authorize.consent.continue}
+                </Button>
+            </div>
+        {:else if !clientMfaForce}
             <Form action={authorizeUrl} {onSubmit}>
                 <div class:emailMinHeight={!showPasswordInput}>
                     {#if isAtproto}
@@ -766,6 +821,16 @@
                     </div>
                 {/if}
 
+                {#if consent && !showReset}
+                    <LoginConsent
+                        {consent}
+                        clientName={clientName || clientId || ''}
+                        bind:accepted={consentAccepted}
+                        bind:confirmed={consentConfirmed}
+                        disabled={isLoading || tooManyRequests}
+                    />
+                {/if}
+
                 {#if !tooManyRequests && !clientMfaForce}
                     {#if showReset && !isAtproto}
                         <div class="btn flex-col">
@@ -778,7 +843,8 @@
                             <Button
                                 type="submit"
                                 ariaLabel={t.authorize.login}
-                                isDisabled={isAtproto ? !atprotoHandle : !email}
+                                isDisabled={(isAtproto ? !atprotoHandle : !email) ||
+                                    isConsentPending}
                                 {isLoading}
                             >
                                 {t.authorize.login}
@@ -848,7 +914,7 @@
             <TosAccept {tos} {tosAcceptCode} onToSAccept={handleAuthRes} {onToSCancel} />
         {/if}
 
-        {#if !showReset && !clientMfaForce && !isAtproto && hasLoginAlternatives}
+        {#if !showReset && !clientMfaForce && !isAtproto && hasLoginAlternatives && loginAction !== 'RefreshConsent'}
             <div class="providers flex-col gap-05">
                 <div class="public-divider">{t.authorize.orLoginWith}</div>
 
@@ -858,6 +924,7 @@
                             level={2}
                             ariaLabel={t.authorize.login}
                             onclick={onPasskeyDiscover}
+                            isDisabled={isConsentPending}
                             {isLoading}
                         >
                             <div class="flex gap-05">
@@ -873,6 +940,7 @@
                         ariaLabel={`Login: ${provider.name}`}
                         {provider}
                         onclick={isProviderAtProto(provider.id) ? toggleAtproto : providerLogin}
+                        isDisabled={isConsentPending}
                         {isLoading}
                     />
                 {/each}

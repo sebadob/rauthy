@@ -81,7 +81,7 @@ export let I18nAdminEs: I18nAdmin = {
         config: 'Configuración del Client',
         consent: {
             builtIn: 'Integrado',
-            desc: `De dónde procede el contenido de la pantalla de consentimiento cuando 'consent.enable' está activado. Integrado muestra los Scopes solicitados. Una URL debe servir el contenido del consentimiento como JSON. Una entrada de '[[consent.sources]]' para el recurso solicitado tiene prioridad. Aún no está activo: solo se guarda hasta que exista la pantalla de consentimiento.`,
+            desc: `De dónde procede el contenido de la pantalla de consentimiento cuando 'consent.enable' está activado. Integrado muestra los Scopes solicitados. Una URL debe servir el contenido del consentimiento como JSON. Una entrada de '[[consent.sources]]' para el recurso solicitado tiene prioridad.`,
             source: 'Origen del consentimiento',
         },
         delete1: '¿Seguro que desea eliminar este Client?',

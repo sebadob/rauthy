@@ -84,7 +84,7 @@ export const I18nAdminIt: I18nAdmin = {
         config: 'Configurazione del client',
         consent: {
             builtIn: 'Integrata',
-            desc: 'Origine dei contenuti della schermata di consenso quando consent.enable è attivo. La schermata integrata mostra gli ambiti richiesti. Un URL deve restituire il consenso in JSON. Una voce [[consent.sources]] per la risorsa richiesta ha la precedenza. La configurazione diventa operativa quando sarà disponibile la relativa schermata.',
+            desc: 'Origine dei contenuti della schermata di consenso quando consent.enable è attivo. La schermata integrata mostra gli ambiti richiesti. Un URL deve restituire il consenso in JSON. Una voce [[consent.sources]] per la risorsa richiesta ha la precedenza.',
             source: 'Origine del consenso',
         },
         delete1: 'Vuoi eliminare questo client?',

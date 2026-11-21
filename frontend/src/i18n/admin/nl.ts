@@ -83,7 +83,7 @@ export let I18nAdminNl: I18nAdmin = {
         config: 'Clientconfiguratie',
         consent: {
             builtIn: 'Ingebouwd',
-            desc: `Waar de inhoud van het toestemmingsscherm vandaan komt, wanneer 'consent.enable' is ingesteld. Ingebouwd toont de gevraagde scopes. Een URL moet de toestemmingsinhoud als JSON leveren. Een '[[consent.sources]]'-vermelding voor de gevraagde resource heeft voorrang. Nog niet actief: de waarde wordt alleen opgeslagen tot het toestemmingsscherm er is.`,
+            desc: `Waar de inhoud van het toestemmingsscherm vandaan komt, wanneer 'consent.enable' is ingesteld. Ingebouwd toont de gevraagde scopes. Een URL moet de toestemmingsinhoud als JSON leveren. Een '[[consent.sources]]'-vermelding voor de gevraagde resource heeft voorrang.`,
             source: 'Toestemmingsbron',
         },
         delete1: 'Weet u zeker dat u deze client wilt verwijderen?',

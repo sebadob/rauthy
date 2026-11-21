@@ -1,4 +1,4 @@
-import type { CodeChallengeMethod } from '#api/types/authorize.ts';
+import type { CodeChallengeMethod, LoginConsent } from '#api/types/authorize.ts';
 
 export type AuthProviderType = 'auto' | 'custom' | 'github' | 'google' | 'oidc';
 
@@ -85,6 +85,7 @@ export interface ProviderLoginRequest {
     /// Validation: PATTERN_ATPROTO_ID
     handle?: string;
     fwda?: boolean;
+    consent?: LoginConsent;
 }
 
 export interface ProviderLookupRequest {
