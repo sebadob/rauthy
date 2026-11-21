@@ -129,7 +129,7 @@ pub async fn handle_token_revocation(
                 rt.delete().await?;
             }
         }
-    };
+    }
 
     Ok(cors_header)
 }

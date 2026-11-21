@@ -2005,9 +2005,9 @@ pub async fn post_webauthn_auth_start(
                             ErrorResponseType::BadRequest,
                             "Malformed magic link binding cookie".to_string(),
                         ));
-                    };
+                    }
                 }
-            };
+            }
 
             id.into_inner()
         }

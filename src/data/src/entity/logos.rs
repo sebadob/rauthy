@@ -100,7 +100,7 @@ impl Logo {
                     DB::pg_execute(sql, &[&id]).await?;
                 }
             }
-        };
+        }
 
         DB::cache_delete_delayed([
             (Cache::App, Some(Self::cache_idx(typ, id))),
@@ -151,7 +151,7 @@ impl Logo {
                     DB::pg_execute(sql, &[&id, &res]).await?;
                 }
             }
-        };
+        }
 
         DB::cache_delete_delayed([
             (Cache::App, Some(Self::cache_idx(typ, id))),

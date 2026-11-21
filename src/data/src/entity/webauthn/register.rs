@@ -272,7 +272,7 @@ pub async fn reg_finish(
                 format!("{err}"),
             ));
         }
-    };
+    }
 
     Ok(())
 }

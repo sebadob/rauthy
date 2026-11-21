@@ -82,7 +82,7 @@ VALUES ($1, $2, $3, $4, $5)"#,
                 ],
             )
             .await?;
-        };
+        }
 
         DB::cache_delete_delayed([(Cache::App, Some(Cow::from(IDX_USER_ATTR_CONFIG)))]).await?;
 

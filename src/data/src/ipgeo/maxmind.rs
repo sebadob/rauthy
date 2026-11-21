@@ -209,7 +209,7 @@ fn decompress(input_file: &str, output_dir: &str, db_file: &str) -> Result<(), E
             entry.unpack(db_file)?;
         } else {
             entry.unpack(format!("{output_dir}/{path_str}"))?;
-        };
+        }
     }
 
     Ok(())

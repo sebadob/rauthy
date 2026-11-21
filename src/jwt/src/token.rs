@@ -107,7 +107,7 @@ impl JwtToken {
                 ErrorResponseType::BadRequest,
                 "Cannot deserialize JWT Token signature",
             ));
-        };
+        }
         if split.next().is_some() {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,

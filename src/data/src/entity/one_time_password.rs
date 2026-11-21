@@ -156,7 +156,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -167,7 +167,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)"#;
             DB::hql().execute(sql, params!(id)).await?;
         } else {
             DB::pg_execute(sql, &[&id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -347,7 +347,7 @@ impl OneTimePassword {
                     "unimplemented",
                 ));
             }
-        };
+        }
 
         Ok(())
     }
@@ -389,7 +389,7 @@ impl OneTimePassword {
                     "unimplemented",
                 ));
             }
-        };
+        }
         Ok(())
     }
 
@@ -415,7 +415,7 @@ impl OneTimePassword {
                     "unimplemented",
                 ));
             }
-        };
+        }
         Ok(())
     }
 }

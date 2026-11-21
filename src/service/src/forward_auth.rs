@@ -131,7 +131,7 @@ pub async fn get_forward_auth_client(
         return Ok(HttpResponse::build(status)
             .insert_header((LOCATION, location))
             .finish());
-    };
+    }
     let mut session = session.unwrap().inner;
 
     // we don't have the middleware auto-updater for last_seen at this point
@@ -350,7 +350,7 @@ async fn get_client_validated(client_id: String, origin: &str) -> Result<Client,
                 ));
             }
         }
-    };
+    }
 
     if client.challenge.is_some() {
         return Err(ErrorResponse::new(

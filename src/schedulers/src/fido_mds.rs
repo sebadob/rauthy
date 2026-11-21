@@ -45,7 +45,7 @@ pub async fn fido_mds_updater() {
 
         if let Err(err) = exec().await {
             error!("Error running fido_mds_updater: {err:?}");
-        };
+        }
 
         // Avoid busy loop in error cases. We want to retry without hammering the servers.
         time::sleep(Duration::from_secs(600)).await;

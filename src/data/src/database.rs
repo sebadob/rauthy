@@ -322,7 +322,7 @@ impl DB {
                     panic!(
                         "You provided an unknown database type, please check the MIGRATE_DB_FROM"
                     );
-                };
+                }
             }
         } else if config.vars.dev.dev_mode && config.is_primary_node {
             migrate_dev_data().await.expect("Migrating DEV DATA");

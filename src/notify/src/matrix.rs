@@ -67,7 +67,7 @@ impl NotifierMatrix {
 
         if disable_tls_validation {
             warn!("Matrix Event Notifier client has TLS validation disabled");
-        };
+        }
 
         let slf = Self {
             user_id,
@@ -191,7 +191,7 @@ impl NotifierMatrix {
                 ErrorResponseType::Connection,
                 "Matrix Notifications Client is not logged in",
             ));
-        };
+        }
 
         debug!("logged in to Matrix");
         Ok(())

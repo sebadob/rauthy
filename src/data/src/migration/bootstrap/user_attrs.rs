@@ -38,7 +38,7 @@ VALUES ($1, $2, $3, $4)"#,
                 &[&attr.name, &attr.desc, &default_value, &user_editable],
             )
             .await?;
-        };
+        }
     }
 
     info!("Migrated {len} user_attributes.");

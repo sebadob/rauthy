@@ -296,7 +296,7 @@ OFFSET $5"#;
                     latest_ts = s.exp;
                 }
                 res = Some(rows);
-            };
+            }
         } else if backwards {
             // backwards without any continuation token will simply
             // serve the last elements without any other conditions
@@ -342,7 +342,7 @@ OFFSET $3"#;
                 latest_ts = s.exp;
             }
             res = Some(rows);
-        };
+        }
 
         let res = res
             .expect("sessions paginated should always be at least an empty Vec<_> at this point");
@@ -857,7 +857,7 @@ impl Session {
     pub fn groups_as_vec(&self) -> Result<Vec<&str>, ErrorResponse> {
         if self.groups.is_none() {
             return Ok(Vec::default());
-        };
+        }
         let mut res = Vec::new();
         self.groups
             .as_ref()

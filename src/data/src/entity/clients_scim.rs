@@ -497,7 +497,7 @@ impl ClientScim {
                 "Error during update group for SCIM client",
             );
             FailedScimTask::upsert(&ScimAction::GroupCreateUpdate(gid), &self.client_id).await?;
-        };
+        }
 
         Ok(())
     }
