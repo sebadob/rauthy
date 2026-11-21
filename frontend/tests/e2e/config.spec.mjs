@@ -229,8 +229,7 @@ test.describe('password policy', () => {
         // The UI lets "not recently used" go up to 32, the backend only accepts 1..=10.
         test.use({ allowErrors: [/http 400 PUT \/auth\/v1\/password_policy/] });
         test('values the backend rejects show its error and change nothing', async ({ page }) => {
-            // FINDING: PasswordPolicy.svelte allows max=32 for "not recently used", the API
-            // validates 1..=10, so the user only learns about the limit from a server error.
+            // Exercise the backend limit while still satisfying the input constraint.
             await field(page, 'Not one of last recent passwords').fill('11');
             const res = await save(page).catch(() => null);
             if (res) {
@@ -397,7 +396,6 @@ test.describe('encryption keys', () => {
         await main(page).getByRole('button', { name: 'Migrate' }).click();
         expect((await res).status()).toBe(200);
         expect((await res).request().postDataJSON()).toEqual({ key_id: active });
-        // FINDING: success is only a check icon without text or live region.
         await expect(main(page).getByRole('button', { name: 'Migrate' })).toBeEnabled();
         expect((await api(page, 'GET', 'encryption/keys')).active).toBe(active);
     });
@@ -413,14 +411,11 @@ test.describe('JWKS', () => {
         for (const k of keys) {
             await expect(main(page).getByText(`${k.alg} / ${k.kid}`)).toBeVisible();
         }
-        // FINDING: every toggle is named "Expand content" without saying which key it opens.
         const toggles = main(page).getByRole('button', { name: 'Expand content' });
         await expect(toggles).toHaveCount(keys.length);
 
         const first = keys[0];
         await toggles.first().click();
-        // FINDING: labels and values of LabeledValue are not associated; `title` is the only
-        // programmatic link between them.
         await expect(main(page).getByTitle('Key ID')).toHaveText(first.kid);
         await expect(main(page).getByTitle('Type', { exact: true })).toHaveText(first.kty);
         await expect(main(page).getByTitle('Algorithm', { exact: true })).toHaveText(first.alg);
@@ -433,8 +428,6 @@ test.describe('JWKS', () => {
     });
 
     test('the expand toggle exposes its state', async ({ page }) => {
-        // upstream set `aria-expanded` only on the wrapping div; the admin UI puts it on the
-        // toggle button as well
         await page.goto('/auth/v1/admin/config/jwks');
         const toggle = main(page).getByRole('button', { name: 'Expand content' }).first();
         await expect(toggle).toHaveAttribute('aria-expanded', 'false', { timeout: 2000 });

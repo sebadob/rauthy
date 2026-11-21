@@ -84,8 +84,7 @@ export function searchBox(scope) {
 }
 
 /**
- * A tab of a tab bar. The original UI renders tabs as plain buttons with `aria-current="step"`
- * (FINDING: should be `tablist` / `tab` with `aria-selected`), so both are accepted.
+ * Selects a tab, including tab bars that use buttons.
  * @param {import('@playwright/test').Page | import('@playwright/test').Locator} scope
  * @param {string} name
  */

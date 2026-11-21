@@ -241,7 +241,6 @@ test.describe('attribute config', () => {
 
     test('makes the attribute user editable after a warning', async ({ page }) => {
         const main = page.getByRole('main');
-        // FINDING: the editable state is only an unnamed check icon next to "User Editable"
         await expect(main.getByText('User Editable')).toBeVisible();
         const toggle = main.getByRole('button', { name: 'Make Editable' });
         await expect(toggle).toHaveCount(1);

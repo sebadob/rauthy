@@ -96,10 +96,7 @@ export async function visibleEmails(/** @type {import('@playwright/test').Page} 
 }
 
 /**
- * On narrow screens the user list sits in a collapsible sub navigation. Opens it when the search
- * box is not visible yet.
- * FINDING: the toggle button has no accessible name (`aria-expanded` sits on the inner svg), so
- * the fallback is the first button inside `main`.
+ * Returns to the user list on narrow screens and waits for search to be available.
  * @param {import('@playwright/test').Page} page
  */
 export async function openUserList(page) {
@@ -108,9 +105,7 @@ export async function openUserList(page) {
 }
 
 /**
- * Selects a detail tab. The original renders tabs as buttons with `aria-current`, a redesign
- * may use `role=tab`. Several icon buttons share the names "Delete" and "Logout", so a button
- * fallback must also carry the name as visible text.
+ * Locates a detail tab by its role or visible button label.
  * @param {import('@playwright/test').Page} page
  * @param {string} name
  */

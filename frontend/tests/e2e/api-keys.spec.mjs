@@ -72,11 +72,7 @@ function matrixBox(scope, /** @type {string} */ group, /** @type {string} */ rig
     return scope.getByRole('checkbox', { name: `${group}: ${right}`, exact: true });
 }
 
-/**
- * The date and time inputs of the expiry.
- * FINDING: upstream both inputs are called "Expiry" (`lib/form/InputDateTimeCombo.svelte`), so the
- * date is the first and the time the last one.
- */
+/** The expiry date and time controls, in display order. */
 function expiry(/** @type {import('@playwright/test').Locator} */ scope) {
     const all = scope.getByRole('textbox', { name: /^Expiry/ });
     return { date: all.first(), time: all.last() };

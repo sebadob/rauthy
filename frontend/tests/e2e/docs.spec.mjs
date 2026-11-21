@@ -48,8 +48,6 @@ test.describe('docs', () => {
             const popup = await popupP;
             await popup.waitForLoadState();
             expect(popup.url()).toBe(l.href);
-            // FINDING: the links have no rel="noopener noreferrer"; current browsers imply
-            // noopener for target=_blank, older ones do not.
             expect(await popup.evaluate(() => window.opener)).toBeNull();
             await popup.close();
             await expect(page).toHaveURL(/\/auth\/v1\/admin\/docs$/);

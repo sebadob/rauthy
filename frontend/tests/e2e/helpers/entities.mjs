@@ -70,10 +70,7 @@ export async function expectCurrent(/** @type {Page} */ page, /** @type {string}
 }
 
 /**
- * A tab of the detail view. Prefers `role=tab`.
- * FINDING: upstream (`lib/tabs/Tabs.svelte`) renders tabs as plain buttons without a tablist,
- * and the search field's icon-only clear button is also called "Delete". The fallback therefore
- * takes the first button of `main` with that name that also shows it as visible text.
+ * Locates a detail tab by its role or visible button label.
  */
 export function tab(/** @type {Page} */ page, /** @type {string} */ name) {
     const main = page.getByRole('main');
@@ -127,10 +124,7 @@ export function searchBox(/** @type {Page} */ page) {
     return subNav(page).getByRole('searchbox', { name: 'Search' });
 }
 
-/**
- * FINDING: the clear button of the search field (`lib/search_bar/SearchBar.svelte`) is called
- * "Delete", which collides with the Delete tab. A name like "Clear search" is accepted as well.
- */
+/** The clear button within the search bar. */
 export function searchClear(/** @type {Page} */ page) {
     return subNav(page)
         .getByRole('search')

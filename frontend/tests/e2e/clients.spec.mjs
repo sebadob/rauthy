@@ -92,8 +92,6 @@ test.describe('clients list', () => {
             await search.fill('no-client-has-this-id-xyz');
             await expect(entries(page)).toHaveCount(0);
 
-            // the icon-only clear button of the search field is labelled "Delete" (FINDING:
-            // "Clear search" would describe it better)
             await subNav(page)
                 .getByRole('search')
                 .getByRole('button', { name: /delete|clear/i })
@@ -667,8 +665,7 @@ test.describe('client config', () => {
     test('allowed and default scopes are edited in a dialog', async ({ page }) => {
         await tab(page, 'Tokens').click();
         const main = page.getByRole('main');
-        // the two scope lists only expose an icon button named by an inner `title` (FINDING:
-        // both are "Edit" without saying which list they edit)
+        // The allowed scopes editor comes before the default scopes editor.
         const editButtons = main.getByRole('button', { name: 'Edit', exact: true });
         await expect(editButtons).toHaveCount(2);
         const selected = main.locator('.admin-selection-field').first().getByRole('listitem');

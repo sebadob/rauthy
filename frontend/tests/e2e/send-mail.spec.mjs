@@ -342,8 +342,6 @@ test.describe('send e-mail', () => {
             for (const [name, expected] of TOOLS) {
                 await ed.fill('hello');
                 await ed.press('ControlOrMeta+a');
-                // FINDING: the toolbar buttons are only named through the `title` of an inner
-                // div; they work, but there is no toolbar role and no keyboard shortcut.
                 await dialog.getByRole('button', { name, exact: true }).click();
                 await expect(ed, name).toHaveText(expected);
             }

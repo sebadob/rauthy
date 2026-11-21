@@ -100,7 +100,6 @@ test.describe('ip blacklist', () => {
         try {
             const date1 = await dateInDays(page, 1);
             let dialog = await openAdd(page);
-            // the focus moves into the dialog (upstream Modal focuses "Close" first, FINDING)
             await expect(dialog.locator(':focus')).toHaveCount(1);
             await fillAdd(dialog, { ip: ip1, date: date1, time: '12:30' });
             await dialog.getByRole('button', { name: 'Save' }).click();

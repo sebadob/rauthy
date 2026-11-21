@@ -233,7 +233,6 @@ test.describe.serial('sessions of a test user', () => {
         await expect(rows(page)).toHaveCount(0);
         await expect(main(page).getByText('Total: 0', { exact: true })).toBeVisible();
 
-        // the clear button of the search field (FINDING: it is named "Delete")
         await main(page)
             .getByRole('search')
             .getByRole('button', { name: /delete|clear/i })

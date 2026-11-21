@@ -69,10 +69,6 @@ function customPayload(/** @type {string} */ name) {
     };
 }
 
-/**
- * FINDING: the client secret field is named "Password" instead of "Client Secret"
- * (`ProviderConfigClientInfo.svelte` does not pass `ariaLabel` to `InputPassword`).
- */
 function secretField(/** @type {import('@playwright/test').Locator} */ scope) {
     return scope.getByRole('textbox', { name: /^(Client Secret|Password)$/ });
 }

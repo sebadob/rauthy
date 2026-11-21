@@ -250,7 +250,7 @@ test.describe('scope config', () => {
         await expect(main.getByText('You can map custom scopes to attributes.')).toBeVisible();
         await expect(main.getByText('Access Token Mappings')).toBeVisible();
         await expect(main.getByText('Id Token Mappings')).toBeVisible();
-        // FINDING: both lists only have an icon button named "Edit"
+        // The access token editor comes before the ID token editor.
         const edit = main.getByRole('button', { name: 'Edit', exact: true });
         await expect(edit).toHaveCount(2);
         const accessChips = main.locator('.admin-selection-field').first().getByRole('listitem');
