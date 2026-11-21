@@ -90,7 +90,6 @@ uninlined_format_args = "allow"
 # Temporarily allowed (to be reviewed and enabled incrementally)
 cast_lossless = "allow"
 doc_markdown = "allow"
-explicit_deref_methods = "allow"
 if_not_else = "allow"
 ignored_unit_patterns = "allow"
 inline_always = "allow"

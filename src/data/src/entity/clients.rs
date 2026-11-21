@@ -39,7 +39,6 @@ use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
-use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
@@ -1452,11 +1451,10 @@ impl Client {
         req: &HttpRequest,
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
         let pub_url_with_scheme = RauthyConfig::get().pub_url_with_scheme.as_str();
-        let additional_allowed_origin_schemes = RauthyConfig::get()
+        let additional_allowed_origin_schemes = &*RauthyConfig::get()
             .vars
             .server
-            .additional_allowed_origin_schemes
-            .deref();
+            .additional_allowed_origin_schemes;
         self.get_validated_origin_header_with(
             req,
             pub_url_with_scheme,
