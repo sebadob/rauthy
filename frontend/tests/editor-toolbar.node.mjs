@@ -95,6 +95,7 @@ test('toolbar buttons apply their markdown to the selection', async () => {
             dialog.locator('input[type="date"]'),
             dialog.getByRole('textbox', { name: 'Time', exact: true }),
         ];
+        await expect(delivery.locator('..').locator('svg')).toBeVisible({ timeout: 2000 });
         const subject = dialog.getByRole('textbox', { name: 'Subject' });
         await expect
             .poll(async () => {
@@ -117,6 +118,33 @@ test('toolbar buttons apply their markdown to the selection', async () => {
         await delivery.selectOption('immediate');
         await editor.fill('Draft before expanding');
         const expand = dialog.getByRole('button', { name: 'Expand content' });
+        const close = dialog.getByRole('button', { name: 'Close' });
+        for (const viewport of [
+            { width: 375, height: 667 },
+            { width: 820, height: 1180 },
+            { width: 1280, height: 900 },
+        ]) {
+            await page.setViewportSize(viewport);
+            await expect
+                .poll(async () => {
+                    const [modal, top, bottom] = await Promise.all([
+                        dialog.boundingBox(),
+                        close.locator('svg').boundingBox(),
+                        expand.locator('svg').boundingBox(),
+                    ]);
+                    return (
+                        !!modal &&
+                        !!top &&
+                        !!bottom &&
+                        Math.abs(top.width - bottom.width) < 1 &&
+                        Math.abs(top.x - bottom.x) < 1 &&
+                        Math.abs(
+                            top.y - modal.y - (modal.y + modal.height - bottom.y - bottom.height),
+                        ) < 1
+                    );
+                })
+                .toBe(true);
+        }
         const normal = await editor.boundingBox();
         await expand.click();
         await expect(expand).toHaveAttribute('aria-pressed', 'true');

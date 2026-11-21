@@ -9,7 +9,7 @@
         closeModal = $bindable(),
         onClose,
         strict = false,
-        expanded = false,
+        expanded = $bindable(),
         prerender = false,
         ariaLabel,
         children,
@@ -126,6 +126,7 @@ We need the onclick listener here to make easy click-outside work.
     aria-modal="true"
     aria-label={ariaLabel}
     data-strict={strict}
+    class:expandable={expanded !== undefined}
     class:expanded
     onclose={() => {
         showModal = false;
@@ -135,8 +136,8 @@ We need the onclick listener here to make easy click-outside work.
 >
     <div bind:this={refContent} role="none" onclick={stopPropagation}>
         {#if !strict}
-            <div class="relative">
-                <div class="absolute close">
+            <div class="relative close-anchor">
+                <div class="absolute close corner-control">
                     <Button ariaLabel={t.common.close} invisible onclick={close}>
                         <span class="closeIcon">
                             <IconStop color="currentColor" width="1.2rem" />
@@ -153,6 +154,32 @@ We need the onclick listener here to make easy click-outside work.
         -->
         {#if prerender || showModal}
             {@render children()}
+            {#if expanded !== undefined}
+                <div class="expand corner-control" title={t.common.expandContent}>
+                    <Button
+                        ariaLabel={t.common.expandContent}
+                        ariaPressed={expanded}
+                        invisible
+                        onclick={() => (expanded = !expanded)}
+                    >
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            {#if expanded}
+                                <path d="M6 10h4V6m8 4h-4V6M6 14h4v4m8-4h-4v4" />
+                            {:else}
+                                <path d="M10 6H6v4m8-4h4v4M6 14v4h4m8-4v4h-4" />
+                            {/if}
+                        </svg>
+                    </Button>
+                </div>
+            {/if}
         {/if}
     </div>
 </dialog>
@@ -243,7 +270,7 @@ We need the onclick listener here to make easy click-outside work.
     :global(.admin-shell) dialog:not(:global(.branding-preview *))::backdrop {
         background: #0006;
     }
-    :global(.admin-shell) dialog:not(:global(.branding-preview *)) :global(.close) {
+    :global(.admin-shell) dialog:not(.expandable, :global(.branding-preview *)) .close {
         top: max(-20px, calc(4px - var(--dialog-padding, 32px)));
         right: max(-20px, calc(4px - var(--dialog-padding, 32px)));
     }
@@ -266,6 +293,54 @@ We need the onclick listener here to make easy click-outside work.
 
     :global(.admin-shell) dialog.expanded > div {
         max-height: 100dvh;
+    }
+
+    dialog.expandable {
+        --modal-corner-size: 40px;
+        --modal-corner-inset: clamp(6px, 1vw, 10px);
+    }
+
+    .expandable .close-anchor {
+        position: static;
+    }
+
+    .expandable .corner-control {
+        position: absolute;
+        inset: auto;
+        inset-inline-end: var(--modal-corner-inset);
+        z-index: 1;
+    }
+
+    .expandable .close {
+        inset-block-start: var(--modal-corner-inset);
+    }
+
+    .expandable .expand {
+        inset-block-end: var(--modal-corner-inset);
+    }
+
+    .expandable .corner-control :global(button) {
+        --ui-button-height: var(--modal-corner-size);
+        --ui-button-min-height: var(--modal-corner-size);
+        width: var(--modal-corner-size);
+    }
+
+    .expandable .corner-control :global(svg) {
+        width: 22px;
+        height: 22px;
+    }
+
+    .expandable .closeIcon {
+        color: inherit;
+    }
+
+    .expandable .close:hover .closeIcon {
+        color: hsl(var(--error));
+    }
+
+    .expand :global(button[aria-pressed='true']) {
+        background: var(--ui-tonal);
+        color: var(--ui-primary);
     }
 
     :global(.admin-shell) dialog :global(.meta) {

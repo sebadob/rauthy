@@ -1,5 +1,6 @@
 <script lang="ts">
     import IconEnvelope from '#icons/IconEnvelope.svelte';
+    import IconChevronDown from '#icons/IconChevronDown.svelte';
     import IconUserGroup from '#icons/IconUserGroup.svelte';
     import Button from '#lib/button/Button.svelte';
     import Modal from '#lib/Modal.svelte';
@@ -162,13 +163,13 @@
     bind:showModal
     bind:closeModal
     ariaLabel={ta.email.sendMail}
-    {expanded}
+    bind:expanded
     onClose={() => (expanded = false)}
     --dialog-padding="clamp(14px, 3vw, 24px)"
 >
     <EditorInteractive
         bind:mode={editorMode}
-        bind:expanded
+        {expanded}
         bind:contentRaw={bodyRaw}
         title={ta.email.sendMail}
     >
@@ -209,19 +210,24 @@
                     <label class="admin-field-label" for={deliveryId}
                         >{ta.email.delivery ?? 'Delivery'}</label
                     >
-                    <select
-                        id={deliveryId}
-                        class="ui-text-input"
-                        bind:value={
-                            () => (scheduled ? 'scheduled' : 'immediate'),
-                            value => (scheduled = value === 'scheduled')
-                        }
-                    >
-                        <option value="immediate">{ta.email.immediate}</option>
-                        <option value="scheduled">
-                            {ta.email.scheduledDelivery ?? ta.email.scheduled}
-                        </option>
-                    </select>
+                    <div class="delivery-select">
+                        <select
+                            id={deliveryId}
+                            class="ui-text-input"
+                            bind:value={
+                                () => (scheduled ? 'scheduled' : 'immediate'),
+                                value => (scheduled = value === 'scheduled')
+                            }
+                        >
+                            <option value="immediate">{ta.email.immediate}</option>
+                            <option value="scheduled">
+                                {ta.email.scheduledDelivery ?? ta.email.scheduled}
+                            </option>
+                        </select>
+                        <span class="delivery-chevron" aria-hidden="true">
+                            <IconChevronDown width=".8rem" />
+                        </span>
+                    </div>
                 </div>
                 {#if scheduled}
                     <div class="schedule-fields">
@@ -304,21 +310,32 @@
         min-width: 0;
     }
 
-    .delivery-field select {
+    .delivery-select {
+        position: relative;
+    }
+
+    .delivery-select select {
+        appearance: none;
         height: var(--ui-field-height);
         padding-block: 0;
+        padding-inline-end: 2.5rem;
+        cursor: pointer;
         text-overflow: ellipsis;
+    }
+
+    .delivery-chevron {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-end: 15px;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        color: var(--ui-text);
     }
 
     .schedule-fields {
         flex: 2 1 18rem;
         min-width: 0;
-    }
-
-    @media (min-width: 360px) {
-        .schedule-fields {
-            --ui-datetime-compact-columns: minmax(0, 1fr) minmax(5.5rem, 0.65fr);
-        }
     }
 
     .recipient-summary {

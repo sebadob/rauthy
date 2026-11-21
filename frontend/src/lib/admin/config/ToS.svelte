@@ -258,13 +258,13 @@
     bind:showModal={showModalAddNew}
     bind:closeModal={closeModalAddNew}
     ariaLabel={ta.tos.addNewToS}
-    {expanded}
+    bind:expanded
     onClose={() => (expanded = false)}
     --dialog-padding="clamp(14px, 3vw, 24px)"
 >
     <EditorInteractive
         bind:mode={editorMode}
-        bind:expanded
+        {expanded}
         bind:contentRaw={newToSContentRaw}
         title={ta.tos.addNewToS}
     >

@@ -755,6 +755,17 @@ test.describe('terms of service', () => {
         const save = dialog.getByRole('button', { name: 'Save', exact: true });
         const transition = dialog.getByRole('checkbox', { name: 'Enable Transition Time' });
         await transition.check();
+        await page.setViewportSize({ width: 375, height: 667 });
+        const date = dialog.getByRole('button', { name: 'Date', exact: true });
+        const time = dialog.getByRole('button', { name: 'Time', exact: true });
+        await expect(date).toBeInViewport({ ratio: 1 });
+        await expect(time).toBeInViewport({ ratio: 1 });
+        const [dateIcon, timeIcon] = await Promise.all([
+            date.locator('svg').boundingBox(),
+            time.locator('svg').boundingBox(),
+        ]);
+        expect(dateIcon?.y).toBeCloseTo(timeIcon?.y ?? -1, 0);
+        await page.setViewportSize({ width: 390, height: 520 });
         const draft = 'Paragraph\n'.repeat(99) + 'Last paragraph';
         await editor.fill(draft);
         const normal = await editor.boundingBox();

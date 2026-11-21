@@ -1,16 +1,14 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Button from '#lib/button/Button.svelte';
     import EditorMarkdown from '#lib/text_edit/md/EditorMarkdown.svelte';
     import EditorText from '#lib/text_edit/EditorText.svelte';
-    import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
 
     let {
         title,
         mode = $bindable('Markdown'),
         contentRaw = $bindable(''),
-        expanded = $bindable(false),
+        expanded = false,
         fields,
         beforeEditor,
         footer,
@@ -24,7 +22,6 @@
         footer: Snippet;
     } = $props();
 
-    const t = useI18n();
     const ta = useI18nAdmin();
     const formatId = $props.id();
 </script>
@@ -63,33 +60,7 @@
         {/if}
     </div>
     <div class="footer">
-        <div class="footer-content">{@render footer()}</div>
-        <Button
-            invisible
-            ariaLabel={t.common.expandContent}
-            ariaPressed={expanded}
-            onclick={() => (expanded = !expanded)}
-        >
-            <span title={t.common.expandContent}>
-                <svg
-                    aria-hidden="true"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    {#if expanded}
-                        <path d="M3 8h5V3m13 5h-5V3M3 16h5v5m13-5h-5v5" />
-                    {:else}
-                        <path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5" />
-                    {/if}
-                </svg>
-            </span>
-        </Button>
+        {@render footer()}
     </div>
 </div>
 
@@ -97,6 +68,10 @@
     .composer {
         --composer-width: calc(100dvw - 34px - 2 * var(--dialog-padding, 32px));
         --composer-height: max(12rem, calc(100dvh - 34px - 2 * var(--dialog-padding, 32px)));
+        --composer-corner-clearance: calc(
+            var(--modal-corner-inset) + var(--modal-corner-size) - var(--dialog-padding, 32px) +
+                0.25rem
+        );
         display: flex;
         flex-direction: column;
         width: min(54rem, var(--composer-width));
@@ -118,7 +93,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
-        padding-inline-end: 1.75rem;
+        padding-inline-end: var(--composer-corner-clearance);
     }
 
     h2 {
@@ -128,11 +103,6 @@
         color: var(--ui-text);
         font-size: 1.375rem;
         line-height: 1.75rem;
-    }
-
-    .footer :global(button[aria-pressed='true']) {
-        background: var(--ui-tonal);
-        color: var(--ui-primary);
     }
 
     .fields {
@@ -145,6 +115,12 @@
 
     .fields::-webkit-scrollbar {
         display: none;
+    }
+
+    @media (360px <= width <= 379px) {
+        .fields {
+            --ui-datetime-compact-columns: minmax(0, 1fr) minmax(5.5rem, 0.65fr);
+        }
     }
 
     .before-editor {
@@ -260,16 +236,8 @@
 
     .footer {
         flex: none;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        gap: 0.5rem;
         padding-top: 0.5rem;
+        padding-inline-end: var(--composer-corner-clearance);
         border-top: 1px solid var(--ui-outline);
-    }
-
-    .footer-content {
-        flex: 1;
-        min-width: 0;
     }
 </style>
