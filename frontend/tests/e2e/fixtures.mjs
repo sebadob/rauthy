@@ -9,7 +9,6 @@ import { test as base, expect } from '@playwright/test';
  */
 const EXPECTED_HTTP_ERRORS = [
     { status: 401, path: /\/oidc\/sessioninfo$/, why: 'session probe before login' },
-    { status: 401, method: 'POST', path: /\/oidc\/authorize$/, why: 'backend asks for password' },
     { status: 404, path: /\/clients\/[^/]+\/logo$/, why: 'no custom client logo uploaded' },
     { status: 404, path: /\/users\/[^/]+\/picture\/?/, why: 'no user picture uploaded' },
 ];
@@ -28,6 +27,8 @@ const fixtures = {
     page: async ({ page, allowErrors }, use, testInfo) => {
         /** @type {string[]} */
         const problems = [];
+        /** @type {Promise<void>[]} */
+        const responseChecks = [];
         const allowed = (/** @type {string} */ s) => allowErrors.some(re => re.test(s));
 
         page.on('pageerror', err => problems.push(`pageerror: ${err.message}`));
@@ -51,10 +52,33 @@ const fixtures = {
                     e.path.test(url.pathname),
             );
             const line = `http ${res.status()} ${method} ${url.pathname}`;
-            if (!ok && !allowed(line)) problems.push(line);
+            if (ok || allowed(line)) return;
+
+            if (
+                res.status() === 400 &&
+                method === 'POST' &&
+                url.pathname.endsWith('/oidc/authorize')
+            ) {
+                responseChecks.push(
+                    res
+                        .json()
+                        .catch(() => undefined)
+                        .then(body => {
+                            if (
+                                body?.error !== 'PasswordRequired' &&
+                                body?.error !== 'InvalidCredentials'
+                            ) {
+                                problems.push(line);
+                            }
+                        }),
+                );
+            } else {
+                problems.push(line);
+            }
         });
 
         await use(page);
+        await Promise.all(responseChecks);
 
         if (problems.length) {
             await testInfo.attach('browser-problems', { body: problems.join('\n') });

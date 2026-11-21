@@ -1,5 +1,4 @@
-// Built-UI contract test for the login page: only a 401 from POST /oidc/authorize means "needs a
-// password" or "invalid credentials". Any other unexpected status must surface the server message.
+// Built-UI contract tests for the password prompt, credential errors and session recovery.
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { launchChromium, readBuiltHtml, serveUi } from './helpers/browser.mjs';
@@ -18,15 +17,15 @@ const documentPath = '/auth/v1/oidc/authorize';
 const authorizeReq = `POST ${documentPath}`;
 const keepAlivePath = '/auth/v1/keep_alive';
 
+/** @typedef {{ status: number, error?: string, headers?: Record<string, string> }} Reply */
+const passwordRequired = { status: 400, error: 'PasswordRequired' };
+
 /**
- * Opens the login page. `handle` is the answer of `POST /oidc/authorize`, `keepAlive` the answer of
- * the idle ticker's `GET /auth/v1/keep_alive`, and every document navigation (the first `goto` and
- * any reload the page does itself) is recorded in `navigations`.
- * @param {number} status
- * @param {Record<string, string>} [headers]
+ * The mock can return either one reply or distinct replies for the email and password steps.
+ * @param {Reply | ((password: string | undefined) => Reply)} authorize
  * @param {{ status: number, headers?: Record<string, string>, timeoutAfterMs?: number }} [keepAlive]
  */
-async function openLogin(status, headers = {}, keepAlive = undefined) {
+async function openLogin(authorize, keepAlive = undefined) {
     const context = await browser.newContext({ serviceWorkers: 'block', locale: 'en-US' });
     const page = await context.newPage();
     /** @type {string[]} */
@@ -57,10 +56,14 @@ async function openLogin(status, headers = {}, keepAlive = undefined) {
         requests,
         handle: (/** @type {any} */ _route, /** @type {any} */ request, /** @type {any} */ url) => {
             if (url.pathname === documentPath && request.method() === 'POST') {
+                const { status, headers, error } =
+                    typeof authorize === 'function'
+                        ? authorize(request.postDataJSON().password)
+                        : authorize;
                 return {
                     status,
                     headers,
-                    json: { error: 'SomeError', message: `server said ${status}` },
+                    json: { error: error ?? 'SomeError', message: `server said ${status}` },
                 };
             }
             if (url.pathname === keepAlivePath && request.method() === 'GET') {
@@ -87,9 +90,9 @@ async function openLogin(status, headers = {}, keepAlive = undefined) {
     return { context, page, requests, navigations, beats, fillEmail, submit };
 }
 
-for (const status of [404, 409, 413]) {
+for (const status of [400, 401, 404, 409, 413]) {
     test(`login: HTTP ${status} shows the server message, not a password prompt`, async t => {
-        const { context, page, requests, fillEmail, submit } = await openLogin(status);
+        const { context, page, requests, fillEmail, submit } = await openLogin({ status });
         t.after(() => context.close());
         await fillEmail();
         await submit();
@@ -101,8 +104,10 @@ for (const status of [404, 409, 413]) {
     });
 }
 
-test('login: HTTP 401 asks for the password, then reports invalid credentials', async t => {
-    const { context, page, fillEmail, submit } = await openLogin(401);
+test('login: PasswordRequired opens the password field and InvalidCredentials shows the error', async t => {
+    const { context, page, requests, fillEmail, submit } = await openLogin(password =>
+        password ? { status: 400, error: 'InvalidCredentials' } : passwordRequired,
+    );
     t.after(() => context.close());
     await fillEmail();
     await submit();
@@ -111,6 +116,28 @@ test('login: HTTP 401 asks for the password, then reports invalid credentials', 
     await submit();
     await page.getByText('Invalid credentials', { exact: true }).waitFor();
     await page.getByText('Password forgotten?').waitFor();
+    assert.equal(requests.filter(r => r === authorizeReq).length, 2);
+});
+
+test('login: clicking submit with an invalid email does not send it', async t => {
+    const { context, page, submit } = await openLogin(passwordRequired);
+    t.after(() => context.close());
+    /** @type {string[]} */
+    const submittedEmails = [];
+    page.on('request', (/** @type {any} */ request) => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname === documentPath) {
+            submittedEmails.push(request.postDataJSON().email);
+        }
+    });
+    const email = page.locator('input[name=email]');
+    await email.fill('invalid-address');
+    await submit();
+    await page.getByText('Provide valid E-Mail address').waitFor();
+
+    await email.fill('user@localhost');
+    await submit();
+    await page.locator('input[name=password]').waitFor();
+    assert.deepEqual(submittedEmails, ['user@localhost']);
 });
 
 async function waitForReloads(/** @type {string[]} */ navigations, /** @type {number} */ want) {
@@ -121,8 +148,9 @@ async function waitForReloads(/** @type {string[]} */ navigations, /** @type {nu
 }
 
 test('login: an expired page session reloads itself, it never claims bad credentials', async t => {
-    const { context, page, navigations, fillEmail, submit } = await openLogin(401, {
-        'x-session-expired': 'true',
+    const { context, page, navigations, fillEmail, submit } = await openLogin({
+        status: 401,
+        headers: { 'x-session-expired': 'true' },
     });
     t.after(() => context.close());
     await fillEmail();
@@ -133,8 +161,9 @@ test('login: an expired page session reloads itself, it never claims bad credent
 });
 
 test('login: the expired session reload runs once, then the server message shows', async t => {
-    const { context, page, navigations, fillEmail, submit } = await openLogin(401, {
-        'x-session-expired': 'true',
+    const { context, page, navigations, fillEmail, submit } = await openLogin({
+        status: 401,
+        headers: { 'x-session-expired': 'true' },
     });
     t.after(() => context.close());
 
@@ -154,8 +183,7 @@ test('login: the idle ticker beats at the server deadline, never faster than 10 
     // The answer is a deadline 70 s away, so the next beat is the 10 s floor, not the 60 s before
     // the deadline - this is what pins both bounds at once.
     const { context, page, beats } = await openLogin(
-        401,
-        {},
+        { status: 401 },
         {
             status: 200,
             timeoutAfterMs: 70_000,
@@ -171,8 +199,7 @@ test('login: the idle ticker beats at the server deadline, never faster than 10 
 
 test('login: the idle ticker restarts a dead page session before the form is used', async t => {
     const { context, page, navigations, beats } = await openLogin(
-        401,
-        {},
+        { status: 401 },
         {
             status: 401,
             headers: { 'x-session-expired': 'true' },

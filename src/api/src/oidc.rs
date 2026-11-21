@@ -329,8 +329,8 @@ fn build_authorize_resp(
             (OtpLoginResponse = "application/otp+json"),
         )),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
-        (status = 400, description = "Missing / bad input data", body = ErrorResponse),
-        (status = 401, description = "Bad input, expired sessionn, or CSRF Token error", body = ErrorResponse),
+        (status = 400, description = "Password required, invalid form credentials, or missing / bad input data", body = ErrorResponse),
+        (status = 401, description = "Invalid authentication, expired session, or CSRF token error", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/authorize")]
@@ -360,6 +360,9 @@ pub async fn post_authorize_handle(
 
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
+
+    let uses_password_form = payload.email.is_some() && payload.resident_key_token.is_none();
+    let has_password = payload.password.is_some();
 
     let mut has_password_been_hashed = false;
     let mut add_login_delay = true;
@@ -402,10 +405,17 @@ pub async fn post_authorize_handle(
                 return Err(err);
             }
 
-            let err = Err(ErrorResponse::new(
-                ErrorResponseType::Unauthorized,
-                "Invalid user credentials",
-            ));
+            // Normalize by the submitted form step, even when the account does not exist.
+            // Safari can retry a challenged POST and reuse its already consumed proof of work.
+            let (kind, message) = match (uses_password_form, has_password) {
+                (true, false) => (ErrorResponseType::PasswordRequired, "Password required"),
+                (true, true) => (
+                    ErrorResponseType::InvalidCredentials,
+                    "Invalid user credentials",
+                ),
+                _ => (ErrorResponseType::Unauthorized, "Invalid user credentials"),
+            };
+            let err = Err(ErrorResponse::new(kind, message));
             if !add_login_delay {
                 return err;
             }
