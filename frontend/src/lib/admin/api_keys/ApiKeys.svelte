@@ -42,7 +42,7 @@
         if (!search) {
             keysFiltered = keys;
         } else if (searchOption === searchOptions[0]) {
-            keysFiltered = keys.filter(k => k.name?.includes(search));
+            keysFiltered = keys.filter(k => k.name.toLowerCase().includes(search));
         }
     });
 

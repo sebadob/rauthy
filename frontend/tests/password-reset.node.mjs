@@ -2,6 +2,8 @@
 // credentials and reset context exist only in memory, without traces or a mail server.
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { expect } from '@playwright/test';
 import {
     addVirtualAuthenticator,
     injectTemplates,
@@ -10,15 +12,59 @@ import {
     serveUi,
 } from './helpers/browser.mjs';
 
-/** @type {any} */
+/** @type {Awaited<ReturnType<typeof launchChromium>>} */
 let browser;
 /** @type {any} */
 let html;
+let requestHtml = '';
 before(async () => {
     html = await readBuiltHtml('users/{id}/reset/reset.html');
+    requestHtml = await readBuiltHtml('users/password_reset.html');
     browser = await launchChromium();
 });
 after(async () => browser?.close());
+
+for (const logo of ['default', 'custom', 'unavailable']) {
+    test(`password reset request: ${logo} logo`, async t => {
+        const context = await browser.newContext({ viewport: { width: 375, height: 667 } });
+        t.after(() => context.close());
+        const documentPath = '/auth/v1/users/password_reset';
+        const logoPath = '/auth/v1/clients/rauthy/logo';
+        /** @type {string[]} */
+        const customLogoRequests = [];
+        const svg = fileURLToPath(new URL('../../assets/logo/rauthy_dark.svg', import.meta.url));
+
+        await serveUi({
+            context,
+            documentPath,
+            html: injectTemplates(requestHtml, {
+                tpl_client_logo_updated: logo === 'default' ? '' : '42',
+            }),
+            requests: [],
+            handle: (_, _request, url) => {
+                if (url.pathname === logoPath) {
+                    customLogoRequests.push(url.search);
+                    return logo === 'custom' ? { path: svg } : { status: 404 };
+                }
+                if (url.pathname.startsWith('/auth/v1/assets/rauthy_')) return { path: svg };
+            },
+        });
+
+        const page = await context.newPage();
+        await page.goto(`http://localhost${documentPath}`);
+        const brand = page.getByRole('img', {
+            name: logo === 'custom' ? 'Client Logo' : 'Rauthy Logo',
+        });
+        await expect(brand).toBeVisible();
+        await expect(brand).toHaveJSProperty('complete', true);
+        assert.ok(
+            await brand.evaluate(
+                image => image instanceof HTMLImageElement && image.naturalWidth > 0,
+            ),
+        );
+        assert.deepEqual(customLogoRequests, logo === 'default' ? [] : ['?updated=42']);
+    });
+}
 
 for (const scenario of [
     'password-only',
@@ -148,11 +194,10 @@ for (const scenario of [
                 }
             });
         } else {
+            /** @type {ResidentKeyRequirement} */
+            const residentKey = scenario === 'non-resident-key' ? 'discouraged' : 'required';
             createdCredId = await page.evaluate(
-                /** @param {{createCredential: boolean, residentKey: ResidentKeyRequirement}} p */ async ({
-                    createCredential,
-                    residentKey,
-                }) => {
+                async ({ createCredential, residentKey }) => {
                     let credentialId;
                     if (createCredential) {
                         const credential = await navigator.credentials.create({
@@ -184,7 +229,7 @@ for (const scenario of [
                 },
                 {
                     createCredential: tpl.needs_mfa,
-                    residentKey: scenario === 'non-resident-key' ? 'discouraged' : 'required',
+                    residentKey,
                 },
             );
         }

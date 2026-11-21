@@ -29,13 +29,12 @@
 
     let ta = useI18nAdmin();
     const t = useI18n();
-    // The search bar's options: ta.users.searchName ?? 'Name' matches given_name / family_name, ta.users.searchUsername ?? 'Username' matches
-    // preferred_username, and both are server-side idx values as well
+    // Both name fields support server-side lookup. Only given and family names are in the list.
     const SEARCH_EMAIL = t.common.email;
     const SEARCH_ID = 'ID';
     const SEARCH_NAME = ta.users.searchName ?? 'Name';
     const SEARCH_USERNAME = ta.users.searchUsername ?? 'Username';
-    // Server-side searches are fired while typing - this is the minimum time between two queries
+    // Limit how often typing can trigger a server search.
     const SERVER_SEARCH_THROTTLE_MS = 250;
 
     let closeModal: undefined | (() => void) = $state();

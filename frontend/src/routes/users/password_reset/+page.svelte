@@ -51,10 +51,12 @@
 
 <PublicPage>
     <div class="public-card">
-        <ClientLogo
-            clientId="rauthy"
-            updated={clientLogoUpdated > -1 ? clientLogoUpdated : undefined}
-        />
+        <div class="brand">
+            <ClientLogo
+                clientId={clientLogoUpdated >= 0 ? 'rauthy' : undefined}
+                updated={clientLogoUpdated >= 0 ? clientLogoUpdated : undefined}
+            />
+        </div>
 
         <div class="desc">
             <h1>{t.passwordReset.passwordReset}</h1>
@@ -89,6 +91,11 @@
 </PublicPage>
 
 <style>
+    .brand {
+        display: flex;
+        justify-content: center;
+    }
+
     .submit {
         margin-top: 0.66rem;
     }

@@ -144,9 +144,7 @@ test.describe('API keys list', () => {
         await expect(matrixBox(page.getByRole('main'), 'Roles', 'create')).not.toBeChecked();
     });
 
-    // UPSTREAM BUG: `ApiKeys.svelte` lower-cases the search term but not the key names, so keys
-    // with upper-case letters (allowed by PATTERN_API_KEY) can never be found.
-    test.fail('search finds keys with upper-case letters', async ({ page }) => {
+    test('search finds keys with upper-case letters', async ({ page }) => {
         await page.goto(PAGE);
         const name = keyName('E2EK');
         await api(page, 'POST', 'api_keys', {
@@ -159,7 +157,7 @@ test.describe('API keys list', () => {
         // Wait for the debounced filter before checking whether this key reappears.
         await searchBox(page).fill('nothing-matches');
         await expect(entry(page, name)).toHaveCount(0);
-        await searchBox(page).fill(name);
+        await searchBox(page).fill(name.toLowerCase());
         await expect(entry(page, name)).toBeVisible({ timeout: 3_000 });
     });
 });

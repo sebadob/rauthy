@@ -349,9 +349,7 @@ test.describe('edit role', () => {
         expect((await roleById(page, role.id))?.name).toBe(role.name);
     });
 
-    // UPSTREAM BUG: `stringifyJsonValue()` in `src/utils/jsonValue.ts` returns '' for every
-    // falsy value, so metadata `false` / `0` is shown as empty and wiped by the next save.
-    test.fail('falsy JSON metadata is shown after a reload', async ({ page }) => {
+    test('falsy JSON metadata is shown after a reload', async ({ page }) => {
         await page.goto(`${PAGE}?rid=${role.id}`);
         await metaInput(page).fill('false');
         await saveButton(page).click();
@@ -360,16 +358,15 @@ test.describe('edit role', () => {
         await expect(metaInput(page)).toHaveValue('false', { timeout: 3_000 });
     });
 
-    // UPSTREAM BUG: `parseJsonValue()` in `src/utils/jsonValue.ts` uses `Number.parseInt` first,
-    // so any text that starts with a digit ("12 monkeys", "2024-01-01") is silently stored as a
-    // number and the rest of the input is lost.
-    test.fail('text metadata starting with a digit is stored unchanged', async ({ page }) => {
+    test('text metadata starting with a digit is stored unchanged', async ({ page }) => {
         await page.goto(`${PAGE}?rid=${role.id}`);
         await metaInput(page).fill('12 monkeys');
         await saveButton(page).click();
         await expect
             .poll(async () => (await roleById(page, role.id))?.meta, { timeout: 3_000 })
             .toBe('12 monkeys');
+        await page.reload();
+        await expect(metaInput(page)).toHaveValue('12 monkeys');
     });
 });
 
