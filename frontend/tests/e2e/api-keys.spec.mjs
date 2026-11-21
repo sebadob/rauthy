@@ -403,20 +403,21 @@ test.describe('API key secret', () => {
             await expectTabSelected(page, 'Secret');
             await expect(main.getByText('You will only see this secret once')).toBeVisible();
 
-            const secretBox = main.getByRole('textbox', { name: 'API Key', exact: true });
+            const secretField = main.getByRole('group', { name: 'API Key', exact: true });
+            const secretBox = secretField.locator('pre code');
             await expect(secretBox).toHaveCount(0);
 
             await main.getByRole('button', { name: 'Generate' }).click();
             await expect(secretBox).toBeVisible();
-            await expect(secretBox).toHaveValue(/^•+$/);
-            const reveal = main.getByRole('button', { name: 'Show', exact: true }).first();
+            await expect(secretBox).toHaveText(/^•+$/);
+            const reveal = secretField.getByRole('button', { name: 'Show', exact: true });
             const [control, field] = await Promise.all([
                 reveal.boundingBox(),
                 secretBox.boundingBox(),
             ]);
             expect(!!control && !!field && control.y + control.height <= field.y).toBe(true);
             await reveal.click();
-            const secret = await secretBox.inputValue();
+            const secret = (await secretBox.textContent()) ?? '';
             expect(secret).toMatch(new RegExp(`^${name}\\$.{20,}$`));
             await expect(main.getByText('API-Key <api_key>')).toBeVisible();
 
@@ -425,16 +426,20 @@ test.describe('API key secret', () => {
             expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(secret);
 
             // the curl examples contain the secret and the test URL
-            const curl = main.getByRole('textbox', { name: 'curl text command simple' });
+            const curlField = main.getByRole('group', { name: 'curl text command simple' });
+            const curl = curlField.locator('pre');
             await expect(curl).toBeVisible();
             await main.getByRole('button', { name: 'Copy value to clipboard' }).last().click();
             const curlCmd = await page.evaluate(() => navigator.clipboard.readText());
             expect(curlCmd).toContain(`Authorization: API-Key ${secret}`);
             expect(curlCmd).toContain(`/auth/v1/api_keys/${name}/test`);
-            const curlPretty = main.getByRole('textbox', { name: 'curl text command with jq' });
+            expect(curlCmd.split('\n')).toHaveLength(3);
+            await curlField.getByRole('button', { name: 'Show', exact: true }).click();
+            await expect(curl.locator('code')).toHaveText(curlCmd);
+            const curlPretty = main
+                .getByRole('group', { name: 'curl text command with jq' })
+                .locator('pre');
             await expect(curlPretty).toBeVisible();
-            await expect(curlPretty).toHaveAttribute('rows', '4');
-            await expect(curl).toHaveAttribute('rows', '4');
             expect((await curlPretty.boundingBox())?.width).toBeCloseTo(
                 (await curl.boundingBox())?.width ?? -1,
                 0,
@@ -466,7 +471,7 @@ test.describe('API key secret', () => {
             await main.getByRole('button', { name: 'Generate' }).click();
             await expect(secretBox).toBeVisible();
             await reveal.click();
-            const secret2 = await secretBox.inputValue();
+            const secret2 = (await secretBox.textContent()) ?? '';
             expect(secret2).not.toBe(secret);
             const oldRes = await anon.get(`/auth/v1/api_keys/${name}/test`, { headers: auth });
             expect(oldRes.status()).toBe(401);

@@ -132,7 +132,7 @@
                         pattern={PATTERN_LINUX_HOSTNAME}
                         maxLength={61}
                     />
-                    <div>
+                    <div class="admin-field-select">
                         <span class="admin-field-label">{ta.pam.groupName}</span>
                         <Options
                             ariaLabel={ta.pam.groupName}

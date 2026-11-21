@@ -304,6 +304,7 @@ export let I18nAdminEn: I18nAdmin = {
         filterType: ['None', 'In Group', 'Not in Group', 'Has Role', 'Has not Role'],
         immediate: 'Immediate',
         jobs: 'E-Mail Jobs',
+        recipients: 'Recipients',
         scheduled: 'Scheduled Dispatch',
         scheduledDelivery: 'Scheduled',
         sendAllUsers: 'This E-Mail will be sent to all users.',

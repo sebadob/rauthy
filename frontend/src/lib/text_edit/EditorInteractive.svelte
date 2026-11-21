@@ -12,6 +12,7 @@
         contentRaw = $bindable(''),
         expanded = $bindable(false),
         fields,
+        beforeEditor,
         footer,
     }: {
         title: string;
@@ -19,6 +20,7 @@
         contentRaw?: string;
         expanded?: boolean;
         fields: Snippet;
+        beforeEditor?: Snippet;
         footer: Snippet;
     } = $props();
 
@@ -31,14 +33,23 @@
     <header>
         <h2>{title}</h2>
         <div class="format">
-            <label for={formatId}>{ta.editor.format ?? 'Format'}</label>
-            <select id={formatId} class="ui-text-input" bind:value={mode}>
-                <option value="Markdown">Markdown</option>
-                <option value="Text">{ta.editor.plainText ?? 'Plain text'}</option>
-            </select>
+            <span class="format-label" id={formatId}>{ta.editor.format ?? 'Format'}</span>
+            <div class="format-options" role="radiogroup" aria-labelledby={formatId}>
+                <label>
+                    <input type="radio" name={formatId} value="Markdown" bind:group={mode} />
+                    <span>Markdown</span>
+                </label>
+                <label>
+                    <input type="radio" name={formatId} value="Text" bind:group={mode} />
+                    <span>{ta.editor.plainText ?? 'Plain text'}</span>
+                </label>
+            </div>
         </div>
     </header>
     <div class="fields">{@render fields()}</div>
+    {#if beforeEditor}
+        <div class="before-editor">{@render beforeEditor()}</div>
+    {/if}
     <div class="body">
         {#if mode === 'Markdown'}
             <EditorMarkdown bind:markdown={contentRaw} height="100%" />
@@ -112,6 +123,8 @@
 
     h2 {
         margin: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
         color: var(--ui-text);
         font-size: 1.375rem;
         line-height: 1.75rem;
@@ -134,6 +147,11 @@
         display: none;
     }
 
+    .before-editor {
+        flex: none;
+        --ui-field-margin: 0;
+    }
+
     .format {
         flex: none;
         display: flex;
@@ -141,15 +159,59 @@
         gap: 0.375rem;
     }
 
-    .format label {
+    .format-label {
         color: var(--ui-muted);
         font-size: 0.8125rem;
     }
 
-    .format select {
-        width: auto;
+    .format-options {
+        display: flex;
+        gap: 2px;
+        padding: 3px;
+        background: var(--ui-container);
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+    }
+
+    .format-options label {
+        position: relative;
+        display: flex;
+    }
+
+    .format-options input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .format-options label span {
+        display: grid;
+        place-items: center;
         min-height: 32px;
-        padding: 4px 8px;
+        padding: 0 0.625rem;
+        border-radius: calc(var(--border-radius) - 2px);
+        color: var(--ui-muted);
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+
+    .format-options label:hover span {
+        background: var(--ui-hover);
+    }
+
+    .format-options input:checked + span {
+        background: var(--ui-surface);
+        color: var(--ui-text);
+        box-shadow: 0 0 0 1px var(--ui-outline);
+    }
+
+    .format-options input:focus-visible + span {
+        outline: 2px solid var(--ui-primary);
+        outline-offset: 1px;
     }
 
     @media (max-width: 480px) {
@@ -157,13 +219,18 @@
             font-size: 1.125rem;
             line-height: 1.25rem;
         }
-    }
+        .format-label {
+            position: absolute;
+            clip-path: inset(50%);
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
 
-    @media (max-width: 359px) {
-        .format {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 2px;
+        .format-options label span {
+            padding: 0 0.4375rem;
+            font-size: 0.75rem;
         }
     }
 

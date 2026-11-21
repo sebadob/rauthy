@@ -259,6 +259,7 @@ export interface I18nAdmin {
         filterType: string[];
         immediate: string;
         jobs: string;
+        recipients?: string;
         scheduled: string;
         scheduledDelivery?: string;
         sendAllUsers: string;

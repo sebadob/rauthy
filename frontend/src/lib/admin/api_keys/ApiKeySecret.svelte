@@ -37,7 +37,11 @@
 
         if (res.text) {
             secret = res.text;
-            curl = `curl -s -H 'Authorization: API-Key ${res.text}' ${window.location.origin}/auth/v1/api_keys/${key.name}/test`;
+            curl = [
+                'curl -s \\',
+                `  -H 'Authorization: API-Key ${res.text}' \\`,
+                `  '${window.location.origin}/auth/v1/api_keys/${key.name}/test'`,
+            ].join('\n');
             curlPretty = `${curl} | jq`;
         } else {
             err = res.error?.message || 'Error';
@@ -68,12 +72,13 @@
     {#if secret}
         <Section title={ta.api_key.examples ?? 'Usage examples'}>
             <p class="ui-muted-copy">{@html ta.api_key.generate3}</p>
-            <div><code>{'API-Key <api_key>'}</code></div>
+            <pre class="auth-example"><code>{'API-Key <api_key>'}</code></pre>
             <div class="example">
                 <p class="ui-muted-copy">{@html ta.api_key.generate4}</p>
                 {#key curlPretty}
                     <HiddenValueArea
                         ariaLabel="curl text command with jq"
+                        language="bash"
                         rows={4}
                         value={curlPretty}
                         width="100%"
@@ -85,6 +90,7 @@
                 {#key curl}
                     <HiddenValueArea
                         ariaLabel="curl text command simple"
+                        language="bash"
                         rows={4}
                         value={curl}
                         width="100%"
@@ -104,6 +110,23 @@
 
     .example {
         gap: 0.5rem;
+    }
+
+    .example p {
+        margin: 0;
+    }
+
+    pre.auth-example {
+        margin: 0;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--ui-outline);
+        background: var(--ui-container);
+        overflow: auto;
+    }
+
+    .auth-example code {
+        padding: 0;
+        background: none;
     }
 
     .secret {

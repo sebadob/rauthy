@@ -2,6 +2,7 @@ import { test, expect } from './fixtures.mjs';
 import { tab } from './helpers/clients.mjs';
 import { ADMIN_EMAIL } from './helpers/env.mjs';
 import { detailTab } from './helpers/users.mjs';
+import { chooseOption } from './helpers/ui.mjs';
 
 test('the compact language menu scrolls without visible scrollbars @webkit', async ({ page }) => {
     await page.goto('/auth/v1/');
@@ -188,9 +189,11 @@ test('scheduled delivery fields fit above the editor on a phone @mobile @webkit'
     await page.goto('/auth/v1/admin/users');
     await page.getByRole('button', { name: 'Send E-Mail' }).click();
     const dialog = page.getByRole('dialog');
+    await chooseOption(page, dialog.getByRole('combobox', { name: 'User Filter' }), 'Has Role');
     await dialog.getByRole('combobox', { name: 'Delivery', exact: true }).selectOption('scheduled');
     await expect(dialog.locator('.admin-date-field')).toBeInViewport({ ratio: 1 });
     await expect(dialog.locator('.admin-time-field')).toBeInViewport({ ratio: 1 });
+    await expect(dialog.getByRole('textbox', { name: 'Subject' })).toBeInViewport({ ratio: 1 });
     await expect(dialog.getByRole('textbox', { name: 'Edit Text' })).toBeInViewport({ ratio: 1 });
     await expect(dialog.getByRole('button', { name: 'Send', exact: true })).toBeInViewport({
         ratio: 1,
@@ -235,9 +238,96 @@ test('PAM host fields share the same size', async ({ page }) => {
     const group = dialog.getByRole('combobox', { name: 'Groupname' });
     await expect(hostname).toBeVisible();
     await expect(group).toBeVisible();
-    expect((await group.boundingBox())?.height).toBeCloseTo(
-        (await hostname.boundingBox())?.height ?? -1,
-        0,
+    await expect
+        .poll(async () => {
+            const [input, select] = await Promise.all([
+                hostname.boundingBox(),
+                group.boundingBox(),
+            ]);
+            return Math.abs((input?.height ?? 0) - (select?.height ?? -1));
+        })
+        .toBeLessThan(0.5);
+});
+
+test('Hostname and Groupname line up in an existing PAM host', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const id = 'example-host';
+    const name = 'demo-host';
+    await page.route('**/auth/v1/pam/groups', route =>
+        route.fulfill({ json: [{ id: 1, name: 'default', typ: 'host' }] }),
+    );
+    await page.route('**/auth/v1/pam/hosts', route =>
+        route.fulfill({ json: [{ id, name, aliases: [], addresses: [] }] }),
+    );
+    await page.route(`**/auth/v1/pam/hosts/${id}`, route =>
+        route.fulfill({
+            json: {
+                id,
+                hostname: name,
+                gid: 1,
+                secret: '',
+                force_mfa: true,
+                local_password_only: false,
+                ips: [],
+                aliases: [],
+            },
+        }),
+    );
+    await page.goto('/auth/v1/admin/pam');
+    const navigation = page.getByRole('main').getByRole('navigation');
+    await navigation.getByRole('button', { name: 'Hosts', exact: true }).click();
+    await navigation.getByRole('button', { name, exact: true }).click();
+    const hostname = page.getByRole('textbox', { name: 'Hostname', exact: true });
+    const group = page.getByRole('combobox', { name: 'Groupname' });
+    await expect(group).toHaveText('default');
+    const hostnameBox = await hostname.boundingBox();
+    const groupBox = await group.boundingBox();
+    expect(groupBox?.y).toBeCloseTo(hostnameBox?.y ?? -1, 0);
+    expect(groupBox?.height).toBeCloseTo(hostnameBox?.height ?? -1, 0);
+});
+
+test('encryption key status stays separate from the migration target', async ({ page }) => {
+    await page.route('**/auth/v1/encryption/keys', route =>
+        route.fulfill({ json: { active: 'current', keys: ['current', 'previous'] } }),
+    );
+    await page.goto('/auth/v1/admin/config/encryption');
+    const available = page.getByRole('region', { name: 'Available Keys' });
+    const first = available.getByRole('listitem').filter({ hasText: 'current' });
+    await expect(first.getByText('Active Key', { exact: true })).toBeVisible();
+    const heading = await available.getByRole('heading').boundingBox();
+    expect((await first.locator('code').boundingBox())?.x).toBeCloseTo(heading?.x ?? -1, 0);
+
+    const target = page.getByRole('combobox', { name: /Migrate all existing encrypted values/ });
+    await chooseOption(page, target, 'previous');
+    await expect(target).toHaveText('previous');
+    await expect(first.getByText('Active Key', { exact: true })).toBeVisible();
+    await expect(available.getByText('Active Key', { exact: true })).toHaveCount(1);
+});
+
+test('generated API key commands wrap without overlapping their controls', async ({ page }) => {
+    const name = 'demo-key';
+    const secret = `${name}$${'a'.repeat(90)}`;
+    await page.route('**/auth/v1/api_keys', route =>
+        route.fulfill({ json: { keys: [{ name, created: 1795273200, access: [] }] } }),
+    );
+    await page.route(`**/auth/v1/api_keys/${name}/secret`, route =>
+        route.fulfill({ contentType: 'text/plain', body: secret }),
+    );
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`/auth/v1/admin/api_keys?kn=${name}`);
+    await tab(page, 'Secret').click();
+    await page.getByRole('button', { name: 'Generate', exact: true }).click();
+    const command = page.getByRole('group', { name: 'curl text command with jq' });
+    const code = command.locator('pre code');
+    await expect(code).toHaveText(/^[•\s]+$/);
+    await command.getByRole('button', { name: 'Show', exact: true }).click();
+    await expect(code).toContainText(`Authorization: API-Key ${secret}`);
+    await expect(code).toContainText('| jq');
+    const pre = command.locator('pre');
+    expect(await pre.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
+    const actions = await command.getByRole('button', { name: 'Hide', exact: true }).boundingBox();
+    expect((await pre.boundingBox())?.y).toBeGreaterThanOrEqual(
+        (actions?.y ?? 0) + (actions?.height ?? 0),
     );
 });
 
@@ -256,7 +346,14 @@ test('client secret confirmation scrolls into view without rotating the secret',
         }
     });
     await generate.click();
-    await expect(page.getByRole('checkbox', { name: 'Client Secret Cache' })).toBeInViewport();
+    const cache = page.getByRole('checkbox', { name: 'Client Secret Cache' });
+    await expect(page.getByText(/Caution: You should not cache/)).toBeInViewport({ ratio: 1 });
+    await expect(cache).toBeInViewport({ ratio: 1 });
+    await expect(generate).toBeInViewport({ ratio: 1 });
+    await cache.check();
+    await expect(page.getByRole('spinbutton', { name: 'Cache Duration (hours)' })).toBeInViewport({
+        ratio: 1,
+    });
     await expect(generate).toBeInViewport({ ratio: 1 });
     expect(writes).toBe(0);
 });

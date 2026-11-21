@@ -358,9 +358,13 @@ test.describe('encryption keys', () => {
         await page.goto('/auth/v1/admin/config/encryption');
         const { active, keys } = await api(page, 'GET', 'encryption/keys');
 
-        await expect(main(page).getByText(`Active Key: ${active}`)).toBeVisible();
         const list = main(page).getByRole('list');
         await expect(list.getByRole('listitem')).toHaveCount(keys.length);
+        const activeItem = list.getByRole('listitem').filter({
+            has: page.getByText('Active Key', { exact: true }),
+        });
+        await expect(activeItem).toHaveCount(1);
+        await expect(activeItem.getByText(active, { exact: true })).toBeVisible();
         for (const k of keys) {
             await expect(list.getByRole('listitem').filter({ hasText: k })).toBeVisible();
         }
@@ -384,6 +388,7 @@ test.describe('encryption keys', () => {
         const other = keys.find((/** @type {string} */ k) => k !== active);
         await chooseOption(page, select, other);
         await expect(select).toHaveText(other);
+        await expect(activeItem.getByText(active, { exact: true })).toBeVisible();
         await chooseOption(page, select, active);
         await expect(select).toHaveText(active);
 
@@ -659,9 +664,9 @@ test.describe('terms of service', () => {
         await openToS(page);
         await main(page).getByRole('button', { name: 'New ToS', exact: true }).click();
         const dialog = page.getByRole('dialog');
-        const format = dialog.getByRole('combobox', { name: 'Format', exact: true });
-        await format.selectOption('Text');
-        await expect(format).toHaveValue('Text');
+        const format = dialog.getByRole('radio', { name: 'Plain text', exact: true });
+        await format.check();
+        await expect(format).toBeChecked();
         await dialog.getByRole('textbox', { name: 'Edit Text' }).fill('Plain *terms*');
         await dialog.getByRole('button', { name: 'Save' }).click();
         await expect(dialog).toBeHidden();

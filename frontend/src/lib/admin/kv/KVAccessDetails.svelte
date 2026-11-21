@@ -111,7 +111,13 @@
             disabled
             showCopy
         />
-        <HiddenValueArea ariaLabel="curl test-command" rows={5} value={curl} width="100%" />
+        <HiddenValueArea
+            ariaLabel="curl test-command"
+            language="bash"
+            rows={3}
+            value={curl}
+            width="100%"
+        />
     </div>
 {/if}
 

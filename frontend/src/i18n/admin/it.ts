@@ -256,6 +256,7 @@ export const I18nAdminIt: I18nAdmin = {
         filterType: ['Nessuno', 'Nel gruppo', 'Fuori dal gruppo', 'Con il ruolo', 'Senza il ruolo'],
         immediate: 'Immediato',
         jobs: 'Invii email',
+        recipients: 'Destinatari',
         scheduled: 'Invio programmato',
         scheduledDelivery: 'Programmato',
         sendAllUsers: 'L’email verrà inviata a tutti gli utenti.',

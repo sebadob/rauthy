@@ -1,5 +1,6 @@
 <script lang="ts">
     import IconEnvelope from '#icons/IconEnvelope.svelte';
+    import IconUserGroup from '#icons/IconUserGroup.svelte';
     import Button from '#lib/button/Button.svelte';
     import Modal from '#lib/Modal.svelte';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
@@ -67,6 +68,8 @@
     let isFilterRole = $derived(
         filter === ta.email.filterType[3] || filter === ta.email.filterType[4],
     );
+    let recipientFilter = $derived(isGroupAdmin ? ta.email.filterType[1] : filter);
+    let recipientValue = $derived(isGroupAdmin || isFilterGroup ? group : role);
 
     $effect(() => {
         // default to the first selectable group, and keep `group` valid if the list narrows
@@ -170,16 +173,6 @@
         title={ta.email.sendMail}
     >
         {#snippet fields()}
-            <div class="subject">
-                <Input
-                    label={ta.email.subject}
-                    placeholder={ta.email.subject}
-                    bind:value={subject}
-                    width="100%"
-                    maxLength={1024}
-                    required
-                />
-            </div>
             <div class="delivery-fields">
                 {#if !isGroupAdmin}
                     <div class="delivery-field admin-field-select">
@@ -245,22 +238,36 @@
                 {/if}
             </div>
         {/snippet}
+        {#snippet beforeEditor()}
+            <Input
+                label={ta.email.subject}
+                placeholder={ta.email.subject}
+                bind:value={subject}
+                width="100%"
+                maxLength={1024}
+                required
+            />
+        {/snippet}
         {#snippet footer()}
             <div class="send">
-                <p>
-                    {#if isGroupAdmin}
-                        {ta.email.sendAllUsersFiltered}
-                        <b>{`${ta.email.filterType[1]} ${group}`}</b>
-                    {:else if isFilterNone}
-                        {ta.email.sendAllUsers}
-                    {:else if isFilterGroup}
-                        {ta.email.sendAllUsersFiltered}
-                        <b>{`${filter} ${group}`}</b>
-                    {:else if isFilterRole}
-                        {ta.email.sendAllUsersFiltered}
-                        <b>{`${filter} ${role}`}</b>
-                    {/if}
-                </p>
+                <div class="recipient-summary" role="status" aria-atomic="true">
+                    <span class="recipient-icon" aria-hidden="true">
+                        <IconUserGroup width="1.125rem" />
+                    </span>
+                    <div class="recipient-copy">
+                        {#if isGroupAdmin || !isFilterNone}
+                            <span>{ta.email.recipients ?? ta.email.sendAllUsersFiltered}</span>
+                            <span class="recipient-filter">
+                                <span>{recipientFilter}</span>
+                                {#if recipientValue}
+                                    <strong>{recipientValue}</strong>
+                                {/if}
+                            </span>
+                        {:else}
+                            <span>{ta.email.sendAllUsers}</span>
+                        {/if}
+                    </div>
+                </div>
 
                 <div class="flex gap-10">
                     <Button
@@ -314,14 +321,43 @@
         }
     }
 
-    .subject {
-        --ui-field-margin: 0;
+    .recipient-summary {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: baseline;
+        gap: 0.5rem;
+        min-height: 1.5rem;
         margin-bottom: 0.5rem;
+        color: var(--ui-muted);
+        font-size: 0.8125rem;
     }
 
-    .send p {
-        margin: 0 0 0.5rem;
-        max-width: none;
-        font-size: 0.8125rem;
+    .recipient-icon {
+        display: inline-flex;
+        color: var(--ui-primary);
+    }
+
+    .recipient-copy {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.25rem 0.5rem;
+    }
+
+    .recipient-filter {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.125rem 0.375rem;
+        max-width: 100%;
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--border-radius);
+        background: var(--ui-tonal);
+        overflow-wrap: anywhere;
+    }
+
+    .recipient-filter strong {
+        min-width: 0;
+        color: var(--ui-text);
     }
 </style>

@@ -56,12 +56,14 @@
 <div class="ui-section-stack">
     <Section title={ta.docs.encKeys.keysAvailable}>
         {#if activeKey}
-            <p class="current">
-                {ta.docs.encKeys.keyActive}: <strong class="font-mono">{activeKey}</strong>
-            </p>
             <ul class="keys" role="list">
                 {#each keys as key (key)}
-                    <li class="font-mono" class:active={key === activeKey}>{key}</li>
+                    <li>
+                        <code>{key}</code>
+                        {#if key === activeKey}
+                            <span class="active-key">{ta.docs.encKeys.keyActive}</span>
+                        {/if}
+                    </li>
                 {/each}
             </ul>
         {/if}
@@ -95,37 +97,53 @@
 </div>
 
 <style>
-    .keys,
-    .controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.625rem;
-    }
-
     .keys {
         list-style: none;
         margin: 0;
         padding: 0;
+        border-block: 1px solid var(--ui-outline);
     }
 
     .keys li {
-        min-width: 5rem;
-        padding: 0.625rem 0.875rem;
-        border: 1px solid var(--ui-outline);
-        border-radius: var(--border-radius);
-        background: var(--ui-container);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        min-height: 2.75rem;
+        margin: 0;
+        padding-block: 0.375rem;
         font-size: var(--ui-control-font-size);
         overflow-wrap: anywhere;
     }
 
-    .keys li.active {
-        color: var(--ui-primary);
+    .keys li + li {
+        border-top: 1px solid var(--ui-outline);
+    }
+
+    .keys code {
+        min-width: 0;
+        padding: 0;
+        background: none;
+        font-size: inherit;
+    }
+
+    .active-key {
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--border-radius);
+        color: var(--ui-text);
         background: var(--ui-tonal);
-        border-color: var(--ui-primary);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: end;
     }
 
     .controls {
+        display: flex;
+        flex-wrap: wrap;
         align-items: end;
+        gap: 0.625rem;
+        --ui-button-height: var(--ui-field-height);
+        --ui-button-min-height: var(--ui-field-height);
     }
 
     .target {
@@ -137,9 +155,7 @@
     }
 
     details {
-        padding: 0.625rem 0.75rem;
-        border-radius: var(--border-radius);
-        background: var(--ui-container);
+        padding-block: 0.25rem;
     }
 
     summary {

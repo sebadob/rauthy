@@ -27,6 +27,7 @@
 
     let secret: undefined | string = $state();
     let showConfirm = $state(false);
+    let confirmation: HTMLDivElement | undefined = $state();
     let cacheSecret = $state(false);
     let cacheCurrentHours = $state('1');
 
@@ -77,6 +78,10 @@
             err = res.error?.message || 'Error';
         }
     }
+
+    function scrollConfirmation() {
+        confirmation?.scrollIntoView({ block: 'end', inline: 'nearest' });
+    }
 </script>
 
 <div class="container">
@@ -96,8 +101,10 @@
 
         {#if showConfirm}
             <div
+                class="confirmation"
+                bind:this={confirmation}
                 transition:slide={{ duration: 150 }}
-                onintroend={ev => ev.currentTarget.scrollIntoView({ block: 'nearest' })}
+                onintroend={scrollConfirmation}
             >
                 <p>{ta.clients.secret.rotateDesc1}</p>
                 <p><b>{ta.clients.secret.rotateDesc2}</b></p>
@@ -107,7 +114,7 @@
                 </InputCheckbox>
 
                 {#if cacheSecret}
-                    <div transition:slide={{ duration: 150 }}>
+                    <div transition:slide={{ duration: 150 }} onintroend={scrollConfirmation}>
                         <Input
                             typ="number"
                             label={ta.clients.secret.cacheDuration}
@@ -143,5 +150,9 @@
         margin: 0.5rem 0;
         /* matches <p> max width */
         max-width: 467pt;
+    }
+
+    .confirmation {
+        scroll-margin-block-end: 0.75rem;
     }
 </style>

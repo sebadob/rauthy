@@ -93,9 +93,7 @@ test.describe('send e-mail', () => {
             'aria-required',
             'true',
         );
-        await expect(dialog.getByRole('combobox', { name: 'Format', exact: true })).toHaveValue(
-            'Markdown',
-        );
+        await expect(dialog.getByRole('radio', { name: 'Markdown', exact: true })).toBeChecked();
         await expect(dialog.getByRole('button', { name: 'Send' })).toBeDisabled();
 
         await dialog.getByRole('button', { name: 'Close' }).click();
@@ -137,6 +135,7 @@ test.describe('send e-mail', () => {
             .sort((/** @type {string} */ a, /** @type {string} */ b) => a.localeCompare(b));
         const dialog = await openCompose(page);
         const type = filters(dialog).first();
+        const summary = dialog.getByRole('status');
 
         // the chosen group / role is kept when switching between "In" and "Not in"
         /** @type {Map<readonly string[], string>} */
@@ -153,17 +152,12 @@ test.describe('send e-mail', () => {
             await expect(filters(dialog)).toHaveCount(2);
             const value = filters(dialog).nth(1);
             await expect(value).toHaveText(current);
-            await expect(
-                dialog.getByText(
-                    `This E-Mail will be sent to all users filtered by: ${filter} ${current}`,
-                ),
-            ).toBeVisible();
+            await expect(summary.getByText(filter, { exact: true })).toBeVisible();
+            await expect(summary.getByText(current, { exact: true })).toBeVisible();
             const last = values[values.length - 1];
             await chooseOption(page, value, last);
             kept.set(values, last);
-            await expect(
-                dialog.getByText(`filtered by: ${filter} ${last}`, { exact: false }),
-            ).toBeVisible();
+            await expect(summary.getByText(last, { exact: true })).toBeVisible();
         }
 
         await chooseOption(page, type, 'None');
@@ -184,7 +178,7 @@ test.describe('send e-mail', () => {
             await chooseOption(page, filters(dialog).first(), 'In Group');
             await chooseOption(page, filters(dialog).nth(1), target.group.name);
             await expect(
-                dialog.getByText(`filtered by: In Group ${target.group.name}`, { exact: false }),
+                dialog.getByRole('status').getByText(target.group.name, { exact: true }),
             ).toBeVisible();
 
             const subject = unique('E2E mass mail');
@@ -253,9 +247,9 @@ test.describe('send e-mail', () => {
         const dialog = await openCompose(page);
         await chooseOption(page, filters(dialog).first(), 'Has not Role');
         await dialog.getByRole('textbox', { name: 'Subject' }).fill('Plain');
-        const format = dialog.getByRole('combobox', { name: 'Format', exact: true });
-        await format.selectOption('Text');
-        await expect(format).toHaveValue('Text');
+        const format = dialog.getByRole('radio', { name: 'Plain text', exact: true });
+        await format.check();
+        await expect(format).toBeChecked();
         await editor(dialog).fill('Just *plain* text');
         await dialog.getByRole('button', { name: 'Send' }).click();
         await expect(page.getByRole('dialog')).toBeHidden();
