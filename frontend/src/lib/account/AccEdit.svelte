@@ -143,120 +143,116 @@
     {#if config}
         <Form action={`/auth/v1/users/${user.id}/self`} {onSubmit}>
             <div class="formInner">
-                <div>
+                <Input
+                    typ="email"
+                    name="email"
+                    label={t.common.email}
+                    placeholder={t.common.email}
+                    value={user.email}
+                    required
+                />
+                {#if config.given_name !== 'hidden'}
                     <Input
-                        typ="email"
-                        name="email"
-                        label={t.common.email}
-                        placeholder={t.common.email}
-                        value={user.email}
-                        required
+                        name="given_name"
+                        autocomplete="given-name"
+                        label={t.account.givenName}
+                        placeholder={t.account.givenName}
+                        value={user.given_name}
+                        required={config.given_name === 'required'}
+                        maxLength={32}
+                        pattern={PATTERN_USER_NAME}
                     />
-                    {#if config.given_name !== 'hidden'}
-                        <Input
-                            name="given_name"
-                            autocomplete="given-name"
-                            label={t.account.givenName}
-                            placeholder={t.account.givenName}
-                            value={user.given_name}
-                            required={config.given_name === 'required'}
-                            maxLength={32}
-                            pattern={PATTERN_USER_NAME}
-                        />
-                    {/if}
-                    {#if config.family_name !== 'hidden'}
-                        <Input
-                            name="family_name"
-                            autocomplete="family-name"
-                            label={t.account.familyName}
-                            placeholder={t.account.familyName}
-                            value={user.family_name}
-                            required={config.family_name === 'required'}
-                            maxLength={32}
-                            pattern={PATTERN_USER_NAME}
-                        />
-                    {/if}
-                    {#if config.birthdate !== 'hidden'}
-                        <InputDateTimeCombo
-                            name="birthdate"
-                            label={t.account.birthdate}
-                            bind:value={user.user_values.birthdate}
-                            required={config.birthdate === 'required'}
-                            withDelete
-                            openTop
-                        />
-                    {/if}
-                    {#if config.tz !== 'hidden'}
-                        <div><TZSelect bind:value={user.user_values.tz} /></div>
-                    {/if}
-                    <PreferredUsername
-                        userId={user.id}
-                        bind:preferred_username={user.user_values.preferred_username}
-                        config={config.preferred_username}
+                {/if}
+                {#if config.family_name !== 'hidden'}
+                    <Input
+                        name="family_name"
+                        autocomplete="family-name"
+                        label={t.account.familyName}
+                        placeholder={t.account.familyName}
+                        value={user.family_name}
+                        required={config.family_name === 'required'}
+                        maxLength={32}
+                        pattern={PATTERN_USER_NAME}
                     />
-                </div>
-                <div>
-                    {#if config.street !== 'hidden'}
-                        <Input
-                            name="street"
-                            autocomplete="street-address"
-                            label={t.account.street}
-                            placeholder={t.account.street}
-                            value={user.user_values.street}
-                            required={config.street === 'required'}
-                            maxLength={48}
-                            pattern={PATTERN_STREET}
-                        />
-                    {/if}
-                    {#if config.zip !== 'hidden'}
-                        <Input
-                            name="zip"
-                            autocomplete="postal-code"
-                            label={t.account.zip}
-                            placeholder={t.account.zip}
-                            value={user.user_values.zip}
-                            required={config.zip === 'required'}
-                            maxLength={24}
-                            pattern={PATTERN_ALNUM}
-                        />
-                    {/if}
-                    {#if config.city !== 'hidden'}
-                        <Input
-                            name="city"
-                            autocomplete="address-level2"
-                            label={t.account.city}
-                            placeholder={t.account.city}
-                            value={user.user_values.city}
-                            required={config.city === 'required'}
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
-                        />
-                    {/if}
-                    {#if config.country !== 'hidden'}
-                        <Input
-                            name="country"
-                            autocomplete="country"
-                            label={t.account.country}
-                            placeholder={t.account.country}
-                            value={user.user_values.country}
-                            required={config.country === 'required'}
-                            maxLength={48}
-                            pattern={PATTERN_CITY}
-                        />
-                    {/if}
-                    {#if config.phone !== 'hidden'}
-                        <Input
-                            name="phone"
-                            autocomplete="tel"
-                            label={t.account.phone}
-                            placeholder={t.account.phone}
-                            value={user.user_values.phone}
-                            required={config.phone === 'required'}
-                            maxLength={32}
-                            pattern={PATTERN_PHONE}
-                        />
-                    {/if}
-                </div>
+                {/if}
+                <PreferredUsername
+                    userId={user.id}
+                    bind:preferred_username={user.user_values.preferred_username}
+                    config={config.preferred_username}
+                />
+                {#if config.birthdate !== 'hidden'}
+                    <InputDateTimeCombo
+                        name="birthdate"
+                        label={t.account.birthdate}
+                        bind:value={user.user_values.birthdate}
+                        required={config.birthdate === 'required'}
+                        withDelete
+                        openTop
+                    />
+                {/if}
+                {#if config.tz !== 'hidden'}
+                    <div><TZSelect bind:value={user.user_values.tz} /></div>
+                {/if}
+                {#if config.street !== 'hidden'}
+                    <Input
+                        name="street"
+                        autocomplete="street-address"
+                        label={t.account.street}
+                        placeholder={t.account.street}
+                        value={user.user_values.street}
+                        required={config.street === 'required'}
+                        maxLength={48}
+                        pattern={PATTERN_STREET}
+                    />
+                {/if}
+                {#if config.zip !== 'hidden'}
+                    <Input
+                        name="zip"
+                        autocomplete="postal-code"
+                        label={t.account.zip}
+                        placeholder={t.account.zip}
+                        value={user.user_values.zip}
+                        required={config.zip === 'required'}
+                        maxLength={24}
+                        pattern={PATTERN_ALNUM}
+                    />
+                {/if}
+                {#if config.city !== 'hidden'}
+                    <Input
+                        name="city"
+                        autocomplete="address-level2"
+                        label={t.account.city}
+                        placeholder={t.account.city}
+                        value={user.user_values.city}
+                        required={config.city === 'required'}
+                        maxLength={48}
+                        pattern={PATTERN_CITY}
+                    />
+                {/if}
+                {#if config.country !== 'hidden'}
+                    <Input
+                        name="country"
+                        autocomplete="country"
+                        label={t.account.country}
+                        placeholder={t.account.country}
+                        value={user.user_values.country}
+                        required={config.country === 'required'}
+                        maxLength={48}
+                        pattern={PATTERN_CITY}
+                    />
+                {/if}
+                {#if config.phone !== 'hidden'}
+                    <Input
+                        name="phone"
+                        autocomplete="tel"
+                        label={t.account.phone}
+                        placeholder={t.account.phone}
+                        value={user.user_values.phone}
+                        required={config.phone === 'required'}
+                        maxLength={32}
+                        pattern={PATTERN_PHONE}
+                    />
+                {/if}
             </div>
 
             <div class="bottom">
@@ -344,16 +340,10 @@
     .formInner {
         --ui-field-margin: 0;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-        gap: var(--ui-space);
-        max-width: 48rem;
-    }
-
-    .formInner > div {
-        display: grid;
-        align-content: start;
-        gap: var(--ui-space);
-        min-width: 0;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+        align-items: start;
+        gap: 0.75rem var(--ui-space);
+        max-width: 60rem;
     }
 
     .formInner + .bottom {

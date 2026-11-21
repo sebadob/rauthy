@@ -5,8 +5,10 @@
     import { fetchGet } from '#api/fetch.ts';
     import type { Argon2ParamsResponse, LoginTimeResponse } from '#api/types/login_times.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
+    import { useI18n } from '#state/i18n.svelte.ts';
 
     let ta = useI18nAdmin();
+    let t = useI18n();
 
     let params: undefined | Argon2ParamsResponse = $state();
     let loginTime: undefined | number = $state();
@@ -27,8 +29,6 @@
 <h2 class="ui-page-title">Argon2ID - Password Hashing</h2>
 
 <div class="ui-section-stack">
-    <p class="ui-muted-copy">{ta.docs.hashing.pUtility}</p>
-
     <Section title={ta.docs.hashing.currValuesHead}>
         <p class="ui-muted-copy">{ta.docs.hashing.currValues1}</p>
         {#if params}
@@ -48,9 +48,13 @@
     </Section>
 
     <Section title={ta.docs.hashing.utilityHead}>
-        <p class="ui-muted-copy">{ta.docs.hashing.utility1}</p>
-        <p class="ui-muted-copy">{@html ta.docs.hashing.utility2}</p>
+        <p class="ui-muted-copy">{ta.docs.hashing.pUtility}</p>
         {#if params}<Argon2Utility {params} />{/if}
+        <details>
+            <summary>{t.common.details}</summary>
+            <p class="ui-muted-copy">{ta.docs.hashing.utility1}</p>
+            <p class="ui-muted-copy">{@html ta.docs.hashing.utility2}</p>
+        </details>
     </Section>
 
     <Section>
@@ -99,6 +103,15 @@
         padding: 0.625rem;
         border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
+        background: var(--ui-container);
+    }
+
+    .stats strong {
+        font-variant-numeric: tabular-nums;
+    }
+
+    p {
+        margin: 0;
     }
 
     .stats span {
@@ -106,9 +119,23 @@
         font-size: 0.8125rem;
     }
 
+    details {
+        padding: 0.625rem 0.75rem;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
+    }
+
     summary {
         cursor: pointer;
-        width: fit-content;
+        font-size: var(--ui-control-font-size);
+    }
+
+    .params > div {
+        min-width: 0;
+        padding: 0.75rem;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
+        background: var(--ui-surface);
     }
 
     details p,

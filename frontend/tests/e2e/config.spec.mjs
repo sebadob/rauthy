@@ -317,12 +317,11 @@ test.describe('password hashing (argon2)', () => {
         const { results } = await res.json();
         expect(results.length).toBeGreaterThan(0);
 
-        // FINDING: the results are a grid of divs, not a table, so rows and columns have no
-        // semantics; the values can only be found as text.
-        await expect(main(page).getByText('ms', { exact: true })).toBeVisible();
+        const table = main(page).getByRole('table');
+        await expect(table.getByRole('columnheader', { name: 'ms', exact: true })).toBeVisible();
         for (const r of results) {
             await expect(
-                main(page).getByText(String(r.time_taken), { exact: true }).first(),
+                table.getByRole('cell', { name: String(r.time_taken), exact: true }).first(),
             ).toBeVisible();
         }
         // the longest run reached the target

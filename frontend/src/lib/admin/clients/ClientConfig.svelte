@@ -429,220 +429,247 @@
             </Section>
         </section>
 
-        <section data-client-section="1" hidden={section !== 1} class="admin-form-section">
-            <p class="mb-0"><b>Authentication Flows</b></p>
-            <InputCheckbox ariaLabel="authorization_code" bind:checked={flows.authorizationCode}>
-                authorization_code
-            </InputCheckbox>
-            <InputCheckbox
-                ariaLabel="urn:ietf:params:oauth:grant-type:device_code"
-                bind:checked={flows.deviceCode}
-            >
-                device_code
-            </InputCheckbox>
-            <InputCheckbox ariaLabel="client_credentials" bind:checked={flows.clientCredentials}>
-                client_credentials
-            </InputCheckbox>
-            <InputCheckbox ariaLabel="password" bind:checked={flows.password}
-                >password</InputCheckbox
-            >
-            {#if forceMfa && flows.password}
-                <div transition:slide={{ duration: 150 }} class="passwordMfaWarn">
-                    {ta.clients.passwordFlowMfaWarn}
-                </div>
-            {/if}
-            <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
-                refresh_token
-            </InputCheckbox>
-            <InputCheckbox
-                ariaLabel="urn:ietf:params:oauth:grant-type:token-exchange"
-                bind:checked={flows.tokenExchange}
-            >
-                token_exchange
-            </InputCheckbox>
-
-            <div style:height=".5rem"></div>
-            {#if flows.tokenExchange}
-                <div transition:slide={{ duration: 150 }} class="tokenExchangeOpts">
+        <section data-client-section="1" hidden={section !== 1} class="settings-cards">
+            <Section title="Authentication Flows">
+                <div class="client-flow-options">
                     <InputCheckbox
-                        ariaLabel={ta.clients.actorSameClient}
-                        bind:checked={actorSameClient}
+                        ariaLabel="authorization_code"
+                        bind:checked={flows.authorizationCode}
                     >
-                        {ta.clients.actorSameClient}
+                        authorization_code
                     </InputCheckbox>
-                    <p class="desc">{ta.clients.descActorSameClient}</p>
+                    <InputCheckbox
+                        ariaLabel="urn:ietf:params:oauth:grant-type:device_code"
+                        bind:checked={flows.deviceCode}
+                    >
+                        device_code
+                    </InputCheckbox>
+                    <InputCheckbox
+                        ariaLabel="client_credentials"
+                        bind:checked={flows.clientCredentials}
+                    >
+                        client_credentials
+                    </InputCheckbox>
+                    <InputCheckbox ariaLabel="password" bind:checked={flows.password}
+                        >password</InputCheckbox
+                    >
+                    <InputCheckbox ariaLabel="refresh_token" bind:checked={flows.refreshToken}>
+                        refresh_token
+                    </InputCheckbox>
+                    <InputCheckbox
+                        ariaLabel="urn:ietf:params:oauth:grant-type:token-exchange"
+                        bind:checked={flows.tokenExchange}
+                    >
+                        token_exchange
+                    </InputCheckbox>
                 </div>
-            {/if}
+                {#if forceMfa && flows.password}
+                    <div transition:slide={{ duration: 150 }} class="passwordMfaWarn">
+                        {ta.clients.passwordFlowMfaWarn}
+                    </div>
+                {/if}
+                {#if flows.tokenExchange}
+                    <div transition:slide={{ duration: 150 }} class="tokenExchangeOpts">
+                        <InputCheckbox
+                            ariaLabel={ta.clients.actorSameClient}
+                            bind:checked={actorSameClient}
+                        >
+                            {ta.clients.actorSameClient}
+                        </InputCheckbox>
+                        <p class="settings-hint">{ta.clients.descActorSameClient}</p>
+                    </div>
+                {/if}
+            </Section>
 
-            <p class="mb-0"><b>PKCE</b></p>
-            <p class="desc">{ta.clients.descPKCE}</p>
-            <p class="desc"><strong>{ta.clients.descPKCEEnforce}</strong></p>
-            <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}
-                >plain</InputCheckbox
-            >
-            <InputCheckbox ariaLabel="PKCE S256" bind:checked={challenges.s256}>S256</InputCheckbox>
-
-            {#if !confidential && !challenges.plain && !challenges.s256}
-                <div class="err" transition:slide={{ duration: 150 }}>
-                    {ta.clients.errConfidentialPKCE}
+            <Section title="PKCE">
+                <p class="settings-hint">{ta.clients.descPKCE}</p>
+                <p class="settings-hint"><strong>{ta.clients.descPKCEEnforce}</strong></p>
+                <div class="client-flags">
+                    <InputCheckbox ariaLabel="PKCE plain" bind:checked={challenges.plain}
+                        >plain</InputCheckbox
+                    >
+                    <InputCheckbox ariaLabel="PKCE S256" bind:checked={challenges.s256}
+                        >S256</InputCheckbox
+                    >
                 </div>
-            {/if}
-            <div style:height=".5rem"></div>
+                {#if !confidential && !challenges.plain && !challenges.s256}
+                    <div class="err" transition:slide={{ duration: 150 }}>
+                        {ta.clients.errConfidentialPKCE}
+                    </div>
+                {/if}
+            </Section>
 
-            <p class="mb-0"><b>Origin</b></p>
-            <p class="desc">{ta.clients.descOrigin}</p>
-            <InputTags
-                bind:values={origins}
-                label="Allowed Origins"
-                errMsg={ta.validation.origin}
-                pattern={PATTERN_ORIGIN}
-            />
-
-            <p class="desc">{@html ta.clients.descUri}</p>
-            <InputTags
-                bind:values={redirectURIs}
-                label="Redirect URIs"
-                errMsg={ta.validation.uri}
-                required={flows.authorizationCode}
-                pattern={PATTERN_CLIENT_URI}
-                validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
-            />
-            {#if redirectURIsErr}
-                <div class="err" transition:slide={{ duration: 150 }}>
-                    {redirectURIsErr}
-                </div>
-            {/if}
-            <InputTags
-                bind:values={postLogoutRedirectURIs}
-                label="Post Logout Redirect URIs"
-                errMsg={ta.validation.uri}
-                pattern={PATTERN_CLIENT_URI}
-                validate={uri => postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
-            />
-            {#if postLogoutRedirectURIsErr}
-                <div class="err" transition:slide={{ duration: 150 }}>
-                    {postLogoutRedirectURIsErr}
-                </div>
-            {/if}
-
-            <div style:height=".5rem"></div>
-            <p class="mb-0"><b>Consent</b></p>
-            <p class="desc">{ta.clients.consent.desc}</p>
-            <LabeledValue label={ta.clients.consent.source}>
-                <Options
-                    ariaLabel={ta.clients.consent.source}
-                    options={consentOptions}
-                    bind:value={consentMode}
-                    borderless
+            <Section title="Origins and Redirect URIs">
+                <p class="settings-hint">{ta.clients.descOrigin}</p>
+                <InputTags
+                    bind:values={origins}
+                    label="Allowed Origins"
+                    errMsg={ta.validation.origin}
+                    pattern={PATTERN_ORIGIN}
                 />
-            </LabeledValue>
-            {#if consentMode === consentUrl}
-                <div transition:slide={{ duration: 150 }}>
-                    <Input
-                        typ="url"
-                        bind:value={consentSourceUrl}
-                        autocomplete="off"
-                        label={ta.clients.consent.source}
-                        placeholder="https://"
-                        width={inputWidth}
-                        maxLength={1024}
-                        pattern={PATTERN_CONSENT_URL}
-                        required
-                    />
-                </div>
-            {/if}
 
-            <div style:height=".5rem"></div>
-            <InputCheckbox ariaLabel={ta.clients.confidential} bind:checked={confidential}>
-                {ta.clients.confidential}
-            </InputCheckbox>
-            {#if section === 1}
-                {#key client.id}
-                    <ClientSecret {client} />
-                {/key}
-            {/if}
+                <p class="settings-hint">{@html ta.clients.descUri}</p>
+                <InputTags
+                    bind:values={redirectURIs}
+                    label="Redirect URIs"
+                    errMsg={ta.validation.uri}
+                    required={flows.authorizationCode}
+                    pattern={PATTERN_CLIENT_URI}
+                    validate={uri => redirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
+                />
+                {#if redirectURIsErr}
+                    <div class="err" transition:slide={{ duration: 150 }}>
+                        {redirectURIsErr}
+                    </div>
+                {/if}
+                <InputTags
+                    bind:values={postLogoutRedirectURIs}
+                    label="Post Logout Redirect URIs"
+                    errMsg={ta.validation.uri}
+                    pattern={PATTERN_CLIENT_URI}
+                    validate={uri =>
+                        postLogoutRedirectUriShapeErrorMsg(uri, ta.validation.redirectUri)}
+                />
+                {#if postLogoutRedirectURIsErr}
+                    <div class="err" transition:slide={{ duration: 150 }}>
+                        {postLogoutRedirectURIsErr}
+                    </div>
+                {/if}
+            </Section>
+
+            <Section title="Consent">
+                <p class="settings-hint">{ta.clients.consent.desc}</p>
+                <LabeledValue label={ta.clients.consent.source}>
+                    <Options
+                        ariaLabel={ta.clients.consent.source}
+                        options={consentOptions}
+                        bind:value={consentMode}
+                        borderless
+                    />
+                </LabeledValue>
+                {#if consentMode === consentUrl}
+                    <div transition:slide={{ duration: 150 }}>
+                        <Input
+                            typ="url"
+                            bind:value={consentSourceUrl}
+                            autocomplete="off"
+                            label={ta.clients.consent.source}
+                            placeholder="https://"
+                            width={inputWidth}
+                            maxLength={1024}
+                            pattern={PATTERN_CONSENT_URL}
+                            required
+                        />
+                    </div>
+                {/if}
+            </Section>
+
+            <Section title="Client Credentials">
+                <InputCheckbox ariaLabel={ta.clients.confidential} bind:checked={confidential}>
+                    {ta.clients.confidential}
+                </InputCheckbox>
+                {#if section === 1}
+                    {#key client.id}
+                        <ClientSecret {client} />
+                    {/key}
+                {/if}
+            </Section>
         </section>
 
-        <section data-client-section="2" hidden={section !== 2} class="admin-form-section">
-            <p class="mb-0"><b>Resource Indicators</b></p>
-            <p class="desc">{ta.clients.descAllowedResources}</p>
-            <InputTags
-                bind:values={allowedResources}
-                label={ta.clients.allowedResources}
-                errMsg={ta.validation.uri}
-                pattern={PATTERN_RESOURCE}
-            />
-            <p class="desc">{ta.clients.descDefaultAud}</p>
-            <InputTags
-                bind:values={defaultAud}
-                label={ta.clients.defaultAud}
-                errMsg={ta.validation.uri}
-                pattern={PATTERN_RESOURCE}
-            />
+        <section data-client-section="2" hidden={section !== 2} class="settings-cards">
+            <Section title="Resource Indicators">
+                <div class="client-pair">
+                    <div>
+                        <InputTags
+                            bind:values={allowedResources}
+                            label={ta.clients.allowedResources}
+                            width={inputWidth}
+                            errMsg={ta.validation.uri}
+                            pattern={PATTERN_RESOURCE}
+                        />
+                        <p class="settings-hint">{ta.clients.descAllowedResources}</p>
+                    </div>
+                    <div>
+                        <InputTags
+                            bind:values={defaultAud}
+                            label={ta.clients.defaultAud}
+                            width={inputWidth}
+                            errMsg={ta.validation.uri}
+                            pattern={PATTERN_RESOURCE}
+                        />
 
-            <div style:height=".5rem"></div>
-            <p class="mb-0"><b>Scopes</b></p>
-            <p class="desc">{@html ta.clients.scopes.desc}</p>
-            <SelectList bind:items={scopes}>
-                {ta.clients.scopes.allowed}
-            </SelectList>
-            <SelectList bind:items={defaultScopes}>
-                {ta.clients.scopes.default}
-            </SelectList>
+                        <p class="settings-hint">{ta.clients.descDefaultAud}</p>
+                    </div>
+                </div>
+            </Section>
 
-            <div style:height=".75rem"></div>
-            <p class="mb-0"><b>Tokens</b></p>
-            <p>{ta.clients.tokenLifetime.p1}</p>
-            <Input
-                typ="number"
-                bind:value={tokenLifetime}
-                autocomplete="off"
-                label="Token Lifetime"
-                placeholder="Token Lifetime"
-                width={inputWidth}
-                min="10"
-                max="86400"
-                errMsg="10 <= Token Lifetime <= 86400"
-            />
+            <Section title="Scopes">
+                <p class="settings-hint">{@html ta.clients.scopes.desc}</p>
+                <div class="client-pair">
+                    <SelectList maxWidth="100%" bind:items={scopes}>
+                        {ta.clients.scopes.allowed}
+                    </SelectList>
+                    <SelectList maxWidth="100%" bind:items={defaultScopes}>
+                        {ta.clients.scopes.default}
+                    </SelectList>
+                </div>
+            </Section>
 
-            <div style:height=".5rem"></div>
-            <p>{ta.clients.tokenLifetime.p2}</p>
-            <p>{ta.clients.tokenLifetime.p3}</p>
-            <LabeledValue label="Access Token Algorithm">
-                <Options
-                    ariaLabel="Access Token Algorithm"
-                    options={optionsAlgs}
-                    bind:value={accessTokenAlg}
-                    borderless
-                />
-            </LabeledValue>
-            <LabeledValue label="ID Token Algorithm">
-                <Options
-                    ariaLabel="ID Token Algorithm"
-                    options={optionsAlgs}
-                    bind:value={idTokenAlg}
-                    borderless
-                />
-            </LabeledValue>
+            <Section title="Token Lifetimes">
+                <div class="client-pair">
+                    <Input
+                        typ="number"
+                        bind:value={tokenLifetime}
+                        autocomplete="off"
+                        label="Token Lifetime"
+                        placeholder="Token Lifetime"
+                        description={ta.clients.tokenLifetime.p1}
+                        width={inputWidth}
+                        min="10"
+                        max="86400"
+                        errMsg="10 <= Token Lifetime <= 86400"
+                    />
 
-            <div style:height=".5rem"></div>
-            <p>{ta.clients.descAuthCode}</p>
-            <Input
-                typ="number"
-                bind:value={authCodeLifetime}
-                autocomplete="off"
-                label="Auth Code Lifetime"
-                placeholder="Auth Code Lifetime"
-                width={inputWidth}
-                min="10"
-                max="300"
-                errMsg="10 <= Auth Code Lifetime <= 300"
-            />
+                    <Input
+                        typ="number"
+                        bind:value={authCodeLifetime}
+                        autocomplete="off"
+                        label="Auth Code Lifetime"
+                        placeholder="Auth Code Lifetime"
+                        description={ta.clients.descAuthCode}
+                        width={inputWidth}
+                        min="10"
+                        max="300"
+                        errMsg="10 <= Auth Code Lifetime <= 300"
+                    />
+                </div>
+            </Section>
 
-            <div style:height=".5rem"></div>
-            <p class="mb-0"><b>Custom Claims</b></p>
-            <p class="desc">{ta.clients.claimsDesc}</p>
-            <div class="claims">
+            <Section title="Token Algorithms">
+                <div class="client-pair">
+                    <LabeledValue label="Access Token Algorithm">
+                        <Options
+                            ariaLabel="Access Token Algorithm"
+                            options={optionsAlgs}
+                            bind:value={accessTokenAlg}
+                            borderless
+                        />
+                    </LabeledValue>
+                    <LabeledValue label="ID Token Algorithm">
+                        <Options
+                            ariaLabel="ID Token Algorithm"
+                            options={optionsAlgs}
+                            bind:value={idTokenAlg}
+                            borderless
+                        />
+                    </LabeledValue>
+                </div>
+                <p class="settings-hint">{ta.clients.tokenLifetime.p2}</p>
+                <p class="settings-hint">{ta.clients.tokenLifetime.p3}</p>
+            </Section>
+
+            <Section title="Custom Claims">
+                <p class="settings-hint">{ta.clients.claimsDesc}</p>
                 <InputArea
                     label={ta.clients.claims}
                     placeholder={ta.clients.claims}
@@ -650,22 +677,22 @@
                     bind:value={jsonClaims}
                     formatBadge={t.account.stringOrJson ?? 'String / JSON'}
                 />
-            </div>
-            <InputCheckbox ariaLabel={ta.clients.claimsAtRoot} bind:checked={claimsAtRoot}>
-                {ta.clients.claimsAtRoot}
-            </InputCheckbox>
-            {#if claimsAtRoot}
-                <p class="warn">
-                    {ta.clients.claimsAtRootWarning}
-                    <a
-                        href="https://www.iana.org/assignments/jwt/jwt.xhtml"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        IANA JWT Claims Registry
-                    </a>
-                </p>
-            {/if}
+                <InputCheckbox ariaLabel={ta.clients.claimsAtRoot} bind:checked={claimsAtRoot}>
+                    {ta.clients.claimsAtRoot}
+                </InputCheckbox>
+                {#if claimsAtRoot}
+                    <p class="warn">
+                        {ta.clients.claimsAtRootWarning}
+                        <a
+                            href="https://www.iana.org/assignments/jwt/jwt.xhtml"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            IANA JWT Claims Registry
+                        </a>
+                    </p>
+                {/if}
+            </Section>
         </section>
 
         <section data-client-section="3" hidden={section !== 3} class="settings-cards">
@@ -792,21 +819,33 @@
         display: none;
     }
 
-    .desc {
-        margin-bottom: -0.25rem;
+    .client-pair,
+    .client-flow-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--ui-space);
     }
 
-    .container {
-        /* matches <p> max width */
-        max-width: 467pt;
+    .client-flow-options {
+        gap: 0.375rem var(--ui-space);
     }
 
-    .mb-0 {
-        margin-bottom: 0;
+    .settings-cards :global(.admin-tags-field),
+    .settings-cards :global(.admin-selection-field),
+    .client-pair :global(.admin-labeled-value) {
+        margin-block: 0;
     }
 
-    .claims {
-        max-width: 40rem;
+    @media (width < 1000px) {
+        .client-pair {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    @media (width < 520px) {
+        .client-flow-options {
+            grid-template-columns: minmax(0, 1fr);
+        }
     }
 
     .passwordMfaWarn {
@@ -908,25 +947,8 @@
         padding-inline-start: 1.25rem;
     }
 
-    .admin-form-section {
-        padding: 24px;
-        border: 1px solid var(--ui-outline);
-        border-radius: var(--border-radius);
-        min-width: 0;
-        background: transparent;
-    }
-    .admin-form-section :global(h3) {
-        margin: 0 0 24px;
-        color: var(--ui-text);
-        font-size: 16px;
-        font-weight: 600;
-        line-height: 24px;
-    }
     .admin-client-config > :global(form) > :global(section) {
         margin: 20px 0;
-    }
-    .admin-client-config :global(.desc) {
-        margin: 16px 0 8px;
     }
     .admin-save-bar {
         display: flex;
@@ -941,16 +963,9 @@
         border-top: 1px solid var(--ui-outline);
     }
     @media (max-width: 800px) {
-        .admin-form-section {
-            padding: 20px;
-        }
         .admin-save-bar {
             bottom: -24px;
             margin-bottom: -24px;
         }
-    }
-
-    .admin-client-config {
-        max-width: none;
     }
 </style>

@@ -6,17 +6,15 @@
         ariaLabel,
         accept,
         disabled,
-        alwaysVisible = true,
     }: {
         files?: File[];
         ariaLabel: string;
         accept: string;
         disabled?: boolean;
-        alwaysVisible?: boolean;
     } = $props();
 </script>
 
-<label class="image-edit" class:alwaysVisible title={ariaLabel}>
+<label class="image-edit" title={ariaLabel}>
     <input
         type="file"
         aria-label={ariaLabel}
@@ -63,9 +61,9 @@
         background: var(--ui-surface, hsl(var(--bg)));
         color: var(--ui-muted, hsl(var(--text)));
         opacity: 0;
+        transition: opacity 140ms ease;
     }
 
-    .alwaysVisible .edit-picture,
     .image-edit:hover .edit-picture,
     .image-edit:focus-within .edit-picture {
         opacity: 1;
@@ -75,6 +73,12 @@
     input:focus-visible + .edit-picture {
         border-color: var(--ui-primary, hsl(var(--action)));
         color: var(--ui-primary, hsl(var(--action)));
+    }
+
+    @media (hover: none) {
+        .image-edit:not(:focus-within) .edit-picture {
+            opacity: 0.4;
+        }
     }
 
     input:focus-visible + .edit-picture {

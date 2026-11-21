@@ -7,7 +7,6 @@
     import { fetchPut } from '#api/fetch.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
-    import InputPassword from '#lib/form/InputPassword.svelte';
 
     let {
         key,
@@ -58,14 +57,9 @@
         <p class="warning">{ta.api_key.generate2}</p>
         {#if secret}
             <div class="secret" transition:slide={{ duration: 150 }}>
-                <InputPassword
-                    autocomplete="off"
-                    value={secret}
-                    label="API Key"
-                    placeholder="API Key"
-                    disabled
-                    showCopy
-                />
+                {#key secret}
+                    <HiddenValueArea ariaLabel="API Key" rows={2} value={secret} width="100%" />
+                {/key}
             </div>
         {/if}
         {#if err}<p class="err" role="alert">{err}</p>{/if}
@@ -88,7 +82,12 @@
             <div class="example">
                 <p class="ui-muted-copy">{@html ta.api_key.generate5}</p>
                 {#key curl}
-                    <HiddenValueArea ariaLabel="curl text command simple" rows={3} value={curl} />
+                    <HiddenValueArea
+                        ariaLabel="curl text command simple"
+                        rows={3}
+                        value={curl}
+                        width="100%"
+                    />
                 {/key}
             </div>
         </Section>
@@ -107,7 +106,7 @@
     }
 
     .secret {
-        max-width: 30rem;
+        max-width: 54rem;
     }
 
     .warning {

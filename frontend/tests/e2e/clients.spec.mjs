@@ -671,7 +671,8 @@ test.describe('client config', () => {
         // both are "Edit" without saying which list they edit)
         const editButtons = main.getByRole('button', { name: 'Edit', exact: true });
         await expect(editButtons).toHaveCount(2);
-        await expect(main.getByText('email, openid, profile, groups')).toBeVisible();
+        const selected = main.locator('.admin-selection-field').first().getByRole('listitem');
+        await expect(selected).toHaveText(['email', 'openid', 'profile', 'groups']);
 
         await editButtons.nth(0).click();
         let dialog = page.getByRole('dialog');

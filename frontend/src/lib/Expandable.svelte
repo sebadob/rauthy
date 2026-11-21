@@ -64,10 +64,15 @@
 
 <style>
     .chevron {
-        margin-bottom: -0.7rem;
+        display: grid;
+        place-items: center;
         padding: 0 0.2rem;
         color: hsl(var(--action));
         transition: all 150ms ease-in-out;
+    }
+
+    .chevron :global(svg) {
+        display: block;
     }
 
     .chevron:hover {
@@ -91,7 +96,6 @@
     }
 
     .container[aria-expanded='true'] .chevron {
-        transform: translate(-2px, 2px);
         rotate: 90deg;
     }
 
@@ -111,7 +115,6 @@
 
     .summary {
         margin-right: 0.5rem;
-        padding-top: 0.25rem;
         display: inline-flex;
         align-items: center;
     }

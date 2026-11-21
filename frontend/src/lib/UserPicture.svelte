@@ -200,13 +200,7 @@
 <div class="container">
     {#if config?.upload_allowed && !disableUpload}
         <div class="avatar" style:--avatar-color={color} style:width>
-            <ImageEdit
-                bind:files
-                {accept}
-                ariaLabel={t.common.edit}
-                disabled={isUploading}
-                alwaysVisible={size === 'large'}
-            />
+            <ImageEdit bind:files {accept} ariaLabel={t.common.edit} disabled={isUploading} />
 
             {#if errFileSize}
                 <div class="errLimit" style:width>

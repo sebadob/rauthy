@@ -3,7 +3,6 @@
     import IconEye from '#icons/IconEye.svelte';
     import IconEyeSlash from '#icons/IconEyeSlash.svelte';
     import Button from '#lib/button/Button.svelte';
-    import { onMount } from 'svelte';
     import { useI18n } from '#state/i18n.svelte.ts';
 
     let {
@@ -12,7 +11,7 @@
         rows = 10,
         cols = 60,
         show = $bindable(false),
-        width = 'min(25rem, calc(100dvw - 2rem))',
+        width = 'min(32rem, 100%)',
         ...rest
     }: {
         ariaLabel: string;
@@ -25,24 +24,7 @@
 
     let t = useI18n();
 
-    let hidden = $state('');
-    let text = $state('');
-
-    $effect(() => {
-        if (show) {
-            text = value;
-        } else {
-            text = hidden;
-        }
-    });
-
-    onMount(() => {
-        for (let i = 0; i < value.length; i++) {
-            hidden = hidden + '*';
-        }
-        text = hidden;
-        show = false;
-    });
+    const text = $derived(show ? value : '•'.repeat(value.length));
 
     function copyToClip() {
         navigator.clipboard.writeText(value);
@@ -53,35 +35,34 @@
     }
 </script>
 
-<div style:width={`${width}`}>
-    <div class="iconsOuter">
-        <div class="iconsInner">
-            <Button ariaLabel={show ? t.common.hide : t.common.show} invisible onclick={toggle}>
-                {#if show}
-                    <div title={t.common.hide}>
-                        <IconEye />
-                    </div>
-                {:else}
-                    <div title={t.common.show}>
-                        <IconEyeSlash />
-                    </div>
-                {/if}
-            </Button>
+<div class="secret-field" style:width>
+    <div class="secret-actions">
+        <Button
+            ariaLabel={show ? t.common.hide : t.common.show}
+            invisible
+            isDisabled={!value}
+            onclick={toggle}
+        >
+            {#if show}
+                <IconEye width="1.125rem" />
+            {:else}
+                <IconEyeSlash width="1.125rem" />
+            {/if}
+            <span class="action-label">{show ? t.common.hide : t.common.show}</span>
+        </Button>
 
-            <Button ariaLabel={t.common.copyToClip} invisible onclick={copyToClip}>
-                <div title={t.common.copyToClip}>
-                    <IconClipboard />
-                </div>
-            </Button>
-        </div>
+        <Button ariaLabel={t.common.copyToClip} invisible isDisabled={!value} onclick={copyToClip}>
+            <IconClipboard width="1.125rem" />
+            <span class="action-label">{t.common.copyToClip}</span>
+        </Button>
     </div>
 
     <textarea
         aria-label={ariaLabel}
-        style:width
-        style:padding-right="3.25rem"
-        disabled
-        bind:value={text}
+        class="font-mono"
+        value={text}
+        readonly
+        tabindex={show ? undefined : -1}
         {rows}
         {cols}
         {...rest}
@@ -89,31 +70,48 @@
 </div>
 
 <style>
-    textarea {
-        width: 100%;
-        /*width: min(100%, calc(100dvw - 2rem));*/
-        padding: 0.25rem 0.5rem;
-        border: 1px solid hsl(var(--bg-high));
+    .secret-field {
+        max-width: 100%;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        border: 1px solid var(--ui-outline, hsl(var(--bg-high)));
         border-radius: var(--border-radius);
-        color: hsl(var(--text));
-        background: hsl(var(--bg-high));
-        outline: none;
-        resize: none;
+        background: var(--ui-container, hsl(var(--bg-high)));
+    }
+
+    .secret-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: end;
+        gap: 0.25rem;
+        padding: 0.25rem;
+    }
+
+    textarea {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0.625rem 0.75rem;
+        border: 0;
+        border-top: 1px solid var(--ui-outline, hsl(var(--bg-high)));
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        background: var(--ui-surface, hsl(var(--bg)));
+        color: var(--ui-text, hsl(var(--text)));
+        font-size: 0.875rem;
+        resize: vertical;
+        overflow-wrap: anywhere;
     }
 
     textarea:focus-visible {
-        outline: hsl(var(--accent));
+        outline-offset: -2px;
     }
 
-    .iconsOuter {
-        position: relative;
-    }
-
-    .iconsInner {
-        position: absolute;
-        top: 2px;
-        right: 1px;
-        cursor: pointer;
-        opacity: 0.85;
+    @media (width < 520px) {
+        .action-label {
+            display: none;
+        }
     }
 </style>

@@ -33,7 +33,9 @@
     }
 
     function onclick() {
-        fetchSecret();
+        err = '';
+        secret = '';
+        void fetchSecret();
         showModal = true;
     }
 
@@ -50,33 +52,39 @@
 <Button level={2} {onclick}>
     {ta.pam.secretShow}
 </Button>
-<Modal bind:showModal bind:closeModal>
-    <h2>Secret</h2>
+<Modal bind:showModal bind:closeModal ariaLabel="Secret">
+    <div class="host-secret">
+        <h2>Secret</h2>
+        {#key secret}
+            <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} width="100%" />
+        {/key}
 
-    {#key secret}
-        <HiddenValueArea ariaLabel="Secret" rows={3} value={secret} />
-    {/key}
-
-    <div class="btn">
-        <Button onclick={rotate}>
-            {ta.pam.secretRotate}
-        </Button>
-        <Button level={2} onclick={() => closeModal?.()}>
-            {t.common.close}
-        </Button>
-    </div>
-
-    {#if err}
-        <div class="err">
-            {err}
+        {#if err}
+            <p class="err" role="alert">{err}</p>
+        {/if}
+        <div class="actions">
+            <Button level={2} onclick={() => closeModal?.()}>{t.common.close}</Button>
+            <Button onclick={rotate}>{ta.pam.secretRotate}</Button>
         </div>
-    {/if}
+    </div>
 </Modal>
 
 <style>
-    .btn {
-        margin-top: 1rem;
+    .host-secret {
+        width: min(39rem, calc(100dvw - 6rem - 2px));
+        display: grid;
+        gap: var(--ui-space);
+    }
+
+    h2,
+    .err {
+        margin: 0;
+    }
+
+    .actions {
         display: flex;
+        flex-wrap: wrap;
+        justify-content: end;
         align-items: center;
         gap: 0.5rem;
     }

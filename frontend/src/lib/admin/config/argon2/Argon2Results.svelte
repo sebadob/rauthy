@@ -8,41 +8,56 @@
     } = $props();
 </script>
 
-<div>
-    <div class="row header font-label">
-        <div>ms</div>
-        <div>t_cost</div>
-        <div>m_cost</div>
-        <div>p_cost</div>
-    </div>
-
-    {#each res as r}
-        <div class="row">
-            <div>{r.time_taken}</div>
-            <div>{r.t_cost}</div>
-            <div>{r.m_cost}</div>
-            <div>{r.p_cost}</div>
-        </div>
-    {/each}
-
-    <div style="height: 1.5rem"></div>
+<div class="results">
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">ms</th>
+                <th scope="col">t_cost</th>
+                <th scope="col">m_cost</th>
+                <th scope="col">p_cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each res as r}
+                <tr>
+                    <td>{r.time_taken}</td>
+                    <td>{r.t_cost}</td>
+                    <td>{r.m_cost}</td>
+                    <td>{r.p_cost}</td>
+                </tr>
+            {/each}
+        </tbody>
+    </table>
 </div>
 
 <style>
-    .header {
-        color: hsl(var(--text-high));
+    .results {
+        overflow-x: auto;
+        border: 1px solid var(--ui-outline);
+        border-radius: var(--border-radius);
     }
 
-    .row {
-        display: grid;
-        grid-template-columns: 5.5rem 4rem 5rem 3rem;
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--ui-control-font-size);
+        font-variant-numeric: tabular-nums;
     }
 
-    .row > div {
-        border-bottom: 1px solid hsl(var(--bg-high));
+    th,
+    td {
+        padding: 0.5rem 0.75rem;
+        text-align: end;
+        white-space: nowrap;
     }
 
-    .row:hover {
-        background: hsl(var(--accent));
+    th {
+        color: var(--ui-muted);
+        background: var(--ui-container);
+    }
+
+    td {
+        border-top: 1px solid var(--ui-outline);
     }
 </style>

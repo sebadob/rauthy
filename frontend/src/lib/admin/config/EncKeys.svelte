@@ -56,10 +56,12 @@
 <div class="ui-section-stack">
     <Section title={ta.docs.encKeys.keysAvailable}>
         {#if activeKey}
-            <p>{ta.docs.encKeys.keyActive}: <strong class="font-mono">{activeKey}</strong></p>
-            <ul class="keys">
+            <p class="current">
+                {ta.docs.encKeys.keyActive}: <strong class="font-mono">{activeKey}</strong>
+            </p>
+            <ul class="keys" role="list">
                 {#each keys as key (key)}
-                    <li class="font-mono">{key}</li>
+                    <li class="font-mono" class:active={key === activeKey}>{key}</li>
                 {/each}
             </ul>
         {/if}
@@ -74,11 +76,14 @@
         <p class="ui-muted-copy">{ta.docs.encKeys.p3}</p>
         {#if keys.length > 1}
             <div class="controls">
-                <Options
-                    ariaLabel={ta.docs.encKeys.migrateToKey}
-                    options={keys}
-                    bind:value={migrateKey}
-                />
+                <div class="admin-field-select target">
+                    <span class="admin-field-label">{ta.docs.encKeys.migrateToKey}</span>
+                    <Options
+                        ariaLabel={ta.docs.encKeys.migrateToKey}
+                        options={keys}
+                        bind:value={migrateKey}
+                    />
+                </div>
                 <Button onclick={migrate} {isLoading}>{ta.docs.encKeys.migrate}</Button>
                 {#if success}<IconCheck />{/if}
             </div>
@@ -94,24 +99,52 @@
     .controls {
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
-        gap: 0.5rem;
+        gap: 0.625rem;
     }
 
     .keys {
         list-style: none;
+        margin: 0;
+        padding: 0;
     }
 
-    li {
-        padding: 0.25rem 0.5rem;
+    .keys li {
+        min-width: 5rem;
+        padding: 0.625rem 0.875rem;
+        border: 1px solid var(--ui-outline);
         border-radius: var(--border-radius);
-        background: var(--ui-hover);
+        background: var(--ui-container);
         font-size: var(--ui-control-font-size);
+        overflow-wrap: anywhere;
+    }
+
+    .keys li.active {
+        color: var(--ui-primary);
+        background: var(--ui-tonal);
+        border-color: var(--ui-primary);
+    }
+
+    .controls {
+        align-items: end;
+    }
+
+    .target {
+        width: min(100%, 24rem);
+    }
+
+    p {
+        margin: 0;
+    }
+
+    details {
+        padding: 0.625rem 0.75rem;
+        border-radius: var(--border-radius);
+        background: var(--ui-container);
     }
 
     summary {
-        width: fit-content;
         cursor: pointer;
+        font-size: var(--ui-control-font-size);
     }
 
     details p {

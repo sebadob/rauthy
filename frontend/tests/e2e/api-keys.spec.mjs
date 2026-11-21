@@ -409,13 +409,19 @@ test.describe('API key secret', () => {
             await expectTabSelected(page, 'Secret');
             await expect(main.getByText('You will only see this secret once')).toBeVisible();
 
-            // FINDING: the secret field is named "Password" instead of "API Key"
-            // (`ApiKeySecret.svelte` does not pass `ariaLabel` to `InputPassword`).
-            const secretBox = main.getByRole('textbox', { name: /^(API Key|Password)$/ });
+            const secretBox = main.getByRole('textbox', { name: 'API Key', exact: true });
             await expect(secretBox).toHaveCount(0);
 
             await main.getByRole('button', { name: 'Generate' }).click();
             await expect(secretBox).toBeVisible();
+            await expect(secretBox).toHaveValue(/^•+$/);
+            const reveal = main.getByRole('button', { name: 'Show', exact: true }).first();
+            const [control, field] = await Promise.all([
+                reveal.boundingBox(),
+                secretBox.boundingBox(),
+            ]);
+            expect(!!control && !!field && control.y + control.height <= field.y).toBe(true);
+            await reveal.click();
             const secret = await secretBox.inputValue();
             expect(secret).toMatch(new RegExp(`^${name}\\$.{20,}$`));
             await expect(main.getByText('API-Key <api_key>')).toBeVisible();
@@ -460,6 +466,7 @@ test.describe('API key secret', () => {
             // generating a new one invalidates the old secret
             await main.getByRole('button', { name: 'Generate' }).click();
             await expect(secretBox).toBeVisible();
+            await reveal.click();
             const secret2 = await secretBox.inputValue();
             expect(secret2).not.toBe(secret);
             const oldRes = await anon.get(`/auth/v1/api_keys/${name}/test`, { headers: auth });

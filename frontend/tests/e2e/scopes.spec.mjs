@@ -253,6 +253,7 @@ test.describe('scope config', () => {
         // FINDING: both lists only have an icon button named "Edit"
         const edit = main.getByRole('button', { name: 'Edit', exact: true });
         await expect(edit).toHaveCount(2);
+        const accessChips = main.locator('.admin-selection-field').first().getByRole('listitem');
 
         await edit.nth(0).click();
         let dialog = page.getByRole('dialog');
@@ -261,7 +262,7 @@ test.describe('scope config', () => {
         await dialog.getByRole('checkbox', { name: attrs[1], exact: true }).check();
         await dialog.getByRole('button', { name: 'Close' }).last().click();
         await expect(dialog).toBeHidden();
-        await expect(main.getByText(`${attrs[0]}, ${attrs[1]}`)).toBeVisible();
+        await expect(accessChips).toHaveText(attrs);
 
         await edit.nth(1).click();
         dialog = page.getByRole('dialog');
@@ -285,7 +286,7 @@ test.describe('scope config', () => {
         expect(s.claims_at_root).toBe(true);
 
         await page.reload();
-        await expect(main.getByText(`${attrs[0]}, ${attrs[1]}`)).toBeVisible();
+        await expect(accessChips).toHaveText(attrs);
         await expect(
             main.getByRole('checkbox', { name: 'Emit claims at token root' }),
         ).toBeChecked();
