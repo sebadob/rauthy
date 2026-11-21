@@ -82,15 +82,16 @@ async function openLogin(status, headers = {}, keepAlive = undefined) {
     await page.goto(
         `http://localhost${documentPath}?client_id=test&redirect_uri=http%3A%2F%2Flocalhost%2Fcb`,
     );
-    await page.locator('input[name=email]').fill('user@localhost');
+    const fillEmail = () => page.locator('input[name=email]').fill('user@localhost');
     const submit = () => page.locator('form button[type=submit]').click();
-    return { context, page, requests, navigations, beats, submit };
+    return { context, page, requests, navigations, beats, fillEmail, submit };
 }
 
 for (const status of [404, 409, 413]) {
     test(`login: HTTP ${status} shows the server message, not a password prompt`, async t => {
-        const { context, page, requests, submit } = await openLogin(status);
+        const { context, page, requests, fillEmail, submit } = await openLogin(status);
         t.after(() => context.close());
+        await fillEmail();
         await submit();
         await page.getByText(`server said ${status}`, { exact: true }).waitFor();
         assert.equal(await page.locator('input[name=password]').count(), 0);
@@ -101,8 +102,9 @@ for (const status of [404, 409, 413]) {
 }
 
 test('login: HTTP 401 asks for the password, then reports invalid credentials', async t => {
-    const { context, page, submit } = await openLogin(401);
+    const { context, page, fillEmail, submit } = await openLogin(401);
     t.after(() => context.close());
+    await fillEmail();
     await submit();
     await page.locator('input[name=password]').waitFor();
     await page.locator('input[name=password]').fill('wrong-password');
@@ -119,10 +121,11 @@ async function waitForReloads(/** @type {string[]} */ navigations, /** @type {nu
 }
 
 test('login: an expired page session reloads itself, it never claims bad credentials', async t => {
-    const { context, page, navigations, submit } = await openLogin(401, {
+    const { context, page, navigations, fillEmail, submit } = await openLogin(401, {
         'x-session-expired': 'true',
     });
     t.after(() => context.close());
+    await fillEmail();
     await submit();
     await waitForReloads(navigations, 2);
     assert.equal(navigations.length, 2, `document reloads: ${navigations.join(' | ')}`);
@@ -130,17 +133,18 @@ test('login: an expired page session reloads itself, it never claims bad credent
 });
 
 test('login: the expired session reload runs once, then the server message shows', async t => {
-    const { context, page, navigations, submit } = await openLogin(401, {
+    const { context, page, navigations, fillEmail, submit } = await openLogin(401, {
         'x-session-expired': 'true',
     });
     t.after(() => context.close());
 
+    await fillEmail();
     await submit();
     await waitForReloads(navigations, 2);
     assert.equal(navigations.length, 2, `document reloads: ${navigations.join(' | ')}`);
 
     // the restarted page is answered the same way - the guard must stop the loop
-    await page.locator('input[name=email]').fill('user@localhost');
+    await fillEmail();
     await submit();
     await page.getByText('server said 401', { exact: true }).waitFor();
     assert.equal(navigations.length, 2, `document reloads: ${navigations.join(' | ')}`);

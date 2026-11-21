@@ -5,15 +5,12 @@
     import Input from '#lib/form/Input.svelte';
     import WebauthnRequest from '#lib/WebauthnRequest.svelte';
     import { slide } from 'svelte/transition';
-    import LangSelector from '#lib/LangSelector.svelte';
     import { IS_DEV, TPL_PASSWORD_RESET } from '#utils/constants.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import Main from '#lib/Main.svelte';
-    import ContentCenter from '#lib/ContentCenter.svelte';
+    import PublicPage from '#lib/PublicPage.svelte';
     import type { PasswordResetTemplate } from '#api/templates/PasswordReset.ts';
     import Template from '#lib/Template.svelte';
     import { useParam } from '#state/param.svelte.ts';
-    import ThemeSwitch from '#lib/ThemeSwitch.svelte';
     import type { WebauthnAdditionalData } from '#mfa/webauthn/types.ts';
     import InputPassword from '#lib/form/InputPassword.svelte';
     import A from '#lib/A.svelte';
@@ -24,7 +21,7 @@
     import type { MfaPurpose } from '#api/types/mfa.ts';
     import PasskeyTypeSelect from '#lib/PasskeyTypeSelect.svelte';
 
-    const inputWidth = '20rem';
+    const inputWidth = '100%';
 
     let t = useI18n();
 
@@ -293,135 +290,131 @@
     </div>
 {/if}
 
-<Main>
-    <ContentCenter>
-        {#if mfaPurpose && tplData}
-            <WebauthnRequest
-                purpose={mfaPurpose}
-                resetUserId={tplData.user_id}
-                onSuccess={onWebauthnSuccess}
-                onError={onWebauthnError}
-            />
-        {/if}
+<PublicPage>
+    {#if mfaPurpose && tplData}
+        <WebauthnRequest
+            purpose={mfaPurpose}
+            resetUserId={tplData.user_id}
+            onSuccess={onWebauthnSuccess}
+            onError={onWebauthnError}
+        />
+    {/if}
 
-        {#if success}
-            <p>
-                {t.passwordReset.success1}
-                {#if redirectTimeout > 0}
-                    <br />
-                    {t.passwordReset.success2.replace('{{ secs }}', redirectTimeout.toString())}
-                    <br />
-                    <br />
-                    {t.passwordReset.success3}
-                {:else}
-                    <br />
-                    <br />
+    {#if success}
+        <p class="public-card">
+            {t.passwordReset.success1}
+            {#if redirectTimeout > 0}
+                <br />
+                {t.passwordReset.success2.replace('{{ secs }}', redirectTimeout.toString())}
+                <br />
+                <br />
+                {t.passwordReset.success3}
+            {:else}
+                <br />
+                <br />
+            {/if}
+            <A
+                href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}
+                reload={!redirectUri}
+            >
+                {redirectsToClient ? t.passwordReset.continueSignIn : 'Account'}
+            </A>
+        </p>
+    {:else if tplData}
+        <div class="public-card reset-card">
+            <div>
+                {#if requestType.get()?.startsWith('new_user')}
+                    <h1>{t.passwordReset.newAccount}</h1>
+                    <p>{t.passwordReset.newAccDesc1}</p>
+                    <p>
+                        {t.passwordReset.newAccDesc2}
+                        <A href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</A>
+                    </p>
+
+                    <div class="typeChoice">
+                        <Button
+                            level={!accountTypeNew ? 1 : 3}
+                            onclick={() => (accountTypeNew = 'passkey')}
+                            {isLoading}
+                        >
+                            {t.passwordReset.passwordless}
+                        </Button>
+                        <Button
+                            level={!accountTypeNew ? 2 : 3}
+                            onclick={() => (accountTypeNew = 'password')}
+                            {isLoading}
+                        >
+                            {t.passwordReset.password}
+                        </Button>
+                    </div>
+
+                    {#if accountTypeNew === 'password'}
+                        <div transition:slide>
+                            {@render passwordInput()}
+                        </div>
+                    {:else if accountTypeNew === 'passkey'}
+                        <div transition:slide>
+                            <Form action="" onSubmit={handleRegister}>
+                                <PasskeyTypeSelect bind:residentKey />
+                                <Input
+                                    bind:ref={refPasskey}
+                                    bind:value={passkeyName}
+                                    autocomplete="off"
+                                    label={t.mfa.passkeyName}
+                                    placeholder={t.mfa.passkeyName}
+                                    width={inputWidth}
+                                    maxLength={32}
+                                    pattern={PATTERN_USER_NAME}
+                                    required
+                                />
+                                <div class="btnReg">
+                                    <Button type="submit" level={success ? 2 : 1}>
+                                        {t.mfa.register}
+                                    </Button>
+                                </div>
+                            </Form>
+
+                            {#if success}
+                                <div class="success">
+                                    <p>{t.passwordReset.successPasskey1}</p>
+                                    <p>{t.passwordReset.successPasskey2}</p>
+                                    <Button onclick={navigateToAccount}>
+                                        {t.passwordReset.accountLogin}
+                                    </Button>
+                                </div>
+                            {/if}
+                        </div>
+                    {/if}
+                {:else if requestType.get()?.startsWith('password_reset')}
+                    <h1>{t.passwordReset.passwordReset}</h1>
+                    {@render passwordInput()}
                 {/if}
-                <A
-                    href={redirectUri ? normalizeClientUri(redirectUri) : '/auth/v1/account'}
-                    reload={!redirectUri}
-                >
-                    {redirectsToClient ? t.passwordReset.continueSignIn : 'Account'}
-                </A>
-            </p>
-        {:else if tplData}
-            <div class="container">
-                <div>
-                    {#if requestType.get()?.startsWith('new_user')}
-                        <h1>{t.passwordReset.newAccount}</h1>
-                        <p>{t.passwordReset.newAccDesc1}</p>
-                        <p>
-                            {t.passwordReset.newAccDesc2}
-                            <A href={t.passwordReset.fidoLink} target="_blank">FIDO Alliance</A>
-                        </p>
 
-                        <div class="typeChoice">
-                            <Button
-                                level={!accountTypeNew ? 1 : 3}
-                                onclick={() => (accountTypeNew = 'passkey')}
-                                {isLoading}
-                            >
-                                {t.passwordReset.passwordless}
-                            </Button>
-                            <Button
-                                level={!accountTypeNew ? 2 : 3}
-                                onclick={() => (accountTypeNew = 'password')}
-                                {isLoading}
-                            >
-                                {t.passwordReset.password}
-                            </Button>
-                        </div>
-
-                        {#if accountTypeNew === 'password'}
-                            <div transition:slide>
-                                {@render passwordInput()}
-                            </div>
-                        {:else if accountTypeNew === 'passkey'}
-                            <div transition:slide>
-                                <Form action="" onSubmit={handleRegister}>
-                                    <PasskeyTypeSelect bind:residentKey />
-                                    <Input
-                                        bind:ref={refPasskey}
-                                        bind:value={passkeyName}
-                                        autocomplete="off"
-                                        label={t.mfa.passkeyName}
-                                        placeholder={t.mfa.passkeyName}
-                                        width={inputWidth}
-                                        maxLength={32}
-                                        pattern={PATTERN_USER_NAME}
-                                        required
-                                    />
-                                    <div class="btnReg">
-                                        <Button type="submit" level={success ? 2 : 1}>
-                                            {t.mfa.register}
-                                        </Button>
-                                    </div>
-                                </Form>
-
-                                {#if success}
-                                    <div class="success">
-                                        <p>{t.passwordReset.successPasskey1}</p>
-                                        <p>{t.passwordReset.successPasskey2}</p>
-                                        <Button onclick={navigateToAccount}>
-                                            {t.passwordReset.accountLogin}
-                                        </Button>
-                                    </div>
-                                {/if}
-                            </div>
-                        {/if}
-                    {:else if requestType.get()?.startsWith('password_reset')}
-                        <h1>Password Reset</h1>
-                        {@render passwordInput()}
-                    {/if}
-
-                    {#if err}
-                        <div class="err">
-                            {err}
-                        </div>
-                    {/if}
-                </div>
+                {#if err}
+                    <div class="err">
+                        {err}
+                    </div>
+                {/if}
             </div>
-        {/if}
-
-        <ThemeSwitch absolute />
-    </ContentCenter>
-</Main>
-
-<LangSelector absolute />
+        </div>
+    {/if}
+</PublicPage>
 
 <style>
     .btnReg {
         margin-top: 1rem;
     }
 
-    .container {
-        margin-top: -1.75rem;
-        max-height: calc(100dvh - 2.5rem);
-        width: 100dvw;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        overflow-y: auto;
+    .reset-card {
+        --public-card-width: 32rem;
+    }
+
+    .reset-card h1 {
+        margin-bottom: 0.75rem;
+    }
+
+    .reset-card p + p {
+        margin-top: 0.5rem;
     }
 
     .err {
@@ -444,13 +437,13 @@
     }
 
     .policy {
-        max-width: 100dvw;
-        overflow: clip;
+        margin-bottom: 0.75rem;
     }
 
     .typeChoice {
-        margin-bottom: 1rem;
+        margin-block: 1rem;
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
     }
 </style>
