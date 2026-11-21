@@ -346,6 +346,12 @@ impl User {
     ) -> Result<Self, ErrorResponse> {
         let slf = Self::insert(new_user).await?;
 
+        // The Magic Link is the only mechanism that grants control over an E-Mail address, so it is
+        // only created for an account which has no password yet and is not initialized.
+        if slf.password.is_some() {
+            return Ok(slf);
+        }
+
         let magic_link = MagicLink::create(
             slf.id.clone(),
             RauthyConfig::get().vars.lifetimes.magic_link_pwd_first,
@@ -407,9 +413,16 @@ impl User {
     }
 
     /// Inserts a user from the open registration endpoint into the database.
+    ///
+    /// `init_pwd` is the decision of the `[user_registration]` config, made in the handler, never
+    /// the request. With it set, the account is created directly from that password:
+    /// `email_verified` is minted and no Magic Link is created, which means no delivery to that
+    /// address ever proves control over it. Without it, the Magic Link is the only mechanism that
+    /// activates the account.
     pub async fn create_from_reg(
         req_data: NewUserRegistrationRequest,
-        lang: Language,
+        language: Language,
+        init_pwd: Option<String>,
     ) -> Result<User, ErrorResponse> {
         // pre-uniqueness checks for better UX and error handling
         User::validate_email_free(req_data.email.clone()).await?;
@@ -421,10 +434,28 @@ impl User {
             email: req_data.email.to_lowercase(),
             given_name: req_data.given_name.unwrap_or_default(),
             family_name: req_data.family_name,
+            language,
             ..Default::default()
         };
-        new_user.language = lang;
-        let new_user = User::create(
+
+        // Will be the case if `danger_reg_acc_init_immediate = true` -> immediate acc init
+        if let Some(pwd) = init_pwd {
+            let rules = PasswordPolicy::find().await?;
+            Self::validate_password_policy(&pwd, &rules)?;
+
+            let hash = HashPassword::hash_password(pwd).await?;
+            let password_expires = rules.valid_days.map(|d| {
+                OffsetDateTime::now_utc()
+                    .add(::time::Duration::days(d as i64))
+                    .unix_timestamp()
+            });
+
+            new_user.email_verified = true;
+            new_user.password = Some(hash);
+            new_user.password_expires = password_expires;
+        }
+
+        let user = User::create(
             new_user,
             req_data.redirect_uri,
             req_data
@@ -434,11 +465,15 @@ impl User {
         )
         .await?;
 
-        if let Some(uv) = req_data.user_values {
-            UserValues::insert(new_user.id.clone(), uv, req_data.preferred_username).await?;
+        if let Some(pwd) = &user.password {
+            RecentPasswordsEntity::create(&user.id, pwd.clone()).await?;
         }
 
-        Ok(new_user)
+        if let Some(uv) = req_data.user_values {
+            UserValues::insert(user.id.clone(), uv, req_data.preferred_username).await?;
+        }
+
+        Ok(user)
     }
 
     pub async fn delete(&self) -> Result<(), ErrorResponse> {
@@ -892,9 +927,10 @@ OFFSET $2"#;
         let lang = new_user.language.as_str();
         let sql = r#"
 INSERT INTO users
-(id, email, given_name, family_name, roles, groups, enabled, email_verified, created_at,
-last_login, language, user_expires, auth_provider_id, federation_uid, picture_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
+(id, email, given_name, family_name, password, roles, groups, enabled, email_verified,
+password_expires, created_at, last_login, language, user_expires, auth_provider_id,
+federation_uid, picture_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)"#;
 
         if is_hiqlite() {
             DB::hql()
@@ -905,10 +941,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                         &new_user.email,
                         &new_user.given_name,
                         &new_user.family_name,
+                        &new_user.password,
                         &new_user.roles,
                         &new_user.groups,
                         new_user.enabled,
                         new_user.email_verified,
+                        new_user.password_expires,
                         new_user.created_at,
                         new_user.last_login,
                         lang,
@@ -938,10 +976,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#;
                     &new_user.email,
                     &new_user.given_name,
                     &new_user.family_name,
+                    &new_user.password,
                     &new_user.roles,
                     &new_user.groups,
                     &new_user.enabled,
                     &new_user.email_verified,
+                    &new_user.password_expires,
                     &new_user.created_at,
                     &new_user.last_login,
                     &lang,
@@ -1866,32 +1906,28 @@ LIMIT $2"#
     ) -> Result<(User, Option<UserValues>, bool), ErrorResponse> {
         let user = User::find(id.clone()).await?;
 
-        let mut password = None;
-        if let Some(pwd_new) = upd_user.password_new {
-            if let Some(pwd_curr) = upd_user.password_current {
-                user.validate_password(pwd_curr).await?;
-            } else if let Some(mfa_code) = upd_user.mfa_code {
-                let svc_req = WebauthnServiceReq::find(mfa_code).await?;
-                if svc_req.user_id != user.id {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::Forbidden,
-                        "User ID does not match",
-                    ));
-                }
-                svc_req.delete().await?;
-            } else {
-                return Err(ErrorResponse::new(
-                    ErrorResponseType::BadRequest,
-                    "Cannot set a new password without the current one",
-                ));
-            }
-            password = Some(pwd_new);
-        }
-
         let email_updated = if let Some(email) = upd_user.email.map(|email| email.to_lowercase()) {
             // if the email should be updated, we do not do it directly -> send out confirmation
             // email to old AND new address
             if email != user.email {
+                // the gate for a self-service change, and `confirm_email_address` refuses to apply
+                // such a link, so a config change mid-flight stays without effect
+                if RauthyConfig::get()
+                    .vars
+                    .user_values
+                    .self_service_email_change_deny
+                {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::BadRequest,
+                        "Self-service E-Mail change is denied by the configuration",
+                    ));
+                }
+
+                // the registration domain and name rules must not be left through the account page
+                let reg = &RauthyConfig::get().vars.user_registration;
+                reg.validate_email_domain(&email)?;
+                reg.validate_email_name(&email)?;
+
                 // invalidate possibly other existing MagicLinks of the same type
                 MagicLink::invalidate_all_email_change(&user.id).await?;
 
@@ -1917,6 +1953,28 @@ LIMIT $2"#
         } else {
             false
         };
+
+        let mut password = None;
+        if let Some(pwd_new) = upd_user.password_new {
+            if let Some(pwd_curr) = upd_user.password_current {
+                user.validate_password(pwd_curr).await?;
+            } else if let Some(mfa_code) = upd_user.mfa_code {
+                let svc_req = WebauthnServiceReq::find(mfa_code).await?;
+                if svc_req.user_id != user.id {
+                    return Err(ErrorResponse::new(
+                        ErrorResponseType::Forbidden,
+                        "User ID does not match",
+                    ));
+                }
+                svc_req.delete().await?;
+            } else {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::BadRequest,
+                    "Cannot set a new password without the current one",
+                ));
+            }
+            password = Some(pwd_new);
+        }
 
         let groups = if user.groups.is_some() {
             Some(user.get_groups())
@@ -2027,7 +2085,67 @@ impl User {
 
     pub async fn apply_password_rules(&mut self, plain_pwd: &str) -> Result<(), ErrorResponse> {
         let rules = PasswordPolicy::find().await?;
+        Self::validate_password_policy(plain_pwd, &rules)?;
 
+        let new_hash = HashPassword::hash_password(plain_pwd.to_string()).await?;
+        let mut new_recent = Vec::new();
+
+        if let Some(recent_req) = rules.not_recently_used {
+            match RecentPasswordsEntity::find(&self.id).await {
+                Ok(mut most_recent) => {
+                    let mut iteration = 1;
+                    for old_hash in most_recent.passwords.split('\n') {
+                        if ComparePasswords::is_match(plain_pwd.to_string(), old_hash.to_string())
+                            .await?
+                        {
+                            return Err(ErrorResponse::new(
+                                ErrorResponseType::BadRequest,
+                                format!(
+                                    "The new password must not be one of the last {recent_req} used \
+                                    passwords"
+                                ),
+                            ));
+                        }
+
+                        new_recent.push(old_hash);
+
+                        // check if we have more recent passwords than needed
+                        iteration += 1;
+                        if iteration == recent_req {
+                            break;
+                        }
+                    }
+
+                    most_recent.passwords = format!("{new_hash}\n{}", new_recent.join("\n"));
+                    most_recent.save().await?;
+                }
+
+                Err(_) => {
+                    RecentPasswordsEntity::create(&self.id, new_hash.clone()).await?;
+                }
+            }
+        }
+
+        if RauthyConfig::get().vars.webauthn.no_password_exp && self.has_webauthn_enabled() {
+            self.password_expires = None;
+        } else {
+            let password_expires = rules.valid_days.map(|d| {
+                OffsetDateTime::now_utc()
+                    .add(::time::Duration::days(d as i64))
+                    .unix_timestamp()
+            });
+            self.password_expires = password_expires;
+        }
+
+        self.password = Some(new_hash);
+
+        Ok(())
+    }
+
+    fn validate_password_policy(
+        plain_pwd: &str,
+        rules: &PasswordPolicy,
+    ) -> Result<(), ErrorResponse> {
         if plain_pwd.len() < rules.length_min as usize {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
@@ -2096,58 +2214,6 @@ impl User {
             ));
         }
 
-        let new_hash = HashPassword::hash_password(plain_pwd.to_string()).await?;
-        let mut new_recent = Vec::new();
-
-        if let Some(recent_req) = rules.not_recently_used {
-            match RecentPasswordsEntity::find(&self.id).await {
-                Ok(mut most_recent) => {
-                    let mut iteration = 1;
-                    for old_hash in most_recent.passwords.split('\n') {
-                        if ComparePasswords::is_match(plain_pwd.to_string(), old_hash.to_string())
-                            .await?
-                        {
-                            return Err(ErrorResponse::new(
-                                ErrorResponseType::BadRequest,
-                                format!(
-                                    "The new password must not be one of the last {recent_req} used \
-                                    passwords"
-                                ),
-                            ));
-                        }
-
-                        new_recent.push(old_hash);
-
-                        // check if we have more recent passwords than needed
-                        iteration += 1;
-                        if iteration == recent_req {
-                            break;
-                        }
-                    }
-
-                    most_recent.passwords = format!("{new_hash}\n{}", new_recent.join("\n"));
-                    most_recent.save().await?;
-                }
-
-                Err(_) => {
-                    RecentPasswordsEntity::create(&self.id, new_hash.clone()).await?;
-                }
-            }
-        }
-
-        if RauthyConfig::get().vars.webauthn.no_password_exp && self.has_webauthn_enabled() {
-            self.password_expires = None;
-        } else {
-            let password_expires = rules.valid_days.map(|d| {
-                OffsetDateTime::now_utc()
-                    .add(::time::Duration::days(d as i64))
-                    .unix_timestamp()
-            });
-            self.password_expires = password_expires;
-        }
-
-        self.password = Some(new_hash);
-
         Ok(())
     }
 
@@ -2195,6 +2261,16 @@ impl User {
             }
             MagicLinkUsage::EmailChange(email) => email,
         };
+
+        let vars = &RauthyConfig::get().vars;
+        if vars.user_values.self_service_email_change_deny {
+            return Err(ErrorResponse::new(
+                ErrorResponseType::BadRequest,
+                "Self-service E-Mail change is denied by the configuration",
+            ));
+        }
+        vars.user_registration.validate_email_domain(&new_email)?;
+        vars.user_registration.validate_email_name(&new_email)?;
 
         let mut user = Self::find(user_id).await?;
 

@@ -400,6 +400,7 @@ pub async fn get_users_register(req: HttpRequest) -> Result<HttpResponse, ErrorR
     request_body = NewUserRegistrationRequest,
     responses(
         (status = 204, description = "NoContent"),
+        (status = 400, description = "BadRequest", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
 )]
@@ -415,7 +416,7 @@ pub async fn post_users_register(
 #[inline(always)]
 pub async fn post_users_register_handle(
     req: HttpRequest,
-    payload: NewUserRegistrationRequest,
+    mut payload: NewUserRegistrationRequest,
 ) -> Result<HttpResponse, ErrorResponse> {
     if !RauthyConfig::get().vars.user_registration.enable {
         return Err(ErrorResponse::new(
@@ -435,23 +436,25 @@ pub async fn post_users_register_handle(
 
     let reg = &RauthyConfig::get().vars.user_registration;
 
-    if let Some(restriction) = &reg.domain_restriction {
-        if !payload.email.ends_with(restriction) {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                format!("Domain for the open registration are restricted to '@{restriction}'"),
-            ));
-        }
-    } else if !reg.domain_blacklist.is_empty() {
-        for blacklisted in &reg.domain_blacklist {
-            if payload.email.ends_with(blacklisted) {
+    reg.validate_email_domain(&payload.email)?;
+    reg.validate_email_name(&payload.email)?;
+
+    // Only the deployment config can initialize an account from a password. A password from the
+    // request is dropped when the flag is off, which keeps the Magic Link the only proof of control
+    // over an E-Mail address for every deployment that did not harden itself.
+    let init_pwd = if reg.danger_reg_acc_init_immediate {
+        match payload.password.take() {
+            Some(pwd) => Some(pwd),
+            None => {
                 return Err(ErrorResponse::new(
                     ErrorResponseType::BadRequest,
-                    "Domain is blacklisted",
+                    "The user registration requires a password",
                 ));
             }
         }
-    }
+    } else {
+        None
+    };
 
     // Note: Always keep the PoW validation BEFORE any other expensive checks with DB access.
     let challenge = Pow::validate(&payload.pow)?;
@@ -465,7 +468,7 @@ pub async fn post_users_register_handle(
 
     let lang = Language::try_from(&req).unwrap_or_default();
     let email = payload.email.clone();
-    let user = match User::create_from_reg(payload, lang).await {
+    let user = match User::create_from_reg(payload, lang, init_pwd).await {
         Ok(u) => u,
         Err(err) => {
             // email is probably registered already.
@@ -2776,6 +2779,8 @@ async fn handle_put_user_by_id(
     request_body = UpdateUserSelfRequest,
     responses(
         (status = 200, description = "Ok", body = UserResponse),
+        (status = 202, description = "E-Mail change accepted", body = UserResponse),
+        (status = 400, description = "E-Mail change denied", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
         (status = 403, description = "Forbidden", body = ErrorResponse),
     ),
