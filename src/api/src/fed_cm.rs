@@ -19,7 +19,7 @@ use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::users::User;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_service::oidc::consent_grant;
+use rauthy_service::oidc::consent_grant::exists_consent_grant;
 use rauthy_service::token_set::{
     AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, TokenNonce, TokenSet,
 };
@@ -292,7 +292,7 @@ pub async fn post_fed_cm_token(
 
     // FedCM has no consent step: with `consent.enable`, the user must have consented to the
     // client already, at an authorization request without a `resource`
-    consent_grant::check_code_exchange(&user.id, &client.id, None)
+    exists_consent_grant(&user.id, &client.id, None)
         .await
         .map_err(consent_required)?;
 

@@ -1,4 +1,4 @@
-use crate::oidc::consent_grant;
+use crate::oidc::consent_grant::{consent_as_invalid_grant, exists_consent_grant};
 use crate::token_set::{
     AuthCodeFlow, AuthTime, ConsentCheck, DeviceCodeFlow, DpopFingerprint, SessionId, TokenNonce,
     TokenScopes, TokenSet,
@@ -179,9 +179,9 @@ pub async fn grant_type_authorization_code(
         (None, granted) => granted.map(String::from),
     };
 
-    consent_grant::check_code_exchange(&code.user_id, &client.id, code.resource.as_deref())
+    exists_consent_grant(&code.user_id, &client.id, code.resource.as_deref())
         .await
-        .map_err(consent_grant::consent_as_invalid_grant)?;
+        .map_err(consent_as_invalid_grant)?;
 
     let user = User::find(code.user_id.clone()).await?;
     user.check_enabled()?;
@@ -202,7 +202,7 @@ pub async fn grant_type_authorization_code(
         ConsentCheck::Required,
     )
     .await
-    .map_err(consent_grant::consent_as_invalid_grant)?;
+    .map_err(consent_as_invalid_grant)?;
 
     // update session metadata
     if let Some(sid) = code.session_id.clone() {

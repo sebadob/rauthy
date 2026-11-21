@@ -51,8 +51,9 @@ impl UserConsent {
     pub async fn find(
         user_id: &str,
         client_id: &str,
-        resource: &str,
+        resource: Option<&str>,
     ) -> Result<Option<Self>, ErrorResponse> {
+        let resource = resource_key(resource);
         let slf = if is_hiqlite() {
             DB::hql()
                 .query_as_optional(SQL_FIND, params!(user_id, client_id, resource))
@@ -458,12 +459,12 @@ impl UserConsent {
 }
 
 impl UserConsent {
+    pub fn scopes(&self) -> impl Iterator<Item = &str> {
+        self.scopes.split(',').filter(|s| !s.is_empty())
+    }
+
     pub fn scopes_vec(&self) -> Vec<String> {
-        self.scopes
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .map(String::from)
-            .collect()
+        self.scopes().map(String::from).collect()
     }
 }
 
