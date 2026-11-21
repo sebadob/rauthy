@@ -700,7 +700,10 @@ mod tests {
         };
         let json = tpl.to_json_escaped();
         assert!(!json.contains(['<', '>', '&']), "{json}");
-        assert_eq!(serde_json::from_str::<LoginConsentContent>(&json).unwrap(), tpl);
+        assert_eq!(
+            serde_json::from_str::<LoginConsentContent>(&json).unwrap(),
+            tpl
+        );
     }
 
     const REMOTE: &str = r#"{
