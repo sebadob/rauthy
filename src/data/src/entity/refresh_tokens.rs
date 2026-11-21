@@ -20,28 +20,21 @@ WHERE user_id = $1
 pub(crate) const SQL_PG_IT_REVOKE_JTIS: &str =
     "UPDATE issued_tokens SET revoked = true WHERE jti = ANY($1)";
 
-/// The statements of [`RefreshToken::discard`], run in one transaction by [`discard_txn`].
-pub(crate) const SQL_RT_DISCARD: DiscardSql = DiscardSql {
-    hql: [
-        r#"
+/// The hiqlite transaction of [`RefreshToken::discard`], in order: revokes the access token while
+/// the row still names it, then deletes the row. hiqlite's `txn` returns only the number of
+/// affected rows of each statement, not the rows a delete returns, so the revoke finds the access
+/// token with a subselect. hiqlite applies the transaction as one raft log entry, so the order of
+/// the tables does not matter there. Both statements are idempotent.
+pub(crate) const SQL_RT_DISCARD_HQL: [&str; 2] = [
+    r#"
 UPDATE issued_tokens SET revoked = true
 WHERE jti = (SELECT access_token_jti FROM refresh_tokens WHERE id = $1)"#,
-        "DELETE FROM refresh_tokens WHERE id = $1",
-    ],
-    pg_delete: "DELETE FROM refresh_tokens WHERE id = $1 RETURNING access_token_jti",
-};
+    "DELETE FROM refresh_tokens WHERE id = $1",
+];
 
-/// The statements of [`SQL_RT_DISCARD`]. All of them are idempotent.
-pub(crate) struct DiscardSql {
-    /// hiqlite, in order: revokes the access token while the row still names it, then deletes
-    /// the row. hiqlite's `txn` returns only the number of affected rows of each statement, not
-    /// the rows a delete returns, so the revoke finds the access token with a subselect. hiqlite
-    /// applies the transaction as one raft log entry, so the order of the tables does not matter
-    /// there.
-    pub(crate) hql: [&'static str; 2],
-    /// Postgres, [`PgDiscardStep::Delete`]: deletes the row and returns its `access_token_jti`
-    pub(crate) pg_delete: &'static str,
-}
+/// Postgres, [`PgDiscardStep::Delete`]: deletes the row and returns its `access_token_jti`
+pub(crate) const SQL_RT_DISCARD_PG_DELETE: &str =
+    "DELETE FROM refresh_tokens WHERE id = $1 RETURNING access_token_jti";
 
 #[derive(Deserialize, FromRow, FromPgRow)]
 pub struct RefreshToken {
@@ -276,10 +269,21 @@ WHERE EXISTS (
     }
 
     /// Deletes the refresh token `id` and revokes the access token issued with it, in one
-    /// transaction, see [`discard_txn`]: either both happen or neither, so a failure leaves the
-    /// row with its access token for a retry. An `id` that is already gone is fine.
+    /// transaction: either both happen or neither, so a failure leaves the row with its access
+    /// token for a retry. An `id` that is already gone is fine.
     pub async fn discard(id: &str) -> Result<(), ErrorResponse> {
-        discard_txn(id).await
+        if is_hiqlite() {
+            for res in DB::hql()
+                .txn(SQL_RT_DISCARD_HQL.map(|sql| (sql, params!(id))))
+                .await?
+            {
+                res?;
+            }
+        } else {
+            let mut cl = DB::pg().await?;
+            pg_discard_txn(&mut cl, id).await?;
+        }
+        Ok(())
     }
 
     pub async fn delete_by_sid(session_id: String) -> Result<(), ErrorResponse> {
@@ -420,24 +424,7 @@ WHERE EXISTS (
     }
 }
 
-/// Discards the refresh token `id` in one transaction: deletes the row and revokes the access
-/// token issued with it. If any statement fails, nothing is committed.
-pub(crate) async fn discard_txn(id: &str) -> Result<(), ErrorResponse> {
-    if is_hiqlite() {
-        for res in DB::hql()
-            .txn(SQL_RT_DISCARD.hql.map(|sql| (sql, params!(id))))
-            .await?
-        {
-            res?;
-        }
-    } else {
-        let mut cl = DB::pg().await?;
-        pg_discard_txn(&mut cl, id).await?;
-    }
-    Ok(())
-}
-
-/// The Postgres part of [`discard_txn`] on `cl`: [`PG_DISCARD_STEPS`] in one transaction.
+/// The Postgres part of [`RefreshToken::discard`] on `cl`: [`PG_DISCARD_STEPS`] in one transaction.
 pub(crate) async fn pg_discard_txn(
     cl: &mut deadpool_postgres::Object,
     id: &str,
@@ -455,16 +442,16 @@ pub(crate) async fn pg_discard_txn(
     Ok(())
 }
 
-/// A statement of the Postgres transaction of [`discard_txn`]
+/// A statement of the Postgres transaction of [`RefreshToken::discard`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PgDiscardStep {
-    /// Deletes the row, see [`DiscardSql::pg_delete`]
+    /// Deletes the row, see [`SQL_RT_DISCARD_PG_DELETE`]
     Delete,
     /// Revokes the access token the deleted row named
     RevokeAccessToken,
 }
 
-/// The statements of the Postgres transaction of [`discard_txn`], in order. The refresh token
+/// The statements of the Postgres transaction of [`RefreshToken::discard`], in order. The refresh token
 /// table goes before `issued_tokens`, in the order `UserConsent::revoke` takes them, so that a
 /// discard and a revoke of the same refresh token at the same time are serialized instead of
 /// deadlocking. The access token is revoked in the same transaction as the delete.
@@ -486,7 +473,7 @@ pub(crate) enum PgDiscardStep {
 pub(crate) const PG_DISCARD_STEPS: [PgDiscardStep; 2] =
     [PgDiscardStep::Delete, PgDiscardStep::RevokeAccessToken];
 
-/// The state of the Postgres transaction of [`discard_txn`]
+/// The state of the Postgres transaction of [`RefreshToken::discard`]
 #[derive(Debug, Default)]
 pub(crate) struct PgDiscard {
     /// `access_token_jti` of the deleted row
@@ -503,7 +490,7 @@ impl PgDiscard {
         match step {
             PgDiscardStep::Delete => {
                 self.jti = txn
-                    .query_opt(SQL_RT_DISCARD.pg_delete, &[&id])
+                    .query_opt(SQL_RT_DISCARD_PG_DELETE, &[&id])
                     .await?
                     .and_then(|row| row.get::<_, Option<String>>(0));
             }
@@ -825,7 +812,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         };
 
         // the access token is revoked while the row still names it
-        for (i, sql) in SQL_RT_DISCARD.hql.iter().enumerate() {
+        for (i, sql) in SQL_RT_DISCARD_HQL.iter().enumerate() {
             exec(sql, "rt_2");
             let row = ids(SELECT_RT_IDS).contains(&"rt_2".to_string());
             let revoked = ids(SELECT_REVOKED).contains(&"j_2".to_string());
@@ -835,7 +822,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
             );
         }
 
-        for sql in SQL_RT_DISCARD.hql {
+        for sql in SQL_RT_DISCARD_HQL {
             exec(sql, "rt_1");
         }
         assert_eq!(ids(SELECT_RT_IDS), vec!["rt_no_jti"]);
@@ -843,7 +830,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
 
         // gone already, or without an access token
         for id in ["rt_1", "rt_no_jti", "rt_unknown"] {
-            for sql in SQL_RT_DISCARD.hql {
+            for sql in SQL_RT_DISCARD_HQL {
                 exec(sql, id);
             }
         }
@@ -861,8 +848,7 @@ FOR EACH ROW EXECUTE FUNCTION fail_revoke();
         conn.execute_batch(DISCARD_FAIL_SQLITE).unwrap();
 
         let txn = conn.transaction().unwrap();
-        let res = SQL_RT_DISCARD
-            .hql
+        let res = SQL_RT_DISCARD_HQL
             .iter()
             .try_for_each(|sql| txn.execute(sql, ["rt_fail"]).map(|_| ()));
         assert!(res.is_err(), "the delete must fail");
