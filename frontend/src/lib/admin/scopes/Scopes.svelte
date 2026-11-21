@@ -117,13 +117,14 @@
     {#snippet buttonTiles()}
         <div class="scopesList">
             {#each scopesFiltered as scope (scope.id)}
-                <NavButtonTile onclick={() => sid.set(scope.id)} selected={sid.get() === scope.id}>
-                    <span class="scope-row">
-                        <span class="scope-name">{scope.name}</span>
-                        {#if isDefaultScope(scope.name)}
-                            <span class="scope-badge">{ta.scopes.defaultBadge ?? 'default'}</span>
-                        {/if}
-                    </span>
+                <NavButtonTile
+                    badge={isDefaultScope(scope.name)
+                        ? (ta.scopes.defaultBadge ?? 'default')
+                        : undefined}
+                    onclick={() => sid.set(scope.id)}
+                    selected={sid.get() === scope.id}
+                >
+                    <span class="scope-name">{scope.name}</span>
                 </NavButtonTile>
             {/each}
         </div>
@@ -145,32 +146,9 @@
 </ContentAdmin>
 
 <style>
-    .scopesList :global(.children > div:has(.scope-row)) {
-        width: 100%;
-        min-width: 0;
-    }
-
-    .scope-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
     .scope-name {
         min-width: 0;
         overflow-wrap: anywhere;
-    }
-
-    .scope-badge {
-        flex: none;
-        padding: 0.125rem 0.5rem;
-        border-radius: 999px;
-        background: var(--ui-container);
-        color: var(--ui-muted);
-        font-size: 0.6875rem;
-        font-weight: 500;
-        line-height: 1.25;
     }
 
     .scopesList {

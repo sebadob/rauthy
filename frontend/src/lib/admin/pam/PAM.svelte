@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { useI18n } from '#state/i18n.svelte.ts';
     import { useI18nAdmin } from '#state/i18n_admin.svelte.ts';
     import ContentAdmin from '#lib/ContentAdmin.svelte';
     import AdminListHeading from '#lib/admin/AdminListHeading.svelte';
@@ -221,12 +220,10 @@
                 {:else}
                     {#each groupsFiltered as group (group.id)}
                         <NavButtonTile
+                            badge={group.typ}
                             onclick={() => (selectedGroup = group)}
                             selected={group.id === selectedGroup?.id}
                         >
-                            <span class="typ font-mono">
-                                {group.typ[0].toUpperCase()}
-                            </span>
                             {group.name}
                         </NavButtonTile>
                     {/each}
@@ -288,12 +285,6 @@
         font-size: 0.8rem;
     }
 
-    .navBtn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
     .navList {
         max-height: calc(100dvh - 10.25rem);
         margin-top: 0.5rem;
@@ -310,10 +301,6 @@
         align-items: flex-start;
         line-height: 1rem;
         overflow-x: clip;
-    }
-
-    .typ {
-        color: hsl(var(--accent));
     }
 
     .navBtn {

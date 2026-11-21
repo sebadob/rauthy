@@ -48,6 +48,26 @@ test.describe('admin navigation', () => {
         }
     });
 
+    test('shows each PAM group type to the right of its name @mobile @webkit', async ({ page }) => {
+        await page.goto('/auth/v1/admin/pam');
+        const sidebar = page.getByRole('main').getByRole('navigation');
+        await sidebar.getByRole('button', { name: 'Groups', exact: true }).click();
+
+        for (const [name, type] of [
+            ['default', 'host'],
+            ['wheel-rauthy', 'immutable'],
+        ]) {
+            const entry = sidebar.getByRole('button', { name: `${name} ${type}`, exact: true });
+            await expect(entry).toBeVisible();
+            const label = await entry.getByText(name, { exact: true }).boundingBox();
+            const badge = await entry.getByText(type, { exact: true }).boundingBox();
+            expect(label && badge && badge.x >= label.x + label.width).toBe(true);
+        }
+
+        await sidebar.getByRole('button', { name: 'default host', exact: true }).click();
+        await expect(page.getByRole('heading', { name: 'default', exact: true })).toBeVisible();
+    });
+
     test('the mobile section menu opens lists including Config @mobile-only', async ({ page }) => {
         await page.goto('/auth/v1/admin/clients?cid=rauthy');
         const main = page.getByRole('main');
