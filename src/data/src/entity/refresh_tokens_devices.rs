@@ -1,5 +1,5 @@
 use crate::database::DB;
-use crate::entity::refresh_tokens::{DiscardSql, RefreshToken, discard_txn, finish_rotation_with};
+use crate::entity::refresh_tokens::{RefreshToken, finish_rotation_with};
 use hiqlite::macros::{FromRow, params};
 use rauthy_common::is_hiqlite;
 use rauthy_derive::FromPgRow;
@@ -27,18 +27,6 @@ fn sql_invalidate_for_user(devices: bool) -> &'static [&'static str] {
         &SQL_INVALIDATE_FOR_USER[1..]
     }
 }
-
-/// The statements of [`RefreshTokenDevice::discard`], like
-/// [`SQL_RT_DISCARD`](crate::entity::refresh_tokens::SQL_RT_DISCARD).
-pub(crate) const SQL_RTD_DISCARD: DiscardSql = DiscardSql {
-    hql: [
-        r#"
-UPDATE issued_tokens SET revoked = true
-WHERE jti = (SELECT access_token_jti FROM refresh_tokens_devices WHERE id = $1)"#,
-        "DELETE FROM refresh_tokens_devices WHERE id = $1",
-    ],
-    pg_delete: "DELETE FROM refresh_tokens_devices WHERE id = $1 RETURNING access_token_jti",
-};
 
 #[derive(Serialize, Deserialize, FromRow, FromPgRow)]
 pub struct RefreshTokenDevice {
@@ -123,12 +111,6 @@ impl RefreshTokenDevice {
         }
     }
 
-    /// Deletes the device refresh token `id` and revokes the access token issued with it, in
-    /// one transaction, like [`RefreshToken::discard`]. An `id` that is already gone is fine.
-    pub async fn discard(id: &str) -> Result<(), ErrorResponse> {
-        discard_txn(&SQL_RTD_DISCARD, id).await
-    }
-
     /// Ends the rotation of this device refresh token into `replacement_id`, a `refresh_tokens`
     /// row: a refresh re-issues a device token as a regular one. The source is kept until the
     /// replacement exists. If it is gone by then (a consent revocation, a device deletion or a
@@ -198,21 +180,6 @@ impl RefreshTokenDevice {
             txn.commit().await?;
         }
         Ok(())
-    }
-
-    /// Finds and delete the refresh token in an atomic operation.
-    pub async fn find_delete(id: &str) -> Result<Self, ErrorResponse> {
-        let sql = "DELETE FROM refresh_tokens_devices WHERE id = $1 RETURNING *";
-
-        let slf = if is_hiqlite() {
-            DB::hql()
-                .execute_returning_map_one(sql, params!(id))
-                .await?
-        } else {
-            DB::pg_query_one(sql, &[&id]).await?
-        };
-
-        Ok(slf)
     }
 
     pub async fn find_opt(id: &str) -> Result<Option<Self>, ErrorResponse> {
@@ -424,11 +391,7 @@ VALUES ('rt_new', 'u1', 1, 2, 'j_new', 'c1')"#,
             }
         };
         let res = finish_rotation_with(delete_checked, || {
-            crate::entity::refresh_tokens::pg_discard_txn(
-                &mut refresher,
-                &crate::entity::refresh_tokens::SQL_RT_DISCARD,
-                "rt_new",
-            )
+            crate::entity::refresh_tokens::pg_discard_txn(&mut refresher, "rt_new")
         })
         .await;
 

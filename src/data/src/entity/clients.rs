@@ -1205,28 +1205,6 @@ impl Client {
         }
     }
 
-    /// With `consent.enable` and a non-empty `[[consent.sources]]`, a `resource` is required
-    /// for an ephemeral client. Only its presence is checked here, whether it is allowed is up
-    /// to [`Client::validate_resource_request`]. Not enforced yet, it is used once the consent
-    /// screen and grant check land.
-    pub fn validate_consent_resource(&self, resource: Option<&str>) -> Result<(), ErrorResponse> {
-        self.validate_consent_resource_with(resource, &RauthyConfig::get().vars.consent)
-    }
-
-    fn validate_consent_resource_with(
-        &self,
-        resource: Option<&str>,
-        vars: &VarsConsent,
-    ) -> Result<(), ErrorResponse> {
-        if vars.requires_resource() && self.is_ephemeral() && resource.is_none() {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::ConsentRequired,
-                "a `resource` is required for ephemeral clients",
-            ));
-        }
-        Ok(())
-    }
-
     #[inline]
     pub fn get_challenges(&self) -> Option<Vec<String>> {
         self.challenge.as_ref()?;
@@ -2559,7 +2537,6 @@ pub(crate) mod tests {
     use crate::rauthy_config::VarsConsentSource;
     use actix_web::http::header;
     use actix_web::test::TestRequest;
-    use std::collections::BTreeMap;
 
     #[test]
     fn test_validate_no_backchannel_logout_uri() {
@@ -2797,38 +2774,6 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
             None
         );
         assert_eq!(Client::default().consent_source_with(None, &vars), None);
-    }
-
-    #[test]
-    fn consent_resource_for_ephemeral_clients() {
-        let eph = Client::try_from_ephemeral(
-            ephemeral_request("https://cimd.example/client"),
-            &ephemeral_vars(&["openid"], &["openid"]),
-        )
-        .unwrap();
-        let client = Client {
-            id: "client".to_string(),
-            ..Default::default()
-        };
-        let vars = consent_vars(true);
-
-        let err = eph.validate_consent_resource_with(None, &vars).unwrap_err();
-        assert_eq!(err.error, ErrorResponseType::ConsentRequired);
-        assert!(
-            eph.validate_consent_resource_with(Some("https://api.example.com"), &vars)
-                .is_ok()
-        );
-        assert!(client.validate_consent_resource_with(None, &vars).is_ok());
-
-        let empty = VarsConsent {
-            sources: BTreeMap::default(),
-            ..consent_vars(true)
-        };
-        assert!(eph.validate_consent_resource_with(None, &empty).is_ok());
-        assert!(
-            eph.validate_consent_resource_with(None, &consent_vars(false))
-                .is_ok()
-        );
     }
 
     #[test]

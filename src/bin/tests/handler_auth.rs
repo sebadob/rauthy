@@ -2,7 +2,7 @@ use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, authorization_response_params,
     authorization_response_params_decoded, code_state_from_headers, cookie_csrf_headers_from_res,
     decode_claims, get_auth_headers, get_backend_url, get_issuer, get_solved_pow,
-    init_client_bcl_uri, session_headers,
+    init_client_bcl_uri, refresh, session_headers,
 };
 use actix_web::{App, HttpResponse, HttpServer, http, web};
 use chrono::Utc;
@@ -43,6 +43,14 @@ const INJECTING_STATE: &str = "orig&iss=https://attacker.example.com/";
 const INJECTING_STATE_ENC: &str = "orig%26iss%3Dhttps%3A%2F%2Fattacker.example.com%2F";
 /// `init_client` requires PKCE - without a challenge, `/authorize` would fail for another reason
 const CHALLENGE_PLAIN: &str = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+
+fn assert_not_consent_exempt(refresh_token: &str) {
+    let claims = decode_claims(refresh_token);
+    assert!(
+        claims.get("consent_exempt").is_none_or(|v| v == false),
+        "{claims}"
+    );
+}
 
 // This is a very long running test - run it manually as a single test
 // maybe moving it into its own module would work, so it does not block the others
@@ -643,6 +651,13 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     let access_claims = decode_claims(&ts.access_token);
     assert_eq!(ts.scope.as_deref(), access_claims["scope"].as_str());
 
+    // an authorization_code refresh token is never consent-exempt, nor is its rotation
+    let refresh_token = ts.refresh_token.unwrap();
+    assert_not_consent_exempt(&refresh_token);
+    let res = refresh(&reqwest::Client::new(), refresh_token).await;
+    let rotated = expect_status_json!(res, 200, TokenSet);
+    assert_not_consent_exempt(&rotated.refresh_token.unwrap());
+
     // verify 'nonce' existing in id token
     let id_token = ts.id_token.unwrap();
     println!("id_token: {}", id_token);
@@ -1035,15 +1050,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
 
     // refresh it
     time::sleep(Duration::from_secs(2)).await;
-    let req = TokenRequest {
-        grant_type: GrantType::RefreshToken,
-        client_id: Some(CLIENT_ID.to_string()),
-        client_secret: Some(CLIENT_SECRET.to_string()),
-        refresh_token: Some(ts.refresh_token.clone().unwrap()),
-        ..Default::default()
-    };
-    let url = format!("{}/oidc/token", get_backend_url());
-    let res = reqwest::Client::new().post(&url).form(&req).send().await?;
+    let res = refresh(&reqwest::Client::new(), ts.refresh_token.clone().unwrap()).await;
     let new_ts = expect_status_json!(res, 200, TokenSet);
     assert!(!new_ts.access_token.is_empty());
     assert!(new_ts.id_token.is_some());
