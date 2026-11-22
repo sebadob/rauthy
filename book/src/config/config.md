@@ -972,8 +972,8 @@ backup_keep_for_local = '3d'
 # The `lang=en` response is required and the default: the
 # response for the user's language is used, the `lang=en` one
 # if that is unavailable.
-# A scope `description` may contain HTML, which is sanitized
-# before it is shown. All other fields are shown as plain text.
+# All fields are shown as plain text: HTML in a scope
+# `description` is not rendered, only its text is shown.
 # The version of the consent content is the hash of the content
 # as shown: the name, intro, terms_url and the requested scopes
 # with their title, description and warning (the warnings of

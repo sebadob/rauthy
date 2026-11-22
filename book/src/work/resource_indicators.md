@@ -137,10 +137,10 @@ with `prompt=none` that needs consent is answered with `error=consent_required`.
 The client's `default_scopes` are always accepted and shown locked, any other requested scope can
 be declined. The block must be confirmed before the login. The login then writes the grant with
 the accepted scopes, the time, IP and user agent, and the issued tokens carry only the accepted
-scopes. With a Passkey as the only factor, the grant is written once the ceremony succeeded.
+scopes. With a Passkey or an OTP, the grant is written once the ceremony succeeded.
 
 For a `local` source, the standard OIDC scopes come with built-in descriptions. For a `remote`
-one, the `description` of a scope may contain HTML, which is sanitized before it is shown. A user
+one, the `description` of a scope is shown as plain text, HTML in it is not rendered. A user
 can list and revoke the grants in the Privacy tab of the account dashboard, and a revoke also
 deletes the refresh tokens of the client. FedCM shows no consent block and needs a grant from an
 earlier login.
