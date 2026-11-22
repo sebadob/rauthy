@@ -148,12 +148,16 @@ pub async fn run(
     // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
     // anymore. They are rebuilt from their document on the next request.
     DB::hql().clear_cache(Cache::ClientEphemeral).await?;
+    // Pending provider, WebAuthn and OTP logins carry the consent of the login, an entry from an
+    // older version may not decode anymore. Such a login is started again.
+    DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
+    DB::hql().clear_cache(Cache::Webauthn).await?;
+    DB::hql().clear_cache(Cache::OneTimePassword).await?;
 
     #[cfg(debug_assertions)]
     {
         DB::hql().clear_cache(Cache::Atproto).await?;
         DB::hql().clear_cache(Cache::DeviceCode).await?;
-        DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
         DB::hql().clear_cache(Cache::ClientDynamic).await?;
         DB::hql().clear_cache(Cache::ClientSecret).await?;
         DB::hql().clear_cache(Cache::DPoPNonce).await?;
@@ -165,7 +169,6 @@ pub async fn run(
         DB::hql().clear_cache(Cache::PoW).await?;
         DB::hql().clear_cache(Cache::ToS).await?;
         DB::hql().clear_cache(Cache::User).await?;
-        DB::hql().clear_cache(Cache::Webauthn).await?;
         DB::hql().clear_cache(Cache::PAM).await?;
         DB::hql().clear_cache(Cache::ConsentContent).await?;
     }
