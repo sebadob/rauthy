@@ -146,10 +146,10 @@ pub async fn run(
     DB::hql().clear_cache(Cache::Html).await?;
     // whole App cache to make sure config changes are always updated
     DB::hql().clear_cache(Cache::App).await?;
+    // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
+    // anymore. They are rebuilt from their document on the next request.
+    DB::hql().clear_cache(Cache::ClientEphemeral).await?;
     if previous_db_version != Some(DbVersion::app_version()) {
-        // Ephemeral clients are cached as `Client`, an entry from an older version may not decode
-        // anymore. They are rebuilt from their document on the next request.
-        DB::hql().clear_cache(Cache::ClientEphemeral).await?;
         // Pending provider, WebAuthn and OTP logins carry the consent of the login, an entry from
         // an older version may not decode anymore. Such a login is started again.
         DB::hql().clear_cache(Cache::AuthProviderCallback).await?;
