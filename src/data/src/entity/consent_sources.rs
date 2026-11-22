@@ -734,6 +734,40 @@ mod tests {
             .map(|docs| ConsentContent::build(&docs, scopes))
     }
 
+    /// A grant covers a subset of its scopes while the content of its scopes is the one it was
+    /// given for, and never without a content hash.
+    #[test]
+    fn grant_covers_by_scopes_and_content() {
+        let docs = ConsentDocs {
+            remote: None,
+            name: None,
+        };
+        let granted = strs(&["email", "groups", "openid"]);
+        let grant = |content_hash: Option<String>| UserConsent {
+            user_id: "u".to_string(),
+            client_id: "c".to_string(),
+            resource: String::default(),
+            scopes: "email,groups,openid".to_string(),
+            content_hash,
+            created: 0,
+            updated: 0,
+            ip: "127.0.0.1".to_string(),
+            user_agent: None,
+        };
+        let hashed = grant(Some(ConsentContent::build(&docs, &granted).content_hash));
+        assert!(hashed.covers(&docs, &granted));
+        assert!(hashed.covers(&docs, &strs(&["openid"])));
+        assert!(hashed.covers(&docs, &[]));
+        assert!(!hashed.covers(&docs, &strs(&["openid", "profile"])));
+
+        let changed = ConsentDocs {
+            remote: None,
+            name: Some("Other".into()),
+        };
+        assert!(!hashed.covers(&changed, &strs(&["openid"])));
+        assert!(!grant(None).covers(&docs, &strs(&["openid"])));
+    }
+
     /// The back pressure of the fetcher, of the `en` document or of the translation, fails the
     /// lookup instead of showing the `local` content. Any other failure degrades to `local`.
     #[tokio::test]

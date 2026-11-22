@@ -1,12 +1,11 @@
 use crate::common::{
-    accept_all, consent_content, cookie_csrf_headers_from_res_direct, get_auth_headers,
+    accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_auth_headers,
     get_backend_url, get_solved_pow,
 };
 use rauthy_api_types::auth_providers::{ProviderCallbackRequest, ProviderLoginRequest};
 use rauthy_api_types::oidc::LoginConsent;
 use rauthy_common::sha256;
 use rauthy_common::utils::base64_url_encode;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{self, HeaderValue, LOCATION};
 use std::error::Error;
 
@@ -86,17 +85,6 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
 
     // a missing or stale consent is refused before the upstream redirect, which would spend
     // the single-use callback on it
-    let consent_required = async |res: reqwest::Response| {
-        let res = expect_status!(res, 400);
-        let err = res.json::<ErrorResponse>().await.unwrap();
-        assert_eq!(
-            err.error,
-            ErrorResponseType::ConsentRequired,
-            "{}",
-            err.message
-        );
-        consent_content(&err.message)
-    };
     let content = consent_required(provider_login(None).await).await;
     assert!(content.granted_scopes.is_empty());
     let mut stale = accept_all(&content);

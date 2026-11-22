@@ -1088,6 +1088,24 @@ impl UserPasswordResetHtml<'_> {
 mod tests {
     use super::*;
 
+    /// The consent template is the escaped JSON, which neither closes the `<template>` nor is
+    /// changed by the HTML parser, and decodes to the content again.
+    #[test]
+    fn consent_content_template_is_escaped() {
+        let json = r#"{"source":"remote","content_hash":"h","name":null,"scopes":[],
+            "intro":"</template><script>a && b</script>","terms_url":null,
+            "default_scopes":["openid"],"granted_scopes":[]}"#;
+        let content = serde_json::from_str::<LoginConsentContent>(json).unwrap();
+        let tpl = HtmlTemplate::ConsentContent(content.clone());
+        assert_eq!(tpl.id(), "tpl_consent_content");
+        let inner = tpl.inner();
+        assert!(!inner.contains(['<', '>', '&']), "{inner}");
+        assert_eq!(
+            serde_json::from_str::<LoginConsentContent>(&inner).unwrap(),
+            content
+        );
+    }
+
     #[test]
     fn admin_kv_does_not_render_the_groups_page() {
         let kv = AdminKVHtml::build(&Language::En, 0);

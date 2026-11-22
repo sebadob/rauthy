@@ -355,16 +355,26 @@ pub async fn send_login(
     if res.status() != 400 {
         return res;
     }
+    req.consent = Some(accept_all(&consent_required(res).await));
+    req.pow = get_solved_pow().await;
+    send(&req).await
+}
+
+/// The [`LoginConsentContent`] of a `ConsentRequired` response.
+///
+/// # Panics
+///
+/// On any other response.
+pub async fn consent_required(res: Response) -> LoginConsentContent {
+    let res = expect_status!(res, 400);
     let err = res.json::<ErrorResponse>().await.unwrap();
     assert_eq!(
         err.error,
         ErrorResponseType::ConsentRequired,
-        "login failed: {}",
+        "{}",
         err.message
     );
-    req.consent = Some(accept_all(&consent_content(&err.message)));
-    req.pow = get_solved_pow().await;
-    send(&req).await
+    consent_content(&err.message)
 }
 
 /// The [`LoginConsentContent`] of a `ConsentRequired` message or a login page template.

@@ -1,6 +1,6 @@
 use crate::common::{
     CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, accept_all, code_state_from_headers,
-    consent_content, consent_template, cookie_csrf_headers_from_res, create_login_user,
+    consent_required, consent_template, cookie_csrf_headers_from_res, create_login_user,
     decode_claims, get_auth_headers, get_backend_url, get_solved_pow, get_token_set,
     get_token_set_init_client, password_grant, password_token_set, prepare_login, refresh,
     session_headers_with,
@@ -18,9 +18,8 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::utils::new_store_id;
 use rauthy_data::entity::consent_sources::ConsentSourceType;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::token_set::TokenSet;
-use reqwest::header::{AUTHORIZATION, HeaderMap, LOCATION};
+use reqwest::header::{AUTHORIZATION, HeaderMap, LOCATION, USER_AGENT};
 use reqwest::multipart::{Form, Part};
 use reqwest::{Body, Client, StatusCode};
 use serde_json::{Value, json};
@@ -589,6 +588,7 @@ const EMAIL: &str = "consent-user@consenttest.io";
 /// `zzb_handler_password_policy` as well.
 const LOGIN_PWD: &str = "Login-TEST.1234!#$";
 const OPENID_GROUPS: &[&str] = &["openid", "groups"];
+const LOGIN_USER_AGENT: &str = "consent-login-test";
 
 /// The refresh of a revoked refresh token fails on the missing row.
 async fn assert_refresh_not_found(client: &Client, refresh_token: String) {
@@ -930,21 +930,11 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         client
             .post(&url_auth)
             .headers(headers.clone())
+            .header(USER_AGENT, LOGIN_USER_AGENT)
             .json(&req)
             .send()
             .await
             .unwrap()
-    };
-    let consent_required = async |res: reqwest::Response| {
-        let res = expect_status!(res, 400);
-        let err = res.json::<ErrorResponse>().await.unwrap();
-        assert_eq!(
-            err.error,
-            ErrorResponseType::ConsentRequired,
-            "{}",
-            err.message
-        );
-        consent_content(&err.message)
     };
     let exchange = async |code: String| {
         client
@@ -1024,6 +1014,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
     assert_eq!(grants[0].client_id, CLIENT_ID);
     assert_eq!(grants[0].resource, None);
     assert_eq!(grants[0].scopes, ["email", "openid", "profile"]);
+    assert_eq!(grants[0].user_agent.as_deref(), Some(LOGIN_USER_AGENT));
     assert_eq!(
         consent_events(&client, &admin, "ConsentGranted", events_from, email).await,
         [format!(
@@ -1037,7 +1028,12 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
     let asked = consent_required(login(&headers, OPENID_GROUPS, Some(stale)).await).await;
     assert_eq!(asked.granted_scopes, ["email", "openid", "profile"]);
 
-    // --- the authenticated session asks again only for what the grant does not cover
+    // --- a login the grant covers needs no consent
+    let res = login(&headers, &["openid"], None).await;
+    expect_status!(res, 202);
+
+    // --- the authenticated session asks again for a request the grant does not cover: all
+    // requested scopes, the granted ones pre-checked
     let html = page(&url_authorize("openid%20groups"), Some(&headers)).await;
     let content = consent_template(&html).expect("consent template for `groups`");
     assert_eq!(content.granted_scopes, ["email", "openid", "profile"]);
@@ -1051,6 +1047,23 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
     )
     .await;
     assert!(consent_template(&html).is_some());
+    assert!(html.contains("<template id=\"tpl_login_action\">RefreshConsent</template>"));
+    // `prompt=login` asks for a new login, which knows no grant yet
+    let html = page(
+        &format!("{}&prompt=login", url_authorize("openid")),
+        Some(&headers),
+    )
+    .await;
+    let content_login = consent_template(&html).expect("consent template for `prompt=login`");
+    assert!(content_login.granted_scopes.is_empty());
+    // `prompt=none` refreshes a covered request
+    let html = page(
+        &format!("{}&prompt=none", url_authorize("openid")),
+        Some(&headers),
+    )
+    .await;
+    assert_eq!(consent_template(&html), None);
+    assert!(html.contains("<template id=\"tpl_login_action\">Refresh</template>"));
     // and `prompt=none` cannot ask, nor log in again for `prompt=login` or an expired `max_age`
     let no_redirect = Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -1071,6 +1084,19 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
             location.contains(&format!("error={error}")),
             "{query}: {location}"
         );
+    }
+    // a disallowed `resource` is redirected with the `state` and the issuer
+    let res = no_redirect
+        .get(url_authorize(
+            "openid&state=st1&resource=https%3A%2F%2Fnot-allowed.example.com",
+        ))
+        .headers(headers.clone())
+        .send()
+        .await?;
+    let res = expect_status!(res, 302);
+    let location = res.headers().get(LOCATION).unwrap().to_str()?;
+    for part in ["error=invalid_target", "state=st1", "iss="] {
+        assert!(location.contains(part), "{location}");
     }
 
     // --- a silent refresh within the grant needs no consent
@@ -1093,6 +1119,38 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let (code, _) = code_state_from_headers(expect_status!(res, 202))?;
+
+    // --- a refresh beyond the grant asks for consent, and the consent extends the grant
+    let mut refresh_groups = LoginRefreshRequest {
+        scopes: Some(vec!["openid".to_string(), "groups".to_string()]),
+        ..refresh_login
+    };
+    let url_refresh = format!("{backend}/oidc/authorize/refresh");
+    let res = client
+        .post(&url_refresh)
+        .headers(headers.clone())
+        .json(&refresh_groups)
+        .send()
+        .await?;
+    let asked = consent_required(res).await;
+    assert_eq!(asked.granted_scopes, ["email", "openid", "profile"]);
+    refresh_groups.consent = Some(accept_all(&asked));
+    let res = client
+        .post(&url_refresh)
+        .headers(headers.clone())
+        .json(&refresh_groups)
+        .send()
+        .await?;
+    let (code_refresh, _) = code_state_from_headers(expect_status!(res, 202))?;
+    let ts_refresh = expect_status_json!(exchange(code_refresh).await, 200, TokenSet);
+    assert!(ts_refresh.scope.as_deref().unwrap().contains("groups"));
+    let res = client
+        .get(&url_consents)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let grants = expect_status_json!(res, 200, Vec<UserConsentResponse>);
+    assert_eq!(grants[0].scopes, ["email", "groups", "openid", "profile"]);
 
     // --- a login with fewer scopes keeps the grant's other scopes, and so does the refresh
     let res = login(&headers, OPENID_GROUPS, Some(accept_all(&content))).await;

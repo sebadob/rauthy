@@ -772,6 +772,36 @@ mod tests {
     use super::*;
     use validator::Validate;
 
+    /// The consent of a login is validated with the login, for both login requests.
+    #[test]
+    fn login_requests_validate_the_consent() {
+        let consent =
+            |hash: &str| format!(r#"{{"content_hash": "{hash}", "accepted_scopes": ["openid"]}}"#);
+        let valid = consent(&"a".repeat(64));
+        let invalid = consent("not-a-hash");
+        for (consent, is_valid) in [(valid, true), (invalid, false)] {
+            let refresh = format!(
+                r#"{{"client_id": "my-client", "redirect_uri": "https://app.example.com/cb",
+                "consent": {consent}}}"#
+            );
+            let req: LoginRefreshRequest = serde_json::from_str(&refresh).unwrap();
+            assert_eq!(req.validate().is_ok(), is_valid, "{refresh}");
+
+            let login = format!(
+                r#"{{"email": "u@example.com", "pow": "pow", "client_id": "my-client",
+                "redirect_uri": "https://app.example.com/cb", "consent": {consent}}}"#
+            );
+            let req: LoginRequest = serde_json::from_str(&login).unwrap();
+            let err = req.validate().err().map(|err| err.to_string());
+            assert_eq!(
+                err.as_deref()
+                    .is_none_or(|err| !err.contains("content_hash")),
+                is_valid,
+                "{err:?}"
+            );
+        }
+    }
+
     // Regression test for RFC 8707 `resource` being dropped on the silent re-auth path.
     // The refresh authorize request must deserialize and validate a `resource` just like
     // the full-login `LoginRequest` does, so audience-bound tokens survive later logins.

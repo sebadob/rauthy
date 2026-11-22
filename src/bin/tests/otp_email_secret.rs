@@ -19,7 +19,7 @@
 mod common;
 
 use crate::common::{
-    accept_all, consent_content, cookie_csrf_headers_from_res_direct, get_backend_url,
+    accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_backend_url,
     get_solved_pow, send_login,
 };
 use rauthy_api_types::generic::Language;
@@ -31,8 +31,6 @@ use rauthy_api_types::users::{
 };
 use rauthy_common::sha256;
 use rauthy_common::utils::base64_url_encode;
-use rauthy_data::entity::consent_sources::LoginConsentContent;
-use rauthy_error::{ErrorResponse, ErrorResponseType};
 use reqwest::header::{AUTHORIZATION, COOKIE, HeaderMap, HeaderValue, SET_COOKIE};
 use reqwest::{Client, StatusCode};
 use ring::hmac;
@@ -455,19 +453,6 @@ async fn login_mfa_cookie(
         .await?)
 }
 
-/// The consent of a `ConsentRequired` response, accepting all requested scopes.
-async fn consent_required(res: reqwest::Response) -> Result<LoginConsentContent, Box<dyn Error>> {
-    let res = expect_status!(res, 400);
-    let err = res.json::<ErrorResponse>().await?;
-    assert_eq!(
-        err.error,
-        ErrorResponseType::ConsentRequired,
-        "{}",
-        err.message
-    );
-    Ok(consent_content(&err.message))
-}
-
 /// A consent given with the password or with a valid MFA cookie alone is written only after the
 /// OTP ceremony proved the user, and a login that has proven no factor yet sees nothing of the
 /// grant.
@@ -509,7 +494,7 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
         COOKIE,
         HeaderValue::from_str(&format!("{cookie}; {mfa_cookie}"))?,
     );
-    let content = consent_required(login_mfa_cookie(&session, None).await?).await?;
+    let content = consent_required(login_mfa_cookie(&session, None).await?).await;
     let res = login_mfa_cookie(&session, Some(accept_all(&content))).await?;
     let challenge = expect_status_json!(res, 200, OtpChallenge);
     assert!(consents(&user_id).await?.is_empty());
@@ -529,7 +514,7 @@ async fn test_otp_consent_waits_for_the_ceremony() -> Result<(), Box<dyn Error>>
         COOKIE,
         HeaderValue::from_str(&format!("{cookie}; {mfa_cookie}"))?,
     );
-    let content = consent_required(login_mfa_cookie(&session, None).await?).await?;
+    let content = consent_required(login_mfa_cookie(&session, None).await?).await;
     assert!(content.granted_scopes.is_empty(), "{content:?}");
 
     Ok(())
