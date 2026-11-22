@@ -15,7 +15,8 @@ pub struct WebauthnLoginReq {
     pub tos_await_data: Option<WebauthnToSAwaitData>,
     pub needs_user_update: bool,
     pub session_id: String,
-    /// Written once the ceremony verified the user.
+    /// The consent given at `POST /authorize`, written as the user's grant once the ceremony
+    /// verified the user.
     pub pending_consent: Option<PendingConsent>,
 }
 

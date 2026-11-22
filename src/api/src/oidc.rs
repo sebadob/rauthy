@@ -138,12 +138,7 @@ pub async fn get_authorize(
             true
         }
     } else {
-        // TODO we should add a new DB table that tracks to which clients a user has logged-in
-        //  in the past. When we have that information and we find a `consent` prompt, we would
-        //  never trigger the automatic refresh frontend action. This would mean the user has to
-        //  click the login button which works as a consent.
-        //  We can keep ignoring `select_account|create` options as they have no meaning with
-        //  Rauthy.
+        // We keep ignoring `select_account|create` options as they have no meaning with Rauthy.
         false
     };
 
@@ -451,16 +446,19 @@ pub async fn post_authorize_handle(
             ) =>
         {
             // Only returned after the user checks: the consent content to ask for, which is not
-            // logged, or the back pressure of the consent source fetcher, to be retried.
+            // logged and carries the user's grant only once a factor proved the user, or the
+            // back pressure of the consent source fetcher, to be retried.
             debug!(error = ?err.error, "POST /authorize asks for consent or a retry");
             return Err(err);
         }
         Err(err) => {
             warn!("POST /authorize Error: {:?}", err);
             // We always must return the exact same error type, no matter what the actual error is,
-            // to prevent information enumeration. The only exception is when the user needs to add
-            // a passkey to the account while having given the correct credentials. In that case,
-            // we return the original error to be able to display the info message in the UI.
+            // to prevent information enumeration. The exceptions, all returned only after the user
+            // checks, are a missing MFA while the credentials were correct, an expired password, a
+            // client group prefix mismatch, and, above, `ConsentRequired` and the back pressure of
+            // the consent source fetcher. In those cases, we return the original error to be able
+            // to display the info in the UI.
             if user_needs_mfa {
                 // in this case, we can return directly without any login delay
                 return Err(err);

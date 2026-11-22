@@ -702,7 +702,7 @@ mod tests {
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash, and a user agent may be missing
+        // a grant without a content hash, which a login never writes, and without a user agent
         let none = None::<String>;
         let params = rusqlite::params!["u1", "c3", "", "openid", none, 5, "127.0.0.1", none];
         conn.execute(SQL_UPSERT, params).unwrap();
@@ -1063,7 +1063,7 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
             vec![consent("c2", "", "openid", 3, 3)]
         );
 
-        // the built-in local consent has no content hash, and a user agent may be missing
+        // a grant without a content hash, which a login never writes, and without a user agent
         let none: Option<&str> = None;
         let params: [&(dyn ToSql + Sync); 8] = [
             &"u1",

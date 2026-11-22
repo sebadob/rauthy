@@ -6,7 +6,9 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{
     ClientResponse, ClientSecretResponse, NewClientRequest, UpdateClientRequest,
 };
-use rauthy_api_types::oidc::{GrantType, JwkKeyPairAlg, LoginRequest, TokenRequest};
+use rauthy_api_types::oidc::{
+    GrantType, JwkKeyPairAlg, LoginRefreshRequest, LoginRequest, TokenRequest,
+};
 use rauthy_common::sha256;
 use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_decode};
 use rauthy_service::token_set::TokenSet;
@@ -315,16 +317,19 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
         "initial access token `aud` must contain the requested resource"
     );
 
-    // silent re-auth via `POST /oidc/authorize/refresh` on the SAME session, same `resource`.
-    // `LoginRefreshRequest` is deserialize-only (no `Serialize`), so build the body as raw JSON.
-    let req_refresh = serde_json::json!({
-        "client_id": ID_REFRESH,
-        "redirect_uri": redirect_uri,
-        "nonce": "MySuperNonce",
-        "code_challenge": challenge_s256,
-        "code_challenge_method": "S256",
-        "resource": RES_REFRESH,
-    });
+    // silent re-auth via `POST /oidc/authorize/refresh` on the SAME session, same `resource`
+    let req_refresh = LoginRefreshRequest {
+        client_id: ID_REFRESH.to_string(),
+        redirect_uri: redirect_uri.to_string(),
+        scopes: None,
+        state: None,
+        nonce: Some("MySuperNonce".to_string()),
+        code_challenge: Some(challenge_s256),
+        code_challenge_method: Some("S256".to_string()),
+        resource: Some(RES_REFRESH.to_string()),
+        fwda: None,
+        consent: None,
+    };
     let res = http
         .post(format!("{backend_url}/oidc/authorize/refresh"))
         .headers(session_headers.clone())
