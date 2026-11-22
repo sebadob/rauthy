@@ -889,12 +889,17 @@ backup_keep_for_local = '3d'
 # configured `[[consent.sources]]` log a warning at startup.
 #
 # While it is enabled:
-# - the login page asks for consent, the Admin UI included, when the
-#   user's consent grant for the client and `resource` does not
-#   cover the requested scopes for the current consent content, and
-#   with `prompt=consent`. The client's `default_scopes` are always
-#   accepted, other requested scopes can be declined. The grant is
-#   stored with the time, IP and user agent of the login.
+# - the login page asks for consent, the Admin UI included: a login
+#   without a valid session, which includes one forced by
+#   `prompt=login` or an exceeded `max_age`, always shows the
+#   consent block, while a valid session skips it only when the
+#   user's consent grant for the client and `resource` covers the
+#   requested scopes for the current consent content and there is
+#   no `prompt=consent`. With `prompt=none`, an uncovered request is
+#   answered with `consent_required`. The client's `default_scopes`
+#   are always accepted, other requested scopes can be declined.
+#   The grant is stored with the time, IP and user agent of the
+#   login.
 # - the authorization code exchange, FedCM and a refresh require the
 #   user's consent grant for the client (password, device code and
 #   token exchange tokens issued by this version are exempt). FedCM
@@ -977,9 +982,11 @@ backup_keep_for_local = '3d'
 # The version of the consent content is the hash of the content
 # as shown: the name, intro, terms_url and the requested scopes
 # with their title, description and warning (the warnings of
-# the `lang=en` response are shown in every language). Any edit
-# to a shown field asks for consent again, an edit to a scope
-# that was not requested does not. A user who switches the
+# the `lang=en` response are shown in every language). The hash
+# covers the field values as received, HTML markup included, so
+# an edit that only changes the markup asks for consent again.
+# Any edit to a shown field asks for consent again, an edit to a
+# scope that was not requested does not. A user who switches the
 # language may be asked again.
 # If the `lang=en` response is unavailable or invalid, the
 # built-in content is used instead.
