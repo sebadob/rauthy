@@ -1613,14 +1613,15 @@ impl Vars {
             .expect("Cannot parse USE_VAULT_CONFIG as bool");
         let slf = Self::default();
 
-        let config = match use_vault_config {
-            true => match VaultConfig::load_config().await {
+        let config = if use_vault_config {
+            match VaultConfig::load_config().await {
                 Ok(config) => config,
                 Err(err) => {
                     panic!("Cannot read config from Vault. {err}");
                 }
-            },
-            _ => match fs::read_to_string(path_config).await {
+            }
+        } else {
+            match fs::read_to_string(path_config).await {
                 Ok(s) => s,
                 // A config via env vars only is a valid setup, but only for the default path.
                 // A file that was given explicitly, or exists but cannot be read, is an error.
@@ -1634,7 +1635,7 @@ impl Vars {
                 Err(err) => {
                     panic!("Cannot read config from {path_config}: {err}");
                 }
-            },
+            }
         };
 
         Self::parse(slf, config, path_secrets).await
