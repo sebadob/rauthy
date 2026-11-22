@@ -1276,6 +1276,21 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     );
     let url_auth = format!("{}/oidc/authorize?{}", backend_url, query_pkce);
 
+    // with `[[consent.sources]]`, an ephemeral client must request a `resource`
+    let no_redirect = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+    let res = no_redirect.get(&url_auth).send().await?;
+    let params = authorization_response_params(&expect_status!(res, 302))?;
+    assert!(
+        params
+            .iter()
+            .any(|(k, v)| k == "error" && v == "consent_required"),
+        "{params:?}"
+    );
+    let resource = "https://consent-test.example.com";
+    let url_auth = format!("{url_auth}&resource={resource}");
+
     // make s simple GET to extract the CSRF token
     let res = reqwest::get(&url_auth).await?;
     assert!(res.status().is_success());
@@ -1283,9 +1298,9 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
 
     // login and get an authorization code
     let nonce = get_rand(32);
-    let req_login = LoginRequest {
+    let mut req_login = LoginRequest {
         email: Some(USERNAME.to_string()),
-        password: Some(PASSWORD.to_string()),
+        password: Some("wrong password".to_string()),
         pow: get_solved_pow().await,
         client_id: client_id.to_string(),
         redirect_uri: redirect_uri.to_owned(),
@@ -1299,6 +1314,22 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         fwda: None,
         consent: None,
     };
+    // checked before the credentials, so the answer is the same for a wrong password
+    let res = client
+        .post(&url_auth)
+        .headers(headers.clone())
+        .json(&req_login)
+        .send()
+        .await?;
+    let err = expect_status!(res, 400).json::<ErrorResponse>().await?;
+    assert_eq!(
+        (err.error, err.message.as_ref()),
+        (ErrorResponseType::BadRequest, "a `resource` is required")
+    );
+
+    req_login.password = Some(PASSWORD.to_string());
+    req_login.resource = Some(resource.to_string());
+    req_login.pow = get_solved_pow().await;
     let res = send_login(&client, &url_auth, &headers, req_login).await;
     assert!(res.status().is_success());
     let (code, state) = code_state_from_headers(res)?;

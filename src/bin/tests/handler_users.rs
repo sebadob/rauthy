@@ -1,16 +1,17 @@
 use crate::common::{
-    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, accept_all, code_state_from_headers,
-    consent_required, consent_template, cookie_csrf_headers_from_res, create_login_user,
-    decode_claims, get_auth_headers, get_backend_url, get_solved_pow, get_token_set,
-    get_token_set_init_client, password_grant, password_token_set, prepare_login, refresh,
-    session_headers_with,
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, STALE_HASH, USERNAME, accept_all,
+    authorization_response_params, code_state_from_headers, consent_required, consent_template,
+    cookie_csrf_headers_from_res, create_login_user, decode_claims, get_auth_headers,
+    get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client, password_grant,
+    password_token_set, prepare_login, refresh, session_headers_with,
 };
 use futures::{StreamExt, stream};
 use pretty_assertions::assert_eq;
 use rauthy_api_types::api_keys::{AccessGroup, AccessRights, ApiKeyAccess, ApiKeyRequest};
+use rauthy_api_types::clients::{NewClientRequest, UpdateClientRequest};
 use rauthy_api_types::generic::Language;
 use rauthy_api_types::oidc::{
-    GrantType, LoginConsent, LoginRefreshRequest, LoginRequest, TokenRequest,
+    GrantType, JwkKeyPairAlg, LoginConsent, LoginRefreshRequest, LoginRequest, TokenRequest,
 };
 use rauthy_api_types::users::{
     NewUserRequest, RequestResetRequest, UpdateUserRequest, UserConsentDeleteResponse,
@@ -849,6 +850,7 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
 
     // --- a revoke with a `resource` drops the refresh tokens for the client as a whole
     let ts = password_token_set(&client, EMAIL, LOGIN_PWD).await;
+    let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
     let res = client
         .delete(format!(
             "{url}?client_id={CLIENT_ID}&resource=https%3A%2F%2Fapi.example.com"
@@ -860,6 +862,13 @@ async fn test_user_consents() -> Result<(), Box<dyn Error>> {
     assert!(!deleted.consent_deleted);
     assert!(deleted.refresh_tokens_deleted >= 1);
     assert_refresh_not_found(&client, ts.refresh_token.unwrap()).await;
+    assert_eq!(
+        consent_events(&client, &admin, "ConsentRevoked", events_from, EMAIL).await,
+        [format!(
+            "Consent of `{EMAIL}` for client `{CLIENT_ID}` / `https://api.example.com` revoked \
+            by the user"
+        )]
+    );
 
     // --- an unknown user
     let res = client
@@ -976,8 +985,10 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         content_hash: content.content.content_hash.clone(),
         accepted_scopes: scopes.iter().map(|s| s.to_string()).collect(),
     };
-    let mut stale = accepted(&["email", "openid", "profile"]);
-    stale.content_hash = "0".repeat(64);
+    let stale = LoginConsent {
+        content_hash: STALE_HASH.to_string(),
+        ..accepted(&["email", "openid", "profile"])
+    };
     for consent in [
         stale,
         accepted(&["openid", "profile"]),
@@ -1023,8 +1034,10 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
     );
 
     // --- a stale consent of a user the password proved is asked again with the grant
-    let mut stale = accepted(&["email", "openid", "profile"]);
-    stale.content_hash = "0".repeat(64);
+    let stale = LoginConsent {
+        content_hash: STALE_HASH.to_string(),
+        ..accepted(&["email", "openid", "profile"])
+    };
     let asked = consent_required(login(&headers, OPENID_GROUPS, Some(stale)).await).await;
     assert_eq!(asked.granted_scopes, ["email", "openid", "profile"]);
 
@@ -1093,13 +1106,16 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         .headers(headers.clone())
         .send()
         .await?;
-    let res = expect_status!(res, 302);
-    let location = res.headers().get(LOCATION).unwrap().to_str()?;
-    for part in ["error=invalid_target", "state=st1", "iss="] {
-        assert!(location.contains(part), "{location}");
+    let params = authorization_response_params(&expect_status!(res, 302))?;
+    for want in [("error", "invalid_target"), ("state", "st1")] {
+        assert!(
+            params.iter().any(|(k, v)| (k.as_str(), v.as_str()) == want),
+            "{params:?}"
+        );
     }
 
     // --- a silent refresh within the grant needs no consent
+    let url_refresh = format!("{backend}/oidc/authorize/refresh");
     let refresh_login = LoginRefreshRequest {
         client_id: CLIENT_ID.to_string(),
         redirect_uri: redirect_uri.to_string(),
@@ -1113,7 +1129,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         consent: None,
     };
     let res = client
-        .post(format!("{backend}/oidc/authorize/refresh"))
+        .post(&url_refresh)
         .headers(headers.clone())
         .json(&refresh_login)
         .send()
@@ -1125,7 +1141,6 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         scopes: Some(vec!["openid".to_string(), "groups".to_string()]),
         ..refresh_login
     };
-    let url_refresh = format!("{backend}/oidc/authorize/refresh");
     let res = client
         .post(&url_refresh)
         .headers(headers.clone())
@@ -1178,6 +1193,36 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         "{:?}",
         ts_groups.scope
     );
+    // the grant written by the `openid` login still covers `groups` for its content
+    let res = login(&fresh, OPENID_GROUPS, None).await;
+    expect_status!(res, 202);
+
+    // --- declining a granted scope drops it from the grant and from the refreshed token
+    let res = login(
+        &fresh,
+        OPENID_GROUPS,
+        Some(accepted(&["email", "openid", "profile"])),
+    )
+    .await;
+    expect_status!(res, 202);
+    let res = client
+        .get(&url_consents)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let grants = expect_status_json!(res, 200, Vec<UserConsentResponse>);
+    assert_eq!(grants[0].scopes, ["email", "openid", "profile"]);
+    time::sleep(Duration::from_secs(1)).await;
+    let res = refresh(&client, ts_groups.refresh_token.unwrap()).await;
+    let ts_groups = expect_status_json!(res, 200, TokenSet);
+    let mut scope = ts_groups
+        .scope
+        .as_deref()
+        .unwrap()
+        .split(' ')
+        .collect::<Vec<_>>();
+    scope.sort_unstable();
+    assert_eq!(scope, ["email", "openid", "profile"]);
 
     // --- a revoke rejects the code exchange and the refresh
     let res = client
@@ -1202,6 +1247,168 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     expect_status!(res, 204);
+
+    Ok(())
+}
+
+/// A grant is for one `resource`: it covers no login for another one or none, and keeps the
+/// scopes a later login with unchanged content did not request.
+#[tokio::test]
+async fn test_user_consent_resource() -> Result<(), Box<dyn Error>> {
+    let admin = get_auth_headers().await?;
+    let backend = get_backend_url();
+    let client = Client::new();
+    let email = "consent-resource@consenttest.io";
+    let user = create_login_user(&client, &admin, email, "Consent", LOGIN_PWD).await?;
+
+    let client_id = "consent-resource";
+    let redirect_uri = "http://localhost:3000/oidc/callback";
+    let (res_a, res_b) = (
+        "https://api-a.consenttest.io",
+        "https://api-b.consenttest.io",
+    );
+    let url_client = format!("{backend}/clients/{client_id}");
+    // left-over from a prior run
+    client
+        .delete(&url_client)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let res = client
+        .post(format!("{backend}/clients"))
+        .headers(admin.clone())
+        .json(&NewClientRequest {
+            id: client_id.to_string(),
+            secret: None,
+            name: Some("Consent Resource".to_string()),
+            confidential: false,
+            redirect_uris: vec![redirect_uri.to_string()],
+            post_logout_redirect_uris: None,
+            consent: None,
+        })
+        .send()
+        .await?;
+    expect_status!(res, 200);
+    let upd = UpdateClientRequest {
+        name: Some("Consent Resource".to_string()),
+        confidential: false,
+        redirect_uris: vec![redirect_uri.to_string()],
+        post_logout_redirect_uris: None,
+        allowed_origins: None,
+        enabled: true,
+        flows_enabled: vec![GrantType::AuthorizationCode],
+        access_token_alg: JwkKeyPairAlg::EdDSA,
+        id_token_alg: JwkKeyPairAlg::EdDSA,
+        auth_code_lifetime: 60,
+        access_token_lifetime: 300,
+        scopes: vec!["openid".to_string(), "email".to_string()],
+        default_scopes: vec!["openid".to_string()],
+        challenges: Some(vec!["plain".to_string()]),
+        force_mfa: false,
+        client_uri: None,
+        contacts: None,
+        backchannel_logout_uri: None,
+        restrict_group_prefix: None,
+        claims: None,
+        claims_at_root: false,
+        allowed_resources: Some(vec![res_a.to_string(), res_b.to_string()]),
+        default_aud: None,
+        consent: None,
+        actor_same_client: false,
+        scim: None,
+    };
+    let res = client
+        .put(&url_client)
+        .headers(admin.clone())
+        .json(&upd)
+        .send()
+        .await?;
+    expect_status!(res, 200);
+
+    let challenge = "oDXug9zfYqfz8ejcqMpALRPXfW8QhbKV2AVuScAt8xrLKDAmaRYQ4yRi2uqcH9ys";
+    let res = client
+        .get(format!(
+            "{backend}/oidc/authorize?client_id={client_id}&redirect_uri={redirect_uri}\
+            &response_type=code&code_challenge={challenge}&code_challenge_method=plain\
+            &scope=openid"
+        ))
+        .send()
+        .await?;
+    let headers = cookie_csrf_headers_from_res(expect_status!(res, 200)).await?;
+    let login = async |scopes: &[&str], resource: Option<&str>, consent: Option<LoginConsent>| {
+        let req = LoginRequest {
+            email: Some(email.to_string()),
+            password: Some(LOGIN_PWD.to_string()),
+            pow: get_solved_pow().await,
+            client_id: client_id.to_string(),
+            redirect_uri: redirect_uri.to_string(),
+            scopes: Some(scopes.iter().map(|s| s.to_string()).collect()),
+            state: None,
+            nonce: None,
+            code_challenge: Some(challenge.to_string()),
+            code_challenge_method: Some("plain".to_string()),
+            resource: resource.map(String::from),
+            resident_key_token: None,
+            fwda: None,
+            consent,
+        };
+        client
+            .post(format!("{backend}/oidc/authorize"))
+            .headers(headers.clone())
+            .json(&req)
+            .send()
+            .await
+            .unwrap()
+    };
+    // the content to ask for, from a login with a consent for other content
+    let stale = LoginConsent {
+        content_hash: STALE_HASH.to_string(),
+        accepted_scopes: vec!["openid".to_string()],
+    };
+    let url_consents = format!("{backend}/users/{}/consents", user.id);
+    let grants = async || {
+        let res = client
+            .get(&url_consents)
+            .headers(admin.clone())
+            .send()
+            .await
+            .unwrap();
+        let res = expect_status!(res, 200);
+        res.json::<Vec<UserConsentResponse>>().await.unwrap()
+    };
+
+    // --- the grant for `res_a`
+    let asked = consent_required(login(&["openid", "email"], Some(res_a), None).await).await;
+    let res = login(&["openid", "email"], Some(res_a), Some(accept_all(&asked))).await;
+    expect_status!(res, 202);
+    let res = login(&["openid", "email"], Some(res_a), None).await;
+    expect_status!(res, 202);
+
+    // --- it covers neither another `resource` nor none
+    for resource in [Some(res_b), None] {
+        let asked = consent_required(login(&["openid"], resource, None).await).await;
+        assert!(asked.granted_scopes.is_empty(), "{resource:?}");
+    }
+    let grants_a = grants().await;
+    assert_eq!(grants_a.len(), 1);
+    assert_eq!(grants_a[0].resource.as_deref(), Some(res_a));
+    assert_eq!(grants_a[0].scopes, ["email", "openid"]);
+
+    // --- an unrequested scope stays while the content is unchanged
+    let asked = consent_required(login(&["openid"], Some(res_a), Some(stale)).await).await;
+    let res = login(&["openid"], Some(res_a), Some(accept_all(&asked))).await;
+    expect_status!(res, 202);
+    assert_eq!(grants().await[0].scopes, ["email", "openid"]);
+
+    // --- cleanup
+    let res = client
+        .delete(format!("{backend}/users/{}", user.id))
+        .headers(admin.clone())
+        .send()
+        .await?;
+    expect_status!(res, 204);
+    let res = client.delete(&url_client).headers(admin).send().await?;
+    expect_status!(res, 200);
 
     Ok(())
 }

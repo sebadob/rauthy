@@ -1,6 +1,6 @@
 use crate::common::{
-    accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_auth_headers,
-    get_backend_url, get_solved_pow,
+    CLIENT_ID, accept_all, consent_required, cookie_csrf_headers_from_res_direct, get_auth_headers,
+    get_backend_url, get_solved_pow, stale_consent,
 };
 use rauthy_api_types::auth_providers::{ProviderCallbackRequest, ProviderLoginRequest};
 use rauthy_api_types::oidc::LoginConsent;
@@ -58,14 +58,17 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
         .await?;
     let mut session_headers = cookie_csrf_headers_from_res_direct(res).await?;
 
-    let provider_login = async |consent: Option<LoginConsent>| {
+    let provider_login_to = async |client_id: &str,
+                                   redirect_uri: String,
+                                   scopes: Option<Vec<String>>,
+                                   consent: Option<LoginConsent>| {
         http.post(format!("{backend_url}/providers/login"))
             .headers(session_headers.clone())
             .json(&ProviderLoginRequest {
                 email: None,
-                client_id: "rauthy".to_string(),
-                redirect_uri: format!("{backend_url}/oidc/callback"),
-                scopes: None,
+                client_id: client_id.to_string(),
+                redirect_uri,
+                scopes,
                 state: None,
                 nonce: None,
                 code_challenge: None,
@@ -82,13 +85,30 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
             .await
             .unwrap()
     };
+    let provider_login = async |consent: Option<LoginConsent>| {
+        let redirect_uri = format!("{backend_url}/oidc/callback");
+        provider_login_to("rauthy", redirect_uri, None, consent).await
+    };
+
+    // the consent is asked for exactly the requested scopes with the client's defaults
+    let redirect_uri = "http://localhost:3000/oidc/callback".to_string();
+    let scopes = Some(vec!["openid".to_string(), "groups".to_string()]);
+    let login_groups =
+        |consent| provider_login_to(CLIENT_ID, redirect_uri.clone(), scopes.clone(), consent);
+    let content = consent_required(login_groups(None).await).await;
+    let names = content.content.scopes.iter().map(|s| s.name.as_str());
+    assert_eq!(
+        names.collect::<Vec<_>>(),
+        ["email", "groups", "openid", "profile"]
+    );
+    let res = login_groups(Some(accept_all(&content))).await;
+    expect_status!(res, 202);
 
     // a missing or stale consent is refused before the upstream redirect, which would spend
     // the single-use callback on it
     let content = consent_required(provider_login(None).await).await;
     assert!(content.granted_scopes.is_empty());
-    let mut stale = accept_all(&content);
-    stale.content_hash = "0".repeat(64);
+    let stale = stale_consent(&content);
     assert_eq!(
         consent_required(provider_login(Some(stale)).await).await,
         content

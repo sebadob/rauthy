@@ -19,7 +19,10 @@ container_mailcrab := "rauthy-mailcrab"
 container_postgres := "rauthy-db-postgres"
 container_cargo_registry := "/usr/local/cargo/registry"
 file_test_pid := ".test_pid"
-test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081"
+# `OTP_ENABLE` and the bootstrap API key of the `otp_email_secret` and `mfa_assurance` tests,
+# which skip themselves without them
+test_api_key_secret := "BOOTSTRAP_API_KEY_SECRET=MfaAssuranceRegressionSecret0123456789_mfaAssuranceRegressionSec"
+test_env_vars := "PUB_URL=localhost:8081 RP_ORIGIN=http://localhost:8081 OTP_ENABLE=true BOOTSTRAP_API_KEY=eyJuYW1lIjoibWZhLWFzc3VyYW5jZSIsImV4cCI6bnVsbCwiYWNjZXNzIjpbeyJncm91cCI6IlVzZXJzIiwiYWNjZXNzX3JpZ2h0cyI6WyJyZWFkIiwiY3JlYXRlIiwidXBkYXRlIiwiZGVsZXRlIl19XX0= " + test_api_key_secret
 jemalloc_conf := "MALLOC_CONF=abort_conf:true,narenas:8,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
 postgres := "HIQLITE=false"
 
@@ -272,7 +275,7 @@ test *test:
     #!/usr/bin/env bash
     set -euxo pipefail
     clear
-    cargo test {{ test }}
+    {{ test_api_key_secret }} cargo test {{ test }}
 
 # runs the full set of tests with sqlite
 test-hiqlite *test: test-backend-stop delete-hiqlite
@@ -288,7 +291,7 @@ test-hiqlite *test: test-backend-stop delete-hiqlite
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if cargo test {{ test }}; then
+    if {{ test_api_key_secret }} cargo test {{ test }}; then
       echo "All SQLite tests successful"
       just test-backend-stop
     else
@@ -312,7 +315,7 @@ test-postgres test="": test-backend-stop postgres-stop postgres-rm delete-hiqlit
       echo '>>> Waiting for test-backend to be up and running'
     done
 
-    if {{ postgres }} cargo test {{ test }}; then
+    if {{ test_api_key_secret }} {{ postgres }} cargo test {{ test }}; then
       echo "All Postgres tests successful"
       just test-backend-stop
     else

@@ -24,6 +24,12 @@ secret_api = "SuperSecureSecret1337"
 [consent]
 enable = true
 
+# makes ephemeral clients request a `resource`
+[[consent.sources]]
+resource = 'https://consent-test.example.com'
+source = 'local'
+name = 'Consent Test API'
+
 [database]
 pg_host = 'localhost'
 pg_user = 'rauthy'
@@ -47,6 +53,7 @@ allowed_flows = ['authorization_code', 'refresh_token']
 # the integration test suite serves its ephemeral client document from 127.0.0.1;
 # the deny path is covered by unit tests in src/data/src/http_client.rs
 danger_allow_private_addresses = true
+allowed_resources = ['https://consent-test.example.com']
 
 [hashing]
 argon2_m_cost = 32768

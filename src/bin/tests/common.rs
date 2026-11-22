@@ -24,6 +24,8 @@ pub const CLIENT_ID: &str = "init_client";
 pub const CLIENT_SECRET: &str = "LjERi0WSEz1E9OY9KFJaMjlwV1Uf3nuIuOUnJnoJQNm2i7YMjTDMy4PbAKnYRgFy";
 pub const USERNAME: &str = "init_admin@localhost";
 pub const PASSWORD: &str = "123SuperSafe";
+/// A `content_hash` of no consent content.
+pub const STALE_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 #[macro_export]
 macro_rules! aw {
@@ -401,6 +403,14 @@ pub fn accept_all(content: &LoginConsentContent) -> LoginConsent {
             .iter()
             .map(|s| s.name.clone())
             .collect(),
+    }
+}
+
+/// The consent with all requested scopes of `content`, but given for other content.
+pub fn stale_consent(content: &LoginConsentContent) -> LoginConsent {
+    LoginConsent {
+        content_hash: STALE_HASH.to_string(),
+        ..accept_all(content)
     }
 }
 
