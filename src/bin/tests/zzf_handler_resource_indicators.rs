@@ -320,7 +320,7 @@ async fn test_resource_survives_authorize_refresh() -> Result<(), Box<dyn Error>
     // silent re-auth via `POST /oidc/authorize/refresh` on the SAME session, same `resource`
     let req_refresh = LoginRefreshRequest {
         client_id: ID_REFRESH.to_string(),
-        redirect_uri: redirect_uri.to_string(),
+        redirect_uri: redirect_uri.clone(),
         scopes: None,
         state: None,
         nonce: Some("MySuperNonce".to_string()),
