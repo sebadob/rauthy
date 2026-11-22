@@ -94,7 +94,7 @@ pub async fn send_pwd_reset_info(user: User) {
         )
         .await;
     match res {
-        Ok(_) => {
+        Ok(()) => {
             debug!("User {} notified about password expiry", user.email);
         }
         Err(ref e) => {

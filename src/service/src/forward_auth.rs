@@ -56,7 +56,7 @@ pub async fn get_forward_auth_client(
             if s.validate(&req, &client.id).is_ok() {
                 if check_csrf {
                     match s.validate_csrf(&req, params.danger_cookie_insecure) {
-                        Ok(_) => Some(s),
+                        Ok(()) => Some(s),
                         Err(err) => {
                             error!(?err, "CSRF token check");
                             None

@@ -177,7 +177,7 @@ pub async fn reg_finish(
                     )
                     .await
                     {
-                        Ok(_) => Some(aaguid),
+                        Ok(()) => Some(aaguid),
                         Err(err) => {
                             warn!("Cannot verify FIDO device attestation: {}", err.message);
                             None

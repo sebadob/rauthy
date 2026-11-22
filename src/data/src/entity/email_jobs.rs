@@ -441,7 +441,7 @@ impl EmailJob {
                     )
                     .await
                     {
-                        Ok(_) => {
+                        Ok(()) => {
                             trace!(
                                 "E-Mail to {} sent to Mailer-Task (internally) successfully",
                                 user.email

@@ -83,7 +83,7 @@ impl NotifierMatrix {
         // try login and check access and config
         for attempt in 1..=3 {
             match slf.login().await {
-                Ok(_) => break,
+                Ok(()) => break,
                 Err(err) if attempt == 3 => return Err(err),
                 Err(err) => {
                     warn!("{err:?} - retry in 5 seconds");
@@ -281,7 +281,7 @@ impl Notify for NotifierMatrix {
                 let retries = 3;
                 for i in 1..=3 {
                     match self.login().await {
-                        Ok(_) => {
+                        Ok(()) => {
                             info!("Logged in to Matrix again");
                             break;
                         }
