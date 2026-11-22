@@ -307,7 +307,7 @@ pub struct LoginConsent {
     pub content_hash: String,
     /// Must contain all `default_scopes` of the client, and only requested scopes.
     ///
-    /// Validation: `Vec<^[a-z0-9-_/,:*]{2,64}$>`
+    /// Validation: `Vec<^[a-zA-Z0-9-_/,:*.]{2,64}$>`
     #[validate(custom(function = "validate_vec_scopes"))]
     pub accepted_scopes: Vec<String>,
 }
