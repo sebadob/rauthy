@@ -202,6 +202,7 @@ export const I18nDe: I18n = {
         zip: 'PLZ',
     },
     authorize: {
+        busy: 'Der Server ist gerade ausgelastet. Bitte versuchen Sie es gleich noch einmal.',
         clientForceMfa: `Dieser Login setzt MFA voraus für eine erhöhte Sicherheit.\nUm Zugang zu 
             bekommen, müssen Sie sie in Ihren Account einloggen und mindestens einen Passkey\n
             hinzufügen.`,

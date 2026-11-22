@@ -185,6 +185,7 @@ export const I18nKo: I18n = {
         zip: '우편번호',
     },
     authorize: {
+        busy: '서버가 현재 사용 중입니다. 잠시 후 다시 시도해 주세요.',
         clientForceMfa: `이 로그인은 더 높은 수준의 보안을 위해서 MFA를 강제합니다.\n접근하려면, 계정에 
             로그인하고 최소 하나 이상의 패스키를 추가해야 합니다.`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',

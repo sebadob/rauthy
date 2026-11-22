@@ -196,6 +196,7 @@ export const I18nEn: I18n = {
         zip: 'ZIP / Postal Code',
     },
     authorize: {
+        busy: 'The server is busy right now. Please try again in a moment.',
         clientForceMfa: `This login forces MFA to achieve higher security.\nTo get access, you need 
             to log in to your account and add at least one additional Passkey`,
         clientGroupPrefixForbidden: 'Missing group assignment for this login',

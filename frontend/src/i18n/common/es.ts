@@ -198,6 +198,7 @@ export const I18nEs: I18n = {
         zip: 'Código postal',
     },
     authorize: {
+        busy: 'El servidor está ocupado en este momento. Inténtelo de nuevo en un momento.',
         clientForceMfa: `Este inicio de sesión exige MFA para lograr una mayor seguridad.\nPara
             obtener acceso, debe iniciar sesión en su cuenta y añadir al menos una Passkey`,
         clientGroupPrefixForbidden: 'Falta la asignación de grupo para este inicio de sesión',

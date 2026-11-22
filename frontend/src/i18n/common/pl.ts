@@ -191,6 +191,7 @@ export const I18nPl: I18n = {
         zip: 'Kod pocztowy',
     },
     authorize: {
+        busy: 'Serwer jest teraz zajęty. Spróbuj ponownie za chwilę.',
         clientForceMfa: `To logowanie wymusza MFA dla większego bezpieczeństwa.\nAby uzyskać dostęp,
             zaloguj się na swoje konto i dodaj co najmniej jeden dodatkowy klucz dostępu`,
         clientGroupPrefixForbidden: 'Brak przypisania do grupy dla tego logowania',

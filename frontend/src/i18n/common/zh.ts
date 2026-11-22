@@ -178,6 +178,7 @@ export const I18nZh: I18n = {
         zip: '邮政编码',
     },
     authorize: {
+        busy: '服务器当前繁忙，请稍后重试。',
         clientForceMfa:
             '本次登陆强制使用多因子认证以增强安全性。\n要完成登陆，请登入您的账户并添加一个登陆密钥。',
         clientGroupPrefixForbidden: '缺少此登录的组分配',

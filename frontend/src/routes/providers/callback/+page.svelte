@@ -33,6 +33,8 @@
     let tosAcceptCode = $state('');
     let tosForceAccept = $state(false);
     let needsValuesUpdate = $state(false);
+    // the login page to ask the consent again is unknown, the account is the way on
+    let consentLost = $state(false);
 
     onMount(async () => {
         let pErr = useParam('error').get();
@@ -133,6 +135,7 @@
                 window.location.replace(loginPage);
             } else {
                 error = t.authorize.consent.changed;
+                consentLost = true;
             }
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
@@ -216,6 +219,13 @@
             onToSAccept={handleAuthRes}
             {onToSCancel}
         />
+    {:else if consentLost}
+        <div class="public-card ui-section-stack">
+            <p class="err">{error}</p>
+            <Button onclick={() => window.location.replace('/auth/v1/account')}>
+                {t.authorize.navigateToAccount}
+            </Button>
+        </div>
     {:else if error}
         <div class="public-card err">
             {error}

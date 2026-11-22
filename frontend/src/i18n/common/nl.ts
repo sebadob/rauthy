@@ -195,6 +195,7 @@ export const I18nNl: I18n = {
         zip: 'Postcode',
     },
     authorize: {
+        busy: 'De server is op dit moment bezet. Probeer het zo meteen opnieuw.',
         clientForceMfa: `Voor deze login is MFA vereist voor hogere veiligheid.\nOm toegang te
             krijgen, moet u inloggen op uw account en minimaal één extra Passkey toevoegen`,
         clientGroupPrefixForbidden: 'Ontbrekende groepstoewijzing voor deze login',

@@ -408,9 +408,11 @@
         if (
             loginAction === 'RefreshConsent' &&
             (res.status === 0 || res.status >= 400) &&
+            res.status !== 503 &&
             res.error?.error !== 'consent_required'
         ) {
-            // the refresh failed for another reason, the login form is the way on
+            // The refresh failed for another reason, the login form is the way on. A busy server
+            // keeps the consent view, so that Continue can be retried.
             loginAction = '';
         }
 
@@ -495,6 +497,9 @@
                 tooManyRequests = false;
                 err = '';
             }, diff);
+        } else if (res.status === 503) {
+            // the server is busy, e.g. fetching the consent content, the credentials stay
+            err = t.authorize.busy;
         } else if (res.status === 0 || res.status >= 500) {
             // network or server error -> not a credentials problem
             err = res.error?.message || '';
@@ -593,12 +598,16 @@
             consent: loginConsent(),
             ...(isAtproto && { handle: atprotoHandle }),
         };
-        execProviderLogin(payload).then(error => {
+        execProviderLogin(payload).then(res => {
             isLoading = false;
-            if (error?.error === 'consent_required') {
-                showConsentRequired(error.message);
+            if (!res) {
+                err = '';
+            } else if (res.status === 503) {
+                err = t.authorize.busy;
+            } else if (res.error?.error === 'consent_required') {
+                showConsentRequired(res.error.message);
             } else {
-                err = error?.message || '';
+                err = res.error?.message || `HTTP ${res.status}`;
             }
         });
     }
@@ -759,15 +768,24 @@
             {/if}
         {/if}
 
+        {#if consent && !clientMfaForce}
+            <!--
+            One block for the consent view of a valid session and for the login form, so that a switch
+            between them keeps the choices. Hidden, not removed, during the password reset.
+            -->
+            <div hidden={showReset}>
+                <LoginConsent
+                    {consent}
+                    clientName={clientName || clientId || ''}
+                    bind:accepted={consentAccepted}
+                    bind:confirmed={consentConfirmed}
+                    disabled={isLoading || tooManyRequests}
+                />
+            </div>
+        {/if}
+
         {#if loginAction === 'RefreshConsent' && consent}
             <!-- the session is still valid, only the consent is missing -->
-            <LoginConsent
-                {consent}
-                clientName={clientName || clientId || ''}
-                bind:accepted={consentAccepted}
-                bind:confirmed={consentConfirmed}
-                disabled={isLoading}
-            />
             <div class="btn flex-col">
                 <Button
                     ariaLabel={t.authorize.consent.continue}
@@ -839,29 +857,17 @@
                     </div>
                 {/if}
 
-                {#if consent}
-                    <!-- hidden, not removed, during the password reset to keep the choices -->
-                    <div hidden={showReset}>
-                        <LoginConsent
-                            {consent}
-                            clientName={clientName || clientId || ''}
-                            bind:accepted={consentAccepted}
-                            bind:confirmed={consentConfirmed}
-                            disabled={isLoading || tooManyRequests}
-                        />
+                {#if consent && hintProvider && !showReset}
+                    <div class="btn flex-col">
+                        <Button
+                            ariaLabel={t.authorize.consent.continue}
+                            onclick={() => hintProvider && providerLogin(hintProvider.id)}
+                            isDisabled={isConsentPending}
+                            {isLoading}
+                        >
+                            {t.authorize.consent.continue}
+                        </Button>
                     </div>
-                    {#if hintProvider && !showReset}
-                        <div class="btn flex-col">
-                            <Button
-                                ariaLabel={t.authorize.consent.continue}
-                                onclick={() => hintProvider && providerLogin(hintProvider.id)}
-                                isDisabled={isConsentPending}
-                                {isLoading}
-                            >
-                                {t.authorize.consent.continue}
-                            </Button>
-                        </div>
-                    {/if}
                 {/if}
 
                 {#if !tooManyRequests && !clientMfaForce}

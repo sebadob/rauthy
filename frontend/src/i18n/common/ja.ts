@@ -181,6 +181,7 @@ export const I18nJa: I18n = {
         zip: '郵便番号',
     },
     authorize: {
+        busy: 'サーバーが混み合っています。しばらくしてからもう一度お試しください。',
         clientForceMfa:
             'このログインでは、安全性を高めるため多要素認証が必須です。\nアクセスするには、アカウントにログインして Passkey を少なくとも1つ追加してください',
         clientGroupPrefixForbidden: 'このログインに必要なグループに所属していません',

@@ -189,6 +189,7 @@ export const I18nCs: I18n = {
         zip: 'PSČ',
     },
     authorize: {
+        busy: 'Server je právě vytížený. Zkuste to prosím za chvíli znovu.',
         clientForceMfa: `Toto přihlášení vyžaduje kvůli vyšší bezpečnosti MFA.\nPro přístup se
             přihlaste ke svému účtu a přidejte aspoň jeden přístupový klíč.`,
         clientGroupPrefixForbidden: 'Pro toto přihlášení nejste zařazeni do potřebné skupiny',

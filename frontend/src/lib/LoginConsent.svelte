@@ -43,14 +43,22 @@
     });
 
     // A remote description may contain HTML. Only its text is shown: an inert document from the
-    // DOMParser neither runs scripts nor loads anything.
+    // DOMParser neither runs scripts nor loads anything. The text of scripts and styles is dropped,
+    // and a line break and every block end become a newline, which `pre-line` shows.
     function details(scope: ConsentScope): null | string {
-        if (consent.source === 'remote') {
-            return scope.description
-                ? new DOMParser().parseFromString(scope.description, 'text/html').body.textContent
-                : null;
+        if (consent.source !== 'remote') {
+            return builtin[scope.name] ?? null;
         }
-        return builtin[scope.name] ?? null;
+        if (!scope.description) {
+            return null;
+        }
+        let body = new DOMParser().parseFromString(scope.description, 'text/html').body;
+        body.querySelectorAll('script, style, template').forEach(n => n.remove());
+        body.querySelectorAll('br').forEach(n => n.replaceWith('\n'));
+        body.querySelectorAll(
+            'address, article, aside, blockquote, dd, div, dl, dt, figcaption, figure, footer, h1, h2, h3, h4, h5, h6, header, hr, li, main, nav, ol, p, pre, section, table, tr, ul',
+        ).forEach(n => n.append('\n'));
+        return body.textContent.replace(/\s*\n\s*/g, '\n').trim() || null;
     }
 
     function toggleDetails(scope: ConsentScope) {
@@ -62,9 +70,10 @@
     <h3>{t.authorize.consent.title}</h3>
     <!-- the client asks, `name` is the one of the consent source, i.e. of the resource -->
     <p>
-        {(consent.name ? t.authorize.consent.introResource : t.authorize.consent.intro)
-            .replace('{{ CLIENT }}', clientName)
-            .replace('{{ RESOURCE }}', consent.name ?? '')}
+        {(consent.name ? t.authorize.consent.introResource : t.authorize.consent.intro).replace(
+            /\{\{ (CLIENT|RESOURCE) \}\}/g,
+            (_, key) => (key === 'CLIENT' ? clientName : (consent.name ?? '')),
+        )}
     </p>
     {#if consent.intro}
         <p class="intro">{consent.intro}</p>
@@ -153,6 +162,7 @@
         margin: 0.25rem 0 0.5rem 1.9rem;
         font-size: 0.9rem;
         overflow-wrap: anywhere;
+        white-space: pre-line;
     }
 
     .intro {

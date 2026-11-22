@@ -353,10 +353,7 @@ const refreshPath = '/auth/v1/oidc/authorize/refresh';
 
 test('login: a consent_required on the automatic refresh shows the consent block once', async t => {
     const { context, page, postsTo } = await openConsentPage({
-        templates: {
-            tpl_login_action: 'Refresh',
-            tpl_consent_content: JSON.stringify(consentContent),
-        },
+        templates: { tpl_login_action: 'Refresh' },
         query: '&scope=openid%20groups',
         handle: (/** @type {any} */ request, /** @type {any} */ url) => {
             if (url.pathname === refreshPath) {
@@ -372,6 +369,7 @@ test('login: a consent_required on the automatic refresh shows the consent block
     await cont.waitFor();
     await page.waitForTimeout(500);
     assert.equal(postsTo(refreshPath).length, 1, 'the refresh is sent once');
+    assert.equal(postsTo(refreshPath)[0].body.consent, undefined);
     assert.equal(await page.locator('input[name=email]').count(), 0, 'no credential form');
     assert.ok(await page.getByLabel('groups', { exact: true }).isChecked(), 'granted is checked');
     assert.ok(await cont.isDisabled());
@@ -404,11 +402,60 @@ test('login: a failed consent refresh falls back to the login form', async t => 
     const cont = page.getByRole('button', { name: 'Continue' });
     await cont.waitFor();
     assert.equal(await page.locator('input[name=email]').count(), 0);
+    await page.getByLabel('groups', { exact: true }).click();
     await page.getByLabel('I agree').click();
     await cont.click();
     await page.getByText('session gone').waitFor();
     await page.locator('input[name=email]').waitFor();
     await page.getByRole('button', { name: 'Login: Upstream' }).waitFor();
+    // the login form goes on with the choices made in the consent view
+    assert.ok(await page.getByLabel('groups', { exact: true }).isChecked());
+    assert.ok(await page.getByLabel('I agree').isChecked());
+});
+
+test('login: a busy server keeps the consent view, so that Continue can be retried', async t => {
+    const { context, page, postsTo } = await openConsentPage({
+        templates: {
+            tpl_login_action: 'RefreshConsent',
+            tpl_consent_content: JSON.stringify(consentContent),
+        },
+        handle: (/** @type {any} */ request, /** @type {any} */ url) => {
+            if (url.pathname === refreshPath) {
+                return postsTo(refreshPath).length === 1
+                    ? { status: 503, json: { error: 'x', message: 'raw message' } }
+                    : { status: 400, json: { error: 'x', message: 'refreshed' } };
+            }
+        },
+    });
+    t.after(() => context.close());
+
+    const cont = page.getByRole('button', { name: 'Continue' });
+    await cont.waitFor();
+    await page.getByLabel('I agree').click();
+    await cont.click();
+    await page.getByText('The server is busy right now. Please try again in a moment.').waitFor();
+    assert.equal(await page.locator('input[name=email]').count(), 0, 'still the consent view');
+    await cont.click();
+    await page.getByText('refreshed').waitFor();
+    assert.equal(postsTo(refreshPath).length, 2);
+});
+
+test('login: a busy server on a provider login shows a message to try again', async t => {
+    const { context, page } = await openConsentPage({
+        templates: {
+            tpl_auth_providers: JSON.stringify([{ id: 'p1', name: 'Upstream', updated: 0 }]),
+        },
+        handle: (/** @type {any} */ request, /** @type {any} */ url) => {
+            if (url.pathname === '/auth/v1/providers/login') {
+                return { status: 503, json: { error: 'x', message: 'raw message' } };
+            }
+        },
+    });
+    t.after(() => context.close());
+
+    await page.getByRole('button', { name: 'Login: Upstream' }).click();
+    await page.getByText('The server is busy right now. Please try again in a moment.').waitFor();
+    assert.equal(await page.getByText('raw message').count(), 0);
 });
 
 test('login: with a consent block, the idp_hint login waits for Continue', async t => {
@@ -474,7 +521,9 @@ test('login: a remote scope description shows as plain text only', async t => {
                 title: 'Groups',
                 description:
                     '<div style="position:fixed;inset:0;background:red">overlay</div>' +
-                    '<a href="https://evil.example">click</a><img src=x onerror="window.pwned=1">',
+                    '<p><a href="https://evil.example">click</a> here</p>' +
+                    '<img src=x onerror="window.pwned=1"><script>window.pwned=2</script>' +
+                    '<style>body{display:none}</style>line<br>two',
                 warning: false,
             },
             { name: 'openid', title: null, description: null, warning: false },
@@ -483,7 +532,8 @@ test('login: a remote scope description shows as plain text only', async t => {
     };
     const { context, page } = await openConsentPage({
         templates: {
-            tpl_client_name: 'My App',
+            // a replacement pattern and a placeholder in the name are shown as they are
+            tpl_client_name: "My {{ RESOURCE }} $' App",
             // escaped like the backend does it for the `<template>`
             tpl_consent_content: JSON.stringify(remote)
                 .replaceAll('<', '\\u003c')
@@ -494,11 +544,18 @@ test('login: a remote scope description shows as plain text only', async t => {
     });
     t.after(() => context.close());
 
-    await page.getByText('My App requests access to Calendar API:', { exact: true }).waitFor();
+    await page
+        .getByText("My {{ RESOURCE }} $' App requests access to Calendar API:", { exact: true })
+        .waitFor();
     await page.getByText('Details').click();
-    const details = page.getByText('overlayclick', { exact: true });
+    const details = page.getByText('overlay click here line two', { exact: true });
     await details.waitFor();
     assert.equal(await details.locator('*').count(), 0, 'no element from the description');
+    // no script or style text, and the block ends and the line break show as line breaks
+    assert.equal(
+        await details.evaluate((/** @type {any} */ e) => e.innerText),
+        'overlay\nclick here\nline\ntwo',
+    );
     assert.equal(await page.locator('[style*="fixed"]').count(), 0);
     assert.equal(await page.evaluate(() => /** @type {any} */ (window).pwned), undefined);
 });
@@ -571,19 +628,24 @@ test('provider callback: a consent_required without a login page shows a message
     t.after(() => context.close());
     await page.getByText('The consent content has changed, please check it again.').waitFor();
     assert.equal(await page.getByText('consent_required').count(), 0);
+    await page.getByRole('button', { name: 'Account Dashboard' }).waitFor();
 });
 
 test('register: a provider sign-up collects the consent it is asked for', async t => {
+    const changed = { ...consentContent, content_hash: 'b'.repeat(64) };
     const { context, page, postsTo } = await openConsentPage({
         templates: {
             tpl_auth_providers: JSON.stringify([{ id: 'p1', name: 'Upstream', updated: 0 }]),
+            tpl_client_name: 'My Rauthy',
         },
         path: '/auth/v1/users/register',
         handle: (/** @type {any} */ request, /** @type {any} */ url) => {
             if (url.pathname === '/auth/v1/providers/login') {
-                return postsTo(url.pathname).length === 1
-                    ? consentRequired(consentContent)
-                    : { status: 400, json: { error: 'x', message: 'signed up' } };
+                const n = postsTo(url.pathname).length;
+                if (n === 1) return consentRequired(consentContent);
+                // the confirmed consent is refused, the content changed meanwhile
+                if (n === 2) return consentRequired(changed);
+                return { status: 400, json: { error: 'x', message: 'signed up' } };
             }
         },
     });
@@ -591,15 +653,39 @@ test('register: a provider sign-up collects the consent it is asked for', async 
 
     const provider = page.getByRole('button', { name: /Upstream$/ });
     await provider.click();
-    await page.getByText('Consent', { exact: true }).waitFor();
+    await page.getByText('My Rauthy requests access to:', { exact: true }).waitFor();
     assert.equal(postsTo('/auth/v1/providers/login')[0].body.consent, undefined);
+    assert.equal(await page.getByText('The consent content has changed').count(), 0);
     assert.ok(await provider.isDisabled(), 'the sign-up waits for the confirmation');
 
     await page.getByLabel('I agree').click();
     await provider.click();
+    await page.getByText('The consent content has changed, please check it again.').waitFor();
+    assert.ok(await provider.isDisabled(), 'the changed content needs a new confirmation');
+
+    await page.getByLabel('I agree').click();
+    await provider.click();
     await page.getByText('signed up').waitFor();
-    assert.deepEqual(postsTo('/auth/v1/providers/login')[1].body.consent, {
-        content_hash: consentContent.content_hash,
+    assert.deepEqual(postsTo('/auth/v1/providers/login')[2].body.consent, {
+        content_hash: changed.content_hash,
         accepted_scopes: ['email', 'openid'],
     });
+});
+
+test('register: a busy server on a provider sign-up shows a message to try again', async t => {
+    const { context, page } = await openConsentPage({
+        templates: {
+            tpl_auth_providers: JSON.stringify([{ id: 'p1', name: 'Upstream', updated: 0 }]),
+        },
+        path: '/auth/v1/users/register',
+        handle: (/** @type {any} */ request, /** @type {any} */ url) => {
+            if (url.pathname === '/auth/v1/providers/login') {
+                return { status: 503, json: { error: 'x', message: 'raw message' } };
+            }
+        },
+    });
+    t.after(() => context.close());
+
+    await page.getByRole('button', { name: /Upstream$/ }).click();
+    await page.getByText('The server is busy right now. Please try again in a moment.').waitFor();
 });

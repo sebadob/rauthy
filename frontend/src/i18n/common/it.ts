@@ -181,6 +181,7 @@ export const I18nIt: I18n = {
         zip: 'CAP',
     },
     authorize: {
+        busy: 'Il server è occupato in questo momento. Riprova tra un attimo.',
         clientForceMfa:
             "L'accesso a questa applicazione richiede la MFA. Accedi al tuo account e aggiungi almeno una passkey.",
         clientGroupPrefixForbidden: "L'utente non appartiene a un gruppo autorizzato ad accedere",

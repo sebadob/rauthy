@@ -5,6 +5,7 @@
         PKCE_VERIFIER,
         REDIRECT_URI,
         TPL_AUTH_PROVIDERS,
+        TPL_CLIENT_NAME,
         TPL_RESTRICTED_EMAIL_DOMAIN,
         TPL_USER_VALUES_CONFIG,
     } from '#utils/constants.ts';
@@ -48,6 +49,8 @@
     let config: undefined | UserValuesConfig = $state();
     let redirectUri = useParam('redirect_uri');
     let providers: AuthProviderTemplate[] = $state([]);
+    // the name of the `rauthy` client, which a provider sign-up asks the consent for
+    let clientName = $state('Rauthy');
 
     let isLoading = $state(false);
     let err = $state('');
@@ -191,17 +194,27 @@
         // provider login will fail without a session in at least init state
         await createSession();
 
-        let error = await execProviderLogin(payload);
+        let res = await execProviderLogin(payload);
         isLoading = false;
         err = '';
-        if (error?.error === 'consent_required') {
+        if (!res) {
+            return;
+        }
+        if (res.status === 503) {
+            err = t.authorize.busy;
+        } else if (res.error?.error === 'consent_required') {
             try {
-                consent = JSON.parse(error.message) as ConsentContentTemplate;
+                consent = JSON.parse(res.error.message) as ConsentContentTemplate;
             } catch {
-                err = error.message;
+                err = res.error.message;
+                return;
+            }
+            if (payload.consent) {
+                // the confirmed consent was refused, because the content changed meanwhile
+                err = t.authorize.consent.changed;
             }
         } else {
-            err = error?.message || '';
+            err = res.error?.message || `HTTP ${res.status}`;
         }
     }
 
@@ -268,6 +281,7 @@
 <Template id={TPL_RESTRICTED_EMAIL_DOMAIN} bind:value={restrictedDomain} />
 <Template id={TPL_USER_VALUES_CONFIG} bind:value={config} />
 <Template id={TPL_AUTH_PROVIDERS} bind:value={providers} />
+<Template id={TPL_CLIENT_NAME} clientId="rauthy" bind:value={clientName} />
 
 <PublicPage>
     <div class="public-card register-card">
@@ -424,7 +438,7 @@
                     {#if consent}
                         <LoginConsent
                             {consent}
-                            clientName="Rauthy"
+                            {clientName}
                             bind:accepted={consentAccepted}
                             bind:confirmed={consentConfirmed}
                             disabled={isLoading}

@@ -158,6 +158,7 @@ export interface I18n {
         zip: string;
     };
     authorize: {
+        busy: string;
         clientForceMfa: string;
         clientGroupPrefixForbidden: string;
         consent: {

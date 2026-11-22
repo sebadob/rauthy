@@ -195,6 +195,7 @@ export const I18nFr: I18n = {
         zip: 'Code postal',
     },
     authorize: {
+        busy: 'Le serveur est actuellement occupé. Veuillez réessayer dans un instant.',
         clientForceMfa: `Cette connexion nécessite la double authentification (MFA) pour une sécurité renforcée.\nPour y accéder, vous devez
             vous connecter à votre compte et ajouter au moins une clé d'accès supplémentaire`,
         clientGroupPrefixForbidden: 'Attribution de groupe manquante pour cette connexion',
