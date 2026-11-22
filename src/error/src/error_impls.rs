@@ -649,6 +649,19 @@ mod tests {
         );
     }
 
+    /// Consent fetcher back pressure: a 503 that tells the client when to retry.
+    #[test]
+    fn test_service_unavailable_retry_header() {
+        let err = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(1_700_000_000), "busy");
+        let resp = err.error_response();
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let retry = resp
+            .headers()
+            .get(HEADER_RETRY_NOT_BEFORE)
+            .map(|v| v.to_str().unwrap());
+        assert_eq!(retry, Some("1700000000"), "headers {:?}", resp.headers());
+    }
+
     /// bincode encodes the variant index. A new variant goes at the end to keep the indices
     /// stable, in case an error is ever cached with bincode: otherwise cached values would decode
     /// as another error after an upgrade.

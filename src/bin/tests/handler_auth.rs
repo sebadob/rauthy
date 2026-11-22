@@ -12,7 +12,7 @@ use pretty_assertions::assert_eq;
 use rauthy_api_types::clients::{ClientResponse, NewClientRequest, UpdateClientRequest};
 use rauthy_api_types::generic::KeepAliveResponse;
 use rauthy_api_types::oidc::{
-    GrantType, JktClaim, JwkKeyPairAlg, LoginRequest, TokenInfo, TokenRequest,
+    GrantType, JktClaim, JwkKeyPairAlg, LoginRefreshRequest, LoginRequest, TokenInfo, TokenRequest,
     TokenRevocationRequest, TokenValidationRequest,
 };
 use rauthy_common::constants::{
@@ -1371,6 +1371,39 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     assert!(!ts.access_token.is_empty());
     assert!(new_ts.id_token.is_some());
     assert!(new_ts.refresh_token.is_some());
+
+    // the silent re-auth with the now valid session must request a `resource` as well
+    let refresh_login = |resource: Option<&str>| LoginRefreshRequest {
+        client_id: client_id.to_string(),
+        redirect_uri: redirect_uri.to_string(),
+        scopes: None,
+        state: None,
+        nonce: Some(nonce.clone()),
+        code_challenge: Some(base64_url_encode(hash.as_ref())),
+        code_challenge_method: Some("S256".to_string()),
+        resource: resource.map(String::from),
+        fwda: None,
+        consent: None,
+    };
+    let url_refresh = format!("{backend_url}/oidc/authorize/refresh");
+    let res = client
+        .post(&url_refresh)
+        .headers(headers.clone())
+        .json(&refresh_login(None))
+        .send()
+        .await?;
+    let err = expect_status!(res, 400).json::<ErrorResponse>().await?;
+    assert_eq!(
+        (err.error, err.message.as_ref()),
+        (ErrorResponseType::BadRequest, "a `resource` is required")
+    );
+    let res = client
+        .post(&url_refresh)
+        .headers(headers)
+        .json(&refresh_login(Some(resource)))
+        .send()
+        .await?;
+    expect_status!(res, 202);
 
     Ok(())
 }
