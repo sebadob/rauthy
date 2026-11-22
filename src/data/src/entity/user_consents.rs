@@ -449,7 +449,8 @@ impl UserConsent {
 }
 
 /// A consent given on the login page, written as the user's [`UserConsent`] for the client and
-/// `resource` once the first factor of the login is verified.
+/// `resource` once the last required factor of the login is verified: the password, or the
+/// WebAuthn or OTP ceremony that follows it or replaces it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct ConsentGrant {
     pub client_id: String,

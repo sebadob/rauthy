@@ -1,5 +1,5 @@
 use crate::oidc;
-use crate::oidc::authorize::AuthorizeData;
+use crate::oidc::authorize::{AuthorizeData, FirstFactor};
 use actix_web::HttpRequest;
 use actix_web::cookie::Cookie;
 use rauthy_api_types::auth_providers::ProviderCallbackRequest;
@@ -112,6 +112,7 @@ pub async fn login_finish<'a>(
             code_challenge_method: slf.req_code_challenge_method,
             resource: slf.req_resource,
             consent: slf.req_consent,
+            first_factor: FirstFactor::Proven,
             header_origin,
             require_webauthn,
             require_otp,

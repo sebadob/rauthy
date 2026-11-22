@@ -118,6 +118,11 @@ pub async fn post_authorize(
     };
 
     let account_type = user.account_type();
+    let first_factor = if is_rk_authenticated || req_data.password.is_some() {
+        FirstFactor::Proven
+    } else {
+        FirstFactor::Pending
+    };
 
     // Only allow an empty password, if the user has a passkey only account or a valid MFA cookie.
     let user_must_provide_password = !is_rk_authenticated
@@ -213,6 +218,7 @@ pub async fn post_authorize(
             code_challenge_method: req_data.code_challenge_method,
             resource: req_data.resource,
             consent: req_data.consent,
+            first_factor,
             header_origin,
             require_webauthn,
             require_otp,
@@ -278,6 +284,7 @@ pub async fn post_authorize_refresh(
             // thread it through so audience-bound tokens survive subsequent logins
             resource: req_data.resource,
             consent: req_data.consent,
+            first_factor: FirstFactor::Proven,
             header_origin,
             require_webauthn,
             require_otp,
@@ -298,10 +305,21 @@ pub(crate) struct AuthorizeData {
     pub code_challenge_method: Option<String>,
     pub resource: Option<String>,
     pub consent: Option<LoginConsent>,
+    pub first_factor: FirstFactor,
     pub header_origin: Option<(HeaderName, HeaderValue)>,
     pub require_webauthn: bool,
     pub require_otp: bool,
     pub is_forward_auth: Option<bool>,
+}
+
+/// Whether a factor has proven the user before [`finish_authorize`]. Until one has, the user's
+/// consent grant is neither shown nor used.
+pub(crate) enum FirstFactor {
+    /// The password, a resident key, an upstream provider or a valid session of the user.
+    Proven,
+    /// Only the WebAuthn or OTP ceremony proves the user: a passkey-only account, or a valid MFA
+    /// cookie without the password.
+    Pending,
 }
 
 /// Expects the user checks already been done, but does all the necessary client validations.
@@ -311,8 +329,8 @@ pub(crate) struct AuthorizeData {
 /// With `consent.enable`, fails with `ConsentRequired` carrying the [`LoginConsentContent`] JSON
 /// as message when `data.consent` is missing and the user's grant does not cover the request, or
 /// when `data.consent` is for other content or not valid for the client. A valid consent is
-/// written as the user's grant, after the WebAuthn ceremony if one is required, and the auth code
-/// gets only its accepted scopes.
+/// written as the user's grant after the last required factor: right away, or after the WebAuthn
+/// or OTP ceremony. The auth code gets only its accepted scopes.
 pub(crate) async fn finish_authorize(
     req: &HttpRequest,
     user: User,
@@ -368,7 +386,12 @@ pub(crate) async fn finish_authorize(
         None => None,
         Some(content) => match data.consent {
             None => {
-                let grant = UserConsent::find(&user.id, &client.id, resource).await?;
+                let grant = match data.first_factor {
+                    FirstFactor::Proven => {
+                        UserConsent::find(&user.id, &client.id, resource).await?
+                    }
+                    FirstFactor::Pending => None,
+                };
                 let is_covered = match &grant {
                     None => false,
                     Some(grant) => grant.covers(&client, resource, &scopes, lang).await,
@@ -417,9 +440,9 @@ pub(crate) async fn finish_authorize(
             }
         },
     };
-    // a WebAuthn ceremony may be the only factor, the grant waits for it
+    // a ceremony may be the only factor, the grant waits for the last one
     let consent_grant = match consent_grant {
-        Some(grant) if !data.require_webauthn => {
+        Some(grant) if !data.require_webauthn && !data.require_otp => {
             grant.upsert(&user, req).await?;
             None
         }
@@ -544,6 +567,7 @@ pub(crate) async fn finish_authorize(
             }),
             needs_user_update,
             session_id: session.id.clone(),
+            consent_grant,
         }
         .save()
         .await?;
