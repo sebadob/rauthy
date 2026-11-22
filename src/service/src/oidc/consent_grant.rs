@@ -2,6 +2,7 @@
 //! exchange and FedCM, the mapping of its `ConsentRequired` to `invalid_grant`, and the narrowing
 //! of a refresh token's scope to the consent grant.
 
+use rauthy_api_types::oidc::LoginConsent;
 use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
 use rauthy_data::entity::user_consents::UserConsent;
@@ -49,6 +50,43 @@ pub async fn consent_to_ask(
         client,
         grant.as_ref(),
     )))
+}
+
+/// The consent documents of a login whose `consent` is valid for them: given for the content of
+/// the requested `scopes`, with all `default_scopes` of the client and only requested scopes.
+/// `None` without `consent.enable`.
+///
+/// # Errors
+///
+/// `ConsentRequired` with the content to ask for, with the scopes of `shown_grant` granted, when
+/// `consent` is missing or not valid. `TooManyRequests` as [`ConsentDocs::find`].
+pub async fn consented_docs(
+    client: &Client,
+    resource: Option<&str>,
+    scopes: &[String],
+    lang: Language,
+    consent: Option<&LoginConsent>,
+    shown_grant: Option<&UserConsent>,
+) -> Result<Option<ConsentDocs>, ErrorResponse> {
+    let Some(docs) = ConsentDocs::find(client, resource, lang).await? else {
+        return Ok(None);
+    };
+    let content = ConsentContent::build(&docs, scopes);
+    let is_valid = consent.is_some_and(|consent| {
+        let accepted = &consent.accepted_scopes;
+        consent.content_hash == content.content_hash
+            && client
+                .default_scope_names()
+                .all(|d| accepted.iter().any(|a| a == d))
+            && accepted.iter().all(|a| scopes.contains(a))
+    });
+    if !is_valid {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::ConsentRequired,
+            LoginConsentContent::new(content, client, shown_grant).to_json_escaped(),
+        ));
+    }
+    Ok(Some(docs))
 }
 
 /// With `consent.enable`, fails with `ConsentRequired` when the user has no consent grant for the

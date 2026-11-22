@@ -1,4 +1,4 @@
-use crate::oidc::consent_grant::{ConsentAsk, consent_to_ask};
+use crate::oidc::consent_grant::{ConsentAsk, consent_to_ask, consented_docs};
 use crate::user_values_validator::UserValuesValidator;
 use actix_web::HttpRequest;
 use actix_web::http::header;
@@ -12,7 +12,7 @@ use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::auth_providers::ProviderMfaLogin;
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
-use rauthy_data::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
+use rauthy_data::entity::consent_sources::ConsentContent;
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
@@ -327,7 +327,7 @@ pub(crate) enum FirstFactor {
 /// `user_needs_mfa` is used to add a login delay during `POST /authorize` and not necessary
 /// otherwise.
 ///
-/// With `consent.enable`, fails with `ConsentRequired` carrying the [`LoginConsentContent`] JSON
+/// With `consent.enable`, fails with `ConsentRequired` carrying the `LoginConsentContent` JSON
 /// as message when `data.consent` is missing and the user's grant does not cover the request, or
 /// when `data.consent` is for other content or not valid for the client. A valid consent is
 /// written as the user's grant after the last required factor: right away, or after the WebAuthn
@@ -401,57 +401,47 @@ pub(crate) async fn finish_authorize(
             }
             None
         }
-        Some(consent) => match ConsentDocs::find(&client, resource, lang).await? {
-            None => None,
-            Some(docs) => {
-                // Read before a factor may have proven the user to keep its scopes, but only
-                // shown once one has.
-                let grant = UserConsent::find(&user.id, &client.id, resource).await?;
-                let content = ConsentContent::build(&docs, &scopes);
-                let accepted = &consent.accepted_scopes;
-                let is_valid = consent.content_hash == content.content_hash
-                    && client
-                        .default_scope_names()
-                        .all(|d| accepted.iter().any(|a| a == d))
-                    && accepted.iter().all(|a| scopes.contains(a));
-                if !is_valid {
-                    let shown = user_id.and(grant.as_ref());
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::ConsentRequired,
-                        LoginConsentContent::new(content, &client, shown).to_json_escaped(),
-                    ));
-                }
+        Some(consent) => {
+            // Read before a factor may have proven the user to keep its scopes, but only shown
+            // once one has.
+            let grant = UserConsent::find(&user.id, &client.id, resource).await?;
+            let shown = user_id.and(grant.as_ref());
+            match consented_docs(&client, resource, &scopes, lang, Some(&consent), shown).await? {
+                None => None,
+                Some(docs) => {
+                    let accepted = &consent.accepted_scopes;
 
-                // The scopes of the grant this login did not request stay granted while their
-                // content is unchanged. Of the requested ones, only the accepted stay.
-                let kept = grant
-                    .as_ref()
-                    .filter(|grant| grant.covers(&docs, &[]))
-                    .map(|grant| {
-                        grant
-                            .scopes()
-                            .filter(|g| !scopes.iter().any(|s| s == g))
-                            .map(String::from)
-                            .collect::<Vec<_>>()
+                    // The scopes of the grant this login did not request stay granted while their
+                    // content is unchanged. Of the requested ones, only the accepted stay.
+                    let kept = grant
+                        .as_ref()
+                        .filter(|grant| grant.covers(&docs, &[]))
+                        .map(|grant| {
+                            grant
+                                .scopes()
+                                .filter(|g| !scopes.iter().any(|s| s == g))
+                                .map(String::from)
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default();
+                    scopes.retain(|s| accepted.contains(s));
+                    let mut grant_scopes = Vec::with_capacity(scopes.len() + kept.len());
+                    // the auth code owns the requested scopes
+                    grant_scopes.extend(scopes.iter().cloned());
+                    grant_scopes.extend(kept);
+                    grant_scopes.sort_unstable();
+                    // the content of the granted scopes, from the documents the user confirmed
+                    let content_hash = ConsentContent::build(&docs, &grant_scopes).content_hash;
+                    Some(PendingConsent {
+                        client_id: client.id.clone(),
+                        client_created_micros: client.created_micros,
+                        resource: data.resource.clone(),
+                        scopes: grant_scopes,
+                        content_hash,
                     })
-                    .unwrap_or_default();
-                scopes.retain(|s| accepted.contains(s));
-                let mut grant_scopes = Vec::with_capacity(scopes.len() + kept.len());
-                // the auth code owns the requested scopes
-                grant_scopes.extend(scopes.iter().cloned());
-                grant_scopes.extend(kept);
-                grant_scopes.sort_unstable();
-                // the content of the granted scopes, from the documents the user confirmed
-                let content_hash = ConsentContent::build(&docs, &grant_scopes).content_hash;
-                Some(PendingConsent {
-                    client_id: client.id.clone(),
-                    client_created_micros: client.created_micros,
-                    resource: data.resource.clone(),
-                    scopes: grant_scopes,
-                    content_hash,
-                })
+                }
             }
-        },
+        }
     };
     // a ceremony may be the only factor, the grant waits for the last one
     let pending_consent = match pending_consent {
