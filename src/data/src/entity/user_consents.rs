@@ -530,16 +530,7 @@ impl ConsentGrant {
             .await?;
         }
 
-        if let Err(err) = Event::consent_granted(
-            &user.email,
-            &self.client_id,
-            self.resource.as_deref(),
-            &self.scopes,
-            ip,
-        )
-        .send()
-        .await
-        {
+        if let Err(err) = Event::consent_granted(&user.email, self, ip).send().await {
             error!(?err, "sending the ConsentGranted event");
         }
         Ok(())

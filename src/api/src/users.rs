@@ -49,7 +49,7 @@ use rauthy_data::entity::webauthn::auth_data::WebauthnAdditionalData;
 use rauthy_data::entity::webauthn::auth_req::WebauthnServiceReq;
 use rauthy_data::entity::webauthn::passkey::PasskeyEntity;
 use rauthy_data::entity::webids::WebId;
-use rauthy_data::events::event::{ConsentRevokedBy, Event};
+use rauthy_data::events::event::{ConsentRevokedBy, ConsentTarget, Event};
 use rauthy_data::html::HtmlCached;
 use rauthy_data::html::templates::{Error3Html, ErrorHtml, UserRevokeHtml};
 use rauthy_data::ipgeo;
@@ -1256,8 +1256,10 @@ pub async fn delete_user_consent(
     if (consent_deleted || refresh_tokens_deleted > 0)
         && let Err(err) = Event::consent_revoked(
             &user.email,
-            &params.client_id,
-            resource.unwrap_or_default(),
+            ConsentTarget {
+                client_id: &params.client_id,
+                resource,
+            },
             revoked_by,
             ip,
         )

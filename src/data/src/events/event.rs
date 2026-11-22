@@ -2,6 +2,7 @@ use crate::database::DB;
 use crate::email::mailer;
 use crate::entity::failed_scim_tasks::ScimAction;
 use crate::entity::login_locations::LoginLocation;
+use crate::entity::user_consents::ConsentGrant;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
@@ -736,12 +737,11 @@ impl Event {
     /// an API key by name (see [`ConsentRevokedBy`]).
     pub fn consent_revoked(
         user_email: &str,
-        client_id: &str,
-        resource: &str,
+        target: ConsentTarget<'_>,
         revoked_by: ConsentRevokedBy<'_>,
         ip: IpAddr,
     ) -> Self {
-        let text = consent_revoked_text(user_email, client_id, resource, revoked_by);
+        let text = consent_revoked_text(user_email, target, revoked_by);
         Self::new(
             RauthyConfig::get()
                 .vars
@@ -755,22 +755,9 @@ impl Event {
         )
     }
 
-    /// A consent given on the login page, with the accepted `scopes`.
-    pub fn consent_granted(
-        user_email: &str,
-        client_id: &str,
-        resource: Option<&str>,
-        scopes: &[String],
-        ip: IpAddr,
-    ) -> Self {
-        let scopes = scopes.join(" ");
-        let text = match resource {
-            None => format!("Consent of `{user_email}` for client `{client_id}` granted: {scopes}"),
-            Some(resource) => format!(
-                "Consent of `{user_email}` for client `{client_id}` / `{resource}` granted: \
-                {scopes}"
-            ),
-        };
+    /// A consent given on the login page, with its granted scopes.
+    pub fn consent_granted(user_email: &str, grant: &ConsentGrant, ip: IpAddr) -> Self {
+        let text = consent_granted_text(user_email, grant);
         Self::new(
             RauthyConfig::get()
                 .vars
@@ -1196,23 +1183,42 @@ pub enum ConsentRevokedBy<'a> {
 }
 
 /// The text of [`Event::consent_revoked`].
+/// The client, and the RFC 8707 `resource` if any, of a consent, as event texts name it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConsentTarget<'a> {
+    pub client_id: &'a str,
+    pub resource: Option<&'a str>,
+}
+
+impl Display for ConsentTarget<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.resource {
+            None => write!(f, "client `{}`", self.client_id),
+            Some(resource) => write!(f, "client `{}` / `{resource}`", self.client_id),
+        }
+    }
+}
+
 fn consent_revoked_text(
     user_email: &str,
-    client_id: &str,
-    resource: &str,
+    target: ConsentTarget<'_>,
     revoked_by: ConsentRevokedBy<'_>,
 ) -> String {
-    let target = if resource.is_empty() {
-        format!("`{client_id}`")
-    } else {
-        format!("`{client_id}` / `{resource}`")
-    };
     let by = match revoked_by {
         ConsentRevokedBy::User => "the user".to_string(),
         ConsentRevokedBy::Admin(admin) => format!("admin `{admin}`"),
         ConsentRevokedBy::ApiKey(name) => format!("API key `{name}`"),
     };
-    format!("Consent of `{user_email}` for client {target} revoked by {by}")
+    format!("Consent of `{user_email}` for {target} revoked by {by}")
+}
+
+fn consent_granted_text(user_email: &str, grant: &ConsentGrant) -> String {
+    let target = ConsentTarget {
+        client_id: &grant.client_id,
+        resource: grant.resource.as_deref(),
+    };
+    let scopes = grant.scopes.join(" ");
+    format!("Consent of `{user_email}` for {target} granted: {scopes}")
 }
 
 #[cfg(test)]
@@ -1221,34 +1227,76 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn consent_revoked_round_trip() {
-        let typ = EventType::ConsentRevoked;
-        assert_eq!(typ.value(), 24);
-        assert_eq!(EventType::from(typ.value()), typ);
-        assert_eq!(EventType::from(typ.value() as i64), typ);
-        assert_eq!(typ.as_str(), "ConsentRevoked");
-        assert_eq!(EventType::from(typ.as_str().to_string()), typ);
-        assert_eq!(typ.to_string(), "User consent revoked");
+    fn consent_event_types_round_trip() {
+        for (typ, value, name, text) in [
+            (
+                EventType::ConsentRevoked,
+                24,
+                "ConsentRevoked",
+                "User consent revoked",
+            ),
+            (
+                EventType::ConsentGranted,
+                26,
+                "ConsentGranted",
+                "User consent granted",
+            ),
+        ] {
+            assert_eq!(typ.value(), value);
+            assert_eq!(EventType::from(typ.value()), typ);
+            assert_eq!(EventType::from(typ.value() as i64), typ);
+            assert_eq!(typ.as_str(), name);
+            assert_eq!(EventType::from(typ.as_str().to_string()), typ);
+            assert_eq!(typ.to_string(), text);
+            assert_eq!(
+                EventType::from(rauthy_api_types::events::EventType::from(typ.clone())),
+                typ
+            );
+        }
+    }
+
+    #[test]
+    fn consent_granted_text_by_target() {
+        let mut grant = ConsentGrant {
+            client_id: "c1".to_string(),
+            client_created_micros: None,
+            resource: None,
+            scopes: vec!["email".to_string(), "openid".to_string()],
+            content_hash: String::default(),
+        };
         assert_eq!(
-            EventType::from(rauthy_api_types::events::EventType::from(typ.clone())),
-            typ
+            consent_granted_text("u@example.com", &grant),
+            "Consent of `u@example.com` for client `c1` granted: email openid"
+        );
+        grant.resource = Some("https://api.example.com".to_string());
+        assert_eq!(
+            consent_granted_text("u@example.com", &grant),
+            "Consent of `u@example.com` for client `c1` / `https://api.example.com` granted: \
+            email openid"
         );
     }
+
+    const C1: ConsentTarget = ConsentTarget {
+        client_id: "c1",
+        resource: None,
+    };
 
     #[test]
     fn consent_revoked_text_by_target() {
         assert_eq!(
-            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::User),
+            consent_revoked_text("u@example.com", C1, ConsentRevokedBy::User),
             "Consent of `u@example.com` for client `c1` revoked by the user"
         );
         assert_eq!(
-            consent_revoked_text("u@example.com", "c1", "", ConsentRevokedBy::ApiKey("k1")),
+            consent_revoked_text("u@example.com", C1, ConsentRevokedBy::ApiKey("k1")),
             "Consent of `u@example.com` for client `c1` revoked by API key `k1`"
         );
         let text = consent_revoked_text(
             "u@example.com",
-            "c1",
-            "https://api.example.com",
+            ConsentTarget {
+                client_id: "c1",
+                resource: Some("https://api.example.com"),
+            },
             ConsentRevokedBy::Admin("admin@example.com"),
         );
         assert_eq!(
