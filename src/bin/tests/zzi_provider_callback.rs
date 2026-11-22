@@ -201,6 +201,22 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
     let content = consent_required(login_res(None).await).await;
     let names = content.content.scopes.iter().map(|s| s.name.as_str());
     assert_eq!(names.collect::<Vec<_>>(), ["groups", "openid"]);
+    // built from the consent source of the resource
+    assert_eq!(content.content.name.as_deref(), Some("Consent Test API"));
+    // and checked against it: the consent to the same login without the resource is stale
+    let login_no_res = provider_login_to(
+        RES_CLIENT_ID,
+        redirect_uri.clone(),
+        scopes.clone(),
+        None,
+        None,
+    );
+    let content_no_res = consent_required(login_no_res.await).await;
+    assert_eq!(content_no_res.content.name, None);
+    assert_eq!(
+        consent_required(login_res(Some(accept_all(&content_no_res))).await).await,
+        content
+    );
     let stale = stale_consent(&content);
     assert_eq!(
         consent_required(login_res(Some(stale)).await).await,
