@@ -14,7 +14,9 @@ use rauthy_common::is_hiqlite;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_derive::FromPgRow;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use tokio_postgres::IsolationLevel;
 use tracing::{error, warn};
 use utoipa::ToSchema;
@@ -47,7 +49,8 @@ pub struct UserConsent {
     pub resource: String,
     /// comma separated
     pub scopes: String,
-    /// The `content_hash` of the consent content the grant was given for
+    /// The `content_hash` of the consent content the grant was given for. `None` never matches
+    /// any content, see [`Self::is_content_current`].
     pub content_hash: Option<String>,
     pub created: i64,
     pub updated: i64,
@@ -427,12 +430,15 @@ impl UserConsent {
         self.scopes().map(String::from).collect()
     }
 
-    /// `true` if the grant contains all `scopes` and the consent content of its scopes in `docs`
-    /// is still the one it was given for. With no `scopes`, only the content is compared.
+    /// `true` if the grant contains all `scopes` and [`Self::is_content_current`].
     pub fn covers(&self, docs: &ConsentDocs, scopes: &[String]) -> bool {
-        if !scopes.iter().all(|s| self.scopes().any(|g| g == s)) {
-            return false;
-        }
+        scopes.iter().all(|s| self.scopes().any(|g| g == s)) && self.is_content_current(docs)
+    }
+
+    /// `true` if the consent content of all granted scopes in `docs` is still the one the grant
+    /// was given for: the same language, intro, terms and every scope. Never for a grant without
+    /// a `content_hash`.
+    pub fn is_content_current(&self, docs: &ConsentDocs) -> bool {
         let Some(hash) = self.content_hash.as_deref() else {
             return false;
         };
@@ -452,19 +458,23 @@ pub struct PendingConsent {
     pub resource: Option<String>,
     /// The accepted scopes, with the scopes of the user's grant that the login did not request
     pub scopes: Vec<String>,
-    /// The `content_hash` of the consent content of the `scopes`, which a later login with a
-    /// subset of them compares, see [`UserConsent::covers`].
+    /// The `content_hash` of the consent content of all `scopes`, which a later login compares,
+    /// see [`UserConsent::is_content_current`].
     pub content_hash: String,
 }
 
 impl PendingConsent {
     /// [`Self::upsert`] after a ceremony, unless the client was deleted, or deleted and created
-    /// again, since the consent was given: its grants were deleted with it.
+    /// again, since the consent was given: its grants were deleted with it. An ephemeral client
+    /// has no row to delete, so it is not looked up again, which could fetch its document.
     pub async fn upsert_for_unchanged_client(
         &self,
         user: &User,
         req: &HttpRequest,
     ) -> Result<(), ErrorResponse> {
+        if Url::from_str(&self.client_id).is_ok() {
+            return self.upsert(user, req).await;
+        }
         match Client::find_maybe_ephemeral(self.client_id.clone()).await {
             Ok(client) if client.created_micros == self.client_created_micros => {
                 self.upsert(user, req).await
@@ -569,7 +579,7 @@ mod tests {
             content_hash: Some(format!("hash_{ts}")),
             created,
             updated: ts,
-            ip: "127.0.0.1".to_string(),
+            ip: format!("127.0.0.{ts}"),
             user_agent: Some(format!("ua_{ts}")),
         }
     }
@@ -647,16 +657,9 @@ mod tests {
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
                 let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
-                let params = rusqlite::params![
-                    user_id,
-                    client_id,
-                    resource,
-                    scopes,
-                    hash,
-                    ts,
-                    "127.0.0.1",
-                    ua
-                ];
+                let ip = format!("127.0.0.{ts}");
+                let params =
+                    rusqlite::params![user_id, client_id, resource, scopes, hash, ts, ip, ua];
                 conn.execute(SQL_UPSERT, params).unwrap();
             }
         }
@@ -1004,15 +1007,9 @@ INSERT INTO users (id) VALUES ('u1'), ('u2');
         for user_id in ["u1", "u2"] {
             for (client_id, resource, scopes, ts) in UPSERTS {
                 let (hash, ua) = (format!("hash_{ts}"), format!("ua_{ts}"));
+                let ip = format!("127.0.0.{ts}");
                 let params: [&(dyn ToSql + Sync); 8] = [
-                    &user_id,
-                    &client_id,
-                    &resource,
-                    &scopes,
-                    &hash,
-                    &ts,
-                    &"127.0.0.1",
-                    &ua,
+                    &user_id, &client_id, &resource, &scopes, &hash, &ts, &ip, &ua,
                 ];
                 cl.execute(SQL_UPSERT, &params).await.unwrap();
             }

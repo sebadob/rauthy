@@ -1,5 +1,6 @@
 use crate::database::{Cache, DB};
 use crate::entity::auth_providers::AuthProviderTemplate;
+use crate::entity::clients::Client;
 use crate::entity::logos::{Logo, LogoType};
 use crate::html::templates::{
     AccountHtml, AdminApiKeysHtml, AdminAttributesHtml, AdminBlacklistHtml, AdminClientsHtml,
@@ -186,7 +187,14 @@ impl HtmlCached {
             }
             Self::UserRegistration => {
                 let providers = AuthProviderTemplate::get_all_json_template().await?;
-                UserRegisterHtml::build(&lang, theme_ts, HtmlTemplate::AuthProviders(providers))
+                // named by the consent block of a registration with a login
+                let client_name = Client::find("rauthy".to_string()).await?.name;
+                UserRegisterHtml::build(
+                    &lang,
+                    theme_ts,
+                    HtmlTemplate::AuthProviders(providers),
+                    client_name.unwrap_or_default(),
+                )
             }
         };
 

@@ -1182,7 +1182,6 @@ pub enum ConsentRevokedBy<'a> {
     ApiKey(&'a str),
 }
 
-/// The text of [`Event::consent_revoked`].
 /// The client, and the RFC 8707 `resource` if any, of a consent, as event texts name it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ConsentTarget<'a> {
@@ -1199,6 +1198,7 @@ impl Display for ConsentTarget<'_> {
     }
 }
 
+/// The text of [`Event::consent_revoked`].
 fn consent_revoked_text(
     user_email: &str,
     target: ConsentTarget<'_>,

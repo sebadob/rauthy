@@ -268,7 +268,7 @@ impl GuardedFetcher {
         let too_many = || {
             warn!("Too many concurrent {label} lookups, rejecting {url}");
             ErrorResponse::new(
-                ErrorResponseType::TooManyRequests(chrono::Utc::now().timestamp() + 1),
+                ErrorResponseType::ServiceUnavailable(chrono::Utc::now().timestamp() + 1),
                 format!("too many concurrent {label} lookups"),
             )
         };
@@ -1171,10 +1171,10 @@ mod tests {
         let url = Url::parse(&format!("http://127.0.0.1:{port}/ok")).unwrap();
         match fetcher.fetch_bounded(url.clone(), 1024).await {
             Err(err) => assert!(
-                matches!(err.error, ErrorResponseType::TooManyRequests(_)),
+                matches!(err.error, ErrorResponseType::ServiceUnavailable(_)),
                 "{err:?}"
             ),
-            Ok(_) => panic!("expected TooManyRequests"),
+            Ok(_) => panic!("expected ServiceUnavailable"),
         }
         assert_eq!(hits(&hits_map, "/ok"), 0);
 

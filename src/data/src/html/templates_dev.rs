@@ -1,7 +1,7 @@
 use crate::api_cookie::ApiCookie;
 use crate::entity::auth_providers::{AuthProvider, AuthProviderTemplate};
 use crate::entity::clients::Client;
-use crate::entity::consent_sources::{ConsentContent, LoginConsentContent};
+use crate::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
 use crate::entity::logos::{Logo, LogoRes, LogoType};
 use crate::entity::magic_links::{MagicLink, MagicLinkUsage};
 use crate::entity::password::PasswordPolicy;
@@ -68,15 +68,14 @@ impl HtmlTemplate {
                     ));
                 };
                 let client = Client::find_maybe_ephemeral(client_id).await?;
-                let scopes = client.sanitize_login_scopes(None);
-                let lang = Language::default();
-                let Some(content) = ConsentContent::resolve(&client, None, &scopes, lang).await?
+                let Some(docs) = ConsentDocs::find(&client, None, Language::default()).await?
                 else {
                     return Err(ErrorResponse::new(
                         ErrorResponseType::NotFound,
                         "consent disabled",
                     ));
                 };
+                let content = ConsentContent::build(&docs, &client.sanitize_login_scopes(None));
                 let content = LoginConsentContent::new(content, &client, None);
                 Ok((Self::ConsentContent(content), None))
             }

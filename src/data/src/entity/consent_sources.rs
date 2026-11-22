@@ -100,7 +100,7 @@ impl ConsentDocs {
     ///
     /// # Errors
     ///
-    /// `TooManyRequests` when the back pressure of the consent fetcher rejects a fetch, which
+    /// `ServiceUnavailable` when the back pressure of the consent fetcher rejects a fetch, which
     /// says nothing about the source, so the login is retried instead of shown `local`.
     ///
     /// For a remote source, the content is shown from the `lang` document, or the `en` one if
@@ -157,7 +157,7 @@ impl ConsentDocs {
         };
         for res in [Some(&en), translation.as_ref()].into_iter().flatten() {
             if let Err(err) = res
-                && matches!(err.error, ErrorResponseType::TooManyRequests(_))
+                && matches!(err.error, ErrorResponseType::ServiceUnavailable(_))
             {
                 return Err(err.clone());
             }
@@ -195,21 +195,6 @@ impl ConsentDocs {
 }
 
 impl ConsentContent {
-    /// The consent content of `scopes` for a login, see [`ConsentDocs::find`].
-    ///
-    /// # Errors
-    ///
-    /// See [`ConsentDocs::find`].
-    pub async fn resolve(
-        client: &Client,
-        resource: Option<&str>,
-        scopes: &[String],
-        lang: Language,
-    ) -> Result<Option<Self>, ErrorResponse> {
-        let docs = ConsentDocs::find(client, resource, lang).await?;
-        Ok(docs.map(|docs| Self::build(&docs, scopes)))
-    }
-
     /// The content of `scopes` from `docs`. `name` from the `[[consent.sources]]` registry wins
     /// over the remote document's `name`.
     pub fn build(docs: &ConsentDocs, scopes: &[String]) -> Self {
@@ -447,7 +432,8 @@ impl RemoteConsent {
                 .clone()
         };
 
-        if matches!(&res, Err(err) if matches!(err.error, ErrorResponseType::TooManyRequests(_))) {
+        if matches!(&res, Err(err) if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)))
+        {
             tokio::time::sleep(TOO_MANY_REQUESTS_RETRY_DELAY).await;
             if let Some(Ok(slf)) = Self::cached(cache, &idx, url).await {
                 return Ok(slf);
@@ -537,7 +523,7 @@ fn cache_value(
 ) -> Option<(Option<&RemoteConsent>, u32)> {
     match res {
         Ok(slf) => Some((Some(slf), ttl)),
-        Err(err) if matches!(err.error, ErrorResponseType::TooManyRequests(_)) => None,
+        Err(err) if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)) => None,
         Err(_) => Some((None, negative_cache_ttl(ttl))),
     }
 }
@@ -716,6 +702,13 @@ mod tests {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
+    fn consent_docs(remote: Option<RemoteConsent>, name: Option<&'static str>) -> ConsentDocs {
+        ConsentDocs {
+            remote: remote.map(RemoteDocs::same),
+            name: name.map(Cow::Borrowed),
+        }
+    }
+
     /// The content of `scopes` from [`ConsentDocs::find_with`], which must not fail.
     async fn resolve_with<F>(
         client: &Client,
@@ -738,10 +731,7 @@ mod tests {
     /// given for, and never without a content hash.
     #[test]
     fn grant_covers_by_scopes_and_content() {
-        let docs = ConsentDocs {
-            remote: None,
-            name: None,
-        };
+        let docs = consent_docs(None, None);
         let granted = strs(&["email", "groups", "openid"]);
         let grant = |content_hash: Option<String>| UserConsent {
             user_id: "u".to_string(),
@@ -757,15 +747,14 @@ mod tests {
         let hashed = grant(Some(ConsentContent::build(&docs, &granted).content_hash));
         assert!(hashed.covers(&docs, &granted));
         assert!(hashed.covers(&docs, &strs(&["openid"])));
-        assert!(hashed.covers(&docs, &[]));
+        assert!(hashed.is_content_current(&docs));
         assert!(!hashed.covers(&docs, &strs(&["openid", "profile"])));
 
-        let changed = ConsentDocs {
-            remote: None,
-            name: Some("Other".into()),
-        };
+        let changed = consent_docs(None, Some("Other"));
         assert!(!hashed.covers(&changed, &strs(&["openid"])));
+        assert!(!hashed.is_content_current(&changed));
         assert!(!grant(None).covers(&docs, &strs(&["openid"])));
+        assert!(!grant(None).is_content_current(&docs));
     }
 
     /// The back pressure of the fetcher, of the `en` document or of the translation, fails the
@@ -778,7 +767,7 @@ mod tests {
             ..Default::default()
         };
         let no_sources = vars(Vec::new());
-        let busy = || ErrorResponse::new(ErrorResponseType::TooManyRequests(1), "busy");
+        let busy = || ErrorResponse::new(ErrorResponseType::ServiceUnavailable(1), "busy");
         for (lang, busy_lang) in [
             (Language::En, Language::En),
             (Language::De, Language::En),
@@ -794,7 +783,7 @@ mod tests {
             let res = ConsentDocs::find_with(&client, None, lang, no_sources, find).await;
             let err = res.expect_err("back pressure fails the lookup");
             assert!(
-                matches!(err.error, ErrorResponseType::TooManyRequests(_)),
+                matches!(err.error, ErrorResponseType::ServiceUnavailable(_)),
                 "{lang:?} / {busy_lang:?}: {err:?}"
             );
         }
@@ -814,10 +803,7 @@ mod tests {
     #[test]
     fn login_consent_content_json_escaped_non_ascii() {
         let content = ConsentContent::build(
-            &ConsentDocs {
-                remote: None,
-                name: Some("Caf\u{e9} \u{1f600}".into()),
-            },
+            &consent_docs(None, Some("Caf\u{e9} \u{1f600}")),
             &strs(&["openid"]),
         );
         let mut content = content;
@@ -934,10 +920,7 @@ mod tests {
     #[test]
     fn local_content_hash() {
         let content = ConsentContent::build(
-            &ConsentDocs {
-                remote: None,
-                name: None,
-            },
+            &consent_docs(None, None),
             &strs(&["openid", "email", "openid"]),
         );
         assert_eq!(content.source, ConsentSourceType::Local);
@@ -964,20 +947,11 @@ mod tests {
         assert!(content.scopes.iter().all(|s| s.title.is_none()));
 
         // independent of the request order
-        let other = ConsentContent::build(
-            &ConsentDocs {
-                remote: None,
-                name: None,
-            },
-            &strs(&["email", "openid"]),
-        );
+        let other = ConsentContent::build(&consent_docs(None, None), &strs(&["email", "openid"]));
         assert_eq!(content.content_hash, other.content_hash);
         // but not of the scopes
         let other = ConsentContent::build(
-            &ConsentDocs {
-                remote: None,
-                name: None,
-            },
+            &consent_docs(None, None),
             &strs(&["email", "openid", "profile"]),
         );
         assert_ne!(content.content_hash, other.content_hash);
@@ -987,10 +961,7 @@ mod tests {
     fn remote_content() {
         let remote = RemoteConsent::parse(REMOTE.as_bytes()).unwrap();
         let content = ConsentContent::build(
-            &ConsentDocs {
-                remote: Some(RemoteDocs::same(remote)),
-                name: Some("Registry".into()),
-            },
+            &consent_docs(Some(remote), Some("Registry")),
             &strs(&["openid", "data.write", "data.read"]),
         );
 
@@ -1030,23 +1001,15 @@ mod tests {
         );
 
         let local = ConsentContent::build(
-            &ConsentDocs {
-                remote: None,
-                name: None,
-            },
+            &consent_docs(None, None),
             &strs(&["openid", "data.write", "data.read"]),
         );
         assert_ne!(content.content_hash, local.content_hash);
 
         // without a registry entry, the remote name is used
         let remote = RemoteConsent::parse(REMOTE.as_bytes()).unwrap();
-        let content = ConsentContent::build(
-            &ConsentDocs {
-                remote: Some(RemoteDocs::same(remote)),
-                name: None,
-            },
-            &strs(&["data.read"]),
-        );
+        let content =
+            ConsentContent::build(&consent_docs(Some(remote), None), &strs(&["data.read"]));
         assert_eq!(content.name.as_deref(), Some("Example API"));
     }
 
@@ -1062,33 +1025,24 @@ mod tests {
     fn remote_content_hash_is_deterministic() {
         let scopes = strs(&["data.read"]);
         let a = ConsentContent::build(
-            &ConsentDocs {
-                remote: Some(RemoteDocs::same(
-                    RemoteConsent::parse(REMOTE.as_bytes()).unwrap(),
-                )),
-                name: None,
-            },
+            &consent_docs(Some(RemoteConsent::parse(REMOTE.as_bytes()).unwrap()), None),
             &scopes,
         );
         let b = ConsentContent::build(
-            &ConsentDocs {
-                remote: Some(RemoteDocs::same(
-                    RemoteConsent::parse(REMOTE_REORDERED.as_bytes()).unwrap(),
-                )),
-                name: None,
-            },
+            &consent_docs(
+                Some(RemoteConsent::parse(REMOTE_REORDERED.as_bytes()).unwrap()),
+                None,
+            ),
             &scopes,
         );
         assert_eq!(a.content_hash, b.content_hash);
 
         let changed = REMOTE.replace("Read your data", "Read all your data");
         let c = ConsentContent::build(
-            &ConsentDocs {
-                remote: Some(RemoteDocs::same(
-                    RemoteConsent::parse(changed.as_bytes()).unwrap(),
-                )),
-                name: None,
-            },
+            &consent_docs(
+                Some(RemoteConsent::parse(changed.as_bytes()).unwrap()),
+                None,
+            ),
             &scopes,
         );
         assert_ne!(a.content_hash, c.content_hash);
@@ -1192,13 +1146,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             content,
-            ConsentContent::build(
-                &ConsentDocs {
-                    remote: None,
-                    name: Some("Registry".into())
-                },
-                &scopes
-            )
+            ConsentContent::build(&consent_docs(None, Some("Registry")), &scopes)
         );
         assert_eq!(content.source, ConsentSourceType::Local);
         assert_eq!(content.name.as_deref(), Some("Registry"));
@@ -1209,13 +1157,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             content,
-            ConsentContent::build(
-                &ConsentDocs {
-                    remote: None,
-                    name: None
-                },
-                &scopes
-            )
+            ConsentContent::build(&consent_docs(None, None), &scopes)
         );
     }
 
@@ -1506,13 +1448,7 @@ mod tests {
 
     #[tokio::test]
     async fn unavailable_en_document_degrades_to_local() {
-        let local = ConsentContent::build(
-            &ConsentDocs {
-                remote: None,
-                name: None,
-            },
-            &strs(&["data.read"]),
-        );
+        let local = ConsentContent::build(&consent_docs(None, None), &strs(&["data.read"]));
         // even with a valid translation, the hash is never mixed
         let de = resolve_mock(Language::De, None, Some(REMOTE_DE)).await;
         assert_eq!(de, local);
@@ -1579,7 +1515,7 @@ mod tests {
     }
 
     fn too_many() -> ErrorResponse {
-        ErrorResponse::new(ErrorResponseType::TooManyRequests(0), "too many")
+        ErrorResponse::new(ErrorResponseType::ServiceUnavailable(0), "too many")
     }
 
     #[test]
@@ -1757,7 +1693,7 @@ mod tests {
         .await;
         assert!(matches!(
             res.unwrap_err().error,
-            ErrorResponseType::TooManyRequests(_)
+            ErrorResponseType::ServiceUnavailable(_)
         ));
         assert_eq!(cache.value(&idx), None);
         assert_eq!(cache.puts.load(Ordering::SeqCst), 0);

@@ -121,7 +121,18 @@ pub async fn login_finish<'a>(
         None,
         Some(provider_mfa_login),
     )
-    .await?;
+    .await
+    .map_err(|err| {
+        // the spent callback cannot be retried
+        if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)) {
+            ErrorResponse::new(
+                ErrorResponseType::Connection,
+                "The consent content is unavailable, please start the login again",
+            )
+        } else {
+            err
+        }
+    })?;
 
     // callback data deletion cookie
     let cookie = ApiCookie::build(COOKIE_UPSTREAM_CALLBACK, "", 0);

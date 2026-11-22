@@ -1017,12 +1017,18 @@ pub struct UserRegisterHtml<'a> {
 }
 
 impl UserRegisterHtml<'_> {
-    pub fn build(lang: &Language, theme_ts: i64, auth_providers: HtmlTemplate) -> String {
+    pub fn build(
+        lang: &Language,
+        theme_ts: i64,
+        auth_providers: HtmlTemplate,
+        client_name: String,
+    ) -> String {
         UserRegisterHtml {
             lang: lang.html_lang(),
             client_id: "rauthy",
             theme_ts,
             templates: &[
+                HtmlTemplate::ClientName(client_name),
                 HtmlTemplate::RestrictedEmailDomain(
                     RauthyConfig::get()
                         .vars
@@ -1088,22 +1094,17 @@ impl UserPasswordResetHtml<'_> {
 mod tests {
     use super::*;
 
-    /// The consent template is the escaped JSON, which neither closes the `<template>` nor is
-    /// changed by the HTML parser, and decodes to the content again.
+    /// The consent template is the escaped JSON of the content, see
+    /// [`LoginConsentContent::to_json_escaped`].
     #[test]
     fn consent_content_template_is_escaped() {
         let json = r#"{"source":"remote","content_hash":"h","name":null,"scopes":[],
-            "intro":"</template><script>a && b</script>","terms_url":null,
-            "default_scopes":["openid"],"granted_scopes":[]}"#;
+            "intro":"</template>","terms_url":null,"default_scopes":[],"granted_scopes":[]}"#;
         let content = serde_json::from_str::<LoginConsentContent>(json).unwrap();
-        let tpl = HtmlTemplate::ConsentContent(content.clone());
+        let escaped = content.to_json_escaped();
+        let tpl = HtmlTemplate::ConsentContent(content);
         assert_eq!(tpl.id(), "tpl_consent_content");
-        let inner = tpl.inner();
-        assert!(!inner.contains(['<', '>', '&']), "{inner}");
-        assert_eq!(
-            serde_json::from_str::<LoginConsentContent>(&inner).unwrap(),
-            content
-        );
+        assert_eq!(tpl.inner(), escaped);
     }
 
     #[test]

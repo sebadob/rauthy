@@ -161,8 +161,9 @@ pub struct ProviderLoginRequest {
     /// Set by Rauthy internally if this was a login triggered via Forward Auth. If set, it will
     /// do additional state lookup checks.
     pub fwda: Option<bool>,
-    /// The consent given on the login page, see [`LoginRequest::consent`]. Checked once the
-    /// upstream login finished.
+    /// The consent given on the login page, see [`LoginRequest::consent`]. Checked before the
+    /// upstream redirect, where a refusal returns `ConsentRequired`, and again after the
+    /// callback.
     #[validate(nested)]
     pub consent: Option<LoginConsent>,
 }
@@ -233,21 +234,23 @@ mod tests {
     /// The consent of a provider login is validated with the login.
     #[test]
     fn provider_login_request_validates_the_consent() {
-        for (hash, is_valid) in [("a".repeat(64), true), ("not-a-hash".to_string(), false)] {
+        let hash = "a".repeat(64);
+        for (hash, scope, is_valid) in [
+            (hash.as_str(), "openid", true),
+            ("not-a-hash", "openid", false),
+            (hash.as_str(), "open id", false),
+        ] {
             let json = format!(
                 r#"{{"client_id": "my-client", "redirect_uri": "https://app.example.com/cb",
                 "pow": "pow", "provider_id": "provider", "pkce_challenge": "{}",
-                "consent": {{"content_hash": "{hash}", "accepted_scopes": ["openid"]}}}}"#,
+                "consent": {{"content_hash": "{hash}", "accepted_scopes": ["{scope}"]}}}}"#,
                 "a".repeat(43)
             );
             let req: ProviderLoginRequest = serde_json::from_str(&json).unwrap();
-            let err = req.validate().err().map(|err| err.to_string());
-            assert_eq!(
-                err.as_deref()
-                    .is_none_or(|err| !err.contains("content_hash")),
-                is_valid,
-                "{err:?}"
-            );
+            let has_err = req
+                .validate()
+                .is_err_and(|err| err.errors().contains_key("consent"));
+            assert_eq!(has_err, !is_valid, "{json}");
         }
     }
 

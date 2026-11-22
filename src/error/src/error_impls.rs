@@ -92,6 +92,9 @@ impl ResponseError for ErrorResponse {
             ErrorResponseType::TooManyRequests(_not_before_timestamp) => {
                 StatusCode::TOO_MANY_REQUESTS
             }
+            ErrorResponseType::ServiceUnavailable(_not_before_timestamp) => {
+                StatusCode::SERVICE_UNAVAILABLE
+            }
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -108,6 +111,13 @@ impl ResponseError for ErrorResponse {
                     .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
                     .insert_header(HEADER_HTML)
                     .body(self.message.clone())
+            }
+
+            ErrorResponseType::ServiceUnavailable(not_before_timestamp) => {
+                HttpResponseBuilder::new(status)
+                    .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
+                    .content_type(APPLICATION_JSON)
+                    .body(serde_json::to_string(self).unwrap())
             }
 
             ErrorResponseType::DPoP(header_origin) => {

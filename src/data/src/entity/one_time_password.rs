@@ -557,8 +557,8 @@ pub struct OtpLoginReq {
     pub tos_await_data: Option<OtpToSAwaitData>,
     pub needs_user_update: bool,
     pub session_id: String,
-    /// The consent given at `POST /authorize`, written as the user's grant once the ceremony
-    /// verified the user.
+    /// The consent sent with the login request (`POST /authorize`, `/authorize/refresh` or a
+    /// provider login), written as the user's grant once the ceremony verified the user.
     pub pending_consent: Option<PendingConsent>,
 }
 
@@ -741,8 +741,8 @@ pub async fn auth_finish(
                     .set_authenticated(&user, MfaAssurance::Ceremony)
                     .await?;
                 user.save_login_success().await?;
-                if let Some(grant) = &data.pending_consent {
-                    grant.upsert_for_unchanged_client(&user, req).await?;
+                if let Some(pending) = &data.pending_consent {
+                    pending.upsert_for_unchanged_client(&user, req).await?;
                 }
             }
 

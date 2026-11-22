@@ -15,7 +15,6 @@ use rauthy_data::entity::api_keys::{AccessGroup, AccessRights};
 use rauthy_data::entity::auth_providers::{
     AuthProvider, AuthProviderLinkCookie, AuthProviderTemplate,
 };
-use rauthy_data::entity::clients::Client;
 use rauthy_data::entity::logos::{Logo, LogoType};
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::theme::ThemeCssFull;
@@ -23,7 +22,7 @@ use rauthy_data::entity::users::User;
 use rauthy_data::html::HtmlCached;
 use rauthy_data::language::Language;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_service::oidc::consent_grant::consented_docs;
+use rauthy_service::oidc::auth_providers::login_start::{ProviderLoginStart, login_start};
 use spow::pow::Pow;
 use tracing::{debug, error};
 use validator::Validate;
@@ -143,8 +142,9 @@ pub async fn post_provider_lookup(
     request_body = ProviderLoginRequest,
     responses(
         (status = 202, description = "Accepted"),
-        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 400, description = "BadRequest, or `ConsentRequired` carrying the consent content to ask for", body = ErrorResponse),
         (status = 404, description = "NotFound", body = ErrorResponse),
+        (status = 503, description = "`ServiceUnavailable`: the consent fetcher is busy, retry after the `x-retry-not-before` timestamp", body = ErrorResponse),
     ),
 )]
 #[post("/providers/login")]
@@ -159,17 +159,9 @@ pub async fn post_provider_login(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
-    // The consent is checked again after the upstream login, but checked here first: a refused
-    // consent would spend the single-use upstream callback.
-    let client = Client::find_maybe_ephemeral(payload.client_id.clone()).await?;
-    let scopes = client.sanitize_login_scopes(payload.scopes.as_deref());
     let lang = Language::try_from(&req).unwrap_or_default();
-    let resource = payload.resource.as_deref();
-    let consent = payload.consent.as_ref();
-    consented_docs(&client, resource, &scopes, lang, consent, None).await?;
-
     let (cookie, xsrf_token, location) =
-        rauthy_service::oidc::auth_providers::login_start::login_start(payload).await?;
+        login_start(payload, ProviderLoginStart::Login(lang)).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))
@@ -586,7 +578,7 @@ pub async fn post_provider_link(
 
     // directly redirect to the provider login page
     let (login_cookie, xsrf_token, location) =
-        rauthy_service::oidc::auth_providers::login_start::login_start(payload).await?;
+        login_start(payload, ProviderLoginStart::Link).await?;
 
     Ok(HttpResponse::Accepted()
         .insert_header((LOCATION, location))

@@ -49,12 +49,13 @@ use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::forward_auth::auth_header;
-use rauthy_service::oidc::consent_grant::{ConsentAsk, consent_to_ask};
+use rauthy_service::oidc::consent_grant::{ConsentAsk, ConsentRequest, consent_to_ask};
 use rauthy_service::oidc::{authorize, logout, token_info, token_revocation, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
 use spow::pow::Pow;
 use std::borrow::Cow;
+use std::mem;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{debug, error, info, warn};
@@ -216,17 +217,15 @@ pub async fn get_authorize(
         .as_ref()
         .and_then(|s| s.user_id.as_deref())
         .filter(|_| is_session_valid);
-    let consent = match consent_to_ask(&client, user_id, resource, &scopes, lang, ask).await {
+    let consent_req = ConsentRequest {
+        client: &client,
+        resource,
+        scopes: &scopes,
+        lang,
+    };
+    let consent = match consent_to_ask(&consent_req, user_id, ask).await {
         Ok(consent) => consent,
-        Err(err) => {
-            error!("Cannot resolve the consent for the authorization request: {err}");
-            let error = if matches!(err.error, ErrorResponseType::TooManyRequests(_)) {
-                "temporarily_unavailable"
-            } else {
-                "server_error"
-            };
-            return Ok(redirect_error(error));
-        }
+        Err(err) => return Ok(redirect_error(consent_error_code(&err))),
     };
     if prompt_none && consent.is_some() {
         return Ok(redirect_error("consent_required"));
@@ -237,11 +236,7 @@ pub async fn get_authorize(
     let favicon_updated =
         Logo::find_updated_with_res(&client.id, LogoRes::Favicon, &LogoType::Client).await?;
 
-    let has_consent = consent.is_some();
     let mut templates = Vec::with_capacity(12);
-    if let Some(consent) = consent {
-        templates.push(HtmlTemplate::ConsentContent(consent));
-    }
     templates.push(HtmlTemplate::AuthProviders(auth_providers_json));
     templates.push(HtmlTemplate::ClientName(client.name.unwrap_or_default()));
     templates.push(HtmlTemplate::ClientUrl(
@@ -263,15 +258,16 @@ pub async fn get_authorize(
 
     // if the user is still authenticated and everything is valid -> immediate refresh, after the
     // consent if one is needed
-    if is_session_valid && (has_consent || !prompt_consent) {
+    if is_session_valid && (consent.is_some() || !prompt_consent) {
         let csrf = principal.get_session_csrf_token()?;
 
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
-        // `RefreshConsent` only with the `ConsentContent` pushed above
-        let action = if has_consent {
-            FrontendAction::RefreshConsent
-        } else {
-            FrontendAction::Refresh
+        let action = match consent {
+            Some(consent) => {
+                templates.push(HtmlTemplate::ConsentContent(consent));
+                FrontendAction::RefreshConsent
+            }
+            None => FrontendAction::Refresh,
         };
         templates.push(HtmlTemplate::LoginAction(action));
 
@@ -302,6 +298,9 @@ pub async fn get_authorize(
             return Ok(ErrorHtml::response(body, status));
         }
 
+        if let Some(consent) = consent {
+            templates.push(HtmlTemplate::ConsentContent(consent));
+        }
         templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
         templates.push(HtmlTemplate::LoginAction(action));
 
@@ -313,6 +312,18 @@ pub async fn get_authorize(
             origin_header,
             browser_id,
         )
+    }
+}
+
+/// The `error` of the authorization redirect when the consent to ask for cannot be resolved:
+/// `temporarily_unavailable` for the back pressure of the consent fetcher, else `server_error`.
+fn consent_error_code(err: &ErrorResponse) -> &'static str {
+    if matches!(err.error, ErrorResponseType::ServiceUnavailable(_)) {
+        debug!("The consent for the authorization request is busy: {err}");
+        "temporarily_unavailable"
+    } else {
+        error!("Cannot resolve the consent for the authorization request: {err}");
+        "server_error"
     }
 }
 
@@ -386,8 +397,9 @@ fn build_authorize_resp(
             (OtpLoginResponse = "application/otp+json"),
         )),
         (status = 202, description = "Correct credentials and no MFA Login required, adds Location header"),
-        (status = 400, description = "Password required, invalid form credentials, or missing / bad input data", body = ErrorResponse),
+        (status = 400, description = "Password required, invalid form credentials, missing / bad input data, or `ConsentRequired` carrying the consent content to ask for", body = ErrorResponse),
         (status = 401, description = "Invalid authentication, expired session, or CSRF token error", body = ErrorResponse),
+        (status = 503, description = "`ServiceUnavailable`: the consent fetcher is busy, retry after the `x-retry-not-before` timestamp", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/authorize")]
@@ -404,7 +416,7 @@ pub async fn post_authorize(
 #[inline(always)]
 pub async fn post_authorize_handle(
     req: HttpRequest,
-    payload: LoginRequest,
+    mut payload: LoginRequest,
     principal: ReqPrincipal,
     browser_id: BrowserId,
 ) -> Result<HttpResponse, ErrorResponse> {
@@ -418,6 +430,19 @@ pub async fn post_authorize_handle(
     let challenge = Pow::validate(&payload.pow)?;
     PowEntity::check_prevent_reuse(challenge.to_string()).await?;
 
+    // Before the user checks, so that neither error reveals anything about the credentials.
+    let client = Client::find_maybe_ephemeral(mem::take(&mut payload.client_id)).await?;
+    if RauthyConfig::get()
+        .vars
+        .consent
+        .missing_required_resource(&client, payload.resource.as_deref())
+    {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "a `resource` is required",
+        ));
+    }
+
     let uses_password_form = payload.email.is_some() && payload.resident_key_token.is_none();
     let has_password = payload.password.is_some();
 
@@ -429,6 +454,7 @@ pub async fn post_authorize_handle(
     let res = match authorize::post_authorize(
         &req,
         payload,
+        client,
         session.clone(),
         &mut has_password_been_hashed,
         &mut add_login_delay,
@@ -439,15 +465,10 @@ pub async fn post_authorize_handle(
     .await
     {
         Ok(auth_step) => map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await,
-        Err(err)
-            if matches!(
-                err.error,
-                ErrorResponseType::ConsentRequired | ErrorResponseType::TooManyRequests(_)
-            ) =>
-        {
+        Err(err) if is_consent_error(&err) => {
             // Only returned after the user checks: the consent content to ask for, which is not
             // logged and carries the user's grant only once a factor proved the user, or the
-            // back pressure of the consent source fetcher, to be retried.
+            // back pressure of the consent source or ephemeral client fetcher, to be retried.
             debug!(error = ?err.error, "POST /authorize asks for consent or a retry");
             return Err(err);
         }
@@ -457,7 +478,7 @@ pub async fn post_authorize_handle(
             // to prevent information enumeration. The exceptions, all returned only after the user
             // checks, are a missing MFA while the credentials were correct, an expired password, a
             // client group prefix mismatch, and, above, `ConsentRequired` and the back pressure of
-            // the consent source fetcher. In those cases, we return the original error to be able
+            // the consent source or ephemeral client fetcher. In those cases, we return the original error to be able
             // to display the info in the UI.
             if user_needs_mfa {
                 // in this case, we can return directly without any login delay
@@ -506,6 +527,15 @@ pub async fn post_authorize_handle(
     .await
 }
 
+/// `ConsentRequired` and the fetcher back pressure, which `POST /authorize` passes through instead
+/// of the normalized credentials error.
+fn is_consent_error(err: &ErrorResponse) -> bool {
+    matches!(
+        err.error,
+        ErrorResponseType::ConsentRequired | ErrorResponseType::ServiceUnavailable(_)
+    )
+}
+
 /// Immediate login refresh with valid session
 ///
 /// This endpoint is used from the login form if an authenticated and valid session still exists
@@ -518,8 +548,9 @@ pub async fn post_authorize_handle(
     request_body = LoginRefreshRequest,
     responses(
         (status = 202, description = "Accepted"),
-        (status = 400, description = "BadRequest", body = ErrorResponse),
+        (status = 400, description = "BadRequest, or `ConsentRequired` carrying the consent content to ask for", body = ErrorResponse),
         (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 503, description = "`ServiceUnavailable`: the consent fetcher is busy, retry after the `x-retry-not-before` timestamp", body = ErrorResponse),
     ),
 )]
 #[post("/oidc/authorize/refresh")]
@@ -1473,4 +1504,48 @@ pub async fn get_well_known_oauth_rfc8414() -> Result<HttpResponse, ErrorRespons
 #[get("/.well-known/oauth-authorization-server/auth/v1/")]
 pub async fn get_well_known_oauth_rfc8414_trailing() -> Result<HttpResponse, ErrorResponse> {
     well_known_response().await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_consent_error_code() {
+        let busy = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(1), "busy");
+        assert_eq!(consent_error_code(&busy), "temporarily_unavailable");
+        for typ in [
+            ErrorResponseType::TooManyRequests(1),
+            ErrorResponseType::Connection,
+            ErrorResponseType::Internal,
+        ] {
+            let err = ErrorResponse::new(typ.clone(), "err");
+            assert_eq!(consent_error_code(&err), "server_error", "{typ:?}");
+        }
+    }
+
+    #[test]
+    fn test_is_consent_error() {
+        for typ in [
+            ErrorResponseType::ConsentRequired,
+            ErrorResponseType::ServiceUnavailable(1),
+        ] {
+            assert!(
+                is_consent_error(&ErrorResponse::new(typ.clone(), "")),
+                "{typ:?}"
+            );
+        }
+        for typ in [
+            ErrorResponseType::TooManyRequests(1),
+            ErrorResponseType::BadRequest,
+            ErrorResponseType::NotFound,
+            ErrorResponseType::Unauthorized,
+            ErrorResponseType::InvalidCredentials,
+        ] {
+            assert!(
+                !is_consent_error(&ErrorResponse::new(typ.clone(), "")),
+                "{typ:?}"
+            );
+        }
+    }
 }

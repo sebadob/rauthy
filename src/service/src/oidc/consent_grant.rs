@@ -19,35 +19,41 @@ pub enum ConsentAsk {
     Always,
 }
 
+/// The login request a consent is for: the `client`, the RFC 8707 `resource` and the sanitized
+/// `scopes`, with the content shown in `lang`.
+pub struct ConsentRequest<'req> {
+    pub client: &'req Client,
+    pub resource: Option<&'req str>,
+    pub scopes: &'req [String],
+    pub lang: Language,
+}
+
 /// The consent the login page asks for, `None` without `consent.enable` or when it asks for none.
 /// `user_id` is the user a factor has already proven, whose grant is shown and may cover the
 /// request: `None` for a login that has proven none yet, which is always asked with no granted
 /// scopes.
 pub async fn consent_to_ask(
-    client: &Client,
+    req: &ConsentRequest<'_>,
     user_id: Option<&str>,
-    resource: Option<&str>,
-    scopes: &[String],
-    lang: Language,
     ask: ConsentAsk,
 ) -> Result<Option<LoginConsentContent>, ErrorResponse> {
-    let Some(docs) = ConsentDocs::find(client, resource, lang).await? else {
+    let Some(docs) = ConsentDocs::find(req.client, req.resource, req.lang).await? else {
         return Ok(None);
     };
     let grant = match user_id {
         None => None,
-        Some(user_id) => UserConsent::find(user_id, &client.id, resource).await?,
+        Some(user_id) => UserConsent::find(user_id, &req.client.id, req.resource).await?,
     };
     if ask == ConsentAsk::IfNotCovered
         && let Some(grant) = &grant
-        && grant.covers(&docs, scopes)
+        && grant.covers(&docs, req.scopes)
     {
         return Ok(None);
     }
-    let content = ConsentContent::build(&docs, scopes);
+    let content = ConsentContent::build(&docs, req.scopes);
     Ok(Some(LoginConsentContent::new(
         content,
-        client,
+        req.client,
         grant.as_ref(),
     )))
 }
@@ -59,31 +65,29 @@ pub async fn consent_to_ask(
 /// # Errors
 ///
 /// `ConsentRequired` with the content to ask for, with the scopes of `shown_grant` granted, when
-/// `consent` is missing or not valid. `TooManyRequests` as [`ConsentDocs::find`].
+/// `consent` is missing or not valid. `ServiceUnavailable` as [`ConsentDocs::find`].
 pub async fn consented_docs(
-    client: &Client,
-    resource: Option<&str>,
-    scopes: &[String],
-    lang: Language,
+    req: &ConsentRequest<'_>,
     consent: Option<&LoginConsent>,
     shown_grant: Option<&UserConsent>,
 ) -> Result<Option<ConsentDocs>, ErrorResponse> {
-    let Some(docs) = ConsentDocs::find(client, resource, lang).await? else {
+    let Some(docs) = ConsentDocs::find(req.client, req.resource, req.lang).await? else {
         return Ok(None);
     };
-    let content = ConsentContent::build(&docs, scopes);
+    let content = ConsentContent::build(&docs, req.scopes);
     let is_valid = consent.is_some_and(|consent| {
         let accepted = &consent.accepted_scopes;
         consent.content_hash == content.content_hash
-            && client
+            && req
+                .client
                 .default_scope_names()
                 .all(|d| accepted.iter().any(|a| a == d))
-            && accepted.iter().all(|a| scopes.contains(a))
+            && accepted.iter().all(|a| req.scopes.contains(a))
     });
     if !is_valid {
         return Err(ErrorResponse::new(
             ErrorResponseType::ConsentRequired,
-            LoginConsentContent::new(content, client, shown_grant).to_json_escaped(),
+            LoginConsentContent::new(content, req.client, shown_grant).to_json_escaped(),
         ));
     }
     Ok(Some(docs))

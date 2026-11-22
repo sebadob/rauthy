@@ -775,11 +775,15 @@ mod tests {
     /// The consent of a login is validated with the login, for both login requests.
     #[test]
     fn login_requests_validate_the_consent() {
-        let consent =
-            |hash: &str| format!(r#"{{"content_hash": "{hash}", "accepted_scopes": ["openid"]}}"#);
-        let valid = consent(&"a".repeat(64));
-        let invalid = consent("not-a-hash");
-        for (consent, is_valid) in [(valid, true), (invalid, false)] {
+        let consent = |hash: &str, scope: &str| {
+            format!(r#"{{"content_hash": "{hash}", "accepted_scopes": ["{scope}"]}}"#)
+        };
+        let hash = "a".repeat(64);
+        for (consent, is_valid) in [
+            (consent(&hash, "openid"), true),
+            (consent("not-a-hash", "openid"), false),
+            (consent(&hash, "open id"), false),
+        ] {
             let refresh = format!(
                 r#"{{"client_id": "my-client", "redirect_uri": "https://app.example.com/cb",
                 "consent": {consent}}}"#
@@ -792,13 +796,10 @@ mod tests {
                 "redirect_uri": "https://app.example.com/cb", "consent": {consent}}}"#
             );
             let req: LoginRequest = serde_json::from_str(&login).unwrap();
-            let err = req.validate().err().map(|err| err.to_string());
-            assert_eq!(
-                err.as_deref()
-                    .is_none_or(|err| !err.contains("content_hash")),
-                is_valid,
-                "{err:?}"
-            );
+            let has_err = req
+                .validate()
+                .is_err_and(|err| err.errors().contains_key("consent"));
+            assert_eq!(has_err, !is_valid, "{login}");
         }
     }
 

@@ -3330,6 +3330,29 @@ VALUES ('j_c1', 'u1', 2), ('j_legacy', 'u1', 2), ('j_c2', 'u1', 2),
     }
 
     #[test]
+    fn test_default_scope_names_skip_blank_entries() {
+        for (default_scopes, want) in [
+            ("", strs(&[])),
+            (" , ", strs(&[])),
+            (" openid , ,email", strs(&["openid", "email"])),
+            ("openid, ,email", strs(&["openid", "email"])),
+        ] {
+            let client = Client {
+                scopes: "openid,email".to_string(),
+                default_scopes: default_scopes.to_string(),
+                ..Default::default()
+            };
+            let names = client.default_scope_names().map(String::from);
+            assert_eq!(names.collect::<Vec<_>>(), want, "{default_scopes:?}");
+            assert_eq!(
+                client.sanitize_login_scopes_with(None, false),
+                want,
+                "{default_scopes:?}"
+            );
+        }
+    }
+
+    #[test]
     fn test_ephemeral_client_redirect_uri_shape() {
         for uri in [
             "https://app.example.com/#/callback",
