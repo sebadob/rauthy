@@ -212,7 +212,8 @@ export const I18nNl: I18n = {
                 groups: 'Je groepslidmaatschappen',
                 openid: 'Je gebruikers-ID en rollen om in te loggen',
                 phone: 'Je telefoonnummer',
-                profile: 'Je naam, gebruikersnaam, foto, taal, geboortedatum en tijdzone',
+                profile:
+                    'Je naam, gebruikersnaam (kan je e-mailadres zijn), foto, taal, geboortedatum en tijdzone',
                 webid: 'Je WebID',
             },
             terms: 'Voorwaarden',

@@ -214,7 +214,7 @@ export const I18nPt: I18n = {
                 openid: 'O seu ID de utilizador e as suas funções para iniciar sessão',
                 phone: 'O seu número de telefone',
                 profile:
-                    'O seu nome, nome de utilizador, imagem, idioma, data de nascimento e fuso horário',
+                    'O seu nome, nome de utilizador (pode ser o seu endereço de e-mail), imagem, idioma, data de nascimento e fuso horário',
                 webid: 'O seu WebID',
             },
             terms: 'Termos',

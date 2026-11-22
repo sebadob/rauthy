@@ -202,7 +202,7 @@ export const I18nKo: I18n = {
                 groups: '그룹 멤버십',
                 openid: '로그인용 사용자 ID 및 역할',
                 phone: '전화번호',
-                profile: '이름, 사용자 이름, 사진, 언어, 생년월일 및 시간대',
+                profile: '이름, 사용자 이름(이메일 주소일 수 있음), 사진, 언어, 생년월일 및 시간대',
                 webid: 'WebID',
             },
             terms: '약관',

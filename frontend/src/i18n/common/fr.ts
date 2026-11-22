@@ -213,7 +213,7 @@ export const I18nFr: I18n = {
                 openid: 'Votre identifiant et vos rôles pour vous connecter',
                 phone: 'Votre numéro de téléphone',
                 profile:
-                    "Votre nom, nom d'utilisateur, photo, langue, date de naissance et fuseau horaire",
+                    "Votre nom, nom d'utilisateur (peut être votre adresse e-mail), photo, langue, date de naissance et fuseau horaire",
                 webid: 'Votre WebID',
             },
             terms: 'Conditions',

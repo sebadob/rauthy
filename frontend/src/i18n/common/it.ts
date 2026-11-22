@@ -199,7 +199,7 @@ export const I18nIt: I18n = {
                 openid: "Il tuo ID utente e i tuoi ruoli per l'accesso",
                 phone: 'Il tuo numero di telefono',
                 profile:
-                    'Il tuo nome, nome utente, immagine, lingua, data di nascita e fuso orario',
+                    'Il tuo nome, nome utente (può essere il tuo indirizzo e-mail), immagine, lingua, data di nascita e fuso orario',
                 webid: 'Il tuo WebID',
             },
             terms: 'Condizioni',

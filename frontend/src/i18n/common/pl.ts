@@ -209,7 +209,7 @@ export const I18nPl: I18n = {
                 openid: 'Twój identyfikator użytkownika i role do logowania',
                 phone: 'Twój numer telefonu',
                 profile:
-                    'Twoje imię, nazwa użytkownika, zdjęcie, język, data urodzenia i strefa czasowa',
+                    'Twoje imię, nazwa użytkownika (może to być Twój adres e-mail), zdjęcie, język, data urodzenia i strefa czasowa',
                 webid: 'Twój WebID',
             },
             terms: 'Warunki',

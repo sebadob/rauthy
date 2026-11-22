@@ -216,7 +216,7 @@ export const I18nEs: I18n = {
                 openid: 'Su ID de usuario y sus roles para iniciar sesión',
                 phone: 'Su número de teléfono',
                 profile:
-                    'Su nombre, nombre de usuario, imagen, idioma, fecha de nacimiento y zona horaria',
+                    'Su nombre, nombre de usuario (puede ser su dirección de correo electrónico), imagen, idioma, fecha de nacimiento y zona horaria',
                 webid: 'Su WebID',
             },
             terms: 'Condiciones',

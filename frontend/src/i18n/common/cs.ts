@@ -207,7 +207,7 @@ export const I18nCs: I18n = {
                 openid: 'Vaše ID uživatele a role pro přihlášení',
                 phone: 'Vaše telefonní číslo',
                 profile:
-                    'Vaše jméno, uživatelské jméno, obrázek, jazyk, datum narození a časové pásmo',
+                    'Vaše jméno, uživatelské jméno (může to být vaše e-mailová adresa), obrázek, jazyk, datum narození a časové pásmo',
                 webid: 'Vaše WebID',
             },
             terms: 'Podmínky',

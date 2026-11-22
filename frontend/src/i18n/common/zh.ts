@@ -195,7 +195,7 @@ export const I18nZh: I18n = {
                 groups: '您的组成员身份',
                 openid: '用于登录的用户 ID 和角色',
                 phone: '您的电话号码',
-                profile: '您的姓名、用户名、头像、语言、出生日期和时区',
+                profile: '您的姓名、用户名（可能是您的电子邮件地址）、头像、语言、出生日期和时区',
                 webid: '您的 WebID',
             },
             terms: '条款',

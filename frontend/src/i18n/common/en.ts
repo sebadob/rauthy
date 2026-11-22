@@ -213,7 +213,8 @@ export const I18nEn: I18n = {
                 groups: 'Your group memberships',
                 openid: 'Your user ID and roles to sign you in',
                 phone: 'Your phone number',
-                profile: 'Your name, username, picture, language, birthdate and time zone',
+                profile:
+                    'Your name, username (may be your E-Mail address), picture, language, birthdate and time zone',
                 webid: 'Your WebID',
             },
             terms: 'Terms',

@@ -220,7 +220,8 @@ export const I18nDe: I18n = {
                 groups: 'Ihre Gruppenzugehörigkeiten',
                 openid: 'Ihre Benutzer-ID und Rollen für die Anmeldung',
                 phone: 'Ihre Telefonnummer',
-                profile: 'Ihr Name, Benutzername, Bild, Sprache, Geburtsdatum und Zeitzone',
+                profile:
+                    'Ihr Name, Benutzername (kann Ihre E-Mail-Adresse sein), Bild, Sprache, Geburtsdatum und Zeitzone',
                 webid: 'Ihre WebID',
             },
             terms: 'Bedingungen',

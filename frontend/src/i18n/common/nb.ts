@@ -210,7 +210,8 @@ export const I18nNb: I18n = {
                 groups: 'Gruppemedlemskapene dine',
                 openid: 'Bruker-ID-en og rollene dine for innlogging',
                 phone: 'Telefonnummeret ditt',
-                profile: 'Navn, brukernavn, bilde, språk, fødselsdato og tidssone',
+                profile:
+                    'Navn, brukernavn (kan være e-postadressen din), bilde, språk, fødselsdato og tidssone',
                 webid: 'WebID-en din',
             },
             terms: 'Vilkår',
