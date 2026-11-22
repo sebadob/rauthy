@@ -1,6 +1,7 @@
 use crate::ListenScheme;
 use crate::email::mailer::{EMail, SmtpConnMode};
 use crate::email::mailer_callback::EMailCallback;
+use crate::entity::clients::Client;
 use crate::entity::consent_sources::ConsentSource;
 use crate::events::event::{Event, EventLevel};
 use crate::events::listener::EventRouterMsg;
@@ -4821,10 +4822,10 @@ impl VarsConsent {
         self.sources.get(resource)
     }
 
-    /// `true` if an ephemeral client must request a `resource`: `consent.enable` is set and
-    /// `[[consent.sources]]` is not empty.
-    pub fn requires_resource(&self) -> bool {
-        self.enable && !self.sources.is_empty()
+    /// `true` if `client` is ephemeral and must request a `resource` but `resource` is `None`:
+    /// `consent.enable` is set and `[[consent.sources]]` is not empty.
+    pub fn missing_required_resource(&self, client: &Client, resource: Option<&str>) -> bool {
+        self.enable && !self.sources.is_empty() && client.is_ephemeral() && resource.is_none()
     }
 }
 
@@ -5778,6 +5779,7 @@ pub fn err_t(key: &str, parent: &str, typ: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entity::clients::tests::redirect_test_client;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -5852,7 +5854,9 @@ mod tests {
         let vars = parse_consent("[consent]\nenable = true");
         assert_eq!(vars.consent.content_cache_ttl, 3600);
         assert!(vars.consent.sources.is_empty());
-        assert!(!vars.consent.requires_resource());
+        let ephemeral = redirect_test_client("https://cimd.example.com/client", "");
+        let static_client = redirect_test_client("app", "");
+        assert!(!vars.consent.missing_required_resource(&ephemeral, None));
 
         let vars = parse_consent(
             r#"
@@ -5898,7 +5902,13 @@ name = 'Data'
                 .source_for("https://other.example.com")
                 .is_none()
         );
-        assert!(vars.consent.requires_resource());
+        assert!(vars.consent.missing_required_resource(&ephemeral, None));
+        assert!(
+            !vars
+                .consent
+                .missing_required_resource(&ephemeral, Some("urn:example:data"))
+        );
+        assert!(!vars.consent.missing_required_resource(&static_client, None));
 
         // without `consent.enable` no `resource` is required
         let vars = parse_consent(
@@ -5909,7 +5919,7 @@ source = 'local'
 name = 'Example API'
 "#,
         );
-        assert!(!vars.consent.requires_resource());
+        assert!(!vars.consent.missing_required_resource(&ephemeral, None));
     }
 
     #[test]

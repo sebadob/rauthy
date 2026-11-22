@@ -1,11 +1,54 @@
-//! The consent grant check of the authorization_code exchange and FedCM, the mapping of its
-//! `ConsentRequired` to `invalid_grant`, and the narrowing of a refresh token's scope to the
-//! consent grant.
+//! The consent to ask for on the login page, the consent grant check of the authorization_code
+//! exchange and FedCM, the mapping of its `ConsentRequired` to `invalid_grant`, and the narrowing
+//! of a refresh token's scope to the consent grant.
 
 use rauthy_data::entity::clients::Client;
+use rauthy_data::entity::consent_sources::{ConsentContent, LoginConsentContent};
 use rauthy_data::entity::user_consents::UserConsent;
+use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
+
+/// When the login page asks for consent: always, or only when the user's grant does not cover
+/// the request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConsentAsk {
+    IfNotCovered,
+    /// `prompt=consent`
+    Always,
+}
+
+/// The consent the login page asks for, `None` without `consent.enable` or when it asks for none.
+/// `user_id` is the user a factor has already proven, whose grant is shown and may cover the
+/// request: `None` for a login that has proven none yet, which is always asked with no granted
+/// scopes.
+pub async fn consent_to_ask(
+    client: &Client,
+    user_id: Option<&str>,
+    resource: Option<&str>,
+    scopes: &[String],
+    lang: Language,
+    ask: ConsentAsk,
+) -> Result<Option<LoginConsentContent>, ErrorResponse> {
+    let Some(content) = ConsentContent::resolve(client, resource, scopes, lang).await else {
+        return Ok(None);
+    };
+    let grant = match user_id {
+        None => None,
+        Some(user_id) => UserConsent::find(user_id, &client.id, resource).await?,
+    };
+    if ask == ConsentAsk::IfNotCovered
+        && let Some(grant) = &grant
+        && grant.covers(client, resource, scopes, lang).await
+    {
+        return Ok(None);
+    }
+    Ok(Some(LoginConsentContent::new(
+        content,
+        client,
+        grant.as_ref(),
+    )))
+}
 
 /// With `consent.enable`, fails with `ConsentRequired` when the user has no consent grant for the
 /// client and `resource`. The caller maps it to its own denial, see [`consent_as_invalid_grant`].

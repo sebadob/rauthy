@@ -917,10 +917,13 @@ rate_limit_db_burst = 200000
 # configured `[[consent.sources]]` log a warning at startup.
 #
 # While it is enabled:
-# - the login page asks for consent, the Admin UI included, when the
-#   user's consent grant for the client and `resource` does not
-#   cover the requested scopes for the current consent content, and
-#   with `prompt=consent`. The client's `default_scopes` are always
+# - the login page asks for consent, the Admin UI included: a login
+#   without a valid session always shows the consent block, while a
+#   valid session skips it only when the user's consent grant for
+#   the client and `resource` covers the requested scopes for the
+#   current consent content and there is no `prompt=consent`. With
+#   `prompt=none`, an uncovered request is answered with
+#   `consent_required`. The client's `default_scopes` are always
 #   accepted, other requested scopes can be declined. The grant is
 #   stored with the time, IP and user agent of the login.
 # - the authorization code exchange, FedCM and a refresh require the

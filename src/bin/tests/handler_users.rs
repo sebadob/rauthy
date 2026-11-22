@@ -1037,17 +1037,27 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
     )
     .await;
     assert!(consent_template(&html).is_some());
-    // and `prompt=none` cannot ask
-    let res = Client::builder()
+    // and `prompt=none` cannot ask, nor log in again for `prompt=login` or an expired `max_age`
+    let no_redirect = Client::builder()
         .redirect(reqwest::redirect::Policy::none())
-        .build()?
-        .get(format!("{}&prompt=none", url_authorize("openid%20groups")))
-        .headers(headers.clone())
-        .send()
-        .await?;
-    let res = expect_status!(res, 302);
-    let location = res.headers().get(LOCATION).unwrap().to_str()?;
-    assert!(location.contains("error=consent_required"), "{location}");
+        .build()?;
+    for (query, error) in [
+        ("openid%20groups&prompt=none", "consent_required"),
+        ("openid&prompt=none%20login", "login_required"),
+        ("openid&prompt=none&max_age=0", "login_required"),
+    ] {
+        let res = no_redirect
+            .get(url_authorize(query))
+            .headers(headers.clone())
+            .send()
+            .await?;
+        let res = expect_status!(res, 302);
+        let location = res.headers().get(LOCATION).unwrap().to_str()?;
+        assert!(
+            location.contains(&format!("error={error}")),
+            "{query}: {location}"
+        );
+    }
 
     // --- a silent refresh within the grant needs no consent
     let refresh_login = LoginRefreshRequest {

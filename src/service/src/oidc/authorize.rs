@@ -1,3 +1,4 @@
+use crate::oidc::consent_grant::{ConsentAsk, consent_to_ask};
 use crate::user_values_validator::UserValuesValidator;
 use actix_web::HttpRequest;
 use actix_web::http::header;
@@ -18,7 +19,7 @@ use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::{MfaAssurance, Session};
-use rauthy_data::entity::user_consents::{ConsentGrant, UserConsent};
+use rauthy_data::entity::user_consents::ConsentGrant;
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
@@ -369,12 +370,13 @@ pub(crate) async fn finish_authorize(
         client.validate_resource_request(resource)?;
     }
 
-    let mut scopes = client.sanitize_login_scopes(&data.scopes)?;
+    let mut scopes = client.sanitize_login_scopes(data.scopes.as_deref());
 
     let resource = data.resource.as_deref();
-    if RauthyConfig::get().vars.consent.requires_resource()
-        && client.is_ephemeral()
-        && resource.is_none()
+    if RauthyConfig::get()
+        .vars
+        .consent
+        .missing_required_resource(&client, resource)
     {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -382,30 +384,26 @@ pub(crate) async fn finish_authorize(
         ));
     }
     let lang = Language::try_from(req).unwrap_or_default();
-    let consent_grant = match ConsentContent::resolve(&client, resource, &scopes, lang).await {
-        None => None,
-        Some(content) => match data.consent {
-            None => {
-                let grant = match data.first_factor {
-                    FirstFactor::Proven => {
-                        UserConsent::find(&user.id, &client.id, resource).await?
-                    }
-                    FirstFactor::Pending => None,
-                };
-                let is_covered = match &grant {
-                    None => false,
-                    Some(grant) => grant.covers(&client, resource, &scopes, lang).await,
-                };
-                if !is_covered {
-                    return Err(ErrorResponse::new(
-                        ErrorResponseType::ConsentRequired,
-                        LoginConsentContent::new(content, &client, grant.as_ref())
-                            .to_json_escaped(),
-                    ));
-                }
-                None
+    let user_id = match data.first_factor {
+        FirstFactor::Proven => Some(user.id.as_str()),
+        FirstFactor::Pending => None,
+    };
+    let consent_grant = match data.consent {
+        None => {
+            let ask = ConsentAsk::IfNotCovered;
+            if let Some(content) =
+                consent_to_ask(&client, user_id, resource, &scopes, lang, ask).await?
+            {
+                return Err(ErrorResponse::new(
+                    ErrorResponseType::ConsentRequired,
+                    content.to_json_escaped(),
+                ));
             }
-            Some(consent) => {
+            None
+        }
+        Some(consent) => match ConsentContent::resolve(&client, resource, &scopes, lang).await {
+            None => None,
+            Some(content) => {
                 let accepted = &consent.accepted_scopes;
                 let is_valid = consent.content_hash == content.content_hash
                     && client

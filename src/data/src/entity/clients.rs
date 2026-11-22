@@ -1356,12 +1356,9 @@ impl Client {
     /// Sanitizes the requested scopes on the authorization endpoint and matches them to the
     /// allowed scopes for this client.
     #[inline]
-    pub fn sanitize_login_scopes(
-        &self,
-        scopes: &Option<Vec<String>>,
-    ) -> Result<Vec<String>, ErrorResponse> {
+    pub fn sanitize_login_scopes(&self, scopes: Option<&[String]>) -> Vec<String> {
         let matrix_enabled = RauthyConfig::get().vars.matrix.msc3861_enable;
-        Ok(self.sanitize_login_scopes_with(scopes.as_deref(), matrix_enabled))
+        self.sanitize_login_scopes_with(scopes, matrix_enabled)
     }
 
     /// Config-free core of [`Self::sanitize_login_scopes`]: default scopes first, then the

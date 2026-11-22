@@ -30,7 +30,6 @@ use rauthy_data::entity::auth_providers::{
 };
 use rauthy_data::entity::browser_id::{BrowserId, BrowserIdSetNew};
 use rauthy_data::entity::clients::Client;
-use rauthy_data::entity::consent_sources::{ConsentContent, LoginConsentContent};
 use rauthy_data::entity::devices::DeviceAuthCode;
 use rauthy_data::entity::fed_cm::FedCMLoginStatus;
 use rauthy_data::entity::ip_rate_limit::DeviceIpRateLimit;
@@ -41,7 +40,6 @@ use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::pow::PowEntity;
 use rauthy_data::entity::sessions::Session;
 use rauthy_data::entity::theme::ThemeCssFull;
-use rauthy_data::entity::user_consents::UserConsent;
 use rauthy_data::entity::users::User;
 use rauthy_data::entity::well_known::WellKnown;
 use rauthy_data::html::templates::{
@@ -51,6 +49,7 @@ use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
 use rauthy_service::forward_auth::auth_header;
+use rauthy_service::oidc::consent_grant::{ConsentAsk, consent_to_ask};
 use rauthy_service::oidc::{authorize, logout, token_info, token_revocation, userinfo, validation};
 use rauthy_service::token_set::TokenSet;
 use rauthy_service::{login_delay, oidc};
@@ -58,7 +57,7 @@ use spow::pow::Pow;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use validator::Validate;
 
 /// OIDC Authorization HTML
@@ -177,7 +176,7 @@ pub async fn get_authorize(
     // check for `prompt=none` and redirect if we don't have a valid session
     let prompt_none = params.prompt.as_ref().is_some_and(|p| p.contains("none"));
     let is_session_valid = !force_new_session && principal.validate_session_auth().is_ok();
-    if !force_new_session && prompt_none && !is_session_valid {
+    if prompt_none && !is_session_valid {
         return Ok(redirect_error("login_required"));
     }
 
@@ -191,9 +190,10 @@ pub async fn get_authorize(
         );
         return Ok(redirect_error("invalid_target"));
     }
-    if RauthyConfig::get().vars.consent.requires_resource()
-        && client.is_ephemeral()
-        && resource.is_none()
+    if RauthyConfig::get()
+        .vars
+        .consent
+        .missing_required_resource(&client, resource)
     {
         warn!("Authorization request without the `resource` the consent requires");
         return Ok(redirect_error("consent_required"));
@@ -204,30 +204,28 @@ pub async fn get_authorize(
         .prompt
         .as_ref()
         .is_some_and(|p| p.contains("consent"));
-    let scopes = client.sanitize_login_scopes(&Some(
-        params.scope.split_whitespace().map(String::from).collect(),
-    ))?;
-    let consent = match ConsentContent::resolve(&client, resource, &scopes, lang).await {
-        None => None,
-        Some(content) => {
-            let user_id = principal
-                .session
-                .as_ref()
-                .and_then(|s| s.user_id.as_deref())
-                .filter(|_| is_session_valid);
-            let grant = match user_id {
-                None => None,
-                Some(user_id) => UserConsent::find(user_id, &client.id, resource).await?,
-            };
-            let is_covered = match &grant {
-                None => false,
-                Some(grant) => grant.covers(&client, resource, &scopes, lang).await,
-            };
-            if !prompt_consent && is_covered {
-                None
-            } else {
-                Some(LoginConsentContent::new(content, &client, grant.as_ref()))
-            }
+    let ask = if prompt_consent {
+        ConsentAsk::Always
+    } else {
+        ConsentAsk::IfNotCovered
+    };
+    let scopes = params
+        .scope
+        .split_whitespace()
+        .map(String::from)
+        .collect::<Vec<_>>();
+    let scopes = client.sanitize_login_scopes(Some(&scopes));
+    // only a valid session has proven the user, whose grant may then be shown
+    let user_id = principal
+        .session
+        .as_ref()
+        .and_then(|s| s.user_id.as_deref())
+        .filter(|_| is_session_valid);
+    let consent = match consent_to_ask(&client, user_id, resource, &scopes, lang, ask).await {
+        Ok(consent) => consent,
+        Err(err) => {
+            error!("Cannot resolve the consent for the authorization request: {err}");
+            return Ok(redirect_error("server_error"));
         }
     };
     if prompt_none && consent.is_some() {
@@ -239,7 +237,11 @@ pub async fn get_authorize(
     let favicon_updated =
         Logo::find_updated_with_res(&client.id, LogoRes::Favicon, &LogoType::Client).await?;
 
+    let has_consent = consent.is_some();
     let mut templates = Vec::with_capacity(12);
+    if let Some(consent) = consent {
+        templates.push(HtmlTemplate::ConsentContent(consent));
+    }
     templates.push(HtmlTemplate::AuthProviders(auth_providers_json));
     templates.push(HtmlTemplate::ClientName(client.name.unwrap_or_default()));
     templates.push(HtmlTemplate::ClientUrl(
@@ -261,16 +263,17 @@ pub async fn get_authorize(
 
     // if the user is still authenticated and everything is valid -> immediate refresh, after the
     // consent if one is needed
-    if is_session_valid && (consent.is_some() || !prompt_consent) {
+    if is_session_valid && (has_consent || !prompt_consent) {
         let csrf = principal.get_session_csrf_token()?;
 
         templates.push(HtmlTemplate::CsrfToken(csrf.to_string()));
-        if let Some(consent) = consent {
-            templates.push(HtmlTemplate::ConsentContent(consent));
-            templates.push(HtmlTemplate::LoginAction(FrontendAction::RefreshConsent));
+        // `RefreshConsent` only with the `ConsentContent` pushed above
+        let action = if has_consent {
+            FrontendAction::RefreshConsent
         } else {
-            templates.push(HtmlTemplate::LoginAction(FrontendAction::Refresh));
-        }
+            FrontendAction::Refresh
+        };
+        templates.push(HtmlTemplate::LoginAction(action));
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(accept_encoding, body, None, origin_header, browser_id)
@@ -301,9 +304,6 @@ pub async fn get_authorize(
 
         templates.push(HtmlTemplate::CsrfToken(session.csrf_token.clone()));
         templates.push(HtmlTemplate::LoginAction(action));
-        if let Some(consent) = consent {
-            templates.push(HtmlTemplate::ConsentContent(consent));
-        }
 
         let body = AuthorizeHtml::build(&lang, client_id_theme, theme_ts, &templates);
         build_authorize_resp(
@@ -439,6 +439,12 @@ pub async fn post_authorize_handle(
     .await
     {
         Ok(auth_step) => map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await,
+        Err(err) if err.error == ErrorResponseType::ConsentRequired => {
+            // Only returned after the user checks, with the consent content to ask for, which is
+            // not logged.
+            debug!("POST /authorize asks for consent");
+            return Err(err);
+        }
         Err(err) => {
             warn!("POST /authorize Error: {:?}", err);
             // We always must return the exact same error type, no matter what the actual error is,
@@ -459,11 +465,6 @@ pub async fn post_authorize_handle(
                 // We only get a forbidden if there is a mismatch in group prefix restriction,
                 // and we can return the "true" error directly for best UX.
                 error!("User login with not matching client group prefix");
-                return Err(err);
-            }
-
-            if let ErrorResponseType::ConsentRequired = err.error {
-                // Only returned after the user checks, with the consent content to ask for.
                 return Err(err);
             }
 

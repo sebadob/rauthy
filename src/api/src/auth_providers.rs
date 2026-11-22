@@ -222,7 +222,12 @@ pub async fn post_provider_callback_handle(
         {
             Ok(r) => r,
             Err(err) => {
-                error!("Error during Auth Provider Callback: {}", err.message);
+                // the message of `ConsentRequired` is the consent content to ask for
+                if err.error == ErrorResponseType::ConsentRequired {
+                    debug!("Auth Provider Callback asks for consent");
+                } else {
+                    error!("Error during Auth Provider Callback: {}", err.message);
+                }
                 return Err(err);
             }
         };
