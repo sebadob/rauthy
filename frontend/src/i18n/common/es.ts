@@ -207,14 +207,16 @@ export const I18nEs: I18n = {
             continue: 'Continuar',
             details: 'Detalles',
             intro: '{{ CLIENT }} solicita acceso a:',
+            introResource: '{{ CLIENT }} solicita acceso a {{ RESOURCE }}:',
             required: 'siempre',
             scopes: {
                 address: 'Su dirección postal',
                 email: 'Su dirección de correo electrónico',
                 groups: 'Sus grupos',
-                openid: 'Su ID de usuario para iniciar sesión',
+                openid: 'Su ID de usuario y sus roles para iniciar sesión',
                 phone: 'Su número de teléfono',
-                profile: 'Su nombre, nombre de usuario, imagen e idioma',
+                profile:
+                    'Su nombre, nombre de usuario, imagen, idioma, fecha de nacimiento y zona horaria',
                 webid: 'Su WebID',
             },
             terms: 'Condiciones',

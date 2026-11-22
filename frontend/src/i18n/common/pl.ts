@@ -200,14 +200,16 @@ export const I18nPl: I18n = {
             continue: 'Dalej',
             details: 'Szczegóły',
             intro: '{{ CLIENT }} prosi o dostęp do:',
+            introResource: '{{ CLIENT }} prosi o dostęp do {{ RESOURCE }}:',
             required: 'zawsze',
             scopes: {
                 address: 'Twój adres pocztowy',
                 email: 'Twój adres e-mail',
                 groups: 'Twoje grupy',
-                openid: 'Twój identyfikator użytkownika do logowania',
+                openid: 'Twój identyfikator użytkownika i role do logowania',
                 phone: 'Twój numer telefonu',
-                profile: 'Twoje imię, nazwa użytkownika, zdjęcie i język',
+                profile:
+                    'Twoje imię, nazwa użytkownika, zdjęcie, język, data urodzenia i strefa czasowa',
                 webid: 'Twój WebID',
             },
             terms: 'Warunki',

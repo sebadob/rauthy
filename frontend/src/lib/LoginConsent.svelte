@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { ConsentContentTemplate, ConsentScope } from '#api/templates/ConsentContent.ts';
     import { useI18n } from '#state/i18n.svelte.ts';
-    import { useMarkdownWorker } from '#lib/text_edit/useWorker.svelte.ts';
     import InputCheckbox from '#lib/form/InputCheckbox.svelte';
     import Button from '#lib/button/Button.svelte';
 
@@ -20,14 +19,14 @@
     } = $props();
 
     let t = useI18n();
-    let md = useMarkdownWorker();
 
     // built-in descriptions of the standard scopes for the `local` source
     let builtin: Record<string, string> = $derived(t.authorize.consent.scopes);
     let detailsScope: undefined | string = $state();
     let checks: Record<string, boolean> = $state({});
 
-    // a new content, e.g. after it changed on the server, needs a new confirmation
+    // A new content, e.g. after it changed on the server, needs a new confirmation. The page keeps
+    // this block mounted for as long as the content stays, so the choices are kept until then.
     $effect(() => {
         checks = Object.fromEntries(
             consent.scopes.map(s => [
@@ -43,29 +42,29 @@
         accepted = consent.scopes.map(s => s.name).filter(s => checks[s]);
     });
 
-    function details(scope: ConsentScope): string | undefined {
+    // A remote description may contain HTML. Only its text is shown: an inert document from the
+    // DOMParser neither runs scripts nor loads anything.
+    function details(scope: ConsentScope): null | string {
         if (consent.source === 'remote') {
-            return scope.description;
+            return scope.description
+                ? new DOMParser().parseFromString(scope.description, 'text/html').body.textContent
+                : null;
         }
-        return builtin[scope.name];
+        return builtin[scope.name] ?? null;
     }
 
     function toggleDetails(scope: ConsentScope) {
-        if (detailsScope === scope.name) {
-            detailsScope = undefined;
-            return;
-        }
-        detailsScope = scope.name;
-        if (consent.source === 'remote' && scope.description) {
-            md.sanitizeHTML(scope.description);
-        }
+        detailsScope = detailsScope === scope.name ? undefined : scope.name;
     }
 </script>
 
 <div class="consent">
     <h3>{t.authorize.consent.title}</h3>
+    <!-- the client asks, `name` is the one of the consent source, i.e. of the resource -->
     <p>
-        {t.authorize.consent.intro.replace('{{ CLIENT }}', consent.name || clientName)}
+        {(consent.name ? t.authorize.consent.introResource : t.authorize.consent.intro)
+            .replace('{{ CLIENT }}', clientName)
+            .replace('{{ RESOURCE }}', consent.name ?? '')}
     </p>
     {#if consent.intro}
         <p class="intro">{consent.intro}</p>
@@ -101,14 +100,7 @@
                     <div class="warning">{t.authorize.consent.warning}</div>
                 {/if}
                 {#if detailsScope === scope.name && desc}
-                    <div class="details">
-                        {#if consent.source === 'remote'}
-                            <!-- sanitized by the markdown worker -->
-                            {@html md.sanitizedHTML()}
-                        {:else}
-                            {desc}
-                        {/if}
-                    </div>
+                    <div class="details">{desc}</div>
                 {/if}
             </li>
         {/each}

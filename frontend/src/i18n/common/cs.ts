@@ -198,14 +198,16 @@ export const I18nCs: I18n = {
             continue: 'Pokračovat',
             details: 'Podrobnosti',
             intro: '{{ CLIENT }} žádá o přístup k:',
+            introResource: '{{ CLIENT }} žádá o přístup k {{ RESOURCE }}:',
             required: 'vždy',
             scopes: {
                 address: 'Vaše poštovní adresa',
                 email: 'Vaše e-mailová adresa',
                 groups: 'Vaše členství ve skupinách',
-                openid: 'Vaše ID uživatele pro přihlášení',
+                openid: 'Vaše ID uživatele a role pro přihlášení',
                 phone: 'Vaše telefonní číslo',
-                profile: 'Vaše jméno, uživatelské jméno, obrázek a jazyk',
+                profile:
+                    'Vaše jméno, uživatelské jméno, obrázek, jazyk, datum narození a časové pásmo',
                 webid: 'Vaše WebID',
             },
             terms: 'Podmínky',

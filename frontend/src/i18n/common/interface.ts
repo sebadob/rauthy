@@ -166,6 +166,7 @@ export interface I18n {
             continue: string;
             details: string;
             intro: string;
+            introResource: string;
             required: string;
             scopes: {
                 address: string;

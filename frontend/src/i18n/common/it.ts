@@ -190,14 +190,16 @@ export const I18nIt: I18n = {
             continue: 'Continua',
             details: 'Dettagli',
             intro: "{{ CLIENT }} richiede l'accesso a:",
+            introResource: "{{ CLIENT }} richiede l'accesso a {{ RESOURCE }}:",
             required: 'sempre',
             scopes: {
                 address: 'Il tuo indirizzo postale',
                 email: 'Il tuo indirizzo email',
                 groups: 'I tuoi gruppi',
-                openid: "Il tuo ID utente per l'accesso",
+                openid: "Il tuo ID utente e i tuoi ruoli per l'accesso",
                 phone: 'Il tuo numero di telefono',
-                profile: 'Il tuo nome, nome utente, immagine e lingua',
+                profile:
+                    'Il tuo nome, nome utente, immagine, lingua, data di nascita e fuso orario',
                 webid: 'Il tuo WebID',
             },
             terms: 'Condizioni',

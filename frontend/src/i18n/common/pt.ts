@@ -205,14 +205,16 @@ export const I18nPt: I18n = {
             continue: 'Continuar',
             details: 'Detalhes',
             intro: '{{ CLIENT }} pede acesso a:',
+            introResource: '{{ CLIENT }} pede acesso a {{ RESOURCE }}:',
             required: 'sempre',
             scopes: {
                 address: 'O seu endereço postal',
                 email: 'O seu endereço de e-mail',
                 groups: 'Os seus grupos',
-                openid: 'O seu ID de utilizador para iniciar sessão',
+                openid: 'O seu ID de utilizador e as suas funções para iniciar sessão',
                 phone: 'O seu número de telefone',
-                profile: 'O seu nome, nome de utilizador, imagem e idioma',
+                profile:
+                    'O seu nome, nome de utilizador, imagem, idioma, data de nascimento e fuso horário',
                 webid: 'O seu WebID',
             },
             terms: 'Termos',

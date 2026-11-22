@@ -204,14 +204,16 @@ export const I18nFr: I18n = {
             continue: 'Continuer',
             details: 'Détails',
             intro: "{{ CLIENT }} demande l'accès à :",
+            introResource: "{{ CLIENT }} demande l'accès à {{ RESOURCE }} :",
             required: 'toujours',
             scopes: {
                 address: 'Votre adresse postale',
                 email: 'Votre adresse e-mail',
                 groups: 'Vos groupes',
-                openid: 'Votre identifiant pour vous connecter',
+                openid: 'Votre identifiant et vos rôles pour vous connecter',
                 phone: 'Votre numéro de téléphone',
-                profile: "Votre nom, nom d'utilisateur, photo et langue",
+                profile:
+                    "Votre nom, nom d'utilisateur, photo, langue, date de naissance et fuseau horaire",
                 webid: 'Votre WebID',
             },
             terms: 'Conditions',
