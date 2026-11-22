@@ -1,5 +1,5 @@
 use crate::database::{Cache, DB};
-use crate::entity::user_consents::ConsentGrant;
+use crate::entity::user_consents::PendingConsent;
 use crate::rauthy_config::RauthyConfig;
 use rauthy_common::utils::get_rand;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
@@ -16,7 +16,7 @@ pub struct WebauthnLoginReq {
     pub needs_user_update: bool,
     pub session_id: String,
     /// Written once the ceremony verified the user.
-    pub consent_grant: Option<ConsentGrant>,
+    pub pending_consent: Option<PendingConsent>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

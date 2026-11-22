@@ -19,7 +19,7 @@ use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::{MfaAssurance, Session};
-use rauthy_data::entity::user_consents::{ConsentGrant, UserConsent};
+use rauthy_data::entity::user_consents::{PendingConsent, UserConsent};
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
@@ -388,7 +388,7 @@ pub(crate) async fn finish_authorize(
         FirstFactor::Proven => Some(user.id.as_str()),
         FirstFactor::Pending => None,
     };
-    let consent_grant = match data.consent {
+    let pending_consent = match data.consent {
         None => {
             let ask = ConsentAsk::IfNotCovered;
             if let Some(content) =
@@ -443,7 +443,7 @@ pub(crate) async fn finish_authorize(
                 grant_scopes.sort_unstable();
                 // the content of the granted scopes, from the documents the user confirmed
                 let content_hash = ConsentContent::build(&docs, &grant_scopes).content_hash;
-                Some(ConsentGrant {
+                Some(PendingConsent {
                     client_id: client.id.clone(),
                     client_created_micros: client.created_micros,
                     resource: data.resource.clone(),
@@ -454,7 +454,7 @@ pub(crate) async fn finish_authorize(
         },
     };
     // a ceremony may be the only factor, the grant waits for the last one
-    let consent_grant = match consent_grant {
+    let pending_consent = match pending_consent {
         Some(grant) if !data.require_webauthn && !data.require_otp => {
             grant.upsert(&user, req).await?;
             None
@@ -550,7 +550,7 @@ pub(crate) async fn finish_authorize(
             }),
             needs_user_update,
             session_id: session.id.clone(),
-            consent_grant,
+            pending_consent,
         }
         .save()
         .await?;
@@ -580,7 +580,7 @@ pub(crate) async fn finish_authorize(
             }),
             needs_user_update,
             session_id: session.id.clone(),
-            consent_grant,
+            pending_consent,
         }
         .save()
         .await?;

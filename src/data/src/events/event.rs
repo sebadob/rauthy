@@ -2,7 +2,7 @@ use crate::database::DB;
 use crate::email::mailer;
 use crate::entity::failed_scim_tasks::ScimAction;
 use crate::entity::login_locations::LoginLocation;
-use crate::entity::user_consents::ConsentGrant;
+use crate::entity::user_consents::PendingConsent;
 use crate::entity::users::User;
 use crate::rauthy_config::RauthyConfig;
 use chrono::{DateTime, Timelike, Utc};
@@ -756,7 +756,7 @@ impl Event {
     }
 
     /// A consent given on the login page, with its granted scopes.
-    pub fn consent_granted(user_email: &str, grant: &ConsentGrant, ip: IpAddr) -> Self {
+    pub fn consent_granted(user_email: &str, grant: &PendingConsent, ip: IpAddr) -> Self {
         let text = consent_granted_text(user_email, grant);
         Self::new(
             RauthyConfig::get()
@@ -1212,7 +1212,7 @@ fn consent_revoked_text(
     format!("Consent of `{user_email}` for {target} revoked by {by}")
 }
 
-fn consent_granted_text(user_email: &str, grant: &ConsentGrant) -> String {
+fn consent_granted_text(user_email: &str, grant: &PendingConsent) -> String {
     let target = ConsentTarget {
         client_id: &grant.client_id,
         resource: grant.resource.as_deref(),
@@ -1257,7 +1257,7 @@ mod tests {
 
     #[test]
     fn consent_granted_text_by_target() {
-        let mut grant = ConsentGrant {
+        let mut grant = PendingConsent {
             client_id: "c1".to_string(),
             client_created_micros: None,
             resource: None,

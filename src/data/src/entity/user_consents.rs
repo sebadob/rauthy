@@ -444,7 +444,7 @@ impl UserConsent {
 /// `resource` once the last required factor of the login is verified: the password, or the
 /// WebAuthn or OTP ceremony that follows it or replaces it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct ConsentGrant {
+pub struct PendingConsent {
     pub client_id: String,
     /// The `created_micros` of the client the consent was given to, see
     /// [`Self::upsert_for_unchanged_client`].
@@ -457,7 +457,7 @@ pub struct ConsentGrant {
     pub content_hash: String,
 }
 
-impl ConsentGrant {
+impl PendingConsent {
     /// [`Self::upsert`] after a ceremony, unless the client was deleted, or deleted and created
     /// again, since the consent was given: its grants were deleted with it.
     pub async fn upsert_for_unchanged_client(
