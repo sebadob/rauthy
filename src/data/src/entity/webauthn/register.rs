@@ -105,17 +105,14 @@ pub async fn reg_finish(
     let mut user = User::find(id).await?;
 
     let idx = format!("reg_{:?}_{}", payload.passkey_name, user.id);
-    let reg_data = match DB::hql()
+    let Some(reg_data) = DB::hql()
         .get_remove::<_, _, WebauthnReg>(Cache::Webauthn, idx)
         .await?
-    {
-        None => {
-            return Err(ErrorResponse::new(
-                ErrorResponseType::BadRequest,
-                "Webauthn Registration Request not found",
-            ));
-        }
-        Some(data) => data,
+    else {
+        return Err(ErrorResponse::new(
+            ErrorResponseType::BadRequest,
+            "Webauthn Registration Request not found",
+        ));
     };
 
     let cfg = &RauthyConfig::get().vars.webauthn;

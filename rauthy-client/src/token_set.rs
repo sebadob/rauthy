@@ -53,13 +53,10 @@ impl OidcTokenSet {
         }
 
         // The second part are the claims we care about
-        let claims_b64 = match split.next() {
-            None => {
-                return Err(RauthyError::Token(Cow::from(
-                    "Bad format for raw token - claims missing",
-                )));
-            }
-            Some(s) => s,
+        let Some(claims_b64) = split.next() else {
+            return Err(RauthyError::Token(Cow::from(
+                "Bad format for raw token - claims missing",
+            )));
         };
 
         let bytes = base64_url_no_pad_decode(claims_b64)?;

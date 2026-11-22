@@ -601,14 +601,11 @@ pub async fn post_device_auth(
         };
     }
 
-    let client = match Client::find(payload.client_id).await {
-        Ok(client) => client,
-        Err(_) => {
-            return HttpResponse::NotFound().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidClient,
-                error_description: Some(Cow::from("`client_id` does not exist")),
-            });
-        }
+    let Ok(client) = Client::find(payload.client_id).await else {
+        return HttpResponse::NotFound().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidClient,
+            error_description: Some(Cow::from("`client_id` does not exist")),
+        });
     };
 
     if !client.enabled {

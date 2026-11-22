@@ -20,24 +20,18 @@ use tracing::{debug, error, warn};
 /// Return a [TokenSet](crate::models::response::TokenSet) for the `device_code` flow
 #[tracing::instrument(skip_all, fields(client_id = payload.client_id))]
 pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> HttpResponse {
-    let device_code = match &payload.device_code {
-        None => {
-            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::InvalidRequest,
-                error_description: Some(Cow::from("`device_code` is missing")),
-            });
-        }
-        Some(dc) => dc,
+    let Some(device_code) = &payload.device_code else {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::InvalidRequest,
+            error_description: Some(Cow::from("`device_code` is missing")),
+        });
     };
 
-    let mut code = match DeviceAuthCode::find_by_device_code(device_code).await {
-        Ok(Some(code)) => code,
-        Ok(None) | Err(_) => {
-            return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
-                error: OAuth2ErrorTypeResponse::ExpiredToken,
-                error_description: Some(Cow::from("invalid `device_code` or request has expired")),
-            });
-        }
+    let Ok(Some(mut code)) = DeviceAuthCode::find_by_device_code(device_code).await else {
+        return HttpResponse::BadRequest().json(OAuth2ErrorResponse {
+            error: OAuth2ErrorTypeResponse::ExpiredToken,
+            error_description: Some(Cow::from("invalid `device_code` or request has expired")),
+        });
     };
 
     if Some(code.client_id.as_str()) != payload.client_id.as_deref() {
