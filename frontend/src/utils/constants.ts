@@ -1,6 +1,8 @@
 export const IS_DEV = import.meta.env.MODE === 'development';
 export const PKCE_VERIFIER = 'pkce_verifier';
 export const PKCE_VERIFIER_UPSTREAM = 'pkce_verifier_upstream';
+// the page a provider login started from, in the `sessionStorage`
+export const PROVIDER_LOGIN_PAGE = 'provider_login_page';
 export const CSRF_TOKEN = 'sct';
 export const ACCESS_TOKEN = 'access_token';
 export const ID_TOKEN = 'id_token';

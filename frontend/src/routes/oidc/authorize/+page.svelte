@@ -40,7 +40,7 @@
     } from '#api/types/authorize.ts';
     import Form from '#lib/form/Form.svelte';
     import ButtonAuthProvider from '#lib/ButtonAuthProvider.svelte';
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import type { SessionInfoResponse } from '#api/types/session.ts';
     import ClientLogo from '#lib/ClientLogo.svelte';
     import type { ProviderLoginRequest } from '#api/types/auth_provider.ts';
@@ -149,6 +149,7 @@
     let tos: undefined | ToSLatestResponse = $state();
     let tosAcceptCode = $state('');
 
+    let hintProvider = $derived(idpHint ? providers.find(p => p.id === idpHint) : undefined);
     let hasAutoLoggedIn = false;
     let showModalUpdate = $state(false);
 
@@ -160,7 +161,8 @@
             redirectUri &&
             redirectUri.length > 0
         ) {
-            onRefresh();
+            // untracked, so that a `consent_required` answer setting `consent` does not send it again
+            untrack(onRefresh);
         }
     });
 
@@ -204,20 +206,12 @@
         }
     });
 
+    // With a consent block, the `idp_hint` login waits for "Continue", so that optional scopes can
+    // be unchecked first.
     $effect(() => {
-        if (
-            idpHint &&
-            providers.length > 0 &&
-            !isLoading &&
-            !err &&
-            !hasAutoLoggedIn &&
-            !isConsentPending
-        ) {
-            const provider = providers.find(p => p.id === idpHint);
-            if (provider) {
-                hasAutoLoggedIn = true;
-                providerLogin(provider.id);
-            }
+        if (hintProvider && !consent && !isLoading && !err && !hasAutoLoggedIn) {
+            hasAutoLoggedIn = true;
+            providerLogin(hintProvider.id);
         }
     });
 
@@ -313,7 +307,7 @@
             '/auth/v1/oidc/authorize/refresh',
             payload,
         );
-        await handleAuthRes(res);
+        await handleAuthRes(res, true);
     }
 
     function onPasskeyDiscover() {
@@ -401,6 +395,7 @@
         res?: IResponse<
             undefined | WebauthnLoginResponse | ToSAwaitLoginResponse | OtpLoginResponse
         >,
+        isRefresh = false,
     ) {
         isLoading = false;
         isAutoRefreshing = false;
@@ -408,6 +403,15 @@
         if (!res) {
             console.error('no result in handleAuthRes');
             return;
+        }
+
+        if (
+            loginAction === 'RefreshConsent' &&
+            (res.status === 0 || res.status >= 400) &&
+            res.error?.error !== 'consent_required'
+        ) {
+            // the refresh failed for another reason, the login form is the way on
+            loginAction = '';
         }
 
         if (res.status === 202) {
@@ -445,13 +449,7 @@
             await fetchTos();
         } else if (res.status === 400) {
             if (res.error?.error === 'consent_required') {
-                // the consent is missing or the content changed, with the content to ask for
-                try {
-                    consent = JSON.parse(res.error.message) as ConsentContentTemplate;
-                    err = t.authorize.consent.changed;
-                } catch {
-                    err = res.error.message;
-                }
+                showConsentRequired(res.error.message, isRefresh);
             } else if (res.error?.error === 'PasswordRequired') {
                 needsPassword = true;
                 emailAfterSubmit = email;
@@ -511,6 +509,22 @@
             }
         } else {
             err = res.error?.message || `HTTP ${res.status}`;
+        }
+    }
+
+    // The consent is missing or the content changed: shows the content the answer carries. The
+    // automatic refresh of a valid session continues with the consent block only.
+    function showConsentRequired(message: string, isRefresh = false) {
+        try {
+            consent = JSON.parse(message) as ConsentContentTemplate;
+        } catch {
+            err = message;
+            return;
+        }
+        if (isRefresh && loginAction === 'Refresh') {
+            loginAction = 'RefreshConsent';
+        } else {
+            err = t.authorize.consent.changed;
         }
     }
 
@@ -579,9 +593,13 @@
             consent: loginConsent(),
             ...(isAtproto && { handle: atprotoHandle }),
         };
-        execProviderLogin(payload).then(errMsg => {
-            err = errMsg || '';
+        execProviderLogin(payload).then(error => {
             isLoading = false;
+            if (error?.error === 'consent_required') {
+                showConsentRequired(error.message);
+            } else {
+                err = error?.message || '';
+            }
         });
     }
 
@@ -821,14 +839,29 @@
                     </div>
                 {/if}
 
-                {#if consent && !showReset}
-                    <LoginConsent
-                        {consent}
-                        clientName={clientName || clientId || ''}
-                        bind:accepted={consentAccepted}
-                        bind:confirmed={consentConfirmed}
-                        disabled={isLoading || tooManyRequests}
-                    />
+                {#if consent}
+                    <!-- hidden, not removed, during the password reset to keep the choices -->
+                    <div hidden={showReset}>
+                        <LoginConsent
+                            {consent}
+                            clientName={clientName || clientId || ''}
+                            bind:accepted={consentAccepted}
+                            bind:confirmed={consentConfirmed}
+                            disabled={isLoading || tooManyRequests}
+                        />
+                    </div>
+                    {#if hintProvider && !showReset}
+                        <div class="btn flex-col">
+                            <Button
+                                ariaLabel={t.authorize.consent.continue}
+                                onclick={() => hintProvider && providerLogin(hintProvider.id)}
+                                isDisabled={isConsentPending}
+                                {isLoading}
+                            >
+                                {t.authorize.consent.continue}
+                            </Button>
+                        </div>
+                    {/if}
                 {/if}
 
                 {#if !tooManyRequests && !clientMfaForce}

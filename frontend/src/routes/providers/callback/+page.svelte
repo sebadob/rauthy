@@ -14,7 +14,7 @@
         WebauthnLoginResponse,
     } from '#api/types/authorize.ts';
     import type { ProviderCallbackRequest } from '#api/types/auth_provider.ts';
-    import { IS_DEV } from '#utils/constants.ts';
+    import { IS_DEV, PROVIDER_LOGIN_PAGE } from '#utils/constants.ts';
     import type { ToSAwaitLoginResponse, ToSLatestResponse } from '#api/types/tos.ts';
     import TosAccept from '#lib/TosAccept.svelte';
     import type { MfaPurpose } from '#api/types/mfa.ts';
@@ -124,6 +124,16 @@
             setTimeout(() => {
                 window.location.replace('/auth/v1/');
             }, 5000);
+        } else if (res.error?.error === 'consent_required') {
+            // The consent is missing or changed meanwhile. The login page asks for it again with the
+            // original request.
+            let loginPage = sessionStorage.getItem(PROVIDER_LOGIN_PAGE);
+            sessionStorage.removeItem(PROVIDER_LOGIN_PAGE);
+            if (loginPage?.startsWith(`${window.location.origin}/`)) {
+                window.location.replace(loginPage);
+            } else {
+                error = t.authorize.consent.changed;
+            }
         } else if (res.status === 406) {
             // 406 -> client forces MFA while the user has none
             error = t.authorize.clientForceMfa;

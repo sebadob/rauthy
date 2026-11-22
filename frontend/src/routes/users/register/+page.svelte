@@ -37,6 +37,8 @@
     import { execProviderLogin } from '#utils/login.ts';
     import { genKey, saveCsrfToken } from '#utils/helpers.ts';
     import type { SessionInfoResponse } from '#api/types/session.ts';
+    import LoginConsent from '#lib/LoginConsent.svelte';
+    import type { ConsentContentTemplate } from '#api/templates/ConsentContent.ts';
 
     let t = useI18n();
 
@@ -50,6 +52,11 @@
     let isLoading = $state(false);
     let err = $state('');
     let success = $state(false);
+
+    // the consent a provider sign-up was answered with `consent_required` for
+    let consent: undefined | ConsentContentTemplate = $state();
+    let consentAccepted: string[] = $state([]);
+    let consentConfirmed = $state(false);
 
     let tos: undefined | ToSLatestResponse = $state();
     let noTosExists = $state(false);
@@ -175,14 +182,27 @@
             provider_id: id,
             pkce_challenge: '',
             pow: '',
+            consent:
+                consent && consentConfirmed
+                    ? { content_hash: consent.content_hash, accepted_scopes: consentAccepted }
+                    : undefined,
         };
 
         // provider login will fail without a session in at least init state
         await createSession();
 
-        let errMsg = await execProviderLogin(payload);
-        err = errMsg || '';
+        let error = await execProviderLogin(payload);
         isLoading = false;
+        err = '';
+        if (error?.error === 'consent_required') {
+            try {
+                consent = JSON.parse(error.message) as ConsentContentTemplate;
+            } catch {
+                err = error.message;
+            }
+        } else {
+            err = error?.message || '';
+        }
     }
 
     async function onSubmit(form: HTMLFormElement, params: URLSearchParams) {
@@ -401,11 +421,21 @@
             {#if providers.length > 0}
                 <div class="providers flex-col gap-05">
                     <div class="public-divider">{t.register.orRegisterWith}</div>
+                    {#if consent}
+                        <LoginConsent
+                            {consent}
+                            clientName="Rauthy"
+                            bind:accepted={consentAccepted}
+                            bind:confirmed={consentConfirmed}
+                            disabled={isLoading}
+                        />
+                    {/if}
                     {#each providers as provider}
                         <ButtonAuthProvider
                             ariaLabel={`${t.register.orRegisterWith}: ${provider.name}`}
                             {provider}
                             onclick={() => providerLogin(provider.id)}
+                            isDisabled={!!consent && !consentConfirmed}
                             {isLoading}
                         />
                     {/each}
