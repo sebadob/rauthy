@@ -123,7 +123,6 @@ pub async fn dyn_client_cleanup() {
                             "Client does not exist for ClientDyn when it should. This should never happen.\
                         Please report this issue: {err:?}"
                         );
-                        continue;
                     }
                 }
             }

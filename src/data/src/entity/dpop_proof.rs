@@ -367,7 +367,7 @@ impl DPoPProof {
                 err.message.to_string()
             });
             return Err(latest);
-        };
+        }
 
         Ok(())
     }
@@ -412,7 +412,7 @@ mod tests {
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().clone(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };
@@ -469,7 +469,7 @@ mod tests {
         let claims = DPoPClaims {
             jti: "-BwC3ESc6acc2lTc".to_string(),
             htm: http::Method::POST.to_string(),
-            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
+            htu: DPOP_TOKEN_ENDPOINT.get().unwrap().clone(),
             iat: Utc::now().timestamp(),
             nonce: None,
         };

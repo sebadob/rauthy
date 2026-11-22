@@ -39,7 +39,6 @@ use std::collections::HashSet;
 use std::fmt::Write;
 use std::fmt::{Debug, Formatter};
 use std::net::IpAddr;
-use std::ops::Deref;
 use std::str::FromStr;
 use tracing::{debug, error, trace, warn};
 use validator::Validate;
@@ -378,7 +377,7 @@ VALUES ($1, $2, $3, $4)"#;
             .await?;
 
             txn.commit().await?;
-        };
+        }
         Self::delete_cache_for(&client.id).await?;
 
         let client_dyn = ClientDyn {
@@ -473,7 +472,7 @@ VALUES ($1, $2, $3, $4)"#;
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
-        };
+        }
 
         let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
@@ -1455,11 +1454,10 @@ impl Client {
         req: &HttpRequest,
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
         let pub_url_with_scheme = RauthyConfig::get().pub_url_with_scheme.as_str();
-        let additional_allowed_origin_schemes = RauthyConfig::get()
+        let additional_allowed_origin_schemes = &*RauthyConfig::get()
             .vars
             .server
-            .additional_allowed_origin_schemes
-            .deref();
+            .additional_allowed_origin_schemes;
         self.get_validated_origin_header_with(
             req,
             pub_url_with_scheme,
@@ -1473,15 +1471,10 @@ impl Client {
         pub_url_with_scheme: &str,
         additional_allowed_origin_schemes: &[String],
     ) -> Result<Option<(HeaderName, HeaderValue)>, ErrorResponse> {
-        let origin = match extract_external_origin(
-            req,
-            pub_url_with_scheme,
-            additional_allowed_origin_schemes,
-        )? {
-            Some(o) => o,
-            None => {
-                return Ok(None);
-            }
+        let Some(origin) =
+            extract_external_origin(req, pub_url_with_scheme, additional_allowed_origin_schemes)?
+        else {
+            return Ok(None);
         };
 
         let err_msg = || {
@@ -1584,7 +1577,7 @@ impl Client {
                 write!(path_query, "{}?{}", url.path(), q)?;
             } else {
                 write!(path_query, "{}", url.path())?;
-            };
+            }
 
             if is_wildcard_prefix_match(&path_query, &req_path_query)
                 || path_query == req_path_query
@@ -1926,7 +1919,7 @@ WHERE jti IN (SELECT access_token_jti FROM refresh_tokens WHERE client_id = $1)"
 
 /// Validates a dynamic-client redirect URI.
 /// Rejects backchannel callbacks for dynamic clients.
-fn validate_no_backchannel_logout_uri(opt: &Option<String>) -> Result<(), ErrorResponse> {
+fn validate_no_backchannel_logout_uri(opt: Option<&str>) -> Result<(), ErrorResponse> {
     if opt.is_some() {
         return Err(ErrorResponse::new(
             ErrorResponseType::BadRequest,
@@ -2398,7 +2391,7 @@ impl Client {
             .join(",");
 
         // Dynamic registration accepts only validated redirect URIs and no backchannel callback.
-        validate_no_backchannel_logout_uri(&req.backchannel_logout_uri)?;
+        validate_no_backchannel_logout_uri(req.backchannel_logout_uri.as_deref())?;
 
         let mut redirect_uris = Vec::with_capacity(req.redirect_uris.len());
         for uri in req.redirect_uris {
@@ -2544,19 +2537,12 @@ pub(crate) mod tests {
     #[test]
     fn test_validate_no_backchannel_logout_uri() {
         // the field is rejected entirely for dynamic clients (SSRF surface, see fork-todo.md)
-        assert!(validate_no_backchannel_logout_uri(&None).is_ok());
+        assert!(validate_no_backchannel_logout_uri(None).is_ok());
         assert!(
-            validate_no_backchannel_logout_uri(&Some("https://app.example.com/logout".to_string()))
-                .is_err()
+            validate_no_backchannel_logout_uri(Some("https://app.example.com/logout")).is_err()
         );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("https://169.254.169.254/".to_string()))
-                .is_err()
-        );
-        assert!(
-            validate_no_backchannel_logout_uri(&Some("http://127.0.0.1:8080/".to_string()))
-                .is_err()
-        );
+        assert!(validate_no_backchannel_logout_uri(Some("https://169.254.169.254/")).is_err());
+        assert!(validate_no_backchannel_logout_uri(Some("http://127.0.0.1:8080/")).is_err());
     }
 
     #[test]

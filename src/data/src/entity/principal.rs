@@ -420,7 +420,7 @@ impl Principal {
     pub fn validate_group_admin_user_create(
         &self,
         new_roles: &[String],
-        new_groups: Option<&Vec<String>>,
+        new_groups: Option<&[String]>,
     ) -> Result<(), ErrorResponse> {
         if self.api_key.is_some() || self.is_admin() {
             return Ok(());

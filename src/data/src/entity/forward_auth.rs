@@ -140,7 +140,7 @@ impl ForwardAuthSession {
                 ErrorResponseType::BadRequest,
                 "CSRF Token mismatch",
             ));
-        };
+        }
 
         if let Some(site) = req.headers().get("sec-fetch-site") {
             let site = site.to_str().unwrap_or_default();

@@ -337,7 +337,7 @@ impl EmailJob {
             EmailContentType::Markdown => {
                 Cow::from(markdown::render_sanitized_markdown(&self.body))
             }
-            EmailContentType::Html => Cow::from(self.body.to_string()),
+            EmailContentType::Html => Cow::from(self.body.clone()),
         };
 
         Ok(Some(email::custom::build_custom_html_email(&body).await?))

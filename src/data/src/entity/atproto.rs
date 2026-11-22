@@ -166,7 +166,7 @@ impl Client {
                 AuthProvider::create(payload).await?;
             }
             _ => {}
-        };
+        }
 
         Ok(())
     }

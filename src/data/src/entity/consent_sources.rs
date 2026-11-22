@@ -167,7 +167,7 @@ impl ConsentDocs {
             warn!(
                 "Consent source {url} unavailable for client {}, using `local`: {}",
                 client.id, err.message
-            )
+            );
         }) else {
             return Ok(Some(Self { remote: None, name }));
         };

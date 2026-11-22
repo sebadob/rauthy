@@ -10,6 +10,7 @@ export interface UserValuesConfig {
     country: UserValueConfigValue;
     phone: UserValueConfigValue;
     tz: UserValueConfigValue;
+    self_service_email_change_deny: boolean;
     preferred_username: UserValuesPreferredUsername;
 }
 

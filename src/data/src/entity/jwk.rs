@@ -179,7 +179,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS256,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -200,7 +200,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS384,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -221,7 +221,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::RS512,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -235,7 +235,7 @@ impl JWKS {
             kid: get_rand(24),
             created_at: OffsetDateTime::now_utc().unix_timestamp(),
             signature: JwkKeyPairAlg::EdDSA,
-            enc_key_id: enc_key_active.to_string(),
+            enc_key_id: enc_key_active.clone(),
             jwk,
         };
         entity.save().await?;
@@ -841,7 +841,7 @@ impl JwkKeyPair {
                     return Ok(message);
                 }
             }
-        };
+        }
 
         warn!("JWT Token validation error");
         Err(ErrorResponse::new(

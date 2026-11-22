@@ -510,7 +510,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,
         state: Some(INJECTING_STATE.to_string()),
-        nonce: Some(nonce.to_owned()),
+        nonce: Some(nonce.clone()),
         code_challenge: Some(challenge_plain.to_owned()),
         code_challenge_method: Some("plain".to_string()),
         resource: None,
@@ -586,7 +586,7 @@ async fn test_authorization_code_flow() -> Result<(), Box<dyn Error>> {
     // Step 4: POST /token with extracted values + CSRF cookie
     let mut req_token = TokenRequest {
         grant_type: GrantType::AuthorizationCode,
-        code: Some(code.to_string()),
+        code: Some(code.clone()),
         redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some(CLIENT_ID.to_string()),
         client_secret: Some(CLIENT_SECRET.to_string()),
@@ -1040,7 +1040,7 @@ async fn test_password_flow() -> Result<(), Box<dyn Error>> {
     assert_eq!(ts.scope.as_deref(), claims["scope"].as_str());
 
     // validate against the backend
-    validate_token(ts.access_token.to_owned(), None).await?;
+    validate_token(ts.access_token.clone(), None).await?;
 
     // make sure `auth_time` is handled properly
     let auth_time_refresh = auth_time_from_token(ts.refresh_token.as_ref().unwrap());
@@ -1117,7 +1117,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     let mut claims = DPoPClaims {
         jti: "-BwC3ESc6acc2lTc".to_string(),
         htm: http::Method::POST.to_string(),
-        htu: DPOP_TOKEN_ENDPOINT.get().unwrap().to_string(),
+        htu: DPOP_TOKEN_ENDPOINT.get().unwrap().clone(),
         iat: Utc::now().timestamp(),
         // ath: None,
         nonce: None,
@@ -1204,7 +1204,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);
     validate_token(
-        ts.access_token.to_owned(),
+        ts.access_token.clone(),
         Some(JktClaim { jkt: &fingerprint }),
     )
     .await?;
@@ -1239,7 +1239,7 @@ async fn test_dpop() -> Result<(), Box<dyn Error>> {
     let ts = res.json::<TokenSet>().await?;
     assert_eq!(ts.token_type, JwtTokenType::DPoP);
     validate_token(
-        ts.access_token.to_owned(),
+        ts.access_token.clone(),
         Some(JktClaim { jkt: &fingerprint }),
     )
     .await?;
@@ -1306,7 +1306,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
         redirect_uri: redirect_uri.to_owned(),
         scopes: None,
         state: None,
-        nonce: Some(nonce.to_owned()),
+        nonce: Some(nonce.clone()),
         code_challenge: Some(challenge_s256),
         code_challenge_method: Some("S256".to_string()),
         resource: None,
@@ -1339,7 +1339,7 @@ async fn test_auth_code_flow_ephemeral_client() -> Result<(), Box<dyn Error>> {
     // get a token with the code
     let req_token = TokenRequest {
         grant_type: GrantType::AuthorizationCode,
-        code: Some(code.to_string()),
+        code: Some(code.clone()),
         redirect_uri: Some(redirect_uri.to_string()),
         client_id: Some(client_id.to_string()),
         code_verifier: Some(challenge_plain.to_string()),
@@ -1442,7 +1442,7 @@ fn serve_ephemeral_client() -> JoinHandle<()> {
                 .expect("port 10080 to be free for testing")
                 .run()
                 .await
-                .expect("ephemeral client test http server to start") })
+                .expect("ephemeral client test http server to start"); });
     })
 }
 

@@ -54,7 +54,7 @@ impl NotifierMatrix {
         let http_client = Notification::build_client(disable_tls_validation, root_ca_path).await;
 
         let client = ruma_client::Client::builder()
-            .homeserver_url(server_url.to_string())
+            .homeserver_url(server_url.clone())
             .access_token(access_token.clone())
             .http_client(http_client)
             .await
@@ -67,7 +67,7 @@ impl NotifierMatrix {
 
         if disable_tls_validation {
             warn!("Matrix Event Notifier client has TLS validation disabled");
-        };
+        }
 
         let slf = Self {
             user_id,
@@ -191,7 +191,7 @@ impl NotifierMatrix {
                 ErrorResponseType::Connection,
                 "Matrix Notifications Client is not logged in",
             ));
-        };
+        }
 
         debug!("logged in to Matrix");
         Ok(())
@@ -297,7 +297,6 @@ impl Notify for NotifierMatrix {
                                 "Error logging in to Matrix on {i}. attempt: {err:?}\nRetrying in 3 seconds"
                             );
                             time::sleep(Duration::from_secs(3)).await;
-                            continue;
                         }
                     }
                 }

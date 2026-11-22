@@ -106,6 +106,7 @@ impl HtmlTemplate {
                 Self::IsRegOpen(RauthyConfig::get().vars.user_registration.enable),
                 None,
             )),
+            "tpl_reg_acc_init_immediate" => Ok((Self::reg_acc_init_immediate().await?, None)),
             // the LoginAction requires a complex logic + validation.
             // Simply always return None during local dev.
             "tpl_login_action" => Ok((Self::LoginAction(FrontendAction::None), None)),

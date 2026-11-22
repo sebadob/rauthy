@@ -148,6 +148,7 @@
                     name="email"
                     label={t.common.email}
                     placeholder={t.common.email}
+                    disabled={config.self_service_email_change_deny}
                     value={user.email}
                     required
                 />

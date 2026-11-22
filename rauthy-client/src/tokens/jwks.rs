@@ -26,10 +26,10 @@ enum JwksMsg {
 impl JwksMsg {
     pub(crate) fn send(self) -> Result<(), RauthyError> {
         JWKS_TX
-                .get()
-                .ok_or(RauthyError::Init("JWKS_TX has not been initialized"))?
-                .send(self)
-                .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
+            .get()
+            .ok_or(RauthyError::Init("JWKS_TX has not been initialized"))?
+            .send(self)
+            .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
         Ok(())
     }
 }
@@ -80,7 +80,7 @@ impl JwkPublicKey {
         buf: &mut Vec<u8>,
     ) -> Result<(), RauthyError> {
         if let Some(jwks) = JWKS.get()
-                && let Some(jwk) = jwks.load().get(&kid)
+            && let Some(jwk) = jwks.load().get(&kid)
         {
             jwk.validate_token_alg(alg)?;
             jwk.validate_token_signature(token, buf)?;
@@ -94,10 +94,10 @@ impl JwkPublicKey {
             let (tx, rx) = oneshot::channel();
             JwksMsg::Update(tx).send()?;
             rx.await
-                    .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
+                .map_err(|err| RauthyError::Internal(Cow::from(err.to_string())))?;
 
             if let Some(jwks) = JWKS.get()
-                    && let Some(jwk) = jwks.load().get(&kid)
+                && let Some(jwk) = jwks.load().get(&kid)
             {
                 jwk.validate_token_alg(alg)?;
                 jwk.validate_token_signature(token, buf)?;
@@ -142,7 +142,9 @@ impl JwkPublicKey {
         if self.alg == alg {
             Ok(())
         } else {
-            Err(RauthyError::JWK(format!("Mismatch in 'alg' for JWK with kid {}", self.kid).into()))
+            Err(RauthyError::JWK(
+                format!("Mismatch in 'alg' for JWK with kid {}", self.kid).into(),
+            ))
         }
     }
 
@@ -153,8 +155,8 @@ impl JwkPublicKey {
         buf: &mut Vec<u8>,
     ) -> Result<(), RauthyError> {
         let (message, sig) = token
-                .rsplit_once('.')
-                .ok_or(RauthyError::MalformedJwt("Malformed token"))?;
+            .rsplit_once('.')
+            .ok_or(RauthyError::MalformedJwt("Malformed token"))?;
 
         buf.clear();
         base64_url_no_pad_decode_buf(sig, buf)?;
@@ -166,12 +168,12 @@ impl JwkPublicKey {
                     let hash = hmac_sha256::Hash::hash(message.as_bytes());
                     let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
                     if rsa_pk
-                            .verify(
-                                rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
-                                hash.as_slice(),
-                                buf,
-                            )
-                            .is_ok()
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
                     {
                         return Ok(());
                     }
@@ -186,12 +188,12 @@ impl JwkPublicKey {
                     let hash = hmac_sha512::sha384::Hash::hash(message.as_bytes());
                     let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
                     if rsa_pk
-                            .verify(
-                                rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
-                                hash.as_slice(),
-                                buf,
-                            )
-                            .is_ok()
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha384>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
                     {
                         return Ok(());
                     }
@@ -206,12 +208,12 @@ impl JwkPublicKey {
                     let hash = hmac_sha512::Hash::hash(message.as_bytes());
                     let rsa_pk = rsa::RsaPublicKey::new(self.n()?, self.e()?)?;
                     if rsa_pk
-                            .verify(
-                                rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
-                                hash.as_slice(),
-                                buf,
-                            )
-                            .is_ok()
+                        .verify(
+                            rsa::Pkcs1v15Sign::new::<sha2::Sha512>(),
+                            hash.as_slice(),
+                            buf,
+                        )
+                        .is_ok()
                     {
                         return Ok(());
                     }
@@ -227,7 +229,7 @@ impl JwkPublicKey {
                     return Ok(());
                 }
             }
-        };
+        }
 
         warn!("JWT Token validation error");
         Err(RauthyError::InvalidJwt("Invalid JWT Token signature"))

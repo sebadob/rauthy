@@ -62,7 +62,6 @@ serde = { workspace = true }
 validator = { workspace = true }
 zeroize = { workspace = true }
 
-# jemalloc does not work properly on msvc targets
 [target.'cfg(all(not(target_env = "msvc"), not(target_os = "openbsd"), not(target_os = "linux")))'.dependencies]
 tikv-jemallocator = { workspace = true, optional = true }
 
@@ -107,7 +106,6 @@ deprecated_attributes_without_since = "allow"
 doc_markdown = "allow"
 ignored_unit_patterns = "allow"
 ignore_without_reason = "allow"
-implicit_clone = "allow"
 large_futures = "allow"
 map_unwrap_or = "allow"
 match_same_arms = "allow"
@@ -117,12 +115,10 @@ needless_pass_by_value = "allow"
 needless_raw_string_hashes = "allow"
 redundant_closure_for_method_calls = "allow"
 redundant_else = "allow"
-semicolon_if_nothing_returned = "allow"
 single_char_pattern = "allow"
 struct_excessive_bools = "allow"
 struct_field_names = "allow"
 unchecked_time_subtraction = "allow"
-unnecessary_semicolon = "allow"
 unreadable_literal = "allow"
 unused_async = "allow"
 wildcard_imports = "allow"

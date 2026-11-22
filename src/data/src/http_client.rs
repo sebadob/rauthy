@@ -272,11 +272,11 @@ impl GuardedFetcher {
                 format!("too many concurrent {label} lookups"),
             )
         };
-        let _permit =
-            match tokio::time::timeout(FETCH_ACQUIRE_TIMEOUT, self.semaphore.acquire()).await {
-                Ok(Ok(permit)) => permit,
-                Ok(Err(_)) | Err(_) => return Err(too_many()),
-            };
+        let Ok(Ok(_permit)) =
+            tokio::time::timeout(FETCH_ACQUIRE_TIMEOUT, self.semaphore.acquire()).await
+        else {
+            return Err(too_many());
+        };
 
         let mut res = self
             .client
@@ -889,9 +889,8 @@ mod tests {
 
         tokio::spawn(async move {
             loop {
-                let (mut socket, _) = match listener.accept().await {
-                    Ok(s) => s,
-                    Err(_) => return,
+                let Ok((mut socket, _)) = listener.accept().await else {
+                    return;
                 };
                 let hits_conn = hits_srv.clone();
                 let routes = routes.clone();
