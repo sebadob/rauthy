@@ -84,7 +84,8 @@
             {@const isDefault = consent.default_scopes.includes(scope.name)}
             {@const desc = details(scope)}
             <li>
-                <div class="scope">
+                <!-- a default is always included: only its checkbox is locked, its text stays -->
+                <div class="scope" class:locked={isDefault && !disabled}>
                     <InputCheckbox
                         ariaLabel={scope.title || scope.name}
                         bind:checked={
@@ -96,13 +97,15 @@
                             {scope.title || scope.name}
                         </span>
                         {#if isDefault}
-                            <span class="muted">({t.authorize.consent.required})</span>
+                            <span class="required">({t.authorize.consent.required})</span>
                         {/if}
                     </InputCheckbox>
                     {#if desc}
-                        <Button invisible onclick={() => toggleDetails(scope)}>
-                            {t.authorize.consent.details}
-                        </Button>
+                        <span class="toggle">
+                            <Button invisible onclick={() => toggleDetails(scope)}>
+                                {t.authorize.consent.details}
+                            </Button>
+                        </span>
                     {/if}
                 </div>
                 {#if scope.warning}
@@ -169,9 +172,34 @@
         overflow-wrap: anywhere;
     }
 
-    .muted {
-        opacity: 0.7;
+    .required {
         font-size: 0.85rem;
+    }
+
+    /* the shell fades a disabled checkbox with its label, a locked default fades its box only */
+    :global(.ui-shell) .scope.locked :global(.admin-checkbox[data-disabled='true']) {
+        opacity: 1;
+        cursor: default;
+    }
+
+    :global(.ui-shell) .scope.locked :global(.admin-checkbox input:disabled) {
+        opacity: 0.6;
+    }
+
+    /* no background that stays after a click, the focus ring only on keyboard focus */
+    :global(.ui-shell) .scope .toggle :global(.admin-control[data-variant='invisible']) {
+        background: transparent;
+        color: var(--ui-muted);
+    }
+
+    @media (hover: hover) {
+        :global(.ui-shell) .scope .toggle :global(.admin-control[data-variant='invisible']:hover) {
+            color: var(--ui-primary);
+        }
+    }
+
+    :global(.ui-shell) .scope .toggle :global(.admin-control:focus:not(:focus-visible)) {
+        outline: none;
     }
 
     .warning {
