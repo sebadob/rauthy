@@ -82,26 +82,40 @@ pub struct ConsentContent {
     pub terms_url: Option<String>,
 }
 
-impl ConsentContent {
-    /// The consent content for a login to `client` with the optional RFC 8707 `resource`.
+/// The consent documents of a login, from which [`ConsentContent::build`] builds the content of
+/// any scopes. All content of one login, the one shown and the one of the accepted scopes, comes
+/// from the same documents.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConsentDocs {
+    /// `None` for the `local` content.
+    remote: Option<RemoteDocs>,
+    /// Borrowed from the `[[consent.sources]]` registry.
+    name: Option<Cow<'static, str>>,
+}
+
+impl ConsentDocs {
+    /// The consent documents for a login to `client` with the optional RFC 8707 `resource`.
     /// `None` without `consent.enable`. An unavailable or invalid remote source degrades to
     /// the `local` content and never fails the login.
+    ///
+    /// # Errors
+    ///
+    /// `TooManyRequests` when the back pressure of the consent fetcher rejects a fetch, which
+    /// says nothing about the source, so the login is retried instead of shown `local`.
     ///
     /// For a remote source, the content is shown from the `lang` document, or the `en` one if
     /// that fails, with the scope warnings of the `en` document added. The `content_hash` is
     /// the one of the content as shown, so any change of a shown field asks for consent again,
     /// and so may a change of the user's language. Without a valid `en` document, the whole
     /// content is `local`.
-    pub async fn resolve(
+    pub async fn find(
         client: &Client,
         resource: Option<&str>,
-        scopes: &[String],
         lang: Language,
-    ) -> Option<Self> {
-        Self::resolve_with(
+    ) -> Result<Option<Self>, ErrorResponse> {
+        Self::find_with(
             client,
             resource,
-            scopes,
             lang,
             &RauthyConfig::get().vars.consent,
             RemoteConsent::find,
@@ -109,26 +123,27 @@ impl ConsentContent {
         .await
     }
 
-    /// [`Self::resolve`] with injected config and remote lookup.
-    async fn resolve_with<F>(
+    /// [`Self::find`] with injected config and remote lookup.
+    async fn find_with<F>(
         client: &Client,
         resource: Option<&str>,
-        scopes: &[String],
         lang: Language,
         vars: &'static VarsConsent,
         find_remote: F,
-    ) -> Option<Self>
+    ) -> Result<Option<Self>, ErrorResponse>
     where
         F: AsyncFn(&Url, Language) -> Result<RemoteConsent, ErrorResponse>,
     {
-        let source = client.consent_source_with(resource, vars)?;
+        let Some(source) = client.consent_source_with(resource, vars) else {
+            return Ok(None);
+        };
         // the registry entry is the source whenever it exists for the `resource`
         let name = resource
             .and_then(|r| vars.source_for(r))
             .map(|s| Cow::Borrowed(s.name.as_str()));
 
         let ConsentSource::Remote(url) = source else {
-            return Some(Self::build(None, name, scopes));
+            return Ok(Some(Self { remote: None, name }));
         };
 
         // `None` for `lang == en`. Fetched concurrently with `en`, and ignored if that one
@@ -140,6 +155,13 @@ impl ConsentContent {
                 tokio::join!(find_remote(&url, DEFAULT_LANGUAGE), find_remote(&url, lang));
             (en, Some(translation))
         };
+        for res in [Some(&en), translation.as_ref()].into_iter().flatten() {
+            if let Err(err) = res
+                && matches!(err.error, ErrorResponseType::TooManyRequests(_))
+            {
+                return Err(err.clone());
+            }
+        }
 
         let Ok(en) = en.inspect_err(|err| {
             warn!(
@@ -147,7 +169,7 @@ impl ConsentContent {
                 client.id, err.message
             )
         }) else {
-            return Some(Self::build(None, name, scopes));
+            return Ok(Some(Self { remote: None, name }));
         };
         let remote = match translation {
             None => RemoteDocs::new(en, None),
@@ -165,23 +187,41 @@ impl ConsentContent {
             }
         };
 
-        Some(Self::build(Some(remote), name, scopes))
+        Ok(Some(Self {
+            remote: Some(remote),
+            name,
+        }))
+    }
+}
+
+impl ConsentContent {
+    /// The consent content of `scopes` for a login, see [`ConsentDocs::find`].
+    ///
+    /// # Errors
+    ///
+    /// See [`ConsentDocs::find`].
+    pub async fn resolve(
+        client: &Client,
+        resource: Option<&str>,
+        scopes: &[String],
+        lang: Language,
+    ) -> Result<Option<Self>, ErrorResponse> {
+        let docs = ConsentDocs::find(client, resource, lang).await?;
+        Ok(docs.map(|docs| Self::build(&docs, scopes)))
     }
 
-    /// `name` from the `[[consent.sources]]` registry wins over the remote document's `name`.
-    fn build(
-        remote: Option<RemoteDocs>,
-        name: Option<Cow<'static, str>>,
-        scopes: &[String],
-    ) -> Self {
+    /// The content of `scopes` from `docs`. `name` from the `[[consent.sources]]` registry wins
+    /// over the remote document's `name`.
+    pub fn build(docs: &ConsentDocs, scopes: &[String]) -> Self {
         let mut scopes = scopes.iter().map(String::as_str).collect::<Vec<_>>();
         scopes.sort_unstable();
         scopes.dedup();
 
+        let name = docs.name.clone();
         let Some(RemoteDocs {
-            display: mut remote,
+            display: remote,
             en_warnings,
-        }) = remote
+        }) = &docs.remote
         else {
             return Self::local(name, &scopes);
         };
@@ -191,12 +231,11 @@ impl ConsentContent {
             .map(|s| {
                 // a stale translation must not drop a warning of the `en` document
                 let en_warning = en_warnings.contains(s);
-                // the scopes are deduplicated, so each one is taken once
-                match remote.scopes.remove(s) {
+                match remote.scopes.get(s) {
                     Some(scope) => ConsentScope {
                         name: s.to_string(),
-                        title: Some(scope.title),
-                        description: scope.description,
+                        title: Some(scope.title.clone()),
+                        description: scope.description.clone(),
                         warning: scope.warning || en_warning,
                     },
                     None => ConsentScope {
@@ -211,10 +250,10 @@ impl ConsentContent {
 
         Self::hashed(
             ConsentSourceType::Remote,
-            name.or(remote.name.map(Cow::Owned)),
+            name.or_else(|| remote.name.clone().map(Cow::Owned)),
             scopes,
-            remote.intro,
-            remote.terms_url,
+            remote.intro.clone(),
+            remote.terms_url.clone(),
         )
     }
 
@@ -272,28 +311,25 @@ impl LoginConsentContent {
     pub fn new(content: ConsentContent, client: &Client, grant: Option<&UserConsent>) -> Self {
         Self {
             content,
-            default_scopes: client
-                .default_scopes
-                .split(',')
-                .filter(|s| !s.is_empty())
-                .map(String::from)
-                .collect(),
+            default_scopes: client.default_scope_names().map(String::from).collect(),
             granted_scopes: grant.map(UserConsent::scopes_vec).unwrap_or_default(),
         }
     }
 
-    /// The JSON with `<`, `>` and `&` escaped, which only occur inside JSON strings. Inside an
-    /// HTML `<template>`, remote content can then neither close the element nor be changed by
-    /// the HTML parser.
+    /// The JSON with `<`, `>`, `&` and every non-ASCII char escaped as `\\uXXXX`, which only
+    /// occur inside JSON strings. Inside an HTML `<template>`, remote content can then neither
+    /// close the element nor be changed by the HTML parser, such as a no-break space.
     pub fn to_json_escaped(&self) -> String {
         let json = serde_json::to_string(self).expect("LoginConsentContent to always serialize");
         let mut res = String::with_capacity(json.len());
+        let mut utf16 = [0u16; 2];
         for c in json.chars() {
-            match c {
-                '<' => res.push_str("\\u003c"),
-                '>' => res.push_str("\\u003e"),
-                '&' => res.push_str("\\u0026"),
-                c => res.push(c),
+            if c.is_ascii() && !matches!(c, '<' | '>' | '&') {
+                res.push(c);
+                continue;
+            }
+            for unit in c.encode_utf16(&mut utf16) {
+                write!(res, "\\u{unit:04x}").expect("writing to a String to never fail");
             }
         }
         res
@@ -680,6 +716,93 @@ mod tests {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
+    /// The content of `scopes` from [`ConsentDocs::find_with`], which must not fail.
+    async fn resolve_with<F>(
+        client: &Client,
+        resource: Option<&str>,
+        scopes: &[String],
+        lang: Language,
+        vars: &'static VarsConsent,
+        find: F,
+    ) -> Option<ConsentContent>
+    where
+        F: AsyncFn(&Url, Language) -> Result<RemoteConsent, ErrorResponse>,
+    {
+        ConsentDocs::find_with(client, resource, lang, vars, find)
+            .await
+            .expect("consent docs without back pressure")
+            .map(|docs| ConsentContent::build(&docs, scopes))
+    }
+
+    /// The back pressure of the fetcher, of the `en` document or of the translation, fails the
+    /// lookup instead of showing the `local` content. Any other failure degrades to `local`.
+    #[tokio::test]
+    async fn resolve_back_pressure_fails() {
+        let client = Client {
+            id: "client".to_string(),
+            consent: Some("https://consent.example.com/client".to_string()),
+            ..Default::default()
+        };
+        let no_sources = vars(Vec::new());
+        let busy = || ErrorResponse::new(ErrorResponseType::TooManyRequests(1), "busy");
+        for (lang, busy_lang) in [
+            (Language::En, Language::En),
+            (Language::De, Language::En),
+            (Language::De, Language::De),
+        ] {
+            let find = async |_: &Url, l: Language| {
+                if l == busy_lang {
+                    Err(busy())
+                } else {
+                    RemoteConsent::parse(REMOTE.as_bytes())
+                }
+            };
+            let res = ConsentDocs::find_with(&client, None, lang, no_sources, find).await;
+            let err = res.expect_err("back pressure fails the lookup");
+            assert!(
+                matches!(err.error, ErrorResponseType::TooManyRequests(_)),
+                "{lang:?} / {busy_lang:?}: {err:?}"
+            );
+        }
+
+        let unavailable = async |_: &Url, _: Language| {
+            Err(ErrorResponse::new(ErrorResponseType::Connection, "down"))
+        };
+        let docs = ConsentDocs::find_with(&client, None, Language::En, no_sources, unavailable)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(docs.remote, None);
+    }
+
+    /// Every non-ASCII char is escaped as well, a no-break space included, so the template
+    /// is plain ASCII.
+    #[test]
+    fn login_consent_content_json_escaped_non_ascii() {
+        let content = ConsentContent::build(
+            &ConsentDocs {
+                remote: None,
+                name: Some("Caf\u{e9} \u{1f600}".into()),
+            },
+            &strs(&["openid"]),
+        );
+        let mut content = content;
+        content.intro = Some("a\u{a0}b".to_string());
+        let tpl = LoginConsentContent {
+            content,
+            default_scopes: vec!["openid".to_string()],
+            granted_scopes: Vec::new(),
+        };
+        let json = tpl.to_json_escaped();
+        assert!(json.is_ascii(), "{json}");
+        assert!(json.contains("a\\u00a0b"), "{json}");
+        assert!(json.contains("\\ud83d\\ude00"), "{json}");
+        assert_eq!(
+            serde_json::from_str::<LoginConsentContent>(&json).unwrap(),
+            tpl
+        );
+    }
+
     fn strs(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
     }
@@ -776,7 +899,13 @@ mod tests {
 
     #[test]
     fn local_content_hash() {
-        let content = ConsentContent::build(None, None, &strs(&["openid", "email", "openid"]));
+        let content = ConsentContent::build(
+            &ConsentDocs {
+                remote: None,
+                name: None,
+            },
+            &strs(&["openid", "email", "openid"]),
+        );
         assert_eq!(content.source, ConsentSourceType::Local);
         assert_eq!(
             content.content_hash,
@@ -801,10 +930,22 @@ mod tests {
         assert!(content.scopes.iter().all(|s| s.title.is_none()));
 
         // independent of the request order
-        let other = ConsentContent::build(None, None, &strs(&["email", "openid"]));
+        let other = ConsentContent::build(
+            &ConsentDocs {
+                remote: None,
+                name: None,
+            },
+            &strs(&["email", "openid"]),
+        );
         assert_eq!(content.content_hash, other.content_hash);
         // but not of the scopes
-        let other = ConsentContent::build(None, None, &strs(&["email", "openid", "profile"]));
+        let other = ConsentContent::build(
+            &ConsentDocs {
+                remote: None,
+                name: None,
+            },
+            &strs(&["email", "openid", "profile"]),
+        );
         assert_ne!(content.content_hash, other.content_hash);
     }
 
@@ -812,8 +953,10 @@ mod tests {
     fn remote_content() {
         let remote = RemoteConsent::parse(REMOTE.as_bytes()).unwrap();
         let content = ConsentContent::build(
-            Some(RemoteDocs::same(remote)),
-            Some("Registry".into()),
+            &ConsentDocs {
+                remote: Some(RemoteDocs::same(remote)),
+                name: Some("Registry".into()),
+            },
             &strs(&["openid", "data.write", "data.read"]),
         );
 
@@ -852,14 +995,24 @@ mod tests {
             ]
         );
 
-        let local =
-            ConsentContent::build(None, None, &strs(&["openid", "data.write", "data.read"]));
+        let local = ConsentContent::build(
+            &ConsentDocs {
+                remote: None,
+                name: None,
+            },
+            &strs(&["openid", "data.write", "data.read"]),
+        );
         assert_ne!(content.content_hash, local.content_hash);
 
         // without a registry entry, the remote name is used
         let remote = RemoteConsent::parse(REMOTE.as_bytes()).unwrap();
-        let content =
-            ConsentContent::build(Some(RemoteDocs::same(remote)), None, &strs(&["data.read"]));
+        let content = ConsentContent::build(
+            &ConsentDocs {
+                remote: Some(RemoteDocs::same(remote)),
+                name: None,
+            },
+            &strs(&["data.read"]),
+        );
         assert_eq!(content.name.as_deref(), Some("Example API"));
     }
 
@@ -875,27 +1028,33 @@ mod tests {
     fn remote_content_hash_is_deterministic() {
         let scopes = strs(&["data.read"]);
         let a = ConsentContent::build(
-            Some(RemoteDocs::same(
-                RemoteConsent::parse(REMOTE.as_bytes()).unwrap(),
-            )),
-            None,
+            &ConsentDocs {
+                remote: Some(RemoteDocs::same(
+                    RemoteConsent::parse(REMOTE.as_bytes()).unwrap(),
+                )),
+                name: None,
+            },
             &scopes,
         );
         let b = ConsentContent::build(
-            Some(RemoteDocs::same(
-                RemoteConsent::parse(REMOTE_REORDERED.as_bytes()).unwrap(),
-            )),
-            None,
+            &ConsentDocs {
+                remote: Some(RemoteDocs::same(
+                    RemoteConsent::parse(REMOTE_REORDERED.as_bytes()).unwrap(),
+                )),
+                name: None,
+            },
             &scopes,
         );
         assert_eq!(a.content_hash, b.content_hash);
 
         let changed = REMOTE.replace("Read your data", "Read all your data");
         let c = ConsentContent::build(
-            Some(RemoteDocs::same(
-                RemoteConsent::parse(changed.as_bytes()).unwrap(),
-            )),
-            None,
+            &ConsentDocs {
+                remote: Some(RemoteDocs::same(
+                    RemoteConsent::parse(changed.as_bytes()).unwrap(),
+                )),
+                name: None,
+            },
             &scopes,
         );
         assert_ne!(a.content_hash, c.content_hash);
@@ -994,29 +1153,36 @@ mod tests {
         let find = async |url: &Url, lang| RemoteConsent::fetch(&fetcher, url, lang).await;
 
         // registry source
-        let content = ConsentContent::resolve_with(
-            &client,
-            Some(resource),
-            &scopes,
-            Language::En,
-            vars,
-            find,
-        )
-        .await
-        .unwrap();
+        let content = resolve_with(&client, Some(resource), &scopes, Language::En, vars, find)
+            .await
+            .unwrap();
         assert_eq!(
             content,
-            ConsentContent::build(None, Some("Registry".into()), &scopes)
+            ConsentContent::build(
+                &ConsentDocs {
+                    remote: None,
+                    name: Some("Registry".into())
+                },
+                &scopes
+            )
         );
         assert_eq!(content.source, ConsentSourceType::Local);
         assert_eq!(content.name.as_deref(), Some("Registry"));
 
         // the client's own source
-        let content =
-            ConsentContent::resolve_with(&client, None, &scopes, Language::En, vars, find)
-                .await
-                .unwrap();
-        assert_eq!(content, ConsentContent::build(None, None, &scopes));
+        let content = resolve_with(&client, None, &scopes, Language::En, vars, find)
+            .await
+            .unwrap();
+        assert_eq!(
+            content,
+            ConsentContent::build(
+                &ConsentDocs {
+                    remote: None,
+                    name: None
+                },
+                &scopes
+            )
+        );
     }
 
     #[tokio::test]
@@ -1040,24 +1206,16 @@ mod tests {
         };
 
         // registry: its name wins
-        let content = ConsentContent::resolve_with(
-            &client,
-            Some(resource),
-            &scopes,
-            Language::De,
-            vars,
-            find,
-        )
-        .await
-        .unwrap();
+        let content = resolve_with(&client, Some(resource), &scopes, Language::De, vars, find)
+            .await
+            .unwrap();
         assert_eq!(content.source, ConsentSourceType::Remote);
         assert_eq!(content.name.as_deref(), Some("Registry"));
 
         // client column: the remote name is used
-        let content =
-            ConsentContent::resolve_with(&client, None, &scopes, Language::De, vars, find)
-                .await
-                .unwrap();
+        let content = resolve_with(&client, None, &scopes, Language::De, vars, find)
+            .await
+            .unwrap();
         assert_eq!(content.source, ConsentSourceType::Remote);
         assert_eq!(
             content.name.as_deref(),
@@ -1071,7 +1229,7 @@ mod tests {
             ..*vars
         });
         assert!(
-            ConsentContent::resolve_with(&client, None, &scopes, Language::De, disabled, find)
+            resolve_with(&client, None, &scopes, Language::De, disabled, find)
                 .await
                 .is_none()
         );
@@ -1121,7 +1279,7 @@ mod tests {
                 )),
             }
         };
-        let content = ConsentContent::resolve_with(
+        let content = resolve_with(
             &client,
             None,
             &strs(&["data.read"]),
@@ -1256,16 +1414,9 @@ mod tests {
                     ..RemoteConsent::parse(REMOTE.as_bytes()).unwrap()
                 })
             };
-            let content = ConsentContent::resolve_with(
-                &client,
-                Some(resource),
-                &scopes,
-                Language::En,
-                vars,
-                find,
-            )
-            .await
-            .unwrap();
+            let content = resolve_with(&client, Some(resource), &scopes, Language::En, vars, find)
+                .await
+                .unwrap();
             assert_eq!(content.name.as_deref(), Some(registry));
             content.content_hash
         };
@@ -1283,8 +1434,10 @@ mod tests {
             RemoteConsent::parse(br#"{"scopes": {"data.write": {"title": "Daten schreiben"}}}"#)
                 .unwrap();
         let content = ConsentContent::build(
-            Some(RemoteDocs::new(de, Some(en.clone()))),
-            None,
+            &ConsentDocs {
+                remote: Some(RemoteDocs::new(de, Some(en.clone()))),
+                name: None,
+            },
             &strs(&["data.read", "data.write"]),
         );
         assert_eq!(content.scopes[0].name, "data.read");
@@ -1299,8 +1452,10 @@ mod tests {
         )
         .unwrap();
         let content = ConsentContent::build(
-            Some(RemoteDocs::new(de, Some(en))),
-            None,
+            &ConsentDocs {
+                remote: Some(RemoteDocs::new(de, Some(en))),
+                name: None,
+            },
             &strs(&["data.read"]),
         );
         assert!(content.scopes[0].warning);
@@ -1317,7 +1472,13 @@ mod tests {
 
     #[tokio::test]
     async fn unavailable_en_document_degrades_to_local() {
-        let local = ConsentContent::build(None, None, &strs(&["data.read"]));
+        let local = ConsentContent::build(
+            &ConsentDocs {
+                remote: None,
+                name: None,
+            },
+            &strs(&["data.read"]),
+        );
         // even with a valid translation, the hash is never mixed
         let de = resolve_mock(Language::De, None, Some(REMOTE_DE)).await;
         assert_eq!(de, local);

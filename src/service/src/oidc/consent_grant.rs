@@ -3,7 +3,7 @@
 //! of a refresh token's scope to the consent grant.
 
 use rauthy_data::entity::clients::Client;
-use rauthy_data::entity::consent_sources::{ConsentContent, LoginConsentContent};
+use rauthy_data::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
 use rauthy_data::entity::user_consents::UserConsent;
 use rauthy_data::language::Language;
 use rauthy_data::rauthy_config::RauthyConfig;
@@ -30,7 +30,7 @@ pub async fn consent_to_ask(
     lang: Language,
     ask: ConsentAsk,
 ) -> Result<Option<LoginConsentContent>, ErrorResponse> {
-    let Some(content) = ConsentContent::resolve(client, resource, scopes, lang).await else {
+    let Some(docs) = ConsentDocs::find(client, resource, lang).await? else {
         return Ok(None);
     };
     let grant = match user_id {
@@ -39,10 +39,11 @@ pub async fn consent_to_ask(
     };
     if ask == ConsentAsk::IfNotCovered
         && let Some(grant) = &grant
-        && grant.covers(client, resource, scopes, lang).await
+        && grant.covers(&docs, scopes)
     {
         return Ok(None);
     }
+    let content = ConsentContent::build(&docs, scopes);
     Ok(Some(LoginConsentContent::new(
         content,
         client,
@@ -90,7 +91,7 @@ pub(crate) fn effective_scope(rt_scope: &str, grant: &UserConsent, client: &Clie
     for s in rt_scope.split_whitespace() {
         let covered = grant
             .scopes()
-            .chain(client.default_scopes.split(',').map(str::trim))
+            .chain(client.default_scope_names())
             .any(|g| g == s);
         if covered && !res.split(' ').any(|r| r == s) {
             if !res.is_empty() {

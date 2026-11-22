@@ -215,7 +215,7 @@ pub async fn auth_finish(
                     .await?;
                 user.save_login_success().await?;
                 if let Some(grant) = &data.consent_grant {
-                    grant.upsert(&user, req).await?;
+                    grant.upsert_for_unchanged_client(&user, req).await?;
                 }
             }
 

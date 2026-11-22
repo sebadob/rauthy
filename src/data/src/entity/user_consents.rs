@@ -1,10 +1,9 @@
 use crate::database::DB;
 use crate::entity::clients::Client;
-use crate::entity::consent_sources::ConsentContent;
+use crate::entity::consent_sources::{ConsentContent, ConsentDocs};
 use crate::entity::refresh_tokens::{SQL_PG_IT_REVOKE_JTIS, SQL_RTD_DELETE_BY_USER_CLIENT};
 use crate::entity::users::User;
 use crate::events::event::Event;
-use crate::language::Language;
 use crate::rauthy_config::RauthyConfig;
 use actix_web::HttpRequest;
 use actix_web::http::header;
@@ -14,9 +13,10 @@ use rauthy_api_types::users::UserConsentResponse;
 use rauthy_common::is_hiqlite;
 use rauthy_common::utils::real_ip_from_req;
 use rauthy_derive::FromPgRow;
-use rauthy_error::ErrorResponse;
+use rauthy_error::{ErrorResponse, ErrorResponseType};
 use serde::{Deserialize, Serialize};
 use tokio_postgres::IsolationLevel;
+use tracing::{error, warn};
 use utoipa::ToSchema;
 
 const SQL_FIND: &str = r#"
@@ -427,24 +427,16 @@ impl UserConsent {
         self.scopes().map(String::from).collect()
     }
 
-    /// `true` if the grant contains all `scopes` and the consent content of its scopes is still
-    /// the one it was given for.
-    pub async fn covers(
-        &self,
-        client: &Client,
-        resource: Option<&str>,
-        scopes: &[String],
-        lang: Language,
-    ) -> bool {
+    /// `true` if the grant contains all `scopes` and the consent content of its scopes in `docs`
+    /// is still the one it was given for. With no `scopes`, only the content is compared.
+    pub fn covers(&self, docs: &ConsentDocs, scopes: &[String]) -> bool {
         if !scopes.iter().all(|s| self.scopes().any(|g| g == s)) {
             return false;
         }
         let Some(hash) = self.content_hash.as_deref() else {
             return false;
         };
-        ConsentContent::resolve(client, resource, &self.scopes_vec(), lang)
-            .await
-            .is_some_and(|content| content.content_hash == hash)
+        ConsentContent::build(docs, &self.scopes_vec()).content_hash == hash
     }
 }
 
@@ -454,17 +446,46 @@ impl UserConsent {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct ConsentGrant {
     pub client_id: String,
+    /// The `created_micros` of the client the consent was given to, see
+    /// [`Self::upsert_for_unchanged_client`].
+    pub client_created_micros: Option<i64>,
     pub resource: Option<String>,
-    /// The accepted scopes
+    /// The accepted scopes, with the scopes of the user's grant that the login did not request
     pub scopes: Vec<String>,
-    /// The `content_hash` of the consent content of the accepted `scopes`, which a later login
-    /// with a subset of them compares, see [`UserConsent::covers`].
+    /// The `content_hash` of the consent content of the `scopes`, which a later login with a
+    /// subset of them compares, see [`UserConsent::covers`].
     pub content_hash: String,
 }
 
 impl ConsentGrant {
+    /// [`Self::upsert`] after a ceremony, unless the client was deleted, or deleted and created
+    /// again, since the consent was given: its grants were deleted with it.
+    pub async fn upsert_for_unchanged_client(
+        &self,
+        user: &User,
+        req: &HttpRequest,
+    ) -> Result<(), ErrorResponse> {
+        match Client::find_maybe_ephemeral(self.client_id.clone()).await {
+            Ok(client) if client.created_micros == self.client_created_micros => {
+                self.upsert(user, req).await
+            }
+            Ok(_)
+            | Err(ErrorResponse {
+                error: ErrorResponseType::NotFound,
+                ..
+            }) => {
+                warn!(
+                    client_id = self.client_id,
+                    "the client changed during the login ceremony, its consent is dropped"
+                );
+                Ok(())
+            }
+            Err(err) => Err(err),
+        }
+    }
+
     /// Inserts or replaces the user's grant with the IP and `User-Agent` of `req`, and sends the
-    /// `ConsentGranted` event.
+    /// `ConsentGranted` event. A failed event is logged, the grant is written.
     pub async fn upsert(&self, user: &User, req: &HttpRequest) -> Result<(), ErrorResponse> {
         let resource = resource_key(self.resource.as_deref());
         let scopes = self.scopes.join(",");
@@ -509,7 +530,7 @@ impl ConsentGrant {
             .await?;
         }
 
-        Event::consent_granted(
+        if let Err(err) = Event::consent_granted(
             &user.email,
             &self.client_id,
             self.resource.as_deref(),
@@ -518,6 +539,10 @@ impl ConsentGrant {
         )
         .send()
         .await
+        {
+            error!(?err, "sending the ConsentGranted event");
+        }
+        Ok(())
     }
 }
 

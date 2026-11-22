@@ -12,14 +12,14 @@ use rauthy_data::entity::auth_codes::{AuthCode, AuthCodeToSAwait};
 use rauthy_data::entity::auth_providers::ProviderMfaLogin;
 use rauthy_data::entity::browser_id::BrowserId;
 use rauthy_data::entity::clients::Client;
-use rauthy_data::entity::consent_sources::{ConsentContent, LoginConsentContent};
+use rauthy_data::entity::consent_sources::{ConsentContent, ConsentDocs, LoginConsentContent};
 use rauthy_data::entity::cred_stuff_detect::CredStuffDetect;
 use rauthy_data::entity::forward_auth::ForwardAuthCallbackState;
 use rauthy_data::entity::login_locations::LoginLocation;
 use rauthy_data::entity::mfa_cookie::MfaCookie;
 use rauthy_data::entity::one_time_password::{OtpLoginReq, OtpToSAwaitData};
 use rauthy_data::entity::sessions::{MfaAssurance, Session};
-use rauthy_data::entity::user_consents::ConsentGrant;
+use rauthy_data::entity::user_consents::{ConsentGrant, UserConsent};
 use rauthy_data::entity::users::{AccountType, User};
 use rauthy_data::entity::webauthn::auth_req::{WebauthnLoginReq, WebauthnToSAwaitData};
 use rauthy_data::entity::webauthn::rk_token::ResidentKeyToken;
@@ -401,38 +401,53 @@ pub(crate) async fn finish_authorize(
             }
             None
         }
-        Some(consent) => match ConsentContent::resolve(&client, resource, &scopes, lang).await {
+        Some(consent) => match ConsentDocs::find(&client, resource, lang).await? {
             None => None,
-            Some(content) => {
+            Some(docs) => {
+                // Read before a factor may have proven the user to keep its scopes, but only
+                // shown once one has.
+                let grant = UserConsent::find(&user.id, &client.id, resource).await?;
+                let content = ConsentContent::build(&docs, &scopes);
                 let accepted = &consent.accepted_scopes;
                 let is_valid = consent.content_hash == content.content_hash
                     && client
-                        .default_scopes
-                        .split(',')
-                        .filter(|s| !s.is_empty())
+                        .default_scope_names()
                         .all(|d| accepted.iter().any(|a| a == d))
                     && accepted.iter().all(|a| scopes.contains(a));
                 if !is_valid {
+                    let shown = user_id.and(grant.as_ref());
                     return Err(ErrorResponse::new(
                         ErrorResponseType::ConsentRequired,
-                        LoginConsentContent::new(content, &client, None).to_json_escaped(),
+                        LoginConsentContent::new(content, &client, shown).to_json_escaped(),
                     ));
                 }
-                let is_all_accepted = scopes.iter().all(|s| accepted.contains(s));
-                let content_hash = if is_all_accepted {
-                    content.content_hash
-                } else {
-                    scopes.retain(|s| accepted.contains(s));
-                    ConsentContent::resolve(&client, resource, &scopes, lang)
-                        .await
-                        .expect("consent content to exist with `consent.enable`")
-                        .content_hash
-                };
-                // the auth code owns the scopes and the resource as well
+
+                // The scopes of the grant this login did not request stay granted while their
+                // content is unchanged. Of the requested ones, only the accepted stay.
+                let kept = grant
+                    .as_ref()
+                    .filter(|grant| grant.covers(&docs, &[]))
+                    .map(|grant| {
+                        grant
+                            .scopes()
+                            .filter(|g| !scopes.iter().any(|s| s == g))
+                            .map(String::from)
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+                scopes.retain(|s| accepted.contains(s));
+                let mut grant_scopes = Vec::with_capacity(scopes.len() + kept.len());
+                // the auth code owns the requested scopes
+                grant_scopes.extend(scopes.iter().cloned());
+                grant_scopes.extend(kept);
+                grant_scopes.sort_unstable();
+                // the content of the granted scopes, from the documents the user confirmed
+                let content_hash = ConsentContent::build(&docs, &grant_scopes).content_hash;
                 Some(ConsentGrant {
                     client_id: client.id.clone(),
+                    client_created_micros: client.created_micros,
                     resource: data.resource.clone(),
-                    scopes: scopes.clone(),
+                    scopes: grant_scopes,
                     content_hash,
                 })
             }

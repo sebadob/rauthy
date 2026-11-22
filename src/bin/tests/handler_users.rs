@@ -1,8 +1,9 @@
 use crate::common::{
-    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, code_state_from_headers, consent_content,
-    consent_template, cookie_csrf_headers_from_res, create_login_user, decode_claims,
-    get_auth_headers, get_backend_url, get_solved_pow, get_token_set, get_token_set_init_client,
-    password_grant, password_token_set, prepare_login, refresh, session_headers_with,
+    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, accept_all, code_state_from_headers,
+    consent_content, consent_template, cookie_csrf_headers_from_res, create_login_user,
+    decode_claims, get_auth_headers, get_backend_url, get_solved_pow, get_token_set,
+    get_token_set_init_client, password_grant, password_token_set, prepare_login, refresh,
+    session_headers_with,
 };
 use futures::{StreamExt, stream};
 use pretty_assertions::assert_eq;
@@ -587,6 +588,7 @@ const EMAIL: &str = "consent-user@consenttest.io";
 /// The password of the users these tests log in with. It satisfies the stricter policy of
 /// `zzb_handler_password_policy` as well.
 const LOGIN_PWD: &str = "Login-TEST.1234!#$";
+const OPENID_GROUPS: &[&str] = &["openid", "groups"];
 
 /// The refresh of a revoked refresh token fails on the missing row.
 async fn assert_refresh_not_found(client: &Client, refresh_token: String) {
@@ -908,14 +910,14 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         let res = expect_status!(req.send().await.unwrap(), 200);
         res.text().await.unwrap()
     };
-    let login = async |headers: &HeaderMap, consent: Option<LoginConsent>| {
+    let login = async |headers: &HeaderMap, scopes: &[&str], consent: Option<LoginConsent>| {
         let req = LoginRequest {
             email: Some(email.to_string()),
             password: Some(LOGIN_PWD.to_string()),
             pow: get_solved_pow().await,
             client_id: CLIENT_ID.to_string(),
             redirect_uri: redirect_uri.to_string(),
-            scopes: Some(vec!["openid".to_string(), "groups".to_string()]),
+            scopes: Some(scopes.iter().map(|s| s.to_string()).collect()),
             state: None,
             nonce: None,
             code_challenge: Some(challenge.to_string()),
@@ -976,7 +978,7 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
     assert!(content.granted_scopes.is_empty());
 
     // --- the login without a consent is refused with the content to ask for
-    let asked = consent_required(login(&headers, None).await).await;
+    let asked = consent_required(login(&headers, OPENID_GROUPS, None).await).await;
     assert_eq!(asked, content);
 
     // --- a consent for other content, without a default or with an unrequested scope
@@ -991,13 +993,19 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         accepted(&["openid", "profile"]),
         accepted(&["email", "openid", "profile", "address"]),
     ] {
-        let fresh = consent_required(login(&headers, Some(consent.clone())).await).await;
+        let fresh =
+            consent_required(login(&headers, OPENID_GROUPS, Some(consent.clone())).await).await;
         assert_eq!(fresh, content, "{consent:?}");
     }
 
     // --- the consent without the optional `groups`
     let events_from = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
-    let res = login(&headers, Some(accepted(&["openid", "email", "profile"]))).await;
+    let res = login(
+        &headers,
+        OPENID_GROUPS,
+        Some(accepted(&["openid", "email", "profile"])),
+    )
+    .await;
     let (code, _) = code_state_from_headers(expect_status!(res, 202))?;
     let res = exchange(code).await;
     let ts = expect_status_json!(res, 200, TokenSet);
@@ -1022,6 +1030,12 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
             "Consent of `{email}` for client `{CLIENT_ID}` granted: email openid profile"
         )]
     );
+
+    // --- a stale consent of a user the password proved is asked again with the grant
+    let mut stale = accepted(&["email", "openid", "profile"]);
+    stale.content_hash = "0".repeat(64);
+    let asked = consent_required(login(&headers, OPENID_GROUPS, Some(stale)).await).await;
+    assert_eq!(asked.granted_scopes, ["email", "openid", "profile"]);
 
     // --- the authenticated session asks again only for what the grant does not cover
     let html = page(&url_authorize("openid%20groups"), Some(&headers)).await;
@@ -1079,6 +1093,33 @@ async fn test_user_consent_login() -> Result<(), Box<dyn Error>> {
         .send()
         .await?;
     let (code, _) = code_state_from_headers(expect_status!(res, 202))?;
+
+    // --- a login with fewer scopes keeps the grant's other scopes, and so does the refresh
+    let res = login(&headers, OPENID_GROUPS, Some(accept_all(&content))).await;
+    let (code_groups, _) = code_state_from_headers(expect_status!(res, 202))?;
+    let ts_groups = expect_status_json!(exchange(code_groups).await, 200, TokenSet);
+    assert!(ts_groups.scope.as_deref().unwrap().contains("groups"));
+
+    let res = client.get(url_authorize("openid")).send().await?;
+    let fresh = cookie_csrf_headers_from_res(expect_status!(res, 200)).await?;
+    let html = page(&url_authorize("openid"), Some(&fresh)).await;
+    let openid = consent_template(&html).expect("consent template without a session");
+    let res = login(&fresh, &["openid"], Some(accept_all(&openid))).await;
+    expect_status!(res, 202);
+    let res = client
+        .get(&url_consents)
+        .headers(admin.clone())
+        .send()
+        .await?;
+    let grants = expect_status_json!(res, 200, Vec<UserConsentResponse>);
+    assert_eq!(grants[0].scopes, ["email", "groups", "openid", "profile"]);
+    let res = refresh(&client, ts_groups.refresh_token.unwrap()).await;
+    let ts_groups = expect_status_json!(res, 200, TokenSet);
+    assert!(
+        ts_groups.scope.as_deref().unwrap().contains("groups"),
+        "{:?}",
+        ts_groups.scope
+    );
 
     // --- a revoke rejects the code exchange and the refresh
     let res = client

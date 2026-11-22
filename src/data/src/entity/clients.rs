@@ -1244,6 +1244,14 @@ impl Client {
         }
     }
 
+    /// The `default_scopes`, trimmed, without empty ones.
+    pub fn default_scope_names(&self) -> impl Iterator<Item = &str> {
+        self.default_scopes
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+    }
+
     #[inline]
     pub fn get_default_scopes(&self) -> Vec<String> {
         let mut res = Vec::new();
@@ -1370,10 +1378,8 @@ impl Client {
     ) -> Vec<String> {
         // Always add the configured default scopes
         let mut res = self
-            .default_scopes
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
+            .default_scope_names()
+            .map(String::from)
             .collect::<Vec<_>>();
 
         let Some(scopes) = scopes else {

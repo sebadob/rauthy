@@ -225,7 +225,12 @@ pub async fn get_authorize(
         Ok(consent) => consent,
         Err(err) => {
             error!("Cannot resolve the consent for the authorization request: {err}");
-            return Ok(redirect_error("server_error"));
+            let error = if matches!(err.error, ErrorResponseType::TooManyRequests(_)) {
+                "temporarily_unavailable"
+            } else {
+                "server_error"
+            };
+            return Ok(redirect_error(error));
         }
     };
     if prompt_none && consent.is_some() {
@@ -439,10 +444,15 @@ pub async fn post_authorize_handle(
     .await
     {
         Ok(auth_step) => map_auth_step(auth_step, &req, NewFederatedUserCreated::No).await,
-        Err(err) if err.error == ErrorResponseType::ConsentRequired => {
-            // Only returned after the user checks, with the consent content to ask for, which is
-            // not logged.
-            debug!("POST /authorize asks for consent");
+        Err(err)
+            if matches!(
+                err.error,
+                ErrorResponseType::ConsentRequired | ErrorResponseType::TooManyRequests(_)
+            ) =>
+        {
+            // Only returned after the user checks: the consent content to ask for, which is not
+            // logged, or the back pressure of the consent source fetcher, to be retried.
+            debug!(error = ?err.error, "POST /authorize asks for consent or a retry");
             return Err(err);
         }
         Err(err) => {
