@@ -6667,7 +6667,8 @@ default_scopes = ['profile']
         assert!(
             vars.user_registration
                 .reserved_names
-                .contains(&"postmaster".to_string())
+                .iter()
+                .any(|i| i == "postmaster")
         );
 
         let mut table: toml::Table = toml::from_str(
