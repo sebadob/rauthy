@@ -927,7 +927,7 @@ WHERE id = $4"#;
         if let Some(hours) = cache_current_hours
             && let Some(plain) = self.get_secret_cleartext()?
         {
-            let ttl = hours as i64;
+            let ttl = i64::from(hours);
             // Remember the secret under the client id as well, so that `delete()` can remove it.
             // Otherwise, it would authenticate a client recreated with the same id.
             let idx = Self::cached_secrets_idx(&self.id);

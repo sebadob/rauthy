@@ -434,7 +434,7 @@ fn targets(
     search_base: &str,
     filter: &LdapFilter,
 ) -> Result<Option<Vec<Target>>, (LdapResultCode, String)> {
-    if user_count < threshold as i64 {
+    if user_count < i64::from(threshold) {
         return Ok(None);
     }
     if let Some(id) = user_id {

@@ -377,7 +377,7 @@ impl From<String> for EventType {
 
 impl From<i16> for EventType {
     fn from(value: i16) -> Self {
-        Self::from(value as i64)
+        Self::from(i64::from(value))
     }
 }
 
@@ -694,7 +694,7 @@ impl Event {
             level.clone(),
             EventType::InvalidLogins,
             Some(ip),
-            Some(failed_logins as i64),
+            Some(i64::from(failed_logins)),
             None,
         )
     }
@@ -944,7 +944,7 @@ impl Event {
                 .clone(),
             EventType::BackchannelLogoutFailed,
             None,
-            Some(retries as i64),
+            Some(i64::from(retries)),
             Some(format!("{client_id} / {action:?}")),
         )
     }
@@ -1186,7 +1186,7 @@ mod tests {
         let typ = EventType::ConsentRevoked;
         assert_eq!(typ.value(), 24);
         assert_eq!(EventType::from(typ.value()), typ);
-        assert_eq!(EventType::from(typ.value() as i64), typ);
+        assert_eq!(EventType::from(i64::from(typ.value())), typ);
         assert_eq!(typ.as_str(), "ConsentRevoked");
         assert_eq!(EventType::from(typ.as_str().to_string()), typ);
         assert_eq!(typ.to_string(), "User consent revoked");

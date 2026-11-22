@@ -107,9 +107,9 @@ pub async fn get_users(
 
     let user_count = User::count().await?;
     let ssp_threshold = RauthyConfig::get().vars.server.ssp_threshold;
-    if user_count >= ssp_threshold as i64 {
-        let page_size = max(params.page_size.unwrap_or(20), ssp_threshold) as i64;
-        let offset = params.offset.unwrap_or(0) as i64;
+    if user_count >= i64::from(ssp_threshold) {
+        let page_size = i64::from(max(params.page_size.unwrap_or(20), ssp_threshold));
+        let offset = i64::from(params.offset.unwrap_or(0));
         let backwards = params.backwards.unwrap_or(false);
         let continuation_token = if let Some(token) = &params.continuation_token {
             Some(ContinuationToken::from_str(token.as_str())?)
@@ -361,7 +361,7 @@ pub async fn get_user_picture_config(
 
     Ok(HttpResponse::Ok().json(UserPictureConfig {
         upload_allowed: *PICTURE_STORAGE_TYPE != PictureStorage::Disabled,
-        content_len_limit: RauthyConfig::get().vars.user_pictures.upload_limit_mb as u32
+        content_len_limit: u32::from(RauthyConfig::get().vars.user_pictures.upload_limit_mb)
             * 1024
             * 1024,
     }))

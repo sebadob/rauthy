@@ -169,9 +169,9 @@ pub async fn grant_type_device_code(peer_ip: IpAddr, payload: TokenRequest) -> H
             });
         }
 
-        let access_exp = now.add(chrono::Duration::seconds(
-            client.access_token_lifetime as i64,
-        ));
+        let access_exp = now.add(chrono::Duration::seconds(i64::from(
+            client.access_token_lifetime,
+        )));
         let refresh_exp = if client.allow_refresh_token() {
             Some(
                 access_exp

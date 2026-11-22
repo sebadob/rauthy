@@ -98,7 +98,6 @@ too_many_lines = "allow"
 uninlined_format_args = "allow"
 
 # Temporarily allowed (to be reviewed and enabled incrementally)
-cast_lossless = "allow"
 cast_possible_truncation = "allow"
 cast_possible_wrap = "allow"
 cast_sign_loss = "allow"

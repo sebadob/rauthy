@@ -215,7 +215,6 @@ uninlined_format_args = "allow"
 
 # Temporarily allowed (to be reviewed and enabled incrementally)
 case_sensitive_file_extension_comparisons = "allow"
-cast_lossless = "allow"
 cast_possible_truncation = "allow"
 cast_possible_wrap = "allow"
 cast_precision_loss = "allow"

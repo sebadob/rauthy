@@ -104,7 +104,7 @@ pub async fn auth_start(
         Ok((mut rcr, auth_state)) => {
             let req_exp = RauthyConfig::get().vars.webauthn.req_exp;
             // timeout expected in ms
-            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u32::MAX as u128) as u32);
+            rcr.public_key.timeout = Some(min(req_exp.as_millis(), u128::from(u32::MAX)) as u32);
 
             // cannot be serialized with bincode -> no deserialize from any
             let auth_state_json = serde_json::to_string(&auth_state)?;

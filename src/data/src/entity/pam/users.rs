@@ -68,9 +68,9 @@ VALUES ($1, $2, false)
             slf
         } else {
             let slf: Self =
-                DB::pg_query_one(sql_user, &[&group.name, &(group.id as i64), &email]).await?;
+                DB::pg_query_one(sql_user, &[&group.name, &i64::from(group.id), &email]).await?;
 
-            DB::pg_execute(sql_rel, &[&(group.id as i64), &(slf.id as i64)]).await?;
+            DB::pg_execute(sql_rel, &[&i64::from(group.id), &i64::from(slf.id)]).await?;
 
             slf
         };
@@ -96,7 +96,7 @@ VALUES ($1, $2, false)
         let slf = if is_hiqlite() {
             DB::hql().query_map_one(sql, params!(id)).await?
         } else {
-            DB::pg_query_one(sql, &[&(id as i64)]).await?
+            DB::pg_query_one(sql, &[&i64::from(id)]).await?
         };
 
         Ok(slf)
@@ -167,7 +167,7 @@ WHERE pu.id IS NULL
                 .execute(sql, params!(shell, home_dir, uid))
                 .await?;
         } else {
-            DB::pg_execute(sql, &[&shell, &home_dir, &(uid as i64)]).await?;
+            DB::pg_execute(sql, &[&shell, &home_dir, &i64::from(uid)]).await?;
         }
 
         Ok(())
@@ -197,13 +197,13 @@ VALUES ($1, $2, $3)
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
 
-            DB::pg_txn_append(&txn, sql_remove, &[&(uid as i64)]).await?;
+            DB::pg_txn_append(&txn, sql_remove, &[&i64::from(uid)]).await?;
             for group in groups {
                 debug_assert_eq!(uid, group.uid);
                 DB::pg_txn_append(
                     &txn,
                     sql_insert,
-                    &[&(group.gid as i64), &(uid as i64), &group.wheel],
+                    &[&i64::from(group.gid), &i64::from(uid), &group.wheel],
                 )
                 .await?;
             }
@@ -230,7 +230,7 @@ VALUES ($1, $2, $3)
             let mut cl = DB::pg().await?;
             let txn = cl.transaction().await?;
 
-            DB::pg_txn_append(&txn, sql_user, &[&(self.id as i64)]).await?;
+            DB::pg_txn_append(&txn, sql_user, &[&i64::from(self.id)]).await?;
             DB::pg_txn_append(&txn, sql_group, &[&self.name, &PamGroupType::User.as_str()]).await?;
 
             txn.commit().await?;
