@@ -43,7 +43,7 @@ impl OidcTokenSet {
     where
         T: Debug + for<'a> serde::de::Deserialize<'a>,
     {
-        let mut split = token.split(".");
+        let mut split = token.split('.');
 
         // The first part is the header
         if split.next().is_none() {

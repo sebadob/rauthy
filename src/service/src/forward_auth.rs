@@ -91,7 +91,7 @@ pub async fn get_forward_auth_client(
                         "The first configured `redirect_uri` must start with the `X-Forwarded-Host`",
                     ));
                 }
-                if uri.ends_with("*") {
+                if uri.ends_with('*') {
                     debug!(
                         "The first configured `redirect_uri` must be absolute for `forward_auth`"
                     );

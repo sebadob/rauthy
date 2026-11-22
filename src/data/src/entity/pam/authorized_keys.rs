@@ -270,7 +270,7 @@ impl AuthorizedKey {
             ));
         }
 
-        let (typ, rest) = trimmed.split_once(" ").unwrap_or_default();
+        let (typ, rest) = trimmed.split_once(' ').unwrap_or_default();
         if !(typ.starts_with("ssh-") || typ.starts_with("ecdsa-") || typ.starts_with("sk-"))
             || typ.len() > 40
         {
@@ -280,7 +280,7 @@ impl AuthorizedKey {
             ));
         }
 
-        let (data, comment) = rest.split_once(" ").unwrap_or((rest, ""));
+        let (data, comment) = rest.split_once(' ').unwrap_or((rest, ""));
         if data.len() < 48 || !RE_BASE64_NO_PAD.is_match(data) {
             return Err(ErrorResponse::new(
                 ErrorResponseType::BadRequest,
