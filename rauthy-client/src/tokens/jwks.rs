@@ -229,7 +229,7 @@ impl JwkPublicKey {
                     return Ok(());
                 }
             }
-        };
+        }
 
         warn!("JWT Token validation error");
         Err(RauthyError::InvalidJwt("Invalid JWT Token signature"))

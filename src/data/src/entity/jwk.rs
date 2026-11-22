@@ -841,7 +841,7 @@ impl JwkKeyPair {
                     return Ok(message);
                 }
             }
-        };
+        }
 
         warn!("JWT Token validation error");
         Err(ErrorResponse::new(

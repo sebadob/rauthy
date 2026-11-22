@@ -575,7 +575,7 @@ impl GenConfig {
                         "Please note that you must adjust the `cluster.node_id` \
                         in the end for each node individually."
                     );
-                };
+                }
 
                 println!(
                     r#"

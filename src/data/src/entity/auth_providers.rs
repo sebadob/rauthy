@@ -252,7 +252,7 @@ VALUES
                 ],
             )
             .await?;
-        };
+        }
 
         Self::invalidate_cache_all(None).await?;
 

@@ -179,7 +179,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }
@@ -212,7 +212,7 @@ VALUES ($1, $2, $3, $4, $5, $6)"#;
             DB::hql().execute(sql, params!(user_id)).await?;
         } else {
             DB::pg_execute(sql, &[&user_id]).await?;
-        };
+        }
 
         Ok(())
     }

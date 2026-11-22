@@ -48,7 +48,7 @@ AND (refresh_exp IS NULL OR refresh_exp < $1)"#;
                     error!(?err, "devices_cleanup");
                 }
             }
-        };
+        }
 
         // For some reason, the interval could `.tick()` multiple times,
         // if it finished too quickly.

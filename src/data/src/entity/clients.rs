@@ -377,7 +377,7 @@ VALUES ($1, $2, $3, $4)"#;
             .await?;
 
             txn.commit().await?;
-        };
+        }
         Self::delete_cache_for(&client.id).await?;
 
         let client_dyn = ClientDyn {
@@ -472,7 +472,7 @@ VALUES ($1, $2, $3, $4)"#;
     pub async fn find(id: String) -> Result<Self, ErrorResponse> {
         if let Some(slf) = DB::hql().get(Cache::App, Self::cache_idx(&id)).await? {
             return Ok(slf);
-        };
+        }
 
         let sql = "SELECT * FROM clients WHERE id = $1";
         let slf: Self = if is_hiqlite() {
@@ -1574,7 +1574,7 @@ impl Client {
                 write!(path_query, "{}?{}", url.path(), q)?;
             } else {
                 write!(path_query, "{}", url.path())?;
-            };
+            }
 
             if is_wildcard_prefix_match(&path_query, &req_path_query)
                 || path_query == req_path_query

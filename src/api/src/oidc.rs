@@ -598,7 +598,7 @@ pub async fn post_device_auth(
                     error!(?err, "inserting IP into the cache for rate-limiting",);
                 }
             }
-        };
+        }
     }
 
     let Ok(client) = Client::find(payload.client_id).await else {

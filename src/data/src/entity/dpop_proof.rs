@@ -367,7 +367,7 @@ impl DPoPProof {
                 err.message.to_string()
             });
             return Err(latest);
-        };
+        }
 
         Ok(())
     }

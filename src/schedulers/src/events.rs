@@ -43,7 +43,7 @@ pub async fn events_cleanup() {
                 }
                 Err(err) => error!(?err, "Events cleanup"),
             }
-        };
+        }
 
         // For some reason, the interval could `.tick()` multiple times,
         // if it finished too quickly.
