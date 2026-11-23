@@ -20,8 +20,8 @@ const ID_FOREIGN: &str = "exchange_test_foreign";
 const TARGET: &str = "https://rs-downstream.example.com/api";
 const TARGET_FORBIDDEN: &str = "https://rs-forbidden.example.com/api";
 const ACT_CHAIN_MAX: usize = 32;
-// `zzb_handler_password_policy` runs before this test and leaves a strict policy behind:
-// at least 2 lower case, 3 upper case, 4 digits and 5 special characters
+// The seeded policy: minimum length and at least 1 lower case, 1 upper case and 1 digit.
+// `handler_password_policy` sets stricter rules while it runs and restores these ones.
 const ACTOR_PASSWORD: &str = "Exch4nge!Act0r#2026$%&XYZ";
 
 fn base_update(flows: Vec<GrantType>) -> UpdateClientRequest {

@@ -578,8 +578,8 @@ fn update_request(
 }
 
 const EMAIL: &str = "consent-user@consenttest.io";
-/// The password of the users these tests log in with. It satisfies the stricter policy of
-/// `zzb_handler_password_policy` as well.
+/// The password of the users these tests log in with. It satisfies the seeded policy, which every
+/// suite that changes it restores again at its end.
 const LOGIN_PWD: &str = "Login-TEST.1234!#$";
 
 /// The refresh of a revoked refresh token fails on the missing row.
