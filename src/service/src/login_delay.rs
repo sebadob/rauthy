@@ -47,7 +47,7 @@ pub async fn handle_login_delay<T>(
             }
 
             if has_password_been_hashed {
-                let new_time = (success_time + delta.as_millis() as i64) / 2;
+                let new_time = i64::midpoint(success_time, delta.as_millis() as i64);
                 client
                     .put(Cache::App, IDX_LOGIN_TIME, &new_time, Some(i64::MAX))
                     .await?;
