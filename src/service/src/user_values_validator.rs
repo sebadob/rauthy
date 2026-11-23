@@ -152,7 +152,7 @@ impl<'a> UserValuesValidator<'a> {
         {
             return Err(ErrorResponse::new(
                 ErrorResponseType::NotAccepted,
-                format!("username '{username}' is not available",),
+                format!("username '{username}' is not available"),
             ));
         }
 
