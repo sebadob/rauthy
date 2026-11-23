@@ -79,6 +79,8 @@ A non-string claim node is compared by its text form, which is what the old matc
 value, which the old exact comparison did not have: `^` is a prefix match, `~` a regex, and `^^`
 types a literal leading `^`.
 
+[#1961](https://github.com/sebadob/rauthy/pull/1961)
+
 #### Claim mapping to roles and groups
 
 An upstream provider can map values from the ID token of a federated login to existing local roles
@@ -94,8 +96,10 @@ validated when the config is saved.
 
 The `rauthy_admin` prefix is not valid rule targets, because the admin role is granted by the
 provider's own admin claim mapping only. The Admin UI has a rule editor for it, and the
-[provider docs](https://sebadob.github.io/rauthy/auth_providers/) document the grammar and the 
+[provider docs](https://sebadob.github.io/rauthy/auth_providers/) document the grammar and the
 reconcile behavior.
+
+[#1961](https://github.com/sebadob/rauthy/pull/1961)
 
 #### Hide the login button of an upstream provider
 
