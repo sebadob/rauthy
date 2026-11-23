@@ -132,6 +132,8 @@ log_file_keep_for = '30d'
 log_file_archive_after = '3d'
 ```
 
+[#1962](https://github.com/sebadob/rauthy/pull/1962)
+
 #### Self-Service E-Mail Change Can Be Denied
 
 You can now deny user self-service email changes via the account dashboard. This usually only comes
