@@ -55,7 +55,7 @@ pub async fn send_pwd_reset(magic_link: &MagicLink, user: &User, user_tz: Option
         magic_link.id,
         magic_link.usage,
     );
-    let exp = email_ts_prettify(magic_link.exp, &user.language, user_tz);
+    let exp = email_ts_prettify(magic_link.exp, user.language, user_tz);
     let theme_vars = ThemeCssFull::find_theme_variables_email()
         .await
         .unwrap_or_default();

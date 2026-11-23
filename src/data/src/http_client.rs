@@ -462,13 +462,13 @@ static FORBIDDEN: LazyLock<ForbiddenRanges> = LazyLock::new(|| {
 /// is checked as IPv4.
 pub(crate) fn is_forbidden_addr(addr: IpAddr) -> bool {
     match addr {
-        IpAddr::V4(v4) => is_forbidden_v4(&v4),
+        IpAddr::V4(v4) => is_forbidden_v4(v4),
         IpAddr::V6(v6) => is_forbidden_v6(&v6),
     }
 }
 
-fn is_forbidden_v4(addr: &Ipv4Addr) -> bool {
-    FORBIDDEN.v4.iter().any(|cidr| cidr.contains(addr))
+fn is_forbidden_v4(addr: Ipv4Addr) -> bool {
+    FORBIDDEN.v4.iter().any(|cidr| cidr.contains(&addr))
 }
 
 fn is_forbidden_v6(addr: &Ipv6Addr) -> bool {
@@ -493,7 +493,7 @@ fn is_forbidden_v6(addr: &Ipv6Addr) -> bool {
         // IPv4-mapped (::ffff:a.b.c.d) and IPv4-compatible (::a.b.c.d)
         addr.to_ipv4()
     };
-    embedded_v4.is_some_and(|v4| is_forbidden_v4(&v4))
+    embedded_v4.is_some_and(is_forbidden_v4)
 }
 
 impl AddrPolicy {

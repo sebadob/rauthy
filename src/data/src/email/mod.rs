@@ -20,7 +20,7 @@ pub mod password_reset_info;
 pub mod smtp_oauth_token;
 
 /// Prettifies unix timestamps for E-Mails in a better readable format for end users
-fn email_ts_prettify(ts: i64, lang: &Language, user_tz: Option<&str>) -> String {
+fn email_ts_prettify(ts: i64, lang: Language, user_tz: Option<&str>) -> String {
     let config = &RauthyConfig::get().vars.email.tz_fmt;
     email_ts_prettify_with(config, ts, lang, user_tz)
 }
@@ -29,7 +29,7 @@ fn email_ts_prettify(ts: i64, lang: &Language, user_tz: Option<&str>) -> String 
 fn email_ts_prettify_with(
     config: &VarsEmailTzFmt,
     ts: i64,
-    lang: &Language,
+    lang: Language,
     user_tz: Option<&str>,
 ) -> String {
     let dt = DateTime::from_timestamp(ts, 0).unwrap_or_default();
@@ -72,21 +72,21 @@ mod tests {
             .unwrap()
             .timestamp();
 
-        let p = email_ts_prettify_with(&config, now, &Language::En, None);
+        let p = email_ts_prettify_with(&config, now, Language::En, None);
         assert_eq!(&p, "10/20/2000 13:23:33 (UTC)");
-        let p = email_ts_prettify_with(&config, now, &Language::It, None);
+        let p = email_ts_prettify_with(&config, now, Language::It, None);
         assert_eq!(&p, "20/10/2000 13:23:33 (UTC)");
-        let p = email_ts_prettify_with(&config, now, &Language::It, Some("Europe/Rome"));
+        let p = email_ts_prettify_with(&config, now, Language::It, Some("Europe/Rome"));
         assert_eq!(&p, "20/10/2000 15:23:33 (CEST)");
-        let p = email_ts_prettify_with(&config, now, &Language::En, Some("Europe/Berlin"));
+        let p = email_ts_prettify_with(&config, now, Language::En, Some("Europe/Berlin"));
         assert_eq!(&p, "10/20/2000 15:23:33 (CEST)");
 
-        let p = email_ts_prettify_with(&config, now, &Language::De, None);
+        let p = email_ts_prettify_with(&config, now, Language::De, None);
         assert_eq!(&p, "20.10.2000 13:23:33 (UTC)");
-        let p = email_ts_prettify_with(&config, now, &Language::De, Some("Europe/Berlin"));
+        let p = email_ts_prettify_with(&config, now, Language::De, Some("Europe/Berlin"));
         assert_eq!(&p, "20.10.2000 15:23:33 (CEST)");
 
-        let p = email_ts_prettify_with(&config, now, &Language::Cs, Some("Europe/Prague"));
+        let p = email_ts_prettify_with(&config, now, Language::Cs, Some("Europe/Prague"));
         assert_eq!(&p, "20. 10. 2000 15:23:33 (CEST)");
     }
 }
