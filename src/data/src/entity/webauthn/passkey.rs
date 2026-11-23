@@ -492,7 +492,7 @@ impl PasskeyEntity {
     /// Index for all passkeys a user has
     #[inline]
     fn cache_idx_user_with_uv(user_id: &str) -> String {
-        format!("{IDX_WEBAUTHN}_UV_{user_id}",)
+        format!("{IDX_WEBAUTHN}_UV_{user_id}")
     }
 
     /// Index for credentials for a user

@@ -413,7 +413,7 @@ impl From<reqwest::header::ToStrError> for ErrorResponse {
         debug!("reqwest::header::ToStrError: {value:?}");
         ErrorResponse::new(
             ErrorResponseType::BadRequest,
-            format!("Request headers contained non ASCII characters: {value:?}",),
+            format!("Request headers contained non ASCII characters: {value:?}"),
         )
     }
 }
