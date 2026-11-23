@@ -469,7 +469,7 @@ of reloading its own document on every load.
   session to check, now redirects with `error=login_required`, as OIDC Core requires, instead of
   showing the login page.
 - A busy fetcher of ephemeral client documents now answers `503` with the `x-retry-not-before`
-  header instead of `429`, which is the status of a lockout after failed logins.
+  and the standard `Retry-After` headers instead of `429`, which is the status of a lockout after failed logins.
 - Changing the password from the account page cleared the given and family name and all user
   values, like phone, address and timezone, because the request only contained the password and
   the self-update replaces the whole profile with the request. The password form now sends the

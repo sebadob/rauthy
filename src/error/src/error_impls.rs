@@ -114,8 +114,12 @@ impl ResponseError for ErrorResponse {
             }
 
             ErrorResponseType::ServiceUnavailable(not_before_timestamp) => {
+                // RFC 9110 delta-seconds, at least 1 so a past timestamp still asks for a pause
+                let retry_after =
+                    (*not_before_timestamp - OffsetDateTime::now_utc().unix_timestamp()).max(1);
                 HttpResponseBuilder::new(status)
                     .insert_header((HEADER_RETRY_NOT_BEFORE, *not_before_timestamp))
+                    .insert_header((header::RETRY_AFTER, retry_after))
                     .content_type(APPLICATION_JSON)
                     .body(serde_json::to_string(self).unwrap())
             }
@@ -658,6 +662,19 @@ mod tests {
             .get(HEADER_RETRY_NOT_BEFORE)
             .map(|v| v.to_str().unwrap());
         assert_eq!(retry, Some("1700000000"), "headers {:?}", resp.headers());
+        let retry_after = |resp: &HttpResponse| {
+            resp.headers()
+                .get(header::RETRY_AFTER)
+                .map(|v| v.to_str().unwrap().parse::<i64>().unwrap())
+        };
+        // a timestamp in the past still asks to wait at least a second
+        assert_eq!(retry_after(&resp), Some(1), "headers {:?}", resp.headers());
+
+        let not_before = OffsetDateTime::now_utc().unix_timestamp() + 30;
+        let err = ErrorResponse::new(ErrorResponseType::ServiceUnavailable(not_before), "busy");
+        let resp = err.error_response();
+        let secs = retry_after(&resp).expect("Retry-After header");
+        assert!((29..=30).contains(&secs), "Retry-After {secs}");
     }
 
     /// bincode encodes the variant index. A new variant goes at the end to keep the indices
