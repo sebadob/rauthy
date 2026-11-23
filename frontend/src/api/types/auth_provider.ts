@@ -2,6 +2,18 @@ import type { CodeChallengeMethod } from '#api/types/authorize.ts';
 
 export type AuthProviderType = 'auto' | 'custom' | 'github' | 'google' | 'oidc';
 
+export type ClaimMappingTyp = 'role' | 'group';
+
+export interface ClaimMapping {
+    /// Validation: PATTERN_JSON_PATH
+    claim_path: string;
+    /// Validation: PATTERN_CLAIM_VALUE
+    claim_value: string;
+    typ: ClaimMappingTyp;
+    /// Validation: PATTERN_CLAIM_TARGET_ROLE for `role`, PATTERN_CLAIM_TARGET_GROUP for `group`
+    target: string;
+}
+
 export interface ProviderRequest {
     /// Validation: PATTERN_CLIENT_NAME
     name: string;
@@ -22,6 +34,8 @@ export interface ProviderRequest {
     client_secret_post: boolean;
     auto_onboarding: boolean;
     auto_link: boolean;
+    /** No login button on the login and registration pages; `idp_hint` still works. */
+    hide_login: boolean;
 
     /// Validation: PATTERN_URI
     client_id: string;
@@ -30,14 +44,17 @@ export interface ProviderRequest {
     /// Validation: PATTERN_SCOPE_SPACE
     scope: string;
 
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_JSON_PATH
     admin_claim_path?: string;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLAIM_VALUE
     admin_claim_value?: string;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_JSON_PATH
     mfa_claim_path?: string;
-    /// Validation: PATTERN_URI
+    /// Validation: PATTERN_CLAIM_VALUE
     mfa_claim_value?: string;
+
+    /// Max 32 rules per provider, validated by the backend at save.
+    claim_mappings?: ClaimMapping[];
 }
 
 export interface ProviderCallbackRequest {
@@ -110,11 +127,14 @@ export interface ProviderResponse {
     admin_claim_value?: string;
     mfa_claim_path?: string;
     mfa_claim_value?: string;
+    claim_mappings: ClaimMapping[];
     use_pkce: boolean;
     client_secret_basic: boolean;
     client_secret_post: boolean;
     auto_onboarding: boolean;
     auto_link: boolean;
+    /** No login button on the login and registration pages; `idp_hint` still works. */
+    hide_login: boolean;
 }
 
 export interface ProviderLinkedUserResponse {

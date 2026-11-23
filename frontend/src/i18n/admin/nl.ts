@@ -465,6 +465,10 @@ export let I18nAdminNl: I18nAdmin = {
             autoLinkDesc2: `LET OP: Deze optie kan zeer gevaarlijk zijn en leiden tot accountovername als de provider
                 e-mailadressen niet volledig valideert voor gebruikers en het daardoor mogelijk maakt een vreemd
                 adres voor een gebruiker toe te voegen! MAG NOOIT in zo'n geval worden gebruikt!`,
+            hideLogin: 'Login-knop verbergen',
+            hideLoginDesc: `De login-knop van deze provider is verborgen op de login- en registratiepagina. Inloggen
+                is nog steeds mogelijk via de query-parameter "idp_hint", waarmee een eigen login-knop ervoor kan
+                worden toegevoegd.`,
             clientName: 'Clientnaam',
             custRootCa: 'Aangepaste root CA PEM',
             descAuthMethod: `De authenticatiemethode voor het <code>/token</code>-eindpunt.<br>
@@ -488,7 +492,26 @@ export let I18nAdminNl: I18nAdmin = {
                 p5: '<code>$.roles</code> zou <code>&#123;"roles": "value"&#125;</code> targeten',
                 p6: `<code>$.roles.*</code> kan een waarde targeten in een object of array zoals<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Een <code>value</code> komt exact overeen, behalve als hij begint met <code>^</code> (prefix), <code>~</code> (regex) of <code>^^</code> (een letterlijke <code>^</code>)',
+                p8: "Sleutels met tekens buiten <code>a-z A-Z 0-9 _ -</code> hebben quotes nodig: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Waarden uit het ID-token van de upstream-provider worden toegewezen aan bestaande lokale rollen en groepen. Een regel voegt zijn doel toe wanneer de claim op <code>path</code> overeenkomt met <code>value</code>, en verwijdert het wanneer geen van zijn regels overeenkomt. Alleen de hier geconfigureerde doelen worden verwijderd, en een hier geconfigureerd doel behoort tot de provider: een rol of groep die een admin handmatig aan die gebruiker heeft toegewezen, wordt bij een login zonder treffende regel ook verwijderd.',
+            addMapping: 'Toewijzing toevoegen',
+            removeMapping: 'Toewijzing verwijderen',
+            mappingTyp: 'Type',
+            typRole: 'Rol',
+            typGroup: 'Groep',
+            pathClaim: 'Claim-pad',
+            valueClaim: 'Claim-waarde',
+            targetClaim: 'Rol / Groep',
+            noTargetSelected: '— Geen rol / groep —',
+            targetMissing:
+                'De opgeslagen doelwaarde {{ target }} is geen rol of groep meer. Selecteer een bestaande, of verwijder deze mapping.',
+            groupAdminTarget: '(groepsbeheerder)',
+            maxMappings: 'Een auth-provider ondersteunt maximaal 32 claim-toewijzingen.',
+            regexCost:
+                'Een <code>value</code> die begint met <code>~</code> is een regex en wordt bij elke login tegen elke claim-node geëvalueerd: veranker hem en houd hem zo goedkoop mogelijk.',
             lookup: 'Opzoeken',
             pathAdminClaim: 'Beheerdersclaimpad',
             pathMfaClaim: 'MFA-claimpad',

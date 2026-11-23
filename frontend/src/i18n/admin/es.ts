@@ -461,6 +461,10 @@ export let I18nAdminEs: I18nAdmin = {
             autoLinkDesc2: `ATENCIÓN: Esta opción puede ser muy peligrosa y permitir el robo de cuentas si el
                 proveedor no valida por completo las direcciones de correo electrónico de los usuarios y, por tanto,
                 permite añadir a un usuario una dirección ajena. ¡NUNCA debe usarse en ese caso!`,
+            hideLogin: 'Ocultar botón de inicio de sesión',
+            hideLoginDesc: `El botón de inicio de sesión de este proveedor está oculto en las páginas de inicio de
+                sesión y de registro. El inicio de sesión sigue siendo posible mediante el parámetro de consulta
+                "idp_hint", con el que se puede añadir un botón de inicio de sesión específico para él.`,
             clientName: 'Nombre del Client',
             custRootCa: 'Root CA PEM personalizada',
             descAuthMethod: `El método de autenticación que se usará en el endpoint <code>/token</code>.<br>
@@ -486,7 +490,26 @@ export let I18nAdminEs: I18nAdmin = {
                 p5: '<code>$.roles</code> apuntaría a <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> puede apuntar a un valor dentro de un objeto o array como<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Un <code>value</code> coincide exactamente, salvo si empieza por <code>^</code> (prefijo), <code>~</code> (regex) o <code>^^</code> (un <code>^</code> literal)',
+                p8: "Las claves con caracteres fuera de <code>a-z A-Z 0-9 _ -</code> necesitan comillas: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Asigna valores del ID token del proveedor upstream a roles y grupos locales existentes. Una regla añade su destino cuando el claim en <code>path</code> coincide con <code>value</code>, y lo elimina cuando ninguna de sus reglas coincide. Solo se eliminan los destinos configurados aquí, y un destino configurado aquí pertenece al proveedor: un rol o grupo que un admin haya asignado manualmente al usuario también se elimina en un login donde ninguna regla coincide.',
+            addMapping: 'Añadir asignación',
+            removeMapping: 'Eliminar asignación',
+            mappingTyp: 'Tipo',
+            typRole: 'Rol',
+            typGroup: 'Grupo',
+            pathClaim: 'Ruta del claim',
+            valueClaim: 'Valor del claim',
+            targetClaim: 'Rol / Grupo',
+            noTargetSelected: '— Ningún rol / grupo —',
+            targetMissing:
+                'El objetivo guardado {{ target }} ya no es un rol ni un grupo. Selecciona uno existente o elimina este mapeo.',
+            groupAdminTarget: '(administrador de grupo)',
+            maxMappings: 'Un auth provider admite como máximo 32 asignaciones de claims.',
+            regexCost:
+                'Un <code>value</code> que empieza por <code>~</code> es una regex y se evalúa contra cada nodo del claim en cada inicio de sesión: mantenla anclada y lo más simple posible.',
             lookup: 'Buscar',
             pathAdminClaim: 'Path de la claim de administrador',
             pathMfaClaim: 'Path de la claim de MFA',

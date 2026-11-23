@@ -441,6 +441,10 @@ export let I18nAdminNb: I18nAdmin = {
             autoLink: 'Auto-link bruker',
             autoLinkDesc1: `Hvis auto-link bruker er aktivert, vil en eventuell eksisterende, ikke-koblet bruker automatisk kobles til denne leverandøren ved innlogging.`,
             autoLinkDesc2: `ADVARSEL: Dette kan være svært farlig og føre til kontoovertakelse hvis leverandøren ikke utfører fullstendig e-postverifisering og lar en fremmed adresse bli registrert for en bruker! MÅ ALDRI brukes i slike tilfeller!`,
+            hideLogin: 'Skjul innloggingsknappen',
+            hideLoginDesc: `Innloggingsknappen for denne leverandøren er skjult på innloggingssiden og
+                registreringssiden. Innlogging er fortsatt mulig via query-parameteren "idp_hint", som kan brukes til
+                å legge til en egen innloggingsknapp for denne leverandøren.`,
             clientName: 'Klientnavn',
             custRootCa: 'Egen Root CA PEM',
             descAuthMethod: `Autentiseringsmetoden som skal brukes på <code>/token</code>-endepunktet.<br>De fleste leverandører bør fungere med <code>basic</code>, noen kun med <code>post</code>. I sjeldne tilfeller må begge aktiveres, selv om det kan føre til feil med andre leverandører.`,
@@ -458,7 +462,26 @@ export let I18nAdminNb: I18nAdmin = {
                 p4: '<code>*</code> kan brukes som jokertegn i stien',
                 p5: '<code>$.roles</code> vil treffe <code>&#123;"roles": "verdi"&#125;</code>',
                 p6: `<code>$.roles.*</code> kan treffe en verdi i et objekt eller array som<br><code>&#123;\"roles\": [\"verdi\", \"ikkeMinVerdi\"]&#125;</code>`,
+                p7: 'En <code>value</code> treffer nøyaktig, med mindre den starter med <code>^</code> (prefiks), <code>~</code> (regex) eller <code>^^</code> (en literal <code>^</code>)',
+                p8: "Nøkler med tegn utenfor <code>a-z A-Z 0-9 _ -</code> trenger hermetegn: <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Mapper verdier fra ID-tokenet til en upstream-leverandør til eksisterende lokale roller og grupper. En regel legger til målet sitt når claimet på <code>path</code> treffer <code>value</code>, og fjerner det når ingen av reglene treffer. Bare målene som er konfigurert her, fjernes, og et mål konfigurert her tilhører leverandøren: en rolle eller gruppe en admin har tildelt brukeren manuelt, fjernes også ved en pålogging uten treff.',
+            addMapping: 'Legg til mapping',
+            removeMapping: 'Fjern mapping',
+            mappingTyp: 'Type',
+            typRole: 'Rolle',
+            typGroup: 'Gruppe',
+            pathClaim: 'Claim-bane',
+            valueClaim: 'Claim-verdi',
+            targetClaim: 'Rolle / Gruppe',
+            noTargetSelected: '— Ingen rolle / gruppe —',
+            targetMissing:
+                'Den lagrede verdien {{ target }} er ikke en rolle eller gruppe lenger. Velg en eksisterende, eller fjern denne mappingen.',
+            groupAdminTarget: '(gruppeadmin)',
+            maxMappings: 'En auth-leverandør støtter maksimalt 32 claim-mappings.',
+            regexCost:
+                'En <code>value</code> som starter med <code>~</code>, er en regex som evalueres mot hver claim-node ved hver pålogging: hold den anket og så billig som mulig.',
             lookup: 'Søk',
             pathAdminClaim: 'Sti til admin-claim',
             pathMfaClaim: 'Sti til MFA-claim',

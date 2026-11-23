@@ -38,6 +38,7 @@ async fn test_provider_callback_single_use() -> Result<(), Box<dyn Error>> {
             "client_secret_post": false,
             "auto_onboarding": false,
             "auto_link": false,
+            "hide_login": false,
             "client_id": "rauthy",
             "scope": "openid",
         }))

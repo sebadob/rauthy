@@ -131,9 +131,10 @@ INSERT INTO
 auth_providers (id, enabled, name, typ, issuer, authorization_endpoint, token_endpoint,
 userinfo_endpoint, client_id, secret, scope, admin_claim_path, admin_claim_value, mfa_claim_path,
 mfa_claim_value, use_pkce, client_secret_basic, client_secret_post, jwks_endpoint, auto_onboarding,
-auto_link)
+auto_link, claim_mappings, hide_login)
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+$21, $22, $23
 )"#;
 
     if is_hiqlite() {
@@ -163,7 +164,9 @@ VALUES (
                         b.client_secret_post,
                         b.jwks_endpoint,
                         b.auto_onboarding,
-                        b.auto_link
+                        b.auto_link,
+                        b.claim_mappings,
+                        b.hide_login
                     ),
                 )
                 .await?;
@@ -195,6 +198,8 @@ VALUES (
                     &b.jwks_endpoint,
                     &b.auto_onboarding,
                     &b.auto_link,
+                    &b.claim_mappings,
+                    &b.hide_login,
                 ],
             )
             .await?;

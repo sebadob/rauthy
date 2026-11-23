@@ -477,6 +477,10 @@ export let I18nAdminFr: I18nAdmin = {
             autoLinkDesc2: `ATTENTION : Cette option peut être très dangereuse et entraîner une prise de contrôle de
                 compte si le fournisseur ne valide pas entièrement les adresses e-mail des utilisateurs et permet donc
                 d'ajouter une adresse étrangère pour un utilisateur ! Ne doit JAMAIS être utilisée dans un tel cas !`,
+            hideLogin: 'Masquer le bouton de connexion',
+            hideLoginDesc: `Le bouton de connexion de ce fournisseur est masqué sur les pages de connexion et
+                d'inscription. La connexion reste possible via le paramètre de requête "idp_hint", qui permet
+                d'ajouter un bouton de connexion dédié pour ce fournisseur.`,
             clientName: 'Nom du client',
             custRootCa: 'Autorité de certification racine personnelle PEM',
             descAuthMethod: `Méthode d'authentification à utiliser sur le point de terminaison <code>/token</code>.<br>
@@ -501,7 +505,25 @@ export let I18nAdminFr: I18nAdmin = {
                 p5: '<code>$.roles</code> ciblerait <code>&#123;"roles": "value"&#125;</code>',
                 p6: `<code>$.roles.*</code> peut cibler une valeur à l'intérieur d'un objet ou d'un tableau comme<br>
                     <code>&#123;"roles": ["value", "notMyValue"]&#125;</code>`,
+                p7: 'Un <code>value</code> correspond exactement, sauf s’il commence par <code>^</code> (préfixe), <code>~</code> (regex) ou <code>^^</code> (un <code>^</code> littéral)',
+                p8: "Les clés contenant des caractères en dehors de <code>a-z A-Z 0-9 _ -</code> nécessitent des guillemets : <code>$..['x-groups']</code>",
             },
+            mapRoleGroups:
+                'Assigne les valeurs de l’ID token du fournisseur upstream à des rôles et groupes locaux existants. Une règle ajoute sa cible lorsque le claim en <code>path</code> correspond à <code>value</code>, et la retire lorsqu’aucune de ses règles ne correspond. Seules les cibles configurées ici sont retirées, et une cible configurée ici appartient au fournisseur : un rôle ou un groupe attribué manuellement à cet utilisateur par un admin est également retiré lors d’une connexion où aucune règle ne correspond.',
+            addMapping: 'Ajouter une assignation',
+            removeMapping: 'Retirer une assignation',
+            mappingTyp: 'Type',
+            typRole: 'Rôle',
+            typGroup: 'Groupe',
+            pathClaim: 'Chemin du claim',
+            valueClaim: 'Valeur du claim',
+            targetClaim: 'Rôle / Groupe',
+            noTargetSelected: '— Aucun rôle / groupe —',
+            targetMissing: `La cible enregistrée {{ target }} n'est plus un rôle ni un groupe. Sélectionnez-en un existant ou supprimez ce mappage.`,
+            groupAdminTarget: '(admin de groupe)',
+            maxMappings: 'Un auth provider prend en charge au maximum 32 assignations de claims.',
+            regexCost:
+                'Un <code>value</code> commençant par <code>~</code> est une regex évaluée contre chaque nœud de claim à chaque connexion : ancrez-la et restez aussi simple que possible.',
             lookup: 'Chercher',
             pathAdminClaim: `Chemin du claim d'administrateur`,
             pathMfaClaim: 'Chemin du claim MFA',

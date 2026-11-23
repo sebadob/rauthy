@@ -52,6 +52,7 @@
         client_secret_post: false,
         auto_onboarding: false,
         auto_link: false,
+        hide_login: false,
 
         // user defined values
         name: '',
@@ -63,6 +64,7 @@
         admin_claim_value: '',
         mfa_claim_path: '',
         mfa_claim_value: '',
+        claim_mappings: [],
         // maybe additional ones in the future like client_logo
     });
 
@@ -101,6 +103,7 @@
                         client_secret_post: true,
                         auto_onboarding: false,
                         auto_link: false,
+                        hide_login: false,
                         userinfo_endpoint: 'https://api.github.com/user',
                         use_pkce: false,
 
@@ -114,6 +117,7 @@
                         admin_claim_value: '',
                         mfa_claim_path: '$.two_factor_authentication',
                         mfa_claim_value: 'true',
+                        claim_mappings: [],
                         // maybe additional ones in the future like client_logo
                     };
                     lookupSuccess = true;
@@ -141,6 +145,7 @@
                         client_secret_post: false,
                         auto_onboarding: false,
                         auto_link: false,
+                        hide_login: false,
                         userinfo_endpoint: '',
                         use_pkce: true,
 
@@ -154,6 +159,7 @@
                         admin_claim_value: '',
                         mfa_claim_path: '',
                         mfa_claim_value: '',
+                        claim_mappings: [],
                         // maybe additional ones in the future like client_logo
                     };
             }
@@ -209,6 +215,7 @@
             client_secret_post: config.client_secret_post,
             auto_onboarding: config.auto_onboarding,
             auto_link: config.auto_link,
+            hide_login: config.hide_login,
 
             client_id: config.client_id,
             client_secret: config.client_secret,
@@ -218,6 +225,7 @@
             admin_claim_value: config.admin_claim_value || undefined,
             mfa_claim_path: config.mfa_claim_path || undefined,
             mfa_claim_value: config.mfa_claim_value || undefined,
+            claim_mappings: config.claim_mappings?.length ? config.claim_mappings : undefined,
         };
         let res = await fetchPost(url, payload);
         if (res.error) {
@@ -293,6 +301,7 @@
             client_secret_post: false,
             auto_onboarding: false,
             auto_link: false,
+            hide_login: false,
             scope: '',
             admin_claim_path: '',
             admin_claim_value: '',
@@ -363,6 +372,7 @@
                 bind:adminClaimValue={config.admin_claim_value}
                 bind:mfaClaimPath={config.mfa_claim_path}
                 bind:mfaClaimValue={config.mfa_claim_value}
+                bind:claimMappings={config.claim_mappings}
                 usePKCE={config.use_pkce}
                 {inputWidth}
             />

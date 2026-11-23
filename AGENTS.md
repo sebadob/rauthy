@@ -352,6 +352,12 @@ document it like the library it may become.
 - `//` comments explain why, not what: `// SAFETY:`, `// TODO(issue-123):`, non-obvious
   magic values, workarounds with a link. No design journals, "why we chose X" essays, or
   rule-compliance tables in code docs. Document the end state.
+- **Comments outlive the issue.** A comment must read correctly the second it lands on `main`, for
+  a reader who never saw the ticket. No issue or PR numbers in code comments, no internal decision
+  tags ("D3", "phase 2", "point 4"), no "as decided in the plan", no "was broken before X", no
+  "added in v0.36 for feature Y". History lives in git log, the commit message, and the changelog;
+  the code states the constraint and the end state only. A `// TODO(issue-123):` is the exception:
+  it points at work to do, not at work that was done.
 - **Commented-out code and `TODO`s are deliberate** when the work is in progress or the code
   may be needed again soon — leave them alone unless asked. `#[allow(dead_code)]` on the
   same items is equally deliberate.
@@ -371,6 +377,10 @@ document it like the library it may become.
   removed in the long run.
 - Test observable behavior and properties (monotonic, round-trips, idempotent), not
   restated constants or mirrored branches.
+- **Never prefix a test file name with `z` to order it.** The `src/bin/tests/zz*_` files exist
+  only because a few legacy tests depend on running late; that is legacy, not a pattern. A new
+  test is named after what it tests, is self-contained, and removes everything it created, so its
+  result never depends on the file that ran before it.
 - Write a failing test before fixing a bug. Cover each feature combination and each
   platform-specific path. When something is broken, run what already exists first and read
   the output; analyse by hand only what is still unclear afterwards.
@@ -452,6 +462,8 @@ Before returning Rust code, confirm:
 - No globs (bar a framework's prelude), no preludes of your own, no leaked third-party types.
 - No comment explains how a function works internally, and every function that can panic on
   the input it expects has a `# Panics` block, private ones included.
+- No comment needs the issue, PR, plan, or roadmap point that produced it to be understood: no
+  ticket numbers, no decision tags, no "as decided", no "before this change".
 - Files are ordered `use` → `mod` → `static` → `const` → rest, and each module's main `pub`
   item sits above its helpers.
 - No new function under 3 lines, and no helper that is called from a single place — the
