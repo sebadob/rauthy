@@ -999,6 +999,20 @@ backup_keep_for_local = '3d'
 ## detection algorithm. In most cases the defaults should be
 ## fine.
 
+# Switches the detector on or off. It records every login
+# attempt with a password against a non-existing email or a
+# wrong password per source IP, and it blacklists that IP for
+# `blacklist_duration` once `blacklist_threshold` different
+# combinations appear inside `scan_window`. Set this to
+# `false` when a big group of users shares one source address,
+# like a corporate NAT gateway, where the detector would
+# blacklist all of them. A blacklist lives in the database, so
+# it survives restarts until it expires.
+#
+# default: true
+# overwritten by: CRED_STUFF_ENABLE
+#enable = true
+
 # The duration for how long an IP will be blacklisted after
 # it was considered harmful, doing credential stuffing.
 #

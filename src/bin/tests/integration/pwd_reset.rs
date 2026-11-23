@@ -1,32 +1,49 @@
 use crate::common::{
-    CLIENT_ID, CLIENT_SECRET, PASSWORD, USERNAME, get_auth_headers, get_backend_url,
-    password_token_set,
+    TestClientSetup, USER_PASSWORD, create_login_user, create_pwd_reset_link, create_test_client,
+    delete_test_client, get_auth_headers, get_backend_url, password_token_set_for,
 };
+use crate::expect_status;
+use crate::expect_status_json;
 use pretty_assertions::assert_eq;
-use rauthy_api_types::oidc::{GrantType, TokenRequest};
+use rauthy_api_types::oidc::GrantType;
 use rauthy_api_types::users::{PasswordResetRequest, UserResponse};
 use rauthy_common::constants::PWD_CSRF_HEADER;
+use rauthy_common::utils::new_store_id;
 use rauthy_error::{ErrorResponse, ErrorResponseType};
-use rauthy_service::token_set::TokenSet;
-use reqwest::header;
-use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde_json::json;
 use std::error::Error;
 use std::panic;
 use std::time::Duration;
 use tokio::time;
 
-mod common;
+/// The password the test sets via the reset link; the seeded policy's minimum length included.
+const NEW_PWD: &str = "soSuperMegaSafe12345!\"§$%&/.";
 
+fn setup() -> TestClientSetup {
+    TestClientSetup {
+        name: "Pwd Reset Test".to_string(),
+        flows: vec![GrantType::Password],
+        redirect_uri: "http://localhost:8080/callback".to_string(),
+        post_logout_redirect_uris: Vec::new(),
+        backchannel_logout_uri: None,
+    }
+}
+
+/// A password reset flow, from the magic link's HTML form to a login with the new password. An
+/// admin change of the user made while the reset waits for its password hash survives the reset,
+/// which saves only its own columns and verifies the email the reset was sent to.
 #[tokio::test]
 async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
-    let user_id = "2PYV3STNz3MN7VnPjJVcPQap".to_string(); // test_admin
-    let username = "test_admin@localhost";
-    let reset_id = "2qqdUOcXECQeypBNTs7Pnp7A2zAwr0VzynyzJiIjNR1Ua9KA95dTewM56JaPIoyj";
-    let url_get = format!("{backend_url}/users/{user_id}/reset/{reset_id}");
-
     let client = reqwest::Client::new();
+    let admin = get_auth_headers().await?;
+    let test_client = create_test_client(&setup()).await?;
+    let username = format!("pwd-{}@localhost", new_store_id().to_lowercase());
+    let user = create_login_user(&client, &admin, &username, "Resetee", USER_PASSWORD).await?;
+    let user_id = user.id;
+    let reset_id = create_pwd_reset_link(&client, &admin, &user_id, &username).await?;
+    let url_get = format!("{backend_url}/users/{user_id}/reset/{reset_id}");
 
     // try with bad magic link id
     println!("test_get_pwd_reset_form with bad magic link id");
@@ -36,7 +53,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
 
     // try with wrong user id
     println!("test_get_pwd_reset_form with wrong user id");
-    let bad_url_get = format!("{backend_url}/users/2PYV3STNz3MN7VnPjJVcPQaX/reset/{reset_id}");
+    let bad_url_get = format!("{backend_url}/users/iDoNotExist123456/reset/{reset_id}");
     let res = client.get(&bad_url_get).send().await?;
     let err_html = expect_status!(res, 400).text().await?;
     assert!(err_html.contains("Invalid User ID"));
@@ -81,7 +98,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     // magic_link_id validation error
     let mut req = PasswordResetRequest {
         magic_link_id: "IAmSoWrong123".to_string(),
-        password: "soSuperMegaSafe12345!\"§$%&/.".to_string(),
+        password: NEW_PWD.to_string(),
         mfa_code: None,
     };
     let mut res = client.put(&url_put).json(&req).send().await?;
@@ -91,7 +108,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
 
     // missing cookie - session already assigned
     println!("test_get_pwd_reset_form missing cookie - session already assigned");
-    req.magic_link_id = reset_id.to_string();
+    req.magic_link_id = reset_id.clone();
     let res = client.put(&url_put).json(&req).send().await?;
     let res = expect_status!(res, 403);
     let err = res.json::<ErrorResponse>().await?;
@@ -117,7 +134,6 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     // correct headers - all should be good now, and an admin change of the user made while the
     // reset waits for its password hash survives the reset, which saves only its own columns
     // and verifies the email the reset was sent to
-    let admin = get_auth_headers().await?;
     let url_user = format!("{backend_url}/users/{user_id}");
     let res = patch_user(&client, &admin, &url_user, "email_verified", json!(false)).await?;
     let res = expect_status!(res, 200);
@@ -125,8 +141,11 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     // logins ahead of the reset in the hashing queue, so the change lands while it waits
     let logins = (0..3)
         .map(|_| {
-            tokio::spawn(async {
-                password_token_set(&reqwest::Client::new(), USERNAME, PASSWORD).await;
+            let test_client = test_client.clone();
+            let username = username.clone();
+            tokio::spawn(async move {
+                let http = reqwest::Client::new();
+                password_token_set_for(&http, &test_client, &username, USER_PASSWORD).await;
             })
         })
         .collect::<Vec<_>>();
@@ -138,8 +157,7 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
             .send(),
     );
     time::sleep(Duration::from_millis(20)).await;
-    // in a task of its own, so that test_admin gets its name and verified email back below
-    // whatever it asserts
+    // in a task of its own, so that the created user is deleted below whatever it asserts
     let checks = tokio::spawn({
         let (client, admin, url_user) = (client.clone(), admin.clone(), url_user.clone());
         async move {
@@ -161,13 +179,6 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
         }
     })
     .await;
-    for (key, value) in [
-        ("given_name", json!("Admin")),
-        ("email_verified", json!(true)),
-    ] {
-        let res = patch_user(&client, &admin, &url_user, key, value).await?;
-        expect_status!(res, 200);
-    }
     match checks {
         Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
         Err(err) => return Err(err.into()),
@@ -176,17 +187,8 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     }
 
     // now test logging in with the new password
-    let url = format!("{}/oidc/token", get_backend_url());
-    let body = TokenRequest {
-        grant_type: GrantType::Password,
-        client_id: Some(CLIENT_ID.to_string()),
-        client_secret: Some(CLIENT_SECRET.to_string()),
-        username: Some(username.to_string()),
-        password: Some(req.password.clone()),
-        ..Default::default()
-    };
-    let res = client.post(&url).form(&body).send().await?;
-    let ts = expect_status_json!(res, 200, TokenSet);
+    let new_pwd = req.password.clone();
+    let ts = password_token_set_for(&client, &test_client, &username, &new_pwd).await;
     assert!(!ts.access_token.is_empty());
     assert!(ts.id_token.is_some());
 
@@ -201,6 +203,14 @@ async fn test_get_pwd_reset_form() -> Result<(), Box<dyn Error>> {
     let err = res.json::<ErrorResponse>().await?;
     assert_eq!(err.error, ErrorResponseType::BadRequest);
     assert_eq!(err.message, "This link has expired already");
+
+    let res = client
+        .delete(format!("{backend_url}/users/{user_id}"))
+        .headers(admin)
+        .send()
+        .await?;
+    expect_status!(res, 204);
+    delete_test_client(&test_client.id).await?;
 
     Ok(())
 }

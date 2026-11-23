@@ -1,56 +1,56 @@
 name: Code Style
 
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+            - ready_for_review
 
 env:
-  CARGO_TERM_COLOR: "always"
+    CARGO_TERM_COLOR: 'always'
 
 jobs:
-  check:
-    if: github.event.pull_request.draft == false
-    name: Check Code Style + Test
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/sebadob/rauthy-builder:20260519
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup && build UI
-        run: |
-          just build-wasm
-          
-          cd frontend
-          npm install
-          cd ..
-          
-          just build-ui
-      - name: Code Format Backend
-        run: cargo fmt --check
-      - name: Code Style Backend
-        run: cargo clippy --all-targets
+    check:
+        if: github.event.pull_request.draft == false
+        name: Check Code Style + Test
+        runs-on: ubuntu-latest
+        container:
+            image: ghcr.io/sebadob/rauthy-builder:20261123
+        steps:
+            - uses: actions/checkout@v4
+            - name: Setup && build UI
+              run: |
+                  just build-wasm
 
-      - name: Code Format UI
-        working-directory: ./frontend
-        run: npm run format-check
-      - name: Code Style UI
-        working-directory: ./frontend
-        run: npm run check
-      - name: Frontend Contract Tests
-        working-directory: ./frontend
-        # The Chromium tests (npm run test:password-reset and
-        # test:account-mfa) are not wired here: they need a browser
-        # binary plus the already-built frontend. Run them locally
-        # after `just build-ui`.
-        run: npm run test:webauthn && npm run test:webauthn-reg
+                  cd frontend
+                  npm install
+                  cd ..
 
-      - name: Integration Tests against Hiqlite
-        # We are running integration tests inside the same job to benefit from the already cached
-        # and built assets without requiring a more complicated setup. All of this will only run
-        # for merge requests ready to review anyway. Only running Hiqlite (for now) because it's a
-        # simpler setup.
-        run: just test-hiqlite
+                  just build-ui
+            - name: Code Format Backend
+              run: cargo fmt --check
+            - name: Code Style Backend
+              run: cargo clippy --all-targets
+
+            - name: Code Format UI
+              working-directory: ./frontend
+              run: npm run format-check
+            - name: Code Style UI
+              working-directory: ./frontend
+              run: npm run check
+            - name: Frontend Contract Tests
+              working-directory: ./frontend
+              # The Chromium tests (npm run test:password-reset and
+              # test:account-mfa) are not wired here: they need a browser
+              # binary plus the already-built frontend. Run them locally
+              # after `just build-ui`.
+              run: npm run test:webauthn && npm run test:webauthn-reg
+
+            - name: Integration Tests against Hiqlite
+              # We are running integration tests inside the same job to benefit from the already cached
+              # and built assets without requiring a more complicated setup. All of this will only run
+              # for merge requests ready to review anyway. Only running Hiqlite (for now) because it's a
+              # simpler setup.
+              run: just test-hiqlite

@@ -4960,7 +4960,6 @@ dependencies = [
  "time",
  "tls-hot-reload",
  "tokio",
- "tokio-test",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",

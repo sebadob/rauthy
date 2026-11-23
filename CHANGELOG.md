@@ -88,6 +88,28 @@ canonicalizes `ceo+news` into the mailbox `ceo`.
 
 ### Changes
 
+#### Credential Stuffing Detection Can Be Disabled
+
+`cred_stuff_detection.enable` turns the detector off completely. This is not new, only the config
+switch is.
+
+```toml
+[cred_stuff_detection]
+# Switches the detector on or off. It records every login
+# attempt with a password against a non-existing email or a
+# wrong password per source IP, and it blacklists that IP for
+# `blacklist_duration` once `blacklist_threshold` different
+# combinations appear inside `scan_window`. Set this to
+# `false` when a big group of users shares one source address,
+# like a corporate NAT gateway, where the detector would
+# blacklist all of them. A blacklist lives in the database, so
+# it survives restarts until it expires.
+#
+# default: true
+# overwritten by: CRED_STUFF_ENABLE
+enable = true
+```
+
 #### Rolling App Log Files
 
 By default, Rauthy only logs to stdout. With `logging.log_file`, it writes a rolling app log file
@@ -133,6 +155,7 @@ log_file_archive_after = '3d'
 ```
 
 [#1962](https://github.com/sebadob/rauthy/pull/1962)
+
 #### Custom JSON path claim matcher
 
 Rauthy now ships a customized, simplified JSONPath matcher. It brings new possibilities and fixes

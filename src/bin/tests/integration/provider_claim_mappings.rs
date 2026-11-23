@@ -1,28 +1,31 @@
 use crate::common::{
     cookie_csrf_headers_from_res_direct, get_auth_headers, get_backend_url, get_solved_pow,
 };
+use crate::{expect_status, expect_status_json};
 use actix_web::{App, HttpResponse, HttpServer, web};
 use rauthy_api_types::auth_providers::{
     ClaimMapping, ClaimMappingTyp, ProviderCallbackRequest, ProviderLoginRequest,
 };
 use rauthy_api_types::users::UpdateUserRequest;
 use rauthy_common::sha256;
-use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode};
+use rauthy_common::utils::{base64_url_encode, base64_url_no_pad_encode, new_store_id};
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use std::error::Error;
 use std::net::TcpStream;
+use std::sync::{LazyLock, OnceLock};
 use std::thread;
 use std::time::Duration;
 
-mod common;
-
-const ROLE: &str = "cm_test_role";
-const GROUP: &str = "cm test group";
+/// Every name this file's tests create carries this suffix, so two runs on one backend never share
+/// a role, a group, or a federated user.
+static SUFFIX: LazyLock<String> = LazyLock::new(|| new_store_id().to_lowercase());
+static ROLE: LazyLock<String> = LazyLock::new(|| format!("cm_test_role_{}", *SUFFIX));
+static GROUP: LazyLock<String> = LazyLock::new(|| format!("cm test group {}", *SUFFIX));
 /// A role name that contains `rauthy_admin` without being admin-scoped.
 const ADMIN_ALIKE: &str = "rauthy_administrator";
 /// A group name without a space: the name rules of a role, which the group admin role string must
 /// match, do not allow whitespace.
-const GROUP_ADMIN_GROUP: &str = "cm_test_group";
+static GROUP_ADMIN_GROUP: LazyLock<String> = LazyLock::new(|| format!("cm_test_group_{}", *SUFFIX));
 const ISSUER: &str = "http://localhost:1/claim-mapping-test";
 
 /// Nothing on this port listens: the config tests never reach the upstream at all.
@@ -243,14 +246,23 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
     let backend_url = get_backend_url();
     let http = reqwest::Client::new();
 
-    delete_leftovers(&http, &backend_url, &auth_headers, ISSUER, ROLE, GROUP, "").await?;
+    delete_leftovers(
+        &http,
+        &backend_url,
+        &auth_headers,
+        ISSUER,
+        ROLE.as_str(),
+        GROUP.as_str(),
+        "",
+    )
+    .await?;
     delete_by_name(&http, &backend_url, &auth_headers, "roles", ADMIN_ALIKE).await?;
     delete_by_name(
         &http,
         &backend_url,
         &auth_headers,
         "groups",
-        GROUP_ADMIN_GROUP,
+        GROUP_ADMIN_GROUP.as_str(),
     )
     .await?;
 
@@ -258,11 +270,11 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
     for (url, payload) in [
         (
             format!("{backend_url}/roles"),
-            serde_json::json!({ "role": ROLE }),
+            serde_json::json!({ "role": ROLE.as_str() }),
         ),
         (
             format!("{backend_url}/groups"),
-            serde_json::json!({ "group": GROUP }),
+            serde_json::json!({ "group": GROUP.as_str() }),
         ),
         (
             format!("{backend_url}/roles"),
@@ -270,7 +282,7 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
         ),
         (
             format!("{backend_url}/groups"),
-            serde_json::json!({ "group": GROUP_ADMIN_GROUP }),
+            serde_json::json!({ "group": GROUP_ADMIN_GROUP.as_str() }),
         ),
     ] {
         let res = http
@@ -283,8 +295,8 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
     }
 
     let mappings = serde_json::json!([
-        { "claim_path": "$.groups[*]", "claim_value": "^cm:", "typ": "role", "target": ROLE },
-        { "claim_path": "$..['cm-groups']", "claim_value": "~^cm:admin$", "typ": "group", "target": GROUP },
+        { "claim_path": "$.groups[*]", "claim_value": "^cm:", "typ": "role", "target": ROLE.as_str() },
+        { "claim_path": "$..['cm-groups']", "claim_value": "~^cm:admin$", "typ": "group", "target": GROUP.as_str() },
     ]);
     let id = create_provider(&http, &backend_url, &auth_headers, mappings, &CONFIG_SPEC).await?;
 
@@ -292,12 +304,12 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         get_claim_mappings(&http, &backend_url, &auth_headers, &id).await?,
         serde_json::to_value(vec![
-            rule(ClaimMappingTyp::Role, "$.groups[*]", "^cm:", ROLE),
+            rule(ClaimMappingTyp::Role, "$.groups[*]", "^cm:", ROLE.as_str()),
             rule(
                 ClaimMappingTyp::Group,
                 "$..['cm-groups']",
                 "~^cm:admin$",
-                GROUP
+                GROUP.as_str()
             ),
         ])?,
         "the claim mappings must round-trip"
@@ -336,7 +348,7 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
     // The group-admin delegates are valid generic targets. `rauthy_admin:<group>` is a role name,
     // and `rauthy_admin:*` is the glob over every group.
     for target in [
-        format!("rauthy_admin:{GROUP_ADMIN_GROUP}"),
+        format!("rauthy_admin:{}", GROUP_ADMIN_GROUP.as_str()),
         "rauthy_admin:*".to_string(),
     ] {
         assert_eq!(
@@ -357,7 +369,10 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
     // It is a role, never a group, and the group behind it must exist. An empty group part names
     // nothing.
     for (typ, target) in [
-        ("group", format!("rauthy_admin:{GROUP_ADMIN_GROUP}")),
+        (
+            "group",
+            format!("rauthy_admin:{}", GROUP_ADMIN_GROUP.as_str()),
+        ),
         ("role", "rauthy_admin:cm_missing_group".to_string()),
         ("role", "rauthy_admin:".to_string()),
     ] {
@@ -379,8 +394,8 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
     // A `,` separates the entries of a user's role / group CSV, so it can never be part of a
     // target, even though the name rules of a role and a group both allow it.
     for (typ, target) in [
-        ("role", format!("{ROLE},cm_test")),
-        ("group", format!("{GROUP},cm_test")),
+        ("role", format!("{},cm_test", ROLE.as_str())),
+        ("group", format!("{},cm_test", GROUP.as_str())),
     ] {
         assert_eq!(
             put(
@@ -418,7 +433,7 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
             &backend_url,
             &auth_headers,
             &id,
-            serde_json::json!([{ "claim_path": "$.roles", "claim_value": "~(unclosed", "typ": "role", "target": ROLE }]),
+            serde_json::json!([{ "claim_path": "$.roles", "claim_value": "~(unclosed", "typ": "role", "target": ROLE.as_str() }]),
             &CONFIG_SPEC,
         )
         .await?,
@@ -432,7 +447,7 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
             &backend_url,
             &auth_headers,
             &id,
-            serde_json::json!([{ "claim_path": "$.groups[?@.a=='x']", "claim_value": "x", "typ": "role", "target": ROLE }]),
+            serde_json::json!([{ "claim_path": "$.groups[?@.a=='x']", "claim_value": "x", "typ": "role", "target": ROLE.as_str() }]),
             &CONFIG_SPEC,
         )
         .await?,
@@ -474,7 +489,7 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
                     "claim_path": "$.roles",
                     "claim_value": "x",
                     "typ": "role",
-                    "target": ROLE,
+                    "target": ROLE.as_str(),
                 })
             })
             .collect(),
@@ -499,7 +514,7 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
             &backend_url,
             &auth_headers,
             &id,
-            serde_json::json!([{ "claim_path": "$.roles[*]", "claim_value": "^^literal", "typ": "group", "target": GROUP }]),
+            serde_json::json!([{ "claim_path": "$.roles[*]", "claim_value": "^^literal", "typ": "group", "target": GROUP.as_str() }]),
             &CONFIG_SPEC,
         )
         .await?,
@@ -511,7 +526,7 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
             ClaimMappingTyp::Group,
             "$.roles[*]",
             "^^literal",
-            GROUP
+            GROUP.as_str()
         )])?
     );
 
@@ -540,15 +555,15 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
         .await?;
     expect_status!(res, 200);
 
-    delete_by_name(&http, &backend_url, &auth_headers, "roles", ROLE).await?;
+    delete_by_name(&http, &backend_url, &auth_headers, "roles", ROLE.as_str()).await?;
     delete_by_name(&http, &backend_url, &auth_headers, "roles", ADMIN_ALIKE).await?;
-    delete_by_name(&http, &backend_url, &auth_headers, "groups", GROUP).await?;
+    delete_by_name(&http, &backend_url, &auth_headers, "groups", GROUP.as_str()).await?;
     delete_by_name(
         &http,
         &backend_url,
         &auth_headers,
         "groups",
-        GROUP_ADMIN_GROUP,
+        GROUP_ADMIN_GROUP.as_str(),
     )
     .await?;
 
@@ -558,28 +573,37 @@ async fn test_provider_claim_mappings() -> Result<(), Box<dyn Error>> {
 // --- The mapping on the login path -------------------------------------------------------------
 
 const ISSUER_LOGIN: &str = "http://localhost:1/claim-mapping-login";
-const ROLE_LOGIN: &str = "cm_login_role";
-const GROUP_LOGIN: &str = "cm login group";
-/// The delegated admin of `GROUP_LOGIN_ADMIN`, granted by a generic rule. The group name has no
+static ROLE_LOGIN: LazyLock<String> = LazyLock::new(|| format!("cm_login_role_{}", *SUFFIX));
+static GROUP_LOGIN: LazyLock<String> = LazyLock::new(|| format!("cm login group {}", *SUFFIX));
+/// The delegated admin of `GROUP_LOGIN_ADMIN.as_str()`, granted by a generic rule. The group name has no
 /// space, because the group admin target is a role name and the role rules forbid whitespace.
-const GROUP_LOGIN_ADMIN: &str = "cm_login_admin";
-const GROUP_ADMIN_ROLE: &str = "rauthy_admin:cm_login_admin";
-const FED_EMAIL: &str = "cm-federated@localhost";
+static GROUP_LOGIN_ADMIN: LazyLock<String> =
+    LazyLock::new(|| format!("cm_login_admin_{}", *SUFFIX));
+static GROUP_ADMIN_ROLE: LazyLock<String> =
+    LazyLock::new(|| format!("rauthy_admin:{}", GROUP_LOGIN_ADMIN.as_str()));
+static FED_EMAIL: LazyLock<String> =
+    LazyLock::new(|| format!("cm-federated-{}@localhost", *SUFFIX));
 /// A role that only the local admin grants. It is never named by any rule, so the reconcile must
 /// never touch it.
 const LOCAL_ROLE: &str = "bs_role_1";
-/// The mock IdP's port. `handler_auth.rs` serves its ephemeral client on 10080, and every test
-/// file is its own process, so these never collide.
-const MOCK_PORT: u16 = 10081;
+/// The port the mock IdP bound to, set by [`serve_mock_idp`].
+static MOCK_PORT: OnceLock<u16> = OnceLock::new();
 const PKCE_VERIFIER: &str = "Ajk3hfdVsDu8DpYuZeYbUfNIWSYdq5sKjpDcTWgM7RBsXQEkSmTNXV6wLvHUmJYQ";
 
-const LOGIN_BASE: &str = "http://127.0.0.1:10081";
+/// The mock IdP's base URL, from the port it bound to. Leaked so a [`ProviderSpec`] can hold it
+/// as a `&'static str`.
+fn mock_base() -> &'static str {
+    let port = *MOCK_PORT.get().expect("the mock IdP to be running");
+    Box::leak(format!("http://127.0.0.1:{port}").into_boxed_str())
+}
 
-const LOGIN_SPEC: ProviderSpec<'static> = ProviderSpec {
-    issuer: ISSUER_LOGIN,
-    base: LOGIN_BASE,
-    auto_onboarding: true,
-};
+fn login_spec() -> ProviderSpec<'static> {
+    ProviderSpec {
+        issuer: ISSUER_LOGIN,
+        base: mock_base(),
+        auto_onboarding: true,
+    }
+}
 
 /// The upstream IdP for the login tests. Only the backend's own `/token` request ever reaches it,
 /// and it answers with the claim set the request's `code` names: `claims-granted` has both values
@@ -587,22 +611,31 @@ const LOGIN_SPEC: ProviderSpec<'static> = ProviderSpec {
 fn serve_mock_idp() {
     thread::spawn(|| {
         actix_web::rt::System::new().block_on(async {
-            HttpServer::new(|| App::new().route("/token", web::post().to(mock_token)))
-                .bind(("127.0.0.1", MOCK_PORT))
-                .expect("port 10081 to be free for the mock IdP")
-                .run()
-                .await
-                .expect("the mock IdP to start");
+            // Port 0: the OS picks a free port, so the mock never collides with anything else.
+            let server = HttpServer::new(|| App::new().route("/token", web::post().to(mock_token)))
+                .bind(("127.0.0.1", 0))
+                .expect("an ephemeral port for the mock IdP");
+            let port = server
+                .addrs()
+                .first()
+                .expect("the bound mock IdP address")
+                .port();
+            MOCK_PORT
+                .set(port)
+                .expect("the mock port to be set only once");
+            server.run().await.expect("the mock IdP to start");
         });
     });
 
     for _ in 0..50 {
-        if TcpStream::connect(("127.0.0.1", MOCK_PORT)).is_ok() {
+        if let Some(port) = MOCK_PORT.get()
+            && TcpStream::connect(("127.0.0.1", *port)).is_ok()
+        {
             return;
         }
         thread::sleep(Duration::from_millis(100));
     }
-    panic!("the mock IdP did not start on port {MOCK_PORT}");
+    panic!("the mock IdP did not start");
 }
 
 fn upstream_claims(code: &str) -> serde_json::Value {
@@ -619,7 +652,7 @@ fn upstream_claims(code: &str) -> serde_json::Value {
     serde_json::json!({
         "iss": ISSUER_LOGIN,
         "sub": "cm-fed-1",
-        "email": FED_EMAIL,
+        "email": FED_EMAIL.as_str(),
         "email_verified": true,
         "given_name": "Cm",
         "family_name": "Federated",
@@ -748,7 +781,7 @@ async fn get_federated_user(
     let users = expect_status_json!(res, 200, Vec<serde_json::Value>);
     let user = users
         .into_iter()
-        .find(|u| u["email"].as_str() == Some(FED_EMAIL))
+        .find(|u| u["email"].as_str() == Some(FED_EMAIL.as_str()))
         .ok_or("the federated user must exist")?;
     let id = user["id"].as_str().expect("the user id").to_string();
 
@@ -784,13 +817,13 @@ async fn grant_local_role(
         .put(format!("{url}/users/{id}"))
         .headers(headers.clone())
         .json(&UpdateUserRequest {
-            email: FED_EMAIL.to_string(),
+            email: FED_EMAIL.clone(),
             given_name: user["given_name"].as_str().map(String::from),
             family_name: user["family_name"].as_str().map(String::from),
             language: None,
             password: None,
-            roles: vec![LOCAL_ROLE.to_string(), ROLE_LOGIN.to_string()],
-            groups: Some(vec![GROUP_LOGIN.to_string()]),
+            roles: vec![LOCAL_ROLE.to_string(), ROLE_LOGIN.clone()],
+            groups: Some(vec![GROUP_LOGIN.clone()]),
             enabled: true,
             email_verified: true,
             user_expires: None,
@@ -816,9 +849,9 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
         &backend_url,
         &auth_headers,
         ISSUER_LOGIN,
-        ROLE_LOGIN,
-        GROUP_LOGIN,
-        FED_EMAIL,
+        ROLE_LOGIN.as_str(),
+        GROUP_LOGIN.as_str(),
+        FED_EMAIL.as_str(),
     )
     .await?;
     delete_by_name(
@@ -826,7 +859,7 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
         &backend_url,
         &auth_headers,
         "groups",
-        GROUP_LOGIN_ADMIN,
+        GROUP_LOGIN_ADMIN.as_str(),
     )
     .await?;
     serve_mock_idp();
@@ -834,15 +867,15 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
     for (url, payload) in [
         (
             format!("{backend_url}/roles"),
-            serde_json::json!({ "role": ROLE_LOGIN }),
+            serde_json::json!({ "role": ROLE_LOGIN.as_str() }),
         ),
         (
             format!("{backend_url}/groups"),
-            serde_json::json!({ "group": GROUP_LOGIN }),
+            serde_json::json!({ "group": GROUP_LOGIN.as_str() }),
         ),
         (
             format!("{backend_url}/groups"),
-            serde_json::json!({ "group": GROUP_LOGIN_ADMIN }),
+            serde_json::json!({ "group": GROUP_LOGIN_ADMIN.as_str() }),
         ),
     ] {
         let res = http
@@ -855,23 +888,23 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
     }
 
     let mappings = serde_json::json!([
-        { "claim_path": "$.groups[*]", "claim_value": "engineering", "typ": "role", "target": ROLE_LOGIN },
-        { "claim_path": "$.tgchat[*]", "claim_value": "^tgchat:", "typ": "group", "target": GROUP_LOGIN },
-        { "claim_path": "$.tgchat[*]", "claim_value": "^tgchat:", "typ": "role", "target": GROUP_ADMIN_ROLE },
+        { "claim_path": "$.groups[*]", "claim_value": "engineering", "typ": "role", "target": ROLE_LOGIN.as_str() },
+        { "claim_path": "$.tgchat[*]", "claim_value": "^tgchat:", "typ": "group", "target": GROUP_LOGIN.as_str() },
+        { "claim_path": "$.tgchat[*]", "claim_value": "^tgchat:", "typ": "role", "target": GROUP_ADMIN_ROLE.as_str() },
     ]);
-    let id = create_provider(&http, &backend_url, &auth_headers, mappings, &LOGIN_SPEC).await?;
+    let id = create_provider(&http, &backend_url, &auth_headers, mappings, &login_spec()).await?;
 
     // The first login creates the federated account with exactly the matched names.
     federated_login(&http, &backend_url, &id, "claims-granted").await?;
     let user = get_federated_user(&http, &backend_url, &auth_headers).await?;
     assert_eq!(
         names(&user, "roles"),
-        vec![ROLE_LOGIN.to_string(), GROUP_ADMIN_ROLE.to_string()],
+        vec![ROLE_LOGIN.clone(), GROUP_ADMIN_ROLE.clone()],
         "the mapped role and the mapped group admin must be granted"
     );
     assert_eq!(
         names(&user, "groups"),
-        vec![GROUP_LOGIN.to_string()],
+        vec![GROUP_LOGIN.clone()],
         "the mapped group must be granted"
     );
 
@@ -901,9 +934,9 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
             &auth_headers,
             &id,
             serde_json::json!([
-                { "claim_path": "$.groups[*]", "claim_value": "engineering", "typ": "role", "target": ROLE_LOGIN }
+                { "claim_path": "$.groups[*]", "claim_value": "engineering", "typ": "role", "target": ROLE_LOGIN.as_str() }
             ]),
-            &LOGIN_SPEC,
+            &login_spec(),
         )
         .await?,
         200
@@ -912,7 +945,7 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
     let user = get_federated_user(&http, &backend_url, &auth_headers).await?;
     assert_eq!(
         names(&user, "roles"),
-        vec![LOCAL_ROLE.to_string(), ROLE_LOGIN.to_string()],
+        vec![LOCAL_ROLE.to_string(), ROLE_LOGIN.clone()],
         "the mapped role is granted again after the re-save"
     );
     assert!(
@@ -929,7 +962,7 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
             &auth_headers,
             &id,
             serde_json::json!([]),
-            &LOGIN_SPEC
+            &login_spec()
         )
         .await?,
         200
@@ -938,7 +971,7 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
     let user = get_federated_user(&http, &backend_url, &auth_headers).await?;
     assert_eq!(
         names(&user, "roles"),
-        vec![LOCAL_ROLE.to_string(), ROLE_LOGIN.to_string()],
+        vec![LOCAL_ROLE.to_string(), ROLE_LOGIN.clone()],
         "no rules means no changes to membership"
     );
 
@@ -950,13 +983,20 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
             &backend_url,
             &auth_headers,
             &id,
-            serde_json::json!([{ "claim_path": "$.groups[*]", "claim_value": "engineering", "typ": "role", "target": ROLE_LOGIN }]),
-            &LOGIN_SPEC,
+            serde_json::json!([{ "claim_path": "$.groups[*]", "claim_value": "engineering", "typ": "role", "target": ROLE_LOGIN.as_str() }]),
+            &login_spec(),
         )
         .await?,
         200
     );
-    delete_by_name(&http, &backend_url, &auth_headers, "roles", ROLE_LOGIN).await?;
+    delete_by_name(
+        &http,
+        &backend_url,
+        &auth_headers,
+        "roles",
+        ROLE_LOGIN.as_str(),
+    )
+    .await?;
     federated_login(&http, &backend_url, &id, "claims-granted").await?;
     let user = get_federated_user(&http, &backend_url, &auth_headers).await?;
     assert_eq!(
@@ -974,8 +1014,8 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
             &backend_url,
             &auth_headers,
             &id,
-            serde_json::json!([{ "claim_path": "$.tgchat[*]", "claim_value": "^tgchat:", "typ": "role", "target": GROUP_ADMIN_ROLE }]),
-            &LOGIN_SPEC,
+            serde_json::json!([{ "claim_path": "$.tgchat[*]", "claim_value": "^tgchat:", "typ": "role", "target": GROUP_ADMIN_ROLE.as_str() }]),
+            &login_spec(),
         )
         .await?,
         200
@@ -984,7 +1024,7 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
     let user = get_federated_user(&http, &backend_url, &auth_headers).await?;
     assert_eq!(
         names(&user, "roles"),
-        vec![LOCAL_ROLE.to_string(), GROUP_ADMIN_ROLE.to_string()],
+        vec![LOCAL_ROLE.to_string(), GROUP_ADMIN_ROLE.clone()],
         "the mapped group admin must be granted - {:?}",
         user["roles"]
     );
@@ -1003,7 +1043,7 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
         &backend_url,
         &auth_headers,
         "groups",
-        GROUP_LOGIN_ADMIN,
+        GROUP_LOGIN_ADMIN.as_str(),
     )
     .await?;
     federated_login(&http, &backend_url, &id, "claims-granted").await?;
@@ -1021,15 +1061,29 @@ async fn test_provider_claim_mappings_federated_login() -> Result<(), Box<dyn Er
         .send()
         .await?;
     expect_status!(res, 200);
-    delete_user_by_email(&http, &backend_url, &auth_headers, FED_EMAIL).await?;
-    delete_by_name(&http, &backend_url, &auth_headers, "roles", ROLE_LOGIN).await?;
-    delete_by_name(&http, &backend_url, &auth_headers, "groups", GROUP_LOGIN).await?;
+    delete_user_by_email(&http, &backend_url, &auth_headers, FED_EMAIL.as_str()).await?;
+    delete_by_name(
+        &http,
+        &backend_url,
+        &auth_headers,
+        "roles",
+        ROLE_LOGIN.as_str(),
+    )
+    .await?;
     delete_by_name(
         &http,
         &backend_url,
         &auth_headers,
         "groups",
-        GROUP_LOGIN_ADMIN,
+        GROUP_LOGIN.as_str(),
+    )
+    .await?;
+    delete_by_name(
+        &http,
+        &backend_url,
+        &auth_headers,
+        "groups",
+        GROUP_LOGIN_ADMIN.as_str(),
     )
     .await?;
 

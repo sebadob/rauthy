@@ -8,6 +8,11 @@ description.workspace = true
 default-run = "rauthy"
 rust-version = "1.95.0"
 
+# One test binary for the whole integration suite: every test file on its own builds the whole
+# dependency graph again, and Cargo runs test binaries one after another. `ip_blacklist` keeps its
+# own target because it blacklists the source address every other test connects from.
+autotests = false
+
 [features]
 default = ["jemalloc"]
 jemalloc = ["dep:tikv-jemallocator"]
@@ -81,7 +86,14 @@ josekit = "0.8"
 pretty_assertions = "1"
 reqwest = { workspace = true, features = ["multipart"] }
 ring = { workspace = true }
-tokio-test = "*"
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
+[[test]]
+name = "ip_blacklist"
+path = "tests/ip_blacklist.rs"
 
 [lints.rust]
 warnings = { level = "deny", priority = -2 }
